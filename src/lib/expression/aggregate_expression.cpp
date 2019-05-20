@@ -14,7 +14,7 @@ namespace opossum {
 
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function)
     : AbstractExpression(ExpressionType::Aggregate, {}), aggregate_function(aggregate_function) {
-  Assert(aggregate_function == AggregateFunction::Count, "Only COUNT aggregates can have no arguments");
+  Assert(aggregate_function == AggregateFunction::CountRows, "Only COUNT(*) aggregates can have no arguments");
 }
 
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
@@ -39,7 +39,7 @@ std::string AggregateExpression::as_column_name() const {
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
     stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
-  } else if (aggregate_function == AggregateFunction::Count && !argument()) {
+  } else if (aggregate_function == AggregateFunction::CountRows && !argument()) {
     stream << "COUNT(*)";
   } else {
     stream << aggregate_function << "(";
@@ -51,8 +51,8 @@ std::string AggregateExpression::as_column_name() const {
 }
 
 DataType AggregateExpression::data_type() const {
-  if (aggregate_function == AggregateFunction::Count) {
-    return AggregateTraits<NullValue, AggregateFunction::Count>::AGGREGATE_DATA_TYPE;
+  if (aggregate_function == AggregateFunction::CountRows || aggregate_function == AggregateFunction::CountNonNull) {
+    return AggregateTraits<NullValue, AggregateFunction::CountRows>::AGGREGATE_DATA_TYPE;
   }
 
   Assert(arguments.size() == 1, "Expected this AggregateFunction to have one argument");
@@ -76,7 +76,8 @@ DataType AggregateExpression::data_type() const {
       case AggregateFunction::Avg:
         aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Avg>::AGGREGATE_DATA_TYPE;
         break;
-      case AggregateFunction::Count:
+      case AggregateFunction::CountNonNull:
+      case AggregateFunction::CountRows:
       case AggregateFunction::CountDistinct:
         break;  // These are handled above
       case AggregateFunction::Sum:

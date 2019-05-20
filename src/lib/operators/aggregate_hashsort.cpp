@@ -36,7 +36,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
   });
 
   if (fixed_size_groups) {
-    auto input_groups = produce_initial_group_run<FixedSizeGroupRun>(input_table, _groupby_column_ids);
+    auto input_groups = produce_initial_groups<FixedSizeGroupRun>(input_table, _groupby_column_ids);
     auto input_aggregates = produce_initial_aggregates(input_table, _aggregates);
 
     auto input_run = Run{std::move(input_groups), std::move(input_aggregates)};

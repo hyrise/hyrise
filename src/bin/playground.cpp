@@ -71,13 +71,9 @@ int main() {
   const auto aggregate_op = std::make_shared<AggregateHashSort>(table_op, aggregates, group_by_column_ids);
   aggregate_op->execute();
   std::cout << "HashSort: " << t1.lap_formatted() << std::endl;
-//  const auto aggregate_op3 = std::make_shared<AggregateSort>(table_op, aggregates, group_by_column_ids);
-//  aggregate_op3->execute();
-//  std::cout << "Sort: " << t1.lap_formatted() << std::endl;
 
   std::cout << "HashSort: " << aggregate_op->get_output()->row_count() << std::endl;
   std::cout << "Hash: " << aggregate_op2->get_output()->row_count() << std::endl;
-//  std::cout << "Sort: " << aggregate_op3->get_output()->row_count() << std::endl;
 
   if (aggregate_op->get_output()->row_count() < 20) {
     Print::print(aggregate_op->get_output());

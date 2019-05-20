@@ -352,7 +352,8 @@ struct Partitioning {
 };
 
 inline Partitioning determine_partitioning(const size_t level) {
-  return {8, level * 3, 0b111};
+  // Best partitioning as determined by magic
+  return {16, level * 4, 0b1111};
 }
 
 template<typename GroupRun>
@@ -479,19 +480,7 @@ hashing(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&inpu
 }
 
 template<typename GroupRun>
-std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&input_runs, const size_t level) {
-  // std::cout << "[" << level << "]" << std::endl;
-
-  if (input_runs.empty()) {
-    return {};
-  }
-
-  if (input_runs.size() == 1 && input_runs.front().is_aggregated) {
-    return std::move(input_runs);
-  }
-
-  const auto partitioning = determine_partitioning(level);
-
+std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&input_runs, const Partitioning &partitioning) {
   auto partitions = std::vector<Partition<GroupRun>>(partitioning.partition_count);
 
   auto mode = HashSortMode::Hashing;
@@ -505,13 +494,11 @@ std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std:
     if (mode == HashSortMode::Hashing) {
       auto[continue_hashing, hashing_partitions] = hashing(config, std::move(input_runs), partitioning, run_idx, run_offset);
       if (!continue_hashing) {
-        // std::cout << "[" << level << "] SWITCHING TO PARTITIONING (" << run_idx << ", " << run_offset << ")" << std::endl;
         mode = HashSortMode::Partition;
       }
       phase_partitions = std::move(hashing_partitions);
     } else {
       phase_partitions = partition(config, std::move(input_runs), partitioning, run_idx, run_offset);
-      // std::cout << "[" << level << "] SWITCHING TO HASHING (" << run_idx << ", " << run_offset << ")" << std::endl;
       mode = HashSortMode::Hashing;
     }
 
@@ -525,7 +512,24 @@ std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std:
     }
   }
 
+  return partitions;
+}
+
+template<typename GroupRun>
+std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std::vector<Run<GroupRun>> &&input_runs, const size_t level) {
+  if (input_runs.empty()) {
+    return {};
+  }
+
+  if (input_runs.size() == 1 && input_runs.front().is_aggregated) {
+    return std::move(input_runs);
+  }
+
   auto output_runs = std::vector<Run<GroupRun>>{};
+
+  const auto partitioning = determine_partitioning(level);
+
+  auto partitions = adaptive_hashing_and_partition(config, std::move(input_runs), partitioning);
 
   for (auto &&partition : partitions) {
     if (partition.size() == 0) {
@@ -597,11 +601,11 @@ size_t hash_segment_position(const SegmentPosition &segment_position) {
 }
 
 template<typename GroupRun>
-GroupRun produce_initial_group_run(const Table &table, const std::vector<ColumnID> &group_by_column_ids);
+GroupRun produce_initial_groups(const Table &table, const std::vector<ColumnID> &group_by_column_ids);
 
 template<>
 inline FixedSizeGroupRun
-produce_initial_group_run<FixedSizeGroupRun>(const Table &table, const std::vector<ColumnID> &group_by_column_ids) {
+produce_initial_groups<FixedSizeGroupRun>(const Table &table, const std::vector<ColumnID> &group_by_column_ids) {
   Assert(!group_by_column_ids.empty(), "");
 
   constexpr auto BLOB_DATA_TYPE_SIZE = sizeof(FixedSizeGroupRun::BlobDataType);
@@ -641,34 +645,30 @@ produce_initial_group_run<FixedSizeGroupRun>(const Table &table, const std::vect
       auto row_idx = chunk_row_idx;
 
       segment_iterate(*chunk->get_segment(group_by_column_ids[output_group_by_column_idx]),
-                      [&](const auto &segment_position) {
-                        if (segment_position.is_null()) {
-                          group_run.data[data_offset] = 1;
-                          memset(&group_run.data[data_offset + 1], 0, value_size - BLOB_DATA_TYPE_SIZE);
-                        } else {
-                          if (nullable) {
-                            group_run.data[data_offset] = 0;
-                            memcpy(&group_run.data[data_offset + 1], &segment_position.value(),
-                                   value_size - BLOB_DATA_TYPE_SIZE);
-                          } else {
-                            memcpy(&group_run.data[data_offset], &segment_position.value(), value_size);
-                          }
-                        }
+        [&](const auto &segment_position) {
+          if (segment_position.is_null()) {
+            group_run.data[data_offset] = 1;
+            memset(&group_run.data[data_offset + 1], 0, value_size - BLOB_DATA_TYPE_SIZE);
+          } else {
+            if (nullable) {
+              group_run.data[data_offset] = 0;
+              memcpy(&group_run.data[data_offset + 1], &segment_position.value(),
+                     value_size - BLOB_DATA_TYPE_SIZE);
+            } else {
+              memcpy(&group_run.data[data_offset], &segment_position.value(), value_size);
+            }
+          }
 
-                        boost::hash_combine(group_run.hashes[row_idx], hash_segment_position(segment_position));
+          boost::hash_combine(group_run.hashes[row_idx], hash_segment_position(segment_position));
 
-                        data_offset += layout.group_size;
-                        ++row_idx;
-                      });
+          data_offset += layout.group_size;
+          ++row_idx;
+        });
     }
 
     chunk_row_idx += chunk->size();
     chunk_data_base_offset += layout.group_size * chunk->size();
   }
-
-//  //// std::cout << "BaseOffsets: " << to_string(column_base_offsets) << std::endl;
-//  //// std::cout << "Data: " << to_string(group_run.data) << std::endl;
-//  //// std::cout << "Hashes: " << to_string(group_run.hashes) << std::endl;
 
   return group_run;
 }
