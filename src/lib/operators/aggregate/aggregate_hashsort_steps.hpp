@@ -73,35 +73,33 @@ struct FixedSizeGroupRun {
   }
 
   template <typename T>
-  void materialize_output(std::vector<T>& target_values, std::vector<bool>& target_null_values, size_t target_offset,
-                          const ColumnID column_id) const {
-    if (data.empty()) {
-      return;
-    }
-
-    const auto nullable = !target_null_values.empty();
+  std::shared_ptr<BaseSegment> materialize_output(const ColumnID column_id, const bool nullable) const {
     const auto* source_pointer = &data[layout.column_base_offsets[column_id]];
     const auto* source_end = &data.back() + 1;
 
+    auto target_offset = size_t{0};
+
+    auto values = std::vector<T>(hashes.size());
+    auto null_values = std::vector<bool>(nullable ? hashes.size() : 0u);
+
     while (source_pointer < source_end) {
       if (nullable) {
-        target_null_values[target_offset] = *source_pointer != 0;
-        memcpy(reinterpret_cast<char*>(&target_values[target_offset]), source_pointer + 1, sizeof(T));
+        null_values[target_offset] = *source_pointer != 0;
+        memcpy(reinterpret_cast<char*>(&values[target_offset]), source_pointer + 1, sizeof(T));
       } else {
-        memcpy(reinterpret_cast<char*>(&target_values[target_offset]), source_pointer, sizeof(T));
+        memcpy(reinterpret_cast<char*>(&values[target_offset]), source_pointer, sizeof(T));
       }
 
       source_pointer += layout.group_size;
       ++target_offset;
     }
-  }
 
-  //  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer, const FixedSizeGroupRun& source_run_segment) {
-  //    for (const auto& [source_offset, target_offset] : buffer) {
-  //      const auto source_value_range = source_run_segment.group_value(source_offset);
-  //      std::copy(source_value_range.first, source_value_range.second, data.begin() + group_size * target_offset);
-  //    }
-  //  }
+    if (nullable) {
+      return std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values));
+    } else {
+      return std::make_shared<ValueSegment<T>>(std::move(values));
+    }
+  }
 
   size_t hash(const size_t offset) const { return hashes[offset]; }
 
@@ -113,15 +111,6 @@ struct FixedSizeGroupRun {
   }
 };
 
-//std::ostream& operator<<(std::ostream& stream, const FixedSizeGroupRun& group_run) {
-//  stream << "FixedSizeGroupRun {" << std::endl;
-//  stream << "  Data: " << to_string(group_run.data) << std::endl;
-//  stream << "  Hashes: " << to_string(group_run.hashes) << std::endl;
-//  stream << "}";
-//  return stream;
-//}
-
-struct VariablySizedGroupByRunSegment {};
 
 template <typename GroupRun>
 struct Run {
@@ -161,7 +150,7 @@ struct Partition {
   std::vector<Run<GroupRun>> runs;
 
   void flush_buffers(const Run<GroupRun>& input_run) {
-    if (append_buffer.empty()) {
+    if (append_buffer.empty() && aggregation_buffer.empty()) {
       return;
     }
 
@@ -171,12 +160,20 @@ struct Partition {
 
     auto& target_run = runs.back();
     auto& target_groups = target_run.groups;
+    auto& target_aggregates = target_run.groups;
 
+    /**
+     * Process append_buffer
+     */
     auto target_offset = target_run.size();
     target_groups.resize(target_run.size() + append_buffer.size());
     for (const auto& source_offset : append_buffer) {
       target_groups.copy(target_offset, input_run.groups, source_offset);
       ++target_offset;
+    }
+
+    for (auto& aggregate : target_run.aggregates) {
+      aggregate.flush_aggregation_buffer(aggregation_buffer);
     }
 
     append_buffer.clear();

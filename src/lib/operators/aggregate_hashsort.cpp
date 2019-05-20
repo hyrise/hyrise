@@ -48,75 +48,29 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     /**
      * Build output Table
      */
-    const auto output_row_count =
-        std::accumulate(result_runs.begin(), result_runs.end(), size_t{0},
-                        [](const auto row_count, const auto& run) { return row_count + run.size(); });
-
     const auto output_column_definitions = _get_output_column_defintions();
+    auto output_chunks = std::vector<std::shared_ptr<Chunk>>(result_runs.size());
 
-    auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
+    for (const auto& run : result_runs) {
+      auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
 
-    for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size();
-         ++output_group_by_column_id) {
-      const auto& output_column_definition = output_column_definitions[output_group_by_column_id];
+      for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size();
+           ++output_group_by_column_id) {
+        const auto& output_column_definition = output_column_definitions[output_group_by_column_id];
+        resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+          output_segments[output_group_by_column_id] = run.groups.materialize_output<ColumnDataType>(output_group_by_column_id, output_column_definition.nullable);
+        });
+      }
 
-      resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
+      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
+        output_segments[_groupby_column_ids.size() + aggregate_idx] = run.aggregates[aggregate_idx].materialize_output();
+      }
 
-        auto values = std::vector<ColumnDataType>(output_row_count);
-        auto null_values = std::vector<bool>();
-        if (output_column_definition.nullable) {
-          null_values.resize(output_row_count);
-        }
-
-        auto target_offset = size_t{0};
-        for (auto&& run : result_runs) {
-          run.groups.materialize_output<ColumnDataType>(values, null_values, target_offset, output_group_by_column_id);
-          target_offset += run.size();
-        }
-
-        if (output_column_definition.nullable) {
-          output_segments[output_group_by_column_id] =
-              std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
-        } else {
-          output_segments[output_group_by_column_id] =
-              std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
-        }
-      });
+      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
     }
 
-    //    for (auto aggregate_idx = size_t{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
-    //      const auto& output_column_definition = output_column_definitions[aggregate_idx + _groupby_column_ids.size()];
-    //
-    //      resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
-    //        using ColumnDataType = typename decltype(data_type_t)::type;
-    //
-    //        ColumnMaterialization<ColumnDataType> materialization;
-    //
-    //        materialization.values.resize(output_row_count);
-    //        if (output_column_definition.nullable) {
-    //          materialization.null_values.resize(output_row_count);
-    //        }
-    //
-    //        auto target_offset = size_t{0};
-    //        for (auto&& run : result_runs) {
-    //          //// //// std::cout << "Materializing groupby run of size " << run.size << std::endl;
-    //          run.aggregates[aggregate_idx]->materialize(materialization, target_offset);
-    //          target_offset += run.size;
-    //        }
-    //
-    //        if (output_column_definition.nullable) {
-    //          output_segments[aggregate_idx + _groupby_column_ids.size()] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(materialization.values), std::move(materialization.null_values));
-    //        } else {
-    //          output_segments[aggregate_idx + _groupby_column_ids.size()] = std::make_shared<ValueSegment<ColumnDataType>>(std::move(materialization.values));
-    //        }
-    //      });
-    //    }
-    //
-    const auto output_table = std::make_shared<Table>(output_column_definitions, TableType::Data);
-    output_table->append_chunk(output_segments);
-
-    return output_table;
+    return std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
   } else {
     Fail("Nope");
   }
