@@ -164,8 +164,6 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     _physical_plan = _lqp_translator->translate_node(lqp);
   }
 
-  _precheck_ddl_operators(_physical_plan);
-
   done = std::chrono::high_resolution_clock::now();
 
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
@@ -193,6 +191,8 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   if (_result_table || !_query_has_output) {
     return _result_table;
   }
+
+  _precheck_ddl_operators(get_physical_plan());
 
   const auto& tasks = get_tasks();
 
