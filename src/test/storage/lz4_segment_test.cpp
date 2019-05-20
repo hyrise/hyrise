@@ -25,7 +25,7 @@ class StorageLZ4SegmentTest : public BaseTest {
 
 template <typename T>
 std::shared_ptr<LZ4Segment<T>> compress(std::shared_ptr<ValueSegment<T>> segment, DataType data_type) {
-  auto encoded_segment = encode_segment(EncodingType::LZ4, data_type, segment);
+  auto encoded_segment = encode_and_compress_segment(segment, data_type, SegmentEncodingSpec{EncodingType::LZ4});
   return std::dynamic_pointer_cast<LZ4Segment<T>>(encoded_segment);
 }
 
