@@ -139,6 +139,8 @@ INSTANTIATE_TEST_CASE_P(
                       SegmentEncodingSpec{EncodingType::FixedStringDictionary,
                                           VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::RunLength},
+                      SegmentEncodingSpec{EncodingType::RunLength,
+                                          VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
     formatter);
