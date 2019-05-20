@@ -1,5 +1,8 @@
 #include "lqp_translator.hpp"
 
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/tuple.hpp>
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -37,6 +40,7 @@
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
@@ -310,14 +314,31 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto& primary_join_predicate = join_predicates.front();
   std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
-  if (primary_join_predicate.predicate_condition == PredicateCondition::Equals &&
-      join_node->join_mode != JoinMode::FullOuter) {
-    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-                                      primary_join_predicate, std::move(secondary_join_predicates));
-  } else {
-    return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-                                           primary_join_predicate, std::move(secondary_join_predicates));
-  }
+  auto join_operator = std::shared_ptr<AbstractOperator>{};
+
+  const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
+  const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
+
+  // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
+  // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
+  constexpr auto JOIN_OPERATOR_PREFERENCE_ORDER =
+      hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
+
+  boost::hana::for_each(JOIN_OPERATOR_PREFERENCE_ORDER, [&](const auto join_operator_t) {
+    using JoinOperator = typename decltype(join_operator_t)::type;
+
+    if (join_operator) return;
+
+    if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                               right_data_type, !secondary_join_predicates.empty())) {
+      join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                     primary_join_predicate, std::move(secondary_join_predicates));
+    }
+  });
+
+  Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
+
+  return join_operator;
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(

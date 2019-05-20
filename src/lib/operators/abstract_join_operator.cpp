@@ -64,7 +64,8 @@ const std::string AbstractJoinOperator::description(DescriptionMode description_
 
 void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<Table> AbstractJoinOperator::_initialize_output_table(const TableType table_type) const {
+std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks,
+                                                                 const TableType table_type) const {
   const auto left_in_table = _input_left->get_output();
   const auto right_in_table = _input_right->get_output();
 
@@ -89,7 +90,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_initialize_output_table(const Tabl
     }
   }
 
-  return std::make_shared<Table>(output_column_definitions, table_type);
+  return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
 }
 
 }  // namespace opossum
