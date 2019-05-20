@@ -1,5 +1,10 @@
 #pragma once
 
+#include <optional>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "boost/hana/assert.hpp"
 #include "boost/hana/for_each.hpp"
 #include "boost/hana/zip_with.hpp"
@@ -10,30 +15,54 @@
 namespace hana = boost::hana;
 
 namespace {
-auto is_optional = [](auto type) {
-  return type == hana::type_c<std::optional<typename decltype(type)::type::value_type>>;
-};
-}
-
-namespace opossum {
+template <typename T, typename Enable = void>
+struct is_optional : std::false_type {};
 
 template <typename T>
-class not_optional {
- public:
+struct is_optional<T, std::enable_if_t<std::is_same_v<T, std::optional<typename T::value_type>>>> : std::true_type {};
+
+// is_optional_v<T> <=> T is of type std::optional<?>
+template <typename T>
+constexpr bool is_optional_v = is_optional<T>::value;
+
+// get the value_type (lets call it V) of std::optional<V> and V using the same syntax - needed for templating
+template <typename T, typename Enable = void>
+struct GetValueType {
   using value_type = T;
-
-  not_optional() = default;
-  not_optional(T value) : m_value{value} {}  // NOLINT
-  not_optional(const char* string)           // NOLINT
-      : m_value{string} {}
-  // reason for nolint: we want the implicit conversion constructor for convenient calling of append_row
-
-  T& value() { return m_value; }
-  constexpr bool has_value() const { return true; }
-
- private:
-  T m_value;
 };
+
+template <typename T>
+struct GetValueType<T, std::enable_if_t<is_optional_v<T>>> {
+  using value_type = typename T::value_type;
+};
+
+template <typename T>
+using get_value_type = typename GetValueType<T>::value_type;
+
+// check if std::optional<V> or V is null using the same syntax - needed for templating
+template <typename T, typename std::enable_if_t<!is_optional_v<T>, int> = 0>
+constexpr bool is_null(const T&) {
+  return false;
+}
+
+template <typename T, typename std::enable_if_t<is_optional_v<T>, int> = 0>
+bool is_null(const T& optional) {
+  return !optional.has_value();
+}
+
+// get the value of std::optional<V> or V using the same syntax - needed for templating
+template <typename T, typename std::enable_if_t<!is_optional_v<T>, int> = 0>
+get_value_type<T>& get_value(T& value) {
+  return value;
+}
+
+template <typename T, typename std::enable_if_t<is_optional_v<T>, int> = 0>
+get_value_type<T>& get_value(T& optional) {
+  return optional.value();
+}
+}  // namespace
+
+namespace opossum {
 
 /**
  * Helper to build a table with a static (specified by template args `ColumnDefinitions`) column type layout. Keeps a
@@ -45,8 +74,8 @@ class TableBuilder {
  public:
   // names is a list of strings defining column names, types is a list of equal length defining respective column types
   template <typename... Names>
-  TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& types,
-               const boost::hana::tuple<Names...>& names, opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
+  TableBuilder(size_t chunk_size, const hana::tuple<DataTypes...>& types, const hana::tuple<Names...>& names,
+               opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
       : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
     BOOST_HANA_CONSTANT_ASSERT(hana::size(names) == hana::size(types));
 
@@ -57,8 +86,8 @@ class TableBuilder {
                       auto name = name_and_type[hana::llong_c<0>];
                       auto type = name_and_type[hana::llong_c<1>];
 
-                      auto data_type = data_type_from_type<typename decltype(type)::value_type>();
-                      auto is_nullable = is_optional(hana::type_c<decltype(type)>)();
+                      auto data_type = data_type_from_type<get_value_type<decltype(type)>>();
+                      auto is_nullable = is_optional<decltype(type)>();
 
                       definitions.emplace_back(name, data_type, is_nullable);
 
@@ -78,7 +107,7 @@ class TableBuilder {
       auto type = types_and_is_null_vector[hana::llong_c<0>];
       auto& is_null_vector = types_and_is_null_vector[hana::llong_c<1>].get();
 
-      hana::eval_if(is_optional(hana::type_c<decltype(type)>),
+      hana::eval_if(is_optional<decltype(type)>(),
                     [&] {  // if column is nullable
                       is_null_vector = std::vector<bool>();
                       is_null_vector.value().reserve(_estimated_rows_per_chunk);
@@ -97,31 +126,43 @@ class TableBuilder {
     return _table;
   }
 
-  void append_row(DataTypes&&... values) {
+  // Types == DataTypes, we deduce again to get universal references, so we can call with lvalues
+  template<typename... Types>
+  void append_row(Types&&... values) {
+    auto values_tuple = hana::make_tuple(std::forward<decltype(values)>(values)...);
+    BOOST_HANA_CONSTANT_ASSERT(hana::size(hana::tuple<DataTypes...>()) == hana::size(values_tuple));
+
+    // TODO(pascal): assert that Types == DataTypes, but allow type T when data_type is std::optional<T>
+//    hana::for_each(hana::zip(hana::tuple<get_value_type<DataTypes>...>(), hana::tuple<get_value_type<Types>...>()),
+//      [](auto data_type_and_type){
+//      BOOST_HANA_CONSTANT_ASSERT(data_type_and_type[hana::llong_c<0>] == data_type_and_type[hana::llong_c<1>]);
+//    });
+
+
     // Create tuples ([&data_vector0, &is_null_vector0, value0], [&data_vector1, &is_null_vector1, value1], ...)
     auto data_vectors_and_is_null_vectors_and_values = hana::zip_with(
         [](auto& data_vector, auto& is_null_vector, auto&& value) {
           return hana::make_tuple(std::reference_wrapper(data_vector), std::reference_wrapper(is_null_vector),
                                   std::forward<decltype(value)>(value));
         },
-        _data_vectors, _is_null_vectors, hana::make_tuple(std::forward<DataTypes>(values)...));
+        _data_vectors, _is_null_vectors, values_tuple);
 
     // Add the values to their respective data vector
     hana::for_each(data_vectors_and_is_null_vectors_and_values, [](auto&& data_vector_and_is_null_vector_and_value) {
       auto& data_vector = data_vector_and_is_null_vector_and_value[hana::llong_c<0>].get();
       auto& is_null_vector = data_vector_and_is_null_vector_and_value[hana::llong_c<1>].get();
-      auto& optional_value = data_vector_and_is_null_vector_and_value[hana::llong_c<2>];
+      auto& maybe_optional_value = data_vector_and_is_null_vector_and_value[hana::llong_c<2>];
 
       auto column_is_nullable = is_null_vector.has_value();
-      auto is_null = !optional_value.has_value();
+      auto value_is_null = is_null(maybe_optional_value);
 
-      DebugAssert(column_is_nullable || !is_null, "cannot insert null value into not-null-column");
+      DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
 
-      if (is_null) {
+      if (value_is_null) {
         data_vector.emplace_back();
         is_null_vector.value().emplace_back(true);
       } else {
-        data_vector.emplace_back(std::move(optional_value.value()));
+        data_vector.emplace_back(std::move(get_value(maybe_optional_value)));
         if (column_is_nullable) {
           is_null_vector.value().emplace_back(false);
         }
@@ -138,7 +179,7 @@ class TableBuilder {
   UseMvcc _use_mvcc;
   size_t _estimated_rows_per_chunk;
 
-  hana::tuple<std::vector<typename DataTypes::value_type>...> _data_vectors;
+  hana::tuple<std::vector<get_value_type<DataTypes>>...> _data_vectors;
   // what we want: a hana::tuple containing a bool vector for each data vector
   // in other words: std::array<std::vector<bool>, sizeof...(DataTypes)> as hana::tuple
   // so we define an alias for boolean which consumes the template parameter, so we can use "..."
@@ -151,9 +192,9 @@ class TableBuilder {
   void _emit_chunk() {
     Segments segments;
 
-    auto _data_vectors_and_is_null_vectors = boost::hana::zip_with(
+    auto _data_vectors_and_is_null_vectors = hana::zip_with(
         [](auto& data_vector, auto& is_null_vector) {
-          return boost::hana::make_tuple(std::reference_wrapper(data_vector), std::reference_wrapper(is_null_vector));
+          return hana::make_tuple(std::reference_wrapper(data_vector), std::reference_wrapper(is_null_vector));
         },
         _data_vectors, _is_null_vectors);
 
