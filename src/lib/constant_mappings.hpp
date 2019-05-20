@@ -16,7 +16,7 @@ enum class VectorCompressionType : uint8_t;
 enum class AggregateFunction;
 enum class ExpressionType;
 
-extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
+extern const std::unordered_map<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<FunctionType, std::string> function_type_to_string;
 extern const boost::bimap<DataType, std::string> data_type_to_string;
 extern const boost::bimap<EncodingType, std::string> encoding_type_to_string;

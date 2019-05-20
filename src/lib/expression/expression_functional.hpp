@@ -119,7 +119,7 @@ inline detail::unary<AggregateFunction::Sum, AggregateExpression> sum_;
 inline detail::unary<AggregateFunction::Max, AggregateExpression> max_;
 inline detail::unary<AggregateFunction::Min, AggregateExpression> min_;
 inline detail::unary<AggregateFunction::Avg, AggregateExpression> avg_;
-inline detail::unary<AggregateFunction::Count, AggregateExpression> count_;
+inline detail::unary<AggregateFunction::CountNonNull, AggregateExpression> count_non_null_;
 inline detail::unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct_;
 
 inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
@@ -229,7 +229,7 @@ std::shared_ptr<CorrelatedParameterExpression> correlated_parameter_(const Param
   return std::make_shared<CorrelatedParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
-std::shared_ptr<AggregateExpression> count_star_();
+std::shared_ptr<AggregateExpression> count_rows_();
 
 template <typename Argument>
 std::shared_ptr<UnaryMinusExpression> unary_minus_(const Argument& argument) {

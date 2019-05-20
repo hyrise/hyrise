@@ -63,7 +63,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
   std::optional<AggregateType> current_aggregate_value;
   ChunkID current_chunk_id{0};
-  if (function == AggregateFunction::Count && !_aggregates[aggregate_index].column) {
+  if (function == AggregateFunction::CountRows) {
     /*
      * Special COUNT(*) implementation.
      * We do not need to care about null values for COUNT(*).
@@ -197,14 +197,13 @@ void AggregateSort::_set_and_write_aggregate_value(
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
     std::optional<AggregateType>& current_aggregate_value, [[maybe_unused]] const uint64_t value_count,
     [[maybe_unused]] const uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
-  if constexpr (function == AggregateFunction::Count) {  // NOLINT
-    if (this->_aggregates[aggregate_index].column) {
-      // COUNT(<name>), so exclude null values
-      current_aggregate_value = value_count;
-    } else {
-      // COUNT(*), so include null values
-      current_aggregate_value = value_count_with_null;
-    }
+  if constexpr (function == AggregateFunction::CountNonNull) {
+    // COUNT(<name>), so exclude null values
+    current_aggregate_value = value_count;
+  }
+  if constexpr (function == AggregateFunction::CountRows) {
+    // COUNT(*), so include null values
+    current_aggregate_value = value_count_with_null;
   }
   if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {  // NOLINT
     // this ignores the case of Avg on strings, but we check in _on_execute() this does not happen
@@ -315,7 +314,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     if (_groupby_column_ids.empty()) {
       std::vector<AllTypeVariant> default_values;
       for (const auto& aggregate : _aggregates) {
-        if (aggregate.function == AggregateFunction::Count || aggregate.function == AggregateFunction::CountDistinct) {
+        if (aggregate.function == AggregateFunction::CountRows || aggregate.function == AggregateFunction::CountNonNull || aggregate.function == AggregateFunction::CountDistinct) {
           default_values.emplace_back(int64_t{0});
         } else {
           default_values.emplace_back(NULL_VALUE);
@@ -518,9 +517,15 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
                                                                                    sorted_table);
           break;
         }
-        case AggregateFunction::Count: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Count>(group_boundaries, aggregate_index,
+        case AggregateFunction::CountRows: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::CountRows>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountRows>(group_boundaries, aggregate_index,
+                                                                                     sorted_table);
+          break;
+        }
+        case AggregateFunction::CountNonNull: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::CountNonNull>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::CountNonNull>(group_boundaries, aggregate_index,
                                                                                      sorted_table);
           break;
         }
@@ -574,8 +579,11 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
     case AggregateFunction::Avg:
       create_aggregate_column_definitions<ColumnType, AggregateFunction::Avg>(column_index);
       break;
-    case AggregateFunction::Count:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::Count>(column_index);
+    case AggregateFunction::CountRows:
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::CountRows>(column_index);
+      break;
+    case AggregateFunction::CountNonNull:
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::CountNonNull>(column_index);
       break;
     case AggregateFunction::CountDistinct:
       create_aggregate_column_definitions<ColumnType, AggregateFunction::CountDistinct>(column_index);
@@ -622,7 +630,7 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
   }
   column_name_stream << ")";
 
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
+  constexpr bool NEEDS_NULL = (function != AggregateFunction::CountRows && function != AggregateFunction::CountNonNull && function != AggregateFunction::CountDistinct);
   _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 }
 }  // namespace opossum

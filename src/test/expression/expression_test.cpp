@@ -265,9 +265,9 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_TRUE(sum_(null_())->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_TRUE(sum_(add_(1, 2))->is_nullable_on_lqp(*dummy_lqp));
-  EXPECT_FALSE(count_star_()->is_nullable_on_lqp(*dummy_lqp));
-  EXPECT_FALSE(count_(5)->is_nullable_on_lqp(*dummy_lqp));
-  EXPECT_FALSE(count_(null_())->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(count_rows_()->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(count_non_null_(5)->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(count_non_null_(null_())->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_FALSE(in_(1, list_(1, 2, 3))->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_TRUE(in_(null_(), list_(1, 2, 3))->is_nullable_on_lqp(*dummy_lqp));
 

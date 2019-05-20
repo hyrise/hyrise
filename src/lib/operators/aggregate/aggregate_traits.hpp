@@ -14,7 +14,13 @@ struct AggregateTraits {};
 
 // COUNT on all types
 template <typename ColumnType>
-struct AggregateTraits<ColumnType, AggregateFunction::Count> {
+struct AggregateTraits<ColumnType, AggregateFunction::CountRows> {
+  typedef int64_t AggregateType;
+  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
+};
+
+template <typename ColumnType>
+struct AggregateTraits<ColumnType, AggregateFunction::CountNonNull> {
   typedef int64_t AggregateType;
   static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
 };

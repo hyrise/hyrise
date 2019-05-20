@@ -89,7 +89,7 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
     values.reserve(_aggregate_columns.size());
 
     for (const auto& column : _aggregate_columns) {
-      if (column.function == AggregateFunction::Count) {
+      if (column.function == AggregateFunction::CountRows || column.function == AggregateFunction::CountNonNull) {
         values.emplace_back(int64_t{0});
       } else {
         values.emplace_back(NullValue{});
@@ -189,7 +189,8 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
   auto column_position = _aggregate_columns.size() + _groupby_columns.size();
 
   switch (function) {
-    case AggregateFunction::Count:
+    case AggregateFunction::CountNonNull:
+    case AggregateFunction::CountRows:
       // Count aggregates always produce a non-nullable long column.
       _aggregate_columns.emplace_back(
           JitAggregateColumn{column_name, column_position, function, tuple_entry,
@@ -292,7 +293,8 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
     for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
       // Grow each aggregate column vector and initialize the aggregate with a proper initial value.
       switch (_aggregate_columns[i].function) {
-        case AggregateFunction::Count:
+        case AggregateFunction::CountRows:
+        case AggregateFunction::CountNonNull:
         case AggregateFunction::Sum:
           row_index =
               jit_grow_by_one(_aggregate_columns[i].hashmap_entry, JitVariantVector::InitialValue::Zero, context);
@@ -325,7 +327,8 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
   // Step 3: Update the aggregate values by calling jit_aggregate_compute with appropriate operation lambdas.
   for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
     switch (_aggregate_columns[i].function) {
-      case AggregateFunction::Count:
+      case AggregateFunction::CountNonNull:
+      case AggregateFunction::CountRows:
         jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_entry, _aggregate_columns[i].hashmap_entry,
                               row_index, context);
         break;

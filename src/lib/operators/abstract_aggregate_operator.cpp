@@ -10,7 +10,7 @@ namespace opossum {
 
 bool AggregateColumnDefinition::supported(const std::optional<DataType>& column_data_type, const AggregateFunction function) {
   if (!column_data_type) {
-    return function == AggregateFunction::Count;
+    return function == AggregateFunction::CountRows;
   }
 
   if (*column_data_type == DataType::String) {
@@ -86,7 +86,7 @@ void AbstractAggregateOperator::_validate_aggregates() const {
   const auto input_table = input_table_left();
   for (const auto& aggregate : _aggregates) {
     if (!aggregate.column) {
-      Assert(aggregate.function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
+      Assert(aggregate.function == AggregateFunction::CountRows, "Aggregate: Asterisk is only valid with COUNT");
     } else {
       DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
       Assert(input_table->column_data_type(*aggregate.column) != DataType::String ||
@@ -138,8 +138,11 @@ TableColumnDefinitions AbstractAggregateOperator::_get_output_column_defintions(
           case AggregateFunction::Avg:
             aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AGGREGATE_DATA_TYPE;
             break;
-          case AggregateFunction::Count:
-            aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::Count>::AGGREGATE_DATA_TYPE;
+          case AggregateFunction::CountRows:
+            aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::CountRows>::AGGREGATE_DATA_TYPE;
+            break;
+          case AggregateFunction::CountNonNull:
+            aggregate_data_type = AggregateTraits<ColumnDataType, AggregateFunction::CountNonNull>::AGGREGATE_DATA_TYPE;
             break;
           case AggregateFunction::CountDistinct:
             aggregate_data_type =
@@ -152,7 +155,7 @@ TableColumnDefinitions AbstractAggregateOperator::_get_output_column_defintions(
     }
 
     const auto nullable =
-        (aggregate.function != AggregateFunction::Count && aggregate.function != AggregateFunction::CountDistinct);
+        (aggregate.function != AggregateFunction::CountRows &&aggregate.function != AggregateFunction::CountNonNull  && aggregate.function != AggregateFunction::CountDistinct);
     table_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, nullable);
   }
 

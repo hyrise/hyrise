@@ -18,15 +18,15 @@
 
 namespace opossum {
 
-const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
-    make_bimap<AggregateFunction, std::string>({
+const std::unordered_map<AggregateFunction, std::string> aggregate_function_to_string{
         {AggregateFunction::Min, "MIN"},
         {AggregateFunction::Max, "MAX"},
         {AggregateFunction::Sum, "SUM"},
         {AggregateFunction::Avg, "AVG"},
-        {AggregateFunction::Count, "COUNT"},
+        {AggregateFunction::CountRows, "COUNT"},
+        {AggregateFunction::CountNonNull, "COUNT"},
         {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
-    });
+    };
 
 const boost::bimap<FunctionType, std::string> function_type_to_string =
     make_bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});
@@ -53,7 +53,7 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
     });
 
 std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
-  return stream << aggregate_function_to_string.left.at(aggregate_function);
+  return stream << aggregate_function_to_string.at(aggregate_function);
 }
 
 std::ostream& operator<<(std::ostream& stream, FunctionType function_type) {

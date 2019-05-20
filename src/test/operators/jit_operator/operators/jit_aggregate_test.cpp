@@ -50,8 +50,8 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
 // Make sure that aggregates are added to the output table with correct data type and nullability (e.g., count
 // aggregates should be non-nullable and of type long independent of the type and nullability of the input value).
 TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
-  _aggregate->add_aggregate_column("count", JitTupleEntry(DataType::String, false, 0), AggregateFunction::Count);
-  _aggregate->add_aggregate_column("count_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::Count);
+  _aggregate->add_aggregate_column("count", JitTupleEntry(DataType::String, false, 0), AggregateFunction::CountNonNull);
+  _aggregate->add_aggregate_column("count_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::CountNonNull);
   _aggregate->add_aggregate_column("max", JitTupleEntry(DataType::Float, false, 0), AggregateFunction::Max);
   _aggregate->add_aggregate_column("max_nullable", JitTupleEntry(DataType::Double, true, 0), AggregateFunction::Max);
   _aggregate->add_aggregate_column("min", JitTupleEntry(DataType::Long, false, 0), AggregateFunction::Min);
@@ -101,7 +101,7 @@ TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
 
 // Check, that any order of groupby and aggregates columns is reflected in the output table.
 TEST_F(JitAggregateTest, MaintainsColumnOrderInOutputTable) {
-  _aggregate->add_aggregate_column("a", JitTupleEntry(DataType::String, false, 0), AggregateFunction::Count);
+  _aggregate->add_aggregate_column("a", JitTupleEntry(DataType::String, false, 0), AggregateFunction::CountNonNull);
   _aggregate->add_groupby_column("b", JitTupleEntry(DataType::Double, false, 0));
   _aggregate->add_aggregate_column("c", JitTupleEntry(DataType::Long, true, 0), AggregateFunction::Min);
   _aggregate->add_groupby_column("d", JitTupleEntry(DataType::Int, true, 0));
@@ -192,7 +192,7 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
 
   // We compute an aggregate of each type on the same input value.
   _aggregate->add_groupby_column("groupby", tuple_entry_a);
-  _aggregate->add_aggregate_column("count", tuple_entry_b, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("count", tuple_entry_b, AggregateFunction::CountNonNull);
   _aggregate->add_aggregate_column("sum", tuple_entry_b, AggregateFunction::Sum);
   _aggregate->add_aggregate_column("max", tuple_entry_b, AggregateFunction::Max);
   _aggregate->add_aggregate_column("min", tuple_entry_b, AggregateFunction::Min);
@@ -253,7 +253,7 @@ TEST_F(JitAggregateTest, NoGroupByColumns) {
   const auto tuple_entry = JitTupleEntry(DataType::Int, false, 0);
 
   // We compute an aggregate of each type.
-  _aggregate->add_aggregate_column("count", tuple_entry, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("count", tuple_entry, AggregateFunction::CountNonNull);
   _aggregate->add_aggregate_column("sum", tuple_entry, AggregateFunction::Sum);
   _aggregate->add_aggregate_column("max", tuple_entry, AggregateFunction::Max);
   _aggregate->add_aggregate_column("min", tuple_entry, AggregateFunction::Min);
@@ -291,7 +291,7 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
 
   // We compute an aggregate of each type on the same input value.
   _aggregate->add_groupby_column("groupby", tuple_entry_a);
-  _aggregate->add_aggregate_column("count", tuple_entry_b, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("count", tuple_entry_b, AggregateFunction::CountNonNull);
   _aggregate->add_aggregate_column("sum", tuple_entry_b, AggregateFunction::Sum);
   _aggregate->add_aggregate_column("max", tuple_entry_b, AggregateFunction::Max);
   _aggregate->add_aggregate_column("min", tuple_entry_b, AggregateFunction::Min);
@@ -320,7 +320,7 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
   const auto tuple_entry = JitTupleEntry(DataType::Int, false, 0);
 
   // We compute an aggregate of each type on the same input value.
-  _aggregate->add_aggregate_column("count", tuple_entry, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("count", tuple_entry, AggregateFunction::CountNonNull);
   _aggregate->add_aggregate_column("sum", tuple_entry, AggregateFunction::Sum);
   _aggregate->add_aggregate_column("max", tuple_entry, AggregateFunction::Max);
   _aggregate->add_aggregate_column("min", tuple_entry, AggregateFunction::Min);

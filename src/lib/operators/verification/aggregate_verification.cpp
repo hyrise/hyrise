@@ -119,7 +119,7 @@ struct CountNonNullAggregate : public BaseAggregate {
   }
 
   AllTypeVariant result() const override {
-    using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Count>::AggregateType;
+    using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::CountNonNull>::AggregateType;
     return static_cast<AggregateType>(count);
   }
 
@@ -136,7 +136,7 @@ struct CountRowsAggregate : public BaseAggregate {
 
 std::unique_ptr<BaseAggregate> make_aggregate(const Table& table,
                                               const AggregateColumnDefinition& aggregate_column_definition) {
-  if (aggregate_column_definition.function == AggregateFunction::Count && !aggregate_column_definition.column) {
+  if (aggregate_column_definition.function == AggregateFunction::CountRows) {
     return std::make_unique<CountRowsAggregate>();
   }
 
@@ -166,11 +166,14 @@ std::unique_ptr<BaseAggregate> make_aggregate(const Table& table,
                             Fail("AVG(<string column>) not implemented");
                           }
                           break;
-                        case AggregateFunction::Count:
+                        case AggregateFunction::CountNonNull:
                           aggregate = std::make_unique<CountNonNullAggregate<SourceColumnDataType>>();
                           break;
                         case AggregateFunction::CountDistinct:
                           aggregate = std::make_unique<CountDistinctAggregate<SourceColumnDataType>>();
+                          break;
+                        case AggregateFunction::CountRows:
+                          Fail("Handled above");
                           break;
                       }
                     });

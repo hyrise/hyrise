@@ -286,7 +286,7 @@ void AggregateHash::_aggregate() {
    */
   for (ColumnID column_id{0}; column_id < _aggregates.size(); ++column_id) {
     const auto& aggregate = _aggregates[column_id];
-    if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+    if (aggregate.function == AggregateFunction::CountRows) {
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
       _contexts_per_column[column_id] = context;
@@ -348,7 +348,7 @@ void AggregateHash::_aggregate() {
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
-        if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+        if (aggregate.function == AggregateFunction::CountRows) {
           auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>(
               _contexts_per_column[column_index]);
 
@@ -393,14 +393,16 @@ void AggregateHash::_aggregate() {
               _aggregate_segment<ColumnDataType, AggregateFunction::Avg, AggregateKey>(chunk_id, column_index,
                                                                                        *base_segment, keys_per_chunk);
               break;
-            case AggregateFunction::Count:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Count, AggregateKey>(chunk_id, column_index,
+            case AggregateFunction::CountNonNull:
+              _aggregate_segment<ColumnDataType, AggregateFunction::CountNonNull, AggregateKey>(chunk_id, column_index,
                                                                                          *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::CountDistinct:
               _aggregate_segment<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
                   chunk_id, column_index, *base_segment, keys_per_chunk);
               break;
+            case AggregateFunction::CountRows:
+              Fail("Handled above");
           }
         });
 
@@ -505,7 +507,7 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
 // COUNT writes the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Count, void> write_aggregate_values(
+std::enable_if_t<func == AggregateFunction::CountNonNull || func == AggregateFunction::CountRows, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     const AggregateResults<ColumnDataType, AggregateType>& results) {
   DebugAssert(!segment->is_nullable(), "Aggregate: Output segment for COUNT shouldn't be nullable");
@@ -628,8 +630,11 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
     case AggregateFunction::Avg:
       write_aggregate_output<ColumnDataType, AggregateFunction::Avg>(column_index);
       break;
-    case AggregateFunction::Count:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Count>(column_index);
+    case AggregateFunction::CountRows:
+      write_aggregate_output<ColumnDataType, AggregateFunction::CountRows>(column_index);
+      break;
+    case AggregateFunction::CountNonNull:
+      write_aggregate_output<ColumnDataType, AggregateFunction::CountNonNull>(column_index);
       break;
     case AggregateFunction::CountDistinct:
       write_aggregate_output<ColumnDataType, AggregateFunction::CountDistinct>(column_index);
@@ -683,7 +688,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   }
 
   // write aggregated values into the segment
-  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
+  constexpr bool NEEDS_NULL = (function != AggregateFunction::CountRows && function != AggregateFunction::CountNonNull && function != AggregateFunction::CountDistinct);
   _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 
   auto output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(NEEDS_NULL);
@@ -693,7 +698,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   } else if (_groupby_column_ids.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
     output_segment->values().push_back(decltype(aggregate_type){});
-    if (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct) {
+    if (NEEDS_NULL) {
       output_segment->null_values().push_back(true);
     }
   }
@@ -728,9 +733,14 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
             ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Avg>::AggregateType,
             AggregateKey>>();
         break;
-      case AggregateFunction::Count:
+      case AggregateFunction::CountRows:
         context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::Count>::AggregateType,
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountRows>::AggregateType,
+            AggregateKey>>();
+        break;
+      case AggregateFunction::CountNonNull:
+        context = std::make_shared<AggregateContext<
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountNonNull>::AggregateType,
             AggregateKey>>();
         break;
       case AggregateFunction::CountDistinct:

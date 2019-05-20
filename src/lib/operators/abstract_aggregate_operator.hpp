@@ -95,8 +95,17 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
   }
 };
 
+
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountRows> {
+ public:
+  auto get_aggregate_function() {
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};
+  }
+};
+
+template <typename ColumnDataType, typename AggregateType>
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountNonNull> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};

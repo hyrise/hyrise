@@ -39,7 +39,7 @@ std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const
   return std::make_shared<PQPColumnExpression>(column_id, data_type, nullable, column_name);
 }
 
-std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<AggregateExpression> count_rows_() {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<AggregateExpression>(AggregateFunction::CountRows);
 }
 

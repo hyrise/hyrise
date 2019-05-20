@@ -94,7 +94,7 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
       all_data_types.emplace_back(d);
     });
 
-    const auto all_aggregate_functions = std::vector{AggregateFunction::Min, AggregateFunction::Max, AggregateFunction::Sum, AggregateFunction::Avg, AggregateFunction::Count, AggregateFunction::CountDistinct};
+    const auto all_aggregate_functions = std::vector{AggregateFunction::Min, AggregateFunction::Max, AggregateFunction::Sum, AggregateFunction::Avg, AggregateFunction::CountRows, AggregateFunction::CountNonNull, AggregateFunction::CountDistinct};
 
     const auto all_table_sizes = std::vector<size_t>{0, 10};
 

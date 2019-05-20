@@ -7,6 +7,7 @@
 #include "storage/segment_iterate.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
+#include "operators/aggregate/aggregate_hashsort_aggregates.hpp"
 #include "operators/aggregate/aggregate_hashsort_config.hpp"
 
 namespace opossum {
@@ -14,58 +15,14 @@ namespace opossum {
 namespace aggregate_hashsort {
 
 const auto data_type_size = std::unordered_map<DataType, size_t>{
-{DataType::Int,    4},
-{DataType::Long,   8},
-{DataType::Float,  4},
-{DataType::Double, 8}
+  {DataType::Int,    4},
+  {DataType::Long,   8},
+  {DataType::Float,  4},
+  {DataType::Double, 8}
 };
 
 enum class HashSortMode {
   Hashing, Partition
-};
-
-struct ColumnIterable {
-  const Table &table;
-  const ColumnID column_id;
-
-  template<typename T, typename F>
-  void for_each(const F &f) const {
-    auto offset = size_t{0};
-
-    for (const auto &chunk : table.chunks()) {
-      const auto &segment = *chunk->get_segment(column_id);
-
-      segment_with_iterators<T>(segment, [&](auto begin, auto end) {
-        std::for_each(begin, end, [&](const auto &segment_position) {
-          f(segment_position, offset);
-          ++offset;
-        });
-      });
-    }
-  }
-};
-
-struct BaseColumnMaterialization {
-  virtual ~BaseColumnMaterialization() = default;
-};
-
-template<typename T>
-struct ColumnMaterialization : public BaseColumnMaterialization {
-  std::vector<T> values;
-  std::vector<bool> null_values;
-};
-
-struct BaseRunSegment {
-  virtual ~BaseRunSegment() = default;
-
-  virtual void resize(const size_t size) = 0;
-
-  virtual std::unique_ptr<BaseRunSegment> new_instance() const = 0;
-
-  virtual void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>> &buffer,
-                                        const BaseRunSegment &base_source_run_segment) = 0;
-
-  virtual void materialize(BaseColumnMaterialization &target, const size_t offset) const = 0;
 };
 
 // Data isn't copied/aggregated directly. Instead copy/aggregation operations are gathered and then executed as one.
@@ -176,74 +133,16 @@ struct FixedSizeGroupRun {
 struct VariablySizedGroupByRunSegment {
 };
 
-template<typename SourceColumnDataType>
-struct SumRunSegment : public BaseRunSegment {
-  using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Sum>::AggregateType;
-
-  SumRunSegment() = default;
-
-  SumRunSegment(const ColumnIterable &column_iterable) {
-    sums.resize(column_iterable.table.row_count());
-
-    column_iterable.for_each<SourceColumnDataType>([&](const auto segment_position, const auto offset) {
-      if (segment_position.is_null()) {
-        return;
-      } else {
-        sums[offset] = segment_position.value();
-      }
-    });
-
-  }
-
-  void resize(const size_t size) override {
-    sums.resize(size);
-  }
-
-  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>> &buffer,
-                                const BaseRunSegment &base_source_run_segment) override {
-    const auto &source_run_segment = static_cast<const SumRunSegment<SourceColumnDataType> &>(base_source_run_segment);
-
-    for (const auto&[source_offset, target_offset] : buffer) {
-      const auto &source_sum = source_run_segment.sums[source_offset];
-      auto &target_sum = sums[target_offset];
-
-      if (!source_sum) continue;
-
-      if (!target_sum) {
-        target_sum = source_sum;
-        continue;
-      }
-
-      *target_sum += *source_sum;
-    }
-  }
-
-  std::unique_ptr<BaseRunSegment> new_instance() const override {
-    return std::make_unique<SumRunSegment>();
-  }
-
-  void materialize(BaseColumnMaterialization &base_target, size_t target_offset) const override {
-    auto &target = static_cast<ColumnMaterialization<AggregateType> &>(base_target);
-
-    for (auto source_offset = size_t{0}; source_offset < sums.size(); ++source_offset, ++target_offset) {
-      target.values[target_offset] = sums[source_offset].value_or(0);
-      target.null_values[target_offset] = !sums[source_offset].has_value();
-    }
-  }
-
-  std::vector<std::optional<AggregateType>> sums;
-};
-
 template<typename GroupRun>
 struct Run {
-  Run(GroupRun &&groups, std::vector<std::unique_ptr<BaseRunSegment>> &&aggregates) :
+  Run(GroupRun &&groups, std::vector<std::unique_ptr<BaseAggregateRun>> &&aggregates) :
     groups(std::move(groups)), aggregates(std::move(aggregates)) {
   }
 
   size_t size() const { return groups.hashes.size(); }
 
   GroupRun groups;
-  std::vector<std::unique_ptr<BaseRunSegment>> aggregates;
+  std::vector<std::unique_ptr<BaseAggregateRun>> aggregates;
 
   bool is_aggregated{false};
 };
@@ -253,7 +152,7 @@ Run<GroupRun> make_run(const Run<GroupRun> &prototype);
 
 template<>
 Run<FixedSizeGroupRun> make_run<FixedSizeGroupRun>(const Run<FixedSizeGroupRun> &prototype) {
-  auto aggregates = std::vector<std::unique_ptr<BaseRunSegment>>(prototype.aggregates.size());
+  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(prototype.aggregates.size());
   for (auto aggregate_idx = size_t{0}; aggregate_idx < prototype.aggregates.size(); ++aggregate_idx) {
     aggregates[aggregate_idx] = prototype.aggregates[aggregate_idx]->new_instance();
   }
@@ -304,39 +203,6 @@ struct Partition {
     });
   }
 };
-
-//template<typename GroupRun>
-//void append(GroupRun& target, const GroupRun& source, const size_t offset) {
-//  const auto source_value_range = source.group_value(offset);
-//  target.data.insert(target.data.end(), source_value_range.first, source_value_range.second);
-//}
-//
-//template<typename GroupRun>
-//void flush_aggregation_buffer(Partition<GroupRun>& partition, const Run<GroupRun>& source_run) {
-//  if (partition.aggregation_buffer.empty()) return;
-//
-//  const auto max_group_key = std::max_element(partition.aggregation_buffer.begin(), partition.aggregation_buffer.end(), [](const auto& a, const auto& b) {
-//    return a.second < b.second;
-//  });
-//
-//  auto& target_run = partition.runs.back();
-//
-//  if (max_group_key->second >= target_run.size) {
-//    target_run.groups.resize(max_group_key->second + 1);
-//    for (auto& aggregate_run_segment : target_run.aggregates) {
-//      aggregate_run_segment->resize(max_group_key->second + 1);
-//    }
-//    target_run.size = max_group_key->second + 1;
-//  }
-//
-//  target_run.groups.flush_aggregation_buffer(partition.aggregation_buffer, source_run.groups);
-//
-//  for (auto aggregate_idx = size_t{0}; aggregate_idx < target_run.aggregates.size(); ++aggregate_idx) {
-//    target_run.aggregates[aggregate_idx]->flush_aggregation_buffer(partition.aggregation_buffer, *source_run.aggregates[aggregate_idx]);
-//  }
-//
-//  partition.aggregation_buffer.clear();
-//}
 
 struct Partitioning {
   size_t partition_count;
@@ -542,53 +408,6 @@ std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std:
   }
 
   return output_runs;
-}
-
-inline std::vector<std::unique_ptr<BaseRunSegment>> produce_initial_aggregates(const Table &table,
-                                                                        const std::vector<AggregateColumnDefinition> &aggregate_column_definitions) {
-  auto aggregates = std::vector<std::unique_ptr<BaseRunSegment>>(aggregate_column_definitions.size());
-  for (auto aggregate_idx = size_t{0}; aggregate_idx < aggregates.size(); ++aggregate_idx) {
-    const auto &aggregate_column_definition = aggregate_column_definitions[aggregate_idx];
-
-    if (!aggregate_column_definition.column) {
-      Fail("Nye");
-    }
-
-    const auto source_column_id = *aggregate_column_definition.column;
-
-    resolve_data_type(table.column_data_type(*aggregate_column_definition.column), [&](const auto data_type_t) {
-      using SourceColumnDataType = typename decltype(data_type_t)::type;
-
-      ColumnIterable column_iterable{table, source_column_id};
-
-      if constexpr (std::is_same_v<SourceColumnDataType, pmr_string>) {
-        Fail("ajkhn");
-      } else {
-        switch (aggregate_column_definition.function) {
-          case AggregateFunction::Min:
-            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>(column_iterable);
-            break;
-          case AggregateFunction::Max:
-            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>(column_iterable);
-            break;
-          case AggregateFunction::Sum:
-            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>(column_iterable);
-            break;
-          case AggregateFunction::Avg:
-            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>(column_iterable);
-            break;
-          case AggregateFunction::Count:
-            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>(column_iterable);
-            break;
-          case AggregateFunction::CountDistinct:
-            aggregates[aggregate_idx] = std::make_unique<SumRunSegment<SourceColumnDataType>>(column_iterable);
-            break;
-        }
-      }
-    });
-  }
-
-  return aggregates;
 }
 
 template<typename SegmentPosition>

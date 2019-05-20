@@ -233,7 +233,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
 
       if (aggregate_expression->arguments.empty()) {
         // COUNT(*)
-        DebugAssert(aggregate_expression->aggregate_function == AggregateFunction::Count,
+        DebugAssert(aggregate_expression->aggregate_function == AggregateFunction::CountRows,
                     "Only the aggregate function COUNT can have no arguments");
         // JitAggregate requires one value for each aggregate function. This value is ignored for COUNT so that the
         // first value in the tuple can be used.

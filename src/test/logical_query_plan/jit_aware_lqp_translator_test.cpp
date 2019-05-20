@@ -521,7 +521,7 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   ASSERT_EQ(aggregate_columns.size(), 6u);
 
   ASSERT_EQ(aggregate_columns[0].column_name, "COUNT(a)");
-  ASSERT_EQ(aggregate_columns[0].function, AggregateFunction::Count);
+  ASSERT_EQ(aggregate_columns[0].function, AggregateFunction::CountNonNull);
   ASSERT_EQ(*jit_read_tuples->find_input_column(aggregate_columns[0].tuple_entry), ColumnID{0});
 
   ASSERT_EQ(aggregate_columns[1].column_name, "SUM(b)");
@@ -542,7 +542,7 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   ASSERT_EQ(*jit_read_tuples->find_input_column(aggregate_columns[4].tuple_entry), ColumnID{1});
 
   ASSERT_EQ(aggregate_columns[5].column_name, "COUNT(*)");
-  ASSERT_EQ(aggregate_columns[5].function, AggregateFunction::Count);
+  ASSERT_EQ(aggregate_columns[5].function, AggregateFunction::CountRows);
   ASSERT_EQ(aggregate_columns[5].tuple_entry.tuple_index, 0u);
 }
 

@@ -514,9 +514,9 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupByAndUnrelatedHaving) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_b, count_(int_float_a)),
+  ProjectionNode::make(expression_vector(int_float_b, count_non_null_(int_float_a)),
     PredicateNode::make(greater_than_(sum_(int_float_a), value_(1000)),
-      AggregateNode::make(expression_vector(int_float_b), expression_vector(count_(int_float_a), sum_(int_float_a)),
+      AggregateNode::make(expression_vector(int_float_b), expression_vector(count_non_null_(int_float_a), sum_(int_float_a)),
         stored_table_node_int_float)));
   // clang-format on
 
@@ -595,7 +595,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   const auto actual_lqp_count_a = compile_query("SELECT b, COUNT(a) FROM int_float GROUP BY b");
   // clang-format off
   const auto expected_lqp_a =
-  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_(int_float_a)),
+  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_non_null_(int_float_a)),
     stored_table_node_int_float);
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_a, expected_lqp_a);
@@ -603,7 +603,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   const auto actual_lqp_count_star = compile_query("SELECT b, COUNT(*) FROM int_float GROUP BY b");
   // clang-format off
   const auto expected_lqp_star =
-  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star_()),
+  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_rows_()),
     stored_table_node_int_float);
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_star, expected_lqp_star);
@@ -621,7 +621,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   const auto actual_lqp_count_1 = compile_query("SELECT a, COUNT(1) FROM int_float GROUP BY a");
   // clang-format off
   const auto expected_lqp_count_1 =
-  AggregateNode::make(expression_vector(int_float_a), expression_vector(count_(value_(1))),
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(count_non_null_(value_(1))),
     ProjectionNode::make(expression_vector(value_(1), int_float_a),
       stored_table_node_int_float));
   // clang-format on

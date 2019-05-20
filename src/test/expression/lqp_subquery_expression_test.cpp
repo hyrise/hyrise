@@ -39,7 +39,7 @@ class LQPSubqueryExpressionTest : public BaseTest {
 
     parameter_a = correlated_parameter_(ParameterID{0}, a_2);
     lqp_c =
-    AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_a))),
+    AggregateNode::make(expression_vector(), expression_vector(count_non_null_(add_(a, parameter_a))),
       ProjectionNode::make(expression_vector(add_(a, parameter_a)),
         int_float_node_a));
     // clang-format on
@@ -69,7 +69,7 @@ TEST_F(LQPSubqueryExpressionTest, DeepEquals) {
 
   const auto parameter_d = correlated_parameter_(ParameterID{0}, a_2);
   const auto lqp_d =
-  AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_d))),
+  AggregateNode::make(expression_vector(), expression_vector(count_non_null_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
       int_float_node_a));
 

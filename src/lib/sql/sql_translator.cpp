@@ -96,6 +96,14 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
     {hsql::kOrderDesc, OrderByMode::Descending},
 };
 
+// AggregateFunctions with unique names (as opossed to CountRows/CountNonNull/CountDistinct)
+const std::unordered_map<std::string, AggregateFunction> aggregate_function_by_name = {
+{"MIN", AggregateFunction::Min},
+{"MAX", AggregateFunction::Max},
+{"SUM", AggregateFunction::Sum},
+{"AVG", AggregateFunction::Avg}
+};
+
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
       {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::FullOuter}, {hsql::kJoinLeft, JoinMode::Left},
@@ -1223,34 +1231,39 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       /**
        * Aggregate function
        */
-      const auto aggregate_iter = aggregate_function_to_string.right.find(name);
-      if (aggregate_iter != aggregate_function_to_string.right.end()) {
-        auto aggregate_function = aggregate_iter->second;
-
-        if (aggregate_function == AggregateFunction::Count && expr.distinct) {
+      auto aggregate_function = std::optional<AggregateFunction>{};
+      if (name == "COUNT") {
+        if (expr.distinct) {
           aggregate_function = AggregateFunction::CountDistinct;
+        } else if (expr.exprList->front()->type == hsql::kExprStar) {
+          AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
+          aggregate_function = AggregateFunction::CountRows;
+        } else {
+          aggregate_function = AggregateFunction::CountNonNull;
         }
+      } else {
+        const auto aggregate_iter = aggregate_function_by_name.find(name);
+        if (aggregate_iter != aggregate_function_by_name.end()) {
+          aggregate_function = aggregate_iter->second;
+        }
+      }
 
+      if (aggregate_function) {
         AssertInput(expr.exprList && expr.exprList->size() == 1,
                     "Expected exactly one argument for this AggregateFunction");
 
-        switch (aggregate_function) {
+        switch (*aggregate_function) {
           case AggregateFunction::Min:
           case AggregateFunction::Max:
           case AggregateFunction::Sum:
           case AggregateFunction::Avg:
-            return std::make_shared<AggregateExpression>(
-                aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
-
-          case AggregateFunction::Count:
+          case AggregateFunction::CountNonNull:
           case AggregateFunction::CountDistinct:
-            if (expr.exprList->front()->type == hsql::kExprStar) {
-              AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
-              return std::make_shared<AggregateExpression>(aggregate_function);
-            } else {
-              return std::make_shared<AggregateExpression>(
-                  aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
-            }
+            return std::make_shared<AggregateExpression>(
+                *aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
+
+          case AggregateFunction::CountRows:
+            return std::make_shared<AggregateExpression>(*aggregate_function);
         }
       }
 
