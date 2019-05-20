@@ -63,14 +63,22 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     dictionary->erase(std::unique(dictionary->begin(), dictionary->end()), dictionary->cend());
     dictionary->shrink_to_fit();
 
+    const auto null_value_id = static_cast<uint32_t>(dictionary->size());
+
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       auto fixed_string_dictionary =
           std::make_shared<FixedStringVector>(dictionary->cbegin(), dictionary->cend(), max_string_length);
-      return _encode_dictionary_segment(fixed_string_dictionary, dense_values, null_values, allocator);
+      const auto compressed_attribute_vector = _create_compressed_attribute_vector(
+          fixed_string_dictionary, dense_values, null_values, allocator, null_value_id);
+      return std::allocate_shared<FixedStringDictionarySegment<T>>(allocator, fixed_string_dictionary,
+                                                                   compressed_attribute_vector, ValueID{null_value_id});
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
-      return _encode_dictionary_segment(dictionary, dense_values, null_values, allocator);
+      const auto compressed_attribute_vector =
+          _create_compressed_attribute_vector(dictionary, dense_values, null_values, allocator, null_value_id);
+      return std::allocate_shared<DictionarySegment<T>>(allocator, dictionary, compressed_attribute_vector,
+                                                        ValueID{null_value_id});
     }
   }
 
@@ -82,10 +90,9 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
   }
 
   template <typename U, typename T>
-  std::shared_ptr<BaseEncodedSegment> _encode_dictionary_segment(const U& dictionary, const std::vector<T>& values,
-                                                                 const std::vector<bool>& null_values,
-                                                                 const PolymorphicAllocator<T>& allocator) {
-    const auto null_value_id = static_cast<uint32_t>(dictionary->size());
+  const std::shared_ptr<const BaseCompressedVector> _create_compressed_attribute_vector(
+      const U& dictionary, const std::vector<T>& values, const std::vector<bool>& null_values,
+      const PolymorphicAllocator<T>& allocator, const uint32_t null_value_id) {
     auto attribute_vector = pmr_vector<uint32_t>{allocator};
     attribute_vector.resize(null_values.size());
 
@@ -100,20 +107,12 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       }
     }
 
-    // We need to increment the dictionary size here because of possible null values.
+    // The dictionary size is incremented here to create the value ID for possible null values.
     const auto max_value_id = dictionary->size() + 1u;
 
-    auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(
+    return std::shared_ptr<const BaseCompressedVector>(
         compress_vector(attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
                         allocator, {max_value_id}));
-
-    if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      return std::allocate_shared<FixedStringDictionarySegment<T>>(allocator, dictionary, compressed_attribute_vector,
-                                                                   ValueID{null_value_id});
-    } else {
-      return std::allocate_shared<DictionarySegment<T>>(allocator, dictionary, compressed_attribute_vector,
-                                                        ValueID{null_value_id});
-    }
   }
 };
 
