@@ -44,7 +44,8 @@ std::shared_ptr<BaseEncodedSegment> encode_and_compress_segment(const std::share
                                                                 const SegmentEncodingSpec& encoding_spec) {
   auto encoder = create_encoder(encoding_spec.encoding_type);
 
-  if (encoder->uses_vector_compression() && encoding_spec.vector_compression_type) {
+  // if (encoder->uses_vector_compression() && encoding_spec.vector_compression_type) {
+  if (encoding_spec.vector_compression_type) {
     encoder->set_vector_compression(*encoding_spec.vector_compression_type);
   }
 
