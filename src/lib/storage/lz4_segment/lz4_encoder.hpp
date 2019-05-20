@@ -74,24 +74,27 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * If the null value vector only contains the value false, then the value segment does not have any row value that
      * is null. In that case, we don't store the null value vector to reduce the LZ4 segment's memory footprint.
      */
-    auto contains_null_value = false;
+    auto segment_contains_null = false;
 
-    segment_iterable.with_iterators([&](auto segment_it, auto segment_end) {
-      const auto segment_size = std::distance(segment_it, segment_end);
+    segment_iterable.with_iterators([&](auto it, auto end) {
+      const auto segment_size = static_cast<size_t>(std::distance(it, end));
       values.resize(segment_size);
       null_values.resize(segment_size);
 
       // iterate over the segment to access the values and increment the row index to copy values and null flags
-      for (auto row_index = size_t{0u}; segment_it != segment_end; ++segment_it, ++row_index) {
-        const auto segment_value = *segment_it;
-        const auto is_null = segment_value.is_null();
+      auto row_index = size_t{0u};
+      for (; it != end; ++it) {
+        const auto segment_value = *it;
+        const auto contains_null = segment_value.is_null();
         values[row_index] = segment_value.value();
-        null_values[row_index] = is_null;
-        contains_null_value = contains_null_value || is_null;
+        null_values[row_index] = contains_null;
+        segment_contains_null = segment_contains_null || contains_null;
+
+        ++row_index;
       }
     });
 
-    auto optional_null_values = contains_null_value ? std::optional<pmr_vector<bool>>{null_values} : std::nullopt;
+    auto optional_null_values = segment_contains_null ? std::optional<pmr_vector<bool>>{null_values} : std::nullopt;
 
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows
@@ -136,7 +139,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      */
     auto num_chars = size_t{0u};
     segment_iterable.with_iterators([&](auto it, auto end) {
-      for (size_t row_index = 0; it != end; ++it, ++row_index) {
+      for (; it != end; ++it) {
         if (!it->is_null()) {
           num_chars += it->value().size();
         }
@@ -152,7 +155,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
      * If the null value vector only contains the value false, then the value segment does not have any row value that
      * is null. In that case, we don't store the null value vector to reduce the LZ4 segment's memory footprint.
      */
-    auto contains_null_value = false;
+    auto segment_contains_null = false;
 
     /**
      * These offsets mark the beginning of strings (and therefore end of the previous string) in the data vector.
@@ -182,14 +185,15 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
       auto offset = uint32_t{0u};
       // iterate over the iterator to access the values and increment the row index to write to the values and null
       // values vectors
-      for (size_t row_index = 0; it != end; ++it, ++row_index) {
+      auto row_index = size_t{0};
+      for (; it != end; ++it) {
         const auto segment_element = *it;
-        const auto is_null = segment_element.is_null();
-        null_values[row_index] = is_null;
-        contains_null_value = contains_null_value || is_null;
+        const auto contains_null = segment_element.is_null();
+        null_values[row_index] = contains_null;
+        segment_contains_null = segment_contains_null || contains_null;
         offsets[row_index] = offset;
         auto sample_size = size_t{0u};
-        if (!is_null) {
+        if (!contains_null) {
           const auto value = segment_element.value();
           const auto string_length = value.size();
           values.insert(values.cend(), value.begin(), value.end());
@@ -198,11 +202,13 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
           offset += static_cast<uint32_t>(string_length);
           sample_size = string_length;
         }
+
         string_samples_lengths[row_index] = sample_size;
+        ++row_index;
       }
     });
 
-    auto optional_null_values = contains_null_value ? std::optional<pmr_vector<bool>>{null_values} : std::nullopt;
+    auto optional_null_values = segment_contains_null ? std::optional<pmr_vector<bool>>{null_values} : std::nullopt;
 
     /**
      * If the input only contained null values and/or empty strings we don't need to compress anything (and LZ4 will

@@ -101,17 +101,17 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     }
 
     // We need to increment the dictionary size here because of possible null values.
-    const auto max_value = dictionary->size() + 1u;
+    const auto max_value_id = dictionary->size() + 1u;
 
-    auto encoded_attribute_vector = std::shared_ptr<const BaseCompressedVector>(
+    auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(
         compress_vector(attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
-                        allocator, {max_value}));
+                        allocator, {max_value_id}));
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      return std::allocate_shared<FixedStringDictionarySegment<T>>(allocator, dictionary, encoded_attribute_vector,
+      return std::allocate_shared<FixedStringDictionarySegment<T>>(allocator, dictionary, compressed_attribute_vector,
                                                                    ValueID{null_value_id});
     } else {
-      return std::allocate_shared<DictionarySegment<T>>(allocator, dictionary, encoded_attribute_vector,
+      return std::allocate_shared<DictionarySegment<T>>(allocator, dictionary, compressed_attribute_vector,
                                                         ValueID{null_value_id});
     }
   }

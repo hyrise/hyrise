@@ -60,7 +60,7 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
       }
     }
 
-    // In case of unencoded re-encoding, an any segment iterable is used to manually setup
+    // In case of unencoded re-encoding, an AnySegmentIterable iterable is used to manually setup
     // the data vectors for a ValueSegment. If another encoding is requested, the segment
     // encoding utitilies are used (which create and call the according encoder).
     if (encoding_spec.encoding_type == EncodingType::Unencoded) {

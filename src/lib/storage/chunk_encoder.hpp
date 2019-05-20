@@ -42,7 +42,7 @@ class ChunkEncoder {
                            const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**
-   * @brief Encodes a chunk using the same segment encoding spec
+   * @brief Encodes a chunk using the same SegmentEncodingSpec
    */
   static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                            const SegmentEncodingSpec& segment_encoding_spec = {});
@@ -50,13 +50,13 @@ class ChunkEncoder {
   /**
    * @brief Encodes the specified chunks of the passed table
    *
-   * The encoding is specified per segment for each chunk.
+   * The encoding is specified per segment (SegmentEncodingSpec) for each chunk.
    */
   static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                             const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs);
 
   /**
-   * @brief Encodes the specified chunks of the passed table using a single segment-encoding spec
+   * @brief Encodes the specified chunks of the passed table using a single SegmentEncodingSpec
    */
   static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                             const SegmentEncodingSpec& segment_encoding_spec = {});
@@ -77,7 +77,7 @@ class ChunkEncoder {
   static void encode_all_chunks(const std::shared_ptr<Table>& table, const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**
-   * @brief Encodes an entire table using a single segment-encoding spec
+   * @brief Encodes an entire table using a single SegmentEncodingSpec
    */
   static void encode_all_chunks(const std::shared_ptr<Table>& table,
                                 const SegmentEncodingSpec& segment_encoding_spec = {});
