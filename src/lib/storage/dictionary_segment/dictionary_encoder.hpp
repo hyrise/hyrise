@@ -65,18 +65,39 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     const auto null_value_id = static_cast<uint32_t>(dictionary->size());
 
+    auto create_compressed_attribute_vector = [&](const auto& local_dictionary) {
+      auto attribute_vector = pmr_vector<uint32_t>{allocator};
+      attribute_vector.resize(null_values.size());
+
+      auto values_iter = dense_values.cbegin();
+      for (auto current_position = size_t{0}; current_position < null_values.size(); ++current_position) {
+        if (!null_values[current_position]) {
+          const auto value_id = _get_value_id(local_dictionary, *values_iter);
+          attribute_vector[current_position] = value_id;
+          ++values_iter;
+        } else {
+          attribute_vector[current_position] = null_value_id;
+        }
+      }
+
+      // The local_dictionary size is incremented here to create the value ID for possible null values.
+      const auto max_value_id = local_dictionary->size() + 1u;
+
+      return std::shared_ptr<const BaseCompressedVector>(
+          compress_vector(attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
+                          allocator, {max_value_id}));
+    };
+
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       auto fixed_string_dictionary =
           std::make_shared<FixedStringVector>(dictionary->cbegin(), dictionary->cend(), max_string_length);
-      const auto compressed_attribute_vector = _create_compressed_attribute_vector(
-          fixed_string_dictionary, dense_values, null_values, allocator, null_value_id);
+      const auto compressed_attribute_vector = create_compressed_attribute_vector(fixed_string_dictionary);
       return std::allocate_shared<FixedStringDictionarySegment<T>>(allocator, fixed_string_dictionary,
                                                                    compressed_attribute_vector, ValueID{null_value_id});
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
-      const auto compressed_attribute_vector =
-          _create_compressed_attribute_vector(dictionary, dense_values, null_values, allocator, null_value_id);
+      const auto compressed_attribute_vector = create_compressed_attribute_vector(dictionary);
       return std::allocate_shared<DictionarySegment<T>>(allocator, dictionary, compressed_attribute_vector,
                                                         ValueID{null_value_id});
     }
@@ -87,32 +108,6 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
   static ValueID _get_value_id(const U& dictionary, const T& value) {
     return ValueID{static_cast<ValueID::base_type>(
         std::distance(dictionary->cbegin(), std::lower_bound(dictionary->cbegin(), dictionary->cend(), value)))};
-  }
-
-  template <typename U, typename T>
-  const std::shared_ptr<const BaseCompressedVector> _create_compressed_attribute_vector(
-      const U& dictionary, const std::vector<T>& values, const std::vector<bool>& null_values,
-      const PolymorphicAllocator<T>& allocator, const uint32_t null_value_id) {
-    auto attribute_vector = pmr_vector<uint32_t>{allocator};
-    attribute_vector.resize(null_values.size());
-
-    auto values_iter = values.cbegin();
-    for (auto current_position = size_t{0}; current_position < null_values.size(); ++current_position) {
-      if (!null_values[current_position]) {
-        const auto value_id = _get_value_id(dictionary, *values_iter);
-        attribute_vector[current_position] = value_id;
-        ++values_iter;
-      } else {
-        attribute_vector[current_position] = null_value_id;
-      }
-    }
-
-    // The dictionary size is incremented here to create the value ID for possible null values.
-    const auto max_value_id = dictionary->size() + 1u;
-
-    return std::shared_ptr<const BaseCompressedVector>(
-        compress_vector(attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
-                        allocator, {max_value_id}));
   }
 };
 
