@@ -9,6 +9,7 @@ extern "C" {
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/integral_constant.hpp>
 #include <boost/hana/zip_with.hpp>
+#include <filesystem>
 #include <utility>
 
 #include "benchmark_config.hpp"
@@ -230,7 +231,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-    for (const auto& table_file : filesystem::recursive_directory_iterator(cache_directory)) {
+    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
       const auto table_name = table_file.path().stem();
       Timer timer;
       std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();

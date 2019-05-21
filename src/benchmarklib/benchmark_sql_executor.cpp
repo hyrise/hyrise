@@ -46,9 +46,9 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
       any_verification_failed = true;
       std::cout << "- Verification failed: Hyrise returned a result, but SQLite did not" << std::endl;
     } else if (const auto table_difference_message =
-                   check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                   check_table_equal(result_table, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                      FloatComparisonMode::RelativeDifference)) {
-      _query_results[query_id].verification_passed = false;
+      any_verification_failed = true;
       std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl
                 << *table_difference_message << std::endl;
     }
