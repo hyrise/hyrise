@@ -10,11 +10,17 @@
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/maintenance/create_prepared_plan.hpp"
+#include "operators/maintenance/create_table.hpp"
+#include "operators/maintenance/create_view.hpp"
+#include "operators/maintenance/drop_table.hpp"
+#include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 
@@ -186,6 +192,8 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
     return _result_table;
   }
 
+  _precheck_ddl_operators(get_physical_plan());
+
   const auto& tasks = get_tasks();
 
   const auto started = std::chrono::high_resolution_clock::now();
@@ -217,4 +225,47 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 }
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
+
+void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) const {
+  const auto& storage_manager = StorageManager::get();
+
+  /**
+   * Only look at the root operator, because as of now DDL operators are always at the root.
+   */
+
+  switch (pqp->type()) {
+    case OperatorType::CreatePreparedPlan: {
+      const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
+      AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->prepared_plan_name()),
+                  "Prepared Plan '" + create_prepared_plan->prepared_plan_name() + "' already exists.");
+      break;
+    }
+    case OperatorType::CreateTable: {
+      const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
+      AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
+                  "Table '" + create_table->table_name + "' already exists.");
+      break;
+    }
+    case OperatorType::CreateView: {
+      const auto create_view = std::dynamic_pointer_cast<CreateView>(pqp);
+      AssertInput(create_view->if_not_exists() || !storage_manager.has_view(create_view->view_name()),
+                  "View '" + create_view->view_name() + "' already exists.");
+      break;
+    }
+    case OperatorType::DropTable: {
+      const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
+      AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
+                  "There is no table '" + drop_table->table_name + "'.");
+      break;
+    }
+    case OperatorType::DropView: {
+      const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
+      AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
+                  "There is no view '" + drop_view->view_name + "'.");
+      break;
+    }
+    default:
+      break;
+  }
+}
 }  // namespace opossum

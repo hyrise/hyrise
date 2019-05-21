@@ -30,7 +30,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    * determined by its filename. Multiple file extensions per table are allowed, for example there could be a CSV and a
    * binary version of a table.
    */
-  for (const auto& directory_entry : filesystem::recursive_directory_iterator(_path)) {
+  for (const auto& directory_entry : std::filesystem::recursive_directory_iterator(_path)) {
     if (!std::filesystem::is_regular_file(directory_entry)) continue;
 
     const auto extension = directory_entry.path().extension();

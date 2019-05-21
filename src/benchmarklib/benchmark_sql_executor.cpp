@@ -45,10 +45,12 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
     if (sqlite_result->row_count() == 0) {
       any_verification_failed = true;
       std::cout << "- Verification failed: Hyrise returned a result, but SQLite did not" << std::endl;
-    } else if (!check_table_equal(result_table, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
-                                  FloatComparisonMode::RelativeDifference)) {
-      any_verification_failed = true;
-      std::cout << "- Verification failed: Tables are not equal" << std::endl;
+    } else if (const auto table_difference_message =
+                   check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                                     FloatComparisonMode::RelativeDifference)) {
+      _query_results[query_id].verification_passed = false;
+      std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl
+                << *table_difference_message << std::endl;
     }
   } else {
     if (sqlite_result && sqlite_result->row_count() > 0) {

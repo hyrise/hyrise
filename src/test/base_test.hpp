@@ -44,7 +44,8 @@ class BaseTestWithParam
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_segment = std::make_shared<ValueSegment<T>>(std::move(vector_values));
 
-    auto compressed_segment = encode_segment(EncodingType::Dictionary, data_type, value_segment);
+    auto compressed_segment =
+        encode_and_compress_segment(value_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
     return std::static_pointer_cast<DictionarySegment<T>>(compressed_segment);
   }
 

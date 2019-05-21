@@ -206,6 +206,8 @@ set(
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
+    operators/join_verification.cpp
+    operators/join_verification.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -547,7 +549,6 @@ set(
     utils/check_table_equal.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
-    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
@@ -671,6 +672,16 @@ endif()
 
 if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
+endif()
+
+set(ERASE_SEGMENT_TYPES "" CACHE STRING "Erase iterators and accessors for these types (e.g., RunLength,FrameOfReference). Good for compile time, bad for run time (if these types end up being used)")
+string(REPLACE "," ";" ERASE_SEGMENT_TYPES_LIST "${ERASE_SEGMENT_TYPES}")
+string(TOUPPER "${ERASE_SEGMENT_TYPES_LIST}" ERASE_SEGMENT_TYPES_UPPER)
+if (NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
+    foreach(ERASE_SEGMENT_TYPE ${ERASE_SEGMENT_TYPES_UPPER})
+        message(STATUS "Erasing iterators and accessors for: ${ERASE_SEGMENT_TYPE}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DHYRISE_ERASE_${ERASE_SEGMENT_TYPE}")
+    endforeach()
 endif()
 
 # Generate header file in order to define probes needed for dtrace
