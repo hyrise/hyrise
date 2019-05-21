@@ -68,12 +68,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   }
 }
 
-BenchmarkRunner::~BenchmarkRunner() {
-  if (CurrentScheduler::is_set()) {
-    CurrentScheduler::get()->finish();
-  }
-}
-
 void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
@@ -166,7 +160,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   }
   _state.set_done();
 
-  // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
+  // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
   CurrentScheduler::wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
