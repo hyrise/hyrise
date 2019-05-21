@@ -452,7 +452,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTable) {
   const auto [transaction_successful, table] = sql_pipeline.get_result_table();
   EXPECT_TRUE(transaction_successful);
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
@@ -467,7 +467,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableJoin) {
@@ -623,6 +623,26 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
   expected_second_result->append({11, 11, 11});
 
   EXPECT_TABLE_EQ_UNORDERED(second_subquery_result, expected_second_result);
+}
+
+TEST_F(SQLPipelineStatementTest, PrecheckDDLOperators) {
+  auto sql_pipeline_1 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_1.get_result_table());
+
+  auto sql_pipeline_2 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline_statement();
+  EXPECT_THROW(sql_pipeline_2.get_result_table(), InvalidInputException);
+
+  auto sql_pipeline_3 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_3.get_result_table());
+
+  auto sql_pipeline_4 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline_statement();
+  EXPECT_THROW(sql_pipeline_4.get_result_table(), InvalidInputException);
+
+  auto sql_pipeline_5 = SQLPipelineBuilder{"DROP TABLE IF EXISTS t"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_5.get_result_table());
+
+  auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_6.get_result_table());
 }
 
 }  // namespace opossum

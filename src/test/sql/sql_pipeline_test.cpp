@@ -342,7 +342,7 @@ TEST_F(SQLPipelineTest, GetResultTable) {
   const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
   EXPECT_TRUE(transaction_successful);
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
@@ -350,7 +350,7 @@ TEST_F(SQLPipelineTest, GetResultTableMultiple) {
   const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
   EXPECT_TRUE(transaction_successful);
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableTwice) {
@@ -369,7 +369,7 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
@@ -377,7 +377,7 @@ TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
   const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
   EXPECT_TRUE(transaction_successful);
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {

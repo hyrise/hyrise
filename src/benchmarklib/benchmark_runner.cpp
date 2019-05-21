@@ -44,7 +44,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
-    for (auto node : Topology::get().nodes()) {
+    for (const auto& node : Topology::get().nodes()) {
       numa_cores_per_node.push_back(node.cpus.size());
     }
     _context.push_back({"utilized_cores_per_numa_node", numa_cores_per_node});
@@ -372,10 +372,12 @@ void BenchmarkRunner::_execute_query(const QueryID query_id, const std::shared_p
       if (sqlite_result->row_count() == 0) {
         _query_results[query_id].verification_passed = false;
         std::cout << "- Verification failed: Hyrise returned a result, but SQLite didn't" << std::endl;
-      } else if (!check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
-                                    FloatComparisonMode::RelativeDifference)) {
+      } else if (const auto table_difference_message =
+                     check_table_equal(hyrise_result, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
+                                       FloatComparisonMode::RelativeDifference)) {
         _query_results[query_id].verification_passed = false;
-        std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl;
+        std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl
+                  << *table_difference_message << std::endl;
       } else {
         _query_results[query_id].verification_passed = true;
         std::cout << "- Verification passed (" << hyrise_result->row_count() << " rows; " << timer.lap_formatted()

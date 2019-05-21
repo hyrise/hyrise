@@ -260,6 +260,7 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     // The exception is if this is the last bin, then it is actually part of the last bin,
     // because that edge is stored separately and therefore not trimmed to the prefix length.
     // We checked earlier that it is not larger than maximum().
+    // NOLINTNEXTLINE(abseil-string-find-startswith) - false warning: absl::StartsWith only available in C++20
     if (value.length() > this->_string_prefix_length && value.find(_bin_maximum(bin_id)) == 0 &&
         bin_id < bin_count() - 1) {
       return bin_id + 1;
