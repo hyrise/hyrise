@@ -42,7 +42,7 @@
 
 using namespace opossum;  // NOLINT
 
-constexpr auto SCALE_FACTOR = 0.01f;
+constexpr auto SCALE_FACTOR = 1.0f;
 
 typedef boost::bimap<std::string, uint16_t> table_name_id_bimap;
 typedef table_name_id_bimap::value_type table_name_id;
@@ -371,7 +371,7 @@ std::vector<IndexCandidate> select_index_assessments_greedy(std::vector<IndexCan
 
 int main() {
   auto config = BenchmarkConfig::get_default_config();
-  config.max_num_query_runs = 1;
+  config.max_num_query_runs = 10;
   config.enable_visualization = true;
   
   const std::vector<QueryID> tpch_query_ids = {QueryID{0},  QueryID{1},  QueryID{2},  QueryID{3},  QueryID{4},
@@ -401,17 +401,17 @@ int main() {
 
   // ToDo: Think about parameterized queries
   for (const auto& [query_string, physical_query_plan] : SQLPhysicalPlanCache::get()) {
-    physical_query_plan->print(std::cout);
+    // physical_query_plan->print(std::cout);
     process_pqp(physical_query_plan);
   }
 
-  print_operator_map(scan_map);
+  // print_operator_map(scan_map);
   // std::cout << "#####" << std::endl << " JOIN " << std::endl << "#####" << std::endl << std::endl;
   // print_operator_map(join_map);
 
   auto index_candidates = enumerate_index_candidates();
   auto index_assessments = assess_index_candidates(index_candidates);
-  auto index_choices = select_index_assessments_greedy(index_assessments, 3'000'000);
+  auto index_choices = select_index_assessments_greedy(index_assessments, static_cast<size_t>(SCALE_FACTOR * 30'000'000));
 
   for (const auto& index_choice : index_choices) {
     std::cout << TCID_to_string(index_choice.tcid) << std::endl;
