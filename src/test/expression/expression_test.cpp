@@ -74,6 +74,14 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_NE(*cast_(6.5, DataType::Int), *cast_(6.5, DataType::Float));
 }
 
+TEST_F(ExpressionTest, SameContent) {
+  const std::shared_ptr<AbstractExpression> expression(mul_(2, 3));
+  expression->id = 1;
+  EXPECT_NE(expression, mul_(2, 3));
+  EXPECT_TRUE(expression->has_same_content(*mul_(2, 3)));
+  EXPECT_FALSE(expression->has_same_content(*mul_(3, 2)));
+}
+
 TEST_F(ExpressionTest, DeepEquals) {
   const auto expr_a_a = sub_(mul_(add_(1, 5), add_(13.3, 14.4)), mod_(12, 5.5));
   const auto expr_a_b = sub_(mul_(add_(1, 5), add_(13.3, 14.4)), mod_(12, 5.5));

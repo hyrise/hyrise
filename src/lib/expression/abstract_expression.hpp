@@ -50,12 +50,16 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual ~AbstractExpression() = default;
 
   /**
-   * Recursively check for Expression equality.
+   * Recursively check for Expression equality, taking the id into account.
    * @pre Both expressions need to reference the same LQP
    */
   bool operator==(const AbstractExpression& other) const;
-  bool equals_ignoring_id(const AbstractExpression& other) const;
   bool operator!=(const AbstractExpression& other) const;
+
+ /**
+  * Recursively check for Expression equality, disregarding the id.
+  */
+  bool has_same_content(const AbstractExpression &other) const;
 
   /**
    * Certain expression types (Parameters, Literals, and Columns) don't require computation and therefore don't require
@@ -89,6 +93,10 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
 
   const ExpressionType type;
   std::vector<std::shared_ptr<AbstractExpression>> arguments;
+
+  /**
+   * Can be used to distinguish otherwise similar Expressions.
+   */
   int id;
 
  protected:
