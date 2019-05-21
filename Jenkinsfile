@@ -276,5 +276,6 @@ try {
       }
       slackSend message: ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
     }
+    throw error
   }
 }
