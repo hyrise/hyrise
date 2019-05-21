@@ -26,7 +26,7 @@
 namespace opossum {
 
 std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
-                                                      std::optional<EncodingType> encoding_type) {
+                                                      std::optional<SegmentEncodingSpec> segment_encoding_spec) {
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
   /*
@@ -73,8 +73,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
     table->append_chunk(segments);
   }
 
-  if (encoding_type) {
-    ChunkEncoder::encode_all_chunks(table, encoding_type.value());
+  if (segment_encoding_spec) {
+    ChunkEncoder::encode_all_chunks(table, *segment_encoding_spec);
   }
 
   return table;
@@ -82,7 +82,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
 
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
-    const size_t chunk_size, std::optional<EncodingType> encoding_type, const bool numa_distribute_chunks) {
+    const size_t chunk_size, std::optional<SegmentEncodingSpec> segment_encoding_spec, const bool numa_distribute_chunks) {
   Assert(chunk_size != 0, "cannot generate table with chunk size 0");
   const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
@@ -189,8 +189,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
     }
   }
 
-  if (encoding_type) {
-    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{encoding_type.value()});
+  if (segment_encoding_spec) {
+    ChunkEncoder::encode_all_chunks(table, *segment_encoding_spec);
   }
 
   return table;
