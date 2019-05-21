@@ -35,7 +35,6 @@ class BenchmarkRunner {
  public:
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
-  ~BenchmarkRunner();
 
   void run();
 
