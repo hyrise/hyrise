@@ -1,5 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
+
 try {
   node('master') {
     stage ("Start") {
@@ -69,7 +71,6 @@ try {
           mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           wait"
-          full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
         }
 
         parallel clangDebug: {
