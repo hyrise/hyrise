@@ -1,2 +1,0 @@
--- test
-SHOW TABLES; -- foo
