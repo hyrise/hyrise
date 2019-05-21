@@ -3,7 +3,7 @@ function(add_plugin)
         PARSED_ARGS
         ""
         "NAME"
-        "SRCS;DEPS"
+        "SRCS;DEPS;LIBS"
         ${ARGN}
     )
     if(NOT PARSED_ARGS_NAME)
@@ -17,6 +17,10 @@ function(add_plugin)
     foreach(dep ${PARSED_ARGS_DEPS})
         add_dependencies(${PARSED_ARGS_NAME} ${dep})
     endforeach(dep)
+
+    foreach(lib ${PARSED_ARGS_LIBS})
+        target_link_libraries(${PARSED_ARGS_NAME} ${lib})
+    endforeach(lib)
 
     # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
