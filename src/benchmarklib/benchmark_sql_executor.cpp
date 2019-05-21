@@ -4,6 +4,7 @@
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/check_table_equal.hpp"
+#include "utils/timer.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -41,10 +42,13 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline.get_sql());
   const auto& result_table = pipeline.get_result_table();
 
+  Timer timer;
+
   if (result_table->row_count() > 0) {
     if (sqlite_result->row_count() == 0) {
       any_verification_failed = true;
-      std::cout << "- Verification failed: Hyrise returned a result, but SQLite did not" << std::endl;
+      std::cout << "- Verification failed: Hyrise returned a result, but SQLite did not (" << timer.lap_formatted()
+                << ")" << std::endl;
     } else if (const auto table_difference_message =
                    check_table_equal(result_table, sqlite_result, OrderSensitivity::No, TypeCmpMode::Lenient,
                                      FloatComparisonMode::RelativeDifference)) {
@@ -55,7 +59,8 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   } else {
     if (sqlite_result && sqlite_result->row_count() > 0) {
       any_verification_failed = true;
-      std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not" << std::endl;
+      std::cout << "- Verification failed: SQLite returned a result, but Hyrise did not (" << timer.lap_formatted()
+                << ")" << std::endl;
     }
   }
 }
