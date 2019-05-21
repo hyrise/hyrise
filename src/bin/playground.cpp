@@ -42,7 +42,7 @@
 
 using namespace opossum;  // NOLINT
 
-constexpr auto SCALE_FACTOR = 0.1f;
+constexpr auto SCALE_FACTOR = 0.01f;
 
 typedef boost::bimap<std::string, uint16_t> table_name_id_bimap;
 typedef table_name_id_bimap::value_type table_name_id;
@@ -206,6 +206,25 @@ void process_pqp(std::shared_ptr<const opossum::AbstractOperator> op) {
   if (op->input_right()) process_pqp(op->input_right());
 }
 
+std::string table_name_from_TCID(const TableColumnIdentifier& tcid) {
+  const auto table_id = tcid.first;
+  const auto table_name = table_name_id_map.right.at(table_id);
+
+  return table_name;
+}
+
+std::string attribute_name_from_TCID(const TableColumnIdentifier& tcid) {
+  const auto attribute_name = attribute_id_name_map[tcid];
+
+  return attribute_name;
+}
+
+std::string TCID_to_string(const TableColumnIdentifier& tcid) {
+  const std::string result = table_name_from_TCID(tcid) + "." + attribute_name_from_TCID(tcid);
+
+  return result;
+}
+
 void print_operator_map(std::unordered_map<TableColumnIdentifier, TableColumnInformation>& map) {
   for (const auto& elem : map) {
     const auto table_id = elem.first.first;
@@ -254,40 +273,100 @@ void print_operator_map(std::unordered_map<TableColumnIdentifier, TableColumnInf
   }
 }
 
-struct IndexCandidate {
-  TableColumnIdentifier tci;
-  float desirability;
+size_t predict_index_size(const TableColumnIdentifier& tcid) {
+  const auto table_id = tcid.first;
+  const auto attribute_id = tcid.second;
+  const auto table_name = table_name_id_map.right.at(table_id);
 
-  IndexCandidate(TableColumnIdentifier tci, float desirability) : tci(tci), desirability(desirability) {}
+  const auto table = StorageManager::get().get_table(table_name);
+  size_t index_size = 0;
+
+  for (const auto& chunk : table->chunks()) {
+    const auto segment = chunk->get_segment(attribute_id);
+    const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
+    const auto unique_values = dict_segment->unique_values_count();
+    index_size +=
+        BaseIndex::estimate_memory_consumption(SegmentIndexType::GroupKey, chunk->size(), unique_values, /*Last Parameter is ignored for GroupKeyIndex*/1);
+  }
+
+  return index_size;
+}
+
+struct IndexCandidate {
+  TableColumnIdentifier tcid;
+
+  IndexCandidate(TableColumnIdentifier tcid) : tcid(tcid) {}
+};
+
+struct IndexCandidateAssessment {
+  std::shared_ptr<IndexCandidate> candidate;
+  float desirability = 0.0f;
+  float cost = 0.0f;
+
+  IndexCandidateAssessment(const std::shared_ptr<IndexCandidate> candidate, const float desirability, const float cost) : candidate(candidate), desirability(desirability), cost(cost) {}
 };
 
 // This enumerator considers all columns except these of tables that have less than 10'000 * SCALE_FACTOR rows
-// std::vector<IndexCandidate> enumerate_index_candidates() {
-//   std::vector<IndexCandidate> index_candidates;
+std::vector<IndexCandidate> enumerate_index_candidates() {
+  std::vector<IndexCandidate> index_candidates;
 
-//   uint16_t next_table_id = 0;
-//   for (const auto& table_name : StorageManager::get().table_names()) {
-//     const auto table = StorageManager::get().get_table(table_name);
-//     if (table->row_count() >= (10'000 * SCALE_FACTOR)) {
-//       ColumnID next_attribute_id{0};
-//       for ([[maybe_unused]] const auto& column_def : table->column_definitions()) {
-//         auto identifier = std::make_pair<uint16_t, ColumnID>(next_table_id, next_attribute_id++);
-//         // IndexCandidate ic{identifier, 1.0f};
-//         // index_candidates.push_back(ic);
-//         index_candidates.emplace_back(identifier, 1.0f);
-//       }
-//     } else {
-//       std::cout << "Not considering columns of: " << table_name << " as candidates." << std::endl;
-//     }
+  uint16_t next_table_id = 0;
+  for (const auto& table_name : StorageManager::get().table_names()) {
+    const auto table = StorageManager::get().get_table(table_name);
+    if (table->row_count() >= (10'000 * SCALE_FACTOR)) {
+      ColumnID next_attribute_id{0};
+      for ([[maybe_unused]] const auto& column_def : table->column_definitions()) {
+        const TableColumnIdentifier identifier = std::make_pair(next_table_id, next_attribute_id);
+        next_attribute_id++;
+        index_candidates.emplace_back(identifier);
+      }
+    } else {
+      std::cout << "Not considering columns of: " << table_name << " as candidates." << std::endl;
+    }
 
-//     ++next_table_id;
-//   }
+    ++next_table_id;
+  }
 
-//   return index_candidates;
-// }
+  return index_candidates;
+}
 
-void evaluate_index_candidates() {
+// This evaluator assigns a desirability according to the number of processed rows of this column
+std::vector<IndexCandidateAssessment> assess_index_candidates(std::vector<IndexCandidate>& index_candidates) {
+  std::vector<IndexCandidateAssessment> index_candidate_assessments;
 
+  for (auto& index_candidate : index_candidates) {
+    const auto table_column_information = scan_map[index_candidate.tcid];
+    const auto total_processed_rows = std::accumulate(table_column_information.input_rows.rbegin(), table_column_information.input_rows.rend(), 0);
+
+    index_candidate_assessments.emplace_back(std::make_shared<IndexCandidate>(index_candidate), static_cast<float>(total_processed_rows), static_cast<float>(predict_index_size(index_candidate.tcid)));
+  }
+
+  return index_candidate_assessments;
+}
+
+bool compareByDesirabilityPerCost(const IndexCandidateAssessment& assessment_1, const IndexCandidateAssessment& assessment_2) {
+  const auto desirability_per_cost_1 = assessment_1.desirability / assessment_1.cost;
+  const auto desirability_per_cost_2 = assessment_2.desirability / assessment_2.cost;
+
+  return desirability_per_cost_1 > desirability_per_cost_2;
+}
+
+// This selector greedily selects assessed items based on desirability per cost
+std::vector<IndexCandidate> select_index_assessments_greedy(std::vector<IndexCandidateAssessment>& index_assessments, size_t budget) {
+  std::vector<IndexCandidate> selected_candidates;
+  size_t used_budget = 0;
+
+  auto assessments = index_assessments;
+  std::sort(assessments.begin(), assessments.end(), compareByDesirabilityPerCost);
+
+  for (const auto& assessment : assessments) {
+    if (assessment.cost + used_budget < budget) {
+      selected_candidates.emplace_back(*(assessment.candidate));
+      used_budget += static_cast<size_t>(assessment.cost);
+    }
+  }
+
+  return selected_candidates;
 }
 
 int main() {
@@ -330,7 +409,13 @@ int main() {
   // std::cout << "#####" << std::endl << " JOIN " << std::endl << "#####" << std::endl << std::endl;
   // print_operator_map(join_map);
 
-  // const auto index_candidates = enumerate_index_candidates();
+  auto index_candidates = enumerate_index_candidates();
+  auto index_assessments = assess_index_candidates(index_candidates);
+  auto index_choices = select_index_assessments_greedy(index_assessments, 3'000'000);
+
+  for (const auto& index_choice : index_choices) {
+    std::cout << TCID_to_string(index_choice.tcid) << std::endl;
+  }
 
   return 0;
 }
