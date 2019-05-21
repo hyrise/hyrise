@@ -752,6 +752,19 @@ namespace opossum {
     return result_table_source_state;
   }
 
+  void SQLTranslator::_create_new_expression_for_different_alias(std::shared_ptr<AbstractExpression> &expression,
+      const std::shared_ptr<SQLIdentifierResolver> &current_sql_identifier_resolver){
+    auto old_identifier_count = _sql_identifier_resolver->count_identifiers(expression);
+    auto current_identifier_count = current_sql_identifier_resolver->count_identifiers(expression);
+    auto new_identifier_count = current_identifier_count - old_identifier_count;
+    if (new_identifier_count > 0) {
+      // This expression equals another expression but has a different alias.
+      // Therefore, create a new expression with a different id.
+      expression = expression->deep_copy();
+      expression->id = new_identifier_count;
+    }
+  }
+
   void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStatement &select) {
     auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
     auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -793,15 +806,9 @@ namespace opossum {
       } else {
         auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
 
-        auto previous_expression_count = _sql_identifier_resolver->count_expression(expression);
-        auto current_expression_count = post_select_sql_identifier_resolver->count_expression(expression);
-        auto new_expression_count = current_expression_count - previous_expression_count;
-        if (hsql_select_expr->alias && new_expression_count > 0) {
-          // Create a new expression from a "known" one, but assign a different id
-          expression = expression->deep_copy();
-          expression->id = new_expression_count;
+        if (hsql_select_expr->alias) {
+          _create_new_expression_for_different_alias(expression, post_select_sql_identifier_resolver);
         }
-
         visit_expression(expression, find_aggregates_and_arguments);
         select_list_elements.emplace_back(expression);
 

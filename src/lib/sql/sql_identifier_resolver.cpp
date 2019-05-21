@@ -79,7 +79,7 @@ void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
   _entries.insert(_entries.end(), rhs._entries.begin(), rhs._entries.end());
 }
 
-int SQLIdentifierResolver::count_expression(const std::shared_ptr<opossum::AbstractExpression>& expression) {
+int SQLIdentifierResolver::count_identifiers(const std::shared_ptr<opossum::AbstractExpression>& expression) {
   int count = 0;
   for (const auto& entry : _entries) {
     if (entry.expression->has_same_content(*expression)) {
