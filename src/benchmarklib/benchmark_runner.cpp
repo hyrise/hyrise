@@ -21,6 +21,7 @@
 #include "utils/format_duration.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
+#include "utils/plugin_manager.hpp"
 #include "version.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
@@ -70,6 +71,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
   }
 
+  PluginManager::get().load_plugin("/home/Leander.Neiss/pcm_plugin/build/libPcmPlugin.so");
+
   // Run the preparation queries
   {
     auto sql = _query_generator->get_preparation_queries();
@@ -82,9 +85,11 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<
       pipeline.get_result_table();
     }
   }
+
 }
 
 BenchmarkRunner::~BenchmarkRunner() {
+  PluginManager::get().unload_plugin("PcmPlugin");
   if (CurrentScheduler::is_set()) {
     CurrentScheduler::get()->finish();
   }
