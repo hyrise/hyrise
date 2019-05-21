@@ -46,7 +46,6 @@ size_t AbstractExpression::hash() const {
   for (const auto& argument : arguments) {
     boost::hash_combine(hash, argument->hash());
   }
-//  boost::hash_combine(hash, boost::hash_value(id));
   boost::hash_combine(hash, _on_hash());
   return hash;
 }

@@ -98,14 +98,6 @@ SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_ent
   // If there is no entry for this Expression, just add one
   if (entry_iter == _entries.end()) {
     SQLIdentifierContextEntry entry{expression, {}};
-//    if (entry_iter != _entries.end()) {
-//      // Create n new entry for a "known" expression, but assign a different id
-//      auto max_id = std::max_element(_entries.begin(), _entries.end(), [](const auto& entry1, const auto& entry2) {
-//        return entry1.expression->id < entry2.expression->id;
-//      })->expression->id;
-//      entry.expression = expression->deep_copy();
-//      entry.expression->id = max_id + 1;
-//    }
     entry_iter = _entries.emplace(_entries.end(), entry);
   }
 
