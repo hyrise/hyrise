@@ -320,14 +320,15 @@ int main() {
     ++next_table_id;
   }
 
+  // ToDo: Think about parameterized queries
   for (const auto& [query_string, physical_query_plan] : SQLPhysicalPlanCache::get()) {
-    physical_query_plan->print();
+    physical_query_plan->print(std::cout);
     process_pqp(physical_query_plan);
   }
 
   print_operator_map(scan_map);
-  std::cout << "#####" << std::endl << " JOIN " << std::endl << "#####" << std::endl << std::endl;
-  print_operator_map(join_map);
+  // std::cout << "#####" << std::endl << " JOIN " << std::endl << "#####" << std::endl << std::endl;
+  // print_operator_map(join_map);
 
   // const auto index_candidates = enumerate_index_candidates();
 
