@@ -6,7 +6,6 @@ try {
   node('master') {
     stage ("Start") {
       // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
-      slackSend message: ":rotating_light: TEST! :rotating_light:"
       if (env.CHANGE_ID) {
         try {
           withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
@@ -275,9 +274,9 @@ try {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         githubNotify context: 'Full CI', status: 'FAILURE'
       }
-      if (env.BRANCH_NAME == 'master') {
-        slackSend message: ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
-      }
+      // if (env.BRANCH_NAME == 'master') {
+        slackSend message: ":rotating_light: ALARM! Build on ${env.BRANCH_NAME} failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+      // }
     }
     throw error
   }
