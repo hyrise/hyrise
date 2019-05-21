@@ -2,6 +2,8 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 
+slackSend message: ":rotating_light: TEST! :rotating_light:"
+
 try {
   node('master') {
     stage ("Start") {
@@ -274,7 +276,9 @@ try {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         githubNotify context: 'Full CI', status: 'FAILURE'
       }
-      slackSend message: ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+      if (env.BRANCH_NAME == 'master') {
+        slackSend message: ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+      }
     }
     throw error
   }
