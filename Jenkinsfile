@@ -2,12 +2,11 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
 
-slackSend message: ":rotating_light: TEST! :rotating_light:"
-
 try {
   node('master') {
     stage ("Start") {
       // Check if the user who opened the PR is a known collaborator (i.e., has been added to a hyrise/hyrise team)
+      slackSend message: ":rotating_light: TEST! :rotating_light:"
       if (env.CHANGE_ID) {
         try {
           withCredentials([usernamePassword(credentialsId: '5fe8ede9-bbdb-4803-a307-6924d4b4d9b5', usernameVariable: 'GITHUB_USERNAME', passwordVariable: 'GITHUB_TOKEN')]) {
