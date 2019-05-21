@@ -132,13 +132,6 @@ class TableBuilder {
     auto values_tuple = hana::make_tuple(std::forward<decltype(values)>(values)...);
     BOOST_HANA_CONSTANT_ASSERT(hana::size(hana::tuple<DataTypes...>()) == hana::size(values_tuple));
 
-    // TODO(pascal): assert that Types == DataTypes, but allow type T when data_type is std::optional<T>
-//    hana::for_each(hana::zip(hana::tuple<get_value_type<DataTypes>...>(), hana::tuple<get_value_type<Types>...>()),
-//      [](auto data_type_and_type){
-//      BOOST_HANA_CONSTANT_ASSERT(data_type_and_type[hana::llong_c<0>] == data_type_and_type[hana::llong_c<1>]);
-//    });
-
-
     // Create tuples ([&data_vector0, &is_null_vector0, value0], [&data_vector1, &is_null_vector1, value1], ...)
     auto data_vectors_and_is_null_vectors_and_values = hana::zip_with(
         [](auto& data_vector, auto& is_null_vector, auto&& value) {
@@ -162,6 +155,7 @@ class TableBuilder {
         data_vector.emplace_back();
         is_null_vector.value().emplace_back(true);
       } else {
+        // on failure: make sure append_row is called with the same types that were passed to table_builder constructor
         data_vector.emplace_back(std::move(get_value(maybe_optional_value)));
         if (column_is_nullable) {
           is_null_vector.value().emplace_back(false);
