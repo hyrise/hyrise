@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "abstract_scheduler.hpp"
+#include "task_queue.hpp"
 
 namespace opossum {
 
@@ -16,5 +17,17 @@ void CurrentScheduler::set(const std::shared_ptr<AbstractScheduler>& instance) {
 }
 
 bool CurrentScheduler::is_set() { return !!_instance; }
+
+void CurrentScheduler::wait_for_all_tasks() {
+  if (_instance) _instance->wait_for_all_tasks();
+}
+
+bool CurrentScheduler::has_pending_tasks() {
+  if (!_instance) return false;
+  for (const auto& queue : _instance->queues()) {
+    if (!queue->empty()) return true;
+  }
+  return false;
+}
 
 }  // namespace opossum

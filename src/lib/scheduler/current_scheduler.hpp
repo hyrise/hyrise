@@ -38,6 +38,10 @@ class CurrentScheduler {
   template <typename TaskType>
   static void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks);
 
+  static void wait_for_all_tasks();
+
+  static bool has_pending_tasks();
+
  private:
   static std::shared_ptr<AbstractScheduler> _instance;
 };

@@ -104,6 +104,8 @@ class NodeQueueScheduler : public AbstractScheduler {
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                 SchedulePriority priority = SchedulePriority::Default) override;
 
+  void wait_for_all_tasks() override;
+
  private:
   std::atomic<TaskID> _task_counter{TaskID{0}};
   std::shared_ptr<UidAllocator> _worker_id_allocator;

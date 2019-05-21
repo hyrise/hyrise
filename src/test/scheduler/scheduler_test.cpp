@@ -126,6 +126,31 @@ TEST_F(SchedulerTest, BasicTest) {
   CurrentScheduler::set(nullptr);
 }
 
+TEST_F(SchedulerTest, PendingTasks) {
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  std::atomic_uint counter{0};
+
+  auto task = std::make_shared<JobTask>([&]() {
+    // Wait for test to increment the counter, then increment it again
+    while (counter == 0) {
+    }
+    ++counter;
+  });
+  task->schedule();
+
+  ASSERT_TRUE(CurrentScheduler::has_pending_tasks());
+
+  counter += 1;
+
+  // Wait for task to increment the counter
+  while (counter != 2) {
+  }
+
+  ASSERT_FALSE(CurrentScheduler::has_pending_tasks());
+}
+
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
   std::atomic_uint counter{0};
   increment_counter_in_subtasks(counter);
