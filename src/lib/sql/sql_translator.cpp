@@ -753,7 +753,7 @@ namespace opossum {
   }
 
   void SQLTranslator::_create_new_expression_for_different_alias(std::shared_ptr<AbstractExpression> &expression,
-      const std::shared_ptr<SQLIdentifierResolver> &current_sql_identifier_resolver){
+      const std::shared_ptr<SQLIdentifierResolver> &current_sql_identifier_resolver) {
     auto old_identifier_count = _sql_identifier_resolver->count_identifiers(expression);
     auto current_identifier_count = current_sql_identifier_resolver->count_identifiers(expression);
     auto new_identifier_count = current_identifier_count - old_identifier_count;

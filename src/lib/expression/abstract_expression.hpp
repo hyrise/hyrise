@@ -56,9 +56,9 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   bool operator==(const AbstractExpression& other) const;
   bool operator!=(const AbstractExpression& other) const;
 
- /**
-  * Recursively check for Expression equality, disregarding the id.
-  */
+  /**
+   * Recursively check for Expression equality, disregarding the id.
+   */
   bool has_same_content(const AbstractExpression &other) const;
 
   /**
