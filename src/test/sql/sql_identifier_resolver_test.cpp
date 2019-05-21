@@ -29,18 +29,32 @@ class SQLIdentifierResolverTest : public BaseTest {
     expression_c = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{2}));
     expression_unnamed = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{3}));
 
+    expression_a1 = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{0}));
+    expression_a2 = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{0}));
+    auto abstract_expression_a1 = static_cast<std::shared_ptr<AbstractExpression>>(expression_a1);;
+    auto abstract_expression_a2 = static_cast<std::shared_ptr<AbstractExpression>>(expression_a1);
+    abstract_expression_a1->id = 1;
+    abstract_expression_a2->id = 1;
+
     context.add_column_name(expression_a, {"a"s});
     context.add_column_name(expression_b, {"b"s});
     context.add_column_name(expression_c, {"c"s});
+    context.add_column_name(expression_a1, {"a"s});
+    context.add_column_name(expression_a1, {"a1"s});
+    context.add_column_name(expression_a2, {"a"s});
+    context.add_column_name(expression_a2, {"a2"s});
     context.set_table_name(expression_a, {"T1"s});
     context.set_table_name(expression_b, {"T1"s});
     context.set_table_name(expression_c, {"T2"s});
+    context.set_table_name(expression_a1, {"T1"s});
+    context.set_table_name(expression_a2, {"T1"s});
 
     parameter_id_allocator = std::make_shared<ParameterIDAllocator>();
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed;
+  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed, expression_a1,
+      expression_a2;
   SQLIdentifierResolver context;
   std::shared_ptr<ParameterIDAllocator> parameter_id_allocator;
 };
@@ -102,6 +116,14 @@ TEST_F(SQLIdentifierResolverTest, ColumnNameRedundancy) {
 
   context.set_table_name(expression_a2, "T2");
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T2"}), expression_a2);
+}
+
+TEST_F(SQLIdentifierResolverTest, CountIdentifiers) {
+  EXPECT_EQ(context.count_identifiers(expression_a), 5);
+  EXPECT_EQ(context.count_identifiers(expression_a1), 5);
+  EXPECT_EQ(context.count_identifiers(expression_a2), 5);
+  EXPECT_EQ(context.count_identifiers(expression_b), 1);
+  EXPECT_EQ(context.count_identifiers(expression_c), 1);
 }
 
 TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
