@@ -1,5 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
+
 try {
   node('master') {
     stage ("Start") {
@@ -69,7 +71,6 @@ try {
           mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           wait"
-          full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
         }
 
         parallel clangDebug: {
@@ -255,23 +256,28 @@ try {
       }
     }
   }
-} finally {
-  stage("Notify") {
-    script {
-      if (currentBuild.currentResult == 'SUCCESS') {
+
+  node ('master') {
+    stage("Notify") {
+      script {
         githubNotify context: 'CI Pipeline', status: 'SUCCESS'
         if (env.BRANCH_NAME == 'master' || full_ci) {
           githubNotify context: 'Full CI', status: 'SUCCESS'
         }
-      } else {
-        githubNotify context: 'CI Pipeline', status: 'FAILURE'
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          githubNotify context: 'Full CI', status: 'FAILURE'
-        }
-        if (env.BRANCH_NAME == 'master') {
-          slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
-        }
       }
     }
+  }
+} catch (error) {
+  stage("Notify") {
+    script {
+      githubNotify context: 'CI Pipeline', status: 'FAILURE'
+      if (env.BRANCH_NAME == 'master' || full_ci) {
+        githubNotify context: 'Full CI', status: 'FAILURE'
+      }
+      if (env.BRANCH_NAME == 'master') {
+        slackSend message: ":rotating_light: ALARM! Build on ${env.BRANCH_NAME} failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+      }
+    }
+    throw error
   }
 }
