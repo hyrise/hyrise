@@ -995,7 +995,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
-  AssertInput(!create_statement.select, "CREATE TABLE ... (SELECT...) not supported");
   Assert(create_statement.columns, "CREATE TABLE: No columns specified. Parser bug?");
 
   auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
@@ -1032,7 +1031,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     column_definition.nullable = parser_column_definition->nullable;
   }
 
-  return CreateTableNode::make(create_statement.tableName, column_definitions, create_statement.ifNotExists);
+  return CreateTableNode::make(
+      create_statement.tableName, column_definitions, create_statement.ifNotExists,
+      create_statement.select ? _translate_select_statement(*create_statement.select) : nullptr);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {

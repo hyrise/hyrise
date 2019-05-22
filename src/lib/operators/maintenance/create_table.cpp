@@ -2,15 +2,17 @@
 
 #include <sstream>
 
+#include "concurrency/transaction_manager.hpp"
 #include "constant_mappings.hpp"
+#include "operators/insert.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
 
 CreateTable::CreateTable(const std::string& table_name, const TableColumnDefinitions& column_definitions,
-                         const bool if_not_exists)
-    : AbstractReadOnlyOperator(OperatorType::CreateTable),
+                         const bool if_not_exists, const std::shared_ptr<AbstractOperator> in)
+    : AbstractReadOnlyOperator(OperatorType::CreateTable, in),
       table_name(table_name),
       column_definitions(column_definitions),
       if_not_exists(if_not_exists) {}
@@ -43,11 +45,23 @@ const std::string CreateTable::description(DescriptionMode description_mode) con
 }
 
 std::shared_ptr<const Table> CreateTable::_on_execute() {
-  // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
-  if (!if_not_exists || !StorageManager::get().has_table(table_name)) {
-    // TODO(anybody) chunk size and mvcc not yet specifiable
+  if (input_table_left()) {
+    const auto input_table = input_table_left();
+    //TODO if not exists
+    //TODO only use column definitions of referenced columns
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     StorageManager::get().add_table(table_name, table);
+
+    const auto insert = std::make_shared<Insert>(table_name, input_left());
+    insert->set_transaction_context(TransactionManager::get().new_transaction_context());
+    insert->execute();
+  } else {
+    // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
+    if (!if_not_exists || !StorageManager::get().has_table(table_name)) {
+      // TODO(anybody) chunk size and mvcc not yet specifiable
+      const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+      StorageManager::get().add_table(table_name, table);
+    }
   }
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
 }
