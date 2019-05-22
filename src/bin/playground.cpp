@@ -42,6 +42,14 @@
 
 using namespace opossum;  // NOLINT
 
+
+// class AbstractEnumerator {
+// public:
+//   AbstractEnumerator();
+//   ~AbstractEnumerator();
+  
+// };
+
 constexpr auto SCALE_FACTOR = 1.0f;
 
 typedef boost::bimap<std::string, uint16_t> table_name_id_bimap;
@@ -69,6 +77,40 @@ struct TableColumnInformation {
   std::vector<size_t> input_rows;
   std::vector<size_t> output_rows;
   std::vector<std::time_t> timestamps;
+};
+
+class AbstractCandidate {
+public:
+  TableColumnIdentifier tcid;
+
+  AbstractCandidate(TableColumnIdentifier tcid) : tcid(tcid) {}
+
+  // virtual ~AbstractCandidate();
+};
+
+class IndexCandidate : public AbstractCandidate {
+public:
+  IndexCandidate(TableColumnIdentifier tcid_sub) : AbstractCandidate(tcid_sub) {}
+
+  // virtual ~IndexCandidate();
+};
+
+class AbstractCandidateAssessment {
+public:
+  std::shared_ptr<AbstractCandidate> candidate;
+  float desirability = 0.0f;
+  float cost = 0.0f;
+
+  AbstractCandidateAssessment(const std::shared_ptr<AbstractCandidate> candidate, const float desirability, const float cost) : candidate(candidate), desirability(desirability), cost(cost) {}
+  // virtual ~AbstractCandidateAssessment();
+};
+
+class IndexCandidateAssessment : public AbstractCandidateAssessment {
+public:
+  // float desirability = 0.0f;
+  // float cost = 0.0f;
+  // virtual ~IndexCandidateAssessment();
+  IndexCandidateAssessment(const std::shared_ptr<IndexCandidate> candidate_2, const float desirability_2, const float cost_2) : AbstractCandidateAssessment(candidate_2, desirability_2, cost_2) {}
 };
 
 // Todo: what is wrong with customer.c_nationkey
@@ -292,20 +334,6 @@ size_t predict_index_size(const TableColumnIdentifier& tcid) {
   return index_size;
 }
 
-struct IndexCandidate {
-  TableColumnIdentifier tcid;
-
-  IndexCandidate(TableColumnIdentifier tcid) : tcid(tcid) {}
-};
-
-struct IndexCandidateAssessment {
-  std::shared_ptr<IndexCandidate> candidate;
-  float desirability = 0.0f;
-  float cost = 0.0f;
-
-  IndexCandidateAssessment(const std::shared_ptr<IndexCandidate> candidate, const float desirability, const float cost) : candidate(candidate), desirability(desirability), cost(cost) {}
-};
-
 // This enumerator considers all columns except these of tables that have less than 10'000 * SCALE_FACTOR rows
 std::vector<IndexCandidate> enumerate_index_candidates() {
   std::vector<IndexCandidate> index_candidates;
@@ -331,8 +359,8 @@ std::vector<IndexCandidate> enumerate_index_candidates() {
 }
 
 // This evaluator assigns a desirability according to the number of processed rows of this column
-std::vector<IndexCandidateAssessment> assess_index_candidates(std::vector<IndexCandidate>& index_candidates) {
-  std::vector<IndexCandidateAssessment> index_candidate_assessments;
+std::vector<AbstractCandidateAssessment> assess_index_candidates(std::vector<IndexCandidate>& index_candidates) {
+  std::vector<AbstractCandidateAssessment> index_candidate_assessments;
 
   for (auto& index_candidate : index_candidates) {
     const auto table_column_information = scan_map[index_candidate.tcid];
@@ -344,7 +372,7 @@ std::vector<IndexCandidateAssessment> assess_index_candidates(std::vector<IndexC
   return index_candidate_assessments;
 }
 
-bool compareByDesirabilityPerCost(const IndexCandidateAssessment& assessment_1, const IndexCandidateAssessment& assessment_2) {
+bool compareByDesirabilityPerCost(const AbstractCandidateAssessment& assessment_1, const AbstractCandidateAssessment& assessment_2) {
   const auto desirability_per_cost_1 = assessment_1.desirability / assessment_1.cost;
   const auto desirability_per_cost_2 = assessment_2.desirability / assessment_2.cost;
 
@@ -352,14 +380,14 @@ bool compareByDesirabilityPerCost(const IndexCandidateAssessment& assessment_1, 
 }
 
 // This selector greedily selects assessed items based on desirability per cost
-std::vector<IndexCandidate> select_index_assessments_greedy(std::vector<IndexCandidateAssessment>& index_assessments, size_t budget) {
-  std::vector<IndexCandidate> selected_candidates;
+std::vector<AbstractCandidate> select_assessments_greedy(std::vector<AbstractCandidateAssessment>& assessments, size_t budget) {
+  std::vector<AbstractCandidate> selected_candidates;
   size_t used_budget = 0;
 
-  auto assessments = index_assessments;
-  std::sort(assessments.begin(), assessments.end(), compareByDesirabilityPerCost);
+  auto assessments_copy = assessments;
+  std::sort(assessments_copy.begin(), assessments_copy.end(), compareByDesirabilityPerCost);
 
-  for (const auto& assessment : assessments) {
+  for (const auto& assessment : assessments_copy) {
     if (assessment.cost + used_budget < budget) {
       selected_candidates.emplace_back(*(assessment.candidate));
       used_budget += static_cast<size_t>(assessment.cost);
@@ -371,7 +399,7 @@ std::vector<IndexCandidate> select_index_assessments_greedy(std::vector<IndexCan
 
 int main() {
   auto config = BenchmarkConfig::get_default_config();
-  config.max_num_query_runs = 10;
+  config.max_num_query_runs = 1;
   config.enable_visualization = true;
   
   const std::vector<QueryID> tpch_query_ids = {QueryID{0},  QueryID{1},  QueryID{2},  QueryID{3},  QueryID{4},
@@ -411,7 +439,7 @@ int main() {
 
   auto index_candidates = enumerate_index_candidates();
   auto index_assessments = assess_index_candidates(index_candidates);
-  auto index_choices = select_index_assessments_greedy(index_assessments, static_cast<size_t>(SCALE_FACTOR * 30'000'000));
+  auto index_choices = select_assessments_greedy(index_assessments, static_cast<size_t>(SCALE_FACTOR * 30'000'000));
 
   for (const auto& index_choice : index_choices) {
     std::cout << TCID_to_string(index_choice.tcid) << std::endl;
