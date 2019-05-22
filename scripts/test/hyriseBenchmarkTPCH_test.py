@@ -35,7 +35,6 @@ def initialize(arguments):
 	build_dir = sys.argv[1]
 
 	concat_arguments = ' '.join(['='.join(map(str, x)) for x in arguments.items()])
-	print(concat_arguments)
 
 	benchmark = pexpect.spawn(build_dir + "/hyriseBenchmarkTPCH " + concat_arguments, maxread=1000000,timeout=None, dimensions=(200, 64))
 	benchmark.logfile = sys.stdout
