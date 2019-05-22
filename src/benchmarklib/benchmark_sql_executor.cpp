@@ -39,6 +39,8 @@ std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sq
 }
 
 void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
+  Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification");
+
   const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline.get_sql());
   const auto& result_table = pipeline.get_result_table();
 

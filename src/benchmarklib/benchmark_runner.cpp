@@ -187,11 +187,11 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
-    result.all_runs_duration = _state.benchmark_duration;
+    result.duration_of_all_runs = _state.benchmark_duration;
 
-    const auto all_runs_duration_ns =
-        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.all_runs_duration).count());
-    const auto duration_seconds = all_runs_duration_ns / 1'000'000'000;
+    const auto duration_of_all_runs_ns =
+        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration_of_all_runs).count());
+    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
     if (!_config.verify && !_config.enable_visualization) {
@@ -318,13 +318,13 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
     if (_config.benchmark_mode == BenchmarkMode::Ordered) {
       // These metrics are not meaningful for permuted / shuffled execution
-      const auto all_runs_duration_ns =
-          static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.all_runs_duration).count());
-      const auto duration_seconds = all_runs_duration_ns / 1'000'000'000;
+      const auto duration_of_all_runs_ns =
+          static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration_of_all_runs).count());
+      const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
       const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
       benchmark["items_per_second"] = items_per_second;
       const auto time_per_item =
-          result.num_iterations > 0 ? all_runs_duration_ns / result.num_iterations : std::nanf("");
+          result.num_iterations > 0 ? duration_of_all_runs_ns / result.num_iterations : std::nanf("");
       benchmark["avg_real_time_per_iteration"] = time_per_item;
     }
 

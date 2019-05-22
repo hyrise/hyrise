@@ -45,7 +45,7 @@ class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
       {9, 0.01f},   {10, 0.02f},  {11, 0.01f}, {12, 0.01f},  {13, 0.01f},   {14, 0.01f}, {15, 0.01f}, {16, 0.01f},
       {17, 0.013f}, {18, 0.005f}, {19, 0.01f}, {20, 0.008f}, {21, 0.0075f}, {22, 0.01f}};
 
-  // Helper method used to touch TPCHBenchmarkItemRunner's privates
+  // Helper method used to access TPCHBenchmarkItemRunner's private members
   std::string get_deterministic_query(TPCHBenchmarkItemRunner& runner, BenchmarkItemID item_id) {
     return runner._build_deterministic_query(item_id);
   }

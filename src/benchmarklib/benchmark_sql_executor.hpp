@@ -8,8 +8,8 @@ namespace opossum {
 class TransactionContext;
 
 // This class provides SQL functionality to BenchmarkItemRunners. See AbstractBenchmarkItemRunner::_on_execute_item().
-// If sqlite_wrapper (i.e. verification is enabled) is set, all SQL queries executed in the benchmark will also be
-// executed using SQLite and then Hyrise's and SQLite's results are compared. For now, we expect items to use a
+// If sqlite_wrapper is set (i.e. verification is enabled), all SQL queries executed in the benchmark will also be
+// executed using SQLite. Hyrise's and SQLite's results are then compared. For now, we expect items to use a
 // single transaction, which is why the BenchmarkSQLExecutor executes all queries in the same context.
 class BenchmarkSQLExecutor {
  public:

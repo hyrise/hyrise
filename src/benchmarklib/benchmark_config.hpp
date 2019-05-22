@@ -9,7 +9,7 @@ namespace opossum {
 
 /**
  * "Ordered" runs each item a number of times and then the next one
- * "Shuffled" runs the items as set permuting their order after each run
+ * "Shuffled" runs the items in a random order
  */
 enum class BenchmarkMode { Ordered, Shuffled };
 
