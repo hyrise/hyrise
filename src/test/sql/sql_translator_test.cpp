@@ -511,7 +511,7 @@ TEST_F(SQLTranslatorTest, DifferentAliasesForSimilarColumns) {
   const auto actual_lqp = compile_query("SELECT a AS a1, a AS a2, a AS a3, b AS b1, b AS b2, b AS b3 FROM int_float");
 
   const auto expressions =
-    expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
+      expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
 
   // clang-format off
   const auto expected_lqp =

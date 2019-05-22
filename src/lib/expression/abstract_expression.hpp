@@ -59,7 +59,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   /**
    * Recursively check for Expression equality, disregarding the id.
    */
-  bool has_same_content(const AbstractExpression &other) const;
+  bool has_same_content(const AbstractExpression& other) const;
 
   /**
    * Certain expression types (Parameters, Literals, and Columns) don't require computation and therefore don't require
