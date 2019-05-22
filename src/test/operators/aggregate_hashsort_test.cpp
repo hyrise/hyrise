@@ -1,5 +1,6 @@
 #include "base_test.hpp"
 #include "operators/aggregate/aggregate_hashsort_steps.hpp"
+#include "operators/abstract_aggregate_operator.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
@@ -79,6 +80,44 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
   EXPECT_EQ(groups.data, expected_group_data);
 }
 
+TEST_F(AggregateHashSortStepsTest, ProduceInitialAggregates) {
+  auto column_definitions =
+      TableColumnDefinitions{{"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Double, true}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  table->append({4.5f, 13, 1.0});
+  table->append({NullValue{}, 12, -2.0});
+  table->append({1.5f, 14, NullValue{}});
+
+  auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{
+    {std::nullopt, AggregateFunction::CountRows},
+    {ColumnID{0}, AggregateFunction::Sum},
+    {ColumnID{1}, AggregateFunction::Min},
+    {ColumnID{2}, AggregateFunction::Avg},
+  };
+
+  auto aggregates = produce_initial_aggregates(*table, aggregate_column_definitions);
+
+  ASSERT_EQ(aggregates.size(), 4u);
+
+  const auto* count_rows = dynamic_cast<CountRowsAggregateRun*>(aggregates[0].get());
+  ASSERT_TRUE(count_rows);
+  EXPECT_EQ(count_rows->values, std::vector<int64_t>({1, 1, 1}));
+
+  const auto* sum = dynamic_cast<SumAggregateRun<float>*>(aggregates[1].get());
+  ASSERT_TRUE(sum);
+  EXPECT_EQ(sum->values, std::vector<double>({4.5, 0.0f, 1.5}));
+  EXPECT_EQ(sum->null_values, std::vector({false, true, false}));
+
+  const auto* min = dynamic_cast<MinAggregateRun<int32_t>*>(aggregates[2].get());
+  ASSERT_TRUE(min);
+  EXPECT_EQ(min->values, std::vector<int32_t>({13, 12, 14}));
+  EXPECT_EQ(min->null_values, std::vector({false, false, false}));
+
+  const auto* avg = dynamic_cast<AvgAggregateRun<double>*>(aggregates[3].get());
+  ASSERT_TRUE(avg);
+  EXPECT_EQ(avg->sets, std::vector<std::vector<double>>({{1.0}, {-2.0}, {}}));
+}
+
 TEST_F(AggregateHashSortStepsTest, Partitioning) {
   EXPECT_EQ(Partitioning(2, 0, 1).get_partition_index(1), 1);
   EXPECT_EQ(Partitioning(2, 0, 1).get_partition_index(2), 0);
@@ -98,7 +137,15 @@ TEST_F(AggregateHashSortStepsTest, Partition) {
   groups.hashes[6] = size_t{0b100}; groups.data[6] = int32_t{8};
   // clang-format off
 
-  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun>{std::move(groups), {}};
+  auto aggregate = std::make_unique<SumAggregateRun<int32_t>>();
+  // clang-format off
+  aggregate->values =      {0,     1,     2,     3,     0,    5,     6,     7};
+  aggregate->null_values = {false, false, false, false, true, false, false, false};
+  // clang-format on
+  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
+  aggregates.emplace_back(std::move(aggregate));
+
+  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun>{std::move(groups), std::move(aggregates)};
   auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun>>{};
   runs.emplace_back(std::move(run));
 
@@ -122,12 +169,27 @@ TEST_F(AggregateHashSortStepsTest, Partition) {
 
   ASSERT_EQ(partitions.at(0).runs.at(0).groups.data, std::vector<uint32_t>({5, 7}));
   ASSERT_EQ(partitions.at(0).runs.at(0).groups.hashes, std::vector<size_t>({0b001, 0b000}));
+  ASSERT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(0).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_0);
+  EXPECT_EQ(aggregate_0->values, std::vector<int64_t>({0, 0}));
+  EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
 
   ASSERT_EQ(partitions.at(2).runs.at(0).groups.data, std::vector<uint32_t>({2, 5, 8}));
   ASSERT_EQ(partitions.at(2).runs.at(0).groups.hashes, std::vector<size_t>({0b100, 0b101, 0b100}));
+  ASSERT_EQ(partitions.at(2).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_2 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_2);
+  EXPECT_EQ(aggregate_2->values, std::vector<int64_t>({1, 2, 5}));
+  EXPECT_EQ(aggregate_2->null_values, std::vector<bool>({false, false, false}));
 
   ASSERT_EQ(partitions.at(3).runs.at(0).groups.data, std::vector<uint32_t>({6}));
   ASSERT_EQ(partitions.at(3).runs.at(0).groups.hashes, std::vector<size_t>({0b110}));
+  ASSERT_EQ(partitions.at(3).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_3 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(3).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_3);
+  EXPECT_EQ(aggregate_3->values, std::vector<int64_t>({3}));
+  EXPECT_EQ(aggregate_3->null_values, std::vector<bool>({false}));
 }
 
 TEST_F(AggregateHashSortStepsTest, Hashing) {
@@ -141,7 +203,15 @@ TEST_F(AggregateHashSortStepsTest, Hashing) {
   groups.hashes[3] = size_t{12}; groups.data[6] = int32_t{5}; groups.data[7] = int32_t{4};
   // clang-format on
 
-  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun>{std::move(groups), {}};
+  auto aggregate = std::make_unique<SumAggregateRun<int32_t>>();
+  // clang-format off
+  aggregate->values =      {5,     6,     7,     0};
+  aggregate->null_values = {false, false, false, true};
+  // clang-format on
+  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
+  aggregates.emplace_back(std::move(aggregate));
+
+  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun>{std::move(groups), std::move(aggregates)};
   auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun>>{};
   runs.emplace_back(std::move(run));
 
@@ -166,9 +236,19 @@ TEST_F(AggregateHashSortStepsTest, Hashing) {
 
   ASSERT_EQ(partitions.at(0).runs.at(0).groups.data, std::vector<uint32_t>({5, 3, 5, 4}));
   ASSERT_EQ(partitions.at(0).runs.at(0).groups.hashes, std::vector<size_t>({12, 12}));
+  ASSERT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(0).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_0);
+  EXPECT_EQ(aggregate_0->values, std::vector<int64_t>({12, 0}));
+  EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
 
   ASSERT_EQ(partitions.at(1).runs.at(0).groups.data, std::vector<uint32_t>({2, 2}));
   ASSERT_EQ(partitions.at(1).runs.at(0).groups.hashes, std::vector<size_t>({13}));
+  ASSERT_EQ(partitions.at(1).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_1 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(1).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_1);
+  EXPECT_EQ(aggregate_1->values, std::vector<int64_t>({6}));
+  EXPECT_EQ(aggregate_1->null_values, std::vector<bool>({false}));
 }
 
 TEST_F(AggregateHashSortStepsTest, AggregateAdaptive) {

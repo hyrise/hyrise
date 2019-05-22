@@ -19,12 +19,6 @@ const auto data_type_size = std::unordered_map<DataType, size_t>{
 
 enum class HashSortMode { Hashing, Partition };
 
-// Data isn't copied/aggregated directly. Instead copy/aggregation operations are gathered and then executed as one.
-struct TransferBufferEntry {
-  size_t target_offset;
-  size_t source_offset;
-};
-
 struct FixedSizeGroupRunLayout {
   FixedSizeGroupRunLayout(const size_t group_size, const std::vector<size_t>& column_base_offsets)
       : group_size(group_size), column_base_offsets(column_base_offsets) {}
@@ -59,8 +53,6 @@ struct FixedSizeGroupRun {
 
   // Hash per group
   std::vector<size_t> hashes;
-
-  std::vector<TransferBufferEntry> transfer_buffer;
 
   auto value(const size_t offset) const {
     const auto begin = data.cbegin() + offset * layout.group_size;
@@ -142,7 +134,7 @@ Run<FixedSizeGroupRun> make_run<FixedSizeGroupRun>(const Run<FixedSizeGroupRun>&
 
 template <typename GroupRun>
 struct Partition {
-  std::vector<TransferBufferEntry> aggregation_buffer;
+  std::vector<AggregationBufferEntry> aggregation_buffer;
   std::vector<size_t> append_buffer;
 
   size_t group_key_counter{0};
@@ -160,7 +152,6 @@ struct Partition {
 
     auto& target_run = runs.back();
     auto& target_groups = target_run.groups;
-    auto& target_aggregates = target_run.groups;
 
     /**
      * Process append_buffer
@@ -172,8 +163,11 @@ struct Partition {
       ++target_offset;
     }
 
-    for (auto& aggregate : target_run.aggregates) {
-      aggregate.flush_aggregation_buffer(aggregation_buffer);
+    for (auto aggregate_idx = size_t{0}; aggregate_idx < target_run.aggregates.size(); ++aggregate_idx) {
+      auto& target_aggregate_run = target_run.aggregates[aggregate_idx];
+      const auto& input_aggregate_run = input_run.aggregates[aggregate_idx];
+      target_aggregate_run->flush_append_buffer(append_buffer, *input_aggregate_run);
+      target_aggregate_run->flush_aggregation_buffer(aggregation_buffer, *input_aggregate_run);
     }
 
     append_buffer.clear();
@@ -281,9 +275,9 @@ std::pair<bool, std::vector<Partition<GroupRun>>> hashing(const AggregateHashSor
         hash_table_iter = hash_table.emplace(std::pair{run_idx, run_offset}, partition.group_key_counter).first;
         partition.append_buffer.emplace_back(run_offset);
         ++partition.group_key_counter;
+      } else {
+        partition.aggregation_buffer.emplace_back(AggregationBufferEntry{hash_table_iter->second, run_offset});
       }
-
-      partition.aggregation_buffer.emplace_back(TransferBufferEntry{run_offset, hash_table_iter->second});
 
       if (partition.aggregation_buffer.size() > 255) {
         partition.flush_buffers(input_run);

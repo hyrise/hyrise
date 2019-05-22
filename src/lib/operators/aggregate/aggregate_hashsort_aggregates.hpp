@@ -4,10 +4,17 @@
 #include <vector>
 
 #include "operators/aggregate/aggregate_traits.hpp"
+#include "storage/segment_iterate.hpp"
 
 namespace opossum {
 
 namespace aggregate_hashsort {
+
+// Data isn't copied/aggregated directly. Instead copy/aggregation operations are gathered and then executed as one.
+struct AggregationBufferEntry {
+  size_t target_offset;
+  size_t source_offset;
+};
 
 struct ColumnIterable {
   const Table& table;
@@ -47,16 +54,19 @@ struct BaseAggregateRun {
 
   virtual std::unique_ptr<BaseAggregateRun> new_instance() const = 0;
 
-  virtual void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer,
+  virtual void flush_append_buffer(const std::vector<size_t>& buffer, const BaseAggregateRun& base_aggregate_run) = 0;
+  virtual void flush_aggregation_buffer(const std::vector<AggregationBufferEntry>& buffer,
                                         const BaseAggregateRun& base_aggregate_run) = 0;
 
-  virtual void materialize(BaseColumnMaterialization& target, const size_t offset) const = 0;
+  virtual std::shared_ptr<BaseSegment> materialize_output() const = 0;
 };
 
 template <typename SourceColumnDataType, AggregateFunction aggregate_function>
 struct BaseDistributiveAggregateRun : public BaseAggregateRun {
  public:
   using AggregateType = typename AggregateTraits<SourceColumnDataType, aggregate_function>::AggregateType;
+
+  BaseDistributiveAggregateRun() = default;
 
   BaseDistributiveAggregateRun(const ColumnIterable& column_iterable) {
     resize(column_iterable.table.row_count());
@@ -77,18 +87,28 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
     null_values.resize(size);
   }
 
-  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer,
+  void flush_append_buffer(const std::vector<size_t>& buffer, const BaseAggregateRun& base_aggregate_run) override {
+    const auto& source_run =
+    static_cast<const BaseDistributiveAggregateRun<SourceColumnDataType, aggregate_function>&>(base_aggregate_run);
+
+    for (const auto& source_offset : buffer) {
+      values.emplace_back(source_run.values[source_offset]);
+      null_values.emplace_back(source_run.null_values[source_offset]);
+    }
+  }
+
+  void flush_aggregation_buffer(const std::vector<AggregationBufferEntry>& buffer,
                                 const BaseAggregateRun& base_source_run) override {
     const auto& source_run =
         static_cast<const BaseDistributiveAggregateRun<SourceColumnDataType, aggregate_function>&>(base_source_run);
 
-    for (const auto& [source_offset, target_offset] : buffer) {
-      const auto& source_value = source_run.values[source_offset];
-      auto& target_value = values[target_offset];
+    for (const auto& entry : buffer) {
+      const auto& source_value = source_run.values[entry.source_offset];
+      auto& target_value = values[entry.target_offset];
 
-      if (!source_run.null_values[source_offset]) continue;
+      if (source_run.null_values[entry.source_offset]) continue;
 
-      if (null_values[source_offset]) {
+      if (null_values[entry.source_offset]) {
         target_value = source_value;
         continue;
       }
@@ -97,13 +117,8 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
     }
   }
 
-  void materialize(BaseColumnMaterialization& base_target, size_t target_offset) const override {
-    auto& target = static_cast<ColumnMaterialization<AggregateType>&>(base_target);
-
-    for (auto source_offset = size_t{0}; source_offset < values.size(); ++source_offset, ++target_offset) {
-      target.values[target_offset] = values[source_offset].value_or(0);
-      target.null_values[target_offset] = !values[source_offset].has_value();
-    }
+  std::shared_ptr<BaseSegment> materialize_output() const override {
+    return std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(null_values));
   }
 
   std::vector<AggregateType> values;
@@ -113,7 +128,7 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
 template <typename SourceColumnDataType>
 struct SumAggregateRun : public BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Sum> {
   using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Sum>::AggregateType;
-  using BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Sum>;
+  using BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Sum>::BaseDistributiveAggregateRun;
 
   AggregateType combine(const AggregateType& lhs, const AggregateType& rhs) const override { return lhs + rhs; }
 
@@ -123,9 +138,9 @@ struct SumAggregateRun : public BaseDistributiveAggregateRun<SourceColumnDataTyp
 };
 
 template <typename SourceColumnDataType>
-struct MinAggregateRun : public BaseAggregateRun {
+struct MinAggregateRun : public BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Min> {
   using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Min>::AggregateType;
-  using BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Min>;
+  using BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Min>::BaseDistributiveAggregateRun;
 
   AggregateType combine(const AggregateType& lhs, const AggregateType& rhs) const override {
     return std::min(lhs, rhs);
@@ -137,9 +152,9 @@ struct MinAggregateRun : public BaseAggregateRun {
 };
 
 template <typename SourceColumnDataType>
-struct MaxAggregateRun : public BaseAggregateRun {
+struct MaxAggregateRun : public BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Max> {
   using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Max>::AggregateType;
-  using BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Max>;
+  using BaseDistributiveAggregateRun<SourceColumnDataType, AggregateFunction::Max>::BaseDistributiveAggregateRun;
 
   AggregateType combine(const AggregateType& lhs, const AggregateType& rhs) const override {
     return std::max(lhs, rhs);
@@ -158,7 +173,14 @@ struct CountRowsAggregateRun : public BaseAggregateRun {
 
   void resize(const size_t size) override { values.resize(size, 0); }
 
-  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer,
+  void flush_append_buffer(const std::vector<size_t>& buffer, const BaseAggregateRun& base_aggregate_run) override {
+    const auto& source_run = static_cast<const CountRowsAggregateRun&>(base_aggregate_run);
+    for (const auto& source_offset : buffer) {
+      values.emplace_back(source_run.values[source_offset]);
+    }
+  }
+
+  void flush_aggregation_buffer(const std::vector<AggregationBufferEntry>& buffer,
                                 const BaseAggregateRun& base_source_run) override {
     const auto& source_run = static_cast<const CountRowsAggregateRun&>(base_source_run);
 
@@ -167,12 +189,12 @@ struct CountRowsAggregateRun : public BaseAggregateRun {
     }
   }
 
-  void materialize(BaseColumnMaterialization& base_target, size_t target_offset) const override {
-    auto& target = static_cast<ColumnMaterialization<AggregateType>&>(base_target);
+  std::shared_ptr<BaseSegment> materialize_output() const override {
+    return std::make_shared<ValueSegment<AggregateType>>(std::move(values));
+  }
 
-    for (auto source_offset = size_t{0}; source_offset < values.size(); ++source_offset, ++target_offset) {
-      target.values[target_offset] = values[source_offset];
-    }
+  std::unique_ptr<BaseAggregateRun> new_instance() const override {
+    return std::make_unique<CountRowsAggregateRun>(0);
   }
 
   std::vector<AggregateType> values;
@@ -181,7 +203,9 @@ struct CountRowsAggregateRun : public BaseAggregateRun {
 template <typename SourceColumnDataType>
 struct CountNonNullAggregateRun : public BaseAggregateRun {
  public:
-  using AggregateType = typename AggregateTraits<void, AggregateFunction::CountNonNull>::AggregateType;
+  using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::CountNonNull>::AggregateType;
+
+  CountNonNullAggregateRun() = default;
 
   explicit CountNonNullAggregateRun(const ColumnIterable& column_iterable) {
     resize(column_iterable.table.row_count());
@@ -195,21 +219,28 @@ struct CountNonNullAggregateRun : public BaseAggregateRun {
 
   void resize(const size_t size) override { values.resize(size, 0); }
 
-  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer,
+  void flush_append_buffer(const std::vector<size_t>& buffer, const BaseAggregateRun& base_aggregate_run) override {
+    const auto& source_run = static_cast<const CountNonNullAggregateRun&>(base_aggregate_run);
+    for (const auto& source_offset : buffer) {
+      values.emplace_back(source_run.values[source_offset]);
+    }
+  }
+
+  void flush_aggregation_buffer(const std::vector<AggregationBufferEntry>& buffer,
                                 const BaseAggregateRun& base_source_run) override {
-    const auto& source_run = static_cast<const CountRowsAggregateRun&>(base_source_run);
+    const auto& source_run = static_cast<const CountNonNullAggregateRun&>(base_source_run);
 
     for (const auto& [source_offset, target_offset] : buffer) {
       values[target_offset] += source_run.values[source_offset];
     }
   }
 
-  void materialize(BaseColumnMaterialization& base_target, size_t target_offset) const override {
-    auto& target = static_cast<ColumnMaterialization<AggregateType>&>(base_target);
+  std::shared_ptr<BaseSegment> materialize_output() const override {
+    return std::make_shared<ValueSegment<AggregateType>>(std::move(values));
+  }
 
-    for (auto source_offset = size_t{0}; source_offset < values.size(); ++source_offset, ++target_offset) {
-      target.values[target_offset] = values[source_offset];
-    }
+  std::unique_ptr<BaseAggregateRun> new_instance() const override {
+    return std::make_unique<CountNonNullAggregateRun>();
   }
 
   std::vector<AggregateType> values;
@@ -219,6 +250,8 @@ template <typename SourceColumnDataType>
 struct CountDistinctAggregateRun : public BaseAggregateRun {
  public:
   using AggregateType = typename AggregateTraits<void, AggregateFunction::CountDistinct>::AggregateType;
+
+  CountDistinctAggregateRun() = default;
 
   explicit CountDistinctAggregateRun(const ColumnIterable& column_iterable) {
     resize(column_iterable.table.row_count());
@@ -230,9 +263,16 @@ struct CountDistinctAggregateRun : public BaseAggregateRun {
     });
   }
 
-  void resize(const size_t size) override { sets.resize(size, 0); }
+  void resize(const size_t size) override { sets.resize(size); }
 
-  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer,
+  void flush_append_buffer(const std::vector<size_t>& buffer, const BaseAggregateRun& base_aggregate_run) override {
+    const auto& source_run = static_cast<const CountDistinctAggregateRun&>(base_aggregate_run);
+    for (const auto& source_offset : buffer) {
+      sets.emplace_back(source_run.sets[source_offset]);
+    }
+  }
+
+  void flush_aggregation_buffer(const std::vector<AggregationBufferEntry>& buffer,
                                 const BaseAggregateRun& base_source_run) override {
     const auto& source_run = static_cast<const CountDistinctAggregateRun&>(base_source_run);
 
@@ -242,21 +282,28 @@ struct CountDistinctAggregateRun : public BaseAggregateRun {
     }
   }
 
-  void materialize(BaseColumnMaterialization& base_target, size_t target_offset) const override {
-    auto& target = static_cast<ColumnMaterialization<AggregateType>&>(base_target);
-
-    for (auto source_offset = size_t{0}; source_offset < sets.size(); ++source_offset, ++target_offset) {
-      target.values[target_offset] = sets[source_offset].size();
+  std::shared_ptr<BaseSegment> materialize_output() const override {
+    auto values = std::vector<AggregateType>(sets.size());
+    for (auto set_idx = size_t{0}; set_idx < sets.size(); ++set_idx) {
+      values[set_idx] = sets[set_idx].size();
     }
+
+    return std::make_shared<ValueSegment<AggregateType>>(std::move(values));
   }
 
-  std::vector<std::unordered_set<AggregateType>> sets;
+  std::unique_ptr<BaseAggregateRun> new_instance() const override {
+    return std::make_unique<CountDistinctAggregateRun>();
+  }
+
+  std::vector<std::unordered_set<SourceColumnDataType>> sets;
 };
 
 template <typename SourceColumnDataType>
 struct AvgAggregateRun : public BaseAggregateRun {
  public:
-  using AggregateType = typename AggregateTraits<void, AggregateFunction::Avg>::AggregateType;
+  using AggregateType = typename AggregateTraits<SourceColumnDataType, AggregateFunction::Avg>::AggregateType;
+
+  AvgAggregateRun() = default;
 
   explicit AvgAggregateRun(const ColumnIterable& column_iterable) {
     resize(column_iterable.table.row_count());
@@ -270,31 +317,46 @@ struct AvgAggregateRun : public BaseAggregateRun {
 
   void resize(const size_t size) override { sets.resize(size); }
 
-  void flush_aggregation_buffer(const std::vector<std::pair<size_t, size_t>>& buffer,
+  void flush_append_buffer(const std::vector<size_t>& buffer, const BaseAggregateRun& base_aggregate_run) override {
+    const auto& source_run = static_cast<const AvgAggregateRun&>(base_aggregate_run);
+    for (const auto& source_offset : buffer) {
+      sets.emplace_back(source_run.sets[source_offset]);
+    }
+  }
+
+  void flush_aggregation_buffer(const std::vector<AggregationBufferEntry>& buffer,
                                 const BaseAggregateRun& base_source_run) override {
     const auto& source_run = static_cast<const AvgAggregateRun<SourceColumnDataType>&>(base_source_run);
 
     for (const auto& [source_offset, target_offset] : buffer) {
       const auto& source_set = source_run.sets[source_offset];
-      sets[target_offset].insert(source_set.begin(), source_set.end());
+      sets[target_offset].insert(sets[target_offset].end(), source_set.begin(), source_set.end());
     }
   }
 
-  void materialize(BaseColumnMaterialization& base_target, size_t target_offset) const override {
-    auto& target = static_cast<ColumnMaterialization<AggregateType>&>(base_target);
+  std::shared_ptr<BaseSegment> materialize_output() const override {
+    auto values = std::vector<AggregateType>(sets.size());
+    auto null_values = std::vector<bool>(sets.size());
 
+    auto target_offset = size_t{0};
     for (auto source_offset = size_t{0}; source_offset < sets.size(); ++source_offset, ++target_offset) {
       const auto& source_values = sets[source_offset];
       if (source_values.empty()) {
-        target.null_values[target_offset] = true;
+        null_values[target_offset] = true;
       } else {
-        target.values[target_offset] =
-            std::accumulate(source_values.begin(), source_values.end(), AggregateType{0}) / source_values.size()
+        values[target_offset] =
+            std::accumulate(source_values.begin(), source_values.end(), AggregateType{0}) / source_values.size();
       }
     }
+
+    return std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(null_values));
   }
 
-  std::vector<std::unordered_set<AggregateType>> sets;
+  std::unique_ptr<BaseAggregateRun> new_instance() const override {
+    return std::make_unique<AvgAggregateRun>();
+  }
+
+  std::vector<std::vector<AggregateType>> sets;
 };
 
 inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates(
@@ -305,6 +367,7 @@ inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates
 
     if (aggregate_column_definition.function == AggregateFunction::CountRows) {
       aggregates[aggregate_idx] = std::make_unique<CountRowsAggregateRun>(table.row_count());
+      continue;
     }
 
     const auto source_column_id = *aggregate_column_definition.column;

@@ -51,7 +51,8 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     const auto output_column_definitions = _get_output_column_defintions();
     auto output_chunks = std::vector<std::shared_ptr<Chunk>>(result_runs.size());
 
-    for (const auto& run : result_runs) {
+    for (auto run_idx = size_t{0}; run_idx < result_runs.size(); ++run_idx) {
+      auto& run = result_runs[run_idx];
       auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
 
       for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size();
@@ -64,10 +65,10 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
       }
 
       for (auto aggregate_idx = ColumnID{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
-        output_segments[_groupby_column_ids.size() + aggregate_idx] = run.aggregates[aggregate_idx].materialize_output();
+        output_segments[_groupby_column_ids.size() + aggregate_idx] = run.aggregates[aggregate_idx]->materialize_output();
       }
 
-      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
+      output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);
     }
 
     return std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
