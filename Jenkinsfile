@@ -80,7 +80,7 @@ try {
             sh "./scripts/test/hyriseConsole_test.py clang-debug"
             sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
             sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-            sh "./scripts/test/hyriseBenchmarkTCPH_test.py clang-debug"
+            sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {
@@ -91,7 +91,7 @@ try {
             sh "./scripts/test/hyriseConsole_test.py gcc-debug"
             sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
             sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
-            sh "./scripts/test/hyriseBenchmarkTCPH_test.py gcc-debug"
+            sh "./scripts/test/hyriseBenchmarkTPCH_test.py gcc-debug"
           }
         }, lint: {
           stage("Linting") {
