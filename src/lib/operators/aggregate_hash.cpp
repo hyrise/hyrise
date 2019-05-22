@@ -3,6 +3,7 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <string>
@@ -401,8 +402,8 @@ void AggregateHash::_aggregate() {
               _aggregate_segment<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
                   chunk_id, column_index, *base_segment, keys_per_chunk);
               break;
-            case AggregateFunction::SampleStandardDeviation:
-              _aggregate_segment<ColumnDataType, AggregateFunction::SampleStandardDeviation, AggregateKey>(
+            case AggregateFunction::StdDevSamp:
+              _aggregate_segment<ColumnDataType, AggregateFunction::StdDevSamp, AggregateKey>(
                   chunk_id, column_index, *base_segment, keys_per_chunk);
               break;
           }
@@ -575,7 +576,7 @@ std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<Aggrega
 
 // STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::SampleStandardDeviation && std::is_arithmetic_v<AggregateType>, void>
+std::enable_if_t<func == AggregateFunction::StdDevSamp && std::is_arithmetic_v<AggregateType>, void>
 write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
                        const AggregateResults<ColumnDataType, AggregateType>& results) {
   DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
@@ -586,18 +587,20 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
   values.resize(results.size());
   null_values.resize(results.size());
 
+  // var = (1/n) * (sx2 - (1/n) * sx^2) // Population
+  // var = (1/(n-1)) * (sx2 - (1/n) * sx^2) // Sample
+
   size_t i = 0;
   for (const auto& result : results) {
-    null_values[i] = !result.current_primary_aggregate;
+    const auto n = static_cast<AggregateType>(result.aggregate_count);
 
-    if (result.current_primary_aggregate) {
-      // TODO(Marcel) adapt for STDDEV_SAMP, implement formular here
-      Fail("STDDEV_SAMP is not yet implemented.");
-      // s²= sum(x²)/n - (sum(x)/n)²
-      // const auto sample_count = static_cast<AggregateType>(result.aggregate_count);
-      // const auto sample_sum = *result.current_primary_aggregate;
-      // const auto avg = sample_sum / sample_count;
-      values[i] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
+    if (result.current_primary_aggregate && n > 1) {
+      const auto sum = *result.current_primary_aggregate;
+      const auto sum_square = *result.current_secondary_aggregate;
+      const auto variance = (1 / (n - 1)) * (sum_square - (1 / n) * sum * sum);
+      values[i] = std::sqrt(variance);
+    } else {
+      null_values[i] = true;
     }
     ++i;
   }
@@ -605,7 +608,7 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
 // STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::SampleStandardDeviation && !std::is_arithmetic_v<AggregateType>, void>
+std::enable_if_t<func == AggregateFunction::StdDevSamp && !std::is_arithmetic_v<AggregateType>, void>
 write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
                        const AggregateResults<ColumnDataType, AggregateType>& results) {
   Fail("Invalid aggregate");
@@ -676,8 +679,8 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
     case AggregateFunction::CountDistinct:
       write_aggregate_output<ColumnDataType, AggregateFunction::CountDistinct>(column_index);
       break;
-    case AggregateFunction::SampleStandardDeviation:
-      write_aggregate_output<ColumnDataType, AggregateFunction::SampleStandardDeviation>(column_index);
+    case AggregateFunction::StdDevSamp:
+      write_aggregate_output<ColumnDataType, AggregateFunction::StdDevSamp>(column_index);
       break;
   }
 }
@@ -783,10 +786,9 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
             ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType,
             AggregateKey>>();
         break;
-      case AggregateFunction::SampleStandardDeviation:
+      case AggregateFunction::StdDevSamp:
         context = std::make_shared<AggregateContext<
-            ColumnDataType,
-            typename AggregateTraits<ColumnDataType, AggregateFunction::SampleStandardDeviation>::AggregateType,
+            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::StdDevSamp>::AggregateType,
             AggregateKey>>();
         break;
     }

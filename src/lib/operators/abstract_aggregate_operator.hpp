@@ -94,28 +94,26 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::SampleStandardDeviation> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::StdDevSamp> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
               std::optional<AggregateType>& current_secondary_aggregate) {
-      // TODO(Marcel) remove this
-      // if(std::is_arithmetic<ColumnDataType>::value){
-      //   std::cout << (new_value * new_value) << std::endl;
-      // }
-      // add new value to sum of x
-      if (current_primary_aggregate) {
-        *current_primary_aggregate += new_value;
+      if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+        // add new value to sum of x
+        if (current_primary_aggregate) {
+          *current_primary_aggregate += new_value;
+        } else {
+          current_primary_aggregate = new_value;
+        }
+        // add new value to sum of x²
+        if (current_secondary_aggregate) {
+          *current_secondary_aggregate += new_value * new_value;
+        } else {
+          current_secondary_aggregate = new_value * new_value;
+        }
       } else {
-        current_primary_aggregate = new_value;
-      }
-      // add new value to sum of x²
-      if (current_secondary_aggregate) {
-        // TODO(Marcel) new_value * new_value
-        *current_secondary_aggregate += new_value + new_value;
-      } else {
-        // TODO(Marcel) new_value * new_value
-        current_secondary_aggregate = new_value + new_value;
+        Fail("Stddev not available for non-arithmetic types.");
       }
     };
   }
