@@ -3,7 +3,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "concurrency/transaction_manager.hpp"
 #include "operators/maintenance/create_table.hpp"
+#include "operators/get_table.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -66,5 +68,24 @@ TEST_F(CreateTableTest, ExecuteWithIfNotExists) {
 
   const auto ct_if_not_exists_2 = std::make_shared<CreateTable>("t", column_definitions, true);
   EXPECT_NO_THROW(ct_if_not_exists_2->execute());
+}
+
+TEST_F(CreateTableTest, CreateTableAsSelect) {
+  const auto table = load_table("resources/test_data/tbl/10_ints.tbl");
+  StorageManager::get().add_table("test", table);
+
+  const auto get_table = std::make_shared<GetTable>("test");
+  get_table->execute();
+
+  const auto create_table_as = std::make_shared<CreateTable>("test_2", table->column_definitions(), false, get_table);
+  const auto context = TransactionManager::get().new_transaction_context();
+  create_table_as->set_transaction_context(context);
+  EXPECT_NO_THROW(create_table_as->execute());
+  context->commit();
+
+  StorageManager::get().drop_table("test");
+  const auto table_2 = StorageManager::get().get_table("test_2");
+
+  EXPECT_EQ(table_2->row_count(), 10);
 }
 }  // namespace opossum

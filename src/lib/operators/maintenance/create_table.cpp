@@ -45,7 +45,9 @@ const std::string CreateTable::description(DescriptionMode description_mode) con
 }
 
 std::shared_ptr<const Table> CreateTable::_on_execute() {
-  if (input_table_left()) {
+  if (input_left()) {
+    Assert(transaction_context(), "Transaction context must be set to create a table from select.");
+
     const auto input_table = input_table_left();
     //TODO if not exists
     //TODO only use column definitions of referenced columns
@@ -53,7 +55,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute() {
     StorageManager::get().add_table(table_name, table);
 
     const auto insert = std::make_shared<Insert>(table_name, input_left());
-    insert->set_transaction_context(TransactionManager::get().new_transaction_context());
+    insert->set_transaction_context(transaction_context());
     insert->execute();
   } else {
     // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
