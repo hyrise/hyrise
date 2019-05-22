@@ -42,14 +42,6 @@
 
 using namespace opossum;  // NOLINT
 
-
-// class AbstractEnumerator {
-// public:
-//   AbstractEnumerator();
-//   ~AbstractEnumerator();
-  
-// };
-
 constexpr auto SCALE_FACTOR = 1.0f;
 
 typedef boost::bimap<std::string, uint16_t> table_name_id_bimap;
@@ -84,15 +76,11 @@ public:
   TableColumnIdentifier tcid;
 
   AbstractCandidate(TableColumnIdentifier tcid) : tcid(tcid) {}
-
-  // virtual ~AbstractCandidate();
 };
 
 class IndexCandidate : public AbstractCandidate {
 public:
   IndexCandidate(TableColumnIdentifier tcid_sub) : AbstractCandidate(tcid_sub) {}
-
-  // virtual ~IndexCandidate();
 };
 
 class AbstractCandidateAssessment {
@@ -100,16 +88,10 @@ public:
   std::shared_ptr<AbstractCandidate> candidate;
   float desirability = 0.0f;
   float cost = 0.0f;
-
-  AbstractCandidateAssessment(const std::shared_ptr<AbstractCandidate> candidate, const float desirability, const float cost) : candidate(candidate), desirability(desirability), cost(cost) {}
-  // virtual ~AbstractCandidateAssessment();
 };
 
 class IndexCandidateAssessment : public AbstractCandidateAssessment {
 public:
-  // float desirability = 0.0f;
-  // float cost = 0.0f;
-  // virtual ~IndexCandidateAssessment();
   IndexCandidateAssessment(const std::shared_ptr<IndexCandidate> candidate_2, const float desirability_2, const float cost_2) : AbstractCandidateAssessment(candidate_2, desirability_2, cost_2) {}
 };
 
