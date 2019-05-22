@@ -115,6 +115,15 @@ TEST_F(SQLIdentifierResolverTest, CountIdentifiers) {
    * Simulate a scenario in which identical expressions have different aliases
    */
 
+  EXPECT_EQ(context.count_identifiers(expression_a), 1);
+  EXPECT_EQ(context.count_identifiers(expression_a1), 1);
+  EXPECT_EQ(context.count_identifiers(expression_a2), 1);
+  EXPECT_EQ(context.count_identifiers(expression_b), 1);
+  EXPECT_EQ(context.count_identifiers(expression_c), 1);
+
+  context.set_table_name(expression_a1, {"T1"s});
+  context.set_table_name(expression_a2, {"T1"s});
+
   EXPECT_EQ(context.count_identifiers(expression_a), 3);
   EXPECT_EQ(context.count_identifiers(expression_a1), 3);
   EXPECT_EQ(context.count_identifiers(expression_a2), 3);
