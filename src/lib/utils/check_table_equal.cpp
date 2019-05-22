@@ -14,7 +14,7 @@
 #define ANSI_COLOR_BG_GREEN "\x1B[42m"
 #define ANSI_COLOR_RESET "\x1B[0m"
 
-#define EPSILON 0.0001
+#define EPSILON 0.001
 
 namespace {
 

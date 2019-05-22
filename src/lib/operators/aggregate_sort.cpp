@@ -128,8 +128,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
         if (is_new_group) {
           // New group is starting. Store the aggregate value of the just finished group
           _set_and_write_aggregate_value<AggregateType, function>(
-              aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_primary_aggregate,
-              value_count, value_count_with_null, unique_values.size());
+              aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index,
+              current_primary_aggregate, value_count, value_count_with_null, unique_values.size());
 
           // Reset helper variables
           current_primary_aggregate = std::optional<AggregateType>();
@@ -533,10 +533,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
               group_boundaries, aggregate_index, sorted_table);
           break;
         }
-        case AggregateFunction::SampleStandardDeviation: {
-          using AggregateType =
-              typename AggregateTraits<ColumnDataType, AggregateFunction::SampleStandardDeviation>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::SampleStandardDeviation>(
+        case AggregateFunction::StdDevSamp: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::StdDevSamp>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::StdDevSamp>(
               group_boundaries, aggregate_index, sorted_table);
           break;
         }
@@ -589,8 +588,8 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
     case AggregateFunction::CountDistinct:
       create_aggregate_column_definitions<ColumnType, AggregateFunction::CountDistinct>(column_index);
       break;
-    case AggregateFunction::SampleStandardDeviation:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::SampleStandardDeviation>(column_index);
+    case AggregateFunction::StdDevSamp:
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::StdDevSamp>(column_index);
       break;
   }
 }

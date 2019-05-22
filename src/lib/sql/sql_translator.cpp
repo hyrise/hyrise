@@ -1239,7 +1239,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::Max:
           case AggregateFunction::Sum:
           case AggregateFunction::Avg:
-          case AggregateFunction::SampleStandardDeviation:
+          case AggregateFunction::StdDevSamp:
             return std::make_shared<AggregateExpression>(
                 aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
 
