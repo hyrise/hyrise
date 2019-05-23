@@ -41,9 +41,14 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 /**
  * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
-#define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)    \
-  EXPECT_TRUE(opossum_table&& expected_table&& check_table_equal(opossum_table, expected_table, order_sensitivity, \
-                                                                 type_cmp_mode, float_comparison_mode));
+#define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)   \
+  {                                                                                                               \
+    if (const auto table_difference_message = check_table_equal(opossum_table, expected_table, order_sensitivity, \
+                                                                type_cmp_mode, float_comparison_mode)) {          \
+      FAIL() << *table_difference_message;                                                                        \
+    }                                                                                                             \
+  }                                                                                                               \
+  static_assert(true, "End call of macro with a semicolon")
 
 /**
  * Specialised version of EXPECT_TABLE_EQ
@@ -59,6 +64,29 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
+/**
+ * Compare two segments with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
+ */
+// clang-format off
+#define EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode) \
+  EXPECT_TRUE(segment_to_test && expected_segment && check_segment_equal(                                             \
+              segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode));
+// clang-format on
+
+/**
+ * Specialised version of EXPECT_SEGMENT_EQ
+ */
+#define EXPECT_SEGMENT_EQ_UNORDERED(segment_to_test, expected_segment)                            \
+  EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, OrderSensitivity::No, TypeCmpMode::Strict, \
+                    FloatComparisonMode::AbsoluteDifference)
+
+/**
+ * Specialised version of EXPECT_SEGMENT_EQ
+ */
+#define EXPECT_SEGMENT_EQ_ORDERED(segment_to_test, expected_segment)                               \
+  EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, OrderSensitivity::Yes, TypeCmpMode::Strict, \
+                    FloatComparisonMode::AbsoluteDifference)
+
 #define ASSERT_LQP_TIE(output, input_side, input)                   \
   {                                                                 \
     if (!opossum::check_lqp_tie(output, input_side, input)) FAIL(); \
@@ -73,13 +101,13 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
       std::cout << "Differing subtrees" << std::endl;                                                     \
       std::cout << "-------------- Actual LQP --------------" << std::endl;                               \
       if (mismatch->first)                                                                                \
-        mismatch->first->print();                                                                         \
+        std::cout << *mismatch->first;                                                                    \
       else                                                                                                \
         std::cout << "NULL" << std::endl;                                                                 \
       std::cout << std::endl;                                                                             \
       std::cout << "------------- Expected LQP -------------" << std::endl;                               \
       if (mismatch->second)                                                                               \
-        mismatch->second->print();                                                                        \
+        std::cout << *mismatch->second;                                                                   \
       else                                                                                                \
         std::cout << "NULL" << std::endl;                                                                 \
       std::cout << "-------------..............-------------" << std::endl;                               \

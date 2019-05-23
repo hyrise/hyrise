@@ -34,12 +34,17 @@ class SQLiteWrapper final {
   void create_table(const Table& table, const std::string& table_name);
 
   /*
-   * Executes a sql query in the sqlite database context.
+   * Executes a sql query in the sqlite database context and returns a Hyrise table.
    *
    * @param sql_query Query to be executed
    * @returns An opossum Table containing the results of the executed query
    */
-  std::shared_ptr<Table> execute_query(const std::string& sql_query);
+  std::shared_ptr<Table> execute_query(const std::string& sql);
+
+  /**
+   * Execute an SQL statement on the wrapped sqlite db without invoking any Hyrise parts
+   */
+  void raw_execute_query(const std::string& sql) const;
 
  protected:
   /*
@@ -51,11 +56,6 @@ class SQLiteWrapper final {
    * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
    */
   void _copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count);
-
-  /**
-   * Execute an SQL statement on the wrapped sqlite db
-   */
-  void _exec_sql(const std::string& sql) const;
 
   sqlite3* _db{nullptr};
 };

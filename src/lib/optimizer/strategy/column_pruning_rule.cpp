@@ -11,9 +11,11 @@
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -117,38 +119,35 @@ void ColumnPruningRule::_prune_columns_from_leaves(const std::shared_ptr<Abstrac
   // (if a node has two leaves as inputs, it will be collected twice)
   auto leaf_parents = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>>{};
   visit_lqp(lqp, [&](auto& node) {
-    for (const auto input_side : {LQPInputSide::Left, LQPInputSide::Right}) {
-      const auto input = node->input(input_side);
-      if (input && input->input_count() == 0) leaf_parents.emplace_back(node, input_side);
+    // Early out for non-leaves
+    if (node->input_count() != 0) {
+      return LQPVisitation::VisitInputs;
     }
 
-    // Do not visit the ProjectionNode we may have just inserted, that would lead to infinite recursion
+    auto pruned_column_ids = std::vector<ColumnID>{};
+    for (const auto& expression : node->column_expressions()) {
+      if (referenced_columns.find(expression) != referenced_columns.end()) {
+        continue;
+      }
+      const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+      pruned_column_ids.emplace_back(column_expression->column_reference.original_column_id());
+    }
+
+    // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
+    if (pruned_column_ids.size() == node->column_expressions().size() && !pruned_column_ids.empty()) {
+      pruned_column_ids.pop_back();
+    }
+
+    if (const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node)) {
+      stored_table_node->set_pruned_column_ids(pruned_column_ids);
+    } else if (const auto mock_node = std::dynamic_pointer_cast<MockNode>(node)) {
+      mock_node->set_pruned_column_ids(pruned_column_ids);
+    } else {
+      // We don't know how to prune columns from this leaf-node type (CreateViewNode, etc.), so do nothing
+    }
+
     return LQPVisitation::VisitInputs;
   });
-
-  // Insert ProjectionNodes that prune unused columns between the leaves and their parents
-  for (const auto& parent_and_leaf_input_side : leaf_parents) {
-    const auto& parent = parent_and_leaf_input_side.first;
-    const auto& leaf_input_side = parent_and_leaf_input_side.second;
-    const auto leaf = parent->input(leaf_input_side);
-
-    // Collect all columns from the leaf that are actually referenced
-    auto referenced_leaf_columns = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (const auto& expression : leaf->column_expressions()) {
-      if (referenced_columns.find(expression) != referenced_columns.end()) {
-        referenced_leaf_columns.emplace_back(expression);
-      }
-    }
-
-    if (leaf->column_expressions().size() == referenced_leaf_columns.size()) continue;
-
-    // We cannot have a ProjectionNode that outputs no columns, so let's avoid that
-    if (referenced_leaf_columns.empty()) continue;
-
-    // If a leaf outputs columns that are never used, prune those columns by inserting a ProjectionNode that only
-    // contains the used columns
-    lqp_insert_node(parent, leaf_input_side, ProjectionNode::make(referenced_leaf_columns));
-  }
 }
 
 void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,

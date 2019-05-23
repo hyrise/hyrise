@@ -47,24 +47,28 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
 
 TEST_F(ColumnPruningRuleTest, NoUnion) {
   // clang-format off
-  const auto lqp =
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  lqp =
   ProjectionNode::make(expression_vector(add_(mul_(a, u), 5)),
     PredicateNode::make(greater_than_(5, c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, a),
         node_a,
         SortNode::make(expression_vector(w), std::vector<OrderByMode>{OrderByMode::Ascending},  // NOLINT
           node_b))));
-  // clang-format on
 
-  // clang-format off
+  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
+  lqp = lqp->deep_copy();
+
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(add_(mul_(a, u), 5)),
     PredicateNode::make(greater_than_(5, c),
       JoinNode::make(JoinMode::Inner, greater_than_(v, a),
-        ProjectionNode::make(expression_vector(a, c),
-          node_a),
+        node_a,
         SortNode::make(expression_vector(w), std::vector<OrderByMode>{OrderByMode::Ascending},  // NOLINT
           node_b))));
+
+  node_a->set_pruned_column_ids({ColumnID{1}});
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, lqp);
@@ -74,23 +78,27 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
 
 TEST_F(ColumnPruningRuleTest, WithUnion) {
   // clang-format off
-  const auto lqp =
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  lqp =
   ProjectionNode::make(expression_vector(a),
     UnionNode::make(UnionMode::Positions,
       PredicateNode::make(greater_than_(a, 5), node_a),
       PredicateNode::make(greater_than_(b, 5), node_a)));
-  // clang-format on
 
-  // clang-format off
+  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
+  lqp = lqp->deep_copy();
+
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(a),
     UnionNode::make(UnionMode::Positions,
       PredicateNode::make(greater_than_(a, 5),
-        ProjectionNode::make(expression_vector(a, b),
-          node_a)),
-        PredicateNode::make(greater_than_(b, 5),
-          ProjectionNode::make(expression_vector(a, b),
-            node_a))));
+        node_a),
+      PredicateNode::make(greater_than_(b, 5),
+        node_a)));
+
+  node_a->set_pruned_column_ids({ColumnID{2}});
+
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, lqp);
@@ -100,24 +108,29 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
 
 TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
   // clang-format off
-  const auto lqp =
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  lqp =
   ProjectionNode::make(expression_vector(a),
     PredicateNode::make(greater_than_(mul_(a, b), 5),
       ProjectionNode::make(expression_vector(a, b, mul_(a, b), c),
         PredicateNode::make(greater_than_(mul_(a, 2), 5),
           ProjectionNode::make(expression_vector(a, b, mul_(a, 2), c),
             node_a)))));
-  // clang-format on
 
-  // clang-format off
+  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
+  lqp = lqp->deep_copy();
+
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(a),
     PredicateNode::make(greater_than_(mul_(a, b), 5),
       ProjectionNode::make(expression_vector(a, b, mul_(a, b)),
         PredicateNode::make(greater_than_(mul_(a, 2), 5),
           ProjectionNode::make(expression_vector(a, b, mul_(a, 2)),
-            ProjectionNode::make(expression_vector(a, b),
-              node_a))))));
+           node_a)))));
+
+  node_a->set_pruned_column_ids({ColumnID{2}});
+
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, lqp);

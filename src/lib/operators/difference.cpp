@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "storage/reference_segment.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -32,8 +31,6 @@ void Difference::_on_set_parameters(const std::unordered_map<ParameterID, AllTyp
 std::shared_ptr<const Table> Difference::_on_execute() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables must have same number of columns");
-
-  auto output = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References);
 
   // 1. We create a set of all right input rows as concatenated strings.
 
@@ -63,6 +60,9 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   }
 
   // 2. Now we check for each chunk of the left input which rows can be added to the output
+
+  std::vector<std::shared_ptr<Chunk>> output_chunks;
+  output_chunks.reserve(input_table_left()->chunk_count());
 
   // Iterating over all chunks and for each chunk over all segment
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
@@ -119,7 +119,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // we check if the recently created row_string is contained in the left_input_row_set
       auto search = right_input_row_set.find(row_string);
       if (search == right_input_row_set.end()) {
-        for (auto pos_list_pair : out_pos_list_map) {
+        for (const auto& pos_list_pair : out_pos_list_map) {
           if (pos_list_pair.first) {
             pos_list_pair.second->emplace_back((*pos_list_pair.first)[chunk_offset]);
           } else {
@@ -131,15 +131,16 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // Only add chunk if it would contain any tuples
     if (!output_segments.empty() && output_segments[0]->size() > 0) {
-      output->append_chunk(output_segments);
+      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
     }
   }
 
-  return output;
+  return std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References,
+                                 std::move(output_chunks));
 }
 
 void Difference::_append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value) {
-  const auto string_value = type_cast_variant<pmr_string>(value);
+  const auto string_value = boost::lexical_cast<std::string>(value);
   const auto length = static_cast<uint32_t>(string_value.length());
 
   // write value as string

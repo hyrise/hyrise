@@ -12,7 +12,6 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/value_segment.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace {
@@ -133,7 +132,10 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Grow MVCC vectors and mark new (but still empty) rows as being under modification by current transaction.
       // Do so before resizing the Segments, because the resize of `Chunk::_segments.front()` is what releases the
       // new row count.
-      target_chunk->get_scoped_mvcc_data_lock()->grow_by(num_rows_for_target_chunk, context->transaction_id());
+      {
+        auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
+        mvcc_data->grow_by(num_rows_for_target_chunk, context->transaction_id(), MvccData::MAX_COMMIT_ID);
+      }
 
       // Grow data Segments.
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last

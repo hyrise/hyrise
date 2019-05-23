@@ -1,7 +1,8 @@
-#include <stdlib.h>
-
 #include <boost/algorithm/string.hpp>
 #include <cxxopts.hpp>
+#include <filesystem>
+
+#include <fstream>
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
@@ -14,9 +15,10 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/sqlite_wrapper.hpp"
+#include "utils/timer.hpp"
 
 /**
  * The Join Order Benchmark was introduced by Leis et al. "How good are query optimizers, really?".
@@ -35,8 +37,8 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-  ("table_path", "Directory containing the Tables", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH)) // NOLINT
-  ("query_path", "Directory/file containing the queries", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH)) // NOLINT
+  ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_PATH)) // NOLINT
+  ("query_path", "Directory containing the .sql files of the Join Order Benchmark", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_PATH)) // NOLINT
   ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
@@ -70,7 +72,7 @@ int main(int argc, char* argv[]) {
 
   // Check that the options "query_path" and "table_path" were specified
   if (query_path.empty() || table_path.empty()) {
-    std::cerr << "Need to specify --query_path=path/to/queries and --table_path=path/to/tables" << std::endl;
+    std::cerr << "Need to specify --query_path=path/to/queries and --table_path=path/to/table_files" << std::endl;
     std::cerr << cli_options.help({}) << std::endl;
     return 1;
   }
@@ -113,5 +115,48 @@ int main(int argc, char* argv[]) {
   auto query_generator =
       std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, non_query_file_names, query_subset);
 
-  BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context}.run();
+  auto benchmark_runner =
+      BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context};
+
+  if (benchmark_config->verify) {
+    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
+    // Without this, SQLite would never finish.
+
+    std::cout << "- Adding indexes to SQLite" << std::endl;
+    Timer timer;
+
+    // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
+    // schema and copy the data.
+    for (const auto& table_name : StorageManager::get().table_names()) {
+      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
+                                                         " RENAME TO " + table_name + "_unindexed");
+    }
+
+    // Recreate tables from schema.sql
+    std::ifstream schema_file(query_path + "/schema.sql");
+    std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
+    benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
+
+    // Add foreign keys
+    std::ifstream foreign_key_file(query_path + "/fkindexes.sql");
+    std::string foreign_key_sql((std::istreambuf_iterator<char>(foreign_key_file)), std::istreambuf_iterator<char>());
+    benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_sql);
+
+    // Copy over data
+    for (const auto& table_name : StorageManager::get().table_names()) {
+      Timer per_table_time;
+      std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
+
+      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "} + table_name +  // NOLINT
+                                                         " SELECT * FROM " + table_name + "_unindexed");
+
+      std::cout << " (" << per_table_time.lap_formatted() << ")" << std::endl;
+    }
+
+    std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")" << std::endl;
+  }
+
+  std::cout << "done." << std::endl;
+
+  benchmark_runner.run();
 }

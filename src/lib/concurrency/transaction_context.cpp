@@ -68,40 +68,34 @@ bool TransactionContext::aborted() const {
   return (phase == TransactionPhase::Aborted) || (phase == TransactionPhase::RolledBack);
 }
 
-bool TransactionContext::rollback() {
-  const auto success = _abort();
-
-  if (!success) return false;
+void TransactionContext::rollback() {
+  _abort();
 
   for (const auto& op : _rw_operators) {
     op->rollback_records();
   }
 
   _mark_as_rolled_back();
-  return true;
 }
 
-bool TransactionContext::commit_async(const std::function<void(TransactionID)>& callback) {
-  const auto success = _prepare_commit();
-
-  if (!success) return false;
+void TransactionContext::commit_async(const std::function<void(TransactionID)>& callback) {
+  _prepare_commit();
 
   for (const auto& op : _rw_operators) {
     op->commit_records(commit_id());
   }
 
   _mark_as_pending_and_try_commit(callback);
-
-  return true;
 }
 
-bool TransactionContext::commit() {
+[[nodiscard]] bool TransactionContext::commit() {
+  Assert(_phase == TransactionPhase::Active, "TransactionContext must be active to be committed.");
+
   auto committed = std::promise<void>{};
   const auto committed_future = committed.get_future();
   const auto callback = [&committed](TransactionID) { committed.set_value(); };
 
-  const auto success = commit_async(callback);
-  if (!success) return false;
+  commit_async(callback);
 
   committed_future.wait();
 
@@ -109,16 +103,12 @@ bool TransactionContext::commit() {
   return phase == TransactionPhase::Committed;
 }
 
-bool TransactionContext::_abort() {
+void TransactionContext::_abort() {
   const auto from_phase = TransactionPhase::Active;
   const auto to_phase = TransactionPhase::Aborted;
-  const auto end_phase = TransactionPhase::RolledBack;
-  auto success = _transition(from_phase, to_phase, end_phase);
-
-  if (!success) return false;
+  _transition(from_phase, to_phase);
 
   _wait_for_active_operators_to_finish();
-  return true;
 }
 
 void TransactionContext::_mark_as_rolled_back() {
@@ -133,14 +123,7 @@ void TransactionContext::_mark_as_rolled_back() {
   _phase = TransactionPhase::RolledBack;
 }
 
-bool TransactionContext::_prepare_commit() {
-  const auto from_phase = TransactionPhase::Active;
-  const auto to_phase = TransactionPhase::Committing;
-  const auto end_phase = TransactionPhase::Committed;
-  const auto success = _transition(from_phase, to_phase, end_phase);
-
-  if (!success) return false;
-
+void TransactionContext::_prepare_commit() {
   DebugAssert(([this]() {
                 for (const auto& op : _rw_operators) {
                   if (op->state() != ReadWriteOperatorState::Executed) return false;
@@ -149,10 +132,13 @@ bool TransactionContext::_prepare_commit() {
               }()),
               "All read/write operators need to be in state Executed (especially not Failed).");
 
+  const auto from_phase = TransactionPhase::Active;
+  const auto to_phase = TransactionPhase::Committing;
+  _transition(from_phase, to_phase);
+
   _wait_for_active_operators_to_finish();
 
   _commit_context = TransactionManager::get()._new_commit_context();
-  return true;
 }
 
 void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback) {
@@ -184,8 +170,7 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
               insert_op->target_table_name(), op->input_table_left(), context_ptr->_commit_context->commit_id() - 1,
               UNUSED_TRANSACTION_ID, insert_op->first_chunk_to_check());
           if (!constraints_satisfied) {
-            context_ptr->_transition(TransactionPhase::Committing, TransactionPhase::Active,
-                                     TransactionPhase::RolledBack);
+            context_ptr->_transition(TransactionPhase::Committing, TransactionPhase::RolledBack);
             context_ptr->rollback();
             no_constraint_violations = false;
             break;
@@ -220,17 +205,9 @@ void TransactionContext::_wait_for_active_operators_to_finish() const {
   _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
 }
 
-bool TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase,
-                                     TransactionPhase end_phase) {
-  auto expected = from_phase;
-  const auto success = _phase.compare_exchange_strong(expected, to_phase);
-
-  if (success) {
-    return true;
-  } else {
-    Assert((expected == to_phase) || (expected == end_phase), "Invalid phase transition detected.");
-    return false;
-  }
+void TransactionContext::_transition(TransactionPhase from_phase, TransactionPhase to_phase) {
+  const auto success = _phase.compare_exchange_strong(from_phase, to_phase);
+  Assert(success, "Illegal phase transition detected.");
 }
 
 }  // namespace opossum

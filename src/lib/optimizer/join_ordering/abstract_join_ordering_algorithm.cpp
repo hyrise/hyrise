@@ -80,8 +80,8 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
 
   // Categorize join predicates into those that can be processed as part of a join operator and those that need to be
   // processed as scans.
-  // NOTE: Since MPJ is currently slower than scanning the join output table, we do not emit multiple predicates for
-  //       the JoinNode, but use subsequent scans instead.
+  // NOTE: Since a multi-predicate join is currently slower than scanning the join output table, we do not emit multiple
+  //       predicates for the JoinNode, but use subsequent scans instead.
   auto join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto post_join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 

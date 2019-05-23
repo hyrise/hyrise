@@ -159,11 +159,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   // @}
 
   /**
-   * Prints this node and all its descendants (including all Subqueries) formatted as a tree
-   */
-  void print(std::ostream& out = std::cout) const;
-
-  /**
    * Perform a deep equality check
    */
   bool operator==(const AbstractLQPNode& rhs) const;
@@ -182,7 +177,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
  protected:
-  void _print_impl(std::ostream& out) const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
@@ -202,5 +196,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
 };
+
+std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);
 
 }  // namespace opossum

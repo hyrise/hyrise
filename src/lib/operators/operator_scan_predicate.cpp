@@ -34,25 +34,26 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
 
 namespace opossum {
 
-std::string OperatorScanPredicate::to_string(const std::shared_ptr<const Table>& table) const {
+std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
+                                                      const std::shared_ptr<const Table>& table) const {
   std::string column_name_left = std::string("Column #") + std::to_string(column_id);
   if (table) {
     column_name_left = table->column_name(column_id);
   }
 
-  std::string right = opossum::to_string(value);
-  if (table && is_column_id(value)) {
-    right = table->column_name(boost::get<ColumnID>(value));
-  }
+  stream << column_name_left << " " << predicate_condition;
 
-  std::stringstream stream;
-  stream << column_name_left << " " << predicate_condition_to_string.left.at(predicate_condition) << " " << right;
+  if (table && is_column_id(value)) {
+    stream << table->column_name(boost::get<ColumnID>(value));
+  } else {
+    stream << value;
+  }
 
   if (is_between_predicate_condition(predicate_condition)) {
     stream << " AND " << *value2;
   }
 
-  return stream.str();
+  return stream;
 }
 
 std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_expression(
@@ -153,7 +154,7 @@ bool operator==(const OperatorScanPredicate& lhs, const OperatorScanPredicate& r
 }
 
 std::ostream& operator<<(std::ostream& stream, const OperatorScanPredicate& predicate) {
-  stream << predicate.to_string();
+  predicate.output_to_stream(stream);
   return stream;
 }
 

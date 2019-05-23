@@ -86,27 +86,24 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
   /**
    * Aborts and rolls back the transaction.
-   *
-   * @returns false if called a second time
    */
-  bool rollback();
+  void rollback();
 
   /**
    * Commits the transaction.
    *
    * @param callback called when transaction is actually committed
-   * @return false if called a second time
    */
-  bool commit_async(const std::function<void(TransactionID)>& callback);
+  // TODO Make this protected
+  void commit_async(const std::function<void(TransactionID)>& callback);
 
   /**
    * Commits the transaction.
    *
-   * Blocks until transaction is actually committed.
-   *
-   * @return false if called a second time
+   * Blocks until transaction is actually committed. Returns false if during verification of the contraints a
+   * conflict is detected.
    */
-  bool commit();
+  [[nodiscard]] bool commit();
 
   /**
    * Add an operator to the list of read-write operators.
@@ -131,10 +128,8 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Sets the transaction phase to Aborted.
    * Should be called if an operator fails.
-   *
-   * @returns false if called a second time.
    */
-  bool _abort();
+  void _abort();
 
   /**
    * Sets the transaction phase to RolledBack.
@@ -147,10 +142,8 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * All operators within this context must be finished and
    * none of the registered operators should have failed when
    * calling this function.
-   *
-   * @return false if called a second time.
    */
-  bool _prepare_commit();
+  void _prepare_commit();
 
   /**
    * Sets transaction phase to Pending.
@@ -168,10 +161,9 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   void _wait_for_active_operators_to_finish() const;
 
   /**
-   * Throws an exception if the transition fails and
-   * has not been already in phase to_phase or end_phase.
+   * Throws an exception if the transition fails, i.e. if another thread has already committed the transaction
    */
-  bool _transition(TransactionPhase from_phase, TransactionPhase to_phase, TransactionPhase end_phase);
+  void _transition(TransactionPhase from_phase, TransactionPhase to_phase);
 
  private:
   const TransactionID _transaction_id;

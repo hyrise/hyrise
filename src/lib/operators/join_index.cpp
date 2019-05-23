@@ -26,13 +26,17 @@ namespace opossum {
  * For the remaining join types or if no index is found it falls back to a nested loop join.
  */
 
+bool JoinIndex::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                         DataType right_data_type, bool secondary_predicates) {
+  return !secondary_predicates;
+}
+
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                     const OperatorJoinPredicate& primary_predicate)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, {},
-                           std::make_unique<JoinIndex::PerformanceData>()) {
-  DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
-}
+                     const OperatorJoinPredicate& primary_predicate,
+                     const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
+                           std::make_unique<JoinIndex::PerformanceData>()) {}
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 
@@ -45,29 +49,32 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
-  _output_table = _initialize_output_table();
+  Assert(supports(_mode, _primary_predicate.predicate_condition,
+                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                  !_secondary_predicates.empty()),
+         "JoinHash doesn't support these parameters");
 
-  _perform_join();
-
-  return _output_table;
-}
-
-void JoinIndex::_perform_join() {
   _right_matches.resize(input_table_right()->chunk_count());
   _left_matches.resize(input_table_left()->chunk_count());
-
-  const auto track_left_matches = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
-  if (track_left_matches) {
-    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-      // initialize the data structures for left matches
-      _left_matches[chunk_id_left].resize(input_table_left()->get_chunk(chunk_id_left)->size());
-    }
-  }
 
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-  const auto track_right_matches = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+  const auto track_left_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Left || is_semi_or_anti_join;
+  const auto track_right_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Right;
+
+  if (track_left_matches) {
+    for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
+      _left_matches[chunk_id_left].resize(input_table_left()->get_chunk(chunk_id_left)->size());
+    }
+  }
+
+  if (track_right_matches) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
+      _right_matches[chunk_id_right].resize(input_table_right()->get_chunk(chunk_id_right)->size());
+    }
+  }
 
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
@@ -80,14 +87,13 @@ void JoinIndex::_perform_join() {
 
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
 
-  auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*input_table_left(), *input_table_right(), {}};
+  auto secondary_predicate_evaluator =
+      MultiPredicateJoinEvaluator{*input_table_left(), *input_table_right(), _mode, {}};
 
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
     const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
     const auto indices = chunk_right->get_indices(std::vector<ColumnID>{_primary_predicate.column_ids.second});
-    if (track_right_matches) _right_matches[chunk_id_right].resize(chunk_right->size());
-
     std::shared_ptr<BaseIndex> index = nullptr;
 
     if (!indices.empty()) {
@@ -158,13 +164,28 @@ void JoinIndex::_perform_join() {
   _pos_list_left->shrink_to_fit();
   _pos_list_right->shrink_to_fit();
 
+  // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
+  // We use `left_matches_by_chunk` to determine whether a tuple from the left side found a match.
+  if (is_semi_or_anti_join) {
+    const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+      const auto chunk_size = input_table_left()->get_chunk(chunk_id)->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        if (_left_matches[chunk_id][chunk_offset] ^ invert) {
+          _pos_list_left->emplace_back(chunk_id, chunk_offset);
+        }
+      }
+    }
+  }
+
   // write output chunks
   Segments output_segments;
 
   _write_output_segments(output_segments, input_table_left(), _pos_list_left);
-  _write_output_segments(output_segments, input_table_right(), _pos_list_right);
-
-  _output_table->append_chunk(output_segments);
+  if (!is_semi_or_anti_join) {
+    _write_output_segments(output_segments, input_table_right(), _pos_list_right);
+  }
 
   if (performance_data.chunks_scanned_with_index < performance_data.chunks_scanned_without_index) {
     PerformanceWarning(
@@ -172,6 +193,8 @@ void JoinIndex::_perform_join() {
         std::to_string(performance_data.chunks_scanned_with_index + performance_data.chunks_scanned_without_index) +
         " chunks scanned using an index");
   }
+
+  return _build_output_table({std::make_shared<Chunk>(output_segments)});
 }
 
 // join loop that joins two segments of two columns using an iterator for the left, and an index for the right
@@ -228,39 +251,6 @@ void JoinIndex::_join_two_segments_using_index(LeftIterator left_it, LeftIterato
     }
 
     _append_matches(range_begin, range_end, left_value.chunk_offset(), chunk_id_left, chunk_id_right);
-  }
-}
-
-// join loop that joins two segments of two columns via their iterators
-template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-void JoinIndex::_join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                               RightIterator right_begin, RightIterator right_end,
-                                               const ChunkID chunk_id_left, const ChunkID chunk_id_right) {
-  // No index so we fall back on a nested loop join
-  for (; left_it != left_end; ++left_it) {
-    const auto left_value = *left_it;
-    if (left_value.is_null()) continue;
-
-    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
-      const auto right_value = *right_it;
-      if (right_value.is_null()) continue;
-
-      if (func(left_value.value(), right_value.value())) {
-        _pos_list_left->emplace_back(RowID{chunk_id_left, left_value.chunk_offset()});
-        _pos_list_right->emplace_back(RowID{chunk_id_right, right_value.chunk_offset()});
-
-        if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
-          _left_matches[chunk_id_left][left_value.chunk_offset()] = true;
-        }
-
-        if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
-          DebugAssert(chunk_id_right < input_table_right()->chunk_count(), "invalid chunk_id in join_index");
-          DebugAssert(right_value.chunk_offset() < input_table_right()->get_chunk(chunk_id_right)->size(),
-                      "invalid chunk_offset in join_index");
-          _right_matches[chunk_id_right][right_value.chunk_offset()] = true;
-        }
-      }
-    }
   }
 }
 
@@ -349,12 +339,12 @@ void JoinIndex::_on_cleanup() {
   _right_matches.clear();
 }
 
-std::string JoinIndex::PerformanceData::to_string(DescriptionMode description_mode) const {
-  std::string string = OperatorPerformanceData::to_string(description_mode);
-  string += (description_mode == DescriptionMode::SingleLine ? " / " : "\\n");
-  string += std::to_string(chunks_scanned_with_index) + " of " +
-            std::to_string(chunks_scanned_with_index + chunks_scanned_without_index) + " chunks used an index";
-  return string;
+void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
+  OperatorPerformanceData::output_to_stream(stream, description_mode);
+
+  stream << (description_mode == DescriptionMode::SingleLine ? " / " : "\\n");
+  stream << std::to_string(chunks_scanned_with_index) << " of "
+         << std::to_string(chunks_scanned_with_index + chunks_scanned_without_index) << " chunks used an index";
 }
 
 }  // namespace opossum

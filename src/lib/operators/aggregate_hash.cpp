@@ -87,6 +87,7 @@ template <typename ColumnDataType, typename AggregateType, typename AggregateKey
 struct AggregateContext : public AggregateResultContext<ColumnDataType, AggregateType> {
   AggregateContext() {
     auto allocator = AggregateResultIdMapAllocator<AggregateKey>{&this->buffer};
+    // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage) - false warning: called C++ object (result_ids) is null
     result_ids = std::make_unique<AggregateResultIdMap<AggregateKey>>(allocator);
   }
 
@@ -171,7 +172,7 @@ void AggregateHash::_aggregate() {
     size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
                          input_table->chunk_count() * aligned_size<AggregateKeys<AggregateKey>>() +
                          input_table->row_count() * needed_size_per_aggregate_key;
-    needed_size *= 1.1;  // Give it a little bit more, just in case
+    needed_size = static_cast<size_t>(needed_size * 1.1);  // Give it a little bit more, just in case
 
     auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
     auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
@@ -655,7 +656,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   if (aggregate.function == AggregateFunction::CountDistinct) {
     column_name_stream << "COUNT(DISTINCT ";
   } else {
-    column_name_stream << aggregate_function_to_string.left.at(aggregate.function) << "(";
+    column_name_stream << aggregate.function << "(";
   }
 
   if (aggregate.column) {

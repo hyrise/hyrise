@@ -16,13 +16,15 @@ const std::string CreatePreparedPlan::name() const { return "CreatePreparedPlan"
 const std::string CreatePreparedPlan::description(DescriptionMode description_mode) const {
   std::stringstream stream;
   stream << name() << " '" << _prepared_plan_name << "' {\n";
-  _prepared_plan->print(stream);
+  stream << *_prepared_plan;
   stream << "}";
 
   return stream.str();
 }
 
 std::shared_ptr<PreparedPlan> CreatePreparedPlan::prepared_plan() const { return _prepared_plan; }
+
+const std::string& CreatePreparedPlan::prepared_plan_name() const { return _prepared_plan_name; }
 
 std::shared_ptr<const Table> CreatePreparedPlan::_on_execute() {
   StorageManager::get().add_prepared_plan(_prepared_plan_name, _prepared_plan);
