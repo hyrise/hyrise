@@ -80,7 +80,7 @@ TEST_P(TPCHTest, Test) {
   } else {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
-  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).disable_mvcc().create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).create_pipeline();
 
   /**
    * Run the query and obtain the result tables, TPC-H 15 needs special handling
