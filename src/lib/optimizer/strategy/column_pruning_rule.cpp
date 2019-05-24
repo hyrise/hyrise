@@ -74,6 +74,7 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
       case LQPNodeType::ShowColumns:
       case LQPNodeType::ShowTables:
       case LQPNodeType::Sort:
+      case LQPNodeType::StaticTable:
       case LQPNodeType::StoredTable:
       case LQPNodeType::Union:
       case LQPNodeType::Validate:

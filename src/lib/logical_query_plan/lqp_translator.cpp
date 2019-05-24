@@ -469,6 +469,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
   const auto input_node = create_table_node->left_input();
+  // TODO(david): create dummy table for any case
   return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->column_definitions,
                                        create_table_node->if_not_exists,
                                        input_node ? translate_node(input_node) : nullptr);

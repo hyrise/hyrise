@@ -47,6 +47,7 @@
 #include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
@@ -1031,9 +1032,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     column_definition.nullable = parser_column_definition->nullable;
   }
 
-  return CreateTableNode::make(
-      create_statement.tableName, column_definitions, create_statement.ifNotExists,
-      create_statement.select ? _translate_select_statement(*create_statement.select) : nullptr);
+  //TODO(david): instead of nullptr, insert dummytablenode
+  return CreateTableNode::make(create_statement.tableName, column_definitions, create_statement.ifNotExists,
+                               create_statement.select
+                                   ? _translate_select_statement(*create_statement.select)
+                                   : StaticTableNode::make(Table::create_dummy_table(column_definitions)));
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {

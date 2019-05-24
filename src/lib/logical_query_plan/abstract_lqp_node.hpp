@@ -31,6 +31,7 @@ enum class LQPNodeType {
   ShowColumns,
   ShowTables,
   Sort,
+  StaticTable,
   StoredTable,
   Update,
   Union,
