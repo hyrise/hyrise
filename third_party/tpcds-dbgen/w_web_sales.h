@@ -72,7 +72,7 @@ struct W_WEB_SALES_TBL {
 #define WS_MAX_SHIP_DELAY	120
 
 
-int mk_w_web_sales(void *pDest, ds_key_t kIndex);
+int mk_w_web_sales(void *pDest, ds_key_t kIndex, void* web_returns, int* was_returned);
 int pr_w_web_sales(void *pSrc);
 int ld_w_web_sales(void *pSrc);
 int vld_web_sales(int nTable, ds_key_t kRow, int *Permutation);

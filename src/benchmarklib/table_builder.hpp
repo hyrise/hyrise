@@ -5,9 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include <boost/hana/tuple.hpp>
 #include "boost/hana/assert.hpp"
 #include "boost/hana/for_each.hpp"
+#include "boost/hana/tuple.hpp"
 #include "boost/hana/zip_with.hpp"
 
 #include "resolve_type.hpp"
@@ -17,6 +17,7 @@ namespace hana = boost::hana;
 
 namespace {
 // similar to std::optional but has_value is known at compile time, so "if constexpr" can be used
+// hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
 template <typename T, bool _has_value, typename Enable = void>
 class optional_constexpr {
  public:
@@ -72,26 +73,25 @@ template <typename T>
 using get_value_type = typename GetValueType<T>::value_type;
 
 // check if std::optional<V> or V is null using the same syntax - needed for templating
-template <typename T, typename std::enable_if_t<!is_optional_v<T>, int> = 0>
-constexpr bool is_null(const T&) {
-  return false;
-}
-
-template <typename T, typename std::enable_if_t<is_optional_v<T>, int> = 0>
-bool is_null(const T& optional) {
-  return !optional.has_value();
+template <typename T>
+constexpr bool is_null(const T& maybe_optional) {
+  if constexpr (is_optional_v<T>) {
+    return !maybe_optional.has_value();
+  } else {
+    return false;
+  }
 }
 
 // get the value of std::optional<V> or V using the same syntax - needed for templating
-template <typename T, typename std::enable_if_t<!is_optional_v<T>, int> = 0>
-T& get_value(T& value) {
-  return value;
+template <typename T>
+get_value_type<T>& get_value(T& maybe_optional) {
+  if constexpr (is_optional_v<T>) {
+    return maybe_optional.value();
+  } else {
+    return maybe_optional;
+  }
 }
 
-template <typename T, typename std::enable_if_t<is_optional_v<T>, int> = 0>
-typename T::value_type& get_value(T& optional) {
-  return optional.value();
-}
 }  // namespace
 
 namespace opossum {
@@ -129,9 +129,9 @@ class TableBuilder {
 
     // Reserve some space in the vectors
     hana::for_each(_data_vectors, [&](auto&& vector) { vector.reserve(_estimated_rows_per_chunk); });
-    hana::for_each(_is_null_vectors, [&](auto&& optional_vector) {
-      if constexpr (optional_vector.has_value) {
-        optional_vector.value().reserve(_estimated_rows_per_chunk);
+    hana::for_each(_is_null_vectors, [&](auto&& is_null_vector) {
+      if constexpr (std::decay_t<decltype(is_null_vector)>::has_value) {
+        is_null_vector.value().reserve(_estimated_rows_per_chunk);
       }
     });
   }
@@ -164,7 +164,7 @@ class TableBuilder {
       auto& is_null_vector = data_vector_and_is_null_vector_and_value[hana::llong_c<1>].get();
       auto& maybe_optional_value = data_vector_and_is_null_vector_and_value[hana::llong_c<2>];
 
-      constexpr bool column_is_nullable = is_null_vector.has_value;
+      constexpr bool column_is_nullable = std::decay_t<decltype(is_null_vector)>::has_value;
       auto value_is_null = is_null(maybe_optional_value);
 
       DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
@@ -211,7 +211,7 @@ class TableBuilder {
       auto& is_null_vector = data_vector_and_is_null_vector[hana::llong_c<1>].get();
 
       using T = typename std::decay_t<decltype(data_vector)>::value_type;
-      if constexpr (is_null_vector.has_value) {
+      if constexpr (std::decay_t<decltype(is_null_vector)>::has_value) {
         segments.push_back(
             std::make_shared<ValueSegment<T>>(std::move(data_vector), std::move(is_null_vector.value())));
 

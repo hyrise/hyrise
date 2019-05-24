@@ -288,37 +288,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   //  subroutine of mk_w_catalog_sales
   // catalog returns
   {
-    const auto [catalog_returns_first, catalog_returns_count] = prepare_for_table(CATALOG_RETURNS);
-
-    auto catalog_returns_builder =
-        TableBuilder{_benchmark_config->chunk_size, catalog_returns_column_types, catalog_returns_column_names,
-                     UseMvcc::Yes, static_cast<size_t>(catalog_returns_count)};
-
-    for (auto i = ds_key_t{0}; i < catalog_returns_count; i++) {
-      auto catalog_returns =
-          call_dbgen_mk<W_CATALOG_RETURNS_TBL, &mk_w_catalog_returns, CATALOG_RETURNS>(catalog_returns_first + i);
-
-      catalog_returns_builder.append_row(
-          convert_key(catalog_returns.cr_returned_date_sk), convert_key(catalog_returns.cr_returned_time_sk),
-          convert_key(catalog_returns.cr_item_sk), convert_key(catalog_returns.cr_refunded_customer_sk),
-          convert_key(catalog_returns.cr_refunded_cdemo_sk), convert_key(catalog_returns.cr_refunded_hdemo_sk),
-          convert_key(catalog_returns.cr_refunded_addr_sk), convert_key(catalog_returns.cr_returning_customer_sk),
-          convert_key(catalog_returns.cr_returning_cdemo_sk), convert_key(catalog_returns.cr_returning_hdemo_sk),
-          convert_key(catalog_returns.cr_returning_addr_sk), convert_key(catalog_returns.cr_call_center_sk),
-          convert_key(catalog_returns.cr_catalog_page_sk), convert_key(catalog_returns.cr_ship_mode_sk),
-          convert_key(catalog_returns.cr_warehouse_sk), convert_key(catalog_returns.cr_reason_sk),
-          convert_key(catalog_returns.cr_order_number), catalog_returns.cr_pricing.quantity,
-          decimal_to_float(catalog_returns.cr_pricing.net_paid), decimal_to_float(catalog_returns.cr_pricing.ext_tax),
-          decimal_to_float(catalog_returns.cr_pricing.net_paid_inc_tax),
-          decimal_to_float(catalog_returns.cr_pricing.fee), decimal_to_float(catalog_returns.cr_pricing.ext_ship_cost),
-          decimal_to_float(catalog_returns.cr_pricing.refunded_cash),
-          decimal_to_float(catalog_returns.cr_pricing.reversed_charge),
-          decimal_to_float(catalog_returns.cr_pricing.store_credit),
-          decimal_to_float(catalog_returns.cr_pricing.net_loss));
-    }
-
-    table_info_by_name["catalog_returns"].table = catalog_returns_builder.finish_table();
-    std::cout << "catalog_returns table generated" << std::endl;
+    DebugAssert(prepare_for_table(CATALOG_RETURNS).second <= 0,
+                "catalog returns are only created together with catalog sales");
   }
 
   // catalog sales
@@ -329,9 +300,16 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
         TableBuilder{_benchmark_config->chunk_size, catalog_sales_column_types, catalog_sales_column_names,
                      UseMvcc::Yes, static_cast<size_t>(catalog_sales_count)};
 
+    auto catalog_returns_builder = TableBuilder{_benchmark_config->chunk_size, catalog_returns_column_types,
+                                                catalog_returns_column_names, UseMvcc::Yes};
+
     for (auto i = ds_key_t{0}; i < catalog_sales_count; i++) {
-      const auto catalog_sales =
-          call_dbgen_mk<W_CATALOG_SALES_TBL, &mk_w_catalog_sales, CATALOG_SALES>(catalog_sales_first + i);
+      auto catalog_sales = W_CATALOG_SALES_TBL{};
+      auto catalog_returns = W_CATALOG_RETURNS_TBL{};
+      int was_returned = 0;
+
+      mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
+      tpcds_row_stop(CATALOG_SALES);
 
       catalog_sales_builder.append_row(
           convert_key(catalog_sales.cs_sold_date_sk), convert_key(catalog_sales.cs_sold_time_sk),
@@ -355,10 +333,34 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
           decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_ship),
           decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_ship_tax),
           decimal_to_float(catalog_sales.cs_pricing.net_profit));
+
+      if (was_returned != 0) {
+        catalog_returns_builder.append_row(
+            convert_key(catalog_returns.cr_returned_date_sk), convert_key(catalog_returns.cr_returned_time_sk),
+            convert_key(catalog_returns.cr_item_sk), convert_key(catalog_returns.cr_refunded_customer_sk),
+            convert_key(catalog_returns.cr_refunded_cdemo_sk), convert_key(catalog_returns.cr_refunded_hdemo_sk),
+            convert_key(catalog_returns.cr_refunded_addr_sk), convert_key(catalog_returns.cr_returning_customer_sk),
+            convert_key(catalog_returns.cr_returning_cdemo_sk), convert_key(catalog_returns.cr_returning_hdemo_sk),
+            convert_key(catalog_returns.cr_returning_addr_sk), convert_key(catalog_returns.cr_call_center_sk),
+            convert_key(catalog_returns.cr_catalog_page_sk), convert_key(catalog_returns.cr_ship_mode_sk),
+            convert_key(catalog_returns.cr_warehouse_sk), convert_key(catalog_returns.cr_reason_sk),
+            convert_key(catalog_returns.cr_order_number), catalog_returns.cr_pricing.quantity,
+            decimal_to_float(catalog_returns.cr_pricing.net_paid), decimal_to_float(catalog_returns.cr_pricing.ext_tax),
+            decimal_to_float(catalog_returns.cr_pricing.net_paid_inc_tax),
+            decimal_to_float(catalog_returns.cr_pricing.fee),
+            decimal_to_float(catalog_returns.cr_pricing.ext_ship_cost),
+            decimal_to_float(catalog_returns.cr_pricing.refunded_cash),
+            decimal_to_float(catalog_returns.cr_pricing.reversed_charge),
+            decimal_to_float(catalog_returns.cr_pricing.store_credit),
+            decimal_to_float(catalog_returns.cr_pricing.net_loss));
+      }
     }
 
     table_info_by_name["catalog_sales"].table = catalog_sales_builder.finish_table();
     std::cout << "catalog_sales table generated" << std::endl;
+
+    table_info_by_name["catalog_returns"].table = catalog_returns_builder.finish_table();
+    std::cout << "catalog_returns table generated" << std::endl;
   }
 
   // customer
@@ -643,33 +645,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   //  subroutine of mk_w_store_sales
   // store returns
   {
-    const auto [store_returns_first, store_returns_count] = prepare_for_table(STORE_RETURNS);
-
-    auto store_returns_builder =
-        TableBuilder{_benchmark_config->chunk_size, store_returns_column_types, store_returns_column_names,
-                     UseMvcc::Yes, static_cast<size_t>(store_returns_count)};
-
-    for (auto i = ds_key_t{0}; i < store_returns_count; i++) {
-      auto store_returns =
-          call_dbgen_mk<W_STORE_RETURNS_TBL, &mk_w_store_returns, STORE_RETURNS>(store_returns_first + i);
-
-      store_returns_builder.append_row(
-          convert_key(store_returns.sr_returned_date_sk), convert_key(store_returns.sr_returned_time_sk),
-          convert_key(store_returns.sr_item_sk), convert_key(store_returns.sr_customer_sk),
-          convert_key(store_returns.sr_cdemo_sk), convert_key(store_returns.sr_hdemo_sk),
-          convert_key(store_returns.sr_addr_sk), convert_key(store_returns.sr_store_sk),
-          convert_key(store_returns.sr_reason_sk), convert_key(store_returns.sr_ticket_number),
-          store_returns.sr_pricing.quantity, decimal_to_float(store_returns.sr_pricing.net_paid),
-          decimal_to_float(store_returns.sr_pricing.ext_tax),
-          decimal_to_float(store_returns.sr_pricing.net_paid_inc_tax), decimal_to_float(store_returns.sr_pricing.fee),
-          decimal_to_float(store_returns.sr_pricing.ext_ship_cost),
-          decimal_to_float(store_returns.sr_pricing.refunded_cash),
-          decimal_to_float(store_returns.sr_pricing.reversed_charge),
-          decimal_to_float(store_returns.sr_pricing.store_credit), decimal_to_float(store_returns.sr_pricing.net_loss));
-    }
-
-    table_info_by_name["store_returns"].table = store_returns_builder.finish_table();
-    std::cout << "store_returns table generated" << std::endl;
+    DebugAssert(prepare_for_table(STORE_RETURNS).second <= 0,
+                "store returns are only created together with store sales");
   }
 
   // store sales
@@ -679,9 +656,16 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     auto store_sales_builder =
         TableBuilder{_benchmark_config->chunk_size, store_sales_column_types, store_sales_column_names, UseMvcc::Yes,
                      static_cast<size_t>(store_sales_count)};
+    auto store_returns_builder = TableBuilder{_benchmark_config->chunk_size, store_returns_column_types,
+                                              store_returns_column_names, UseMvcc::Yes};
 
     for (auto i = ds_key_t{0}; i < store_sales_count; i++) {
-      const auto store_sales = call_dbgen_mk<W_STORE_SALES_TBL, &mk_w_store_sales, STORE_SALES>(store_sales_first + i);
+      auto store_sales = W_STORE_SALES_TBL{};
+      auto store_returns = W_STORE_RETURNS_TBL{};
+      int was_returned = 0;
+
+      mk_w_store_sales(&store_sales, store_sales_first + i, &store_returns, &was_returned);
+      tpcds_row_stop(STORE_SALES);
 
       store_sales_builder.append_row(
           convert_key(store_sales.ss_sold_date_sk), convert_key(store_sales.ss_sold_time_sk),
@@ -697,10 +681,30 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
           decimal_to_float(store_sales.ss_pricing.coupon_amt), decimal_to_float(store_sales.ss_pricing.net_paid),
           decimal_to_float(store_sales.ss_pricing.net_paid_inc_tax),
           decimal_to_float(store_sales.ss_pricing.net_profit));
+
+      if (was_returned != 0) {
+        store_returns_builder.append_row(
+            convert_key(store_returns.sr_returned_date_sk), convert_key(store_returns.sr_returned_time_sk),
+            convert_key(store_returns.sr_item_sk), convert_key(store_returns.sr_customer_sk),
+            convert_key(store_returns.sr_cdemo_sk), convert_key(store_returns.sr_hdemo_sk),
+            convert_key(store_returns.sr_addr_sk), convert_key(store_returns.sr_store_sk),
+            convert_key(store_returns.sr_reason_sk), convert_key(store_returns.sr_ticket_number),
+            store_returns.sr_pricing.quantity, decimal_to_float(store_returns.sr_pricing.net_paid),
+            decimal_to_float(store_returns.sr_pricing.ext_tax),
+            decimal_to_float(store_returns.sr_pricing.net_paid_inc_tax), decimal_to_float(store_returns.sr_pricing.fee),
+            decimal_to_float(store_returns.sr_pricing.ext_ship_cost),
+            decimal_to_float(store_returns.sr_pricing.refunded_cash),
+            decimal_to_float(store_returns.sr_pricing.reversed_charge),
+            decimal_to_float(store_returns.sr_pricing.store_credit),
+            decimal_to_float(store_returns.sr_pricing.net_loss));
+      }
     }
 
     table_info_by_name["store_sales"].table = store_sales_builder.finish_table();
     std::cout << "store_sales table generated" << std::endl;
+
+    table_info_by_name["store_returns"].table = store_returns_builder.finish_table();
+    std::cout << "store_returns table generated" << std::endl;
   }
 
   // time
@@ -773,35 +777,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   // TODO(pascal): web returns is a so called child table of web sales, which means it is generated as a
   //  subroutine of mk_w_web_sales
   // web returns
-  {
-    const auto [web_returns_first, web_returns_count] = prepare_for_table(WEB_RETURNS);
-
-    auto web_returns_builder =
-        TableBuilder{_benchmark_config->chunk_size, web_returns_column_types, web_returns_column_names, UseMvcc::Yes,
-                     static_cast<size_t>(web_returns_count)};
-
-    for (auto i = ds_key_t{0}; i < web_returns_count; i++) {
-      const auto web_returns = call_dbgen_mk<W_WEB_RETURNS_TBL, &mk_w_web_returns, WEB_RETURNS>(web_returns_first + i);
-
-      web_returns_builder.append_row(
-          convert_key(web_returns.wr_returned_date_sk), convert_key(web_returns.wr_returned_time_sk),
-          convert_key(web_returns.wr_item_sk), convert_key(web_returns.wr_refunded_customer_sk),
-          convert_key(web_returns.wr_refunded_cdemo_sk), convert_key(web_returns.wr_refunded_hdemo_sk),
-          convert_key(web_returns.wr_refunded_addr_sk), convert_key(web_returns.wr_returning_customer_sk),
-          convert_key(web_returns.wr_returning_cdemo_sk), convert_key(web_returns.wr_returning_hdemo_sk),
-          convert_key(web_returns.wr_returning_addr_sk), convert_key(web_returns.wr_web_page_sk),
-          convert_key(web_returns.wr_reason_sk), convert_key(web_returns.wr_order_number),
-          web_returns.wr_pricing.quantity, decimal_to_float(web_returns.wr_pricing.net_paid),
-          decimal_to_float(web_returns.wr_pricing.ext_tax), decimal_to_float(web_returns.wr_pricing.net_paid_inc_tax),
-          decimal_to_float(web_returns.wr_pricing.fee), decimal_to_float(web_returns.wr_pricing.ext_ship_cost),
-          decimal_to_float(web_returns.wr_pricing.refunded_cash),
-          decimal_to_float(web_returns.wr_pricing.reversed_charge),
-          decimal_to_float(web_returns.wr_pricing.store_credit), decimal_to_float(web_returns.wr_pricing.net_loss));
-    }
-
-    table_info_by_name["web_returns"].table = web_returns_builder.finish_table();
-    std::cout << "web_returns table generated" << std::endl;
-  }
+  { DebugAssert(prepare_for_table(WEB_RETURNS).second <= 0, "web returns are only created together with web sales"); }
 
   // web sales
   {
@@ -809,9 +785,16 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     auto web_sales_builder = TableBuilder{_benchmark_config->chunk_size, web_sales_column_types, web_sales_column_names,
                                           UseMvcc::Yes, static_cast<size_t>(web_sales_count)};
+    auto web_returns_builder =
+        TableBuilder{_benchmark_config->chunk_size, web_returns_column_types, web_returns_column_names, UseMvcc::Yes};
 
     for (auto i = ds_key_t{0}; i < web_sales_count; i++) {
-      const auto web_sales = call_dbgen_mk<W_WEB_SALES_TBL, &mk_w_web_sales, WEB_SALES>(web_sales_first + i);
+      auto web_sales = W_WEB_SALES_TBL{};
+      auto web_returns = W_WEB_RETURNS_TBL{};
+      int was_returned = 0;
+
+      mk_w_web_sales(&web_sales, web_sales_first + i, &web_returns, &was_returned);
+      tpcds_row_stop(WEB_SALES);
 
       web_sales_builder.append_row(
           convert_key(web_sales.ws_sold_date_sk), convert_key(web_sales.ws_sold_time_sk),
@@ -833,10 +816,30 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
           decimal_to_float(web_sales.ws_pricing.net_paid_inc_ship),
           decimal_to_float(web_sales.ws_pricing.net_paid_inc_ship_tax),
           decimal_to_float(web_sales.ws_pricing.net_profit));
+
+      if (was_returned != 0) {
+        web_returns_builder.append_row(
+            convert_key(web_returns.wr_returned_date_sk), convert_key(web_returns.wr_returned_time_sk),
+            convert_key(web_returns.wr_item_sk), convert_key(web_returns.wr_refunded_customer_sk),
+            convert_key(web_returns.wr_refunded_cdemo_sk), convert_key(web_returns.wr_refunded_hdemo_sk),
+            convert_key(web_returns.wr_refunded_addr_sk), convert_key(web_returns.wr_returning_customer_sk),
+            convert_key(web_returns.wr_returning_cdemo_sk), convert_key(web_returns.wr_returning_hdemo_sk),
+            convert_key(web_returns.wr_returning_addr_sk), convert_key(web_returns.wr_web_page_sk),
+            convert_key(web_returns.wr_reason_sk), convert_key(web_returns.wr_order_number),
+            web_returns.wr_pricing.quantity, decimal_to_float(web_returns.wr_pricing.net_paid),
+            decimal_to_float(web_returns.wr_pricing.ext_tax), decimal_to_float(web_returns.wr_pricing.net_paid_inc_tax),
+            decimal_to_float(web_returns.wr_pricing.fee), decimal_to_float(web_returns.wr_pricing.ext_ship_cost),
+            decimal_to_float(web_returns.wr_pricing.refunded_cash),
+            decimal_to_float(web_returns.wr_pricing.reversed_charge),
+            decimal_to_float(web_returns.wr_pricing.store_credit), decimal_to_float(web_returns.wr_pricing.net_loss));
+      }
     }
 
     table_info_by_name["web_sales"].table = web_sales_builder.finish_table();
     std::cout << "web_sales table generated" << std::endl;
+
+    table_info_by_name["web_returns"].table = web_returns_builder.finish_table();
+    std::cout << "web_returns table generated" << std::endl;
   }
 
   // web site

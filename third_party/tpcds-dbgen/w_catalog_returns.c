@@ -69,14 +69,14 @@ extern struct W_CATALOG_SALES_TBL g_w_catalog_sales;
 * 20031023 jms removed ability for stand alone generation
 */
 int
-mk_w_catalog_returns (void * row, ds_key_t index)
+mk_w_catalog_returns (void * row, ds_key_t index, void* catalog_sales)
 {
 	int res = 0;
 	
 	static decimal_t dHundred;
 	int nTemp;	
 	struct W_CATALOG_RETURNS_TBL *r;
-	struct W_CATALOG_SALES_TBL *sale = &g_w_catalog_sales;
+	struct W_CATALOG_SALES_TBL *sale = catalog_sales;
 	static int bInit = 0;
 	static int bStandAlone = 0;
    tdef *pTdef = getSimpleTdefsByNumber(CATALOG_RETURNS);
@@ -103,7 +103,7 @@ mk_w_catalog_returns (void * row, ds_key_t index)
 			row_skip(CATALOG_SALES, 1);
 			return(1);
 		}
-		mk_w_catalog_sales(&g_w_catalog_sales, index);
+		mk_w_catalog_sales(&g_w_catalog_sales, index, NULL, NULL);
 	}
 	
 	/*

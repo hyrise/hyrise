@@ -57,7 +57,7 @@ struct W_STORE_RETURNS_TBL {
 	ds_pricing_t	sr_pricing;
 };
 
-int mk_w_store_returns(void *pDest, ds_key_t kIndex);
+int mk_w_store_returns(void *pDest, ds_key_t kIndex, void* store_sales);
 int pr_w_store_returns(void *pSrc);
 int ld_w_store_returns(void *pSrc);
 #endif

@@ -155,7 +155,7 @@ mk_master (void *row, ds_key_t index)
 }
 
 static void
-mk_detail(void *row, int bPrint)
+mk_detail(void *row, int bPrint, void* catalog_returns, int* was_returned)
 {
 	static decimal_t dZero,
 		dHundred,
@@ -220,7 +220,8 @@ mk_detail(void *row, int bPrint)
 	genrand_integer(&nTemp, DIST_UNIFORM, 0, 99, 0, CR_IS_RETURNED);
 	if (nTemp < CR_RETURN_PCT)
 	{
-		mk_w_catalog_returns(NULL, 1);
+		mk_w_catalog_returns(catalog_returns, 1, r);
+		*was_returned = 1;
       if (bPrint)
          pr_w_catalog_returns(NULL);
 	}
@@ -251,7 +252,7 @@ mk_detail(void *row, int bPrint)
 * 20020902 jms Should promos be tied to item id?
 */
 int
-mk_w_catalog_sales (void* row, ds_key_t index)
+mk_w_catalog_sales (void* row, ds_key_t index, void* catalog_returns, int* was_returned)
 {
    int nLineitems,
       i;
@@ -265,7 +266,7 @@ mk_w_catalog_sales (void* row, ds_key_t index)
    genrand_integer(&nLineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
    for (i=1; i <= nLineitems; i++)
    {
-      mk_detail(NULL, 1);
+      mk_detail(row, 0, catalog_returns, was_returned);
    }
 
    /**
@@ -394,9 +395,9 @@ vld_w_catalog_sales(int nTable, ds_key_t kRow, int *Permutation)
 	genrand_integer(&nLineitem, DIST_UNIFORM, 1, nMaxLineitem, 0, CS_PRICING_QUANTITY);
 	for (i = 1; i < nLineitem; i++)
 	{
-		mk_detail(NULL, 0);
+		mk_detail(NULL, 0, NULL, NULL);
 	}
-   mk_detail(NULL, 1);
+   mk_detail(NULL, 1, NULL, NULL);
 
 	return(0);
 }

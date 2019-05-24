@@ -9,7 +9,7 @@ int main() {
   opossum::TpcdsTableGenerator(1, 1000).generate_and_store();
 
   std::cout << " > Dumping as CSV" << std::endl;
-  opossum::StorageManager::get().export_all_tables_as_csv("./generated_tpcds_data/");
+  opossum::StorageManager::get().export_all_tables_as_csv(".");
 
   std::cout << " > Done" << std::endl;
 

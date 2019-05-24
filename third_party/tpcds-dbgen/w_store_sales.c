@@ -112,7 +112,7 @@ mk_master (void *row, ds_key_t index)
 
 
 static void
-mk_detail (void *row, int bPrint)
+mk_detail (void *row, int bPrint, void* store_returns, int* was_returned)
 {
 int nTemp;
 struct W_STORE_RETURNS_TBL ReturnRow;
@@ -141,7 +141,8 @@ tdef *pT = getSimpleTdefsByNumber(STORE_SALES);
 	genrand_integer(&nTemp, DIST_UNIFORM, 0, 99, 0, SR_IS_RETURNED);
 	if (nTemp < SR_RETURN_PCT)
 	{
-		mk_w_store_returns(&ReturnRow, 1);
+		mk_w_store_returns(store_returns, 1, r);
+		*was_returned = 1;
       if (bPrint)
          pr_w_store_returns(&ReturnRow);
 	}
@@ -237,7 +238,7 @@ ld_w_store_sales(void *pSrc)
 * mk_store_sales
 */
 int
-mk_w_store_sales (void *row, ds_key_t index)
+mk_w_store_sales (void *row, ds_key_t index, void* store_returns, int* was_returned)
 {
 	int nLineitems,
 		i;
@@ -249,7 +250,7 @@ mk_w_store_sales (void *row, ds_key_t index)
 	genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
    for (i = 1; i <= nLineitems; i++)
    {
-	   mk_detail(NULL, 1);
+	   mk_detail(row, 0, store_returns, was_returned);
    }
 
    /**
@@ -288,9 +289,9 @@ vld_w_store_sales(int nTable, ds_key_t kRow, int *Permutation)
 	genrand_integer(&nLineitem, DIST_UNIFORM, 1, nMaxLineitem, 0, SS_PRICING_QUANTITY);
 	for (i = 1; i < nLineitem; i++)
 	{
-		mk_detail(NULL, 0);
+		mk_detail(NULL, 0, NULL, NULL);
 	}
-	mk_detail(NULL, 1);
+	mk_detail(NULL, 1, NULL, NULL);
 
 	return(0);
 }

@@ -138,7 +138,7 @@ return;
 }
 
 static void
-mk_detail (void *row, int bPrint)
+mk_detail (void *row, int bPrint, void* web_returns, int* was_returned)
 {
 	static int *pItemPermutation,
 		nItemCount,
@@ -192,7 +192,8 @@ mk_detail (void *row, int bPrint)
       genrand_integer(&nTemp, DIST_UNIFORM, 0, 99, 0, WR_IS_RETURNED);
       if (nTemp < WR_RETURN_PCT)
       {
-         mk_w_web_returns(&w_web_returns, 1);
+         mk_w_web_returns(web_returns, 1, r);
+         *was_returned = 1;
          if (bPrint)
 			 pr_w_web_returns(&w_web_returns);
       }
@@ -210,7 +211,7 @@ mk_detail (void *row, int bPrint)
 * mk_web_sales
 */
 int
-mk_w_web_sales (void *row, ds_key_t index)
+mk_w_web_sales (void *row, ds_key_t index, void* web_returns, int* was_returned)
 {
 	int nLineitems,
 		i;
@@ -222,7 +223,7 @@ mk_w_web_sales (void *row, ds_key_t index)
 	genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
    for (i = 1; i <= nLineitems; i++)
    {
-	   mk_detail(NULL, 1);
+     mk_detail(row, 0, web_returns, was_returned);
    }
 
    /**
@@ -351,9 +352,9 @@ vld_web_sales(int nTable, ds_key_t kRow, int *Permutation)
 	genrand_integer(&nLineitem, DIST_UNIFORM, 1, nMaxLineitem, 0, WS_PRICING_QUANTITY);
 	for (i = 1; i < nLineitem; i++)
 	{
-		mk_detail(NULL, 0);
+		mk_detail(NULL, 0, NULL, NULL);
 	}
-   mk_detail(NULL, 1);
+   mk_detail(NULL, 1, NULL, NULL);
 
 	return(0);
 }

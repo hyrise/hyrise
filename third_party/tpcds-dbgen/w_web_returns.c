@@ -69,7 +69,7 @@ extern struct W_WEB_SALES_TBL g_w_web_sales;
 * TODO: None
 */
 int
-mk_w_web_returns (void* row, ds_key_t index)
+mk_w_web_returns (void* row, ds_key_t index, void* web_sales)
 {
 	int res = 0;
 	
@@ -98,7 +98,7 @@ mk_w_web_returns (void* row, ds_key_t index)
 	* Some of the information in the return is taken from the original sale
 	* which has been regenerated
 	*/
-	sale = &g_w_web_sales;
+	sale = web_sales;
 	r->wr_item_sk = sale->ws_item_sk;
 	r->wr_order_number = sale->ws_order_number;
 	memcpy((void *)&r->wr_pricing, (void *)&sale->ws_pricing, sizeof(ds_pricing_t));

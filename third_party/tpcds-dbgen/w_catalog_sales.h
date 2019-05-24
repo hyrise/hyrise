@@ -63,7 +63,7 @@ struct W_CATALOG_SALES_TBL {
 	ds_pricing_t	cs_pricing;
 };
 
-int mk_w_catalog_sales(void *row, ds_key_t index);
+int mk_w_catalog_sales(void *row, ds_key_t index, void* catalog_return, int* was_returned);
 int pr_w_catalog_sales(void *r);
 int ld_w_catalog_sales(void *r);
 int vld_w_catalog_sales(int nTable, ds_key_t kRow, int *Permutation);

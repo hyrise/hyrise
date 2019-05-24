@@ -56,7 +56,7 @@ struct W_WEB_RETURNS_TBL {
 	ds_pricing_t	wr_pricing;
 };
 
-int mk_w_web_returns(void *pDest, ds_key_t kIndex);
+int mk_w_web_returns(void *pDest, ds_key_t kIndex, void* web_sales);
 int pr_w_web_returns(void *pSrc);
 int ld_w_web_returns(void *pSrc);
 #endif
