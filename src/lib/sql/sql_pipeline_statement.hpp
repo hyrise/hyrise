@@ -21,6 +21,14 @@ struct SQLPipelineStatementMetrics {
   bool query_plan_cache_hit = false;
 };
 
+enum class SQLPipelineStatus {
+  NotExecuted,  // The pipeline or the pipeline statement has been not been executed yet.
+  Success,      // The pipeline or the pipeline statement has been executed successfully. If use_mvcc is set but no
+                //     transaction_context was supplied, the statement has been auto-committed. If a context was
+                //     supplied, that context continues to be active (i.e., is not yet committed).
+  RolledBack    // The pipeline or the pipeline statement caused a transaction conflict and has been rolled back.
+};
+
 /**
  * The SQLPipelineStatement represents the flow from a *single* SQL statement to the result table with all intermediate
  * steps. Don't construct this class directly, use the SQLPipelineBuilder instead
@@ -62,8 +70,14 @@ class SQLPipelineStatement : public Noncopyable {
   // Returns all tasks that need to be executed for this query.
   const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
 
-  // Executes all tasks, waits for them to finish, and returns the resulting table.
-  const std::shared_ptr<const Table>& get_result_table();
+  // Executes all tasks, waits for them to finish, and returns
+  //   - {Success, table}       if the statement was successful and returned a table
+  //   - {Success, nullptr}     if the statement was successful but did not return a table (e.g., UPDATE)
+  //   - {RolledBack, nullptr}  if the transaction failed
+  // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
+  // explicitly return it as part of get_result_table to force the caller to take the possibility of a failed
+  // transaction into account.
+  std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> get_result_table();
 
   // Returns the TransactionContext that was either passed to or created by the SQLPipelineStatement.
   // This can be a nullptr if no transaction management is wanted.

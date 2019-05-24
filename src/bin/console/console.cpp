@@ -263,9 +263,6 @@ int Console::_eval_sql(const std::string& sql) {
 
   try {
     _sql_pipeline->get_result_tables();
-    Assert(!_sql_pipeline->failed_pipeline_statement(),
-           "The transaction has failed. This should never happen in the console, where only one statement gets "
-           "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
@@ -274,7 +271,20 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
-  const auto& table = _sql_pipeline->get_result_table();
+  const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
+  if (pipeline_status == SQLPipelineStatus::RolledBack) {
+    _handle_rollback();
+    out("A transaction conflict has been detected:");
+    out(_sql_pipeline->failed_pipeline_statement()->get_sql_string());
+    if (_explicitly_created_transaction_context) {
+      out("The transaction has been rolled back");
+    } else {
+      out("The statement was rolled back, but previous statements have been auto-committed");
+    }
+    return ReturnCode::Error;
+  }
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+
   auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)

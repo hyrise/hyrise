@@ -298,7 +298,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
     if (segments_are_dictionaries[input_column_index]) {
       // We need the value ids from a dictionary segment
-      const auto [dict_segment, pos_list] = get_attribute_iterable_data(segment);  // NOLINT(whitespace/braces)
+      const auto [dict_segment, pos_list] = get_attribute_iterable_data(segment);
       DebugAssert(dict_segment, "Segment is not a dictionary or a reference segment referencing a dictionary");
       if (pos_list) {
         create_iterable_from_attribute_vector(*dict_segment).with_iterators(pos_list, [&](auto it, auto end) {
