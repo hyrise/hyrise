@@ -147,10 +147,10 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_query_response(
     const std::shared_ptr<SQLPipeline>& sql_pipeline) {
-  auto result = sql_pipeline->get_result_table();
+  const auto result_table_pair = sql_pipeline->get_result_table();
 
-  Assert(result.first, "Server cannot handle failed transactions yet");
-  auto result_table = result.second;
+  Assert(result_table_pair.first == SQLPipelineStatus::Success, "Server cannot handle failed transactions yet");
+  const auto result_table = result_table_pair.second;
 
   auto send_row_data = [=]() {
     // If there is no result table, e.g. after an INSERT command, we cannot send row data

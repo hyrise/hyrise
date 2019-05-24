@@ -23,8 +23,9 @@ struct SQLPipelineStatementMetrics {
 
 enum class SQLPipelineStatus {
   NotExecuted,  // The pipeline or the pipeline statement has been not been executed yet.
-  Success,      // The pipeline or the pipeline statement has been executed successfully. It is not necessarily
-                // committed.
+  Success,      // The pipeline or the pipeline statement has been executed successfully. If use_mvcc is set but no
+                //     transaction_context was supplied, the statement has been auto-committed. If a context was
+                //     supplied, that context continues to be active (i.e., is not yet committed).
   RolledBack    // The pipeline or the pipeline statement caused a transaction conflict and has been rolled back.
 };
 
@@ -76,7 +77,7 @@ class SQLPipelineStatement : public Noncopyable {
   // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
   // explicitly return it as part of get_result_table to force the caller to take the possibility of a failed
   // transaction into account.
-  const std::pair<SQLPipelineStatus, std::shared_ptr<const Table>&> get_result_table();
+  std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> get_result_table();
 
   // Returns the TransactionContext that was either passed to or created by the SQLPipelineStatement.
   // This can be a nullptr if no transaction management is wanted.

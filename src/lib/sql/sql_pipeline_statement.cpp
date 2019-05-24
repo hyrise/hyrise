@@ -187,7 +187,7 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLPipelineStatement::get_task
   return _tasks;
 }
 
-const std::pair<SQLPipelineStatus, std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
+std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
   // Returns true if a transaction was set and that transaction was rolled back.
   const auto was_rolled_back = [&]() {
     if (_transaction_context) {
@@ -195,9 +195,7 @@ const std::pair<SQLPipelineStatus, std::shared_ptr<const Table>&> SQLPipelineSta
                       _transaction_context->phase() == TransactionPhase::RolledBack ||
                       _transaction_context->phase() == TransactionPhase::Committed,
                   "Transaction found in unexpected state");
-      if (_transaction_context->phase() == TransactionPhase::RolledBack) {
-        return true;
-      }
+      return _transaction_context->phase() == TransactionPhase::RolledBack;
     }
     return false;
   };

@@ -345,8 +345,19 @@ TEST_F(SQLPipelineTest, GetResultTable) {
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
+TEST_F(SQLPipelineTest, GetResultTablesMultiple) {
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+
+  const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  EXPECT_EQ(tables[0], nullptr);
+
+  EXPECT_TABLE_EQ_UNORDERED(tables[1], _table_a_multi);
+}
+
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 

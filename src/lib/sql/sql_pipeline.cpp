@@ -185,7 +185,7 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
   return _tasks;
 }
 
-const std::pair<SQLPipelineStatus, std::shared_ptr<const Table>&> SQLPipeline::get_result_table() {
+std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipeline::get_result_table() {
   const auto& [pipeline_status, tables] = get_result_tables();
 
   if (pipeline_status != SQLPipelineStatus::Success) {
@@ -196,7 +196,7 @@ const std::pair<SQLPipelineStatus, std::shared_ptr<const Table>&> SQLPipeline::g
   return {SQLPipelineStatus::Success, tables.back()};
 }
 
-const std::pair<SQLPipelineStatus, std::vector<std::shared_ptr<const Table>>&> SQLPipeline::get_result_tables() {
+std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> SQLPipeline::get_result_tables() {
   if (_pipeline_status != SQLPipelineStatus::NotExecuted) {
     return {_pipeline_status, _result_tables};
   }
