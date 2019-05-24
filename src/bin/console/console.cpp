@@ -279,7 +279,7 @@ int Console::_eval_sql(const std::string& sql) {
     if (_explicitly_created_transaction_context) {
       out("The transaction has been rolled back");
     } else {
-      out("The statement was not executed, but previous statements have been auto-committed");
+      out("The statement was rolled back, but previous statements have been auto-committed");
     }
     return ReturnCode::Error;
   }
