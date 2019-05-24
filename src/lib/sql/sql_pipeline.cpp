@@ -185,7 +185,7 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
   return _tasks;
 }
 
-const std::pair<bool, std::shared_ptr<const Table>&> SQLPipeline::get_result_table() {
+const std::pair<TransactionContext::TransactionPhase, std::shared_ptr<const Table>&> SQLPipeline::get_result_table() {
   const auto& [transaction_successful, tables] = get_result_tables();
   if (!transaction_successful) {
     static std::shared_ptr<const Table> null_table;
@@ -194,7 +194,7 @@ const std::pair<bool, std::shared_ptr<const Table>&> SQLPipeline::get_result_tab
   return {true, tables.back()};
 }
 
-const std::pair<bool, std::vector<std::shared_ptr<const Table>>&> SQLPipeline::get_result_tables() {
+const std::pair<TransactionContext::TransactionPhase, std::vector<std::shared_ptr<const Table>>&> SQLPipeline::get_result_tables() {
   if (_pipeline_was_executed) {
     return {true, _result_tables};
   }
