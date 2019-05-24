@@ -20,14 +20,14 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 
-#include "tpch/tpch_query_generator.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-using TPCHTestParam = std::tuple<QueryID, bool /* use_jit */, bool /* use_prepared_statements */>;
+using TPCHTestParam = std::tuple<BenchmarkItemID, bool /* use_jit */, bool /* use_prepared_statements */>;
 
 class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
  public:
@@ -44,11 +44,16 @@ class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
       {1, 0.01f},   {2, 0.004f},  {3, 0.01f},  {4, 0.005f},  {5, 0.01f},    {6, 0.01f},  {7, 0.01f},  {8, 0.01f},
       {9, 0.01f},   {10, 0.02f},  {11, 0.01f}, {12, 0.01f},  {13, 0.01f},   {14, 0.01f}, {15, 0.01f}, {16, 0.01f},
       {17, 0.013f}, {18, 0.005f}, {19, 0.01f}, {20, 0.008f}, {21, 0.0075f}, {22, 0.01f}};
+
+  // Helper method used to access TPCHBenchmarkItemRunner's private members
+  std::string get_deterministic_query(TPCHBenchmarkItemRunner& runner, BenchmarkItemID item_id) {
+    return runner._build_deterministic_query(item_id);
+  }
 };
 
 TEST_P(TPCHTest, Test) {
-  const auto [query_idx, use_jit, use_prepared_statements] = GetParam();  // NOLINT
-  const auto tpch_idx = query_idx + 1;
+  const auto [item_idx, use_jit, use_prepared_statements] = GetParam();  // NOLINT
+  const auto tpch_idx = item_idx + 1;
 
   /**
    * Generate the TPC-H tables with a scale factor appropriate for this query
@@ -61,19 +66,10 @@ TEST_P(TPCHTest, Test) {
                (use_prepared_statements ? " with prepared statements" : " without prepared statements"));
 
   // The scale factor passed to the query generator will be ignored as we only use deterministic queries
-  auto query_generator = TPCHQueryGenerator{use_prepared_statements, 1.0f};
-  if (use_prepared_statements) {
-    // Run the preparation queries
-    const auto& sql = query_generator.get_preparation_queries();
+  auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
+  auto benchmark_item_runner = TPCHBenchmarkItemRunner{config, use_prepared_statements, 1.0f};
 
-    Assert(!sql.empty(), "If using prepared statements, the preparation queries should not be empty");
-
-    auto pipeline = SQLPipelineBuilder{sql}.disable_mvcc().create_pipeline();
-    // Execute the query, we don't care about the results
-    pipeline.get_result_table();
-  }
-
-  const auto query = query_generator.build_deterministic_query(query_idx);
+  const auto query = get_deterministic_query(benchmark_item_runner, item_idx);
 
   /**
    * Pick a LQPTranslator, depending on whether we use JIT or not
@@ -84,7 +80,7 @@ TEST_P(TPCHTest, Test) {
   } else {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
-  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).disable_mvcc().create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).create_pipeline();
 
   /**
    * Run the query and obtain the result tables, TPC-H 15 needs special handling
@@ -110,22 +106,29 @@ TEST_P(TPCHTest, Test) {
                   FloatComparisonMode::RelativeDifference);
 }
 
-INSTANTIATE_TEST_CASE_P(TPCHTestNoJITNoPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false, 1.0f}.selected_queries()),
-                                         testing::ValuesIn({false}),
-                                         testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
+INSTANTIATE_TEST_CASE_P(
+    TPCHTestNoJITNoPreparedStatements, TPCHTest,
+    // TPCHBenchmarkItemRunner{false, 1.0f} is used only to get the list of all available queries
+    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
+                         std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
+                                           .items()),
+                     testing::ValuesIn({false}), testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
 
-INSTANTIATE_TEST_CASE_P(TPCHTestNoJITPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false, 1.0f}.selected_queries()),
-                                         testing::ValuesIn({false}),
-                                         testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+INSTANTIATE_TEST_CASE_P(
+    TPCHTestNoJITPreparedStatements, TPCHTest,
+    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
+                         std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
+                                           .items()),
+                     testing::ValuesIn({false}), testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 
 #if HYRISE_JIT_SUPPORT
 
-INSTANTIATE_TEST_CASE_P(TPCHTestJITPreparedStatements, TPCHTest,
-                        testing::Combine(testing::ValuesIn(TPCHQueryGenerator{false, 1.0f}.selected_queries()),
-                                         testing::ValuesIn({true}),
-                                         testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+INSTANTIATE_TEST_CASE_P(
+    TPCHTestJITPreparedStatements, TPCHTest,
+    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
+                         std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
+                                           .items()),
+                     testing::ValuesIn({true}), testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
 
 #endif
 

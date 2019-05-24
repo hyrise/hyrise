@@ -697,7 +697,6 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const auto graph_filename = "." + plan_type_str + ".dot";
   const auto img_filename = plan_type_str + ".png";
 
   switch (plan_type) {
@@ -718,7 +717,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       LQPVisualizer visualizer;
-      visualizer.visualize(lqp_roots, graph_filename, img_filename);
+      visualizer.visualize(lqp_roots, img_filename);
     } break;
 
     case PlanType::PQP: {
@@ -728,7 +727,7 @@ int Console::_visualize(const std::string& input) {
         }
 
         PQPVisualizer visualizer;
-        visualizer.visualize(_sql_pipeline->get_physical_plans(), graph_filename, img_filename);
+        visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
         _handle_rollback();
@@ -755,7 +754,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       JoinGraphVisualizer visualizer;
-      visualizer.visualize(join_graphs, graph_filename, img_filename);
+      visualizer.visualize(join_graphs, img_filename);
     } break;
   }
 

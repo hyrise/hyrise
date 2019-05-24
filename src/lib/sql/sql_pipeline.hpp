@@ -77,7 +77,7 @@ class SQLPipeline : public Noncopyable {
   // another uses it)
   bool requires_execution() const;
 
-  const SQLPipelineMetrics& metrics();
+  SQLPipelineMetrics& metrics();
 
  private:
   std::string _sql;
