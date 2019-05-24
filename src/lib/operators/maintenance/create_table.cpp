@@ -62,7 +62,8 @@ std::shared_ptr<const Table> CreateTable::_on_execute() {
     // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
     if (!if_not_exists || !StorageManager::get().has_table(table_name)) {
       // TODO(anybody) chunk size and mvcc not yet specifiable
-      const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+      const auto table =
+          std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
       StorageManager::get().add_table(table_name, table);
     }
   }
