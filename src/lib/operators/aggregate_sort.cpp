@@ -88,8 +88,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
         value_count_with_null = count;
       }
       _set_and_write_aggregate_value<AggregateType, function>(
-          aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_primary_aggregate, current_secondary_aggregate,
-          value_count, value_count_with_null, unique_values.size());
+          aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_primary_aggregate,
+          current_secondary_aggregate, value_count, value_count_with_null, unique_values.size());
       current_group_begin_pointer = group_boundary;
       aggregate_group_index++;
     }
@@ -129,7 +129,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
           // New group is starting. Store the aggregate value of the just finished group
           _set_and_write_aggregate_value<AggregateType, function>(
               aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index,
-              current_primary_aggregate, current_secondary_aggregate, value_count, value_count_with_null, unique_values.size());
+              current_primary_aggregate, current_secondary_aggregate, value_count, value_count_with_null,
+              unique_values.size());
 
           // Reset helper variables
           current_primary_aggregate = std::optional<AggregateType>();
@@ -158,8 +159,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   }
   // Aggregate value for the last group was not written yet
   _set_and_write_aggregate_value<AggregateType, function>(
-      aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_primary_aggregate, current_secondary_aggregate,
-      value_count, value_count_with_null, unique_values.size());
+      aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_primary_aggregate,
+      current_secondary_aggregate, value_count, value_count_with_null, unique_values.size());
 
   // Store the aggregate values in a value segment
   _output_segments[aggregate_index + _groupby_column_ids.size()] =
@@ -200,10 +201,9 @@ template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
     std::vector<AggregateType>& aggregate_results, std::vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
-    std::optional<AggregateType>& current_primary_aggregate, std::optional<AggregateType>& current_secondary_aggregate,[[maybe_unused]] const uint64_t value_count,
-    [[maybe_unused]] const uint64_t value_count_with_null, [[maybe_unused]] const uint64_t unique_value_count) const {
-  std::cout << "primiary in: " << *current_primary_aggregate << std::endl;
-  std::cout << "secondary in: " << *current_secondary_aggregate << std::endl;
+    std::optional<AggregateType>& current_primary_aggregate, std::optional<AggregateType>& current_secondary_aggregate,
+    [[maybe_unused]] const uint64_t value_count, [[maybe_unused]] const uint64_t value_count_with_null,
+    [[maybe_unused]] const uint64_t unique_value_count) const {
   if constexpr (function == AggregateFunction::Count) {  // NOLINT
     if (this->_aggregates[aggregate_index].column) {
       // COUNT(<name>), so exclude null values
@@ -234,8 +234,8 @@ void AggregateSort::_set_and_write_aggregate_value(
       // normal StdDevSamp calculation
       const auto sum = *current_primary_aggregate;
       const auto sum_square = *current_secondary_aggregate;
-      const auto variance = (1 / (value_count - 1)) * (sum_square - (1 / value_count) * sum * sum);
-      std::cout << "OUT: " << std::sqrt(variance) << std::endl;
+      const double n = value_count;
+      const auto variance = (1 / (n - 1)) * (sum_square - (1 / n) * sum * sum);
       current_primary_aggregate = std::sqrt(variance);
     }
   }
@@ -247,8 +247,6 @@ void AggregateSort::_set_and_write_aggregate_value(
   aggregate_null_values[aggregate_group_index] = !current_primary_aggregate;
   if (current_primary_aggregate) {
     // only store non-null values
-    std::cout << "primiary out: " << *current_primary_aggregate << std::endl;
-    std::cout << "secondary out: " << *current_secondary_aggregate << std::endl;
     aggregate_results[aggregate_group_index] = *current_primary_aggregate;
   }
 }
