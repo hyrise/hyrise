@@ -212,7 +212,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
   auto task = std::make_shared<JobTask>(
       [&, item_id]() {
         const auto run_start = std::chrono::steady_clock::now();
-        auto [metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);  // NOLINT
+        auto [metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);
         const auto run_end = std::chrono::steady_clock::now();
 
         --_currently_running_clients;
@@ -224,8 +224,8 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
           result.num_iterations++;
 
-          result.durations.emplace_back(run_end - run_start);
-          result.metrics.emplace_back(std::move(metrics));
+          result.durations.push_back(run_end - run_start);
+          result.metrics.push_back(metrics);
         }
       },
       SchedulePriority::High);
