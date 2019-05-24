@@ -45,7 +45,6 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
@@ -342,7 +341,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
+void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
@@ -635,7 +634,7 @@ int Console::_print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  out(gt->get_output(), PrintMvcc);
+  out(gt->get_output(), PrintFlags::Mvcc);
 
   return ReturnCode::Ok;
 }
@@ -703,7 +702,6 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const auto graph_filename = "." + plan_type_str + ".dot";
   const auto img_filename = plan_type_str + ".png";
 
   switch (plan_type) {
@@ -724,7 +722,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       LQPVisualizer visualizer;
-      visualizer.visualize(lqp_roots, graph_filename, img_filename);
+      visualizer.visualize(lqp_roots, img_filename);
     } break;
 
     case PlanType::PQP: {
@@ -734,7 +732,7 @@ int Console::_visualize(const std::string& input) {
         }
 
         PQPVisualizer visualizer;
-        visualizer.visualize(_sql_pipeline->get_physical_plans(), graph_filename, img_filename);
+        visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
         _handle_rollback();
@@ -761,7 +759,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       JoinGraphVisualizer visualizer;
-      visualizer.visualize(join_graphs, graph_filename, img_filename);
+      visualizer.visualize(join_graphs, img_filename);
     } break;
   }
 
@@ -930,7 +928,7 @@ int Console::_print_transaction_info(const std::string& input) {
 }
 
 int Console::_print_current_working_directory(const std::string&) {
-  out(filesystem::current_path().string() + "\n");
+  out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
@@ -945,7 +943,7 @@ int Console::_load_plugin(const std::string& args) {
 
   const std::string& plugin_path_str = arguments[0];
 
-  const filesystem::path plugin_path(plugin_path_str);
+  const std::filesystem::path plugin_path(plugin_path_str);
   const auto plugin_name = plugin_name_from_path(plugin_path);
 
   PluginManager::get().load_plugin(plugin_path);

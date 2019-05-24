@@ -75,7 +75,15 @@ class SQLPipelineStatement : public Noncopyable {
 
   const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
+  const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
+  const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
+
  private:
+  // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
+  // table that already exists).
+  // Throws an InvalidInputException if an invalid PQP is detected.
+  void _precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) const;
+
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
 
@@ -87,8 +95,6 @@ class SQLPipelineStatement : public Noncopyable {
 
   const std::shared_ptr<LQPTranslator> _lqp_translator;
   const std::shared_ptr<Optimizer> _optimizer;
-  const std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
-  const std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;

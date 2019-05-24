@@ -343,14 +343,14 @@ TEST_F(SQLPipelineTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
   const auto& table = sql_pipeline.get_result_table();
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
   const auto& table = sql_pipeline.get_result_table();
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableTwice) {
@@ -368,14 +368,14 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
   const auto& table = sql_pipeline.get_result_table();
 
-  EXPECT_TABLE_EQ_UNORDERED(table, _table_a)
+  EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
@@ -545,6 +545,59 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   EXPECT_EQ(_pqp_cache->size(), 2u);
   EXPECT_TRUE(_pqp_cache->has(_select_query_a));
   EXPECT_TRUE(_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
+}
+
+TEST_F(SQLPipelineTest, DefaultPlanCaches) {
+  const auto default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  const auto local_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  const auto default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  const auto local_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  // No caches
+  const auto sql_pipeline_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
+  EXPECT_FALSE(sql_pipeline_0.pqp_cache);
+  EXPECT_FALSE(sql_pipeline_0.lqp_cache);
+  const auto sql_pipeline_statement_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline_statement();
+  EXPECT_FALSE(sql_pipeline_statement_0.pqp_cache);
+  EXPECT_FALSE(sql_pipeline_statement_0.lqp_cache);
+
+  // Default caches
+  SQLPipelineBuilder::default_pqp_cache = default_pqp_cache;
+  SQLPipelineBuilder::default_lqp_cache = default_lqp_cache;
+  const auto sql_pipeline_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
+  EXPECT_EQ(sql_pipeline_1.pqp_cache, default_pqp_cache);
+  EXPECT_EQ(sql_pipeline_1.lqp_cache, default_lqp_cache);
+  const auto sql_pipeline_statement_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline_statement();
+  EXPECT_EQ(sql_pipeline_statement_1.pqp_cache, default_pqp_cache);
+  EXPECT_EQ(sql_pipeline_statement_1.lqp_cache, default_lqp_cache);
+
+  // Local caches
+  const auto sql_pipeline_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
+                                  .with_pqp_cache(local_pqp_cache)
+                                  .with_lqp_cache(local_lqp_cache)
+                                  .create_pipeline();
+  EXPECT_EQ(sql_pipeline_2.pqp_cache, local_pqp_cache);
+  EXPECT_EQ(sql_pipeline_2.lqp_cache, local_lqp_cache);
+  const auto sql_pipeline_statement_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
+                                            .with_pqp_cache(local_pqp_cache)
+                                            .with_lqp_cache(local_lqp_cache)
+                                            .create_pipeline_statement();
+  EXPECT_EQ(sql_pipeline_statement_2.pqp_cache, local_pqp_cache);
+  EXPECT_EQ(sql_pipeline_statement_2.lqp_cache, local_lqp_cache);
+
+  // Back to no caches
+  SQLPipelineBuilder::default_pqp_cache = nullptr;
+  SQLPipelineBuilder::default_lqp_cache = nullptr;
+  const auto sql_pipeline_3 =
+      SQLPipelineBuilder{"SELECT * FROM table_a"}.with_pqp_cache(nullptr).with_lqp_cache(nullptr).create_pipeline();
+  EXPECT_FALSE(sql_pipeline_3.pqp_cache);
+  EXPECT_FALSE(sql_pipeline_3.lqp_cache);
+  const auto sql_pipeline_statement_3 = SQLPipelineBuilder{"SELECT * FROM table_a"}
+                                            .with_pqp_cache(nullptr)
+                                            .with_lqp_cache(nullptr)
+                                            .create_pipeline_statement();
+  EXPECT_FALSE(sql_pipeline_statement_3.pqp_cache);
+  EXPECT_FALSE(sql_pipeline_statement_3.lqp_cache);
 }
 
 }  // namespace opossum

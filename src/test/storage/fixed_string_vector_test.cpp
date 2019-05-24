@@ -11,15 +11,14 @@ class FixedStringVectorTest : public BaseTest {
  protected:
   void SetUp() override {
     std::vector<pmr_string> strings = {"foo", "barbaz", "str3"};
-    fixed_string_vector =
-        std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u, strings.size()));
+    fixed_string_vector = std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u));
   }
   std::shared_ptr<FixedStringVector> fixed_string_vector = nullptr;
 };
 
 TEST_F(FixedStringVectorTest, IteratorConstructor) {
   std::vector<pmr_string> v1 = {"abc", "def", "ghi"};
-  auto v2 = FixedStringVector{v1.begin(), v1.end(), 3, 3u};
+  auto v2 = FixedStringVector{v1.begin(), v1.end(), 3};
 
   EXPECT_EQ(v2[2u], "ghi");
   EXPECT_EQ(v2.size(), 3u);
@@ -29,12 +28,6 @@ TEST_F(FixedStringVectorTest, SubscriptOperator) {
   EXPECT_EQ((*fixed_string_vector)[0u], "foo");
   EXPECT_EQ((*fixed_string_vector)[1u], "barbaz");
   EXPECT_EQ((*fixed_string_vector)[2u], "str3");
-  if (HYRISE_DEBUG) {
-    EXPECT_THROW(fixed_string_vector->push_back("opossum"), std::exception);
-  } else {
-    fixed_string_vector->push_back("opossum");
-    EXPECT_EQ((*fixed_string_vector)[3u], "opossu");
-  }
 }
 
 TEST_F(FixedStringVectorTest, AtOperator) {
@@ -43,13 +36,13 @@ TEST_F(FixedStringVectorTest, AtOperator) {
   EXPECT_EQ(fixed_string_vector->at(0u).maximum_length(), 6u);
 
   EXPECT_EQ(fixed_string_vector->at(1u).string(), "barbaz");
+}
 
-  if (HYRISE_DEBUG) {
-    EXPECT_THROW(fixed_string_vector->push_back("opossum"), std::exception);
-  } else {
-    fixed_string_vector->push_back("opossum");
-    EXPECT_EQ(fixed_string_vector->at(3u).string(), "opossu");
-  }
+TEST_F(FixedStringVectorTest, GetStringAtOperator) {
+  EXPECT_EQ(fixed_string_vector->get_string_at(0u), "foo");
+  EXPECT_EQ(fixed_string_vector->get_string_at(0u).size(), 3u);
+  EXPECT_EQ(fixed_string_vector->get_string_at(1u), "barbaz");
+  EXPECT_EQ(fixed_string_vector->get_string_at(1u).size(), 6u);
 }
 
 TEST_F(FixedStringVectorTest, Iterator) {
@@ -61,6 +54,16 @@ TEST_F(FixedStringVectorTest, Iterator) {
   }
 
   EXPECT_EQ((*fixed_string_vector)[0u], "abcde");
+}
+
+TEST_F(FixedStringVectorTest, RangeIterator) {
+  std::vector<pmr_string> v = {"abc", "def", "ghi"};
+  auto fs_vector = FixedStringVector{v.cbegin(), v.cend(), 3};
+
+  auto counter = size_t{0};
+  for (auto it = fs_vector.begin(); it != fs_vector.end(); ++counter, ++it) {
+    EXPECT_EQ(*it, v[counter]);
+  }
 }
 
 TEST_F(FixedStringVectorTest, IteratorConst) {
@@ -82,23 +85,12 @@ TEST_F(FixedStringVectorTest, IteratorConst) {
 }
 
 TEST_F(FixedStringVectorTest, ReverseIterator) {
-  std::vector<char> helper = {'a', 'b', 'c', 'd'};
-  auto fixed_string = FixedString(&helper[0], 4u);
+  std::vector<pmr_string> v = {"abc", "def", "ghi"};
+  auto fs_vector = FixedStringVector{v.cbegin(), v.cend(), 3};
 
-  auto last_value = fixed_string_vector->rbegin();
-  auto first_value = fixed_string_vector->rend();
-  --first_value;
-
-  EXPECT_EQ(*last_value, "str3");
-  EXPECT_EQ(*first_value, "foo");
-
-  for (auto it = fixed_string_vector->rbegin(); it != fixed_string_vector->rend(); ++it) {
-    *it = fixed_string;
+  for (const auto& fixed_string : fs_vector) {
+    EXPECT_EQ(fixed_string.size(), 3u);
   }
-
-  EXPECT_EQ((*fixed_string_vector)[0u], "abcd");
-  EXPECT_EQ((*fixed_string_vector)[1u], "abcd");
-  EXPECT_EQ((*fixed_string_vector)[2u], "abcd");
 }
 
 TEST_F(FixedStringVectorTest, Size) { EXPECT_EQ(fixed_string_vector->size(), 3u); }
@@ -132,16 +124,20 @@ TEST_F(FixedStringVectorTest, ConstFixedStringVector) {
 
 TEST_F(FixedStringVectorTest, ConstIteratorConstructor) {
   std::vector<pmr_string> v1 = {"abc", "def", "ghi"};
-  auto v2 = FixedStringVector{v1.cbegin(), v1.cend(), 3, 3};
-  std::vector<pmr_string> v3 = {};
-  auto v4 = FixedStringVector{v3.cbegin(), v3.cend(), 0, 0};
+  auto v2 = FixedStringVector{v1.cbegin(), v1.cend(), 3};
 
   EXPECT_EQ(v2[0u], "abc");
   EXPECT_EQ(v2.size(), 3u);
-  EXPECT_EQ(v4.size(), 1u);
+
+  std::vector<pmr_string> v3 = {};
+  auto v4 = FixedStringVector{v3.cbegin(), v3.cend(), 0};
+
+  EXPECT_EQ(v4.size(), 0u);
 }
 
-TEST_F(FixedStringVectorTest, DataSize) { EXPECT_EQ(fixed_string_vector->data_size(), 58u); }
+TEST_F(FixedStringVectorTest, DataSize) {
+  EXPECT_EQ(fixed_string_vector->data_size(), sizeof(*fixed_string_vector) + 3u * 6u);
+}
 
 TEST_F(FixedStringVectorTest, Reserve) {
   fixed_string_vector->reserve(5u);
@@ -151,7 +147,7 @@ TEST_F(FixedStringVectorTest, Reserve) {
 
 TEST_F(FixedStringVectorTest, Sort) {
   std::vector<pmr_string> strings = {"Larry", "Bill", "Alexander", "Mark", "Hasso"};
-  auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 10u, 5u);
+  auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 10u);
 
   std::sort(fixed_string_vector1.begin(), fixed_string_vector1.end());
 
@@ -159,21 +155,35 @@ TEST_F(FixedStringVectorTest, Sort) {
   EXPECT_EQ(fixed_string_vector1[4u], "Mark");
 }
 
+// FixedStringsVectors of empty strings have a special handling which needs to be tested.
 TEST_F(FixedStringVectorTest, StringLengthZero) {
   std::vector<pmr_string> strings = {"", ""};
-  auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 0u, 0u);
-  EXPECT_EQ(fixed_string_vector1.size(), 1u);
+  auto fixed_string_vector1 = FixedStringVector(strings.begin(), strings.end(), 0u);
+  EXPECT_EQ(fixed_string_vector1.size(), 2u);
   EXPECT_EQ(fixed_string_vector1[0u], "");
 
   fixed_string_vector1.push_back("");
-  EXPECT_EQ(fixed_string_vector1.size(), 1u);
+  EXPECT_EQ(fixed_string_vector1.size(), 3u);
   EXPECT_EQ(fixed_string_vector1[0u], "");
+  EXPECT_EQ(fixed_string_vector1[1u], "");
+  EXPECT_EQ(fixed_string_vector1[2u], "");
+
+  EXPECT_EQ(fixed_string_vector1.get_string_at(0u), "");
+  EXPECT_EQ(fixed_string_vector1.get_string_at(1u), "");
+  EXPECT_EQ(fixed_string_vector1.get_string_at(2u), "");
 }
 
 TEST_F(FixedStringVectorTest, CompareStdStringToFixedString) {
   EXPECT_EQ(fixed_string_vector->at(0u), "foo");
   EXPECT_EQ("foo", fixed_string_vector->at(0u));
   EXPECT_EQ(fixed_string_vector->at(1u), pmr_string("barbaz"));
+}
+
+TEST_F(FixedStringVectorTest, ThrowOnOversizedStrings) {
+  std::vector<pmr_string> v = {"abc", "defd", "ghi"};
+  EXPECT_THROW((FixedStringVector{v.cbegin(), v.cend(), 3u}), std::logic_error);
+
+  EXPECT_THROW(fixed_string_vector->push_back("opossum"), std::logic_error);
 }
 
 TEST_F(FixedStringVectorTest, MemoryLayout) {

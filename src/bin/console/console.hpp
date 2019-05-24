@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "operators/print.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/table.hpp"
@@ -73,7 +74,7 @@ class Console : public Singleton<Console> {
    * @param output The output table.
    * @param flags  Flags for the Print operator.
    */
-  void out(const std::shared_ptr<const Table>& table, uint32_t flags = 0);
+  void out(const std::shared_ptr<const Table>& table, PrintFlags flags = PrintFlags::None);
 
   /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).

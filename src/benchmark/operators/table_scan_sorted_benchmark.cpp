@@ -9,6 +9,7 @@
 #include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "table_generator.hpp"

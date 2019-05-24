@@ -12,6 +12,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -44,7 +45,8 @@ class BaseTestWithParam
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_segment = std::make_shared<ValueSegment<T>>(std::move(vector_values));
 
-    auto compressed_segment = encode_segment(EncodingType::Dictionary, data_type, value_segment);
+    auto compressed_segment =
+        encode_and_compress_segment(value_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
     return std::static_pointer_cast<DictionarySegment<T>>(compressed_segment);
   }
 
@@ -55,8 +57,6 @@ class BaseTestWithParam
   }
 
  public:
-  BaseTestWithParam() {}
-
   /**
    * Base test uses its destructor instead of TearDown() to clean up. This way, derived test classes can override TearDown()
    * safely without preventing the BaseTest-cleanup from happening.
@@ -69,6 +69,8 @@ class BaseTestWithParam
     PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
+    SQLPipelineBuilder::default_pqp_cache = nullptr;
+    SQLPipelineBuilder::default_lqp_cache = nullptr;
   }
 
   static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,

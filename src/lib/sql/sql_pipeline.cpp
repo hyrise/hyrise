@@ -20,11 +20,11 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
                          const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                          const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                          const CleanupTemporaries cleanup_temporaries)
-    : _sql(sql),
+    : pqp_cache(pqp_cache),
+      lqp_cache(lqp_cache),
+      _sql(sql),
       _transaction_context(transaction_context),
-      _optimizer(optimizer),
-      _pqp_cache(pqp_cache),
-      _lqp_cache(lqp_cache) {
+      _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
               "The transaction context cannot have been committed already.");
   DebugAssert(!_transaction_context || use_mvcc == UseMvcc::Yes,
@@ -83,7 +83,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
     auto pipeline_statement = std::make_shared<SQLPipelineStatement>(
         statement_string, std::move(parsed_statement), use_mvcc, transaction_context, lqp_translator, optimizer,
-        _pqp_cache, _lqp_cache, cleanup_temporaries);
+        pqp_cache, lqp_cache, cleanup_temporaries);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
 
@@ -232,7 +232,7 @@ size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.si
 
 bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
-const SQLPipelineMetrics& SQLPipeline::metrics() {
+SQLPipelineMetrics& SQLPipeline::metrics() {
   if (_metrics.statement_metrics.empty()) {
     _metrics.statement_metrics.reserve(statement_count());
     for (const auto& pipeline_statement : _sql_pipeline_statements) {

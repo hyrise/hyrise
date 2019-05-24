@@ -15,9 +15,23 @@
 #include "storage/reference_segment.hpp"
 #include "utils/performance_warning.hpp"
 
+namespace {
+
+using namespace opossum;  // NOLINT
+
+bool has_print_mvcc_flag(const PrintFlags flags) {
+  return static_cast<uint32_t>(PrintFlags::Mvcc) & static_cast<uint32_t>(flags);
+}
+
+bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
+  return static_cast<uint32_t>(PrintFlags::IgnoreChunkBoundaries) & static_cast<uint32_t>(flags);
+}
+
+}  // namespace
+
 namespace opossum {
 
-Print::Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out, uint32_t flags)
+Print::Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out, PrintFlags flags)
     : AbstractReadOnlyOperator(OperatorType::Print, in), _out(out), _flags(flags) {}
 
 const std::string Print::name() const { return "Print"; }
@@ -30,13 +44,13 @@ std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags, std::ostream& out) {
+void Print::print(const std::shared_ptr<const Table>& table, PrintFlags flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   Print(table_wrapper, out, flags).execute();
 }
 
-void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out) {
+void Print::print(const std::shared_ptr<const AbstractOperator>& in, PrintFlags flags, std::ostream& out) {
   Print(in, out, flags).execute();
 }
 
@@ -50,14 +64,14 @@ std::shared_ptr<const Table> Print::_on_execute() {
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
     _out << "|" << std::setw(widths[column_id]) << input_table_left()->column_name(column_id) << std::setw(0);
   }
-  if (_flags & PrintMvcc) {
+  if (has_print_mvcc_flag(_flags)) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
     _out << "|" << std::setw(widths[column_id]) << input_table_left()->column_data_type(column_id) << std::setw(0);
   }
-  if (_flags & PrintMvcc) {
+  if (has_print_mvcc_flag(_flags)) {
     _out << "||_BEGIN|_END  |_TID  ";
   }
   _out << "|" << std::endl;
@@ -65,7 +79,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
     const auto nullable = input_table_left()->column_is_nullable(column_id);
     _out << "|" << std::setw(widths[column_id]) << (nullable ? "null" : "not null") << std::setw(0);
   }
-  if (_flags & PrintMvcc) {
+  if (has_print_mvcc_flag(_flags)) {
     _out << "||      |      |      ";
   }
   _out << "|" << std::endl;
@@ -73,21 +87,24 @@ std::shared_ptr<const Table> Print::_on_execute() {
   // print each chunk
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     auto chunk = input_table_left()->get_chunk(chunk_id);
-    _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
-    if (chunk->size() == 0) {
-      _out << "Empty chunk." << std::endl;
-      continue;
-    }
+    if (!has_print_ignore_chunk_boundaries_flag(_flags)) {
+      _out << "=== Chunk " << chunk_id << " ===" << std::endl;
 
-    // print the encoding information
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      const auto column_width = widths[column_id];
-      const auto& segment = chunk->get_segment(column_id);
-      _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
+      if (chunk->size() == 0) {
+        _out << "Empty chunk." << std::endl;
+        continue;
+      }
+
+      // print the encoding information
+      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+        const auto column_width = widths[column_id];
+        const auto& segment = chunk->get_segment(column_id);
+        _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
+      }
+      if (has_print_mvcc_flag(_flags)) _out << "|";
+      _out << "|" << std::endl;
     }
-    if (_flags & PrintMvcc) _out << "|";
-    _out << "|" << std::endl;
 
     // print the rows in the chunk
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
@@ -100,7 +117,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
         _out << std::setw(column_width) << cell << "|" << std::setw(0);
       }
 
-      if (_flags & PrintMvcc && chunk->has_mvcc_data()) {
+      if (has_print_mvcc_flag(_flags) && chunk->has_mvcc_data()) {
         auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
         auto begin = mvcc_data->begin_cids[chunk_offset];

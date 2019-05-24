@@ -10,11 +10,17 @@
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "operators/maintenance/create_prepared_plan.hpp"
+#include "operators/maintenance/create_table.hpp"
+#include "operators/maintenance/create_view.hpp"
+#include "operators/maintenance/drop_table.hpp"
+#include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
+#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 
@@ -28,14 +34,14 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
                                            const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                                            const CleanupTemporaries cleanup_temporaries)
-    : _sql_string(sql),
+    : pqp_cache(pqp_cache),
+      lqp_cache(lqp_cache),
+      _sql_string(sql),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
       _transaction_context(transaction_context),
       _lqp_translator(lqp_translator),
       _optimizer(optimizer),
-      _pqp_cache(pqp_cache),
-      _lqp_cache(lqp_cache),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
       _cleanup_temporaries(cleanup_temporaries) {
@@ -99,8 +105,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   // Handle logical query plan if statement has been cached
-  if (_lqp_cache) {
-    if (const auto cached_plan = _lqp_cache->try_get(_sql_string)) {
+  if (lqp_cache) {
+    if (const auto cached_plan = lqp_cache->try_get(_sql_string)) {
       const auto plan = *cached_plan;
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
@@ -126,8 +132,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _unoptimized_logical_plan = nullptr;
 
   // Cache newly created plan for the according sql statement
-  if (_lqp_cache) {
-    _lqp_cache->set(_sql_string, _optimized_logical_plan);
+  if (lqp_cache) {
+    lqp_cache->set(_sql_string, _optimized_logical_plan);
   }
 
   return _optimized_logical_plan;
@@ -148,8 +154,8 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   auto done = started;  // dummy value needed for initialization
 
   // Try to retrieve the PQP from cache
-  if (_pqp_cache) {
-    if (const auto cached_physical_plan = _pqp_cache->try_get(_sql_string)) {
+  if (pqp_cache) {
+    if (const auto cached_physical_plan = pqp_cache->try_get(_sql_string)) {
       if ((*cached_physical_plan)->transaction_context_is_set()) {
         Assert(_use_mvcc == UseMvcc::Yes, "Trying to use MVCC cached query without a transaction context.");
       } else {
@@ -175,8 +181,8 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
 
   // Cache newly created plan for the according sql statement (only if not already cached)
-  if (_pqp_cache && !_metrics->query_plan_cache_hit) {
-    _pqp_cache->set(_sql_string, _physical_plan);
+  if (pqp_cache && !_metrics->query_plan_cache_hit) {
+    pqp_cache->set(_sql_string, _physical_plan);
   }
 
   _metrics->lqp_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
@@ -197,6 +203,8 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   if (_result_table || !_query_has_output) {
     return _result_table;
   }
+
+  _precheck_ddl_operators(get_physical_plan());
 
   const auto& tasks = get_tasks();
 
@@ -229,4 +237,47 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 }
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
+
+void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) const {
+  const auto& storage_manager = StorageManager::get();
+
+  /**
+   * Only look at the root operator, because as of now DDL operators are always at the root.
+   */
+
+  switch (pqp->type()) {
+    case OperatorType::CreatePreparedPlan: {
+      const auto create_prepared_plan = std::dynamic_pointer_cast<CreatePreparedPlan>(pqp);
+      AssertInput(!storage_manager.has_prepared_plan(create_prepared_plan->prepared_plan_name()),
+                  "Prepared Plan '" + create_prepared_plan->prepared_plan_name() + "' already exists.");
+      break;
+    }
+    case OperatorType::CreateTable: {
+      const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
+      AssertInput(create_table->if_not_exists || !storage_manager.has_table(create_table->table_name),
+                  "Table '" + create_table->table_name + "' already exists.");
+      break;
+    }
+    case OperatorType::CreateView: {
+      const auto create_view = std::dynamic_pointer_cast<CreateView>(pqp);
+      AssertInput(create_view->if_not_exists() || !storage_manager.has_view(create_view->view_name()),
+                  "View '" + create_view->view_name() + "' already exists.");
+      break;
+    }
+    case OperatorType::DropTable: {
+      const auto drop_table = std::dynamic_pointer_cast<DropTable>(pqp);
+      AssertInput(drop_table->if_exists || storage_manager.has_table(drop_table->table_name),
+                  "There is no table '" + drop_table->table_name + "'.");
+      break;
+    }
+    case OperatorType::DropView: {
+      const auto drop_view = std::dynamic_pointer_cast<DropView>(pqp);
+      AssertInput(drop_view->if_exists || storage_manager.has_view(drop_view->view_name),
+                  "There is no view '" + drop_view->view_name + "'.");
+      break;
+    }
+    default:
+      break;
+  }
+}
 }  // namespace opossum

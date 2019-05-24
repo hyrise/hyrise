@@ -78,7 +78,10 @@ class SQLPipeline : public Noncopyable {
   // another uses it)
   bool requires_execution() const;
 
-  const SQLPipelineMetrics& metrics();
+  SQLPipelineMetrics& metrics();
+
+  const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
+  const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
  private:
   std::string _sql;
@@ -87,8 +90,6 @@ class SQLPipeline : public Noncopyable {
 
   const std::shared_ptr<TransactionContext> _transaction_context;
   const std::shared_ptr<Optimizer> _optimizer;
-  const std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
-  const std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 
   // Execution results
   std::vector<std::string> _sql_strings;
