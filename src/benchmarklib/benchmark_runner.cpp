@@ -224,8 +224,8 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
           result.num_iterations++;
 
-          result.durations.push_back(run_end - run_start);
-          result.metrics.push_back(std::move(metrics));
+          result.durations.emplace_back(run_end - run_start);
+          result.metrics.emplace_back(std::move(metrics));
         }
       },
       SchedulePriority::High);

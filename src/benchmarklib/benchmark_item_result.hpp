@@ -13,7 +13,7 @@ struct BenchmarkItemResult {
 
   // Need to explicitly implement move, because std::atomic implicitly deletes it...
   BenchmarkItemResult(BenchmarkItemResult&& other) noexcept;
-  BenchmarkItemResult& operator=(BenchmarkItemResult&& other);
+  BenchmarkItemResult& operator=(BenchmarkItemResult&& other) noexcept;
 
   std::atomic<size_t> num_iterations = 0;
 
