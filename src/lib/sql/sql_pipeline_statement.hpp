@@ -68,6 +68,9 @@ class SQLPipelineStatement : public Noncopyable {
   //   - {Committed, table}    same as above if the transaction was auto-committed
   //   - {Committed, nullptr}  same as above if the transaction was auto-committed
   //   - {RolledBack, nullptr} if the transaction failed
+  // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
+  // explicitly return it as part of get_result_table to force the caller to take the possibility of a failed
+  // transaction into account.
   // TODO write tests for this
   const std::pair<TransactionContext::TransactionPhase, std::shared_ptr<const Table>&> get_result_table();
 
