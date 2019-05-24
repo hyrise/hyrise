@@ -587,9 +587,6 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
   values.resize(results.size());
   null_values.resize(results.size());
 
-  // var = (1/n) * (sx2 - (1/n) * sx^2) // Population
-  // var = (1/(n-1)) * (sx2 - (1/n) * sx^2) // Sample
-
   size_t i = 0;
   for (const auto& result : results) {
     const auto n = static_cast<AggregateType>(result.aggregate_count);
