@@ -60,13 +60,17 @@ class SQLPipeline : public Noncopyable {
   const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns
-  //   - {Committed, tables}  if the transaction was successful and returned at least a table
-  //   - {Committed, {}}}     if the transaction was successful but did not return tables
-  //   - {RolledBack, tables} if the transaction failed (successfully retrieved tables are included)
-  const std::pair<TransactionContext::TransactionPhase, std::vector<std::shared_ptr<const Table>>&> get_result_tables();
+  //   - {Success, tables}      if the statement was successful and returned at least one table
+  //   - {Success, nullptr}     if the statement was successful but did not return a table (e.g., UPDATE)
+  //   - {RolledBack, nullptr}  if the transaction failed
+  // TODO Doc {RolledBack, tables} for auto-commit
+  // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
+  // explicitly return it as part of get_result_table(s) to force the caller to take the possibility of a failed
+  // transaction into account.
+  const std::pair<SQLPipelineStatus, std::vector<std::shared_ptr<const Table>>&> get_result_tables();
 
   // Shorthand for `get_result_tables().back()`
-  const std::pair<TransactionContext::TransactionPhase, std::shared_ptr<const Table>&> get_result_table();
+  const std::pair<SQLPipelineStatus, std::shared_ptr<const Table>&> get_result_table();
 
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
   std::shared_ptr<TransactionContext> transaction_context() const;
@@ -80,7 +84,7 @@ class SQLPipeline : public Noncopyable {
   // another uses it)
   bool requires_execution() const;
 
-  const SQLPipelineMetrics& metrics();
+  SQLPipelineMetrics& metrics();
 
  private:
   std::string _sql;
@@ -99,8 +103,8 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::vector<std::shared_ptr<OperatorTask>>> _tasks;
   std::vector<std::shared_ptr<const Table>> _result_tables;
 
-  // Indicates whether get_result_table() has been run successfully (especially without a transaction failure)
-  bool _pipeline_was_executed{false};
+  // Indicates whether get_result_table() has been run yet and whether the execution was successful
+  SQLPipelineStatus _pipeline_status{SQLPipelineStatus::NotExecuted};
 
   // Indicates whether translating a statement in the pipeline requires the execution of a previous statement
   // e.g. CREATE VIEW foo AS SELECT * FROM bar; SELECT * FROM foo;

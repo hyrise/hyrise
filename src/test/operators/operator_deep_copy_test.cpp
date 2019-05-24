@@ -192,8 +192,8 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
 
   auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline_statement();
-  const auto [sql_success, first_result] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(sql_success);
+  const auto [pipeline_status, first_result] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   // Quick sanity check to see that the original query is correct
   auto expected_first = std::make_shared<Table>(column_definitions, TableType::Data);

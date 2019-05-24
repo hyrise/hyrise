@@ -339,16 +339,16 @@ TEST_F(SQLPipelineTest, GetTasksExecutionRequired) {
 
 TEST_F(SQLPipelineTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
-  const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
-  const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi);
 }
@@ -362,8 +362,8 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   auto duration = metrics.statement_metrics[0]->plan_execution_duration;
 
-  const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   auto duration2 = metrics.statement_metrics[0]->plan_execution_duration;
 
@@ -374,8 +374,8 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
 TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
-  const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
@@ -385,8 +385,8 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
 
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -428,13 +428,13 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
   const auto sql = "UPDATE table_a SET a = 1 WHERE a < 150";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
-  const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_EQ(table, nullptr);
 
   // Check that this doesn't crash. This should return the previous table.
-  const auto& [transaction_successful2, table2] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful2);
+  const auto& [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Success);
   EXPECT_EQ(table2, nullptr);
 }
 
@@ -452,8 +452,8 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
 
-  const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_FALSE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
   EXPECT_TRUE(transaction_context->aborted());
 
@@ -487,8 +487,8 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
       "UPDATE table_a SET a = 1 WHERE a = 1234";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
-  const auto& [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_FALSE(transaction_successful);
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
 
   // This time, the first row should have been updated before the second statement failed

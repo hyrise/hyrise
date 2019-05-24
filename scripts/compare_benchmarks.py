@@ -34,30 +34,24 @@ def get_iteration_durations(iterations):
     iteration_durations = []
     for iteration in iterations:
         iteration_duration = 0
-        for statement in iteration["statements"]:
-            iteration_duration += statement["sql_translation_duration"] + statement["optimization_duration"] + \
-                                  statement["lqp_translation_duration"] + statement["plan_execution_duration"]
-        iteration_duration += iteration["parse_duration"]
+        iteration_duration += iteration
 
         iteration_durations.append(iteration_duration)
 
     return iteration_durations
 
 def calculate_and_format_p_value(old, new):
-    old_iteration_durations = get_iteration_durations(old["metrics"])
-    new_iteration_durations = get_iteration_durations(new["metrics"])
-
-    p_value = ttest_ind(array('d', old_iteration_durations), array('d', new_iteration_durations))[1]
+    p_value = ttest_ind(array('d', old["durations"]), array('d', new["durations"]))[1]
     is_significant = p_value < p_value_significance_threshold
 
     notes = ""
-    old_runtime = sum(runtime for runtime in old_iteration_durations)
-    new_runtime = sum(runtime for runtime in new_iteration_durations)
+    old_runtime = sum(runtime for runtime in old["durations"])
+    new_runtime = sum(runtime for runtime in new["durations"])
     if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns):
         is_significant = False
         notes += "(run time too short) "
 
-    if (len(old_iteration_durations) < min_iterations or len(new_iteration_durations) < min_iterations):
+    if (len(old["durations"]) < min_iterations or len(new["durations"]) < min_iterations):
         is_significant = False
         notes += "(not enough runs) "
 

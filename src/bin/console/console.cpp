@@ -271,12 +271,19 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
-  const auto [transaction_successful, table] = _sql_pipeline->get_result_table();
-  if (!transaction_successful) {
+  const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
+  if (pipeline_status == SQLPipelineStatus::RolledBack) {
     _handle_rollback();
-    out("A transaction conflict has been detected. The transaction has been rolled back.");
+    out("A transaction conflict has been detected:");
+    out(_sql_pipeline->failed_pipeline_statement()->get_sql_string());
+    if (_explicitly_created_transaction_context) {
+      out("The transaction has been rolled back");
+    } else {
+      out("The statement was not executed, but previous statements have been auto-committed");
+    }
     return ReturnCode::Error;
   }
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
   auto row_count = table ? table->row_count() : 0;
 
@@ -700,7 +707,6 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const auto graph_filename = "." + plan_type_str + ".dot";
   const auto img_filename = plan_type_str + ".png";
 
   switch (plan_type) {
@@ -721,7 +727,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       LQPVisualizer visualizer;
-      visualizer.visualize(lqp_roots, graph_filename, img_filename);
+      visualizer.visualize(lqp_roots, img_filename);
     } break;
 
     case PlanType::PQP: {
@@ -731,7 +737,7 @@ int Console::_visualize(const std::string& input) {
         }
 
         PQPVisualizer visualizer;
-        visualizer.visualize(_sql_pipeline->get_physical_plans(), graph_filename, img_filename);
+        visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
         _handle_rollback();
@@ -758,7 +764,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       JoinGraphVisualizer visualizer;
-      visualizer.visualize(join_graphs, graph_filename, img_filename);
+      visualizer.visualize(join_graphs, img_filename);
     } break;
   }
 

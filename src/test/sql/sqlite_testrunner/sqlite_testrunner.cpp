@@ -163,8 +163,8 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_lqp_translator(lqp_translator).create_pipeline();
 
   // Execute query in Hyrise and SQLite
-  const auto [transaction_successful, result_table] = sql_pipeline.get_result_table();
-  ASSERT_TRUE(transaction_successful);
+  const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
+  ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
   const auto sqlite_result_table = _sqlite->execute_query(sql);
 
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&

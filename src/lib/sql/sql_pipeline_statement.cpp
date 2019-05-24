@@ -187,7 +187,7 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLPipelineStatement::get_task
   return _tasks;
 }
 
-const std::pair<TransactionContext::TransactionPhase, std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
+const std::pair<SQLPipelineStatus, std::shared_ptr<const Table>&> SQLPipelineStatement::get_result_table() {
   // Returns true if a transaction was set and that transaction was rolled back.
   const auto was_rolled_back = [&]() {
     if (_transaction_context) {
@@ -203,11 +203,11 @@ const std::pair<TransactionContext::TransactionPhase, std::shared_ptr<const Tabl
   };
 
   if (was_rolled_back()) {
-    return {false, _result_table};
+    return {SQLPipelineStatus::RolledBack, _result_table};
   }
 
   if (_result_table || !_query_has_output) {
-    return {true, _result_table};
+    return {SQLPipelineStatus::Success, _result_table};
   }
 
   _precheck_ddl_operators(get_physical_plan());
@@ -221,14 +221,18 @@ const std::pair<TransactionContext::TransactionPhase, std::shared_ptr<const Tabl
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   if (was_rolled_back()) {
-    return {false, _result_table};
+    return {SQLPipelineStatus::RolledBack, _result_table};
   }
 
   if (_auto_commit) {
     _transaction_context->commit();
   }
 
-  Assert(_transaction_context->phase() == TransactionPhase::Active || _transaction_context->phase() == TransactionPhase::Committed, "Transaction should either be still active or have been auto-committed by now");
+  if (_transaction_context) {
+    Assert(_transaction_context->phase() == TransactionPhase::Active ||
+               _transaction_context->phase() == TransactionPhase::Committed,
+           "Transaction should either be still active or have been auto-committed by now");
+  }
 
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
@@ -241,7 +245,8 @@ const std::pair<TransactionContext::TransactionPhase, std::shared_ptr<const Tabl
                 _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
                 _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
                 reinterpret_cast<uintptr_t>(this));
-  return {_transaction_context->phase(), _result_table};
+
+  return {SQLPipelineStatus::Success, _result_table};
 }
 
 const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_context() const {

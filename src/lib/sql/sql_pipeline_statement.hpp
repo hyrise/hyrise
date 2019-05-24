@@ -21,6 +21,13 @@ struct SQLPipelineStatementMetrics {
   bool query_plan_cache_hit = false;
 };
 
+enum class SQLPipelineStatus {
+  NotExecuted,  // The pipeline or the pipeline statement has been not been executed yet.
+  Success,      // The pipeline or the pipeline statement has been executed successfully. It is not necessarily
+                // committed.
+  RolledBack    // The pipeline or the pipeline statement caused a transaction conflict and has been rolled back.
+};
+
 /**
  * The SQLPipelineStatement represents the flow from a *single* SQL statement to the result table with all intermediate
  * steps. Don't construct this class directly, use the SQLPipelineBuilder instead
@@ -63,16 +70,13 @@ class SQLPipelineStatement : public Noncopyable {
   const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns
-  //   - {Active, table}       if the statement was successful and returned a table
-  //   - {Active, nullptr}     if the statement was successful but did not return a table (e.g., UPDATE)
-  //   - {Committed, table}    same as above if the transaction was auto-committed
-  //   - {Committed, nullptr}  same as above if the transaction was auto-committed
-  //   - {RolledBack, nullptr} if the transaction failed
+  //   - {Success, table}       if the statement was successful and returned a table
+  //   - {Success, nullptr}     if the statement was successful but did not return a table (e.g., UPDATE)
+  //   - {RolledBack, nullptr}  if the transaction failed
   // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
   // explicitly return it as part of get_result_table to force the caller to take the possibility of a failed
   // transaction into account.
-  // TODO write tests for this
-  const std::pair<TransactionContext::TransactionPhase, std::shared_ptr<const Table>&> get_result_table();
+  const std::pair<SQLPipelineStatus, std::shared_ptr<const Table>&> get_result_table();
 
   // Returns the TransactionContext that was either passed to or created by the SQLPipelineStatement.
   // This can be a nullptr if no transaction management is wanted.

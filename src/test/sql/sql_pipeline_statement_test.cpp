@@ -449,9 +449,9 @@ TEST_F(SQLPipelineStatementTest, GetTasksNotValidated) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
-  const auto [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
 
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
@@ -461,8 +461,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
   sql_pipeline.get_result_table();
   auto duration = sql_pipeline.metrics()->plan_execution_duration;
 
-  const auto [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   auto duration2 = sql_pipeline.metrics()->plan_execution_duration;
 
   // Make sure this was not run twice
@@ -472,8 +472,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTableJoin) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline_statement();
-  const auto [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -483,8 +483,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
 
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  const auto [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -493,21 +493,21 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
   const auto sql = "UPDATE table_a SET a = 1 WHERE a < 5";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
 
-  const auto [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_EQ(table, nullptr);
 
   // Check that this doesn't crash. This should return the previous table, otherwise the auto-commit will fail.
-  const auto [transaction_successful2, table2] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful2);
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Success);
   EXPECT_EQ(table2, nullptr);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement();
 
-  const auto [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 
@@ -523,13 +523,13 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransac
   auto transaction_context = TransactionManager::get().new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
 
-  const auto [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_FALSE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
   EXPECT_EQ(table, nullptr);
 
   // Retrieving it again should give us the same result
-  const auto [transaction_successful2, table2] = sql_pipeline.get_result_table();
-  EXPECT_FALSE(transaction_successful2);
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
   EXPECT_EQ(table2, nullptr);
 
   EXPECT_TRUE(transaction_context->aborted());
@@ -542,13 +542,13 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureAutoCommit) {
   const auto sql = "UPDATE table_a SET a = 1";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
 
-  const auto [transaction_successful, table] = sql_pipeline.get_result_table();
-  EXPECT_FALSE(transaction_successful);
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
   EXPECT_EQ(table, nullptr);
 
   // Retrieving it again should give us the same result
-  const auto [transaction_successful2, table2] = sql_pipeline.get_result_table();
-  EXPECT_FALSE(transaction_successful2);
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
   EXPECT_EQ(table2, nullptr);
 }
 
@@ -604,8 +604,8 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
 
   auto first_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
 
-  const auto [transaction_successful, first_subquery_result] = first_subquery_sql_pipeline.get_result_table();
-  EXPECT_TRUE(transaction_successful);
+  const auto [pipeline_status, first_subquery_result] = first_subquery_sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_first_result->append({10, 10, 10});
@@ -615,8 +615,8 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
   SQLPipelineBuilder{"INSERT INTO table_int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
   auto second_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
-  const auto [second_transaction_successful, second_subquery_result] = second_subquery_sql_pipeline.get_result_table();
-  EXPECT_TRUE(second_transaction_successful);
+  const auto [second_pipeline_status, second_subquery_result] = second_subquery_sql_pipeline.get_result_table();
+  EXPECT_EQ(second_pipeline_status, SQLPipelineStatus::Success);
 
   auto expected_second_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_second_result->append({11, 10, 11});
