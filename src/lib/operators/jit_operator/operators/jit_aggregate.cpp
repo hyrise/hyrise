@@ -317,6 +317,8 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         case AggregateFunction::CountDistinct: {
           Fail("Aggregate function count distinct not supported");
         }
+        case AggregateFunction::StdDevSamp:
+          Fail("Aggregate function standard deviation sample is not supported.");
       }
     }
 
@@ -354,6 +356,8 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
       case AggregateFunction::CountDistinct: {
         Fail("Aggregate function count distinct not supported");
       }
+      case AggregateFunction::StdDevSamp:
+        Fail("Aggregate function standard deviation sample is not supported.");
     }
   }
 }
