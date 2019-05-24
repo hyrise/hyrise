@@ -585,9 +585,7 @@ TEST_F(SQLPipelineTest, DefaultPlanCaches) {
   EXPECT_EQ(sql_pipeline_statement_2.pqp_cache, local_pqp_cache);
   EXPECT_EQ(sql_pipeline_statement_2.lqp_cache, local_lqp_cache);
 
-  // Back to no caches
-  SQLPipelineBuilder::default_pqp_cache = nullptr;
-  SQLPipelineBuilder::default_lqp_cache = nullptr;
+  // No caches
   const auto sql_pipeline_3 =
       SQLPipelineBuilder{"SELECT * FROM table_a"}.with_pqp_cache(nullptr).with_lqp_cache(nullptr).create_pipeline();
   EXPECT_FALSE(sql_pipeline_3.pqp_cache);
