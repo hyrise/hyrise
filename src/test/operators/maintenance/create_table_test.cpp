@@ -3,9 +3,11 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "concurrency/transaction_manager.hpp"
-#include "operators/maintenance/create_table.hpp"
+#include "concurrency/transaction_context.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/get_table.hpp"
+#include "operators/maintenance/create_table.hpp"
+#include "operators/projection.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -83,9 +85,33 @@ TEST_F(CreateTableTest, CreateTableAsSelect) {
   EXPECT_NO_THROW(create_table_as->execute());
   context->commit();
 
-  StorageManager::get().drop_table("test");
   const auto table_2 = StorageManager::get().get_table("test_2");
+  EXPECT_EQ(table_2->row_count(), 10);
+
+  StorageManager::get().drop_table("test");
 
   EXPECT_EQ(table_2->row_count(), 10);
 }
+
+TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
+  const auto table = load_table("resources/test_data/tbl/int_float_with_null.tbl");
+  StorageManager::get().add_table("test", table);
+
+  const auto get_table = std::make_shared<GetTable>("test");
+  get_table->execute();
+
+  const std::shared_ptr<AbstractExpression> expr = PQPColumnExpression::from_table(*table, "a");
+  const auto projection = std::make_shared<Projection>(get_table, expression_vector(expr));
+  projection->execute();
+
+  const auto create_table_as = std::make_shared<CreateTable>("test_2", projection->get_output()->column_definitions(), false, projection);
+  EXPECT_NO_THROW(create_table_as->execute());
+
+  const auto table_2 = StorageManager::get().get_table("test_2");
+
+  EXPECT_EQ(table_2->column_count(), 1);
+  EXPECT_EQ(table_2->row_count(), table->row_count());
+  EXPECT_EQ(table_2->column_name(ColumnID{0}), table->column_name(ColumnID{0}));
+}
+
 }  // namespace opossum
