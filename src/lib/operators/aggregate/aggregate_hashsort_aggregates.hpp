@@ -108,7 +108,7 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
 
       if (source_run.null_values[entry.source_offset]) continue;
 
-      if (null_values[entry.source_offset]) {
+      if (null_values[entry.target_offset]) {
         target_value = source_value;
         continue;
       }

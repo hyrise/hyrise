@@ -47,7 +47,8 @@ template<typename GroupRun>
 std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run() {
   auto& input_table = *input_table_left();
 
-  auto input_groups = produce_initial_groups<GroupRun>(input_table, _groupby_column_ids);
+  auto input_layout = produce_initial_groups_layout<typename GroupRun::LayoutType>(input_table, _groupby_column_ids);
+  auto input_groups = produce_initial_groups<GroupRun>(input_table, &input_layout, _groupby_column_ids);
   auto input_aggregates = produce_initial_aggregates(input_table, _aggregates);
 
   auto input_run = Run{std::move(input_groups), std::move(input_aggregates)};

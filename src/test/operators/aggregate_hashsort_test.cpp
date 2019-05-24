@@ -62,10 +62,11 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
 
   auto group_by_column_ids = std::vector<ColumnID>{ColumnID{1}, ColumnID{0}, ColumnID{2}};
 
-  auto groups = produce_initial_groups<FixedSizeGroupRun>(*table, group_by_column_ids);
+  const auto layout = produce_initial_groups_layout<FixedSizeGroupRunLayout>(*table, group_by_column_ids);
+  auto groups = produce_initial_groups<FixedSizeGroupRun>(*table, &layout, group_by_column_ids);
 
-  EXPECT_EQ(groups.layout.group_size, 6u);
-  EXPECT_EQ(groups.layout.column_base_offsets, std::vector<size_t>({0, 1, 3}));
+  EXPECT_EQ(groups.layout->group_size, 6u);
+  EXPECT_EQ(groups.layout->column_base_offsets, std::vector<size_t>({0, 1, 3}));
 
   EXPECT_EQ(groups.hashes.size(), 3u);
 
@@ -80,6 +81,25 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
   EXPECT_EQ(groups.data, expected_group_data);
 }
 
+TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsLayoutVariablySized) {
+  const auto column_definitions =
+  TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, false}, {"c", DataType::String, true}, {"d", DataType::Int, false}, {"e", DataType::Long, false}};
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
+
+  const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
+
+  ASSERT_EQ(layout.variably_sized_column_count, 2u);
+  ASSERT_EQ(layout.column_mapping.size(), 4u);
+  EXPECT_EQ(layout.column_mapping.at(0), std::pair(false, size_t{0}));
+  EXPECT_EQ(layout.column_mapping.at(1), std::pair(true, size_t{0}));
+  EXPECT_EQ(layout.column_mapping.at(2), std::pair(true, size_t{1}));
+  EXPECT_EQ(layout.column_mapping.at(3), std::pair(false, size_t{1}));
+  EXPECT_EQ(layout.fixed_layout.group_size, 4);
+  EXPECT_EQ(layout.fixed_layout.column_base_offsets, std::vector<size_t>({0, 2}));
+}
+
 TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySized) {
   auto column_definitions =
   TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, false}, {"c", DataType::String, true}, {"d", DataType::Int, false}, {"e", DataType::Long, false}};
@@ -89,7 +109,8 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySized) {
 
   auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
 
-  auto groups = produce_initial_groups<VariablySizedGroupRun>(*table, group_by_column_ids);
+  const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
+  auto groups = produce_initial_groups<VariablySizedGroupRun>(*table, &layout, group_by_column_ids);
 
   // clang-format off
   const auto expected_group_data = std::vector<uint32_t>{
@@ -146,7 +167,8 @@ TEST_F(AggregateHashSortStepsTest, Partitioning) {
 
 TEST_F(AggregateHashSortStepsTest, Partition) {
   auto groups_layout = FixedSizeGroupRunLayout{1, {0}};
-  auto groups = FixedSizeGroupRun{groups_layout, 7};
+  auto groups = FixedSizeGroupRun{&groups_layout};
+  groups.resize(7);
 
   // clang-format off
   groups.hashes[0] = size_t{0b001}; groups.data[0] = int32_t{5};
@@ -214,8 +236,9 @@ TEST_F(AggregateHashSortStepsTest, Partition) {
 }
 
 TEST_F(AggregateHashSortStepsTest, Hashing) {
-  auto groups_layout = FixedSizeGroupRunLayout{2, {0, 4}};
-  auto groups = FixedSizeGroupRun{groups_layout, 4};
+  auto groups_layout = FixedSizeGroupRunLayout{2, {0, 2}};
+  auto groups = FixedSizeGroupRun{&groups_layout};
+  groups.resize(4);
 
   // clang-format off
   groups.hashes[0] = size_t{12}; groups.data[0] = int32_t{5}; groups.data[1] = int32_t{3};
@@ -274,7 +297,8 @@ TEST_F(AggregateHashSortStepsTest, Hashing) {
 
 TEST_F(AggregateHashSortStepsTest, AggregateAdaptive) {
   auto groups_layout = FixedSizeGroupRunLayout{1, {0}};
-  auto groups = FixedSizeGroupRun{groups_layout, 8};
+  auto groups = FixedSizeGroupRun{&groups_layout};
+  groups.resize(8);
 
   // clang-format off
   groups.hashes[0] = size_t{0b1}; groups.data[0] = int32_t{5};
