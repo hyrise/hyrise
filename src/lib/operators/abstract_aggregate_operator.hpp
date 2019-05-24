@@ -100,30 +100,17 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
               std::optional<AggregateType>& current_secondary_aggregate) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-        std::cout << "new val: " << new_value << "\n";
         // add new value to sum of x
         if (current_primary_aggregate) {
-          std::cout << "EXISTS current_primary_aggregate" << std::endl;
-          std::cout << "old prim pred: " << *current_primary_aggregate << "\n";
           *current_primary_aggregate += new_value;
-          std::cout << "new prim pred: " << *current_primary_aggregate << "\n";
         } else {
-          std::cout << "NOT EXISTS current_primary_aggregate" << std::endl;
-          std::cout << "old prim pred: " << *current_secondary_aggregate << "\n";
           current_primary_aggregate = new_value;
-          std::cout << "new prim pred: " << *current_secondary_aggregate << "\n";
         }
         // add new value to sum of x²
         if (current_secondary_aggregate) {
-          std::cout << "NOT EXISTS current_secondary_aggregate" << std::endl;
-          std::cout << "old sec pred: " << *current_primary_aggregate << "\n";
           *current_secondary_aggregate += new_value * new_value;
-          std::cout << "new sec pred: " << *current_primary_aggregate << "\n";
         } else {
-          std::cout << "EXISTS current_secondary_aggregate" << std::endl;
-          std::cout << "old sec pred: " << *current_secondary_aggregate << "\n";
           current_secondary_aggregate = new_value * new_value;
-          std::cout << "new sec pred: " << *current_secondary_aggregate << "\n";
         }
       } else {
         Fail("StdDevSamp not available for non-arithmetic types.");
