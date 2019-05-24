@@ -60,10 +60,9 @@ class SQLPipeline : public Noncopyable {
   const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns
-  //   - {Success, tables}      if the statement was successful and returned at least one table
-  //   - {Success, nullptr}     if the statement was successful but did not return a table (e.g., UPDATE)
-  //   - {RolledBack, nullptr}  if the transaction failed
-  // TODO Doc {RolledBack, tables} for auto-commit
+  //   - {Success, tables}     if the statement was successful
+  //   - {RolledBack, tables}  if the transaction failed. There might be tables included if no explicit transaction
+  //                           context was provided and statements auto-committed
   // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
   // explicitly return it as part of get_result_table(s) to force the caller to take the possibility of a failed
   // transaction into account.

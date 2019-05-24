@@ -452,8 +452,9 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
 
-  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  const auto [pipeline_status, tables] = sql_pipeline.get_result_tables();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(tables.size(), 0);
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
   EXPECT_TRUE(transaction_context->aborted());
 
@@ -487,8 +488,9 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
       "UPDATE table_a SET a = 1 WHERE a = 1234";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
-  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(tables.size(), 1);
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
 
   // This time, the first row should have been updated before the second statement failed

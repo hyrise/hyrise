@@ -212,7 +212,6 @@ const std::pair<SQLPipelineStatus, std::vector<std::shared_ptr<const Table>>&> S
         // The pipeline was executed using a transaction context (i.e., no auto-commit after each statement).
         // Previously returned results are invalid.
         _result_tables.clear();
-        // TODO test
       }
 
       return {SQLPipelineStatus::RolledBack, _result_tables};
