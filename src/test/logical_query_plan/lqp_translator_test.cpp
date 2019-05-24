@@ -25,6 +25,7 @@
 #include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/aggregate_hash.hpp"
@@ -48,6 +49,7 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -804,7 +806,8 @@ TEST_F(LQPTranslatorTest, CreateTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, true);
 
-  const auto lqp = CreateTableNode::make("t", column_definitions, false);
+  const auto lqp = CreateTableNode::make("t", column_definitions, false,
+                                         StaticTableNode::make(Table::create_dummy_table(column_definitions)));
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 

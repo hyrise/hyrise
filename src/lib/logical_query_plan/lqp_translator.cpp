@@ -64,6 +64,7 @@
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
 #include "sort_node.hpp"
+#include "static_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
@@ -117,6 +118,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Insert:             return _translate_insert_node(node);
     case LQPNodeType::Delete:             return _translate_delete_node(node);
     case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
+    case LQPNodeType::StaticTable:        return _translate_static_table_node(node);
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
     case LQPNodeType::Union:              return _translate_union_node(node);
@@ -469,10 +471,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
   const auto input_node = create_table_node->left_input();
-  // TODO(david): create dummy table for any case
   return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->column_definitions,
-                                       create_table_node->if_not_exists,
-                                       input_node ? translate_node(input_node) : nullptr);
+                                       create_table_node->if_not_exists, translate_node(input_node));
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_static_table_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto static_table_node = std::dynamic_pointer_cast<StaticTableNode>(node);
+  return std::make_shared<TableWrapper>(static_table_node->table);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(

@@ -1032,7 +1032,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     column_definition.nullable = parser_column_definition->nullable;
   }
 
-  //TODO(david): instead of nullptr, insert dummytablenode
   return CreateTableNode::make(create_statement.tableName, column_definitions, create_statement.ifNotExists,
                                create_statement.select
                                    ? _translate_select_statement(*create_statement.select)
