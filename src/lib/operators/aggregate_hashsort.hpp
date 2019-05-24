@@ -39,6 +39,9 @@ class AggregateHashSort : public AbstractAggregateOperator {
   void _on_cleanup() override;
 
  private:
+  template<typename GroupRun>
+  std::shared_ptr<const Table> _on_execute_with_group_run();
+
   AggregateHashSortConfig _config;
 };
 

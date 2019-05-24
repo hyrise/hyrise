@@ -71,7 +71,7 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
   BaseDistributiveAggregateRun(const ColumnIterable& column_iterable) {
     resize(column_iterable.table.row_count());
 
-    column_iterable.for_each<SourceColumnDataType>([&](const auto segment_position, const auto offset) {
+    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const auto offset) {
       if (segment_position.is_null()) {
         null_values[offset] = true;
       } else {
@@ -210,7 +210,7 @@ struct CountNonNullAggregateRun : public BaseAggregateRun {
   explicit CountNonNullAggregateRun(const ColumnIterable& column_iterable) {
     resize(column_iterable.table.row_count());
 
-    column_iterable.for_each<SourceColumnDataType>([&](const auto segment_position, const auto offset) {
+    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const auto offset) {
       if (!segment_position.is_null()) {
         values[offset] = 1;
       }
@@ -256,7 +256,7 @@ struct CountDistinctAggregateRun : public BaseAggregateRun {
   explicit CountDistinctAggregateRun(const ColumnIterable& column_iterable) {
     resize(column_iterable.table.row_count());
 
-    column_iterable.for_each<SourceColumnDataType>([&](const auto segment_position, const auto offset) {
+    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const auto offset) {
       if (!segment_position.is_null()) {
         sets[offset].insert(segment_position.value());
       }
@@ -308,7 +308,7 @@ struct AvgAggregateRun : public BaseAggregateRun {
   explicit AvgAggregateRun(const ColumnIterable& column_iterable) {
     resize(column_iterable.table.row_count());
 
-    column_iterable.for_each<SourceColumnDataType>([&](const auto segment_position, const auto offset) {
+    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const auto offset) {
       if (!segment_position.is_null()) {
         sets[offset].emplace_back(segment_position.value());
       }

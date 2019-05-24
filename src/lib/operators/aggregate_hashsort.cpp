@@ -36,45 +36,53 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
       [&](const ColumnID column_id) { return input_table.column_data_type(column_id) != DataType::String; });
 
   if (fixed_size_groups) {
-    auto input_groups = produce_initial_groups<FixedSizeGroupRun>(input_table, _groupby_column_ids);
-    auto input_aggregates = produce_initial_aggregates(input_table, _aggregates);
+    return _on_execute_with_group_run<FixedSizeGroupRun>();
+  } else {
+    Fail("");
+    // return _on_execute_with_group_run<VariablySizedGroupRun>();
+  }
+}
 
-    auto input_run = Run{std::move(input_groups), std::move(input_aggregates)};
-    std::vector<Run<FixedSizeGroupRun>> input_runs;
-    input_runs.emplace_back(std::move(input_run));
+template<typename GroupRun>
+std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run() {
+  auto& input_table = *input_table_left();
 
-    auto result_runs = aggregate<FixedSizeGroupRun>(_config, std::move(input_runs), 1u);
+  auto input_groups = produce_initial_groups<GroupRun>(input_table, _groupby_column_ids);
+  auto input_aggregates = produce_initial_aggregates(input_table, _aggregates);
 
-    /**
-     * Build output Table
-     */
-    const auto output_column_definitions = _get_output_column_defintions();
-    auto output_chunks = std::vector<std::shared_ptr<Chunk>>(result_runs.size());
+  auto input_run = Run{std::move(input_groups), std::move(input_aggregates)};
+  std::vector<Run<GroupRun>> input_runs;
+  input_runs.emplace_back(std::move(input_run));
 
-    for (auto run_idx = size_t{0}; run_idx < result_runs.size(); ++run_idx) {
-      auto& run = result_runs[run_idx];
-      auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
+  auto result_runs = aggregate<GroupRun>(_config, std::move(input_runs), 1u);
 
-      for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size();
-           ++output_group_by_column_id) {
-        const auto& output_column_definition = output_column_definitions[output_group_by_column_id];
-        resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
-          using ColumnDataType = typename decltype(data_type_t)::type;
-          output_segments[output_group_by_column_id] = run.groups.materialize_output<ColumnDataType>(output_group_by_column_id, output_column_definition.nullable);
-        });
-      }
+  /**
+   * Build output Table
+   */
+  const auto output_column_definitions = _get_output_column_defintions();
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>(result_runs.size());
 
-      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
-        output_segments[_groupby_column_ids.size() + aggregate_idx] = run.aggregates[aggregate_idx]->materialize_output();
-      }
+  for (auto run_idx = size_t{0}; run_idx < result_runs.size(); ++run_idx) {
+    auto& run = result_runs[run_idx];
+    auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
 
-      output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);
+    for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size();
+         ++output_group_by_column_id) {
+      const auto& output_column_definition = output_column_definitions[output_group_by_column_id];
+      resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        output_segments[output_group_by_column_id] = run.groups.template materialize_output<ColumnDataType>(output_group_by_column_id, output_column_definition.nullable);
+      });
     }
 
-    return std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
-  } else {
-    Fail("Nope");
+    for (auto aggregate_idx = ColumnID{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
+      output_segments[_groupby_column_ids.size() + aggregate_idx] = run.aggregates[aggregate_idx]->materialize_output();
+    }
+
+    output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);
   }
+
+  return std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
 }
 
 }  // namespace opossum

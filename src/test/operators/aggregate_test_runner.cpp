@@ -1,6 +1,7 @@
 #include "base_operator_test_runner.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"
+#include "operators/aggregate_hashsort.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/verification/aggregate_verification.hpp"
@@ -224,6 +225,8 @@ TEST_P(AggregateTestRunner, TestAggregate) {
   auto expected_table = std::shared_ptr<const Table>{};
   auto table_difference_message = std::optional<std::string>{};
 
+  auto expected_output_table_iter = expected_output_tables.find(configuration);
+
   const auto print_configuration_info = [&]() {
     std::cout << "==================== AggregateOperator ======================" << std::endl;
     std::cout << aggregate_operator->description(DescriptionMode::MultiLine) << std::endl;
@@ -241,18 +244,17 @@ TEST_P(AggregateTestRunner, TestAggregate) {
       std::cout << "No Table produced by the aggregate operator under test" << std::endl;
     }
     std::cout << "=================== Expected Output Table ==================" << std::endl;
-    if (aggregate_verification->get_output()) {
-      Print::print(aggregate_verification->get_output(), PrintFlags::IgnoreChunkBoundaries);
+    if (expected_output_table_iter->second) {
+      Print::print(expected_output_table_iter->second, PrintFlags::IgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
-      std::cout << "No Table produced by the reference join operator" << std::endl;
+      std::cout << "No Table produced by the reference aggregate operator" << std::endl;
     }
     std::cout << "======================== Difference ========================" << std::endl;
     std::cout << *table_difference_message << std::endl;
     std::cout << "============================================================" << std::endl;
   };
 
-  auto expected_output_table_iter = expected_output_tables.find(configuration);
   try {
     // Cache reference table to avoid redundant computation of the same
     if (expected_output_table_iter == expected_output_tables.end()) {
@@ -281,6 +283,7 @@ TEST_P(AggregateTestRunner, TestAggregate) {
 // clang-format off
 INSTANTIATE_TEST_CASE_P(AggregateHash, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateHash>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(AggregateSort, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateSort>()), );  // NOLINT
+// INSTANTIATE_TEST_CASE_P(AggregateHashSort, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateHashSort>()), );  // NOLINT
 // clang-format on
 
 }  // namespace opossum

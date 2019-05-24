@@ -14,7 +14,7 @@ namespace opossum {
 
 namespace aggregate_hashsort {
 
-const auto data_type_size = std::unordered_map<DataType, size_t>{
+const auto data_type_sizes = std::unordered_map<DataType, size_t>{
     {DataType::Int, 4}, {DataType::Long, 8}, {DataType::Float, 4}, {DataType::Double, 8}};
 
 enum class HashSortMode { Hashing, Partition };
@@ -95,12 +95,34 @@ struct FixedSizeGroupRun {
 
   size_t hash(const size_t offset) const { return hashes[offset]; }
 
-  void copy(const size_t target_offset, const FixedSizeGroupRun& source_groups, const size_t source_offset) {
-    std::copy(source_groups.data.begin() + source_offset * layout.group_size,
-              source_groups.data.begin() + (source_offset + 1) * layout.group_size,
-              data.begin() + target_offset * layout.group_size);
-    hashes[target_offset] = source_groups.hashes[source_offset];
+  void flush_append_buffer(const std::vector<size_t>& buffer, const FixedSizeGroupRun& source) {
+    auto target_offset = hashes.size();
+    resize(hashes.size() + buffer.size());
+    for (const auto& source_offset : buffer) {
+      std::copy(source.data.begin() + source_offset * layout.group_size,
+                source.data.begin() + (source_offset + 1) * layout.group_size,
+                data.begin() + target_offset * layout.group_size);
+      hashes[target_offset] = source.hashes[source_offset];
+      ++target_offset;
+    }
   }
+};
+
+struct VariablySizedGroupRunLayout {
+  size_t column_count{};
+};
+
+struct VariablySizedGroupRun {
+  using BlobDataType = uint32_t;
+
+  explicit VariablySizedGroupRun(const VariablySizedGroupRunLayout& layout):
+    layout(layout) { }
+
+  VariablySizedGroupRunLayout layout;
+
+  std::vector<BlobDataType> data;
+  std::vector<size_t> hashes;
+  std::vector<size_t> group_offsets;
 };
 
 
@@ -111,26 +133,20 @@ struct Run {
 
   size_t size() const { return groups.hashes.size(); }
 
+  Run<GroupRun> new_instance() const {
+    auto new_aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(this->aggregates.size());
+    for (auto aggregate_idx = size_t{0}; aggregate_idx < new_aggregates.size(); ++aggregate_idx) {
+      new_aggregates[aggregate_idx] = this->aggregates[aggregate_idx]->new_instance();
+    }
+
+    return Run<FixedSizeGroupRun>{FixedSizeGroupRun{groups.layout, 0}, std::move(new_aggregates)};
+  }
+
   GroupRun groups;
   std::vector<std::unique_ptr<BaseAggregateRun>> aggregates;
 
   bool is_aggregated{false};
 };
-
-template <typename GroupRun>
-Run<GroupRun> make_run(const Run<GroupRun>& prototype);
-
-template <>
-Run<FixedSizeGroupRun> make_run<FixedSizeGroupRun>(const Run<FixedSizeGroupRun>& prototype) {
-  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(prototype.aggregates.size());
-  for (auto aggregate_idx = size_t{0}; aggregate_idx < prototype.aggregates.size(); ++aggregate_idx) {
-    aggregates[aggregate_idx] = prototype.aggregates[aggregate_idx]->new_instance();
-  }
-
-  auto run = Run<FixedSizeGroupRun>{FixedSizeGroupRun{prototype.groups.layout, 0}, std::move(aggregates)};
-
-  return run;
-}
 
 template <typename GroupRun>
 struct Partition {
@@ -147,7 +163,7 @@ struct Partition {
     }
 
     if (runs.empty()) {
-      runs.emplace_back(make_run(input_run));
+      runs.emplace_back(input_run.new_instance());
     }
 
     auto& target_run = runs.back();
@@ -156,12 +172,7 @@ struct Partition {
     /**
      * Process append_buffer
      */
-    auto target_offset = target_run.size();
-    target_groups.resize(target_run.size() + append_buffer.size());
-    for (const auto& source_offset : append_buffer) {
-      target_groups.copy(target_offset, input_run.groups, source_offset);
-      ++target_offset;
-    }
+    target_groups.flush_append_buffer(append_buffer, input_run.groups);
 
     for (auto aggregate_idx = size_t{0}; aggregate_idx < target_run.aggregates.size(); ++aggregate_idx) {
       auto& target_aggregate_run = target_run.aggregates[aggregate_idx];
@@ -414,7 +425,7 @@ inline FixedSizeGroupRun produce_initial_groups<FixedSizeGroupRun>(const Table& 
   for (auto output_group_by_column_id = size_t{0}; output_group_by_column_id < group_by_column_ids.size();
        ++output_group_by_column_id) {
     const auto group_column_id = group_by_column_ids[output_group_by_column_id];
-    const auto group_column_size = data_type_size.at(table.column_data_type(group_column_id)) / BLOB_DATA_TYPE_SIZE +
+    const auto group_column_size = data_type_sizes.at(table.column_data_type(group_column_id)) / BLOB_DATA_TYPE_SIZE +
                                    (table.column_is_nullable(group_column_id) ? 1 : 0);
     column_base_offsets[output_group_by_column_id] = group_size;
     group_size += group_column_size;
@@ -463,6 +474,78 @@ inline FixedSizeGroupRun produce_initial_groups<FixedSizeGroupRun>(const Table& 
     chunk_row_idx += chunk->size();
     chunk_data_base_offset += layout.group_size * chunk->size();
   }
+
+  return group_run;
+}
+
+
+template <>
+inline VariablySizedGroupRun produce_initial_groups<VariablySizedGroupRun>(const Table& table,
+                                                                   const std::vector<ColumnID>& group_by_column_ids) {
+  Assert(!group_by_column_ids.empty(), "");
+
+  constexpr auto BLOB_DATA_TYPE_SIZE = sizeof(FixedSizeGroupRun::BlobDataType);
+  //constexpr auto SIZE_T_SIZE = sizeof(size_t) / BLOB_DATA_TYPE_SIZE;
+
+  const auto row_count = table.row_count();
+  const auto column_count = group_by_column_ids.size();
+
+  auto layout = VariablySizedGroupRunLayout{group_by_column_ids.size()};
+  auto group_run = VariablySizedGroupRun{layout};
+
+  group_run.group_offsets.resize(row_count);
+
+  /**
+   * Value sizes
+   */
+  // a[x * h + y]
+  auto value_sizes = std::vector<size_t>(row_count * column_count);
+  auto value_sizes_iter = value_sizes.begin();
+  for (auto output_group_by_column_id = size_t{0}; output_group_by_column_id < group_by_column_ids.size();
+       ++output_group_by_column_id) {
+    const auto group_by_column_id = group_by_column_ids[output_group_by_column_id];
+
+    const auto is_nullable = table.column_is_nullable(group_by_column_id);
+
+    if (table.column_data_type(group_by_column_id) == DataType::String) {
+      auto column_iterable = ColumnIterable{table, group_by_column_id};
+      column_iterable.for_each<pmr_string>([&](const auto& segment_position, const auto offset) {
+        *value_sizes_iter += segment_position.value().size() / BLOB_DATA_TYPE_SIZE;
+        if (segment_position.value().size() % BLOB_DATA_TYPE_SIZE > 0) {
+          ++(*value_sizes_iter);
+        }
+        if (is_nullable) {
+          ++(*value_sizes_iter);
+        }
+
+        ++value_sizes_iter;
+      });
+    } else {
+      auto value_size = data_type_sizes.at(table.column_data_type(group_by_column_id)) / BLOB_DATA_TYPE_SIZE;
+      if (is_nullable) {
+        ++value_size;
+      }
+
+      const auto value_sizes_end = value_sizes_iter + row_count;
+      std::fill(value_sizes_iter, value_sizes_end, value_size);
+      value_sizes_iter = value_sizes_end;
+    }
+  }
+
+  /**
+   * Value offsets
+   */
+  // value_offsets[x * h + y]
+  auto value_offsets = std::vector<size_t>(row_count * column_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
+      if (column_id == 0 && row_idx == 0) continue;
+
+    }
+  }
+
+
+  std::cout << value_offsets.size() << std::endl;
 
   return group_run;
 }

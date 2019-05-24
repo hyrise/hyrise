@@ -80,6 +80,28 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
   EXPECT_EQ(groups.data, expected_group_data);
 }
 
+TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySized) {
+  auto column_definitions =
+  TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, false}, {"c", DataType::String, true}, {"d", DataType::Int, false}, {"e", DataType::Long, false}};
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  table->append({11, "eleven", "twelve", 0, int64_t{12}});
+  table->append({NullValue{}, "five", NullValue{}, 1, int64_t{14}});
+
+  auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
+
+  auto groups = produce_initial_groups<VariablySizedGroupRun>(*table, group_by_column_ids);
+
+  // clang-format off
+  const auto expected_group_data = std::vector<uint32_t>{
+  13, 0, bit_cast<uint32_t>(4.5f), 0, lower_word(1.0), upper_word(1.0),
+  12, 1, 0, 0, lower_word(-2.0), upper_word(-2.0),
+  14, 0, bit_cast<uint32_t>(1.5f), 1, 0, 0
+  };
+  // clang-format on
+
+  EXPECT_EQ(groups.data, expected_group_data);
+}
+
 TEST_F(AggregateHashSortStepsTest, ProduceInitialAggregates) {
   auto column_definitions =
       TableColumnDefinitions{{"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Double, true}};
@@ -117,7 +139,6 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialAggregates) {
   ASSERT_TRUE(avg);
   EXPECT_EQ(avg->sets, std::vector<std::vector<double>>({{1.0}, {-2.0}, {}}));
 }
-
 TEST_F(AggregateHashSortStepsTest, Partitioning) {
   EXPECT_EQ(Partitioning(2, 0, 1).get_partition_index(1), 1);
   EXPECT_EQ(Partitioning(2, 0, 1).get_partition_index(2), 0);
