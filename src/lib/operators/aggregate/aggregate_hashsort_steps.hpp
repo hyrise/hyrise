@@ -112,11 +112,16 @@ struct VariablySizedGroupRunLayout {
 
   // Mapping a ColumnID (the index of the vector) to whether the column's values is stored either in the
   // VariablySizeGroupRun itself, or the FixedSizeGroupRun and the value index in the respective group run.
-  std::vector<std::pair<bool, size_t>> column_mapping;
+  using Column = std::tuple<
+    bool /* is_variably_sized */,
+    size_t /* index */,
+    std::optional<size_t> /* nullable_index */
+  >;
+  std::vector<Column> column_mapping;
 
   FixedSizeGroupRunLayout fixed_layout;
 
-  VariablySizedGroupRunLayout(const size_t variably_sized_column_count, const std::vector<std::pair<bool, size_t>>& column_mapping, const FixedSizeGroupRunLayout& fixed_layout):
+  VariablySizedGroupRunLayout(const size_t variably_sized_column_count, const std::vector<Column>& column_mapping, const FixedSizeGroupRunLayout& fixed_layout):
     variably_sized_column_count(variably_sized_column_count), column_mapping(column_mapping), fixed_layout(fixed_layout) {}
 };
 
@@ -127,6 +132,7 @@ struct VariablySizedGroupRun {
   const VariablySizedGroupRunLayout* layout;
 
   std::vector<BlobDataType> data;
+  std::vector<bool> null_values;
 
   // End indices in `data`
   std::vector<size_t> group_end_offsets;
@@ -443,8 +449,6 @@ GroupRunLayout produce_initial_groups_layout(const Table& table, const std::vect
 
 template <>
 FixedSizeGroupRunLayout produce_initial_groups_layout<FixedSizeGroupRunLayout>(const Table& table, const std::vector<ColumnID>& group_by_column_ids) {
-  Assert(!group_by_column_ids.empty(), "");
-
   constexpr auto BLOB_DATA_TYPE_SIZE = sizeof(FixedSizeGroupRun::BlobDataType);
 
   /**
@@ -470,18 +474,24 @@ VariablySizedGroupRunLayout produce_initial_groups_layout<VariablySizedGroupRunL
   Assert(!group_by_column_ids.empty(), "");
 
   auto variably_sized_column_count = size_t{0};
-  auto column_mapping = std::vector<std::pair<bool, size_t>>(group_by_column_ids.size());
+  auto column_mapping = std::vector<VariablySizedGroupRunLayout::Column>(group_by_column_ids.size());
   auto fixed_size_group_by_column_ids = std::vector<ColumnID>{};
+  auto nullable_count = size_t{0};
 
   for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < group_by_column_ids.size(); ++output_group_by_column_id) {
     const auto group_by_column_id = group_by_column_ids[output_group_by_column_id];
     const auto data_type = table.column_data_type(group_by_column_id);
 
     if (data_type == DataType::String) {
-      column_mapping[output_group_by_column_id] = {true, variably_sized_column_count};
+      if (table.column_is_nullable(group_by_column_id)) {
+        column_mapping[output_group_by_column_id] = {true, variably_sized_column_count, nullable_count};
+        ++nullable_count;
+      } else {
+        column_mapping[output_group_by_column_id] = {true, variably_sized_column_count, std::nullopt};
+      }
       ++variably_sized_column_count;
     } else {
-      column_mapping[output_group_by_column_id] = {false, fixed_size_group_by_column_ids.size()};
+      column_mapping[output_group_by_column_id] = {false, fixed_size_group_by_column_ids.size(), std::nullopt};
       fixed_size_group_by_column_ids.emplace_back(group_by_column_id);
     }
   }
