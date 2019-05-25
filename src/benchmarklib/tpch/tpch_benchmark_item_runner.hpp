@@ -17,7 +17,7 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   // Constructor for a TPCHBenchmarkItemRunner containing a subset of TPC-H queries
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
-                          float scale_factor, const std::vector<BenchmarkItemID>& selected_queries);
+                          float scale_factor, const std::vector<BenchmarkItemID>& items);
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;

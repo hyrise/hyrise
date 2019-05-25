@@ -22,12 +22,4 @@ void CurrentScheduler::wait_for_all_tasks() {
   if (_instance) _instance->wait_for_all_tasks();
 }
 
-bool CurrentScheduler::has_pending_tasks() {
-  if (!_instance) return false;
-  for (const auto& queue : _instance->queues()) {
-    if (!queue->empty()) return true;
-  }
-  return false;
-}
-
 }  // namespace opossum

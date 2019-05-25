@@ -45,7 +45,6 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
@@ -264,9 +263,6 @@ int Console::_eval_sql(const std::string& sql) {
 
   try {
     _sql_pipeline->get_result_tables();
-    Assert(!_sql_pipeline->failed_pipeline_statement(),
-           "The transaction has failed. This should never happen in the console, where only one statement gets "
-           "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
@@ -275,7 +271,20 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
-  const auto& table = _sql_pipeline->get_result_table();
+  const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
+  if (pipeline_status == SQLPipelineStatus::RolledBack) {
+    _handle_rollback();
+    out("A transaction conflict has been detected:");
+    out(_sql_pipeline->failed_pipeline_statement()->get_sql_string());
+    if (_explicitly_created_transaction_context) {
+      out("The transaction has been rolled back");
+    } else {
+      out("The statement was rolled back, but previous statements have been auto-committed");
+    }
+    return ReturnCode::Error;
+  }
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+
   auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)
@@ -337,7 +346,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
+void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
@@ -630,7 +639,7 @@ int Console::_print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  out(gt->get_output(), PrintMvcc);
+  out(gt->get_output(), PrintFlags::Mvcc);
 
   return ReturnCode::Ok;
 }
@@ -924,7 +933,7 @@ int Console::_print_transaction_info(const std::string& input) {
 }
 
 int Console::_print_current_working_directory(const std::string&) {
-  out(filesystem::current_path().string() + "\n");
+  out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
@@ -939,7 +948,7 @@ int Console::_load_plugin(const std::string& args) {
 
   const std::string& plugin_path_str = arguments[0];
 
-  const filesystem::path plugin_path(plugin_path_str);
+  const std::filesystem::path plugin_path(plugin_path_str);
   const auto plugin_name = plugin_name_from_path(plugin_path);
 
   PluginManager::get().load_plugin(plugin_path);

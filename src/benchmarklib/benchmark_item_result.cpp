@@ -6,15 +6,15 @@ BenchmarkItemResult::BenchmarkItemResult() { metrics.reserve(1'000'000); }
 
 BenchmarkItemResult::BenchmarkItemResult(BenchmarkItemResult&& other) noexcept {
   num_iterations.store(other.num_iterations);
-  all_runs_duration = other.all_runs_duration;
+  duration_of_all_runs = other.duration_of_all_runs;
   metrics = other.metrics;
   durations = other.durations;
   verification_passed = other.verification_passed;
 }
 
-BenchmarkItemResult& BenchmarkItemResult::operator=(BenchmarkItemResult&& other) {
+BenchmarkItemResult& BenchmarkItemResult::operator=(BenchmarkItemResult&& other) noexcept {
   num_iterations.store(other.num_iterations);
-  all_runs_duration = other.all_runs_duration;
+  duration_of_all_runs = other.duration_of_all_runs;
   metrics = other.metrics;
   durations = other.durations;
   verification_passed = other.verification_passed;

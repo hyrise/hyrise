@@ -40,8 +40,6 @@ class CurrentScheduler {
 
   static void wait_for_all_tasks();
 
-  static bool has_pending_tasks();
-
  private:
   static std::shared_ptr<AbstractScheduler> _instance;
 };

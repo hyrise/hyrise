@@ -31,11 +31,13 @@ class SQLPipeline;
 struct SQLPipelineMetrics;
 class SQLiteWrapper;
 
+// The BenchmarkRunner is the main class for the benchmark framework. It gets initialized by the benchmark binaries
+// (e.g., tpch_benchmark.cpp). They then hand over the control to the BenchmarkRunner (inversion of control), which
+// calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
 class BenchmarkRunner {
  public:
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
-  ~BenchmarkRunner();
 
   void run();
 

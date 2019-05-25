@@ -21,7 +21,6 @@
 #include "utils/format_duration.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
-#include "utils/plugin_manager.hpp"
 #include "version.hpp"
 
 namespace opossum {
@@ -41,7 +40,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
-    for (auto node : Topology::get().nodes()) {
+    for (const auto& node : Topology::get().nodes()) {
       numa_cores_per_node.push_back(node.cpus.size());
     }
     _context.push_back({"utilized_cores_per_numa_node", numa_cores_per_node});
@@ -66,17 +65,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     }
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
-  }
-
-  // TODO: Use with command line args instead.
-  PluginManager::get().load_plugin("/home/Leander.Neiss/pcm_plugin/build/libPcmPlugin.so");
-
-}
-
-BenchmarkRunner::~BenchmarkRunner() {
-  PluginManager::get().unload_plugin("PcmPlugin");
-  if (CurrentScheduler::is_set()) {
-    CurrentScheduler::get()->finish();
   }
 }
 
@@ -172,7 +160,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   }
   _state.set_done();
 
-  // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
+  // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
   CurrentScheduler::wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
@@ -199,11 +187,11 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
-    result.all_runs_duration = _state.benchmark_duration;
+    result.duration_of_all_runs = _state.benchmark_duration;
 
-    const auto all_runs_duration_ns =
-        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.all_runs_duration).count());
-    const auto duration_seconds = all_runs_duration_ns / 1'000'000'000;
+    const auto duration_of_all_runs_ns =
+        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration_of_all_runs).count());
+    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
     if (!_config.verify && !_config.enable_visualization) {
@@ -237,7 +225,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
           result.num_iterations++;
 
           result.durations.push_back(run_end - run_start);
-          result.metrics.push_back(std::move(metrics));
+          result.metrics.push_back(metrics);
         }
       },
       SchedulePriority::High);
@@ -330,13 +318,13 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
     if (_config.benchmark_mode == BenchmarkMode::Ordered) {
       // These metrics are not meaningful for permuted / shuffled execution
-      const auto all_runs_duration_ns =
-          static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.all_runs_duration).count());
-      const auto duration_seconds = all_runs_duration_ns / 1'000'000'000;
+      const auto duration_of_all_runs_ns =
+          static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration_of_all_runs).count());
+      const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
       const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
       benchmark["items_per_second"] = items_per_second;
       const auto time_per_item =
-          result.num_iterations > 0 ? all_runs_duration_ns / result.num_iterations : std::nanf("");
+          result.num_iterations > 0 ? duration_of_all_runs_ns / result.num_iterations : std::nanf("");
       benchmark["avg_real_time_per_iteration"] = time_per_item;
     }
 

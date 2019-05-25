@@ -9,6 +9,7 @@ extern "C" {
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/integral_constant.hpp>
 #include <boost/hana/zip_with.hpp>
+#include <filesystem>
 #include <utility>
 
 #include "benchmark_config.hpp"
@@ -62,9 +63,11 @@ const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name"
  * No real need to tie this to TPCH, but atm it is only used here so that's where it resides.
  */
 template <typename... DataTypes>
+// NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
 class TableBuilder {
  public:
   template <typename... Strings>
+  // NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
                const boost::hana::tuple<Strings...>& column_names, size_t estimated_rows = 0)
       : _estimated_rows_per_chunk(estimated_rows < chunk_size ? estimated_rows : chunk_size) {
@@ -83,7 +86,7 @@ class TableBuilder {
     // Iterate over the column types/names and create the columns.
     opossum::TableColumnDefinitions column_definitions;
     boost::hana::fold_left(column_names_and_data_types, column_definitions,
-                           [](auto& definitions, auto column_name_and_type) -> decltype(auto) {
+                           [](auto& definitions, auto column_name_and_type) -> decltype(definitions) {
                              definitions.emplace_back(column_name_and_type[boost::hana::llong_c<0>],
                                                       column_name_and_type[boost::hana::llong_c<1>]);
                              return definitions;
@@ -228,7 +231,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-    for (const auto& table_file : filesystem::recursive_directory_iterator(cache_directory)) {
+    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
       const auto table_name = table_file.path().stem();
       Timer timer;
       std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
@@ -368,7 +371,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
     for (auto& [table_name, table_info] : table_info_by_name) {
-      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
     }
   }
 

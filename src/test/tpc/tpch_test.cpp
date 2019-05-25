@@ -45,7 +45,7 @@ class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
       {9, 0.01f},   {10, 0.02f},  {11, 0.01f}, {12, 0.01f},  {13, 0.01f},   {14, 0.01f}, {15, 0.01f}, {16, 0.01f},
       {17, 0.013f}, {18, 0.005f}, {19, 0.01f}, {20, 0.008f}, {21, 0.0075f}, {22, 0.01f}};
 
-  // Helper method used to touch TPCHBenchmarkItemRunner's privates
+  // Helper method used to access TPCHBenchmarkItemRunner's private members
   std::string get_deterministic_query(TPCHBenchmarkItemRunner& runner, BenchmarkItemID item_id) {
     return runner._build_deterministic_query(item_id);
   }
@@ -80,18 +80,21 @@ TEST_P(TPCHTest, Test) {
   } else {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
-  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).disable_mvcc().create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).create_pipeline();
 
   /**
    * Run the query and obtain the result tables, TPC-H 15 needs special handling
    */
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
+  auto result_table_pair = sql_pipeline.get_result_tables();
+  Assert(result_table_pair.first == SQLPipelineStatus::Success, "Unexpected pipeline status");
   std::shared_ptr<const Table> result_table;
   if (tpch_idx == 15) {
     Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15");
-    result_table = sql_pipeline.get_result_tables()[1];
+    result_table = result_table_pair.second[1];
   } else {
-    result_table = sql_pipeline.get_result_table();
+    Assert(sql_pipeline.statement_count() == 1u, "Expected single statement");
+    result_table = result_table_pair.second[0];
   }
 
   /**
