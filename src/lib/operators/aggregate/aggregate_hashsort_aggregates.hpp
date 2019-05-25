@@ -89,7 +89,7 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
 
   void flush_append_buffer(const std::vector<size_t>& buffer, const BaseAggregateRun& base_aggregate_run) override {
     const auto& source_run =
-    static_cast<const BaseDistributiveAggregateRun<SourceColumnDataType, aggregate_function>&>(base_aggregate_run);
+        static_cast<const BaseDistributiveAggregateRun<SourceColumnDataType, aggregate_function>&>(base_aggregate_run);
 
     for (const auto& source_offset : buffer) {
       values.emplace_back(source_run.values[source_offset]);
@@ -193,9 +193,7 @@ struct CountRowsAggregateRun : public BaseAggregateRun {
     return std::make_shared<ValueSegment<AggregateType>>(std::move(values));
   }
 
-  std::unique_ptr<BaseAggregateRun> new_instance() const override {
-    return std::make_unique<CountRowsAggregateRun>(0);
-  }
+  std::unique_ptr<BaseAggregateRun> new_instance() const override { return std::make_unique<CountRowsAggregateRun>(0); }
 
   std::vector<AggregateType> values;
 };
@@ -352,9 +350,7 @@ struct AvgAggregateRun : public BaseAggregateRun {
     return std::make_shared<ValueSegment<AggregateType>>(std::move(values), std::move(null_values));
   }
 
-  std::unique_ptr<BaseAggregateRun> new_instance() const override {
-    return std::make_unique<AvgAggregateRun>();
-  }
+  std::unique_ptr<BaseAggregateRun> new_instance() const override { return std::make_unique<AvgAggregateRun>(); }
 
   std::vector<std::vector<AggregateType>> sets;
 };

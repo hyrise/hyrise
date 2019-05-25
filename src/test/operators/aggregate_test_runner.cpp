@@ -1,7 +1,7 @@
 #include "base_operator_test_runner.hpp"
 #include "operators/aggregate_hash.hpp"
-#include "operators/aggregate_sort.hpp"
 #include "operators/aggregate_hashsort.hpp"
+#include "operators/aggregate_sort.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/verification/aggregate_verification.hpp"

@@ -43,7 +43,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
   }
 }
 
-template<typename GroupRun>
+template <typename GroupRun>
 std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run() {
   auto& input_table = *input_table_left();
 
@@ -72,7 +72,8 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run() {
       const auto& output_column_definition = output_column_definitions[output_group_by_column_id];
       resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
-        output_segments[output_group_by_column_id] = run.groups.template materialize_output<ColumnDataType>(output_group_by_column_id, output_column_definition.nullable);
+        output_segments[output_group_by_column_id] = run.groups.template materialize_output<ColumnDataType>(
+            output_group_by_column_id, output_column_definition.nullable);
       });
     }
 

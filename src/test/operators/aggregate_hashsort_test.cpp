@@ -1,6 +1,6 @@
 #include "base_test.hpp"
-#include "operators/aggregate/aggregate_hashsort_steps.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
+#include "operators/aggregate/aggregate_hashsort_steps.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
@@ -43,12 +43,12 @@ T bit_cast(const S& s) {
   return t;
 }
 
-template<typename BlobElementType>
-std::vector<BlobElementType> chars_to_blob(const std::string& chars) {
-  const auto element_count = chars.size() / sizeof(BlobElementType) + (chars.size() % sizeof(BlobElementType) > 0 ? 1 : 0);
-  auto blob = std::vector<BlobElementType>(element_count);
-  memcpy(blob.data(), chars.data(), chars.size());
-  return blob;
+VariablySizedGroupRun::BlobDataType chars_to_blob_element(const std::string& chars) {
+  Assert(chars.size() <= sizeof(VariablySizedGroupRun::BlobDataType), "Invalid string size");
+
+  auto blob_element = VariablySizedGroupRun::BlobDataType{};
+  memcpy(&blob_element, chars.data(), chars.size());
+  return blob_element;
 }
 
 }  // namespace
@@ -90,7 +90,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
 }
 
 TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixedEmpty) {
-  const auto column_definitions =  TableColumnDefinitions{{"a", DataType::Float, true}};
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Float, true}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
   table->append({4.5f});
   table->append({2.5f});
@@ -109,15 +109,19 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixedEmpty) {
 }
 
 TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsLayoutVariablySized) {
-  const auto column_definitions =
-  TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, false}, {"c", DataType::String, true}, {"d", DataType::Int, false}, {"e", DataType::Long, false}};
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, true},
+                                                         {"b", DataType::String, false},
+                                                         {"c", DataType::String, true},
+                                                         {"d", DataType::Int, false},
+                                                         {"e", DataType::Long, false}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
 
   const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
 
-  ASSERT_EQ(layout.variably_sized_column_count, 2u);
+  ASSERT_EQ(layout.variably_sized_column_ids, std::vector<ColumnID>({ColumnID{1}, ColumnID{2}}));
+  EXPECT_EQ(layout.fixed_size_column_ids, std::vector<ColumnID>({ColumnID{0}, ColumnID{4}}));
   ASSERT_EQ(layout.column_mapping.size(), 4u);
   EXPECT_EQ(layout.column_mapping.at(0), VariablySizedGroupRunLayout::Column(false, size_t{0}, std::nullopt));
   EXPECT_EQ(layout.column_mapping.at(1), VariablySizedGroupRunLayout::Column(true, size_t{0}, std::nullopt));
@@ -128,21 +132,31 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsLayoutVariablySized) {
 }
 
 TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySized) {
-  const auto column_definitions =
-  TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::String, false}, {"c", DataType::String, true}, {"d", DataType::Int, false}, {"e", DataType::Long, false}};
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, true},
+                                                         {"b", DataType::String, false},
+                                                         {"c", DataType::String, true},
+                                                         {"d", DataType::Int, false},
+                                                         {"e", DataType::Long, false}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-  table->append({11, "eleven", "twelve", 0, int64_t{12}});
-  table->append({NullValue{}, "five", NullValue{}, 1, int64_t{14}});
+  table->append({11, "elevens", "twelves", 0, int64_t{12}});
+  table->append({NullValue{}, "fives", NullValue{}, 1, int64_t{14}});
 
   auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
 
   const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
   auto groups = produce_initial_groups<VariablySizedGroupRun>(*table, &layout, group_by_column_ids);
 
-  EXPECT_EQ(groups.data, chars_to_blob<VariablySizedGroupRun::BlobDataType>("eleventwelvefive"));
+  // clang-format off
+  const auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::BlobDataType>{
+    chars_to_blob_element("elev"), chars_to_blob_element("enst"), chars_to_blob_element("welv"), chars_to_blob_element("es"),  // NOLINT
+    chars_to_blob_element("five"), chars_to_blob_element("s")
+  };
+  // clang-format on
+
+  EXPECT_EQ(groups.data, expected_variably_sized_group_data);
   EXPECT_EQ(groups.null_values, std::vector<bool>({false, true}));
-  EXPECT_EQ(groups.group_end_offsets, std::vector<size_t>({12, 16}));
-  EXPECT_EQ(groups.value_end_offsets, std::vector<size_t>({6, 12, 4, 4}));
+  EXPECT_EQ(groups.group_end_offsets, std::vector<size_t>({4, 6}));
+  EXPECT_EQ(groups.value_end_offsets, std::vector<size_t>({7, 14, 5, 5}));
   EXPECT_EQ(groups.fixed.hashes.size(), 2u);
 
   // clang-format off
@@ -164,10 +178,10 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialAggregates) {
   table->append({1.5f, 14, NullValue{}});
 
   auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{
-    {std::nullopt, AggregateFunction::CountRows},
-    {ColumnID{0}, AggregateFunction::Sum},
-    {ColumnID{1}, AggregateFunction::Min},
-    {ColumnID{2}, AggregateFunction::Avg},
+      {std::nullopt, AggregateFunction::CountRows},
+      {ColumnID{0}, AggregateFunction::Sum},
+      {ColumnID{1}, AggregateFunction::Min},
+      {ColumnID{2}, AggregateFunction::Avg},
   };
 
   auto aggregates = produce_initial_aggregates(*table, aggregate_column_definitions);
