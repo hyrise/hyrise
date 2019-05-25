@@ -19,6 +19,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/plugin_manager.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
@@ -66,6 +67,13 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
   }
+
+  // TODO: Use with command line args instead.
+  PluginManager::get().load_plugin("/home/Leander.Neiss/pcm_plugin/build/libPcmPlugin.so");
+}
+
+BenchmarkRunner::~BenchmarkRunner() {
+  PluginManager::get().unload_plugin("PcmPlugin");
 }
 
 void BenchmarkRunner::run() {
