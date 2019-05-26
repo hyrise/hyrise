@@ -449,8 +449,9 @@ TEST_F(SQLPipelineStatementTest, GetTasksNotValidated) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
 
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
@@ -460,7 +461,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
   sql_pipeline.get_result_table();
   auto duration = sql_pipeline.metrics()->plan_execution_duration;
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   auto duration2 = sql_pipeline.metrics()->plan_execution_duration;
 
   // Make sure this was not run twice
@@ -470,7 +472,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTableJoin) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline_statement();
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -480,7 +483,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
 
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -489,23 +493,63 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
   const auto sql = "UPDATE table_a SET a = 1 WHERE a < 5";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_EQ(table, nullptr);
 
   // Check that this doesn't crash. This should return the previous table, otherwise the auto-commit will fail.
-  const auto& table2 = sql_pipeline.get_result_table();
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Success);
   EXPECT_EQ(table2, nullptr);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement();
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 
   // Check that there really is no transaction management
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
+}
+
+TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransaction) {
+  // Mark a row as modified by a different transaction
+  _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids[0] = TransactionID{17};
+
+  const auto sql = "UPDATE table_a SET a = 1";
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
+
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table, nullptr);
+
+  // Retrieving it again should give us the same result
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table2, nullptr);
+
+  EXPECT_TRUE(transaction_context->aborted());
+}
+
+TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureAutoCommit) {
+  // Mark a row as modified by a different transaction
+  _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids[0] = TransactionID{17};
+
+  const auto sql = "UPDATE table_a SET a = 1";
+  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
+
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table, nullptr);
+
+  // Retrieving it again should give us the same result
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table2, nullptr);
 }
 
 TEST_F(SQLPipelineStatementTest, GetTimes) {
@@ -560,7 +604,8 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
 
   auto first_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
 
-  const auto first_subquery_result = first_subquery_sql_pipeline.get_result_table();
+  const auto [pipeline_status, first_subquery_result] = first_subquery_sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_first_result->append({10, 10, 10});
@@ -570,13 +615,34 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
   SQLPipelineBuilder{"INSERT INTO table_int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
   auto second_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
-  const auto second_subquery_result = second_subquery_sql_pipeline.get_result_table();
+  const auto [second_pipeline_status, second_subquery_result] = second_subquery_sql_pipeline.get_result_table();
+  EXPECT_EQ(second_pipeline_status, SQLPipelineStatus::Success);
 
   auto expected_second_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_second_result->append({11, 10, 11});
   expected_second_result->append({11, 11, 11});
 
   EXPECT_TABLE_EQ_UNORDERED(second_subquery_result, expected_second_result);
+}
+
+TEST_F(SQLPipelineStatementTest, PrecheckDDLOperators) {
+  auto sql_pipeline_1 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_1.get_result_table());
+
+  auto sql_pipeline_2 = SQLPipelineBuilder{"CREATE TABLE t (a_int INTEGER)"}.create_pipeline_statement();
+  EXPECT_THROW(sql_pipeline_2.get_result_table(), InvalidInputException);
+
+  auto sql_pipeline_3 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_3.get_result_table());
+
+  auto sql_pipeline_4 = SQLPipelineBuilder{"DROP TABLE t"}.create_pipeline_statement();
+  EXPECT_THROW(sql_pipeline_4.get_result_table(), InvalidInputException);
+
+  auto sql_pipeline_5 = SQLPipelineBuilder{"DROP TABLE IF EXISTS t"}.create_pipeline_statement();
+  EXPECT_NO_THROW(sql_pipeline_5.get_result_table());
+
+  auto sql_pipeline_6 = SQLPipelineBuilder{"CREATE TABLE t2 (a_int INTEGER); DROP TABLE t2"}.create_pipeline();
+  EXPECT_NO_THROW(sql_pipeline_6.get_result_table());
 }
 
 }  // namespace opossum

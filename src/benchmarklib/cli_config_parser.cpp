@@ -40,14 +40,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   if (!output_file_string.empty()) {
     output_file_path = output_file_string;
     std::cout << "- Writing benchmark results to '" << *output_file_path << "'" << std::endl;
-  } else {
-    std::cout << "- Writing benchmark results to stdout" << std::endl;
   }
-
-  // Display info about MVCC being enabled or not
-  const auto enable_mvcc = json_config.value("mvcc", default_config.use_mvcc == UseMvcc::Yes);
-  const auto use_mvcc = enable_mvcc ? UseMvcc::Yes : UseMvcc::No;
-  std::cout << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
 
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
   const auto cores = json_config.value("cores", default_config.cores);
@@ -57,7 +50,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
             << std::endl;
 
   const auto clients = json_config.value("clients", default_config.clients);
-  std::cout << "- " + std::to_string(clients) + " simulated clients are scheduling queries in parallel" << std::endl;
+  std::cout << "- " + std::to_string(clients) + " simulated clients are scheduling items in parallel" << std::endl;
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
@@ -65,20 +58,30 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     }
   }
 
+  Assert(clients > 0, "Invalid value for --clients");
+
+  if (enable_scheduler && clients == 1) {
+    std::cout << "\n\n- WARNING: You are running in multi-threaded (MT) mode but have set --clients=1.\n";
+    std::cout << "           You will achieve better MT performance by executing multiple queries in parallel.\n";
+    std::cout << std::endl;
+  }
+
   // Determine benchmark and display it
-  const auto benchmark_mode_str = json_config.value("mode", "IndividualQueries");
-  auto benchmark_mode = BenchmarkMode::IndividualQueries;  // Just to init it deterministically
-  if (benchmark_mode_str == "IndividualQueries") {
-    benchmark_mode = BenchmarkMode::IndividualQueries;
-  } else if (benchmark_mode_str == "PermutedQuerySet") {
-    benchmark_mode = BenchmarkMode::PermutedQuerySet;
+  const auto benchmark_mode_str = json_config.value("mode", "Ordered");
+  auto benchmark_mode = BenchmarkMode::Ordered;  // Just to init it deterministically
+  if (benchmark_mode_str == "Ordered") {
+    benchmark_mode = BenchmarkMode::Ordered;
+  } else if (benchmark_mode_str == "Shuffled") {
+    benchmark_mode = BenchmarkMode::Shuffled;
   } else {
     throw std::runtime_error("Invalid benchmark mode: '" + benchmark_mode_str + "'");
   }
   std::cout << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
 
   const auto enable_visualization = json_config.value("visualize", default_config.enable_visualization);
-  std::cout << "- Visualization is " << (enable_visualization ? "on" : "off") << std::endl;
+  if (enable_visualization) {
+    std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid." << std::endl;
+  }
 
   // Get the specified encoding type
   std::unique_ptr<EncodingConfig> encoding_config{};
@@ -100,18 +103,18 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   const auto chunk_size = json_config.value("chunk_size", default_config.chunk_size);
   std::cout << "- Chunk size is " << chunk_size << std::endl;
 
-  const auto max_runs = json_config.value("runs", default_config.max_num_query_runs);
-  std::cout << "- Max runs per query is " << max_runs << std::endl;
+  const auto max_runs = json_config.value("runs", default_config.max_runs);
+  std::cout << "- Max runs per item is " << max_runs << std::endl;
 
   const auto default_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(default_config.max_duration);
   const auto max_duration = json_config.value("time", default_duration_seconds.count());
-  std::cout << "- Max duration per query is " << max_duration << " seconds" << std::endl;
+  std::cout << "- Max duration per item is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
   const auto default_warmup_seconds = std::chrono::duration_cast<std::chrono::seconds>(default_config.warmup_duration);
   const auto warmup = json_config.value("warmup", default_warmup_seconds.count());
   if (warmup > 0) {
-    std::cout << "- Warmup duration per query is " << warmup << " seconds" << std::endl;
+    std::cout << "- Warmup duration per item is " << warmup << " seconds" << std::endl;
   } else {
     std::cout << "- No warmup runs are performed" << std::endl;
   }
@@ -136,10 +139,9 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   }
   std::cout << "- JIT is " << (enable_jit ? "enabled" : "disabled") << std::endl;
 
-  return BenchmarkConfig{
-      benchmark_mode, chunk_size,          *encoding_config, max_runs, timeout_duration, warmup_duration,
-      use_mvcc,       output_file_path,    enable_scheduler, cores,    clients,          enable_visualization,
-      verify,         cache_binary_tables, enable_jit};
+  return BenchmarkConfig{benchmark_mode,       chunk_size,       *encoding_config,    max_runs,  timeout_duration,
+                         warmup_duration,      output_file_path, enable_scheduler,    cores,     clients,
+                         enable_visualization, verify,           cache_binary_tables, enable_jit};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -159,7 +161,6 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
   json_config.emplace("cores", parse_result["cores"].as<uint>());
   json_config.emplace("clients", parse_result["clients"].as<uint>());
-  json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
   json_config.emplace("visualize", parse_result["visualize"].as<bool>());
   json_config.emplace("output", parse_result["output"].as<std::string>());
   json_config.emplace("verify", parse_result["verify"].as<bool>());

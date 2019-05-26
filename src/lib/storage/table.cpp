@@ -43,6 +43,12 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   for (const auto& chunk : _chunks) {
     DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
                 "Supply MvccData for Chunks iff Table uses MVCC");
+    DebugAssert(chunk->column_count() == column_count(), "Invalid Chunk column count");
+
+    for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+      DebugAssert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id),
+                  "Invalid Segment DataType");
+    }
   }
 #endif
 }

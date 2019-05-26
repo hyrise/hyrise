@@ -8,7 +8,6 @@
 #include "storage/lz4_segment/lz4_encoder.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
 
-#include "storage/base_value_segment.hpp"
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -40,16 +39,34 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   return encoder->create_new();
 }
 
-std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, DataType data_type,
-                                                   const std::shared_ptr<const BaseValueSegment>& segment,
-                                                   std::optional<VectorCompressionType> zero_suppression_type) {
-  auto encoder = create_encoder(encoding_type);
+std::shared_ptr<BaseEncodedSegment> encode_and_compress_segment(const std::shared_ptr<const BaseSegment>& segment,
+                                                                const DataType data_type,
+                                                                const SegmentEncodingSpec& encoding_spec) {
+  auto encoder = create_encoder(encoding_spec.encoding_type);
 
-  if (zero_suppression_type) {
-    encoder->set_vector_compression(*zero_suppression_type);
+  if (encoding_spec.vector_compression_type) {
+    encoder->set_vector_compression(*encoding_spec.vector_compression_type);
   }
 
   return encoder->encode(segment, data_type);
+}
+
+/**
+ * @brief Returns the vector compression type for a given compressed vector type.
+ *
+ * For the difference of the two, please take a look at compressed_vector_type.hpp.
+ */
+VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type) {
+  switch (compressed_vector_type) {
+    case CompressedVectorType::FixedSize4ByteAligned:
+    case CompressedVectorType::FixedSize2ByteAligned:
+    case CompressedVectorType::FixedSize1ByteAligned:
+      return VectorCompressionType::FixedSizeByteAligned;
+      break;
+    case CompressedVectorType::SimdBp128:
+      return VectorCompressionType::SimdBp128;
+  }
+  Fail("GCC thinks this is reachable");
 }
 
 }  // namespace opossum

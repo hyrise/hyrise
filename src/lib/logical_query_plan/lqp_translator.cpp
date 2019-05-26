@@ -139,9 +139,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-  const auto get_table = std::make_shared<GetTable>(stored_table_node->table_name);
-  get_table->set_excluded_chunk_ids(stored_table_node->excluded_chunk_ids());
-  return get_table;
+  return std::make_shared<GetTable>(stored_table_node->table_name, stored_table_node->pruned_chunk_ids(),
+                                    stored_table_node->pruned_column_ids());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
@@ -197,7 +196,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   std::vector<AllTypeVariant> right_values2 = {};
   if (value2_variant) right_values2.emplace_back(*value2_variant);
 
-  auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+  const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto table_name = stored_table_node->table_name;
   const auto table = StorageManager::get().get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
