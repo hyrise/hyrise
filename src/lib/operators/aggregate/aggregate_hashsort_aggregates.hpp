@@ -76,6 +76,7 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
         null_values[offset] = true;
       } else {
         values[offset] = segment_position.value();
+        null_values[offset] = false;
       }
     });
   }
@@ -84,7 +85,7 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
 
   void resize(const size_t size) override {
     values.resize(size);
-    null_values.resize(size);
+    null_values.resize(size, true);
   }
 
   void flush_append_buffer(const std::vector<size_t>& buffer, const BaseAggregateRun& base_aggregate_run) override {
@@ -110,10 +111,11 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
 
       if (null_values[entry.target_offset]) {
         target_value = source_value;
-        continue;
+      } else {
+        target_value = combine(target_value, source_value);
       }
 
-      target_value = combine(target_value, source_value);
+      null_values[entry.target_offset] = false;
     }
   }
 
@@ -184,7 +186,7 @@ struct CountRowsAggregateRun : public BaseAggregateRun {
                                 const BaseAggregateRun& base_source_run) override {
     const auto& source_run = static_cast<const CountRowsAggregateRun&>(base_source_run);
 
-    for (const auto& [source_offset, target_offset] : buffer) {
+    for (const auto& [target_offset, source_offset] : buffer) {
       values[target_offset] += source_run.values[source_offset];
     }
   }
@@ -228,7 +230,7 @@ struct CountNonNullAggregateRun : public BaseAggregateRun {
                                 const BaseAggregateRun& base_source_run) override {
     const auto& source_run = static_cast<const CountNonNullAggregateRun&>(base_source_run);
 
-    for (const auto& [source_offset, target_offset] : buffer) {
+    for (const auto& [target_offset, source_offset] : buffer) {
       values[target_offset] += source_run.values[source_offset];
     }
   }
@@ -274,7 +276,7 @@ struct CountDistinctAggregateRun : public BaseAggregateRun {
                                 const BaseAggregateRun& base_source_run) override {
     const auto& source_run = static_cast<const CountDistinctAggregateRun&>(base_source_run);
 
-    for (const auto& [source_offset, target_offset] : buffer) {
+    for (const auto& [target_offset, source_offset] : buffer) {
       const auto& source_set = source_run.sets[source_offset];
       sets[target_offset].insert(source_set.begin(), source_set.end());
     }
@@ -326,7 +328,7 @@ struct AvgAggregateRun : public BaseAggregateRun {
                                 const BaseAggregateRun& base_source_run) override {
     const auto& source_run = static_cast<const AvgAggregateRun<SourceColumnDataType>&>(base_source_run);
 
-    for (const auto& [source_offset, target_offset] : buffer) {
+    for (const auto& [target_offset, source_offset] : buffer) {
       const auto& source_set = source_run.sets[source_offset];
       sets[target_offset].insert(sets[target_offset].end(), source_set.begin(), source_set.end());
     }
@@ -356,8 +358,10 @@ struct AvgAggregateRun : public BaseAggregateRun {
 };
 
 inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates(
-    const Table& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions) {
+    const Table& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions, const bool has_group_by_columns) {
+
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(aggregate_column_definitions.size());
+
   for (auto aggregate_idx = size_t{0}; aggregate_idx < aggregates.size(); ++aggregate_idx) {
     const auto& aggregate_column_definition = aggregate_column_definitions[aggregate_idx];
 
@@ -406,6 +410,13 @@ inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates
           break;
       }
     });
+  }
+
+  // Create pseudo-group for special behaviour of no group-by columns and empty table :(
+  if (!has_group_by_columns && table.row_count() == 0) {
+    for (auto& aggregate : aggregates) {
+      aggregate->resize(1);
+    }
   }
 
   return aggregates;

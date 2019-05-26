@@ -38,8 +38,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
   if (fixed_size_groups) {
     return _on_execute_with_group_run<FixedSizeGroupRun>();
   } else {
-    Fail("");
-    // return _on_execute_with_group_run<VariablySizedGroupRun>();
+    return _on_execute_with_group_run<VariablySizedGroupRun>();
   }
 }
 
@@ -47,24 +46,26 @@ template <typename GroupRun>
 std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run() {
   auto& input_table = *input_table_left();
 
+  auto output_runs = std::vector<Run<GroupRun>>{};
+
   auto input_layout = produce_initial_groups_layout<typename GroupRun::LayoutType>(input_table, _groupby_column_ids);
+
   auto input_groups = produce_initial_groups<GroupRun>(input_table, &input_layout, _groupby_column_ids);
-  auto input_aggregates = produce_initial_aggregates(input_table, _aggregates);
+  auto input_aggregates = produce_initial_aggregates(input_table, _aggregates, !_groupby_column_ids.empty());
 
   auto input_run = Run{std::move(input_groups), std::move(input_aggregates)};
   std::vector<Run<GroupRun>> input_runs;
   input_runs.emplace_back(std::move(input_run));
 
-  auto result_runs = aggregate<GroupRun>(_config, std::move(input_runs), 1u);
-
+  output_runs = aggregate<GroupRun>(_config, std::move(input_runs), 1u);
   /**
    * Build output Table
    */
   const auto output_column_definitions = _get_output_column_defintions();
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>(result_runs.size());
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>(output_runs.size());
 
-  for (auto run_idx = size_t{0}; run_idx < result_runs.size(); ++run_idx) {
-    auto& run = result_runs[run_idx];
+  for (auto run_idx = size_t{0}; run_idx < output_runs.size(); ++run_idx) {
+    auto& run = output_runs[run_idx];
     auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
 
     for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < _groupby_column_ids.size();

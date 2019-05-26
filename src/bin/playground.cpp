@@ -9,6 +9,7 @@
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
+#include "storage/storage_manager.hpp"
 #include "table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
@@ -16,7 +17,7 @@
 
 using namespace opossum;  // NOLINT
 
-std::shared_ptr<ValueSegment<int32_t>> make_segment(size_t row_count, int32_t min, int32_t max) {
+std::shared_ptr<ValueSegment<int32_t>> make_int_segment(size_t row_count, int32_t min, int32_t max) {
   std::uniform_int_distribution<int32_t> dist{min, max};
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -30,7 +31,22 @@ std::shared_ptr<ValueSegment<int32_t>> make_segment(size_t row_count, int32_t mi
   return std::make_shared<ValueSegment<int32_t>>(std::move(values));
 }
 
-int main() {
+std::shared_ptr<ValueSegment<pmr_string>> make_date_segment(size_t row_count, int32_t min, int32_t max) {
+  std::uniform_int_distribution<int32_t> dist{min, max};
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+  std::vector<pmr_string> values(row_count);
+
+  for (auto i = size_t{0}; i < row_count; ++i) {
+    const auto s = std::to_string(dist(gen));
+    values[i] = s + s;
+  }
+
+  return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
+}
+
+std::shared_ptr<Table> make_number_table() {
   TableColumnDefinitions table_column_definitions;
   table_column_definitions.emplace_back("a", DataType::Int);
   table_column_definitions.emplace_back("b", DataType::Int);
@@ -46,18 +62,48 @@ int main() {
   //  table->append({4, 3, 2});
   const auto row_count = size_t{5'000'000};
   Segments segments;
-  segments.emplace_back(make_segment(row_count, 0, 2000));
-  segments.emplace_back(make_segment(row_count, 0, 2000));
-  segments.emplace_back(make_segment(row_count, 0, 200));
+  segments.emplace_back(make_int_segment(row_count, 0, 2000));
+  segments.emplace_back(make_int_segment(row_count, 0, 2000));
+  segments.emplace_back(make_int_segment(row_count, 0, 200));
   table->append_chunk(segments);
 
+  return table;
+}
+
+std::shared_ptr<Table> make_string_table() {
+  TableColumnDefinitions table_column_definitions;
+  table_column_definitions.emplace_back("a", DataType::String);
+  table_column_definitions.emplace_back("b", DataType::String);
+  table_column_definitions.emplace_back("c", DataType::Int);
+
+  const auto table = std::make_shared<Table>(table_column_definitions, TableType::Data);
+  table->append({"abcd", "bc", 3});
+  table->append({"aa", "bcd", 4});
+  table->append({"aa", "bcd", 4});
+//  const auto row_count = size_t{1'000'000};
+//  Segments segments;
+//  segments.emplace_back(make_date_segment(row_count, 0, 35));
+//  segments.emplace_back(make_date_segment(row_count, 0, 1));
+//  segments.emplace_back(make_int_segment(row_count, 0, 2000));
+//  table->append_chunk(segments);
+
+  return table;
+}
+
+std::shared_ptr<Table> make_lineitem_table() {
+  TpchTableGenerator{0.1f}.generate_and_store();
+  return StorageManager::get().get_table("lineitem");
+}
+
+int main() {
+  const auto table = make_string_table();
   //  Print::print(table);
 
   const auto table_op = std::make_shared<TableWrapper>(table);
   table_op->execute();
 
   auto aggregates = std::vector<AggregateColumnDefinition>{};
-  // aggregates.emplace_back(ColumnID{2}, AggregateFunction::Sum);
+  // aggregates.emplace_back(ColumnID{1}, AggregateFunction::Sum);
 
   auto group_by_column_ids = std::vector<ColumnID>{};
   group_by_column_ids.emplace_back(ColumnID{0});
@@ -74,9 +120,10 @@ int main() {
   std::cout << "HashSort: " << aggregate_op->get_output()->row_count() << std::endl;
   std::cout << "Hash: " << aggregate_op2->get_output()->row_count() << std::endl;
 
-  if (aggregate_op->get_output()->row_count() < 20) {
-    Print::print(aggregate_op->get_output());
-    Print::print(aggregate_op2->get_output());
+  if (aggregate_op->get_output()->row_count() < 2000) {
+    Print::print(aggregate_op->get_output(), PrintFlags::IgnoreChunkBoundaries);
+    std::cout << std::endl;
+    Print::print(aggregate_op2->get_output(), PrintFlags::IgnoreChunkBoundaries);
   }
 
   return 0;
