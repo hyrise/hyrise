@@ -14,7 +14,7 @@
 | libclang-dev     | 7.1              |    Linux |                             Yes (JIT) |
 | libnuma-dev      | any              |    Linux |                            Yes (numa) |
 | libnuma1         | any              |    Linux |                            Yes (numa) |
-| llvm             | any              |    All   |                 Yes (code sanitizers) |
+| llvm             | <= 7.0.1         |    All   |                 Yes (code sanitizers) |
 | llvm-7.0-tools   | 7                |    Linux |                                    No |
 | parallel         | any              |    All   |                                   Yes |
 | python           | >= 2.7 && < 3    |    All   |                         Yes (linting) |
