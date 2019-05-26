@@ -31,6 +31,13 @@ class SQLPipeline;
 struct SQLPipelineMetrics;
 class SQLiteWrapper;
 
+enum class Event {
+  ItemStarted,
+  ItemFinished,
+};
+
+using EventListener = std::function<void ()>;
+
 // The BenchmarkRunner is the main class for the benchmark framework. It gets initialized by the benchmark binaries
 // (e.g., tpch_benchmark.cpp). They then hand over the control to the BenchmarkRunner (inversion of control), which
 // calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
@@ -45,6 +52,8 @@ class BenchmarkRunner {
   static cxxopts::Options get_basic_cli_options(const std::string& benchmark_name);
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
+
+  void add_listener(const Event event, EventListener listener);
 
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
@@ -65,6 +74,8 @@ class BenchmarkRunner {
 
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
+
+  void _notify_listeners(const Event event);
 
   const BenchmarkConfig _config;
 
@@ -90,6 +101,8 @@ class BenchmarkRunner {
   std::atomic_uint _total_finished_runs{0};
 
   BenchmarkState _state{Duration{0}};
+
+  std::map<Event, std::vector<EventListener>> _event_listeners;
 };
 
 }  // namespace opossum

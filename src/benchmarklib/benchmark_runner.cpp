@@ -179,6 +179,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
     std::cout << "- Benchmarking " << name << std::endl;
+    _notify_listeners(Event::ItemStarted);
 
     auto& result = _results[item_id];
 
@@ -209,6 +210,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     CurrentScheduler::wait_for_all_tasks();
+    _notify_listeners(Event::ItemFinished);
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
 }
@@ -431,6 +433,23 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"verify", config.verify},
       {"time_unit", "ns"},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
+}
+
+void BenchmarkRunner::add_listener(const Event event, EventListener listener) {
+  if (_event_listeners.find(event) == _event_listeners.end()) {
+    _event_listeners.emplace(event, std::vector<EventListener>{listener});
+  } else {
+  _event_listeners[event].push_back(listener);
+  }
+}
+
+void BenchmarkRunner::_notify_listeners(const Event event) {
+  auto it = _event_listeners.find(event);
+  if (it != _event_listeners.end()) {
+    for (auto listener : it->second) {
+      listener();
+    }
+  }
 }
 
 }  // namespace opossum
