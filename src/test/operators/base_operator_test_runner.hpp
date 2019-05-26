@@ -134,13 +134,12 @@ class BaseOperatorTestRunner : public BaseTestWithParam<TestConfiguration> {
   // Cache verification table to avoid redundant computation of the same
   static inline std::map<TestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
 
-  // TODO(anybody) include FrameOfReferenceEncoding once #1662 is resolved
-  static inline const std::vector<EncodingType> all_encoding_types{
-      EncodingType::Unencoded, EncodingType::RunLength, EncodingType::Dictionary, EncodingType::FixedStringDictionary,
-      EncodingType::LZ4};
+  static inline const auto all_input_table_types =
+        std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
-  static inline const std::vector<InputTableType> all_input_table_types{
-      std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList}};
+  static inline const auto all_encoding_types =
+        std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::FrameOfReference,
+                    EncodingType::FixedStringDictionary, EncodingType::RunLength, EncodingType::LZ4};
 };
 
 }  // namespace opossum

@@ -339,14 +339,27 @@ TEST_F(SQLPipelineTest, GetTasksExecutionRequired) {
 
 TEST_F(SQLPipelineTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
+TEST_F(SQLPipelineTest, GetResultTablesMultiple) {
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+
+  const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  EXPECT_EQ(tables[0], nullptr);
+
+  EXPECT_TABLE_EQ_UNORDERED(tables[1], _table_a_multi);
+}
+
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
-  const auto& table = sql_pipeline.get_result_table();
+
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi);
 }
@@ -360,7 +373,8 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   auto duration = metrics.statement_metrics[0]->plan_execution_duration;
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   auto duration2 = metrics.statement_metrics[0]->plan_execution_duration;
 
@@ -371,7 +385,8 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
 TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
@@ -381,7 +396,8 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
 
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -423,12 +439,86 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
   const auto sql = "UPDATE table_a SET a = 1 WHERE a < 150";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_EQ(table, nullptr);
 
   // Check that this doesn't crash. This should return the previous table.
-  const auto& table2 = sql_pipeline.get_result_table();
+  const auto& [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Success);
   EXPECT_EQ(table2, nullptr);
+}
+
+TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
+  // Mark a row as modified by a different transaction
+  auto first_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock();
+  auto& first_chunk_tids = first_chunk_mvcc_data_lock->tids;
+  auto& first_chunk_end_cids = first_chunk_mvcc_data_lock->end_cids;
+
+  first_chunk_tids[1] = TransactionID{17};
+
+  const auto sql =
+      "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
+      "UPDATE table_a SET a = 1 WHERE a = 1234";
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
+
+  const auto [pipeline_status, tables] = sql_pipeline.get_result_tables();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(tables.size(), 0);
+  EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
+  EXPECT_TRUE(transaction_context->aborted());
+
+  // No row should have been touched
+  EXPECT_EQ(first_chunk_tids[0], TransactionID{0});
+  EXPECT_EQ(first_chunk_end_cids[0], MvccData::MAX_COMMIT_ID);
+
+  EXPECT_EQ(first_chunk_tids[1], TransactionID{17});
+  EXPECT_EQ(first_chunk_end_cids[1], MvccData::MAX_COMMIT_ID);
+
+  auto second_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock();
+  auto& second_chunk_tids = second_chunk_mvcc_data_lock->tids;
+  auto& second_chunk_end_cids = second_chunk_mvcc_data_lock->end_cids;
+
+  EXPECT_EQ(second_chunk_tids[0], TransactionID{0});
+  EXPECT_EQ(second_chunk_end_cids[0], MvccData::MAX_COMMIT_ID);
+}
+
+TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
+  // Similar to UpdateWithTransactionFailure, but without explicit transaction context
+
+  // Mark a row as modified by a different transaction
+  auto first_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock();
+  auto& first_chunk_tids = first_chunk_mvcc_data_lock->tids;
+  auto& first_chunk_end_cids = first_chunk_mvcc_data_lock->end_cids;
+
+  first_chunk_tids[1] = TransactionID{17};
+
+  const auto sql =
+      "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
+      "UPDATE table_a SET a = 1 WHERE a = 1234";
+  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+
+  const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(tables.size(), 1);
+  EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
+
+  // This time, the first row should have been updated before the second statement failed
+  EXPECT_EQ(first_chunk_tids[0], TransactionID{1});
+  EXPECT_EQ(first_chunk_end_cids[0], CommitID{2});  // initial commit ID + 1
+
+  // This row was being modified by a different transaction, so it should not have been touched
+  EXPECT_EQ(first_chunk_tids[1], TransactionID{17});
+  EXPECT_EQ(first_chunk_end_cids[1], MvccData::MAX_COMMIT_ID);
+
+  // We had to abort before we got to the third statement
+  auto second_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock();
+  auto& second_chunk_tids = second_chunk_mvcc_data_lock->tids;
+  auto& second_chunk_end_cids = second_chunk_mvcc_data_lock->end_cids;
+
+  EXPECT_EQ(second_chunk_tids[0], TransactionID{0});
+  EXPECT_EQ(second_chunk_end_cids[0], MvccData::MAX_COMMIT_ID);
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {
