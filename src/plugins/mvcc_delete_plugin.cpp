@@ -124,16 +124,15 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
          "MVCC Logical Delete should not be applied on the last/current mutable chunk.");
 
   // Create temporary referencing table that contains the given chunk only
-  auto transaction_context = TransactionManager::get().new_transaction_context();
-  auto gt = std::make_shared<GetTable>(table_name);
-  gt->set_transaction_context(transaction_context);
-
-  // Include all ChunksIDs of current table except chunk_id for pruning in GetTable
+  //   Include all ChunksIDs of current table except chunk_id for pruning in GetTable
   std::vector<ChunkID> excluded_chunk_ids(table->chunk_count() - 1);
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
 
-  gt->set_excluded_chunk_ids(excluded_chunk_ids);
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+
+  auto gt = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
+  gt->set_transaction_context(transaction_context);
   gt->execute();
 
   // Validate temporary table
@@ -165,8 +164,10 @@ void MvccDeletePlugin::_delete_chunk_physically(const std::shared_ptr<Table>& ta
   const auto& chunk = table->get_chunk(chunk_id);
 
   /**
-   * The chunk should be referenced only by the plugin in methods _delete_chunk_physically()
-   * & _physical_delete_loop() and the table's chunk vector.
+   * For a safe physical deletion, the Chunk has to be referenced as follows:
+   *  1. _chunks - Table's chunk vector
+   *  2. _delete_chunk_physically() - this function
+   *  3. _physical_delete_loop() - this function's caller
    */
   Assert(chunk.use_count() == 3,
          "At this point, the chunk should be referenced only by the plugin in methods _delete_chunk_physically() "
