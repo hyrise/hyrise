@@ -27,8 +27,8 @@ class SegmentAccessorTest : public BaseTest {
     vc_str->append("!");
     vc_str->append(NULL_VALUE);
 
-    dc_int = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
-    dc_str = encode_segment(EncodingType::Dictionary, DataType::String, vc_str);
+    dc_int = encode_and_compress_segment(vc_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
+    dc_str = encode_and_compress_segment(vc_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
 
     tbl = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"vc_int", DataType::Int},
                                                          TableColumnDefinition{"dc_str", DataType::String}},

@@ -117,7 +117,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimize
     return _unoptimized_logical_plans;
   }
 
-  Assert(!_requires_execution || _pipeline_was_executed,
+  Assert(!_requires_execution || _pipeline_status != SQLPipelineStatus::NotExecuted,
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
@@ -134,7 +134,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
     return _optimized_logical_plans;
   }
 
-  Assert(!_requires_execution || _pipeline_was_executed,
+  Assert(!_requires_execution || _pipeline_status != SQLPipelineStatus::NotExecuted,
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
@@ -156,7 +156,7 @@ const std::vector<std::shared_ptr<AbstractOperator>>& SQLPipeline::get_physical_
     return _physical_plans;
   }
 
-  Assert(!_requires_execution || _pipeline_was_executed,
+  Assert(!_requires_execution || _pipeline_status != SQLPipelineStatus::NotExecuted,
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot compile all statements without executing, i.e. calling get_result_table()");
 
@@ -173,7 +173,7 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
     return _tasks;
   }
 
-  Assert(!_requires_execution || _pipeline_was_executed,
+  Assert(!_requires_execution || _pipeline_status != SQLPipelineStatus::NotExecuted,
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot generate tasks for all statements without executing, i.e. calling get_result_table()");
 
@@ -185,33 +185,45 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
   return _tasks;
 }
 
-std::shared_ptr<const Table> SQLPipeline::get_result_table() {
-  const auto& tables = get_result_tables();
-  Assert(!tables.empty(), "No result tables");
-  return tables.back();
+std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipeline::get_result_table() {
+  const auto& [pipeline_status, tables] = get_result_tables();
+
+  if (pipeline_status != SQLPipelineStatus::Success) {
+    static std::shared_ptr<const Table> null_table;
+    return {pipeline_status, null_table};
+  }
+
+  return {SQLPipelineStatus::Success, tables.back()};
 }
 
-const std::vector<std::shared_ptr<const Table>>& SQLPipeline::get_result_tables() {
-  if (_pipeline_was_executed) {
-    return _result_tables;
+std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> SQLPipeline::get_result_tables() {
+  if (_pipeline_status != SQLPipelineStatus::NotExecuted) {
+    return {_pipeline_status, _result_tables};
   }
 
   _result_tables.reserve(_sql_pipeline_statements.size());
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    pipeline_statement->get_result_table();
-    if (_transaction_context && _transaction_context->aborted()) {
+    const auto& [statement_status, table] = pipeline_statement->get_result_table();
+    if (statement_status == SQLPipelineStatus::RolledBack) {
       _failed_pipeline_statement = pipeline_statement;
-      _result_tables.clear();
-      return _result_tables;
+
+      if (_transaction_context) {
+        // The pipeline was executed using a transaction context (i.e., no auto-commit after each statement).
+        // Previously returned results are invalid.
+        _result_tables.clear();
+      }
+
+      return {SQLPipelineStatus::RolledBack, _result_tables};
     }
 
-    _result_tables.emplace_back(pipeline_statement->get_result_table());
+    DebugAssert(statement_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+
+    _result_tables.emplace_back(table);
   }
 
-  _pipeline_was_executed = true;
-
-  return _result_tables;
+  _pipeline_status = SQLPipelineStatus::Success;
+  return {_pipeline_status, _result_tables};
 }
 
 std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }
@@ -224,7 +236,7 @@ size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.si
 
 bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
-const SQLPipelineMetrics& SQLPipeline::metrics() {
+SQLPipelineMetrics& SQLPipeline::metrics() {
   if (_metrics.statement_metrics.empty()) {
     _metrics.statement_metrics.reserve(statement_count());
     for (const auto& pipeline_statement : _sql_pipeline_statements) {

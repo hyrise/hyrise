@@ -368,6 +368,7 @@ _CPP_HEADERS = frozenset([
     'scoped_allocator',
     'shared_mutex',
     'set',
+    'shared_mutex',
     'sstream',
     'stack',
     'stdexcept',

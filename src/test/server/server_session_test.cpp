@@ -294,7 +294,7 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
 
   // The session executes the SQLPipeline using another scheduled task
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table()))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table().second))));
 
   // It sends the row data (one message per row)
   EXPECT_CALL(*_connection, send_data_row(_)).Times(3);

@@ -65,9 +65,25 @@ TEST_F(ChunkPruningTest, SimplePruningTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+}
+
+TEST_F(ChunkPruningTest, SimpleChinkPruningTestWithColumnPruning) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  auto predicate_node =
+      std::make_shared<PredicateNode>(less_than_(LQPColumnReference(stored_table_node, ColumnID{1}), 400.0f));
+  predicate_node->set_left_input(stored_table_node);
+
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, BetweenPruningTest) {
@@ -80,9 +96,9 @@ TEST_F(ChunkPruningTest, BetweenPruningTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{0}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
@@ -99,9 +115,9 @@ TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, TwoOperatorPruningTest) {
@@ -118,9 +134,9 @@ TEST_F(ChunkPruningTest, TwoOperatorPruningTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   EXPECT_EQ(pruned, predicate_node_1);
-  std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{1}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, IntersectionPruningTest) {
@@ -141,9 +157,9 @@ TEST_F(ChunkPruningTest, IntersectionPruningTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, union_node);
 
   EXPECT_EQ(pruned, union_node);
-  std::vector<ChunkID> expected = {ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_GreaterThan) {
@@ -156,9 +172,9 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_GreaterThan) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{1}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_Equals) {
@@ -171,9 +187,9 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_Equals) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{0}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, RangeFilterTest) {
@@ -186,9 +202,9 @@ TEST_F(ChunkPruningTest, RangeFilterTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{1}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, LotsOfRangesFilterTest) {
@@ -201,9 +217,9 @@ TEST_F(ChunkPruningTest, LotsOfRangesFilterTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{0}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, RunLengthSegmentPruningTest) {
@@ -215,9 +231,9 @@ TEST_F(ChunkPruningTest, RunLengthSegmentPruningTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{0}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, GetTablePruningTest) {
@@ -230,9 +246,9 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 
   LQPTranslator translator;
   auto get_table_operator = std::dynamic_pointer_cast<GetTable>(translator.translate_node(stored_table_node));
@@ -255,9 +271,9 @@ TEST_F(ChunkPruningTest, StringPruningTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{0}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, FixedStringPruningTest) {
@@ -270,9 +286,9 @@ TEST_F(ChunkPruningTest, FixedStringPruningTest) {
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected = {ChunkID{0}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, PrunePastNonFilteringNodes) {
@@ -294,9 +310,9 @@ TEST_F(ChunkPruningTest, PrunePastNonFilteringNodes) {
 
   EXPECT_EQ(actual_lqp, input_lqp);
 
-  std::vector<ChunkID> expected = {ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
-  EXPECT_EQ(excluded, expected);
+  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningTest, ValueOutOfRange) {
@@ -316,10 +332,10 @@ TEST_F(ChunkPruningTest, ValueOutOfRange) {
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_EQ(actual_lqp, input_lqp);
-  std::vector<ChunkID> expected = {};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
+  std::vector<ChunkID> expected_chunk_ids = {};
+  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
 
-  EXPECT_EQ(excluded, expected);
+  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
 }  // namespace opossum
