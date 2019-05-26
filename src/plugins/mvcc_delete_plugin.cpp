@@ -124,16 +124,15 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
          "MVCC Logical Delete should not be applied on the last/current mutable chunk.");
 
   // Create temporary referencing table that contains the given chunk only
-  auto transaction_context = TransactionManager::get().new_transaction_context();
-  auto gt = std::make_shared<GetTable>(table_name);
-  gt->set_transaction_context(transaction_context);
-
-  // Include all ChunksIDs of current table except chunk_id for pruning in GetTable
+  //   Include all ChunksIDs of current table except chunk_id for pruning in GetTable
   std::vector<ChunkID> excluded_chunk_ids(table->chunk_count() - 1);
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
 
-  gt->set_excluded_chunk_ids(excluded_chunk_ids);
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+
+  auto gt = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
+  gt->set_transaction_context(transaction_context);
   gt->execute();
 
   // Validate temporary table

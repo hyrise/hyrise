@@ -180,8 +180,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     ++output_chunks_iter;
   }
 
-  return std::make_shared<Table>(original_table->column_definitions(), TableType::Data, std::move(output_chunks),
-                                 original_table->uses_mvcc());
+  return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
+                                 stored_table->uses_mvcc());
 }
 
 }  // namespace opossum
