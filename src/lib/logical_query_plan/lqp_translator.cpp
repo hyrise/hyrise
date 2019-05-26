@@ -202,8 +202,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   std::vector<ChunkID> indexed_chunks;
 
   for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-    const auto chunk = table->get_chunk(chunk_id);
-    if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+    const auto& chunk = table->get_chunk(chunk_id);
+    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
       indexed_chunks.emplace_back(chunk_id);
     }
   }

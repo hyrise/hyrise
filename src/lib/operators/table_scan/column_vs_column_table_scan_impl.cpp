@@ -28,7 +28,7 @@ ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<c
 std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnVsColumn"; }
 
 std::shared_ptr<PosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) const {
-  const auto chunk = _in_table->get_chunk(chunk_id);
+  const auto& chunk = _in_table->get_chunk(chunk_id);
   const auto left_segment = chunk->get_segment(_left_column_id);
   const auto right_segment = chunk->get_segment(_right_column_id);
 
@@ -136,8 +136,6 @@ std::shared_ptr<PosList> __attribute__((noinline))
 ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, LeftIterator& left_it,
                                                               const LeftIterator& left_end, RightIterator& right_it,
                                                               const RightIterator& right_end) const {
-  const auto chunk = _in_table->get_chunk(chunk_id);
-
   auto matches_out = std::make_shared<PosList>();
 
   using LeftType = typename LeftIterator::ValueType;

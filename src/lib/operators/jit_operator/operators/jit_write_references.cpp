@@ -55,7 +55,7 @@ void JitWriteReferences::after_chunk(const std::shared_ptr<const Table>& in_tabl
     if (in_table->type() == TableType::References) {
       auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
-      const auto chunk_in = in_table->get_chunk(context.chunk_id);
+      const auto& chunk_in = in_table->get_chunk(context.chunk_id);
       for (const auto& output_column : _output_columns) {
         auto segment_in = chunk_in->get_segment(output_column.referenced_column_id);
 

@@ -169,14 +169,14 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   auto source_row_id = RowID{ChunkID{0}, ChunkOffset{0}};
 
   for (const auto& target_chunk_range : _target_chunk_ranges) {
-    const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
+    const auto& target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
 
     auto target_chunk_offset = target_chunk_range.begin_chunk_offset;
     auto target_chunk_range_remaining_rows =
         target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
 
     while (target_chunk_range_remaining_rows > 0) {
-      const auto source_chunk = input_table_left()->get_chunk(source_row_id.chunk_id);
+      const auto& source_chunk = input_table_left()->get_chunk(source_row_id.chunk_id);
       const auto source_chunk_remaining_rows = source_chunk->size() - source_row_id.chunk_offset;
       const auto num_rows_current_iteration = std::min(source_chunk_remaining_rows, target_chunk_range_remaining_rows);
 
@@ -210,7 +210,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
 void Insert::_on_commit_records(const CommitID cid) {
   for (const auto& target_chunk_range : _target_chunk_ranges) {
-    const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
+    const auto& target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
     auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
@@ -223,7 +223,7 @@ void Insert::_on_commit_records(const CommitID cid) {
 
 void Insert::_on_rollback_records() {
   for (const auto& target_chunk_range : _target_chunk_ranges) {
-    const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
+    const auto& target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
     auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
 
     /**

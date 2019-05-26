@@ -287,7 +287,9 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
       apply_right_outer_join();
       break;
     }
-    default: { Fail("Join mode not implemented."); }
+    default: {
+      Fail("Join mode not implemented.");
+    }
   }
 
   return join_table_stats;

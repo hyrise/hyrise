@@ -41,7 +41,7 @@ AttributeIterableData get_attribute_iterable_data(const std::shared_ptr<const Ba
   const auto pos_list = reference_segment->pos_list();
   if (!pos_list->references_single_chunk() || pos_list->empty()) return {};
 
-  const auto referenced_chunk = reference_segment->referenced_table()->get_chunk(pos_list->common_chunk_id());
+  const auto& referenced_chunk = reference_segment->referenced_table()->get_chunk(pos_list->common_chunk_id());
   const auto referenced_segment = referenced_chunk->get_segment(reference_segment->referenced_column_id());
   const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(referenced_segment);
   return {dict_segment, pos_list};

@@ -30,7 +30,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
   _transaction_id = context->transaction_id();
 
   for (ChunkID chunk_id{0}; chunk_id < _referencing_table->chunk_count(); ++chunk_id) {
-    const auto chunk = _referencing_table->get_chunk(chunk_id);
+    const auto& chunk = _referencing_table->get_chunk(chunk_id);
 
     DebugAssert(chunk->references_exactly_one_table(),
                 "All segments in _referencing_table must reference the same table");
@@ -49,7 +49,11 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
                 "All segments of a Chunk in _referencing_table must have the same PosList");
 
     for (auto row_id : *pos_list) {
-      auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
+      const auto& referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
+      if (!referenced_chunk) {
+        _mark_as_failed();
+        return nullptr;
+      }
 
       // Scope for the lock on the MVCC data
       {
@@ -89,13 +93,13 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 void Delete::_on_commit_records(const CommitID cid) {
   for (ChunkID referencing_chunk_id{0}; referencing_chunk_id < _referencing_table->chunk_count();
        ++referencing_chunk_id) {
-    const auto referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
+    const auto& referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
     const auto referencing_segment =
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment->referenced_table();
 
     for (const auto& row_id : *referencing_segment->pos_list()) {
-      auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+      const auto& referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       referenced_chunk->get_scoped_mvcc_data_lock()->end_cids[row_id.chunk_offset] = cid;
       referenced_chunk->increase_invalid_row_count(1);
@@ -113,7 +117,7 @@ void Delete::_on_commit_records(const CommitID cid) {
 void Delete::_on_rollback_records() {
   for (ChunkID referencing_chunk_id{0}; referencing_chunk_id < _referencing_table->chunk_count();
        ++referencing_chunk_id) {
-    const auto referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
+    const auto& referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
     const auto referencing_segment =
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
     const auto referenced_table = referencing_segment->referenced_table();
@@ -121,7 +125,7 @@ void Delete::_on_rollback_records() {
     for (const auto& row_id : *referencing_segment->pos_list()) {
       auto expected = _transaction_id;
 
-      auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+      const auto& referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       // unlock all rows locked in _on_execute
       const auto result =

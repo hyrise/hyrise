@@ -41,8 +41,8 @@ std::shared_ptr<const Table> Product::_on_execute() {
 
 void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, ChunkID chunk_id_left,
                                          ChunkID chunk_id_right) {
-  const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
-  const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
+  const auto& chunk_left = input_table_left()->get_chunk(chunk_id_left);
+  const auto& chunk_right = input_table_right()->get_chunk(chunk_id_right);
 
   // we use an approach here in which we do not have nested loops for left and right but create both sides separately
   // When the result looks like this:

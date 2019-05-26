@@ -147,7 +147,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
         if (my_chunk >= table->chunk_count()) return;
 
         const auto& chunk = table->get_chunk(ChunkID{my_chunk});
-        if (!is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
+        if (chunk && !is_chunk_encoding_spec_satisfied(chunk_encoding_spec, get_chunk_encoding_spec(*chunk))) {
           ChunkEncoder::encode_chunk(chunk, column_data_types, chunk_encoding_spec);
           encoding_performed = true;
         }

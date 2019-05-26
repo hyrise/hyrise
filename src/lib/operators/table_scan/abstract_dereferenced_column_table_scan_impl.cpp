@@ -41,7 +41,7 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
   if (pos_list->references_single_chunk() && !pos_list->empty()) {
     // Fast path :)
 
-    const auto chunk = segment.referenced_table()->get_chunk(pos_list->common_chunk_id());
+    const auto& chunk = segment.referenced_table()->get_chunk(pos_list->common_chunk_id());
     auto referenced_segment = chunk->get_segment(segment.referenced_column_id());
 
     _scan_non_reference_segment(*referenced_segment, chunk_id, matches, pos_list);
@@ -59,7 +59,7 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
     const auto& position_filter = sub_pos_list.row_ids;
     if (!position_filter || position_filter->empty()) continue;
 
-    const auto chunk = segment.referenced_table()->get_chunk(referenced_chunk_id);
+    const auto& chunk = segment.referenced_table()->get_chunk(referenced_chunk_id);
     auto referenced_segment = chunk->get_segment(segment.referenced_column_id());
 
     const auto num_previous_matches = matches.size();

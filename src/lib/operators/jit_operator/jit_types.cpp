@@ -38,8 +38,7 @@ namespace opossum {
   }
 
 #define JIT_VARIANT_VECTOR_GET_VECTOR(r, d, type)                                                                 \
-  template <>                                                                                                     \
-  /* NOLINTNEXTLINE(bugprone-macro-parentheses) - clang-tidy does not like & for reference */                     \
+  template <> /* NOLINTNEXTLINE(bugprone-macro-parentheses) - clang-tidy does not like & for reference */         \
   std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)>& JitVariantVector::get_vector<BOOST_PP_TUPLE_ELEM(3, 0, type)>() { \
     return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                       \
   }

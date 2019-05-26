@@ -66,7 +66,8 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
         if (!_output) return true;
         if (_output->chunk_count() <= ChunkID{1}) return true;
         for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
-          if (_output->get_chunk(chunk_id)->size() < 1) return true;
+          const auto& chunk = _output->get_chunk(chunk_id);
+          if (chunk && chunk->size() < 1) return true;
         }
         return true;
       }(),

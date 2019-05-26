@@ -2,6 +2,7 @@
 
 #include <boost/container/small_vector.hpp>
 #include <boost/lexical_cast.hpp>
+#include <uninitialized_vector.hpp>
 
 #include "bytell_hash_map.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -12,7 +13,6 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
-#include "uninitialized_vector.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -81,7 +81,11 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
   size_t offset = 0;
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     chunk_offsets[chunk_id] = offset;
-    offset += table->get_chunk(chunk_id)->size();
+
+    const auto& chunk = table->get_chunk(chunk_id);
+    if (!chunk) continue;
+
+    offset += chunk->size();
   }
   return chunk_offsets;
 }
@@ -113,11 +117,17 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   jobs.reserve(in_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+    const auto& chunk = in_table->get_chunk(chunk_id);
+    if (!chunk) continue;
+
+    jobs.emplace_back(std::make_shared<JobTask>([&, in_table, chunk_id]() {
+      const auto& chunk_in = in_table->get_chunk(chunk_id);
+      if (!chunk) return;
+
       // Get information from work queue
       auto output_offset = chunk_offsets[chunk_id];
       auto output_iterator = elements->begin() + output_offset;
-      auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
+      auto segment = chunk_in->get_segment(column_id);
 
       [[maybe_unused]] auto null_value_bitvector_iterator = null_value_bitvector->begin();
       if constexpr (retain_null_values) {

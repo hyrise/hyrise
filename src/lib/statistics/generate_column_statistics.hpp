@@ -32,7 +32,9 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics(const Table& ta
   auto max = std::numeric_limits<ColumnDataType>::lowest();
 
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    const auto base_segment = table.get_chunk(chunk_id)->get_segment(column_id);
+    const auto& chunk = table.get_chunk(chunk_id);
+    if (!chunk) continue;
+    const auto base_segment = chunk->get_segment(column_id);
 
     segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
       if (position.is_null()) {

@@ -165,7 +165,9 @@ FilterByValueEstimate ColumnStatistics<pmr_string>::estimate_predicate_with_valu
       return estimate_not_equals_with_value(value);
     }
     // TODO(anybody) implement other table-scan operators for string.
-    default: { return {non_null_value_ratio(), without_null_values()}; }
+    default: {
+      return {non_null_value_ratio(), without_null_values()};
+    }
   }
 }
 
@@ -412,7 +414,9 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
                                                            right_column_statistics._min, _max, true);
     }
     // case PredicateCondition::BetweenInclusive is not supported for ColumnID as TableScan does not support this
-    default: { return {combined_non_null_ratio, without_null_values(), right_column_statistics.without_null_values()}; }
+    default: {
+      return {combined_non_null_ratio, without_null_values(), right_column_statistics.without_null_values()};
+    }
   }
 }
 
