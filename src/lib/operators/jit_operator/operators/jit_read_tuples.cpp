@@ -257,9 +257,18 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
         // Convert the value to the column data type
         AllTypeVariant casted_value;
-        resolve_data_type(jit_input_column.tuple_entry.data_type, [&](const auto current_data_type_t) {
-          using CurrentType = typename decltype(current_data_type_t)::type;
-          casted_value = type_cast_variant<CurrentType>(value);
+        resolve_data_type(jit_input_column.tuple_entry.data_type, [&](const auto column_data_type_t) {
+          using ColumnDataType = typename decltype(column_data_type_t)::type;
+
+          resolve_data_type(data_type_from_all_type_variant(value), [&](const auto value_data_type_t) {
+            using ValueDataType = typename decltype(value_data_type_t)::type;
+
+            if constexpr (std::is_same_v<ColumnDataType, pmr_string> == std::is_same_v<ValueDataType, pmr_string>) {
+              casted_value = static_cast<ColumnDataType>(boost::get<ValueDataType>(value));
+            } else {
+              Fail("Cannot compare string type with non-string type");
+            }
+          });
         });
 
         // Lookup the value id according to the comparison operator
@@ -289,7 +298,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
     if (segments_are_dictionaries[input_column_index]) {
       // We need the value ids from a dictionary segment
-      const auto [dict_segment, pos_list] = get_attribute_iterable_data(segment);  // NOLINT(whitespace/braces)
+      const auto [dict_segment, pos_list] = get_attribute_iterable_data(segment);
       DebugAssert(dict_segment, "Segment is not a dictionary or a reference segment referencing a dictionary");
       if (pos_list) {
         create_iterable_from_attribute_vector(*dict_segment).with_iterators(pos_list, [&](auto it, auto end) {

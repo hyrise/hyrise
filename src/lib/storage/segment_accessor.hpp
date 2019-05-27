@@ -40,6 +40,9 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
  * This is a rare exception to the "no raw pointers rule". Here, we explicitly need a non-owning reference to the data
  * in the segment. Theoretically, this could be an std::optional<const T&>, but that is very much the same as a raw
  * pointer. We only make this exception because it has a very significant performance impact.
+ *
+ * Accessors are not guaranteed to be thread-safe. For multiple threads that access the same segment, create one
+ * accessor each.
  */
 template <typename T, typename SegmentType>
 class SegmentAccessor : public AbstractSegmentAccessor<T> {

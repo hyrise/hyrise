@@ -1,9 +1,10 @@
 #include <dlfcn.h>
 
+#include <filesystem>
+
 #include "storage/storage_manager.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-#include "utils/filesystem.hpp"
 
 #include "plugin_manager.hpp"
 
@@ -19,7 +20,7 @@ bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
   return false;
 }
 
-void PluginManager::load_plugin(const filesystem::path& path) {
+void PluginManager::load_plugin(const std::filesystem::path& path) {
   const auto name = plugin_name_from_path(path);
 
   Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name " + name + " already exists.");

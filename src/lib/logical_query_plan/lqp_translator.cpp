@@ -1,5 +1,8 @@
 #include "lqp_translator.hpp"
 
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/tuple.hpp>
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -37,6 +40,7 @@
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
@@ -135,9 +139,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-  const auto get_table = std::make_shared<GetTable>(stored_table_node->table_name);
-  get_table->set_excluded_chunk_ids(stored_table_node->excluded_chunk_ids());
-  return get_table;
+  return std::make_shared<GetTable>(stored_table_node->table_name, stored_table_node->pruned_chunk_ids(),
+                                    stored_table_node->pruned_column_ids());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
@@ -193,7 +196,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   std::vector<AllTypeVariant> right_values2 = {};
   if (value2_variant) right_values2.emplace_back(*value2_variant);
 
-  auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+  const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto table_name = stored_table_node->table_name;
   const auto table = StorageManager::get().get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
@@ -310,14 +313,31 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto& primary_join_predicate = join_predicates.front();
   std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
 
-  if (primary_join_predicate.predicate_condition == PredicateCondition::Equals &&
-      join_node->join_mode != JoinMode::FullOuter) {
-    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-                                      primary_join_predicate, std::nullopt, std::move(secondary_join_predicates));
-  } else {
-    return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-                                           primary_join_predicate, std::move(secondary_join_predicates));
-  }
+  auto join_operator = std::shared_ptr<AbstractOperator>{};
+
+  const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
+  const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
+
+  // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
+  // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
+  constexpr auto JOIN_OPERATOR_PREFERENCE_ORDER =
+      hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
+
+  boost::hana::for_each(JOIN_OPERATOR_PREFERENCE_ORDER, [&](const auto join_operator_t) {
+    using JoinOperator = typename decltype(join_operator_t)::type;
+
+    if (join_operator) return;
+
+    if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                               right_data_type, !secondary_join_predicates.empty())) {
+      join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                     primary_join_predicate, std::move(secondary_join_predicates));
+    }
+  });
+
+  Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
+
+  return join_operator;
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
@@ -435,25 +455,27 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
-  return std::make_shared<CreateView>(create_view_node->view_name(), create_view_node->view());
+  return std::make_shared<CreateView>(create_view_node->view_name, create_view_node->view,
+                                      create_view_node->if_not_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
-  return std::make_shared<DropView>(drop_view_node->view_name());
+  return std::make_shared<DropView>(drop_view_node->view_name, drop_view_node->if_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
-  return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->column_definitions);
+  return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->column_definitions,
+                                       create_table_node->if_not_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
-  return std::make_shared<DropTable>(drop_table_node->table_name);
+  return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(

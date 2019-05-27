@@ -26,8 +26,8 @@ function(add_plugin)
     endif()
 endfunction(add_plugin)
 
-add_plugin(NAME TestPlugin SRCS test_plugin.cpp test_plugin.hpp)
-add_plugin(NAME TestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
+add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
+add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes

@@ -45,7 +45,6 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
@@ -114,7 +113,9 @@ Console::Console()
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
       _pagination_active(false),
-      _use_jit(false) {
+      _use_jit(false),
+      _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
+      _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
@@ -243,7 +244,10 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
-    auto builder = SQLPipelineBuilder{sql}.dont_cleanup_temporaries();  // keep tables for debugging and visualization
+    auto builder = SQLPipelineBuilder{sql}
+                       .with_lqp_cache(_lqp_cache)
+                       .with_pqp_cache(_pqp_cache)
+                       .dont_cleanup_temporaries();  // keep tables for debugging and visualization
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }
@@ -264,9 +268,6 @@ int Console::_eval_sql(const std::string& sql) {
 
   try {
     _sql_pipeline->get_result_tables();
-    Assert(!_sql_pipeline->failed_pipeline_statement(),
-           "The transaction has failed. This should never happen in the console, where only one statement gets "
-           "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
@@ -275,7 +276,20 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
-  const auto& table = _sql_pipeline->get_result_table();
+  const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
+  if (pipeline_status == SQLPipelineStatus::RolledBack) {
+    _handle_rollback();
+    out("A transaction conflict has been detected:");
+    out(_sql_pipeline->failed_pipeline_statement()->get_sql_string());
+    if (_explicitly_created_transaction_context) {
+      out("The transaction has been rolled back");
+    } else {
+      out("The statement was rolled back, but previous statements have been auto-committed");
+    }
+    return ReturnCode::Error;
+  }
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+
   auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)
@@ -337,7 +351,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
+void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
@@ -630,7 +644,7 @@ int Console::_print_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  out(gt->get_output(), PrintMvcc);
+  out(gt->get_output(), PrintFlags::Mvcc);
 
   return ReturnCode::Ok;
 }
@@ -698,7 +712,6 @@ int Console::_visualize(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  const auto graph_filename = "." + plan_type_str + ".dot";
   const auto img_filename = plan_type_str + ".png";
 
   switch (plan_type) {
@@ -719,7 +732,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       LQPVisualizer visualizer;
-      visualizer.visualize(lqp_roots, graph_filename, img_filename);
+      visualizer.visualize(lqp_roots, img_filename);
     } break;
 
     case PlanType::PQP: {
@@ -729,7 +742,7 @@ int Console::_visualize(const std::string& input) {
         }
 
         PQPVisualizer visualizer;
-        visualizer.visualize(_sql_pipeline->get_physical_plans(), graph_filename, img_filename);
+        visualizer.visualize(_sql_pipeline->get_physical_plans(), img_filename);
       } catch (const std::exception& exception) {
         out(std::string(exception.what()) + "\n");
         _handle_rollback();
@@ -756,7 +769,7 @@ int Console::_visualize(const std::string& input) {
       }
 
       JoinGraphVisualizer visualizer;
-      visualizer.visualize(join_graphs, graph_filename, img_filename);
+      visualizer.visualize(join_graphs, img_filename);
     } break;
   }
 
@@ -794,7 +807,7 @@ int Console::_change_runtime_setting(const std::string& input) {
     return 0;
   } else if (property == "jit") {
     if constexpr (HYRISE_JIT_SUPPORT) {
-      SQLPhysicalPlanCache::get().clear();
+      _pqp_cache->clear();
       if (value == "on") {
         _use_jit = true;
         out("Just-in-time query compilation turned on\n");
@@ -925,7 +938,7 @@ int Console::_print_transaction_info(const std::string& input) {
 }
 
 int Console::_print_current_working_directory(const std::string&) {
-  out(filesystem::current_path().string() + "\n");
+  out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
@@ -940,7 +953,7 @@ int Console::_load_plugin(const std::string& args) {
 
   const std::string& plugin_path_str = arguments[0];
 
-  const filesystem::path plugin_path(plugin_path_str);
+  const std::filesystem::path plugin_path(plugin_path_str);
   const auto plugin_name = plugin_name_from_path(plugin_path);
 
   PluginManager::get().load_plugin(plugin_path);
@@ -966,7 +979,7 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  SQLPhysicalPlanCache::get().clear();
+  _pqp_cache->clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 
@@ -1081,6 +1094,10 @@ bool Console::_handle_rollback() {
 }  // namespace opossum
 
 int main(int argc, char** argv) {
+  // Make sure the TransactionManager is initialized before the console so that we don't run into destruction order
+  // problems (#1635)
+  opossum::TransactionManager::get();
+
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
 

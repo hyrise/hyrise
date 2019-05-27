@@ -50,4 +50,5 @@ extern distribution vp;
 extern distribution grammar;
 
 void dbgen_reset_seeds();
+void dbgen_init_scale_factor(float scale_factor);
 

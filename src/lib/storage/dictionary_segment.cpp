@@ -5,7 +5,6 @@
 
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -19,7 +18,14 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
-      _decompressor{_attribute_vector->create_base_decompressor()} {}
+      _decompressor{_attribute_vector->create_base_decompressor()} {
+  // NULL is represented by _dictionary.size(). INVALID_VALUE_ID, which is the highest possible number in
+  // ValueID::base_type (2^32 - 1), is needed to represent "value not found" in calls to lower_bound/upper_bound.
+  // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
+
+  Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
+  DebugAssert(ValueID{static_cast<uint32_t>(_dictionary->size())} == _null_value_id, "Invalid NULL value id");  // NOLINT
+}
 
 template <typename T>
 const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -83,7 +89,7 @@ template <typename T>
 ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast_variant<T>(value);
+  const auto typed_value = boost::get<T>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
@@ -94,7 +100,7 @@ template <typename T>
 ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast_variant<T>(value);
+  const auto typed_value = boost::get<T>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;

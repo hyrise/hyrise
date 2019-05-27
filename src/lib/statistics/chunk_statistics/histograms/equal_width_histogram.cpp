@@ -117,7 +117,7 @@ std::shared_ptr<EqualWidthHistogram<T>> EqualWidthHistogram<T>::from_segment(
   }
 
   if constexpr (std::is_same_v<T, pmr_string>) {
-    const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
+    const auto [characters, prefix_length] =
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
     auto bins = EqualWidthHistogram<T>::_build_bins(value_counts, max_bin_count, characters, prefix_length);
     return std::make_shared<EqualWidthHistogram<T>>(bins.minimum, bins.maximum, std::move(bins.bin_heights),
@@ -260,6 +260,7 @@ BinID EqualWidthHistogram<T>::_bin_for_value(const T& value) const {
     // The exception is if this is the last bin, then it is actually part of the last bin,
     // because that edge is stored separately and therefore not trimmed to the prefix length.
     // We checked earlier that it is not larger than maximum().
+    // NOLINTNEXTLINE(abseil-string-find-startswith) - false warning: absl::StartsWith only available in C++20
     if (value.length() > this->_string_prefix_length && value.find(_bin_maximum(bin_id)) == 0 &&
         bin_id < bin_count() - 1) {
       return bin_id + 1;

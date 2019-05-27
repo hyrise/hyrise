@@ -6,7 +6,6 @@
 
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -36,6 +35,8 @@ const AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffs
 
 template <typename T>
 const T* FixedStringDictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+  DebugAssert(chunk_offset < size(), "ChunkOffset out of bounds.");
+
   const auto value_id = _decompressor->get(chunk_offset);
   if (value_id == _null_value_id) {
     return nullptr;
@@ -90,7 +91,7 @@ template <typename T>
 ValueID FixedStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast_variant<pmr_string>(value);
+  const auto typed_value = boost::get<pmr_string>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
@@ -101,7 +102,7 @@ template <typename T>
 ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast_variant<pmr_string>(value);
+  const auto typed_value = boost::get<pmr_string>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;

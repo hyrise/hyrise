@@ -29,7 +29,7 @@ from datetime import datetime
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
-DEFAULT_TPCH_QUERIES = ','.join([str(query) for query in range(1, 23) if query != 15]) # Exclude query 15 which is not supported in our multithreaded benchmarks
+DEFAULT_TPCH_QUERIES = ','.join([str(query) for query in range(1, 23))
 
 def get_parser():
     parser = argparse.ArgumentParser()

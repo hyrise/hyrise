@@ -97,8 +97,7 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   write_tuples->after_query(*output_table, context);
 
   // Both tables should be equal now
-  ASSERT_TRUE(check_table_equal(input_table, output_table, OrderSensitivity::Yes, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_ORDERED(input_table, output_table);
 }
 
 TEST_F(JitReadWriteTupleTest, LimitRowCountIsEvaluated) {
@@ -312,13 +311,13 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   pos_list->guarantee_single_chunk();
   Segments segments;
   segments.push_back(std::make_shared<ReferenceSegment>(encoded_table, ColumnID{0}, pos_list));
-  input_table->append_chunk(std::make_shared<Chunk>(segments));
+  input_table->append_chunk(segments);
 
   // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
   bool use_actual_value{false};
   auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_actual_value);
-  AllTypeVariant value{int64_t{4321}};
+  AllTypeVariant value{int32_t{4321}};
   auto literal_a_tuple_entry = read_tuples.add_literal_value(value);
   auto literal_b_tuple_entry = read_tuples.add_literal_value(value);
 

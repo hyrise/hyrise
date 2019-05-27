@@ -9,6 +9,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 #include "utils/timer.hpp"
@@ -59,7 +60,6 @@ void AbstractOperator::execute() {
                 reinterpret_cast<uintptr_t>(this));
 }
 
-// returns the result of the operator
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
   DebugAssert(
       [&]() {
@@ -71,8 +71,6 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
         return true;
       }(),
       "Empty chunk returned from operator " + description());
-
-  DebugAssert(!_output || _output->column_count() > 0, "Operator " + description() + " did not output any columns");
 
   return _output;
 }

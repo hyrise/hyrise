@@ -492,8 +492,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
               // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
               // here as well.
-              EqualsEvaluator{}(result_values[chunk_offset],  // NOLINT - complains about missing spaces before "{"...
-                                list.value(list_element_idx), left_view.value(chunk_offset));
+              EqualsEvaluator{}(result_values[chunk_offset], list.value(list_element_idx),
+                                left_view.value(chunk_offset));
               if (result_values[chunk_offset]) break;
 
               list_contains_null |= list.is_null(list_element_idx);
@@ -662,7 +662,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
       } else {
         if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {  // NOLINT
           // "String to Numeric" cast
-          // As in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
+          // Same as in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
           // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
           // exception-as-flow-control thing.
           if (!boost::conversion::try_lexical_convert(argument_value, values[chunk_offset])) {
@@ -989,7 +989,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
    * (evaluate_expression_to_result<>()) which is then scanned for positive entries.
    * TODO(anybody) Add fast implementations for (Not)In and (Not)Like as well.
    *
-   * All other Expression types have dedicated, hopefully fast implementations.
+   * All other Expression types have dedicated, hopefully fast, implementations.
    */
 
   auto result_pos_list = PosList{};

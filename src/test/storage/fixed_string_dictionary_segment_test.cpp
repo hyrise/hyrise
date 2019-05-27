@@ -26,7 +26,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CompressSegmentString) {
   vs_str->append("Hasso");
   vs_str->append("Bill");
 
-  auto segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
+  auto segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   // Test attribute_vector size
@@ -49,7 +50,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
   vs_str->append("Steve");
   vs_str->append("Bill");
 
-  auto segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
+  auto segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   EXPECT_EQ(dict_segment->encoding_type(), EncodingType::FixedStringDictionary);
@@ -66,7 +68,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
   vs_str->append("QuiteShort");
   vs_str->append("Short");
 
-  auto segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
+  auto segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   // Test sorting
@@ -81,7 +84,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CopyUsingAlloctor) {
   vs_str->append("Steve");
   vs_str->append("Alexander");
 
-  auto segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
+  auto segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   auto alloc = dict_segment->dictionary()->get_allocator();
@@ -104,7 +108,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LowerUpperBound) {
   vs_str->append("I");
   vs_str->append("K");
 
-  auto segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
+  auto segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   // Test for AllTypeVariant as parameter
@@ -125,7 +130,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, NullValues) {
   vs_str->append(NULL_VALUE);
   vs_str->append("E");
 
-  auto segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
+  auto segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   EXPECT_EQ(dict_segment->null_value_id(), 2u);
@@ -137,7 +143,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
    * memory usage estimations
    */
-  const auto empty_compressed_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
+  const auto empty_compressed_segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   const auto empty_dictionary_segment =
       std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(empty_compressed_segment);
   const auto empty_memory_usage = empty_dictionary_segment->estimate_memory_usage();
@@ -145,7 +152,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
   vs_str->append("A");
   vs_str->append("B");
   vs_str->append("C");
-  const auto compressed_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vs_str);
+  const auto compressed_segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
   const auto dictionary_segment =
       std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(compressed_segment);
 
