@@ -60,7 +60,6 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
   void BM_QueryPlanCache(benchmark::State& state) {
     const auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
 
-    // Enable query plan cache.
     pqp_cache->resize(16);
 
     for (auto _ : state) {
