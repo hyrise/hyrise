@@ -160,7 +160,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (4) Wait for the MvccDeletePlugin to delete chunk two logically
   {
-    auto attempts_remaining = 5;
+    auto attempts_remaining = 10;
     while (attempts_remaining--) {
       // The second chunk should have been logically deleted by now
       if (_table->get_chunk(ChunkID{1})->get_cleanup_commit_id()) break;
@@ -183,7 +183,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   some_other_transaction_context = nullptr;
   {
-    auto attempts_remaining = 5;
+    auto attempts_remaining = 10;
     while (attempts_remaining--) {
       // The second chunk should have been physically deleted by now
       if (_table->get_chunk(ChunkID{1}) == nullptr) break;
@@ -216,7 +216,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (9) Wait for the MvccDeletePlugin to delete chunk three logically
   {
-    auto attempts_remaining = 5;
+    auto attempts_remaining = 10;
     while (attempts_remaining--) {
       // The second chunk should have been logically deleted by now
       if (_table->get_chunk(ChunkID{2})->get_cleanup_commit_id()) break;
@@ -228,9 +228,9 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     EXPECT_GT(attempts_remaining, -1);
   }
 
-  // (10) Wait for the MvccDeletePlugin to delete chunk three phyiscally
+  // (10) Wait for the MvccDeletePlugin to delete chunk three physically
   {
-    auto attempts_remaining = 5;
+    auto attempts_remaining = 10;
     while (attempts_remaining--) {
       // The third chunk should have been phyiscally deleted by now
       if (_table->get_chunk(ChunkID{2}) == nullptr) break;
