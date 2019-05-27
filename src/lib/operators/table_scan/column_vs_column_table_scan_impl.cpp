@@ -137,7 +137,7 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
                                                               const LeftIterator& left_end, RightIterator& right_it,
                                                               const RightIterator& right_end) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
-  
+
   auto matches_out = std::make_shared<PosList>();
 
   using LeftType = typename LeftIterator::ValueType;
