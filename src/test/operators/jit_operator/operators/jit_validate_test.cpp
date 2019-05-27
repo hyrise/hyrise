@@ -133,8 +133,13 @@ TEST_F(JitValidateTest, ValidateOnNonReferenceTable) {
   context.snapshot_commit_id = _transaction_context->snapshot_commit_id();
 
   auto source = std::make_shared<MockSource>();
-  auto validate = std::make_shared<JitValidate>(TableType::Data);
+  auto validate = std::make_shared<JitValidate>();
   auto sink = std::make_shared<MockSink>();
+
+  // Set table type input in JitValidate
+  Table data_table{TableColumnDefinitions{}, TableType::Data};
+  std::vector<bool> tuple_nullable_information;
+  validate->before_specialization(data_table, tuple_nullable_information);
 
   // Link operators to pipeline
   source->set_next_operator(validate);
@@ -159,8 +164,13 @@ TEST_F(JitValidateTest, ValidateOnReferenceTable) {
   context.referenced_table = _test_table;
 
   auto source = std::make_shared<MockSource>();
-  auto validate = std::make_shared<JitValidate>(TableType::References);
+  auto validate = std::make_shared<JitValidate>();
   auto sink = std::make_shared<MockSink>();
+
+  // Set table type input in JitValidate
+  Table reference_table{TableColumnDefinitions{}, TableType::References};
+  std::vector<bool> tuple_nullable_information;
+  validate->before_specialization(reference_table, tuple_nullable_information);
 
   // Link operators to pipeline
   source->set_next_operator(validate);
@@ -203,10 +213,10 @@ TEST_F(JitValidateTest, UpdateTableTypeInformationBeforeSpecialization) {
   std::vector<bool> tuple_nullable_information;
 
   jit_validate.before_specialization(data_table, tuple_nullable_information);
-  EXPECT_EQ(jit_validate.input_table_type, TableType::Data);
+  EXPECT_EQ(jit_validate.input_table_type(), TableType::Data);
 
   jit_validate.before_specialization(reference_table, tuple_nullable_information);
-  EXPECT_EQ(jit_validate.input_table_type, TableType::References);
+  EXPECT_EQ(jit_validate.input_table_type(), TableType::References);
 }
 
 }  // namespace opossum
