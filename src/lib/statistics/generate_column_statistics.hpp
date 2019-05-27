@@ -34,6 +34,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics(const Table& ta
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto& chunk = table.get_chunk(chunk_id);
     if (!chunk) continue;
+
     const auto base_segment = chunk->get_segment(column_id);
 
     segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {

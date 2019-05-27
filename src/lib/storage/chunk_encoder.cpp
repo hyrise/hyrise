@@ -140,12 +140,11 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
-
     const auto& chunk = table->get_chunk(chunk_id);
-    if (chunk) {
-      const auto& chunk_encoding_spec = chunk_encoding_specs.at(chunk_id);
-      encode_chunk(chunk, column_data_types, chunk_encoding_spec);
-    }
+    if (!chunk) continue;
+
+    const auto& chunk_encoding_spec = chunk_encoding_specs.at(chunk_id);
+    encode_chunk(chunk, column_data_types, chunk_encoding_spec);
   }
 }
 
@@ -156,9 +155,9 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
     const auto& chunk = table->get_chunk(chunk_id);
-    if (chunk) {
-      encode_chunk(chunk, column_data_types, segment_encoding_spec);
-    }
+    if (!chunk) continue;
+
+    encode_chunk(chunk, column_data_types, segment_encoding_spec);
   }
 }
 
@@ -170,10 +169,10 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
-    if (chunk) {
-      const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
-      encode_chunk(chunk, column_types, chunk_encoding_spec);
-    }
+    if (!chunk) continue;
+
+    const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
+    encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
 }
 
@@ -185,9 +184,9 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
-    if (chunk) {
-      encode_chunk(chunk, column_types, chunk_encoding_spec);
-    }
+    if (!chunk) continue;
+
+    encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
 }
 
@@ -197,9 +196,9 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
-    if (chunk) {
-      encode_chunk(chunk, column_types, segment_encoding_spec);
-    }
+    if (!chunk) continue;
+
+    encode_chunk(chunk, column_types, segment_encoding_spec);
   }
 }
 

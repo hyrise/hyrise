@@ -185,6 +185,7 @@ void AggregateHash::_aggregate() {
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       const auto& chunk = input_table->get_chunk(chunk_id);
       if (!chunk) continue;
+
       if constexpr (std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>) {
         keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
       } else {
@@ -232,6 +233,7 @@ void AggregateHash::_aggregate() {
         for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
           const auto& chunk_in = input_table->get_chunk(chunk_id);
           if (!chunk_in) continue;
+
           const auto base_segment = chunk_in->get_segment(column_id);
 
           ChunkOffset chunk_offset{0};

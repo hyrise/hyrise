@@ -87,6 +87,7 @@ class ColumnMaterializerNUMA {
     for (auto chunk_id = ChunkID{0}; chunk_id < input->chunk_count(); ++chunk_id) {
       const auto& chunk = input->get_chunk(chunk_id);
       if (!chunk) continue;
+
       // This allocator is used to ensure that materialized chunks are colocated with the original chunks
       auto alloc = MaterializedValueAllocatorNUMA<T>{chunk->get_allocator()};
 
