@@ -284,8 +284,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     std::cout << "catalog_page table generated" << std::endl;
   }
 
-  // TODO(pascal): catalog returns is a so called child table of catalog sales, which means it is generated as a
-  //  subroutine of mk_w_catalog_sales
   // catalog returns
   {
     DebugAssert(prepare_for_table(CATALOG_RETURNS).second <= 0,
@@ -641,8 +639,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     std::cout << "store table generated" << std::endl;
   }
 
-  // TODO(pascal): store returns is a so called child table of store sales, which means it is generated as a
-  //  subroutine of mk_w_store_sales
   // store returns
   {
     DebugAssert(prepare_for_table(STORE_RETURNS).second <= 0,
@@ -774,8 +770,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     std::cout << "web_page table generated" << std::endl;
   }
 
-  // TODO(pascal): web returns is a so called child table of web sales, which means it is generated as a
-  //  subroutine of mk_w_web_sales
   // web returns
   { DebugAssert(prepare_for_table(WEB_RETURNS).second <= 0, "web returns are only created together with web sales"); }
 
