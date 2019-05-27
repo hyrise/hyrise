@@ -50,6 +50,8 @@ struct FixedSizeGroupRun {
 
   const FixedSizeGroupRunLayout* layout;
 
+  std::vector<size_t> _append_buffer;
+
   std::vector<BlobDataType> data;
 
   // Hash per group
@@ -58,8 +60,12 @@ struct FixedSizeGroupRun {
   // Number of groups in this run
   size_t end{0};
 
+  const std::vector<size_t>& append_buffer() const {
+    return _append_buffer;
+  }
+
   bool can_append(const FixedSizeGroupRun& source_run, const size_t source_offset) const {
-    return end < hashes.size();
+    return end + _append_buffer.size() < hashes.size();
   }
 
   bool compare(const size_t own_offset, const FixedSizeGroupRun& other_run, const size_t other_offset) const {
@@ -97,16 +103,21 @@ struct FixedSizeGroupRun {
     }
   }
 
-  void flush_append_buffer(const std::vector<size_t>& buffer, const FixedSizeGroupRun& source) {
-    DebugAssert(end + buffer.size() <= hashes.size(), "Append buffer to big for this run");
+  void schedule_append(const FixedSizeGroupRun& source, const size_t source_offset) {
+    _append_buffer.emplace_back(source_offset);
+  }
 
-    for (const auto& source_offset : buffer) {
+  void flush_append_buffer(const FixedSizeGroupRun& source) {
+    DebugAssert(end + _append_buffer.size() <= hashes.size(), "Append buffer to big for this run");
+
+    for (const auto& source_offset : _append_buffer) {
       std::copy(source.data.begin() + source_offset * layout->group_size,
                 source.data.begin() + (source_offset + 1) * layout->group_size,
                 data.begin() + end * layout->group_size);
       hashes[end] = source.hashes[source_offset];
       ++end;
     }
+    _append_buffer.clear();
   }
 
   size_t hash(const size_t offset) const { return hashes[offset]; }
@@ -121,6 +132,7 @@ struct FixedSizeGroupRun {
   }
 
   void finish() {
+    DebugAssert(_append_buffer.empty(), "Cannot finish run when append operations are pending");
     resize(end);
   }
 };
@@ -163,6 +175,10 @@ struct VariablySizedGroupRun {
   const VariablySizedGroupRunLayout* layout;
 
   std::vector<BlobDataType> data;
+
+  // Number of `data` elements occupied after append_buffer is flushed
+  size_t data_watermark{0};
+
   std::vector<bool> null_values;
 
   // End indices in `data`
@@ -182,13 +198,24 @@ struct VariablySizedGroupRun {
     value_end_offsets.resize(size * layout->column_count);
   }
 
+  const std::vector<size_t>& append_buffer() const {
+    return fixed.append_buffer();
+  }
+
   bool can_append(const VariablySizedGroupRun& source_run, const size_t source_offset) const {
     if (!fixed.can_append(source_run.fixed, source_offset)) {
       return false;
     }
 
     const auto source_size = source_offset == 0 ? source_run.group_end_offsets[0] : source_run.group_end_offsets[source_offset] - source_run.group_end_offsets[source_offset - 1];
-    return group_end_offsets[fixed.end] + source_size <= data.size();
+    return data_watermark + source_size < data.size();
+  }
+
+  void schedule_append(const VariablySizedGroupRun& source, const size_t source_offset) {
+    fixed.schedule_append(source.fixed, source_offset);
+
+    const auto source_size = source_offset == 0 ? source.group_end_offsets[0] : source.group_end_offsets[source_offset] - source.group_end_offsets[source_offset - 1];
+    data_watermark += source_size;
   }
 
   bool compare(const size_t own_offset, const VariablySizedGroupRun& other_run, const size_t other_offset) const {
@@ -258,12 +285,10 @@ struct VariablySizedGroupRun {
     }
   }
 
-  void flush_append_buffer(const std::vector<size_t>& buffer, const VariablySizedGroupRun& source) {
+  void flush_append_buffer(const VariablySizedGroupRun& source) {
     auto end = fixed.end;
 
-    fixed.flush_append_buffer(buffer, source.fixed);
-
-    for (const auto source_offset : buffer) {
+    for (const auto source_offset : fixed.append_buffer()) {
       // Copy null values
       const auto source_null_values_iter = source.null_values.begin() + source_offset * layout->nullable_column_count;
       std::copy(source_null_values_iter, source_null_values_iter + layout->nullable_column_count, null_values.begin() + end * layout->nullable_column_count);
@@ -279,11 +304,15 @@ struct VariablySizedGroupRun {
 
       // Copy group data
       const auto source_data_iter = source.data.begin() + source_group_offset;
-      const auto target_data_iter = end == 0 ? data.begin() : data.begin() + group_end_offsets[end - 1];
+      const auto target_data_offset = end == 0 ? 0 : group_end_offsets[end - 1];
+      const auto target_data_iter = data.begin() + target_data_offset;
+      DebugAssert(target_data_offset + source_group_size < data.size(), "");
       std::copy(source_data_iter, source_data_iter + source_group_size, target_data_iter);
 
       ++end;
     }
+
+    fixed.flush_append_buffer(source.fixed);
   }
 
   size_t size() const { return fixed.end; }
@@ -337,7 +366,6 @@ struct Run {
 template <typename GroupRun>
 struct Partition {
   std::vector<AggregationBufferEntry> aggregation_buffer;
-  std::vector<size_t> append_buffer;
 
   size_t group_key_counter{0};
   size_t next_run_memory_budget{1'000};
@@ -345,6 +373,11 @@ struct Partition {
   std::vector<Run<GroupRun>> runs;
 
   void flush_buffers(const Run<GroupRun>& input_run) {
+    if (runs.empty()) {
+      return;
+    }
+
+    auto& append_buffer = runs.back().groups.append_buffer();
     if (append_buffer.empty() && aggregation_buffer.empty()) {
       return;
     }
@@ -360,9 +393,8 @@ struct Partition {
       target_aggregate_run->flush_aggregation_buffer(aggregation_buffer, *input_aggregate_run);
     }
 
-    target_groups.flush_append_buffer(append_buffer, input_run.groups);
+    target_groups.flush_append_buffer(input_run.groups);
 
-    append_buffer.clear();
     aggregation_buffer.clear();
   }
 
@@ -373,8 +405,10 @@ struct Partition {
       runs.emplace_back(source_run.new_instance(next_run_memory_budget));
     }
 
-    append_buffer.emplace_back(source_offset);
-    if (append_buffer.size() > 255) {
+    auto& target_run = runs.back();
+
+    target_run.groups.schedule_append(source_run.groups, source_offset);
+    if (target_run.groups.append_buffer().size() > 255) {
       flush_buffers(source_run);
     }
   }

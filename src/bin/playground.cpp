@@ -77,15 +77,15 @@ std::shared_ptr<Table> make_string_table() {
   table_column_definitions.emplace_back("c", DataType::Int);
 
   const auto table = std::make_shared<Table>(table_column_definitions, TableType::Data);
-  table->append({"abcd", "bc", 3});
-  table->append({"aa", "bcd", 4});
-  table->append({"aa", "bcd", 4});
-//  const auto row_count = size_t{1'000'000};
-//  Segments segments;
-//  segments.emplace_back(make_date_segment(row_count, 0, 35));
-//  segments.emplace_back(make_date_segment(row_count, 0, 1));
-//  segments.emplace_back(make_int_segment(row_count, 0, 2000));
-//  table->append_chunk(segments);
+//  table->append({"abcd", "bc", 3});
+//  table->append({"aa", "bcd", 4});
+//  table->append({"aa", "bcd", 4});
+  const auto row_count = size_t{1'000'000};
+  Segments segments;
+  segments.emplace_back(make_date_segment(row_count, 0, 35));
+  segments.emplace_back(make_date_segment(row_count, 0, 1));
+  segments.emplace_back(make_int_segment(row_count, 0, 2000));
+  table->append_chunk(segments);
 
   return table;
 }
@@ -120,7 +120,7 @@ int main() {
   std::cout << "HashSort: " << aggregate_op->get_output()->row_count() << std::endl;
   std::cout << "Hash: " << aggregate_op2->get_output()->row_count() << std::endl;
 
-  if (aggregate_op->get_output()->row_count() < 2000) {
+  if (aggregate_op->get_output()->row_count() < 20) {
     Print::print(aggregate_op->get_output(), PrintFlags::IgnoreChunkBoundaries);
     std::cout << std::endl;
     Print::print(aggregate_op2->get_output(), PrintFlags::IgnoreChunkBoundaries);
