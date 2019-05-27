@@ -41,9 +41,10 @@ const T* FixedStringDictionarySegment<T>::get_typed_value(const ChunkOffset chun
   if (value_id == _null_value_id) {
     return nullptr;
   }
-  static T t{}; // TODO
-  t = _dictionary->get_string_at(value_id);
-  return &t;
+
+  static thread_local T value{};
+  value = _dictionary->get_string_at(value_id);
+  return &value;
 }
 
 template <typename T>

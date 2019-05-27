@@ -60,9 +60,10 @@ const T* LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   if (_null_values && (*_null_values)[chunk_offset]) {
     return nullptr;
   }
-  static T t{};  // TODO
-  t = decompress(chunk_offset);
-  return &t;
+
+  static thread_local T value{};
+  value = decompress(chunk_offset);
+  return &value;
 }
 
 template <typename T>

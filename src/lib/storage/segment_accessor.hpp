@@ -50,7 +50,6 @@ class SegmentAccessor : public AbstractSegmentAccessor<T> {
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
   const T* access(ChunkOffset offset) const final {
-    // TODO if decltype(_segment.get_typed_value == const T*)
     return _segment.get_typed_value(offset);
   }
 
