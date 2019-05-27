@@ -7,6 +7,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
+#include "sql_plan_cache.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -48,7 +49,10 @@ class SQLPipelineStatement : public Noncopyable {
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
-                       const std::shared_ptr<Optimizer>& optimizer, const CleanupTemporaries cleanup_temporaries);
+                       const std::shared_ptr<Optimizer>& optimizer,
+                       const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
+                       const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
+                       const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -84,6 +88,9 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<TransactionContext>& transaction_context() const;
 
   const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
+
+  const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
+  const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
  private:
   // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
