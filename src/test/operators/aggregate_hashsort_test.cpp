@@ -77,6 +77,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
   EXPECT_EQ(groups.layout->column_base_offsets, std::vector<size_t>({0, 1, 3}));
 
   EXPECT_EQ(groups.hashes.size(), 3u);
+  EXPECT_EQ(groups.end, 3u);
 
   // clang-format off
   const auto expected_group_data = std::vector<uint32_t>{
@@ -104,6 +105,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixedEmpty) {
   EXPECT_EQ(groups.layout->column_base_offsets, std::vector<size_t>());
 
   EXPECT_EQ(groups.hashes.size(), 2u);
+  EXPECT_EQ(groups.end, 2u);
 
   EXPECT_EQ(groups.data, std::vector<uint32_t>());
 }
@@ -221,8 +223,7 @@ TEST_F(AggregateHashSortStepsTest, Partitioning) {
 
 TEST_F(AggregateHashSortStepsTest, PartitionFixedOnly) {
   auto groups_layout = FixedSizeGroupRunLayout{1, {0}};
-  auto groups = FixedSizeGroupRun{&groups_layout};
-  groups.resize(7);
+  auto groups = FixedSizeGroupRun{&groups_layout, 7};
 
   // clang-format off
   groups.hashes[0] = size_t{0b001}; groups.data[0] = int32_t{5};
@@ -232,12 +233,13 @@ TEST_F(AggregateHashSortStepsTest, PartitionFixedOnly) {
   groups.hashes[4] = size_t{0b000}; groups.data[4] = int32_t{7};
   groups.hashes[5] = size_t{0b100}; groups.data[5] = int32_t{8};
   groups.hashes[6] = size_t{0b100}; groups.data[6] = int32_t{8};
+  groups.end = 7;
   // clang-format off
 
-  auto aggregate = std::make_unique<SumAggregateRun<int32_t>>();
+  auto aggregate = std::make_unique<SumAggregateRun<int32_t>>(7);
   // clang-format off
-  aggregate->values =      {0,     1,     2,     3,     0,    5,     6,     7};
-  aggregate->null_values = {false, false, false, false, true, false, false, false};
+  aggregate->values =      {0,     1,     2,     3,     0,    5,     6};
+  aggregate->null_values = {false, false, false, false, true, false, false};
   // clang-format on
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
   aggregates.emplace_back(std::move(aggregate));
@@ -302,7 +304,8 @@ TEST_F(AggregateHashSortStepsTest, PartitionVariablySizedAndFixed) {
 
   auto fixed_layout = FixedSizeGroupRunLayout{0, {}};
   const auto layout = VariablySizedGroupRunLayout{{ColumnID{0}, ColumnID{1}, ColumnID{2}}, {}, column_mapping, fixed_layout};
-  auto groups = VariablySizedGroupRun{&layout};
+  auto groups = VariablySizedGroupRun{&layout, 4, 36};
+  groups.fixed.end = 4;
 
   // clang-format off
   groups.data = {
@@ -325,6 +328,7 @@ TEST_F(AggregateHashSortStepsTest, PartitionVariablySizedAndFixed) {
     false, false
   };
   groups.fixed.hashes = {0b1, 0b0, 0b0, 0b1};
+  groups.fixed.end = 4;
   // clang-format on
 
   auto partitioning = Partitioning{2, 0, 1};
@@ -374,17 +378,17 @@ TEST_F(AggregateHashSortStepsTest, PartitionVariablySizedAndFixed) {
 
 TEST_F(AggregateHashSortStepsTest, HashingFixed) {
   auto groups_layout = FixedSizeGroupRunLayout{2, {0, 2}};
-  auto groups = FixedSizeGroupRun{&groups_layout};
-  groups.resize(4);
+  auto groups = FixedSizeGroupRun{&groups_layout, 4};
 
   // clang-format off
   groups.hashes[0] = size_t{12}; groups.data[0] = int32_t{5}; groups.data[1] = int32_t{3};
   groups.hashes[1] = size_t{13}; groups.data[2] = int32_t{2}; groups.data[3] = int32_t{2};
   groups.hashes[2] = size_t{12}; groups.data[4] = int32_t{5}; groups.data[5] = int32_t{3};
   groups.hashes[3] = size_t{12}; groups.data[6] = int32_t{5}; groups.data[7] = int32_t{4};
+  groups.end = 4;
   // clang-format on
 
-  auto aggregate = std::make_unique<SumAggregateRun<int32_t>>();
+  auto aggregate = std::make_unique<SumAggregateRun<int32_t>>(4);
   // clang-format off
   aggregate->values =      {5,     6,     7,     0};
   aggregate->null_values = {false, false, false, true};
@@ -441,7 +445,8 @@ TEST_F(AggregateHashSortStepsTest, HashingVariablySized) {
 
   auto fixed_layout = FixedSizeGroupRunLayout{0, {}};
   const auto layout = VariablySizedGroupRunLayout{{ColumnID{0}}, {}, column_mapping, fixed_layout};
-  auto groups = VariablySizedGroupRun{&layout};
+  auto groups = VariablySizedGroupRun{&layout, 3, 15};
+  groups.fixed.end = 3;
 
   // clang-format off
   groups.data = {
@@ -508,8 +513,7 @@ TEST_F(AggregateHashSortStepsTest, HashingVariablySized) {
 
 TEST_F(AggregateHashSortStepsTest, AggregateAdaptive) {
   auto groups_layout = FixedSizeGroupRunLayout{1, {0}};
-  auto groups = FixedSizeGroupRun{&groups_layout};
-  groups.resize(8);
+  auto groups = FixedSizeGroupRun{&groups_layout, 8};
 
   // clang-format off
   groups.hashes[0] = size_t{0b1}; groups.data[0] = int32_t{5};
@@ -520,6 +524,7 @@ TEST_F(AggregateHashSortStepsTest, AggregateAdaptive) {
   groups.hashes[5] = size_t{0b1}; groups.data[5] = int32_t{5};
   groups.hashes[6] = size_t{0b0}; groups.data[6] = int32_t{2};
   groups.hashes[7] = size_t{0b0}; groups.data[7] = int32_t{2};
+  groups.end = 8;
   // clang-format off
 
   // Config so that [0,3] are hashed, [4,5] are partitioned and [6,7] are hashed again

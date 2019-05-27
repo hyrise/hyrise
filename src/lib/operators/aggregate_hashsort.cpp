@@ -79,7 +79,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run() {
     }
 
     for (auto aggregate_idx = ColumnID{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
-      output_segments[_groupby_column_ids.size() + aggregate_idx] = run.aggregates[aggregate_idx]->materialize_output();
+      output_segments[_groupby_column_ids.size() + aggregate_idx] = run.aggregates[aggregate_idx]->materialize_output(run.size());
     }
 
     output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);

@@ -238,7 +238,7 @@ TEST_P(AggregateTestRunner, TestAggregate) {
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
     if (aggregate_operator->get_output()) {
-      Print::print(aggregate_operator->get_output(), PrintFlags::IgnoreChunkBoundaries);
+      Print::print(aggregate_operator->get_output());
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the aggregate operator under test" << std::endl;

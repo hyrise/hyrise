@@ -34,6 +34,7 @@
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/aggregate_hashsort.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
@@ -384,7 +385,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     group_by_column_ids.emplace_back(*column_id);
   }
 
-  return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
+  if (group_by_column_ids.empty()) {
+    return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
+  } else {
+    return std::make_shared<AggregateHashSort>(input_operator, aggregate_column_definitions, group_by_column_ids);
+  }
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
