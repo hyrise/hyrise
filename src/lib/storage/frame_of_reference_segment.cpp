@@ -88,6 +88,7 @@ std::optional<CompressedVectorType> FrameOfReferenceSegment<T, U>::compressed_ve
 }
 
 template class FrameOfReferenceSegment<int32_t>;
-template class FrameOfReferenceSegment<int64_t>;
+// int64_t disabled for now, as vector compression cannot handle 64 bit values
+// template class FrameOfReferenceSegment<int64_t>;
 
 }  // namespace opossum
