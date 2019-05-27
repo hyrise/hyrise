@@ -94,9 +94,7 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       }
     } break;
 
-    default: {
-      Fail("Node type cannot be used for JoinGraph, should have been detected as a vertex");
-    }
+    default: { Fail("Node type cannot be used for JoinGraph, should have been detected as a vertex"); }
   }
 }
 

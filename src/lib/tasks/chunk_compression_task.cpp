@@ -30,7 +30,7 @@ void ChunkCompressionTask::_on_execute() {
     if (!chunk) continue;
 
     DebugAssert(_chunk_is_completed(chunk, table->max_chunk_size()),
-                  "Chunk is not completed and thus can’t be compressed.");
+                "Chunk is not completed and thus can’t be compressed.");
 
     ChunkEncoder::encode_chunk(chunk, table->column_data_types());
   }
