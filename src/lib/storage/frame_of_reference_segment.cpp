@@ -49,7 +49,7 @@ const T* FrameOfReferenceSegment<T, U>::get_typed_value(const ChunkOffset chunk_
     return nullptr;
   }
   const auto minimum = _block_minima[chunk_offset / block_size];
-  static thread_local value = static_cast<T>(_decompressor->get(chunk_offset)) + minimum;
+  static thread_local T value = static_cast<T>(_decompressor->get(chunk_offset)) + minimum;
 
   return &value;
 }
