@@ -21,7 +21,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    auto chunk = table->get_chunk(chunk_id);
+    const auto& chunk = table->get_chunk(chunk_id);
     if (chunk) {
       Assert(chunk->has_mvcc_data(), "Table must have MVCC data.");
     }

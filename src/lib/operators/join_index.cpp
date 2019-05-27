@@ -66,7 +66,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
   if (track_left_matches) {
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-      auto const& chunk_left = input_table_left()->get_chunk(chunk_id_left);
+      const auto& chunk_left = input_table_left()->get_chunk(chunk_id_left);
       if (!chunk_left) continue;
       _left_matches[chunk_id_left].resize(chunk_left->size());
     }
@@ -74,7 +74,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
   if (track_right_matches) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
-      auto const& chunk_right = input_table_right()->get_chunk(chunk_id_right);
+      const auto& chunk_right = input_table_right()->get_chunk(chunk_id_right);
       if (!chunk_right) continue;
       _right_matches[chunk_id_right].resize(chunk_right->size());
     }

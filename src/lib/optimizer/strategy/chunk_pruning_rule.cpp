@@ -60,7 +60,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   auto table = StorageManager::get().get_table(stored_table->table_name);
   std::vector<std::shared_ptr<ChunkStatistics>> statistics;
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
+    const auto& chunk = table->get_chunk(chunk_id);
     if (chunk) {
       statistics.push_back(chunk->statistics());
     }
