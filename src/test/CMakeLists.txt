@@ -159,6 +159,7 @@ set(
     storage/btree_index_test.cpp
     storage/chunk_encoder_test.cpp
     storage/chunk_test.cpp
+    storage/column_iterable_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/compressed_vector_test.cpp
     storage/dictionary_segment_test.cpp

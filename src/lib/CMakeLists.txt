@@ -417,6 +417,8 @@ set(
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/column_iterable.cpp
+    storage/column_iterable.hpp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
     storage/dictionary_segment.cpp

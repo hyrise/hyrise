@@ -71,7 +71,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
   const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{1}, ColumnID{0}, ColumnID{2}};
 
   const auto layout = produce_initial_groups_layout<FixedSizeGroupRunLayout>(*table, group_by_column_ids);
-  auto groups = produce_initial_groups<FixedSizeGroupRun>(*table, &layout, group_by_column_ids);
+  auto groups = produce_initial_groups<FixedSizeGroupRun>(table, &layout, group_by_column_ids);
 
   EXPECT_EQ(groups.layout->group_size, 6u);
   EXPECT_EQ(groups.layout->column_base_offsets, std::vector<size_t>({0, 1, 3}));
@@ -99,7 +99,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixedEmpty) {
   const auto group_by_column_ids = std::vector<ColumnID>{};
 
   const auto layout = produce_initial_groups_layout<FixedSizeGroupRunLayout>(*table, group_by_column_ids);
-  auto groups = produce_initial_groups<FixedSizeGroupRun>(*table, &layout, group_by_column_ids);
+  auto groups = produce_initial_groups<FixedSizeGroupRun>(table, &layout, group_by_column_ids);
 
   EXPECT_EQ(groups.layout->group_size, 0u);
   EXPECT_EQ(groups.layout->column_base_offsets, std::vector<size_t>());
@@ -150,7 +150,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySized) {
   auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
 
   const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
-  auto groups = produce_initial_groups<VariablySizedGroupRun>(*table, &layout, group_by_column_ids);
+  auto groups = produce_initial_groups<VariablySizedGroupRun>(table, &layout, group_by_column_ids);
 
   // clang-format off
   const auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::BlobDataType>{
@@ -194,7 +194,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialAggregates) {
       {ColumnID{2}, AggregateFunction::Avg},
   };
 
-  auto aggregates = produce_initial_aggregates(*table, aggregate_column_definitions, false);
+  auto aggregates = produce_initial_aggregates(table, aggregate_column_definitions, false);
 
   ASSERT_EQ(aggregates.size(), 4u);
 
@@ -255,7 +255,8 @@ TEST_F(AggregateHashSortStepsTest, PartitionFixedOnly) {
   AggregateHashSortConfig config;
   config.max_partitioning_counter = 6;
 
-  const auto partitions = partition(config, std::move(runs), partitioning, run_idx, run_offset);
+  auto run_source = PartitionRunSource<FixedSizeGroupRun>{std::move(runs)};
+  const auto partitions = partition(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 0);
   EXPECT_EQ(run_offset, 6);
 
@@ -344,7 +345,8 @@ TEST_F(AggregateHashSortStepsTest, PartitionVariablySizedAndFixed) {
   AggregateHashSortConfig config;
   config.max_partitioning_counter = 100; // Partition the entire run
 
-  const auto partitions = partition(config, std::move(runs), partitioning, run_idx, run_offset);
+  auto run_source = PartitionRunSource<VariablySizedGroupRun>(std::move(runs));
+  const auto partitions = partition(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
 
@@ -409,7 +411,8 @@ TEST_F(AggregateHashSortStepsTest, HashingFixed) {
   config.hash_table_size = 100;
   config.hash_table_max_load_factor = 1.0f;
 
-  const auto [continue_hashing, partitions] = hashing(config, std::move(runs), partitioning, run_idx, run_offset);
+  auto run_source = PartitionRunSource<FixedSizeGroupRun>{std::move(runs)};
+  const auto [continue_hashing, partitions] = hashing(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
   EXPECT_TRUE(continue_hashing);
@@ -477,7 +480,8 @@ TEST_F(AggregateHashSortStepsTest, HashingVariablySized) {
   AggregateHashSortConfig config;
   config.max_partitioning_counter = 100; // Partition the entire run
 
-  const auto [continue_hashing, partitions] = hashing(config, std::move(runs), partitioning, run_idx, run_offset);
+  auto run_source = PartitionRunSource<VariablySizedGroupRun>{std::move(runs)};
+  const auto [continue_hashing, partitions] = hashing(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
   EXPECT_TRUE(continue_hashing);
@@ -539,7 +543,8 @@ TEST_F(AggregateHashSortStepsTest, AggregateAdaptive) {
 
   auto partitioning = Partitioning{2, 0, 1};
 
-  const auto partitions = adaptive_hashing_and_partition(config, std::move(runs), partitioning);
+  auto run_source = std::make_unique<PartitionRunSource<FixedSizeGroupRun>>(std::move(runs));
+  const auto partitions = adaptive_hashing_and_partition<FixedSizeGroupRun>(config, std::move(run_source), partitioning);
 
   ASSERT_EQ(partitions.size(), 2u);
 

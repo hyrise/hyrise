@@ -44,20 +44,14 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
 
 template <typename GroupRun>
 std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run() {
-  auto& input_table = *input_table_left();
+  auto input_table = input_table_left();
 
-  auto output_runs = std::vector<Run<GroupRun>>{};
+  auto layout = produce_initial_groups_layout<typename GroupRun::LayoutType>(*input_table, _groupby_column_ids);
 
-  auto input_layout = produce_initial_groups_layout<typename GroupRun::LayoutType>(input_table, _groupby_column_ids);
+  auto run_source = std::make_unique<TableRunSource<GroupRun>>(input_table, &layout, _config, _aggregates, _groupby_column_ids);
 
-  auto input_groups = produce_initial_groups<GroupRun>(input_table, &input_layout, _groupby_column_ids);
-  auto input_aggregates = produce_initial_aggregates(input_table, _aggregates, !_groupby_column_ids.empty());
+  auto output_runs = aggregate<GroupRun>(_config, std::move(run_source), 1u);
 
-  auto input_run = Run{std::move(input_groups), std::move(input_aggregates)};
-  std::vector<Run<GroupRun>> input_runs;
-  input_runs.emplace_back(std::move(input_run));
-
-  output_runs = aggregate<GroupRun>(_config, std::move(input_runs), 1u);
   /**
    * Build output Table
    */

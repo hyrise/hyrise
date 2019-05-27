@@ -80,7 +80,7 @@ std::shared_ptr<Table> make_string_table() {
 //  table->append({"abcd", "bc", 3});
 //  table->append({"aa", "bcd", 4});
 //  table->append({"aa", "bcd", 4});
-  const auto row_count = size_t{1'000'000};
+  const auto row_count = size_t{10'000'000};
   Segments segments;
   segments.emplace_back(make_date_segment(row_count, 0, 35));
   segments.emplace_back(make_date_segment(row_count, 0, 1));
@@ -103,7 +103,7 @@ int main() {
   table_op->execute();
 
   auto aggregates = std::vector<AggregateColumnDefinition>{};
-  // aggregates.emplace_back(ColumnID{1}, AggregateFunction::Sum);
+  aggregates.emplace_back(ColumnID{2}, AggregateFunction::Avg);
 
   auto group_by_column_ids = std::vector<ColumnID>{};
   group_by_column_ids.emplace_back(ColumnID{0});

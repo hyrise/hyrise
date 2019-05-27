@@ -28,6 +28,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/aggregate_hashsort.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
@@ -614,7 +615,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
    * Check PQP
    */
-  const auto aggregate_op = std::dynamic_pointer_cast<AggregateHash>(op);
+  const auto aggregate_op = std::dynamic_pointer_cast<AggregateHashSort>(op);
   ASSERT_TRUE(aggregate_op);
   ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
   ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);

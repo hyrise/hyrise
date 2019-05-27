@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "operators/aggregate/aggregate_traits.hpp"
-#include "storage/segment_iterate.hpp"
+#include "storage/column_iterable.hpp"
 
 namespace opossum {
 
@@ -14,27 +14,6 @@ namespace aggregate_hashsort {
 struct AggregationBufferEntry {
   size_t target_offset;
   size_t source_offset;
-};
-
-struct ColumnIterable {
-  const Table& table;
-  const ColumnID column_id;
-
-  template <typename T, typename F>
-  void for_each(const F& f) const {
-    auto offset = size_t{0};
-
-    for (const auto& chunk : table.chunks()) {
-      const auto& segment = *chunk->get_segment(column_id);
-
-      segment_with_iterators<T>(segment, [&](auto begin, auto end) {
-        std::for_each(begin, end, [&](const auto& segment_position) {
-          f(segment_position, offset);
-          ++offset;
-        });
-      });
-    }
-  }
 };
 
 struct BaseColumnMaterialization {
@@ -71,15 +50,17 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
   }
 
   explicit BaseDistributiveAggregateRun(const ColumnIterable& column_iterable) {
-    resize(column_iterable.table.row_count());
+    resize(column_iterable.table->row_count());
 
-    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const auto offset) {
+    auto offset = size_t{0};
+    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const RowID& row_id) {
       if (segment_position.is_null()) {
         null_values[offset] = true;
       } else {
         values[offset] = segment_position.value();
         null_values[offset] = false;
       }
+      ++offset;
     });
   }
 
@@ -217,12 +198,14 @@ struct CountNonNullAggregateRun : public BaseAggregateRun {
   }
 
   explicit CountNonNullAggregateRun(const ColumnIterable& column_iterable) {
-    resize(column_iterable.table.row_count());
+    resize(column_iterable.table->row_count());
 
-    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const auto offset) {
+    auto offset = size_t{0};
+    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const RowID& row_id) {
       if (!segment_position.is_null()) {
         values[offset] = 1;
       }
+      ++offset;
     });
   }
 
@@ -267,12 +250,14 @@ struct CountDistinctAggregateRun : public BaseAggregateRun {
   }
 
   explicit CountDistinctAggregateRun(const ColumnIterable& column_iterable) {
-    resize(column_iterable.table.row_count());
+    resize(column_iterable.table->row_count());
 
-    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const auto offset) {
+    auto offset = size_t{0};
+    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const RowID& row_id) {
       if (!segment_position.is_null()) {
         sets[offset].insert(segment_position.value());
       }
+      ++offset;
     });
   }
 
@@ -322,12 +307,14 @@ struct AvgAggregateRun : public BaseAggregateRun {
   }
 
   explicit AvgAggregateRun(const ColumnIterable& column_iterable) {
-    resize(column_iterable.table.row_count());
+    resize(column_iterable.table->row_count());
 
-    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const auto offset) {
+    auto offset = size_t{0};
+    column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const RowID& row_id) {
       if (!segment_position.is_null()) {
         sets[offset].emplace_back(segment_position.value());
       }
+      ++offset;
     });
   }
 
@@ -375,7 +362,7 @@ struct AvgAggregateRun : public BaseAggregateRun {
 };
 
 inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates(
-    const Table& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions, const bool has_group_by_columns) {
+    const std::shared_ptr<const Table>& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions, const bool has_group_by_columns) {
 
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(aggregate_column_definitions.size());
 
@@ -383,13 +370,13 @@ inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates
     const auto& aggregate_column_definition = aggregate_column_definitions[aggregate_idx];
 
     if (aggregate_column_definition.function == AggregateFunction::CountRows) {
-      aggregates[aggregate_idx] = std::make_unique<CountRowsAggregateRun>(table.row_count());
+      aggregates[aggregate_idx] = std::make_unique<CountRowsAggregateRun>(table->row_count());
       continue;
     }
 
     const auto source_column_id = *aggregate_column_definition.column;
 
-    resolve_data_type(table.column_data_type(*aggregate_column_definition.column), [&](const auto data_type_t) {
+    resolve_data_type(table->column_data_type(*aggregate_column_definition.column), [&](const auto data_type_t) {
       using SourceColumnDataType = typename decltype(data_type_t)::type;
 
       ColumnIterable column_iterable{table, source_column_id};
@@ -430,7 +417,7 @@ inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates
   }
 
   // Create pseudo-group for special behaviour of no group-by columns and empty table :(
-  if (!has_group_by_columns && table.row_count() == 0) {
+  if (!has_group_by_columns && table->row_count() == 0) {
     for (auto& aggregate : aggregates) {
       aggregate->resize(1);
     }
