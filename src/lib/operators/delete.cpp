@@ -50,10 +50,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
     for (auto row_id : *pos_list) {
       const auto& referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
-      if (!referenced_chunk) {
-        _mark_as_failed();
-        return nullptr;
-      }
+      Assert(referenced_chunk, "Referenced chunks are not allowed to be nullpointers");
 
       // Scope for the lock on the MVCC data
       {
