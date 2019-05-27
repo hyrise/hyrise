@@ -88,6 +88,7 @@ public:
   std::shared_ptr<AbstractCandidate> candidate;
   float desirability = 0.0f;
   float cost = 0.0f;
+  AbstractCandidateAssessment(std::shared_ptr<AbstractCandidate> candidate, float desirability, float cost = 0.0f) : candidate(candidate), desirability(desirability), cost(cost) {}
 };
 
 class IndexCandidateAssessment : public AbstractCandidateAssessment {
