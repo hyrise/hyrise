@@ -17,6 +17,9 @@ class CreateView : public AbstractReadOnlyOperator {
 
   const std::string name() const override;
 
+  const std::string& view_name() const;
+  bool if_not_exists() const;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
