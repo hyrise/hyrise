@@ -315,9 +315,9 @@ std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_
   const auto input_node_column_id = input_node->find_column_id(*expression);
   if (input_node_column_id) {
     // The correct nullable information is set when the JitOperatorWrapper is executed with access to the input table.
-    const bool is_nullabe = true;
+    const bool guaranteed_non_null = false;
     const auto tuple_entry =
-        jit_source.add_input_column(expression->data_type(), is_nullabe, *input_node_column_id, use_actual_value);
+        jit_source.add_input_column(expression->data_type(), guaranteed_non_null, *input_node_column_id, use_actual_value);
     return std::make_shared<JitExpression>(tuple_entry);
   }
 

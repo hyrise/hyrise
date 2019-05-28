@@ -19,7 +19,7 @@ TEST_F(JitReadWriteTupleTest, CreateOutputTable) {
 
   for (const auto& column_definition : column_definitions) {
     write_tuples->add_output_column_definition(
-        column_definition.name, JitTupleEntry(column_definition.data_type, column_definition.nullable, 0));
+        column_definition.name, JitTupleEntry(column_definition.data_type, !column_definition.nullable, 0));
   }
 
   auto output_table = write_tuples->create_output_table(Table(TableColumnDefinitions{}, TableType::Data, 1));
@@ -77,8 +77,8 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   read_tuples->set_next_operator(write_tuples);
 
   // Add all input table columns to pipeline
-  auto a_tuple_entry = read_tuples->add_input_column(DataType::Int, true, ColumnID{0});
-  auto b_tuple_entry = read_tuples->add_input_column(DataType::Float, true, ColumnID{1});
+  auto a_tuple_entry = read_tuples->add_input_column(DataType::Int, false, ColumnID{0});
+  auto b_tuple_entry = read_tuples->add_input_column(DataType::Float, false, ColumnID{1});
   write_tuples->add_output_column_definition("a", a_tuple_entry);
   write_tuples->add_output_column_definition("b", b_tuple_entry);
 
@@ -167,8 +167,8 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
 
   JitReadTuples read_tuples;
   bool use_actual_value{false};
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_actual_value);
-  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1}, use_actual_value);
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, false, ColumnID{0}, use_actual_value);
+  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, false, ColumnID{1}, use_actual_value);
   AllTypeVariant value{1};
   auto literal_tuple_entry = read_tuples.add_literal_value(value);
 
@@ -225,8 +225,8 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkUpdatesPossibleValueIDExpressions) {
 
   // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
-  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, true, ColumnID{1});
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, false, ColumnID{0});
+  auto b_tuple_entry = read_tuples.add_input_column(DataType::Float, false, ColumnID{1});
   AllTypeVariant value{1234};
   auto literal_tuple_entry = read_tuples.add_literal_value(value);
   auto parameter_tuple_entry = read_tuples.add_parameter(DataType::Double, ParameterID{1});
@@ -271,7 +271,7 @@ TEST_F(JitReadWriteTupleTest, BeforeChunkCanUseSpecializedFunction) {
 
   // Create JitReadTuples operator and JitExpressions
   JitReadTuples read_tuples;
-  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+  auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, false, ColumnID{0});
 
   // Create filter expression
   // clang-format off
@@ -365,7 +365,7 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
   {
     // Load actual value but not value id
     JitReadTuples read_tuples;
-    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, false, ColumnID{0});
     read_tuples.set_next_operator(std::make_shared<JitWriteTuples>());
 
     JitRuntimeContext context;
@@ -385,7 +385,7 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
     // Load value id but not actual value
     JitReadTuples read_tuples;
     bool use_actual_value{false};
-    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_actual_value);
+    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, false, ColumnID{0}, use_actual_value);
     // clang-format off
     auto expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
                                                       JitExpressionType::IsNull,
@@ -410,9 +410,9 @@ TEST_F(JitReadWriteTupleTest, ReadActualValueAndValueIDFromColumn) {
   {
     // Load actual value and value id
     JitReadTuples read_tuples;
-    read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
+    read_tuples.add_input_column(DataType::Int, false, ColumnID{0});
     bool use_actual_value{false};
-    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, true, ColumnID{0}, use_actual_value);
+    const auto a_tuple_entry = read_tuples.add_input_column(DataType::Int, false, ColumnID{0}, use_actual_value);
     // clang-format off
     auto expression = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_entry),
                                                       JitExpressionType::IsNull,
@@ -438,15 +438,15 @@ TEST_F(JitReadWriteTupleTest, UpdateNullableInformationBeforeSpecialization) {
   JitReadTuples read_tuples;
   JitWriteTuples write_tuples;
 
-  auto tuple_entry_a = read_tuples.add_input_column(DataType::Int, true, ColumnID{0});
-  auto tuple_entry_b = read_tuples.add_input_column(DataType::Long, true, ColumnID{1});
+  auto tuple_entry_a = read_tuples.add_input_column(DataType::Int, false, ColumnID{0});
+  auto tuple_entry_b = read_tuples.add_input_column(DataType::Long, false, ColumnID{1});
 
   write_tuples.add_output_column_definition("a", tuple_entry_a);
   write_tuples.add_output_column_definition("b", tuple_entry_b);
 
   auto& input_columns = read_tuples.input_columns();
-  ASSERT_TRUE(input_columns[0].tuple_entry.is_nullable);
-  ASSERT_TRUE(input_columns[1].tuple_entry.is_nullable);
+  ASSERT_FALSE(input_columns[0].tuple_entry.guaranteed_non_null);
+  ASSERT_FALSE(input_columns[1].tuple_entry.guaranteed_non_null);
 
   TableColumnDefinitions column_definitions = {{"a", DataType::Int,  false},
                                                {"b", DataType::Long, true}};
@@ -458,15 +458,15 @@ TEST_F(JitReadWriteTupleTest, UpdateNullableInformationBeforeSpecialization) {
   write_tuples.before_specialization(*input_table, tuple_nullable_information);
 
   // Nullable information is updated in the result entries ...
-  ASSERT_FALSE(input_columns[0].tuple_entry.is_nullable);
-  ASSERT_TRUE(input_columns[1].tuple_entry.is_nullable);
+  ASSERT_TRUE(input_columns[0].tuple_entry.guaranteed_non_null);
+  ASSERT_FALSE(input_columns[1].tuple_entry.guaranteed_non_null);
 
   auto output_table = write_tuples.create_output_table(*input_table);
   ASSERT_EQ(output_table->column_definitions(), column_definitions);
 
   // ... and the tuple_nullable_information vector
-  EXPECT_FALSE(tuple_nullable_information[0]);
-  EXPECT_TRUE(tuple_nullable_information[1]);
+  EXPECT_TRUE(tuple_nullable_information[0]);
+  EXPECT_FALSE(tuple_nullable_information[1]);
 }
 
 }  // namespace opossum

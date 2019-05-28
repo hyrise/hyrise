@@ -13,10 +13,10 @@ namespace opossum {
 #define JIT_EXPRESSION_COMPUTE_CASE(r, types)                                 \
   case JIT_GET_ENUM_VALUE(0, types): {                                        \
     const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);        \
-    if (!result_entry.is_nullable || result) {                                \
+    if (result_entry.guaranteed_non_null || result) {                                \
       result_entry.set<JIT_GET_DATA_TYPE(0, types)>(result.value(), context); \
     }                                                                         \
-    if (result_entry.is_nullable) {                                           \
+    if (!result_entry.guaranteed_non_null) {                                           \
       result_entry.set_is_null(!result, context);                             \
     }                                                                         \
     break;                                                                    \
@@ -119,10 +119,10 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
   if (!jit_expression_is_binary(expression_type)) {
     switch (expression_type) {
       case JitExpressionType::Not:
-        return std::make_pair(DataType::Bool, left_tuple_entry.is_nullable);
+        return std::make_pair(DataType::Bool, left_tuple_entry.guaranteed_non_null);
       case JitExpressionType::IsNull:
       case JitExpressionType::IsNotNull:
-        return std::make_pair(DataType::Bool, false);
+        return std::make_pair(DataType::Bool, true);
       default:
         Fail("This non-binary expression type is not supported.");
     }
@@ -166,9 +166,9 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
       Fail("This binary expression type is not supported.");
   }
 
-  const bool nullable = left_tuple_entry.is_nullable || right_tuple_entry.is_nullable ||
-                        expression_type == JitExpressionType::Division || expression_type == JitExpressionType::Modulo;
-  return std::make_pair(result_data_type, nullable);
+  const bool guaranteed_non_null = left_tuple_entry.guaranteed_non_null && right_tuple_entry.guaranteed_non_null &&
+                        expression_type != JitExpressionType::Division && expression_type != JitExpressionType::Modulo;
+  return std::make_pair(result_data_type, guaranteed_non_null);
 }
 
 template <typename ResultValueType>
@@ -189,7 +189,7 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
     return result_entry.get<ResultValueType>(context);
 
   } else if (expression_type == JitExpressionType::Value) {
-    if (result_entry.is_nullable && _variant.is_null) {
+    if (!result_entry.guaranteed_non_null && _variant.is_null) {
       return std::nullopt;
     }
     return _variant.get<ResultValueType>();
@@ -283,21 +283,21 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
 }
 
 void JitExpression::update_nullable_information(std::vector<bool>& tuple_nullable_information) {
-  if (expression_type == JitExpressionType::Value) {
-    return;
-  }
   if (expression_type == JitExpressionType::Column) {
-    result_entry.is_nullable = tuple_nullable_information[result_entry.tuple_index];
+    result_entry.guaranteed_non_null = tuple_nullable_information[result_entry.tuple_index];
     return;
   }
 
-  left_child->update_nullable_information(tuple_nullable_information);
-  if (jit_expression_is_binary(expression_type)) {
-    right_child->update_nullable_information(tuple_nullable_information);
+  if (expression_type != JitExpressionType::Value) {
+    left_child->update_nullable_information(tuple_nullable_information);
+    if (jit_expression_is_binary(expression_type)) {
+      right_child->update_nullable_information(tuple_nullable_information);
+    }
+
+    result_entry.guaranteed_non_null = _compute_result_type().second;
   }
 
-  result_entry.is_nullable = _compute_result_type().second;
-  tuple_nullable_information[result_entry.tuple_index] = result_entry.is_nullable;
+  tuple_nullable_information[result_entry.tuple_index] = result_entry.guaranteed_non_null;
 }
 
 // Instantiate compute function for every jit data types

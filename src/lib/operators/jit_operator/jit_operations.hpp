@@ -182,7 +182,7 @@ std::optional<ResultValueType> jit_compute(const T& op_func, const JitExpression
   const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs)
       -> std::optional<decltype(op_func(typed_lhs.value(), typed_rhs.value()), ResultValueType{})> {
     // Handle NULL values and return NULL if either input is NULL.
-    if ((left_entry.is_nullable && !typed_lhs) || (right_entry.is_nullable && !typed_rhs)) {
+    if ((!left_entry.guaranteed_non_null && !typed_lhs) || (!right_entry.guaranteed_non_null && !typed_rhs)) {
       return std::nullopt;
     }
 
@@ -296,7 +296,7 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
   }
 
   // Since we are updating the aggregate with a valid value, the aggregate is no longer NULL
-  if (rhs.is_nullable) {
+  if (!rhs.guaranteed_non_null) {
     rhs.set_is_null(false, rhs_index, context);
   }
 
