@@ -16,14 +16,26 @@
 
 namespace opossum {
 
-Chunk::Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data,
+Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc)
-    : _segments(segments), _mvcc_data(mvcc_data) {
+    : _segments(std::move(segments)), _mvcc_data(mvcc_data) {
+  Assert(!_segments.empty(),
+         "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
+
 #if HYRISE_DEBUG
-  const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
-  Assert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
-  for (const auto& segment : segments) {
-    Assert(segment->size() == chunk_size, "Segments don't have the same length");
+  const auto chunk_size = _segments.empty() ? 0u : _segments[0]->size();
+  const auto is_reference_chunk =
+      !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
+
+  DebugAssert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
+  for (const auto& segment : _segments) {
+    DebugAssert(
+        !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
+        "Chunks containing ReferenceSegments should not contains MvccData. They implicitly use the MvccData of the "
+        "referenced Table");
+    DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
+    DebugAssert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
+                "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments");
   }
 #endif
 

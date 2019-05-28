@@ -112,5 +112,15 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const float right_distinct_count);
 
   /** @} */
+
+
+  /**
+   * Helper
+   * @{
+   */
+  static std::shared_ptr<TableStatistics> prune_column_statistics(const std::shared_ptr<TableStatistics>& table_statistics,
+  const std::vector<ColumnID>& pruned_column_ids);
+
+  /** @} */
 };
 }  // namespace opossum

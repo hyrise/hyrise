@@ -134,7 +134,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::Mock: {
       const auto mock_node = std::dynamic_pointer_cast<MockNode>(lqp);
       Assert(mock_node->table_statistics(), "Cannot return statistics of MockNode that was not assigned statistics");
-      output_table_statistics = mock_node->table_statistics();
+      output_table_statistics = prune_column_statistics(mock_node->table_statistics(), mock_node->pruned_column_ids());
     } break;
 
     case LQPNodeType::Predicate: {
@@ -155,7 +155,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
       const auto stored_table = StorageManager::get().get_table(stored_table_node->table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
-      output_table_statistics = stored_table->table_statistics();
+      output_table_statistics = prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
     } break;
 
     case LQPNodeType::Validate: {
@@ -875,6 +875,37 @@ std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate
   const auto match_count = HistogramCountType{left_height * left_match_ratio * right_density};
 
   return {match_count, HistogramCountType{right_distinct_count}};
+}
+
+std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(const std::shared_ptr<TableStatistics>& table_statistics,
+                                                                const std::vector<ColumnID>& pruned_column_ids) {
+
+  if (pruned_column_ids.empty()) {
+    return table_statistics;
+  }
+
+  /**
+   * Prune `pruned_column_ids` from the statistics
+   */
+
+  auto output_column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>(
+  table_statistics->column_statistics.size() - pruned_column_ids.size());
+
+  auto pruned_column_ids_iter = pruned_column_ids.begin();
+
+  for (auto input_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+       input_column_id < table_statistics->column_statistics.size(); ++input_column_id) {
+    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
+    if (pruned_column_ids_iter != pruned_column_ids.end() && input_column_id == *pruned_column_ids_iter) {
+      ++pruned_column_ids_iter;
+      continue;
+    }
+
+    output_column_statistics[output_column_id] = table_statistics->column_statistics[input_column_id];
+    ++output_column_id;
+  }
+
+  return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
 }
 
 }  // namespace opossum

@@ -19,7 +19,7 @@ class PredicateNode;
 class Table;
 
 /**
- * This rule determines which chunks can be excluded from table scans based on
+ * This rule determines which chunks can be pruned from table scans based on
  * the predicates present in the LQP and stores that information in the stored
  * table nodes.
  */
@@ -31,7 +31,7 @@ class ChunkPruningRule : public AbstractRule {
 
  protected:
   std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
-                                          const StoredTableNode& stored_table_node) const;
+                                          const std::shared_ptr<StoredTableNode>& stored_table_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
   bool _can_prune(const BaseColumnStatistics& base_column_statistics, const PredicateCondition predicate_condition,

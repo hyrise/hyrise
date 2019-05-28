@@ -5,10 +5,16 @@
 
 namespace opossum {
 
+class Chunk;
 class Table;
 
 /**
- * Generate Pruning Filter for all immutable Chunks in this Table
+ * Generate Pruning Filters for an immutable Chunk
+ */
+void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk);
+
+/**
+ * Generate Pruning Filters for all immutable Chunks in this Table
  */
 void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table);
 

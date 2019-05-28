@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+class Table;
+
 /**
  * We use multiple vectors rather than a vector of structs for ease-of-use with STL library functions.
  */

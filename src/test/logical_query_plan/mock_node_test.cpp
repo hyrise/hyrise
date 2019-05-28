@@ -28,8 +28,11 @@ class MockNodeTest : public ::testing::Test {
 };
 
 TEST_F(MockNodeTest, Description) {
-  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed']");
-  EXPECT_EQ(_mock_node_b->description(), "[MockNode 'mock_name']");
+  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] pruned: 0/4 columns");
+  EXPECT_EQ(_mock_node_b->description(), "[MockNode 'mock_name'] pruned: 0/2 columns");
+
+  _mock_node_a->set_pruned_column_ids({ColumnID{2}});
+  EXPECT_EQ(_mock_node_a->description(), "[MockNode 'Unnamed'] pruned: 1/4 columns");
 }
 
 TEST_F(MockNodeTest, OutputColumnExpression) {
@@ -42,6 +45,11 @@ TEST_F(MockNodeTest, OutputColumnExpression) {
   ASSERT_EQ(_mock_node_b->column_expressions().size(), 2u);
   EXPECT_EQ(*_mock_node_b->column_expressions().at(0), *lqp_column_({_mock_node_b, ColumnID{0}}));
   EXPECT_EQ(*_mock_node_b->column_expressions().at(1), *lqp_column_({_mock_node_b, ColumnID{1}}));
+
+  _mock_node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{3}});
+  EXPECT_EQ(_mock_node_a->column_expressions().size(), 2u);
+  EXPECT_EQ(*_mock_node_a->column_expressions().at(0), *lqp_column_({_mock_node_a, ColumnID{1}}));
+  EXPECT_EQ(*_mock_node_a->column_expressions().at(1), *lqp_column_({_mock_node_a, ColumnID{2}}));
 }
 
 TEST_F(MockNodeTest, Equals) {
@@ -52,7 +60,12 @@ TEST_F(MockNodeTest, Equals) {
   EXPECT_EQ(*_mock_node_b, *same_mock_node_b);
 }
 
-TEST_F(MockNodeTest, Copy) { EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy()); }
+TEST_F(MockNodeTest, Copy) {
+  EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy());
+
+  _mock_node_b->set_pruned_column_ids({ColumnID{1}});
+  EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy());
+}
 
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
 

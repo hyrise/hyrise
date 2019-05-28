@@ -47,7 +47,7 @@ class Chunk : private Noncopyable {
   // segments do not use the table's max_chunk_size at all.
   static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
 
-  Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
+  Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   // returns whether new rows can be appended to this Chunk
