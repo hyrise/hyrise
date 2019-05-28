@@ -32,6 +32,7 @@
 #include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_proxy.hpp"
+#include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
@@ -548,24 +549,60 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
   EXPECT_EQ(*projection_op->expressions[0], *PQPColumnExpression::from_table(*table_int_float, "a"));
 }
 
-TEST_F(LQPTranslatorTest, JoinNode) {
+TEST_F(LQPTranslatorTest, JoinNodeToJoinHash) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float2_b, int_float_b), int_float_node, int_float2_node);
+  const auto op = LQPTranslator{}.translate_node(join_node);
+
+  /**
+   * Check PQP - for a inner-equi join, JoinHash should be used.
+   */
+  const auto join_op = std::dynamic_pointer_cast<JoinHash>(op);
+  ASSERT_TRUE(join_op);
+  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{1}, ColumnID{1}));
+  EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::Equals);
+  EXPECT_EQ(join_op->mode(), JoinMode::Inner);
+}
+
+TEST_F(LQPTranslatorTest, JoinNodeToJoinSortMerge) {
   /**
    * Build LQP and translate to PQP
    */
   auto join_node =
-      JoinNode::make(JoinMode::FullOuter, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
+      JoinNode::make(JoinMode::Inner, less_than_(int_float_b, int_float2_b), int_float_node, int_float2_node);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
-   * Check PQP
+   * Check PQP - JoinHash doesn't support non-equi joins, thus we fall back to JoinSortMerge
    */
   // TODO(Sven): Switched to JoinProxy for testing
   //  const auto join_op = std::dynamic_pointer_cast<JoinSortMerge>(op);
   const auto join_op = std::dynamic_pointer_cast<JoinProxy>(op);
   ASSERT_TRUE(join_op);
-  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{1}, ColumnID{0}));
-  EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::Equals);
-  EXPECT_EQ(join_op->mode(), JoinMode::FullOuter);
+  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{1}, ColumnID{1}));
+  EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::LessThan);
+  EXPECT_EQ(join_op->mode(), JoinMode::Inner);
+}
+
+TEST_F(LQPTranslatorTest, JoinNodeToJoinNestedLoop) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  auto join_node =
+      JoinNode::make(JoinMode::Inner, less_than_(int_float_a, int_float2_b), int_float_node, int_float2_node);
+  const auto op = LQPTranslator{}.translate_node(join_node);
+
+  /**
+   * Check PQP - Neither JoinHash nor JoinSortMerge support non-equi joins on different column types. So we fall back to
+   * JoinNestedLoop.
+   */
+  const auto join_op = std::dynamic_pointer_cast<JoinNestedLoop>(op);
+  ASSERT_TRUE(join_op);
+  EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{0}, ColumnID{1}));
+  EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::LessThan);
+  EXPECT_EQ(join_op->mode(), JoinMode::Inner);
 }
 
 TEST_F(LQPTranslatorTest, ShowTablesNode) {

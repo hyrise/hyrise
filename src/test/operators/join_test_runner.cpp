@@ -167,10 +167,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
-    // TODO(anybody) include FrameOfReferenceEncoding once #1662 is resolved
     const auto all_encoding_types =
-        std::vector{EncodingType::Unencoded, EncodingType::RunLength, EncodingType::Dictionary,
-                    EncodingType::FixedStringDictionary, EncodingType::LZ4};
+        std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::FrameOfReference,
+                    EncodingType::FixedStringDictionary, EncodingType::RunLength, EncodingType::LZ4};
 
     // clang-format off
     JoinTestConfiguration default_configuration{

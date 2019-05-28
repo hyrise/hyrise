@@ -11,6 +11,7 @@ class CostModelCalibrationTableGenerator {
                                               const ChunkOffset chunk_size);
 
   void load_calibration_tables() const;
+  void generate_calibration_tables() const;
   void load_tpch_tables(const float scale_factor, const EncodingType encoding = EncodingType::Dictionary) const;
 
  private:

@@ -340,11 +340,11 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
   EXPECT_EQ(stream.str(), R"([0] [Predicate] a > 5
  \_[1] [Join] Mode: Inner [a = a]
     \_[2] [UnionNode] Mode: UnionPositions
-    |  \_[3] [Predicate] TableScan: a = 5
-    |  |  \_[4] [StoredTable] Name: 'int_int'
-    |  \_[5] [Predicate] TableScan: a = 6
+    |  \_[3] [Predicate] a = 5
+    |  |  \_[4] [StoredTable] Name: 'int_int' pruned: 0/1 chunk(s), 0/2 column(s)
+    |  \_[5] [Predicate] a = 6
     |     \_Recurring Node --> [4]
-    \_[6] [StoredTable] Name: 'int_int_int'
+    \_[6] [StoredTable] Name: 'int_int_int' pruned: 0/1 chunk(s), 0/3 column(s)
 )");
 }
 

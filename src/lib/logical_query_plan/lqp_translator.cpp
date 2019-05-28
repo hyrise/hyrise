@@ -1,5 +1,8 @@
 #include "lqp_translator.hpp"
 
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/tuple.hpp>
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -139,9 +142,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-  const auto get_table = std::make_shared<GetTable>(stored_table_node->table_name);
-  get_table->set_excluded_chunk_ids(stored_table_node->excluded_chunk_ids());
-  return get_table;
+  return std::make_shared<GetTable>(stored_table_node->table_name, stored_table_node->pruned_chunk_ids(),
+                                    stored_table_node->pruned_column_ids());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
@@ -197,7 +199,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   std::vector<AllTypeVariant> right_values2 = {};
   if (value2_variant) right_values2.emplace_back(*value2_variant);
 
-  auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+  const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto table_name = stored_table_node->table_name;
   const auto table = StorageManager::get().get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
@@ -361,16 +363,31 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   //return std::make_shared<JoinProxy>(input_left_operator, input_right_operator, join_node->join_mode,
   //                                   operator_join_predicate->column_ids, primary_join_predicate, std::move(secondary_join_predicates));
 
-  // TODO(Sven): These two conditions should be part of an Optimizer Rule.
-  // Otherwise it will be hard for the Cost Model to handle Joins
-  if (primary_join_predicate.predicate_condition == PredicateCondition::Equals &&
-      join_node->join_mode != JoinMode::FullOuter) {
-    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
-                                      primary_join_predicate, std::move(secondary_join_predicates));
-  } else {
-    return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
-                                           primary_join_predicate, std::move(secondary_join_predicates));
-  }
+  auto join_operator = std::shared_ptr<AbstractOperator>{};
+
+  const auto left_data_type = join_node->join_predicates().front()->arguments[0]->data_type();
+  const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
+
+  // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
+  // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order
+  constexpr auto JOIN_OPERATOR_PREFERENCE_ORDER =
+      hana::to_tuple(hana::tuple_t<JoinHash, JoinSortMerge, JoinNestedLoop>);
+
+  boost::hana::for_each(JOIN_OPERATOR_PREFERENCE_ORDER, [&](const auto join_operator_t) {
+    using JoinOperator = typename decltype(join_operator_t)::type;
+
+    if (join_operator) return;
+
+    if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                               right_data_type, !secondary_join_predicates.empty())) {
+      join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
+                                                     primary_join_predicate, std::move(secondary_join_predicates));
+    }
+  });
+
+  Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
+
+  return join_operator;
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(

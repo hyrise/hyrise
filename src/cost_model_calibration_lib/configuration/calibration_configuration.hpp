@@ -9,11 +9,19 @@
 namespace opossum {
 
 struct CalibrationConfiguration {
+  // TBL-based table creation
   std::vector<CalibrationTableSpecification> table_specifications;
+
+  // On-the-fly table creation
+  bool table_generation;
+  std::string table_generation_name_prefix;
+  std::vector<size_t> table_generation_table_sizes;
+
   std::string output_path;
   std::string tpch_output_path;
   size_t calibration_runs;
   std::vector<EncodingType> encodings;
+  bool calibrate_vector_compression_types;
   std::vector<DataType> data_types;
   std::vector<float> selectivities;
   bool use_scan;
@@ -26,7 +34,10 @@ inline void to_json(nlohmann::json& j, const CalibrationConfiguration& s) {
                      {"tpch_output_path", s.tpch_output_path},
                      {"calibration_runs", s.calibration_runs},
                      {"table_specifications", s.table_specifications},
+                     {"table_name_prefix", s.table_generation_name_prefix},
+                     {"table_generation_table_sizes", s.table_generation_table_sizes},
                      {"encodings", s.encodings},
+                     {"calibrate_vector_compression_types", s.calibrate_vector_compression_types},
                      {"data_types", s.data_types},
                      {"selectivities", s.selectivities},
                      {"use_scan", s.use_scan},
@@ -35,10 +46,24 @@ inline void to_json(nlohmann::json& j, const CalibrationConfiguration& s) {
 }
 
 inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configuration) {
+  if (j.find("table_generation") != j.end()) {
+    configuration.table_generation = true;
+    const auto table_generation_config = j.at("table_generation");
+    configuration.table_generation_name_prefix = table_generation_config.at("table_name_prefix");
+
+    const auto table_sizes = table_generation_config.at("table_sizes").get<std::vector<size_t>>();
+    for (const auto table_size : table_sizes) {
+      configuration.table_generation_table_sizes.push_back(table_size);
+    }
+  } else {
+    configuration.table_generation = false;
+  }
+
   configuration.output_path = j.value("output_path", "./calibration_results.json");
   configuration.tpch_output_path = j.value("tpch_output_path", "./tpch_calibration_results.json");
   configuration.calibration_runs = j.value("calibration_runs", 1000u);
   configuration.table_specifications = j.value("table_specifications", std::vector<CalibrationTableSpecification>{});
+  configuration.calibrate_vector_compression_types = j.value("calibrate_vector_compression_types", false);
   configuration.use_scan = j.value("use_scan", true);
   configuration.run_tpch = j.value("run_tpch", false);
 

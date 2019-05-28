@@ -38,6 +38,7 @@ void CostModelCalibration::run_tpch6_costing() const {
 void CostModelCalibration::run() const {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100'000};
   tableGenerator.load_calibration_tables();
+  tableGenerator.generate_calibration_tables();
   _calibrate();
 
   std::cout << "Finished Calibration" << std::endl;

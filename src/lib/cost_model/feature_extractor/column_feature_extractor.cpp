@@ -6,7 +6,9 @@
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 namespace opossum {
 namespace cost_model {
@@ -36,13 +38,22 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
                                                   {EncodingType::FrameOfReference, 0},
                                                   {EncodingType::RunLength, 0}};
 
+  std::map<VectorCompressionType, size_t> vector_compression_mapping{{VectorCompressionType::FixedSizeByteAligned, 0},
+                                                  {VectorCompressionType::SimdBp128, 0}};
+
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
     const auto segment = chunk->get_segment(column_id);
     const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
 
-    encoding_mapping[encoding_reference_pair.first] += 1;
-    if (encoding_reference_pair.second) {
+    const auto segment_encoding_spec = encoding_reference_pair.first;
+    const auto is_reference_segment = encoding_reference_pair.second;
+
+    encoding_mapping[segment_encoding_spec.encoding_type] += 1;
+    if (segment_encoding_spec.vector_compression_type) {
+      vector_compression_mapping[*segment_encoding_spec.vector_compression_type] += 1;
+    }
+    if (is_reference_segment) {
       number_of_reference_segments++;
     }
   }
@@ -59,6 +70,11 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
       encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_FrameOfReference_percentage =
       encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
+  column_features.column_segment_vector_compression_FSBA_percentage =
+      vector_compression_mapping[VectorCompressionType::FixedSizeByteAligned] / static_cast<float>(chunk_count);
+  column_features.column_segment_vector_compression_SimdBp128_percentage =
+      vector_compression_mapping[VectorCompressionType::SimdBp128] / static_cast<float>(chunk_count);
+
   column_features.column_is_reference_segment = number_of_reference_segments > 0;
   column_features.column_data_type = column_expression->data_type();
   // TODO(Sven): this returns the size of the original, stored, unfiltered column...
@@ -69,29 +85,32 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
   return column_features;
 }
 
-std::pair<EncodingType, bool> ColumnFeatureExtractor::_get_encoding_type_for_segment(
+std::pair<SegmentEncodingSpec, bool> ColumnFeatureExtractor::_get_encoding_type_for_segment(
     const std::shared_ptr<BaseSegment>& segment) {
   const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
 
   // Dereference ReferenceSegment for encoding feature
   // TODO(Sven): add test for empty referenced table
   // TODO(Sven): add test to check for encoded, referenced column
+  bool is_reference_segment = false;
+  auto segment_to_encode = segment;  // initialize with passed segment
   if (reference_segment && reference_segment->referenced_table()->chunk_count() > ChunkID{0}) {
+    is_reference_segment = true;
     auto underlying_segment = reference_segment->referenced_table()
                                   ->get_chunk(ChunkID{0})
                                   ->get_segment(reference_segment->referenced_column_id());
-    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(underlying_segment);
-    if (encoded_scan_segment) {
-      return std::make_pair(encoded_scan_segment->encoding_type(), true);
-    }
-    return std::make_pair(EncodingType::Unencoded, true);
-  } else {
-    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-    if (encoded_scan_segment) {
-      return std::make_pair(encoded_scan_segment->encoding_type(), false);
-    }
-    return std::make_pair(EncodingType::Unencoded, false);
+    segment_to_encode = underlying_segment;
   }
+
+  auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment_to_encode);
+  if (encoded_scan_segment) {
+    auto segment_encoding_spec = SegmentEncodingSpec{encoded_scan_segment->encoding_type()};
+    if (encoded_scan_segment->compressed_vector_type()) {
+      segment_encoding_spec.vector_compression_type = parent_vector_compression_type(*encoded_scan_segment->compressed_vector_type());
+    }
+    return std::make_pair(segment_encoding_spec, is_reference_segment);
+  }
+  return std::make_pair(SegmentEncodingSpec{EncodingType::Unencoded}, is_reference_segment);
 }
 
 size_t ColumnFeatureExtractor::_get_memory_usage_for_column(const std::shared_ptr<const Table>& table,
