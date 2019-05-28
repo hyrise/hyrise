@@ -1858,6 +1858,11 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM int_float LIMIT 1 OFFSET 1;"), InvalidInputException);
+  EXPECT_THROW(compile_query("INSERT INTO no_such_table (a) VALUES (1);"), InvalidInputException);
+  EXPECT_THROW(compile_query("DELETE FROM no_such_table"), InvalidInputException);
+  EXPECT_THROW(compile_query("DELETE FROM no_such_table WHERE a = 1"), InvalidInputException);
+  EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1"), InvalidInputException);
+  EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1 WHERE a = 1"), InvalidInputException);
 }
 
 }  // namespace opossum

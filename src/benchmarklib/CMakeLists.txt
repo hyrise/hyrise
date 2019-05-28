@@ -13,20 +13,22 @@ set(
 
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp
-    tpch/tpch_query_generator.cpp
-    tpch/tpch_query_generator.hpp
+    tpch/tpch_benchmark_item_runner.cpp
+    tpch/tpch_benchmark_item_runner.hpp
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
 
     abstract_benchmark_table_generator.hpp
     abstract_table_generator.cpp
     abstract_table_generator.hpp
-    abstract_query_generator.hpp
-    abstract_query_generator.cpp
+    abstract_benchmark_item_runner.hpp
+    abstract_benchmark_item_runner.cpp
     benchmark_config.cpp
     benchmark_config.hpp
     benchmark_runner.cpp
     benchmark_runner.hpp
+    benchmark_sql_executor.cpp
+    benchmark_sql_executor.hpp
     benchmark_state.cpp
     benchmark_state.hpp
     benchmark_table_encoder.cpp
@@ -37,13 +39,13 @@ set(
     encoding_config.hpp
     file_based_table_generator.cpp
     file_based_table_generator.hpp
-    file_based_query_generator.cpp
-    file_based_query_generator.hpp
+    file_based_benchmark_item_runner.cpp
+    file_based_benchmark_item_runner.hpp
     table_generator.cpp
     table_generator.hpp
     random_generator.hpp
-    query_benchmark_result.cpp
-    query_benchmark_result.hpp
+    benchmark_item_result.cpp
+    benchmark_item_result.hpp
 )
 
 
