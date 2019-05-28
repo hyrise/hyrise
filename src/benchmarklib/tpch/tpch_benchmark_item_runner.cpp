@@ -317,8 +317,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       // This is ugly, but at least we can assert that nobody tampered with the string over there.
       static constexpr auto BEGIN_DATE_OFFSET = 156;
       static constexpr auto END_DATE_OFFSET = 192;
-      DebugAssert((std::string_view{&query_15[BEGIN_DATE_OFFSET], 10} == "1996-01-01" &&  // NOLINT
-                   std::string_view{&query_15[END_DATE_OFFSET], 10} == "1996-04-01"),     // NOLINT
+      DebugAssert((std::string_view{&query_15[BEGIN_DATE_OFFSET], 10} == "1996-01-01" &&
+                   std::string_view{&query_15[END_DATE_OFFSET], 10} == "1996-04-01"),
                   "TPC-H 15 string has been modified");
       query_15.replace(BEGIN_DATE_OFFSET, 10, begin_date);
       query_15.replace(END_DATE_OFFSET, 10, end_date);

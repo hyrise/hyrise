@@ -9,6 +9,7 @@
 
 #include "operators/print.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/table.hpp"
 #include "utils/singleton.hpp"
 
@@ -17,9 +18,7 @@ namespace opossum {
 class TransactionContext;
 
 /*
- * SQL REPL Console for Opossum, built on GNU readline. https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
- * Can load TPCC tables via "generate TABLENAME" command, and can execute SQL statements based on
- * opossum::SqlQueryTranslator.
+ * SQL REPL Console for Hyrise, built on GNU readline. https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
  */
 class Console : public Singleton<Console> {
  public:
@@ -157,6 +156,8 @@ class Console : public Singleton<Console> {
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
+  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
+  std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 };
 
 }  // namespace opossum
