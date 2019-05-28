@@ -28,6 +28,8 @@ void JitAggregate::before_specialization(const Table& in_table, std::vector<bool
     groupby_column.hashmap_entry.is_nullable = tuple_nullable_information[groupby_column.tuple_entry.tuple_index];
   }
 
+  // Only update the input information (tuple_entry) to the aggregate function and not the output information
+  // (hashmap_entry), which is already correct.
   for (auto& aggregate_column : _aggregate_columns) {
     aggregate_column.tuple_entry.is_nullable = tuple_nullable_information[aggregate_column.tuple_entry.tuple_index];
   }

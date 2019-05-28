@@ -361,12 +361,20 @@ TEST_F(JitAggregateTest, UpdateNullableInformationBeforeSpecialization) {
   jit_aggregate.add_groupby_column("c", tuple_entry_c);
   jit_aggregate.add_groupby_column("d", tuple_entry_d);
 
+  // An aggregate column contains the information for its input (tuple_entry) and its output (hashmap_entry).
+  // Only the input information has to be updated before specialization.
+  const auto& aggregate_columns = jit_aggregate.aggregate_columns();
+
+  // min(?) is always nullable
+  EXPECT_TRUE(aggregate_columns[0].hashmap_entry.is_nullable);
+  // count(?) is never nullable
+  EXPECT_FALSE(aggregate_columns[1].hashmap_entry.is_nullable);
+
   // Update nullable information
   // a and c are not nullable, b and d are nullable
   std::vector<bool> tuple_nullable_information{false, true, false, true};
   jit_aggregate.before_specialization(*input_table, tuple_nullable_information);
 
-  const auto& aggregate_columns = jit_aggregate.aggregate_columns();
   EXPECT_FALSE(aggregate_columns[0].tuple_entry.is_nullable);
   EXPECT_TRUE(aggregate_columns[1].tuple_entry.is_nullable);
 
