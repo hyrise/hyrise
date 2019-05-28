@@ -74,9 +74,6 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
                                                                                      std::move(position_filter_it)},
           _null_values{null_values} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     IsNullSegmentPosition dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 

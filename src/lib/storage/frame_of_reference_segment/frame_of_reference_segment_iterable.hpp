@@ -73,9 +73,6 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     // End iterator
     explicit Iterator(OffsetValueIteratorT offset_value_it) : Iterator{{}, offset_value_it, {}} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     void increment() {
       ++_offset_value_it;
       ++_null_value_it;
@@ -154,9 +151,6 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
                                  PosList::const_iterator position_filter_it)
         : PointAccessIterator{nullptr, nullptr, nullptr, std::move(position_filter_begin),
                               std::move(position_filter_it)} {}
-
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();

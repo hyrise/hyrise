@@ -54,9 +54,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     explicit Iterator(const ValueID null_value_id, ZsIteratorType attribute_it, ChunkOffset chunk_offset)
         : _null_value_id{null_value_id}, _attribute_it{attribute_it}, _chunk_offset{chunk_offset} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     void increment() {
       ++_attribute_it;
       ++_chunk_offset;
@@ -101,9 +98,6 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
                                                                    std::move(position_filter_it)},
           _null_value_id{null_value_id},
           _attribute_decompressor{attribute_decompressor} {}
-
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();

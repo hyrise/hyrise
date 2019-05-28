@@ -135,9 +135,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
           _data{data},
           _null_values{null_values} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
       const auto value = _data[chunk_offsets.offset_in_poslist];

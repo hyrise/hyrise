@@ -147,9 +147,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                                                                          std::move(position_filter_it)},
           _values_begin_it{values_begin_it} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
@@ -176,9 +173,6 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                                                                   std::move(position_filter_it)},
           _values_begin_it{values_begin_it},
           _null_values_begin_it{null_values_begin_it} {}
-
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();

@@ -69,9 +69,6 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
           _attribute_it{attribute_it},
           _chunk_offset{chunk_offset} {}
 
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
     void increment() {
       ++_attribute_it;
       ++_chunk_offset;
@@ -124,9 +121,6 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
           _dictionary_begin_it{dictionary_begin_it},
           _null_value_id{null_value_id},
           _attribute_decompressor{attribute_decompressor} {}
-
-   private:
-    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
