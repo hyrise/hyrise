@@ -6,8 +6,8 @@ namespace opossum {
 
 JitCompute::JitCompute(const std::shared_ptr<JitExpression>& expression) : expression{expression} {}
 
-void JitCompute::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
-  expression->update_nullable_information(tuple_nullable_information);
+void JitCompute::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
+  expression->update_nullable_information(tuple_non_nullable_information);
 }
 
 std::string JitCompute::description() const {

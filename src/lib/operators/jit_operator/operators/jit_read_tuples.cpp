@@ -93,12 +93,12 @@ std::string JitReadTuples::description() const {
   return desc.str();
 }
 
-void JitReadTuples::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
+void JitReadTuples::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
   // Update the nullable information in the JitExpressions accessing input table values
-  tuple_nullable_information.resize(_num_tuple_values);
+  tuple_non_nullable_information.resize(_num_tuple_values);
   for (auto& input_column : _input_columns) {
     input_column.tuple_entry.guaranteed_non_null = !in_table.column_is_nullable(input_column.column_id);
-    tuple_nullable_information[input_column.tuple_entry.tuple_index] = input_column.tuple_entry.guaranteed_non_null;
+    tuple_non_nullable_information[input_column.tuple_entry.tuple_index] = input_column.tuple_entry.guaranteed_non_null;
   }
 
   // Check for each JitValueIdExpression whether its referenced expression can be actually used with value ids.

@@ -16,7 +16,7 @@ bool is_row_visible(const CommitID our_tid, const TransactionID row_tid, const C
 
 }  // namespace
 
-void JitValidate::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
+void JitValidate::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
   _input_table_type = in_table.type();
 }
 

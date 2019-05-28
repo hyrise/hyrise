@@ -21,17 +21,17 @@ std::string JitAggregate::description() const {
   return desc.str();
 }
 
-void JitAggregate::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
-  // Update the groupby and aggregate column nullable information from the tuple_nullable_information
+void JitAggregate::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
+  // Update the groupby and aggregate column nullable information from the tuple_non_nullable_information
   for (auto& groupby_column : _groupby_columns) {
-    groupby_column.tuple_entry.guaranteed_non_null = tuple_nullable_information[groupby_column.tuple_entry.tuple_index];
-    groupby_column.hashmap_entry.guaranteed_non_null = tuple_nullable_information[groupby_column.tuple_entry.tuple_index];
+    groupby_column.tuple_entry.guaranteed_non_null = tuple_non_nullable_information[groupby_column.tuple_entry.tuple_index];
+    groupby_column.hashmap_entry.guaranteed_non_null = tuple_non_nullable_information[groupby_column.tuple_entry.tuple_index];
   }
 
   // Only update the input information (tuple_entry) to the aggregate function and not the output information
   // (hashmap_entry), which is already correct.
   for (auto& aggregate_column : _aggregate_columns) {
-    aggregate_column.tuple_entry.guaranteed_non_null = tuple_nullable_information[aggregate_column.tuple_entry.tuple_index];
+    aggregate_column.tuple_entry.guaranteed_non_null = tuple_non_nullable_information[aggregate_column.tuple_entry.tuple_index];
   }
 }
 

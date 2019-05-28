@@ -11,7 +11,7 @@ namespace opossum {
  */
 class JitValidate : public AbstractJittable {
  public:
-  void before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) override;
+  void before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) override;
 
   std::string description() const final;
 

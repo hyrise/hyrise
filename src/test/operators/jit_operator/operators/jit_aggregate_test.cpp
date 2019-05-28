@@ -373,8 +373,8 @@ TEST_F(JitAggregateTest, UpdateNullableInformationBeforeSpecialization) {
 
   // Update nullable information
   // a and c are not nullable, b and d are nullable
-  std::vector<bool> tuple_nullable_information{true, false, true, false};
-  jit_aggregate.before_specialization(*input_table, tuple_nullable_information);
+  std::vector<bool> tuple_non_nullable_information{true, false, true, false};
+  jit_aggregate.before_specialization(*input_table, tuple_non_nullable_information);
 
   const auto aggregate_columns = jit_aggregate.aggregate_columns();
   EXPECT_TRUE(aggregate_columns[0].tuple_entry.guaranteed_non_null);

@@ -138,8 +138,8 @@ TEST_F(JitValidateTest, ValidateOnNonReferenceTable) {
 
   // Set table type input in JitValidate
   Table data_table{TableColumnDefinitions{}, TableType::Data};
-  std::vector<bool> tuple_nullable_information;
-  validate->before_specialization(data_table, tuple_nullable_information);
+  std::vector<bool> tuple_non_nullable_information;
+  validate->before_specialization(data_table, tuple_non_nullable_information);
 
   // Link operators to pipeline
   source->set_next_operator(validate);
@@ -169,8 +169,8 @@ TEST_F(JitValidateTest, ValidateOnReferenceTable) {
 
   // Set table type input in JitValidate
   Table reference_table{TableColumnDefinitions{}, TableType::References};
-  std::vector<bool> tuple_nullable_information;
-  validate->before_specialization(reference_table, tuple_nullable_information);
+  std::vector<bool> tuple_non_nullable_information;
+  validate->before_specialization(reference_table, tuple_non_nullable_information);
 
   // Link operators to pipeline
   source->set_next_operator(validate);
@@ -210,12 +210,12 @@ TEST_F(JitValidateTest, UpdateTableTypeInformationBeforeSpecialization) {
   Table reference_table{TableColumnDefinitions{}, TableType::References};
 
   JitValidate jit_validate;
-  std::vector<bool> tuple_nullable_information;
+  std::vector<bool> tuple_non_nullable_information;
 
-  jit_validate.before_specialization(data_table, tuple_nullable_information);
+  jit_validate.before_specialization(data_table, tuple_non_nullable_information);
   EXPECT_EQ(jit_validate.input_table_type(), TableType::Data);
 
-  jit_validate.before_specialization(reference_table, tuple_nullable_information);
+  jit_validate.before_specialization(reference_table, tuple_non_nullable_information);
   EXPECT_EQ(jit_validate.input_table_type(), TableType::References);
 }
 

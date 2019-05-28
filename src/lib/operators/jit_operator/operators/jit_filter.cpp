@@ -8,8 +8,8 @@ JitFilter::JitFilter(const std::shared_ptr<JitExpression>& expression) : express
   DebugAssert(expression->result_entry.data_type == DataType::Bool, "Filter condition must be a boolean");
 }
 
-void JitFilter::before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) {
-  expression->update_nullable_information(tuple_nullable_information);
+void JitFilter::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
+  expression->update_nullable_information(tuple_non_nullable_information);
 }
 
 std::string JitFilter::description() const { return "[Filter] on x = " + expression->to_string(); }

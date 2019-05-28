@@ -282,22 +282,22 @@ std::optional<ResultValueType> JitExpression::compute(JitRuntimeContext& context
   }
 }
 
-void JitExpression::update_nullable_information(std::vector<bool>& tuple_nullable_information) {
+void JitExpression::update_nullable_information(std::vector<bool>& tuple_non_nullable_information) {
   if (expression_type == JitExpressionType::Column) {
-    result_entry.guaranteed_non_null = tuple_nullable_information[result_entry.tuple_index];
+    result_entry.guaranteed_non_null = tuple_non_nullable_information[result_entry.tuple_index];
     return;
   }
 
   if (expression_type != JitExpressionType::Value) {
-    left_child->update_nullable_information(tuple_nullable_information);
+    left_child->update_nullable_information(tuple_non_nullable_information);
     if (jit_expression_is_binary(expression_type)) {
-      right_child->update_nullable_information(tuple_nullable_information);
+      right_child->update_nullable_information(tuple_non_nullable_information);
     }
 
     result_entry.guaranteed_non_null = _compute_result_type().second;
   }
 
-  tuple_nullable_information[result_entry.tuple_index] = result_entry.guaranteed_non_null;
+  tuple_non_nullable_information[result_entry.tuple_index] = result_entry.guaranteed_non_null;
 }
 
 // Instantiate compute function for every jit data types

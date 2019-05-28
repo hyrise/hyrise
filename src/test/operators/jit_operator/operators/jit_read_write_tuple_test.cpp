@@ -189,8 +189,8 @@ TEST_F(JitReadWriteTupleTest, BeforeSpecialization) {
 
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 2u);
 
-  std::vector<bool> tuple_nullable_information;
-  read_tuples.before_specialization(*input_table, tuple_nullable_information);
+  std::vector<bool> tuple_non_nullable_information;
+  read_tuples.before_specialization(*input_table, tuple_non_nullable_information);
 
   // Expression a is removed as its used input column is not encoded
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 1u);
@@ -338,8 +338,8 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   read_tuples.set_next_operator(std::make_shared<JitWriteTuples>());
 
   JitRuntimeContext context;
-  std::vector<bool> tuple_nullable_information;
-  read_tuples.before_specialization(*input_table, tuple_nullable_information);
+  std::vector<bool> tuple_non_nullable_information;
+  read_tuples.before_specialization(*input_table, tuple_non_nullable_information);
   ASSERT_EQ(read_tuples.value_id_expressions().size(), 2u);
   read_tuples.before_query(*input_table, std::vector<AllTypeVariant>{}, context);
   read_tuples.before_chunk(*input_table, ChunkID{0}, std::vector<AllTypeVariant>{}, context);
@@ -453,9 +453,9 @@ TEST_F(JitReadWriteTupleTest, UpdateNullableInformationBeforeSpecialization) {
   auto input_table = Table::create_dummy_table(column_definitions);
 
   // Update nullable information of result entries for input column values
-  std::vector<bool> tuple_nullable_information;
-  read_tuples.before_specialization(*input_table, tuple_nullable_information);
-  write_tuples.before_specialization(*input_table, tuple_nullable_information);
+  std::vector<bool> tuple_non_nullable_information;
+  read_tuples.before_specialization(*input_table, tuple_non_nullable_information);
+  write_tuples.before_specialization(*input_table, tuple_non_nullable_information);
 
   // Nullable information is updated in the result entries ...
   ASSERT_TRUE(input_columns[0].tuple_entry.guaranteed_non_null);
@@ -464,9 +464,9 @@ TEST_F(JitReadWriteTupleTest, UpdateNullableInformationBeforeSpecialization) {
   auto output_table = write_tuples.create_output_table(*input_table);
   ASSERT_EQ(output_table->column_definitions(), column_definitions);
 
-  // ... and the tuple_nullable_information vector
-  EXPECT_TRUE(tuple_nullable_information[0]);
-  EXPECT_FALSE(tuple_nullable_information[1]);
+  // ... and the tuple_non_nullable_information vector
+  EXPECT_TRUE(tuple_non_nullable_information[0]);
+  EXPECT_FALSE(tuple_non_nullable_information[1]);
 }
 
 }  // namespace opossum

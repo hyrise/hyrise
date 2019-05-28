@@ -77,7 +77,7 @@ class JitExpression {
    * The nullability information is not available during the creation of JitExpressions so that this information must
    * be updated in all JitExpressions once this information is available before the specialization.
    */
-  void update_nullable_information(std::vector<bool>& tuple_nullable_information);
+  void update_nullable_information(std::vector<bool>& tuple_non_nullable_information);
 
   const std::shared_ptr<JitExpression> left_child;
   const std::shared_ptr<JitExpression> right_child;

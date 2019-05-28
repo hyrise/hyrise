@@ -62,7 +62,7 @@ class JitWriteTuples : public AbstractJittableSink {
  public:
   std::string description() const final;
 
-  void before_specialization(const Table& in_table, std::vector<bool>& tuple_nullable_information) override;
+  void before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) override;
 
   // Is called by the JitOperatorWrapper.
   // Creates an empty output table with appropriate column definitions.
