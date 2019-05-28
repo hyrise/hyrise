@@ -15,7 +15,6 @@ class JitValidate : public AbstractJittable {
 
   std::string description() const final;
 
-
   TableType input_table_type() const;
 
  protected:

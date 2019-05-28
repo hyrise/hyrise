@@ -24,14 +24,17 @@ std::string JitAggregate::description() const {
 void JitAggregate::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
   // Update the groupby and aggregate column nullable information from the tuple_non_nullable_information
   for (auto& groupby_column : _groupby_columns) {
-    groupby_column.tuple_entry.guaranteed_non_null = tuple_non_nullable_information[groupby_column.tuple_entry.tuple_index];
-    groupby_column.hashmap_entry.guaranteed_non_null = tuple_non_nullable_information[groupby_column.tuple_entry.tuple_index];
+    groupby_column.tuple_entry.guaranteed_non_null =
+        tuple_non_nullable_information[groupby_column.tuple_entry.tuple_index];
+    groupby_column.hashmap_entry.guaranteed_non_null =
+        tuple_non_nullable_information[groupby_column.tuple_entry.tuple_index];
   }
 
   // Only update the input information (tuple_entry) to the aggregate function and not the output information
   // (hashmap_entry), which is already correct.
   for (auto& aggregate_column : _aggregate_columns) {
-    aggregate_column.tuple_entry.guaranteed_non_null = tuple_non_nullable_information[aggregate_column.tuple_entry.tuple_index];
+    aggregate_column.tuple_entry.guaranteed_non_null =
+        tuple_non_nullable_information[aggregate_column.tuple_entry.tuple_index];
   }
 }
 
@@ -238,9 +241,9 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
 
 void JitAggregate::add_groupby_column(const std::string& column_name, const JitTupleEntry& tuple_entry) {
   auto column_position = _aggregate_columns.size() + _groupby_columns.size();
-  _groupby_columns.emplace_back(
-      JitGroupByColumn{column_name, column_position, tuple_entry,
-                       JitHashmapEntry(tuple_entry.data_type, tuple_entry.guaranteed_non_null, _num_hashmap_columns++)});
+  _groupby_columns.emplace_back(JitGroupByColumn{
+      column_name, column_position, tuple_entry,
+      JitHashmapEntry(tuple_entry.data_type, tuple_entry.guaranteed_non_null, _num_hashmap_columns++)});
 }
 
 const std::vector<JitAggregateColumn> JitAggregate::aggregate_columns() const { return _aggregate_columns; }

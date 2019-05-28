@@ -36,16 +36,16 @@ const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string
                                                 {JitExpressionType::IsNotNull, "IS NOT NULL"}});
 
 const boost::bimap<JitExpressionType, PredicateCondition> jit_expression_type_to_predicate_condition =
-make_bimap<JitExpressionType, PredicateCondition>({
-{JitExpressionType::Equals, PredicateCondition::Equals},
-{JitExpressionType::NotEquals, PredicateCondition::NotEquals},
-{JitExpressionType::GreaterThan, PredicateCondition::GreaterThan},
-{JitExpressionType::GreaterThanEquals, PredicateCondition::GreaterThanEquals},
-{JitExpressionType::LessThan, PredicateCondition::LessThan},
-{JitExpressionType::LessThanEquals, PredicateCondition::LessThanEquals},
-{JitExpressionType::Like, PredicateCondition::Like},
-{JitExpressionType::NotLike, PredicateCondition::NotLike},
-{JitExpressionType::IsNull, PredicateCondition::IsNull},
-{JitExpressionType::IsNotNull, PredicateCondition::IsNotNull}});
+    make_bimap<JitExpressionType, PredicateCondition>(
+        {{JitExpressionType::Equals, PredicateCondition::Equals},
+         {JitExpressionType::NotEquals, PredicateCondition::NotEquals},
+         {JitExpressionType::GreaterThan, PredicateCondition::GreaterThan},
+         {JitExpressionType::GreaterThanEquals, PredicateCondition::GreaterThanEquals},
+         {JitExpressionType::LessThan, PredicateCondition::LessThan},
+         {JitExpressionType::LessThanEquals, PredicateCondition::LessThanEquals},
+         {JitExpressionType::Like, PredicateCondition::Like},
+         {JitExpressionType::NotLike, PredicateCondition::NotLike},
+         {JitExpressionType::IsNull, PredicateCondition::IsNull},
+         {JitExpressionType::IsNotNull, PredicateCondition::IsNotNull}});
 
 }  // namespace opossum

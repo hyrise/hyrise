@@ -38,8 +38,7 @@ namespace opossum {
   }
 
 #define JIT_VARIANT_VECTOR_GET_VECTOR(r, d, type)                                                                 \
-  template <>                                                                                                     \
-  /* NOLINTNEXTLINE(bugprone-macro-parentheses) - clang-tidy does not like & for reference */                     \
+  template <> /* NOLINTNEXTLINE(bugprone-macro-parentheses) - clang-tidy does not like & for reference */         \
   std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)>& JitVariantVector::get_vector<BOOST_PP_TUPLE_ELEM(3, 0, type)>() { \
     return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                       \
   }
@@ -76,7 +75,8 @@ void JitTupleEntry::set_is_null(const bool is_null, JitRuntimeContext& context) 
 }
 
 bool JitTupleEntry::operator==(const JitTupleEntry& other) const {
-  return data_type == other.data_type && guaranteed_non_null == other.guaranteed_non_null && tuple_index == other.tuple_index;
+  return data_type == other.data_type && guaranteed_non_null == other.guaranteed_non_null &&
+         tuple_index == other.tuple_index;
 }
 
 JitHashmapEntry::JitHashmapEntry(const DataType data_type, const bool guaranteed_non_null, const size_t column_index)

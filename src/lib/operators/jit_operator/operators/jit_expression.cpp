@@ -13,10 +13,10 @@ namespace opossum {
 #define JIT_EXPRESSION_COMPUTE_CASE(r, types)                                 \
   case JIT_GET_ENUM_VALUE(0, types): {                                        \
     const auto result = compute<JIT_GET_DATA_TYPE(0, types)>(context);        \
-    if (result_entry.guaranteed_non_null || result) {                                \
+    if (result_entry.guaranteed_non_null || result) {                         \
       result_entry.set<JIT_GET_DATA_TYPE(0, types)>(result.value(), context); \
     }                                                                         \
-    if (!result_entry.guaranteed_non_null) {                                           \
+    if (!result_entry.guaranteed_non_null) {                                  \
       result_entry.set_is_null(!result, context);                             \
     }                                                                         \
     break;                                                                    \
@@ -167,7 +167,8 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
   }
 
   const bool guaranteed_non_null = left_tuple_entry.guaranteed_non_null && right_tuple_entry.guaranteed_non_null &&
-                        expression_type != JitExpressionType::Division && expression_type != JitExpressionType::Modulo;
+                                   expression_type != JitExpressionType::Division &&
+                                   expression_type != JitExpressionType::Modulo;
   return std::make_pair(result_data_type, guaranteed_non_null);
 }
 

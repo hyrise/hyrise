@@ -61,7 +61,7 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is false and not null
   if (left_entry.guaranteed_non_null || left_result) {  // Left result is not null
-    if (!left_result.value()) {                  // Left result is false
+    if (!left_result.value()) {                         // Left result is false
       return false;
     }
   }
@@ -103,7 +103,7 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is true and not null
   if (left_entry.guaranteed_non_null || left_result) {  // Left result is not null
-    if (left_result.value()) {                   // Left result is true
+    if (left_result.value()) {                          // Left result is true
       return true;
     }
   }

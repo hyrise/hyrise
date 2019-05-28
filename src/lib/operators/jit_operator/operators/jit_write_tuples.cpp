@@ -20,7 +20,8 @@ std::string JitWriteTuples::description() const {
 void JitWriteTuples::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
   // Update the output column nullable information from the tuple_non_nullable_information
   for (auto& output_column : _output_columns) {
-    output_column.tuple_entry.guaranteed_non_null = tuple_non_nullable_information[output_column.tuple_entry.tuple_index];
+    output_column.tuple_entry.guaranteed_non_null =
+        tuple_non_nullable_information[output_column.tuple_entry.tuple_index];
   }
 }
 
