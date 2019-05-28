@@ -76,7 +76,6 @@ try {
           stage("clang-debug") {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-debug/hyriseTest clang-debug"
-            sh "mv resources/test_data/imdb_sample/ imdb_data/"
             sh "./scripts/test/hyriseConsole_test.py clang-debug"
             sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
             sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
@@ -87,7 +86,6 @@ try {
             sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             // Test that running the binary from the build folder works
             sh "cd gcc-debug && ./hyriseTest && cd .."
-            sh "mv resources/test_data/imdb_sample/ imdb_data/"
             sh "./scripts/test/hyriseConsole_test.py gcc-debug"
             sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
             sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"

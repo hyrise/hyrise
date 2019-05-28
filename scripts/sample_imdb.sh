@@ -1,8 +1,11 @@
 #!/bin/bash
 
+# This script creates a very small sample from the imdb database downloaded during the setup of hyriseBenchmarkJoinOrder
+# to avoid downloading it for every new test environment and allowing fast testing
 rm -rf imdb_sample
 mkdir imdb_sample
 
+# These rows are picked to allow a verification of query 3b in the hyriseBenchmarkJoinOrder_test.py
 tail -n 1                             imdb_data/aka_name.csv          > imdb_sample/aka_name.csv
 tail -n 1                             imdb_data/aka_title.csv         > imdb_sample/aka_title.csv
 tail -n 1                             imdb_data/cast_info.csv         > imdb_sample/cast_info.csv
@@ -25,24 +28,4 @@ tail -n 1                             imdb_data/person_info.csv       > imdb_sam
 tail -n 1                             imdb_data/role_type.csv         > imdb_sample/role_type.csv
 grep -w 3292787                       imdb_data/title.csv             > imdb_sample/title.csv
 
-cp imdb_data/aka_name.csv.json          imdb_sample/aka_name.csv.json
-cp imdb_data/aka_title.csv.json         imdb_sample/aka_title.csv.json
-cp imdb_data/cast_info.csv.json         imdb_sample/cast_info.csv.json
-cp imdb_data/char_name.csv.json         imdb_sample/char_name.csv.json
-cp imdb_data/company_name.csv.json      imdb_sample/company_name.csv.json
-cp imdb_data/company_type.csv.json      imdb_sample/company_type.csv.json
-cp imdb_data/comp_cast_type.csv.json    imdb_sample/comp_cast_type.csv.json
-cp imdb_data/complete_cast.csv.json     imdb_sample/complete_cast.csv.json
-cp imdb_data/info_type.csv.json         imdb_sample/info_type.csv.json
-cp imdb_data/keyword.csv.json           imdb_sample/keyword.csv.json
-cp imdb_data/kind_type.csv.json         imdb_sample/kind_type.csv.json
-cp imdb_data/link_type.csv.json         imdb_sample/link_type.csv.json
-cp imdb_data/movie_companies.csv.json   imdb_sample/movie_companies.csv.json
-cp imdb_data/movie_info.csv.json        imdb_sample/movie_info.csv.json
-cp imdb_data/movie_info_idx.csv.json    imdb_sample/movie_info_idx.csv.json
-cp imdb_data/movie_keyword.csv.json     imdb_sample/movie_keyword.csv.json
-cp imdb_data/movie_link.csv.json        imdb_sample/movie_link.csv.json
-cp imdb_data/name.csv.json              imdb_sample/name.csv.json
-cp imdb_data/person_info.csv.json       imdb_sample/person_info.csv.json
-cp imdb_data/role_type.csv.json         imdb_sample/role_type.csv.json
-cp imdb_data/title.csv.json             imdb_sample/title.csv.json
+cp imdb_data/*.csv.json          			imdb_sample/

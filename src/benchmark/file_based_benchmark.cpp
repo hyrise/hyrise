@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
       ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(".")) // NOLINT
       ("query_path", "A specific .sql file or a directory containing .sql files", cxxopts::value<std::string>()->default_value(".")) // NOLINT
       ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")) // NOLINT
-      ("excluded_queries", "Non-queries to exlude as a comma separated list", cxxopts::value<std::string>()->default_value("none")); // NOLINT
+      ("excluded_queries", "Non-queries to exclude as a comma separated list", cxxopts::value<std::string>()->default_value("none")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> benchmark_config;
