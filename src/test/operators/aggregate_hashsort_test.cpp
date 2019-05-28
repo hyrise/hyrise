@@ -214,7 +214,8 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialAggregates) {
 
   const auto* avg = dynamic_cast<AvgAggregateRun<double>*>(aggregates[3].get());
   ASSERT_TRUE(avg);
-  EXPECT_EQ(avg->sets, std::vector<std::vector<double>>({{1.0}, {-2.0}, {}}));
+  const auto expected_avg_aggregates = std::vector<std::pair<double, size_t>>({{1.0, 1}, {-2.0, 1}, {0.0, 0}});
+  EXPECT_EQ(avg->pairs, expected_avg_aggregates);
 }
 TEST_F(AggregateHashSortStepsTest, Partitioning) {
   EXPECT_EQ(Partitioning(2, 0, 1).get_partition_index(1), 1);

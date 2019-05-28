@@ -902,7 +902,6 @@ struct TableRunSource : public AbstractRunSource<GroupRun> {
   AbstractRunSource<GroupRun>({}), table(table), config(config), layout(layout), aggregate_column_definitions(aggregate_column_definitions), groupby_column_ids(groupby_column_ids) {
   }
 
-
   bool can_fetch_run() const override { return AbstractRunSource<GroupRun>::runs.empty(); }
   void fetch_run() override;
 };
