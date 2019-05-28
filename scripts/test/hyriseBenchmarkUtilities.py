@@ -31,7 +31,7 @@ def initialize(arguments, benchmark_name, additional_directory):
 
 # This benchmark tests a binary with two different sets of arguments.
 # After the first test, it checks if binary tables were created.
-# After the second test, it checks if all benchmarks were successfully verified.
+# After the second test, it checks if all queries were successfully verified.
 def run_benchmark(arguments1, arguments2, benchmark_name, additional_directory=None):
 	return_error = False
 	
