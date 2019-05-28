@@ -11,6 +11,7 @@
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "table_generator.hpp"
+#include "types.hpp"
 
 namespace {
 constexpr auto NUMBER_OF_CHUNKS = size_t{50};
@@ -36,12 +37,11 @@ namespace opossum {
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<TableGenerator>();
 
-  ColumnDataDistribution config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
-  const auto chunk_size = static_cast<ChunkID::base_type>(number_of_rows / NUMBER_OF_CHUNKS);
+  const auto chunk_size = static_cast<ChunkOffset>(number_of_rows / NUMBER_OF_CHUNKS);
   Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table");
 
-  auto table = table_generator->generate_table(std::vector<ColumnDataDistribution>{config}, number_of_rows, chunk_size,
-                                               EncodingType::Dictionary);
+  auto table =
+      table_generator->generate_table(1ul, number_of_rows, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary});
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);

@@ -42,7 +42,7 @@ struct ColumnDataDistribution {
 
   DataDistributionType distribution_type = DataDistributionType::Uniform;
 
-  int num_different_values = 1000;
+  int num_different_values = 1'000;
 
   double pareto_scale = 1.0;
   double pareto_shape = 1.0;
@@ -56,17 +56,24 @@ struct ColumnDataDistribution {
 };
 
 class TableGenerator {
- public:
-  std::shared_ptr<Table> generate_table(const ChunkID chunk_size,
-                                        std::optional<SegmentEncodingSpec> segment_encoding_spec = std::nullopt);
-
   // Note: numa_distribute_chunks=true only affects generated tables that use DictionaryCompression,
-  // otherwise the chunks are most likely all placed on a single node. This will change in the future.
+  // otherwise the chunks are most likely all placed on a single node. This might change in the future.
   // See the discussion here https://github.com/hyrise/hyrise/pull/402
+ public:
+  // Simple table generation, mainly for simple tests
+  std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows, const ChunkOffset chunk_size,
+                                        const SegmentEncodingSpec segment_encoding_spec = {EncodingType::Unencoded});
+
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
-                                        const size_t num_rows, const size_t chunk_size,
-                                        std::optional<SegmentEncodingSpec> segment_encoding_spec = std::nullopt,
+                                        const std::vector<DataType>& column_data_types, const size_t num_rows,
+                                        const ChunkOffset chunk_size,
+                                        const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
                                         const bool numa_distribute_chunks = false);
+
+  // Base function that generates the actual data
+  std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
+                                        const std::vector<DataType>& column_data_types, const size_t num_rows,
+                                        const ChunkOffset chunk_size, const bool numa_distribute_chunks);
 
  protected:
   const size_t _num_columns = 10;
