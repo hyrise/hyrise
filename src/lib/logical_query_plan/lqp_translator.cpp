@@ -214,6 +214,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
       std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
                                   predicate->predicate_condition, right_values, right_values2, node->deep_copy());
 
+  if (indexed_chunks.size() == static_cast<size_t>(table->chunk_count())) {
+    return index_scan;
+  }
+
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
   index_scan->set_included_chunk_ids(indexed_chunks);
