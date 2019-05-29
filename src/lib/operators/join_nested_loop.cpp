@@ -142,6 +142,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
     const auto& chunk_right = right_table->get_chunk(chunk_id_right);
     if (!chunk_right) continue;
+
     right_matches_by_chunk[chunk_id_right].resize(chunk_right->size());
   }
 
@@ -152,6 +153,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
     const auto& chunk_left = left_table->get_chunk(chunk_id_left);
     if (!chunk_left) continue;
+
     auto segment_left = chunk_left->get_segment(left_column_id);
 
     std::vector<bool> left_matches;
@@ -163,6 +165,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto& chunk_right = right_table->get_chunk(chunk_id_right);
       if (!chunk_right) continue;
+
       const auto segment_right = chunk_right->get_segment(right_column_id);
 
       JoinParams params{*pos_list_left,
@@ -197,8 +200,8 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto& chunk_right = right_table->get_chunk(chunk_id_right);
       if (!chunk_right) continue;
-      const auto chunk_size = chunk_right->size();
 
+      const auto chunk_size = chunk_right->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (!right_matches_by_chunk[chunk_id_right][chunk_offset]) {
           pos_list_left->emplace_back(NULL_ROW_ID);

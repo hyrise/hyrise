@@ -42,9 +42,10 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   if (_included_chunk_ids.empty()) {
     jobs.reserve(_in_table->chunk_count());
     for (auto chunk_id = ChunkID{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
-      if (_in_table->get_chunk(chunk_id)) {
-        jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
-      }
+      const auto& chunk = _in_table->get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
     }
   } else {
     jobs.reserve(_included_chunk_ids.size());
@@ -71,10 +72,12 @@ void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllType
 
 std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
-    const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
-
     // The output chunk is allocated on the same NUMA node as the input chunk.
     const auto& chunk = _in_table->get_chunk(chunk_id);
+    if (!chunk) return;
+
+    const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
+
     Segments segments;
 
     for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
