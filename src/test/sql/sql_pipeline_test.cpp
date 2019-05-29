@@ -63,7 +63,7 @@ class SQLPipelineTest : public BaseTest {
     StorageManager::get().add_table("table_a_multi", _table_a_multi);
     StorageManager::get().add_table("table_b", _table_b);
 
-    SQLPhysicalPlanCache::get().clear();
+    _pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   }
 
   // Tables modified during test case
@@ -73,6 +73,8 @@ class SQLPipelineTest : public BaseTest {
   inline static std::shared_ptr<Table> _table_a_multi;
   inline static std::shared_ptr<Table> _table_b;
   inline static std::shared_ptr<Table> _join_result;
+
+  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -339,14 +341,27 @@ TEST_F(SQLPipelineTest, GetTasksExecutionRequired) {
 
 TEST_F(SQLPipelineTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
+TEST_F(SQLPipelineTest, GetResultTablesMultiple) {
+  auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+
+  const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  EXPECT_EQ(tables[0], nullptr);
+
+  EXPECT_TABLE_EQ_UNORDERED(tables[1], _table_a_multi);
+}
+
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
-  const auto& table = sql_pipeline.get_result_table();
+
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi);
 }
@@ -360,7 +375,8 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   auto duration = metrics.statement_metrics[0]->plan_execution_duration;
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
   auto duration2 = metrics.statement_metrics[0]->plan_execution_duration;
 
@@ -371,7 +387,8 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
 TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
   auto sql_pipeline = SQLPipelineBuilder{_multi_statement_dependent}.create_pipeline();
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
@@ -381,7 +398,8 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
 
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -423,18 +441,89 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
   const auto sql = "UPDATE table_a SET a = 1 WHERE a < 150";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_EQ(table, nullptr);
 
   // Check that this doesn't crash. This should return the previous table.
-  const auto& table2 = sql_pipeline.get_result_table();
+  const auto& [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Success);
   EXPECT_EQ(table2, nullptr);
 }
 
-TEST_F(SQLPipelineTest, GetTimes) {
-  const auto& cache = SQLPhysicalPlanCache::get();
-  EXPECT_EQ(cache.size(), 0u);
+TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
+  // Mark a row as modified by a different transaction
+  auto first_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock();
+  auto& first_chunk_tids = first_chunk_mvcc_data_lock->tids;
+  auto& first_chunk_end_cids = first_chunk_mvcc_data_lock->end_cids;
 
+  first_chunk_tids[1] = TransactionID{17};
+
+  const auto sql =
+      "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
+      "UPDATE table_a SET a = 1 WHERE a = 1234";
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline();
+
+  const auto [pipeline_status, tables] = sql_pipeline.get_result_tables();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(tables.size(), 0);
+  EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
+  EXPECT_TRUE(transaction_context->aborted());
+
+  // No row should have been touched
+  EXPECT_EQ(first_chunk_tids[0], TransactionID{0});
+  EXPECT_EQ(first_chunk_end_cids[0], MvccData::MAX_COMMIT_ID);
+
+  EXPECT_EQ(first_chunk_tids[1], TransactionID{17});
+  EXPECT_EQ(first_chunk_end_cids[1], MvccData::MAX_COMMIT_ID);
+
+  auto second_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock();
+  auto& second_chunk_tids = second_chunk_mvcc_data_lock->tids;
+  auto& second_chunk_end_cids = second_chunk_mvcc_data_lock->end_cids;
+
+  EXPECT_EQ(second_chunk_tids[0], TransactionID{0});
+  EXPECT_EQ(second_chunk_end_cids[0], MvccData::MAX_COMMIT_ID);
+}
+
+TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
+  // Similar to UpdateWithTransactionFailure, but without explicit transaction context
+
+  // Mark a row as modified by a different transaction
+  auto first_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock();
+  auto& first_chunk_tids = first_chunk_mvcc_data_lock->tids;
+  auto& first_chunk_end_cids = first_chunk_mvcc_data_lock->end_cids;
+
+  first_chunk_tids[1] = TransactionID{17};
+
+  const auto sql =
+      "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
+      "UPDATE table_a SET a = 1 WHERE a = 1234";
+  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+
+  const auto& [pipeline_status, tables] = sql_pipeline.get_result_tables();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(tables.size(), 1);
+  EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
+
+  // This time, the first row should have been updated before the second statement failed
+  EXPECT_EQ(first_chunk_tids[0], TransactionID{1});
+  EXPECT_EQ(first_chunk_end_cids[0], CommitID{2});  // initial commit ID + 1
+
+  // This row was being modified by a different transaction, so it should not have been touched
+  EXPECT_EQ(first_chunk_tids[1], TransactionID{17});
+  EXPECT_EQ(first_chunk_end_cids[1], MvccData::MAX_COMMIT_ID);
+
+  // We had to abort before we got to the third statement
+  auto second_chunk_mvcc_data_lock = _table_a->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock();
+  auto& second_chunk_tids = second_chunk_mvcc_data_lock->tids;
+  auto& second_chunk_end_cids = second_chunk_mvcc_data_lock->end_cids;
+
+  EXPECT_EQ(second_chunk_tids[0], TransactionID{0});
+  EXPECT_EQ(second_chunk_end_cids[0], MvccData::MAX_COMMIT_ID);
+}
+
+TEST_F(SQLPipelineTest, GetTimes) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
 
   const auto& metrics = sql_pipeline.metrics();
@@ -531,22 +620,72 @@ TEST_F(SQLPipelineTest, CacheQueryPlanTwice) {
   sql_pipeline1.get_result_table();
 
   // INSERT INTO table_a VALUES (11, 11.11); SELECT * FROM table_a
-  auto sql_pipeline2 = SQLPipelineBuilder{_multi_statement_query}.create_pipeline();
+  auto sql_pipeline2 = SQLPipelineBuilder{_multi_statement_query}.with_pqp_cache(_pqp_cache).create_pipeline();
   sql_pipeline2.get_result_table();
 
   // The second part of _multi_statement_query is _select_query_a, which is already cached
-  const auto& cache = SQLPhysicalPlanCache::get();
-  EXPECT_EQ(cache.size(), 2u);
-  EXPECT_TRUE(cache.has(_select_query_a));
-  EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
+  EXPECT_EQ(_pqp_cache->size(), 2u);
+  EXPECT_TRUE(_pqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
 
-  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}.create_pipeline();
+  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}.with_pqp_cache(_pqp_cache).create_pipeline();
   sql_pipeline3.get_result_table();
 
   // Make sure the cache hasn't changed
-  EXPECT_EQ(cache.size(), 2u);
-  EXPECT_TRUE(cache.has(_select_query_a));
-  EXPECT_TRUE(cache.has("INSERT INTO table_a VALUES (11, 11.11);"));
+  EXPECT_EQ(_pqp_cache->size(), 2u);
+  EXPECT_TRUE(_pqp_cache->has(_select_query_a));
+  EXPECT_TRUE(_pqp_cache->has("INSERT INTO table_a VALUES (11, 11.11);"));
+}
+
+TEST_F(SQLPipelineTest, DefaultPlanCaches) {
+  const auto default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  const auto local_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  const auto default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  const auto local_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  // No caches
+  const auto sql_pipeline_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
+  EXPECT_FALSE(sql_pipeline_0.pqp_cache);
+  EXPECT_FALSE(sql_pipeline_0.lqp_cache);
+  const auto sql_pipeline_statement_0 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline_statement();
+  EXPECT_FALSE(sql_pipeline_statement_0.pqp_cache);
+  EXPECT_FALSE(sql_pipeline_statement_0.lqp_cache);
+
+  // Default caches
+  SQLPipelineBuilder::default_pqp_cache = default_pqp_cache;
+  SQLPipelineBuilder::default_lqp_cache = default_lqp_cache;
+  const auto sql_pipeline_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline();
+  EXPECT_EQ(sql_pipeline_1.pqp_cache, default_pqp_cache);
+  EXPECT_EQ(sql_pipeline_1.lqp_cache, default_lqp_cache);
+  const auto sql_pipeline_statement_1 = SQLPipelineBuilder{"SELECT * FROM table_a"}.create_pipeline_statement();
+  EXPECT_EQ(sql_pipeline_statement_1.pqp_cache, default_pqp_cache);
+  EXPECT_EQ(sql_pipeline_statement_1.lqp_cache, default_lqp_cache);
+
+  // Local caches
+  const auto sql_pipeline_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
+                                  .with_pqp_cache(local_pqp_cache)
+                                  .with_lqp_cache(local_lqp_cache)
+                                  .create_pipeline();
+  EXPECT_EQ(sql_pipeline_2.pqp_cache, local_pqp_cache);
+  EXPECT_EQ(sql_pipeline_2.lqp_cache, local_lqp_cache);
+  const auto sql_pipeline_statement_2 = SQLPipelineBuilder{"SELECT * FROM table_a"}
+                                            .with_pqp_cache(local_pqp_cache)
+                                            .with_lqp_cache(local_lqp_cache)
+                                            .create_pipeline_statement();
+  EXPECT_EQ(sql_pipeline_statement_2.pqp_cache, local_pqp_cache);
+  EXPECT_EQ(sql_pipeline_statement_2.lqp_cache, local_lqp_cache);
+
+  // No caches
+  const auto sql_pipeline_3 =
+      SQLPipelineBuilder{"SELECT * FROM table_a"}.with_pqp_cache(nullptr).with_lqp_cache(nullptr).create_pipeline();
+  EXPECT_FALSE(sql_pipeline_3.pqp_cache);
+  EXPECT_FALSE(sql_pipeline_3.lqp_cache);
+  const auto sql_pipeline_statement_3 = SQLPipelineBuilder{"SELECT * FROM table_a"}
+                                            .with_pqp_cache(nullptr)
+                                            .with_lqp_cache(nullptr)
+                                            .create_pipeline_statement();
+  EXPECT_FALSE(sql_pipeline_statement_3.pqp_cache);
+  EXPECT_FALSE(sql_pipeline_statement_3.lqp_cache);
 }
 
 }  // namespace opossum

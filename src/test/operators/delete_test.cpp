@@ -326,8 +326,7 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Create the values_to_delete table via Chunk pruning and a Table Scan
-  const auto get_table_op = std::make_shared<GetTable>("table_b");
-  get_table_op->set_excluded_chunk_ids({ChunkID{1}});
+  const auto get_table_op = std::make_shared<GetTable>("table_b", std::vector{ChunkID{1}}, std::vector<ColumnID>{});
   get_table_op->execute();
 
   const auto table_scan = create_table_scan(get_table_op, ColumnID{0}, PredicateCondition::LessThan, 5);

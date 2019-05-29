@@ -1,4 +1,4 @@
-#include "file_based_query_generator.hpp"
+#include "file_based_benchmark_item_runner.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <filesystem>
@@ -10,9 +10,11 @@
 
 namespace opossum {
 
-FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, const std::string& query_path,
-                                                 const std::unordered_set<std::string>& filename_blacklist,
-                                                 const std::optional<std::unordered_set<std::string>>& query_subset) {
+FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
+    const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
+    const std::unordered_set<std::string>& filename_blacklist,
+    const std::optional<std::unordered_set<std::string>>& query_subset)
+    : AbstractBenchmarkItemRunner(config) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   std::filesystem::path path{query_path};
@@ -33,25 +35,29 @@ FileBasedQueryGenerator::FileBasedQueryGenerator(const BenchmarkConfig& config, 
     }
   }
 
-  _selected_queries.resize(_queries.size());
-  std::iota(_selected_queries.begin(), _selected_queries.end(), QueryID{0});
+  _items.resize(_queries.size());
+  std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
 
   // Sort queries by name
   std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
 }
 
-std::string FileBasedQueryGenerator::build_query(const QueryID query_id) { return _queries[query_id].sql; }
+void FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+  sql_executor.execute(_queries[item_id].sql);
+}
 
-std::string FileBasedQueryGenerator::query_name(const QueryID query_id) const { return _queries[query_id].name; }
+std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
+  return _queries[item_id].name;
+}
 
-size_t FileBasedQueryGenerator::available_query_count() const { return _queries.size(); }
+const std::vector<BenchmarkItemID>& FileBasedBenchmarkItemRunner::items() const { return _items; }
 
-void FileBasedQueryGenerator::_parse_query_file(const std::filesystem::path& query_file_path,
-                                                const std::optional<std::unordered_set<std::string>>& query_subset) {
+void FileBasedBenchmarkItemRunner::_parse_query_file(
+    const std::filesystem::path& query_file_path, const std::optional<std::unordered_set<std::string>>& query_subset) {
   std::ifstream file(query_file_path);
 
   // The names of queries from, e.g., "queries/TPCH-7.sql" will be prefixed with "TPCH-7."
-  const auto query_name_prefix = query_file_path.stem().string();
+  const auto item_name_prefix = query_file_path.stem().string();
 
   std::string content{std::istreambuf_iterator<char>(file), {}};
 
@@ -68,11 +74,11 @@ void FileBasedQueryGenerator::_parse_query_file(const std::filesystem::path& que
 
   size_t sql_string_offset{0u};
   for (auto statement_idx = size_t{0}; statement_idx < parse_result.size(); ++statement_idx) {
-    const auto query_name = query_name_prefix + '.' + std::to_string(statement_idx);
+    const auto item_name = item_name_prefix + '.' + std::to_string(statement_idx);
     const auto statement_string_length = parse_result.getStatement(statement_idx)->stringLength;
     const auto statement_string = boost::trim_copy(content.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
-    queries_in_file[statement_idx] = {query_name, statement_string};
+    queries_in_file[statement_idx] = {item_name, statement_string};
   }
 
   // Remove ".0" from the end of the query name if there is only one file
@@ -81,7 +87,7 @@ void FileBasedQueryGenerator::_parse_query_file(const std::filesystem::path& que
   }
 
   /**
-   * Add queries to _queries and _query_names, if query_subset allows it
+   * Add queries to _queries and _item_names, if query_subset allows it
    */
   for (const auto& query : queries_in_file) {
     if (!query_subset || query_subset->count(query.name)) {

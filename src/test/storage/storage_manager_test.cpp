@@ -16,8 +16,8 @@ class StorageManagerTest : public BaseTest {
  protected:
   void SetUp() override {
     auto& sm = StorageManager::get();
-    auto t1 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
-    auto t2 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 4);
+    auto t1 = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data);
+    auto t2 = std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Int}}, TableType::Data, 4);
 
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);
@@ -125,8 +125,8 @@ TEST_F(StorageManagerTest, OutputToStream) {
   auto output_string = output.str();
 
   EXPECT_TRUE(output_string.find("===== Tables =====") != std::string::npos);
-  EXPECT_TRUE(output_string.find("==== table >> first_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
-  EXPECT_TRUE(output_string.find("==== table >> second_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> first_table << (1 columns, 0 rows in 0 chunks)") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> second_table << (1 columns, 0 rows in 0 chunks)") != std::string::npos);
   EXPECT_TRUE(output_string.find("==== table >> third_table << (2 columns, 4 rows in 2 chunks)") != std::string::npos);
 
   EXPECT_TRUE(output_string.find("===== Views ======") != std::string::npos);

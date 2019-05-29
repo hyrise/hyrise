@@ -23,6 +23,8 @@ class AbstractScheduler {
    */
   virtual void begin() = 0;
 
+  virtual void wait_for_all_tasks() = 0;
+
   /**
    * Ends the schedulers lifecycle as the global Scheduler instance. This waits for all scheduled tasks to be finished,
    * and sets the scheduler to inactive.
