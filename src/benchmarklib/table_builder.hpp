@@ -21,7 +21,7 @@ namespace {
 // hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
 template <typename T, bool _has_value, typename Enable = void>
 class optional_constexpr {
-public:
+ public:
   template <typename... Args>
   explicit optional_constexpr(Args&&... args) : _value{std::forward<Args>(args)...} {}
 
@@ -30,13 +30,13 @@ public:
 
   T& value() { return _value; }
 
-private:
+ private:
   T _value;
 };
 
 template <typename T, bool _has_value>
 class optional_constexpr<T, _has_value, std::enable_if_t<!_has_value>> {
-public:
+ public:
   template <typename... Args>
   explicit optional_constexpr(Args&&...) {}
 

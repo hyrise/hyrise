@@ -5,9 +5,10 @@
 
 namespace opossum {
 
-template<typename T>
+template <typename T>
 std::optional<T> get_optional_from_table(const Table& table, uint16_t x, int y) {
-  return std::static_pointer_cast<ValueSegment<T>>(table.get_chunk(ChunkID{0})->get_segment(ColumnID{x}))->get_typed_value(y);
+  return std::static_pointer_cast<ValueSegment<T>>(table.get_chunk(ChunkID{0})->get_segment(ColumnID{x}))
+      ->get_typed_value(y);
 }
 
 const auto types = boost::hana::tuple<int32_t, std::optional<float>, pmr_string>();
@@ -20,17 +21,17 @@ TEST(TableBuilderTest, CreateColumnsWithCorrectNamesAndTypesAndNullables) {
   EXPECT_EQ(table->column_count(), 3);
 
   auto expected_names = std::vector<std::string>{"a", "b", "c"};
-  for(auto i = size_t{0}; i < expected_names.size(); i++){
+  for (auto i = size_t{0}; i < expected_names.size(); i++) {
     EXPECT_EQ(table->column_names()[i], expected_names[i]);
   }
 
   auto expected_types = std::vector{DataType::Int, DataType::Float, DataType::String};
-  for(auto i = size_t{0}; i < expected_types.size(); i++){
+  for (auto i = size_t{0}; i < expected_types.size(); i++) {
     EXPECT_EQ(table->column_data_types()[i], expected_types[i]);
   }
 
   auto expected_nullables = std::vector{false, true, false};
-  for(auto i = size_t{0}; i < expected_nullables.size(); i++){
+  for (auto i = size_t{0}; i < expected_nullables.size(); i++) {
     EXPECT_EQ(table->columns_are_nullable()[i], expected_nullables[i]);
   }
 }

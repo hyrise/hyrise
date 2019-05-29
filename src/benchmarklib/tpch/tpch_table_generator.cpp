@@ -6,21 +6,14 @@ extern "C" {
 #include <rnd.h>
 }
 
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/integral_constant.hpp>
-#include <boost/hana/zip_with.hpp>
 #include <filesystem>
 #include <utility>
 
-#include "boost/hana/for_each.hpp"
-#include "boost/hana/integral_constant.hpp"
-#include "boost/hana/zip_with.hpp"
-
-#include "../table_builder.hpp"
 #include "benchmark_config.hpp"
 #include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
+#include "table_builder.hpp"
 #include "utils/timer.hpp"
 
 extern char** asc_date;
