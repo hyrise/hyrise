@@ -28,8 +28,8 @@ TEST_F(TableVerificationTest, CaseInsensitiveColumns) {
                               FloatComparisonMode::AbsoluteDifference),
             std::nullopt);
   EXPECT_NE(check_table_equal(table_aa, table_ab, OrderSensitivity::No, TypeCmpMode::Strict,
-                               FloatComparisonMode::AbsoluteDifference),
-             std::nullopt);
+                              FloatComparisonMode::AbsoluteDifference),
+            std::nullopt);
 }
 
 }  // namespace opossum
