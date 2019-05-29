@@ -53,12 +53,6 @@ std::ostream& operator<<(std::ostream& stream, const HistogramBin<T>& bin) {
   return stream;
 }
 
-// Often both cardinality and distinct count of a estimate are required
-struct CardinalityAndDistinctCountEstimate {
-  Cardinality cardinality{};
-  float distinct_count{};
-};
-
 /**
  * Base class for histogram types.
  *
@@ -72,7 +66,7 @@ struct CardinalityAndDistinctCountEstimate {
  *  - a number of values
  *  - a number of distinct values
  *
- * Histograms are supported for all five data column types Hyrise supports.
+ * Histograms are supported for all data column types Hyrise supports.
  *
  * String histograms, however, are implemented slightly different because of their non-numerical property. While lower
  * and upper bin bounds are stored as strings, they are converted to integers for cardinality estimation purposes
@@ -100,7 +94,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /**
    * @return name of the histogram type, e.g., "EqualDistinctCount"
    */
-  virtual std::string histogram_name() const = 0;
+  virtual std::string name() const = 0;
 
   /**
    * @return a deep copy of this histogram
@@ -121,7 +115,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
   Cardinality estimate_cardinality(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                                    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
-  CardinalityAndDistinctCountEstimate estimate_cardinality_and_distinct_count(
+  std::pair<Cardinality, DistinctCount> estimate_cardinality_and_distinct_count(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
@@ -206,7 +200,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
 
  protected:
   Cardinality _invert_estimate(const Cardinality& estimate) const;
-  CardinalityAndDistinctCountEstimate _invert_estimate(const CardinalityAndDistinctCountEstimate& estimate) const;
+  std::pair<Cardinality, DistinctCount> _invert_estimate(const std::pair<Cardinality, DistinctCount>& estimate) const;
 
   /**
    * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.
@@ -242,9 +236,13 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Given a Bin with @param value_count total values and @param distinct_count, estimate the resulting distinct count
    * if a subset of the total values (@param selectivity) is taken.
    * Currently, this is just a dummy heuristic that ensures the resulting distinct count does not exceed the resulting
-   * value count
+   * value count.
+   *
+   * E.g. _scale_distinct_count(100, 5, 0.1) -> 5
+   *      _scale_distinct_count(100, 5, 0.01) -> 1
    */
-  Cardinality _scale_distinct_count(Selectivity selectivity, Cardinality value_count, Cardinality distinct_count) const;
+  static Cardinality _scale_distinct_count(Cardinality value_count, Cardinality distinct_count,
+                                           Selectivity selectivity);
 
   // Call after constructor of the derived histogram has finished to check whether the bins are valid
   // (e.g. do not overlap).

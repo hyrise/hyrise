@@ -25,14 +25,10 @@ template <typename T>
 void create_pruning_filter_for_segment(ColumnStatistics<T>& column_statistics, const pmr_vector<T>& dictionary) {
   std::shared_ptr<AbstractStatisticsObject> pruning_filter;
   if constexpr (std::is_arithmetic_v<T>) {
-    if (!column_statistics.range_filter) {
-      pruning_filter = RangeFilter<T>::build_filter(dictionary);
-    }
+    pruning_filter = RangeFilter<T>::build_filter(dictionary);
   } else {
-    if (!column_statistics.min_max_filter) {
-      if (!dictionary.empty()) {
-        pruning_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
-      }
+    if (!dictionary.empty()) {
+      pruning_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
     }
   }
 
@@ -87,7 +83,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
 
-    if (chunk->is_mutable()) {
+    if (!chunk || chunk->is_mutable()) {
       continue;
     }
 

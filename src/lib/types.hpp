@@ -50,6 +50,7 @@ namespace opossum {
 
 // Float aliases used in cardinality estimations/statistics
 using Cardinality = float;
+using DistinctCount = float;
 using Selectivity = float;
 
 // Cost that an AbstractCostModel assigns to an Operator/LQP node. The unit of the Cost is left to the Cost estimator

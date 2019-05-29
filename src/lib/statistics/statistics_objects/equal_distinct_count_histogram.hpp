@@ -56,7 +56,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                                                                      const BinID max_bin_count,
                                                                      const HistogramDomain<T>& domain = {});
 
-  std::string histogram_name() const override;
+  std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
   HistogramCountType total_distinct_count() const override;
   HistogramCountType total_count() const override;

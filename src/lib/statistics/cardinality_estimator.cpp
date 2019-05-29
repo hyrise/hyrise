@@ -155,7 +155,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
       const auto stored_table = StorageManager::get().get_table(stored_table_node->table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
-      output_table_statistics = prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
+      output_table_statistics =
+          prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
     } break;
 
     case LQPNodeType::Validate: {
@@ -449,12 +450,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0f : 1.0f);
         output_column_statistics[left_column_id] = column_statistics;
       } else {
-        // If have no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL
+        // If there is no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL, as no
+        // magic number makes real sense here.
         selectivity = 1.0f;
       }
     } else {
       const auto scan_statistics_object = left_input_column_statistics->histogram;
-      // If there are no statistics available for this segment, assume a selectivity of 1
+      // If there are no statistics available for this segment, assume a selectivity of 1, as no magic number makes real
+      // sense here.
       if (!scan_statistics_object) {
         selectivity = 1.0f;
         return;
@@ -492,20 +495,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         }
 
         const auto bin_adjusted_left_histogram = left_histogram->split_at_bin_bounds(right_histogram->bin_bounds());
-        if (!bin_adjusted_left_histogram) {
-          selectivity = 1.0f;
-          return;
-        }
-
         const auto bin_adjusted_right_histogram = right_histogram->split_at_bin_bounds(left_histogram->bin_bounds());
-        if (!bin_adjusted_right_histogram) {
-          selectivity = 1.0f;
-          return;
-        }
 
         const auto column_vs_column_histogram = estimate_column_vs_column_equi_scan_with_histograms(
             *bin_adjusted_left_histogram, *bin_adjusted_right_histogram);
         if (!column_vs_column_histogram) {
+          // No overlapping bins: No rows selected
           selectivity = 0.0f;
           return;
         }
@@ -551,7 +546,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           case PredicateCondition::NotIn:
           case PredicateCondition::Like:
           case PredicateCondition::NotLike:
-            // Lacking better options, assume a "magic" selectivity for >, >=, <, <=, ....
+            // Lacking better options, assume a "magic" selectivity for >, >=, <, <=, ... Any number would be equally
+            // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
             selectivity = 0.5f;
             break;
 
@@ -570,10 +566,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         // TODO(anybody) For (NOT) LIKE predicates that start with a wildcard, Histograms won't yield reasonable
         //               results. Assume a magic selectivity for now
         if (predicate.predicate_condition == PredicateCondition::Like) {
+          // Lacking better options, assume a "magic" selectivity for LIKE. Any number would be equally
+          // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
           selectivity = 0.1f;
           return;
         }
         if (predicate.predicate_condition == PredicateCondition::NotLike) {
+          // Lacking better options, assume a "magic" selectivity for NOT LIKE. Any number would be equally
+          // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
           selectivity = 0.9f;
           return;
         }
@@ -877,9 +877,8 @@ std::pair<HistogramCountType, HistogramCountType> CardinalityEstimator::estimate
   return {match_count, HistogramCountType{right_distinct_count}};
 }
 
-std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(const std::shared_ptr<TableStatistics>& table_statistics,
-                                                                const std::vector<ColumnID>& pruned_column_ids) {
-
+std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(
+    const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids) {
   if (pruned_column_ids.empty()) {
     return table_statistics;
   }
@@ -889,7 +888,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(c
    */
 
   auto output_column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>(
-  table_statistics->column_statistics.size() - pruned_column_ids.size());
+      table_statistics->column_statistics.size() - pruned_column_ids.size());
 
   auto pruned_column_ids_iter = pruned_column_ids.begin();
 

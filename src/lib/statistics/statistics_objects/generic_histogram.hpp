@@ -44,7 +44,7 @@ class GenericHistogram : public AbstractHistogram<T> {
                    std::vector<HistogramCountType>&& bin_heights, std::vector<HistogramCountType>&& bin_distinct_counts,
                    const HistogramDomain<T>& domain = {});
 
-  std::string histogram_name() const override;
+  std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
   HistogramCountType total_distinct_count() const override;
   HistogramCountType total_count() const override;

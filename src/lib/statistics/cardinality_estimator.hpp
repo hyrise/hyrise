@@ -113,13 +113,12 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   /** @} */
 
-
   /**
    * Helper
    * @{
    */
-  static std::shared_ptr<TableStatistics> prune_column_statistics(const std::shared_ptr<TableStatistics>& table_statistics,
-  const std::vector<ColumnID>& pruned_column_ids);
+  static std::shared_ptr<TableStatistics> prune_column_statistics(
+      const std::shared_ptr<TableStatistics>& table_statistics, const std::vector<ColumnID>& pruned_column_ids);
 
   /** @} */
 };

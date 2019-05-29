@@ -8,11 +8,11 @@
 #include "table.hpp"
 #include "types.hpp"
 
+#include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
-#include "statistics/generate_pruning_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

@@ -19,14 +19,23 @@ class JoinGraph;
  * The key of the cache is a bitmask (with each bit representing a predicate or a vertex node).
  *
  * This cache exists primarily to aid the performance of the JoinOrderingRule.
- * The JOR frequently request statistics for different plans consisting of the same set of Join and Scan predicates.
+ * The JoinOrderingRule frequently requests statistics for different plans consisting of the same set of Join and Scan
+ * predicates.
  */
 class JoinGraphStatisticsCache {
  public:
+  // One bit for each of JoinGraph's vertices followed by one bit for each predicate. Represents a subgraph of a
+  // JoinGraph. "1" means that the vertex/predicate is included in the subgraph.
   using Bitmask = boost::dynamic_bitset<>;
+
+  // Maps vertices to their index in the Bitmask
   using VertexIndexMap = std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t>;
+
+  // Maps predicates to their index in the Bitmask
   using PredicateIndexMap = ExpressionUnorderedMap<size_t>;
 
+  // Creates a JoinGraphStatisticsCache with VertexIndexMap and PredicateIndexMap pointing to the vertices / predicates
+  // in the JoinGraph
   static JoinGraphStatisticsCache from_join_graph(const JoinGraph& join_graph);
 
   JoinGraphStatisticsCache(VertexIndexMap&& vertex_indices, PredicateIndexMap&& predicate_indices);
@@ -64,7 +73,8 @@ class JoinGraphStatisticsCache {
     ExpressionUnorderedMap<ColumnID> column_expression_order;
   };
 
-  // There is no std::hash<Bitmask>... :(
+  // There is no std::hash<Bitmask> and Bitmask/boost::dynamic_bitset<> doesn't expose the data necessary to implement
+  // this efficiently... :(
   std::map<Bitmask, CacheEntry> _cache;
 };
 

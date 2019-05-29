@@ -23,7 +23,7 @@ template <typename T>
 class CountingQuotientFilter;
 
 /**
- * Statistically represents a slice of a Column. Might cover any number of rows or Chunks.
+ * Statistically represents a Column (when used in TableStatistics) or a Segment (when used in ColumnPruningStatistics).
  *
  * Contains any number of AbstractStatisticsObjects (Histograms, Filters, etc.).
  */

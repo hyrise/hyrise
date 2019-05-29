@@ -22,7 +22,7 @@ class SingleBinHistogram : public AbstractHistogram<T> {
   SingleBinHistogram(const T& minimum, const T& maximum, HistogramCountType total_count,
                      HistogramCountType distinct_count, const HistogramDomain<T>& domain = {});
 
-  std::string histogram_name() const override;
+  std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
   HistogramCountType total_distinct_count() const override;
   HistogramCountType total_count() const override;

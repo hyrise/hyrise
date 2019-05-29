@@ -38,7 +38,7 @@ template <typename T>
 std::string AbstractHistogram<T>::description() const {
   std::stringstream stream;
 
-  stream << histogram_name();
+  stream << name();
   stream << " value count: " << total_count() << ";";
   stream << " distinct count: " << total_distinct_count() << ";";
   stream << " bin count: " << bin_count() << ";";
@@ -101,8 +101,8 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     *  1. For two strings s1 and s2: s1 < s2 -> repr(s1) < repr(s2)
     *  2. For two strings s1 and s2: dist(s1, s2) == repr(s2) - repr(s1)
     *  repr(s) is the numerical representation for a string s, and dist(s1, s2) returns the number of strings between
-    *  s1 and s2 in the domain of strings with at most length `string_prefix_length`
-    *  and the set of supported characters `supported_characters`.
+    *  s1 and s2 in the domain of strings with at most length `common_prefix_length`
+    *  and the set of supported characters in the `_domain`.
     *
     * Thus, we calculate the range based only on a domain of strings with a maximum length of `string_prefix_length`
     * characters.
@@ -111,8 +111,8 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     *
     * Example:
     *  - bin: ["intelligence", "intellij"]
-    *  - supported_characters: [a-z]
-    *  - string_prefix_length: 4
+    *  - _domain.supported_characters: [a-z]
+    *  - common_prefix_length: 4
     *  - value: intelligent
     *
     *  Traditionally, if we did not strip the common prefix, we would calculate the range based on the
@@ -126,16 +126,15 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
 
+    // Determine the common_prefix_lengths of bin_min and bin_max. E.g. bin_max=abcde and bin_max=abcz have a
+    // common_prefix_length=3
     auto common_prefix_length = size_t{0};
-    const auto max_common_prefix_len = std::min(bin_min.length(), bin_max.length());
-    for (; common_prefix_length < max_common_prefix_len; ++common_prefix_length) {
+    const auto max_common_prefix_length = std::min(bin_min.length(), bin_max.length());
+    for (; common_prefix_length < max_common_prefix_length; ++common_prefix_length) {
       if (bin_min[common_prefix_length] != bin_max[common_prefix_length]) {
         break;
       }
     }
-
-    DebugAssert(value.substr(0, common_prefix_length) == bin_min.substr(0, common_prefix_length),
-                "Value does not belong to bin");
 
     const auto in_domain_value = _domain.string_to_domain(value.substr(common_prefix_length));
     const auto value_repr = _domain.string_to_number(in_domain_value);
@@ -163,16 +162,15 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
 
+    // Determine the common_prefix_lengths of bin_min and bin_max. E.g. bin_max=abcde and bin_max=abcz have a
+    // common_prefix_length=3
     auto common_prefix_length = size_t{0};
-    const auto max_common_prefix_len = std::min(bin_min.length(), bin_max.length());
-    for (; common_prefix_length < max_common_prefix_len; ++common_prefix_length) {
+    const auto max_common_prefix_length = std::min(bin_min.length(), bin_max.length());
+    for (; common_prefix_length < max_common_prefix_length; ++common_prefix_length) {
       if (bin_min[common_prefix_length] != bin_max[common_prefix_length]) {
         break;
       }
     }
-
-    DebugAssert(value.substr(0, common_prefix_length) == bin_min.substr(0, common_prefix_length),
-                "Value does not belong to bin");
 
     const auto in_domain_value = _domain.string_to_domain(value.substr(common_prefix_length));
     const auto value_repr = _domain.string_to_number(in_domain_value) + 1;
@@ -197,9 +195,8 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
     return false;
   }
 
-  if constexpr (std::is_same_v<
-                    T,
-                    pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  if constexpr (std::is_same_v<T, pmr_string>) {
     Assert(_domain.contains(*value), "Invalid value");
   }
 
@@ -219,6 +216,9 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
       return value > bin_maximum(bin_count() - 1);
     case PredicateCondition::GreaterThan:
       return value >= bin_maximum(bin_count() - 1);
+
+    // These are statistical estimations, currently there is no point in distinguishing between the different Between*
+    // types.
     case PredicateCondition::BetweenInclusive:
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:
@@ -422,7 +422,7 @@ bool AbstractHistogram<pmr_string>::_does_not_contain(const PredicateCondition p
 }
 
 template <typename T>
-CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_and_distinct_count(
+std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality_and_distinct_count(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   auto value = static_variant_cast<T>(variant_value);
@@ -430,9 +430,8 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
     return {static_cast<Cardinality>(total_count()), static_cast<float>(total_distinct_count())};
   }
 
-  if constexpr (std::is_same_v<
-                    T,
-                    pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  if constexpr (std::is_same_v<T, pmr_string>) {
     value = _domain.string_to_domain(*value);
   }
 
@@ -449,12 +448,7 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
         return {Cardinality{0.0f}, 0.0f};
       } else {
         const auto cardinality = Cardinality{bin_height(bin_id) / bin_distinct_count};
-
-        if (bin_distinct_count == 1) {
-          return {cardinality, 1.0f};
-        } else {
-          return {cardinality, std::min(bin_distinct_count, HistogramCountType{1.0f})};
-        }
+        return {cardinality, std::min(bin_distinct_count, HistogramCountType{1.0f})};
       }
     }
 
@@ -583,13 +577,13 @@ CardinalityAndDistinctCountEstimate AbstractHistogram<T>::estimate_cardinality_a
 }
 
 template <typename T>
-CardinalityAndDistinctCountEstimate AbstractHistogram<T>::_invert_estimate(
-    const CardinalityAndDistinctCountEstimate& estimate) const {
-  if (estimate.cardinality > total_count() || estimate.distinct_count > total_distinct_count()) {
+std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::_invert_estimate(
+    const std::pair<Cardinality, DistinctCount>& estimate) const {
+  if (estimate.first > total_count() || estimate.second > total_distinct_count()) {
     return {Cardinality{0.0f}, 0.0f};
   }
 
-  return {Cardinality{total_count() - estimate.cardinality}, total_distinct_count() - estimate.distinct_count};
+  return {Cardinality{total_count() - estimate.first}, total_distinct_count() - estimate.second};
 }
 
 // Specialization for numbers.
@@ -598,7 +592,7 @@ Cardinality AbstractHistogram<T>::estimate_cardinality(const PredicateCondition 
                                                        const AllTypeVariant& variant_value,
                                                        const std::optional<AllTypeVariant>& variant_value2) const {
   const auto estimate = estimate_cardinality_and_distinct_count(predicate_condition, variant_value, variant_value2);
-  return estimate.cardinality;
+  return estimate.first;
 }
 
 // Specialization for strings.
@@ -623,13 +617,13 @@ Cardinality AbstractHistogram<pmr_string>::estimate_cardinality(
 
       // We don't deal with this for now because it is not worth the effort.
       // TODO(anyone): think about good way to handle SingleChar wildcard in patterns.
-      const auto single_char_count = std::count(value->cbegin(), value->cend(), '_');
-      if (single_char_count > 0u) {
+      const auto has_single_char_wildcard = std::find(value->cbegin(), value->cend(), '_') != value->cend();
+      if (has_single_char_wildcard) {
         return static_cast<Cardinality>(total_count());
       }
 
       const auto any_chars_count = std::count(value->cbegin(), value->cend(), '%');
-      DebugAssert(any_chars_count > 0u,
+      DebugAssert(any_chars_count > 0,
                   "contains_wildcard() should not return true if there is neither a '%' nor a '_' in the string.");
 
       // Match everything.
@@ -639,7 +633,7 @@ Cardinality AbstractHistogram<pmr_string>::estimate_cardinality(
 
       if (value->front() != '%') {
         /**
-         * We know now we have some sort of prefix search, because there is at least one AnyChars wildcard,
+         * We now know we have some sort of prefix search, because there is at least one AnyChars wildcard,
          * and it is not at the start of the pattern.
          *
          * We differentiate two cases:
@@ -647,7 +641,7 @@ Cardinality AbstractHistogram<pmr_string>::estimate_cardinality(
          *  and it is at the end of the pattern.
          *  2. All others, e.g., 'foo%bar' or 'foo%bar%'.
          *
-         *  The way we handle these cases is we only estimate simple prefix patterns and assume uniform distribution
+         *  The way we handle these cases is that we only estimate simple prefix patterns and assume uniform distribution
          *  for additional fixed characters for the second case.
          *  Note: this is obviously far from great because not only do characters not appear with equal probability,
          *  they also appear with different probability depending on characters around them.
@@ -720,8 +714,8 @@ Cardinality AbstractHistogram<pmr_string>::estimate_cardinality(
 
       // TODO(anyone): think about good way to handle SingleChar wildcard in patterns.
       //               We don't deal with this for now because it is not worth the effort.
-      const auto single_char_count = std::count(value->cbegin(), value->cend(), '_');
-      if (single_char_count > 0u) {
+      const auto single_char_wildcard = std::find(value->cbegin(), value->cend(), '_') != value->cend();
+      if (single_char_wildcard) {
         return static_cast<Cardinality>(total_count());
       }
 
@@ -730,7 +724,7 @@ Cardinality AbstractHistogram<pmr_string>::estimate_cardinality(
 
     default:
       const auto estimate = estimate_cardinality_and_distinct_count(predicate_condition, variant_value, variant_value2);
-      return estimate.cardinality;
+      return estimate.first;
   }
 }
 
@@ -749,6 +743,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
   const auto value = static_variant_cast<T>(variant_value);
   if (!value) {
+    // variant_value is NULL and slicing with NULL is nothing we can do anything meaningful for.
     return clone();
   }
 
@@ -780,9 +775,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       if (minimum != maximum) {
         // A bin [50, 60] sliced with `!= 60` becomes [50, 59]
         // TODO(anybody) Implement bin bounds trimming for strings
-        if constexpr (!std::is_same_v<
-                          pmr_string,
-                          T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+        // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+        if constexpr (!std::is_same_v<pmr_string, T>) {
           if (minimum == *value) {
             minimum = _domain.next_value(*value);
           }
@@ -793,8 +787,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         }
 
         const auto estimate = estimate_cardinality_and_distinct_count(PredicateCondition::Equals, variant_value);
-        const auto new_height = bin_height(value_bin_id) - estimate.cardinality;
-        const auto new_distinct_count = distinct_count - estimate.distinct_count;
+        const auto new_height = bin_height(value_bin_id) - estimate.first;
+        const auto new_distinct_count = distinct_count - estimate.second;
 
         builder.add_bin(minimum, maximum, new_height, new_distinct_count);
       }
@@ -808,36 +802,35 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       return sliced(PredicateCondition::LessThan, _domain.next_value(*value));
 
     case PredicateCondition::LessThan: {
-      auto last_bin_id = _bin_for_value(*value);
+      auto last_included_bin_id = _bin_for_value(*value);
 
-      if (last_bin_id == INVALID_BIN_ID) {
-        last_bin_id = _next_bin_for_value(*value);
+      if (last_included_bin_id == INVALID_BIN_ID) {
+        last_included_bin_id = _next_bin_for_value(*value);
 
-        if (last_bin_id == INVALID_BIN_ID) {
-          last_bin_id = bin_count() - 1;
+        if (last_included_bin_id == INVALID_BIN_ID) {
+          last_included_bin_id = bin_count() - 1;
         } else {
-          last_bin_id = last_bin_id - 1;
+          last_included_bin_id = last_included_bin_id - 1;
         }
       }
 
-      if (predicate_condition == PredicateCondition::LessThan && *value == bin_minimum(last_bin_id)) {
-        --last_bin_id;
+      if (predicate_condition == PredicateCondition::LessThan && *value == bin_minimum(last_included_bin_id)) {
+        --last_included_bin_id;
       }
 
       auto last_bin_maximum = T{};
       // previous_value(value) is not available for strings, but we do not expect it to make a big difference.
       // TODO(anybody) Correctly implement bin bounds trimming for strings
-      if constexpr (
-          !std::is_same_v<
-              T, pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
-        last_bin_maximum = std::min(bin_maximum(last_bin_id), _domain.previous_value(*value));
+      // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+      if constexpr (!std::is_same_v<T, pmr_string>) {
+        last_bin_maximum = std::min(bin_maximum(last_included_bin_id), _domain.previous_value(*value));
       } else {
-        last_bin_maximum = std::min(bin_maximum(last_bin_id), *value);
+        last_bin_maximum = std::min(bin_maximum(last_included_bin_id), *value);
       }
 
-      GenericHistogramBuilder<T> builder{last_bin_id + 1, _domain};
-      builder.add_copied_bins(*this, BinID{0}, last_bin_id);
-      builder.add_sliced_bin(*this, last_bin_id, bin_minimum(last_bin_id), last_bin_maximum);
+      GenericHistogramBuilder<T> builder{last_included_bin_id + 1, _domain};
+      builder.add_copied_bins(*this, BinID{0}, last_included_bin_id);
+      builder.add_sliced_bin(*this, last_included_bin_id, bin_minimum(last_included_bin_id), last_bin_maximum);
 
       return builder.build();
     }
@@ -893,7 +886,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
   // Scale the number of values in the bin with the given selectivity.
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
     builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) * selectivity,
-                    _scale_distinct_count(selectivity, bin_height(bin_id), bin_distinct_count(bin_id)));
+                    _scale_distinct_count(bin_height(bin_id), bin_distinct_count(bin_id), selectivity));
   }
 
   return builder.build();
@@ -902,9 +895,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
 template <typename T>
 std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const std::vector<std::pair<T, T>>& additional_bin_edges) const {
-  if constexpr (std::is_same_v<
-                    T,
-                    pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  if constexpr (std::is_same_v<T, pmr_string>) {
     Fail("Cannot split_at_bin_bounds() on string histogram");
   }
 
@@ -923,8 +915,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   for (auto bin_id = BinID{0}; bin_id < current_bin_count; bin_id++) {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
-    if constexpr (std::is_arithmetic_v<
-                      T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+    // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+    if constexpr (std::is_arithmetic_v<T>) {
       split_set.insert(std::make_pair(_domain.previous_value(bin_min), bin_min));
       split_set.insert(std::make_pair(bin_max, _domain.next_value(bin_max)));
     } else {
@@ -934,8 +926,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   }
 
   for (const auto& edge_pair : additional_bin_edges) {
-    if constexpr (std::is_arithmetic_v<
-                      T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+    // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+    if constexpr (std::is_arithmetic_v<T>) {
       split_set.insert(std::make_pair(_domain.previous_value(edge_pair.first), edge_pair.first));
       split_set.insert(std::make_pair(edge_pair.second, _domain.next_value(edge_pair.second)));
     } else {
@@ -984,12 +976,12 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const auto estimate =
         estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, bin_min, bin_max);
     // Skip empty bins
-    if (estimate.cardinality == Cardinality{0}) {
+    if (estimate.first == Cardinality{0}) {
       continue;
     }
 
-    builder.add_bin(bin_min, bin_max, static_cast<HistogramCountType>(estimate.cardinality),
-                    static_cast<HistogramCountType>(estimate.distinct_count));
+    builder.add_bin(bin_min, bin_max, static_cast<HistogramCountType>(estimate.first),
+                    static_cast<HistogramCountType>(estimate.second));
   }
 
   return builder.build();
@@ -1015,9 +1007,8 @@ void AbstractHistogram<T>::_assert_bin_validity() {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");
     }
 
-    if constexpr (
-        std::is_same_v<
-            T, pmr_string>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+    // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+    if constexpr (std::is_same_v<T, pmr_string>) {
       Assert(_domain.contains(bin_minimum(bin_id)), "Invalid string bin minimum");
       Assert(_domain.contains(bin_maximum(bin_id)), "Invalid string bin maximum");
     }
@@ -1025,8 +1016,8 @@ void AbstractHistogram<T>::_assert_bin_validity() {
 }
 
 template <typename T>
-Cardinality AbstractHistogram<T>::_scale_distinct_count(Selectivity selectivity, Cardinality value_count,
-                                                        Cardinality distinct_count) const {
+Cardinality AbstractHistogram<T>::_scale_distinct_count(Cardinality value_count, Cardinality distinct_count,
+                                                        Selectivity selectivity) {
   return std::min(distinct_count, Cardinality{value_count * selectivity});
 }
 

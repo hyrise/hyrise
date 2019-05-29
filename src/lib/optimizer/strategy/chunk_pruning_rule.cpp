@@ -82,7 +82,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-  const Table& table, const AbstractExpression& predicate,
+    const Table& table, const AbstractExpression& predicate,
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
   // Hacky:
   // `statistics` contains ColumnStatistics for all columns, even those that are pruned in `stored_table_node`.

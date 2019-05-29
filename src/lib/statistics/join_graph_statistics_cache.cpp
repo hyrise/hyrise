@@ -4,12 +4,6 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/table_statistics.hpp"
 
-namespace {
-
-using namespace opossum;  // NOLINT
-
-}  // namespace
-
 namespace opossum {
 
 JoinGraphStatisticsCache JoinGraphStatisticsCache::from_join_graph(const JoinGraph& join_graph) {

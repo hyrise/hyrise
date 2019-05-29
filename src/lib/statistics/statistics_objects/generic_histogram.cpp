@@ -27,7 +27,7 @@ GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T
 }
 
 template <typename T>
-std::string GenericHistogram<T>::histogram_name() const {
+std::string GenericHistogram<T>::name() const {
   return "Generic";
 }
 
