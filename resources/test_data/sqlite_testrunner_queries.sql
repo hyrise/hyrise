@@ -190,8 +190,8 @@ SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT SUM(min_a) FROM (SELECT 
 SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
-SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
-SELECT a AS whatever, SUM(b) FROM mixed GROUP BY a;
+SELECT a AS a_alias, SUM(b) FROM mixed GROUP BY a_alias;
+SELECT a AS a_alias, SUM(b) FROM mixed GROUP BY a;
 
 -- DISTINCT
 SELECT DISTINCT a FROM mixed;
