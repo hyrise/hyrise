@@ -65,16 +65,18 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
       TableColumnDefinitions{{"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Double, true}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
   table->append({4.5f, 13, 1.0});
+  table->append({4.5f, 13, 1.0});
   table->append({NullValue{}, 12, -2.0});
+  table->append({1.5f, 14, NullValue{}});
   table->append({1.5f, 14, NullValue{}});
 
   const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{1}, ColumnID{0}, ColumnID{2}};
 
   const auto layout = produce_initial_groups_layout<FixedSizeGroupRunLayout>(*table, group_by_column_ids);
-  auto groups = produce_initial_groups<FixedSizeGroupRun>(table, &layout, group_by_column_ids);
+  EXPECT_EQ(layout.group_size, 6u);
+  EXPECT_EQ(layout.column_base_offsets, std::vector<size_t>({0, 1, 3}));
 
-  EXPECT_EQ(groups.layout->group_size, 6u);
-  EXPECT_EQ(groups.layout->column_base_offsets, std::vector<size_t>({0, 1, 3}));
+  auto groups = produce_initial_groups<FixedSizeGroupRun>(table, &layout, group_by_column_ids, 1, 3);
 
   EXPECT_EQ(groups.hashes.size(), 3u);
   EXPECT_EQ(groups.end, 3u);
@@ -90,7 +92,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixed) {
   EXPECT_EQ(groups.data, expected_group_data);
 }
 
-TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixedEmpty) {
+TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixedNoGroupByColumns) {
   const auto column_definitions = TableColumnDefinitions{{"a", DataType::Float, true}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
   table->append({4.5f});
@@ -99,7 +101,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsFixedEmpty) {
   const auto group_by_column_ids = std::vector<ColumnID>{};
 
   const auto layout = produce_initial_groups_layout<FixedSizeGroupRunLayout>(*table, group_by_column_ids);
-  auto groups = produce_initial_groups<FixedSizeGroupRun>(table, &layout, group_by_column_ids);
+  auto groups = produce_initial_groups<FixedSizeGroupRun>(table, &layout, group_by_column_ids, 0, 2);
 
   EXPECT_EQ(groups.layout->group_size, 0u);
   EXPECT_EQ(groups.layout->column_base_offsets, std::vector<size_t>());
@@ -135,7 +137,7 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsLayoutVariablySized) {
   EXPECT_EQ(layout.fixed_layout.column_base_offsets, std::vector<size_t>({0, 2}));
 }
 
-TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySized) {
+TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySizedDataBudgetLimited) {
   const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, true},
                                                          {"b", DataType::String, false},
                                                          {"c", DataType::String, true},
@@ -143,14 +145,18 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySized) {
                                                          {"e", DataType::Long, false}};
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
   table->append({11, "abcd", "bcdef", 0, int64_t{12}});
+  table->append({11, "abcd", "bcdef", 0, int64_t{12}});
   table->append({NullValue{}, "aa", "bcd", 1, int64_t{14}});
   table->append({NullValue{}, "aa", "bcd", 1, int64_t{14}});
+  table->append({NullValue{}, "aa", NullValue{}, 1, int64_t{14}});
   table->append({NullValue{}, "aa", NullValue{}, 1, int64_t{14}});
 
   auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
 
   const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
-  auto groups = produce_initial_groups<VariablySizedGroupRun>(table, &layout, group_by_column_ids);
+
+  // Produce groups with data/row budget so that the data budget (8 * uint32_t) gets exhausted first, after 4 rows
+  auto groups = produce_initial_groups<VariablySizedGroupRun>(table, &layout, group_by_column_ids, 1, 5, 8);
 
   // clang-format off
   const auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::BlobDataType>{
@@ -173,6 +179,50 @@ TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySized) {
     1, 0, lower_word(int64_t{14}), upper_word(int64_t{14}),
     1, 0, lower_word(int64_t{14}), upper_word(int64_t{14}),
     1, 0, lower_word(int64_t{14}), upper_word(int64_t{14})
+  };
+  // clang-format on
+
+  EXPECT_EQ(groups.fixed.data, expected_fixed_group_data);
+}
+
+TEST_F(AggregateHashSortStepsTest, ProduceInitialGroupsVariablySizedRowBudgetLimited) {
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, true},
+                                                         {"b", DataType::String, false},
+                                                         {"c", DataType::String, true},
+                                                         {"d", DataType::Int, false},
+                                                         {"e", DataType::Long, false}};
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  table->append({11, "abcd", "bcdef", 0, int64_t{12}});
+  table->append({11, "abcd", "bcdef", 0, int64_t{12}});
+  table->append({NullValue{}, "aab", "cdefgh", 1, int64_t{14}});
+  table->append({int32_t{99}, "ae", "bcd", 1, int64_t{17}});
+  table->append({NullValue{}, "aa", NullValue{}, 1, int64_t{14}});
+  table->append({NullValue{}, "aa", NullValue{}, 1, int64_t{14}});
+
+  auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
+
+  const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
+
+  // Produce groups with data/row budget so that the row budget (2) gets exhausted first, after 5 * uint32_t data
+  auto groups = produce_initial_groups<VariablySizedGroupRun>(table, &layout, group_by_column_ids, 2, 2, 8);
+
+  // clang-format off
+  const auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::BlobDataType>{
+    chars_to_blob_element("aabc"), chars_to_blob_element("defg"), chars_to_blob_element("h"),
+    chars_to_blob_element("aebc"), chars_to_blob_element("d")
+  };
+  // clang-format on
+
+  EXPECT_EQ(groups.data, expected_variably_sized_group_data);
+  EXPECT_EQ(groups.null_values, std::vector<bool>({false, false, false, false}));
+  EXPECT_EQ(groups.group_end_offsets, std::vector<size_t>({3, 5}));
+  EXPECT_EQ(groups.value_end_offsets, std::vector<size_t>({3, 9, 2, 5}));
+  EXPECT_EQ(groups.fixed.hashes.size(), 2u);
+
+  // clang-format off
+  const auto expected_fixed_group_data = std::vector<uint32_t>{
+    1, 0, lower_word(int64_t{14}), upper_word(int64_t{14}),
+    0, 99, lower_word(int64_t{17}), upper_word(int64_t{17}),
   };
   // clang-format on
 

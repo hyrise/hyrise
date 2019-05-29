@@ -733,18 +733,45 @@ inline VariablySizedGroupRunLayout produce_initial_groups_layout<VariablySizedGr
   return VariablySizedGroupRunLayout{variably_sized_column_ids, fixed_size_column_ids, column_mapping, fixed_layout};
 }
 
-template <typename GroupRun>
-GroupRun produce_initial_groups(const std::shared_ptr<const Table>& table, const typename GroupRun::LayoutType* layout,
-                                const std::vector<ColumnID>& group_by_column_ids);
-
-template <>
-inline FixedSizeGroupRun produce_initial_groups<FixedSizeGroupRun>(const std::shared_ptr<const Table>& table,
+inline std::pair<FixedSizeGroupRun, RowID> produce_initial_groups(const std::shared_ptr<const Table>& table,
                                                                    const FixedSizeGroupRunLayout* layout,
-                                                                   const std::vector<ColumnID>& group_by_column_ids) {
+                                                                   const std::vector<ColumnID>& group_by_column_ids, const RowID& begin_row_id, const size_t row_count_budget) {
   constexpr auto BLOB_DATA_TYPE_SIZE = sizeof(FixedSizeGroupRun::BlobDataType);
 
-  auto group_run = FixedSizeGroupRun{layout, table->row_count()};
-  group_run.end = table->row_count();
+  auto group_run = FixedSizeGroupRun{layout, row_count_budget};
+
+  auto end_row_id = RowID{};
+  auto row_
+
+  for (auto output_group_by_column_idx = ColumnID{0}; output_group_by_column_idx < group_by_column_ids.size();
+       ++output_group_by_column_idx) {
+
+    auto column_iterable = ColumnIterable{table, group_by_column_ids[output_group_by_column_idx]};
+    auto data_offset = segment_base_offset;
+
+    end_row_id = column_iterable.for_each<ResolveDataTypeTag>([](const auto& segment_position, const RowID& row_id) {
+      if (segment_position.is_null()) {
+        group_run.data[data_offset] = 1;
+        memset(&group_run.data[data_offset + 1], 0, value_size - BLOB_DATA_TYPE_SIZE);
+      } else {
+        if (nullable) {
+          group_run.data[data_offset] = 0;
+          memcpy(&group_run.data[data_offset + 1], &segment_position.value(), value_size - BLOB_DATA_TYPE_SIZE);
+        } else {
+          memcpy(&group_run.data[data_offset], &segment_position.value(), value_size);
+        }
+      }
+
+      boost::hash_combine(group_run.hashes[row_idx], hash_segment_position(segment_position));
+
+      data_offset += layout->group_size;
+      ++row_idx;
+    }, begin_row_id);
+  }
+
+
+
+  return {group_run, end_row_id};
 
   /**
    * Materialize the GroupBy-columns

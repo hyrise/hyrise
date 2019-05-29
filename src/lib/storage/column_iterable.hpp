@@ -19,13 +19,15 @@ struct ColumnIterable {
   ColumnIterable(const std::shared_ptr<const Table>& table,
                  const ColumnID column_id);
 
+
   template <typename T, typename F>
-  void for_each(const F& f, const RowID begin_row_id = RowID{ChunkID{0}, ChunkOffset{0}}) const {
+  RowID for_each(const F& f, const RowID begin_row_id = RowID{ChunkID{0}, ChunkOffset{0}}) const {
     auto aborted = false;
     const auto chunk_count = table->chunk_count();
     auto chunk_offset = begin_row_id.chunk_offset;
 
-    for (auto chunk_id = begin_row_id.chunk_id; chunk_id < chunk_count; ++chunk_id) {
+    auto chunk_id = begin_row_id.chunk_id;
+    for (; chunk_id < chunk_count; ++chunk_id) {
       const auto& segment = *table->get_chunk(chunk_id)->get_segment(column_id);
 
       segment_with_iterators<T>(segment, [&](auto iter, auto end) {
@@ -54,6 +56,8 @@ struct ColumnIterable {
 
       chunk_offset = 0;
     }
+
+    return {chunk_id, chunk_offset};
   }
 };
 
