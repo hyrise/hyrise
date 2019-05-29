@@ -15,12 +15,13 @@
 
 namespace hana = boost::hana;
 
+// helper structs and functions for compile time, the actual code is in namespace opossum
 namespace {
 // similar to std::optional but has_value is known at compile time, so "if constexpr" can be used
 // hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
 template <typename T, bool _has_value, typename Enable = void>
 class optional_constexpr {
- public:
+public:
   template <typename... Args>
   explicit optional_constexpr(Args&&... args) : _value{std::forward<Args>(args)...} {}
 
@@ -29,13 +30,13 @@ class optional_constexpr {
 
   T& value() { return _value; }
 
- private:
+private:
   T _value;
 };
 
 template <typename T, bool _has_value>
 class optional_constexpr<T, _has_value, std::enable_if_t<!_has_value>> {
- public:
+public:
   template <typename... Args>
   explicit optional_constexpr(Args&&...) {}
 
@@ -101,21 +102,26 @@ namespace opossum {
  * data vector for each column and appends values to them in append_row(). For nullable columns an additional
  * is_null_vector is kept. Automatically creates chunks in accordance with the specified chunk size.
  */
-template <typename... ColumnDefinitionTuples>
+template <typename... DataTypes>
 class TableBuilder {
  public:
-  TableBuilder(size_t chunk_size, const hana::tuple<ColumnDefinitionTuples...>& column_definition_tuples,
+  // names is a list of strings defining column names, types is a list of equal length defining respective column types
+  // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
+  template <typename... Names>
+  TableBuilder(size_t chunk_size, const hana::tuple<DataTypes...>& types, const hana::tuple<Names...>& names,
                opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
       : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
+    BOOST_HANA_CONSTANT_ASSERT(hana::size(names) == hana::size(types));
+
     // Iterate over the column types/names and create the columns.
     auto column_definitions = TableColumnDefinitions{};
-    hana::fold_left(column_definition_tuples, column_definitions,
-                    [](auto& definitions, const auto& definition_tuple) -> decltype(definitions) {
-                      auto name = definition_tuple[hana::llong_c<0>];
-                      auto type = definition_tuple[hana::llong_c<1>];
-                      auto is_nullable = definition_tuple[hana::llong_c<2>];
+    hana::fold_left(hana::zip(names, types), column_definitions,
+                    [](auto& definitions, const auto& name_and_type) -> decltype(definitions) {
+                      auto name = name_and_type[hana::llong_c<0>];
+                      auto type = name_and_type[hana::llong_c<1>];
 
-                      auto data_type = data_type_from_type<typename decltype(type)::type>();
+                      auto data_type = data_type_from_type<get_value_type<decltype(type)>>();
+                      auto is_nullable = is_optional<decltype(type)>();
 
                       definitions.emplace_back(name, data_type, is_nullable);
 
@@ -144,6 +150,7 @@ class TableBuilder {
   template <typename... Types>
   void append_row(Types&&... values) {
     auto values_tuple = hana::make_tuple(std::forward<decltype(values)>(values)...);
+    BOOST_HANA_CONSTANT_ASSERT(hana::size(hana::tuple<DataTypes...>()) == hana::size(values_tuple));
 
     // Create tuples ([&data_vector0, &is_null_vector0, value0], [&data_vector1, &is_null_vector1, value1], ...)
     auto data_vectors_and_is_null_vectors_and_values = hana::zip_with(
@@ -186,13 +193,8 @@ class TableBuilder {
   UseMvcc _use_mvcc;
   size_t _estimated_rows_per_chunk;
 
-  template <typename Tuple, int index>
-  constexpr static auto get_tuple_element() {
-    return hana::at_c<index>(Tuple());
-  }
-
-  hana::tuple<std::vector<typename decltype(get_tuple_element<ColumnDefinitionTuples, 1>())::type>...> _data_vectors;
-  hana::tuple<optional_constexpr<std::vector<bool>, hana::at_c<2>(ColumnDefinitionTuples())>...> _is_null_vectors;
+  hana::tuple<std::vector<get_value_type<DataTypes>>...> _data_vectors;
+  hana::tuple<optional_constexpr<std::vector<bool>, (is_optional<DataTypes>())>...> _is_null_vectors;
 
   size_t _current_chunk_row_count() const { return _data_vectors[hana::llong_c<0>].size(); }
 

@@ -8,7 +8,11 @@ extern "C" {
 
 #include <utility>
 
-#include "table_builder.hpp"
+#include "boost/hana/for_each.hpp"
+#include "boost/hana/integral_constant.hpp"
+#include "boost/hana/zip_with.hpp"
+
+#include "../table_builder.hpp"
 #include "benchmark_config.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
@@ -23,74 +27,32 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-const auto customer_definitions = hana::make_tuple(hana::make_tuple("c_custkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("c_name", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("c_address", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("c_nationkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("c_phone", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("c_acctbal", hana::type_c<float>, false),
-                                                   hana::make_tuple("c_mktsegment", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("c_comment", hana::type_c<pmr_string>, false));
+// clang-format off
+const auto customer_column_types = boost::hana::tuple <int32_t, pmr_string, pmr_string, int32_t, pmr_string, float, pmr_string, pmr_string>(); // NOLINT
+const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name", "c_address", "c_nationkey", "c_phone", "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
 
-const auto order_definitions = hana::make_tuple(hana::make_tuple("o_orderkey", hana::type_c<int32_t>, false),
-                                                hana::make_tuple("o_custkey", hana::type_c<int32_t>, false),
-                                                hana::make_tuple("o_orderstatus", hana::type_c<pmr_string>, false),
-                                                hana::make_tuple("o_totalprice", hana::type_c<float>, false),
-                                                hana::make_tuple("o_orderdate", hana::type_c<pmr_string>, false),
-                                                hana::make_tuple("o_orderpriority", hana::type_c<pmr_string>, false),
-                                                hana::make_tuple("o_clerk", hana::type_c<pmr_string>, false),
-                                                hana::make_tuple("o_shippriority", hana::type_c<int32_t>, false),
-                                                hana::make_tuple("o_comment", hana::type_c<pmr_string>, false));
+const auto order_column_types = boost::hana::tuple <int32_t, int32_t, pmr_string, float, pmr_string, pmr_string, pmr_string, int32_t, pmr_string>(); // NOLINT
+const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk", "o_shippriority", "o_comment"); // NOLINT
 
-const auto lineitem_definitions = hana::make_tuple(hana::make_tuple("l_orderkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("l_partkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("l_suppkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("l_linenumber", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("l_quantity", hana::type_c<float>, false),
-                                                   hana::make_tuple("l_extendedprice", hana::type_c<float>, false),
-                                                   hana::make_tuple("l_discount", hana::type_c<float>, false),
-                                                   hana::make_tuple("l_tax", hana::type_c<float>, false),
-                                                   hana::make_tuple("l_returnflag", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("l_linestatus", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("l_shipdate", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("l_commitdate", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("l_receiptdate", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("l_shipinstruct", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("l_shipmode", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("l_comment", hana::type_c<pmr_string>, false));
+const auto lineitem_column_types = boost::hana::tuple <int32_t, int32_t, int32_t, int32_t, float, float, float, float, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string>(); // NOLINT
+const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment"); // NOLINT
 
-const auto part_definitions = hana::make_tuple(hana::make_tuple("p_partkey", hana::type_c<int32_t>, false),
-                                               hana::make_tuple("p_name", hana::type_c<pmr_string>, false),
-                                               hana::make_tuple("p_mfgr", hana::type_c<pmr_string>, false),
-                                               hana::make_tuple("p_brand", hana::type_c<pmr_string>, false),
-                                               hana::make_tuple("p_type", hana::type_c<pmr_string>, false),
-                                               hana::make_tuple("p_size", hana::type_c<int32_t>, false),
-                                               hana::make_tuple("p_container", hana::type_c<pmr_string>, false),
-                                               hana::make_tuple("p_retailsize", hana::type_c<float>, false),
-                                               hana::make_tuple("p_comment", hana::type_c<pmr_string>, false));
+const auto part_column_types = boost::hana::tuple <int32_t, pmr_string, pmr_string, pmr_string, pmr_string, int32_t, pmr_string, float, pmr_string>(); // NOLINT
+const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name", "p_mfgr", "p_brand", "p_type", "p_size", "p_container", "p_retailsize", "p_comment"); // NOLINT
 
-const auto partsupp_definitions = hana::make_tuple(hana::make_tuple("ps_partkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("ps_suppkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("ps_availqty", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("ps_supplycost", hana::type_c<float>, false),
-                                                   hana::make_tuple("ps_comment", hana::type_c<pmr_string>, false));
+const auto partsupp_column_types = boost::hana::tuple<int32_t, int32_t, int32_t, float, pmr_string>(); // NOLINT
+const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment"); // NOLINT
 
-const auto supplier_definitions = hana::make_tuple(hana::make_tuple("s_suppkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("s_name", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("s_address", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("s_nationkey", hana::type_c<int32_t>, false),
-                                                   hana::make_tuple("s_phone", hana::type_c<pmr_string>, false),
-                                                   hana::make_tuple("s_acctbal", hana::type_c<float>, false),
-                                                   hana::make_tuple("s_comment", hana::type_c<pmr_string>, false));
+const auto supplier_column_types = boost::hana::tuple<int32_t, pmr_string, pmr_string, int32_t, pmr_string, float, pmr_string>(); // NOLINT
+const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name", "s_address", "s_nationkey", "s_phone", "s_acctbal", "s_comment"); // NOLINT
 
-const auto nation_definitions = hana::make_tuple(hana::make_tuple("n_nationkey", hana::type_c<int32_t>, false),
-                                                 hana::make_tuple("n_name", hana::type_c<pmr_string>, false),
-                                                 hana::make_tuple("n_regionkey", hana::type_c<int32_t>, false),
-                                                 hana::make_tuple("n_comment", hana::type_c<pmr_string>, false));
+const auto nation_column_types = boost::hana::tuple<int32_t, pmr_string, int32_t, pmr_string>(); // NOLINT
+const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name", "n_regionkey", "n_comment"); // NOLINT
 
-const auto region_definitions = hana::make_tuple(hana::make_tuple("r_regionkey", hana::type_c<int32_t>, false),
-                                                 hana::make_tuple("r_name", hana::type_c<pmr_string>, false),
-                                                 hana::make_tuple("r_comment", hana::type_c<pmr_string>, false));
+const auto region_column_types = boost::hana::tuple<int32_t, pmr_string, pmr_string>(); // NOLINT
+const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name", "r_comment"); // NOLINT
+
+// clang-format on
 
 std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable>> tpch_table_to_dbgen_id = {
     {opossum::TpchTable::Part, PART},     {opossum::TpchTable::PartSupp, PSUPP}, {opossum::TpchTable::Supplier, SUPP},
@@ -145,12 +107,6 @@ void dbgen_cleanup() {
   asc_date = nullptr;
 }
 
-std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_t chunk_size) {
-  auto config = BenchmarkConfig::get_default_config();
-  config.chunk_size = chunk_size;
-  return std::make_shared<BenchmarkConfig>(config);
-}
-
 }  // namespace
 
 namespace opossum {
@@ -183,14 +139,22 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_definitions, UseMvcc::Yes, customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_definitions, UseMvcc::Yes, order_count};
-  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_definitions, UseMvcc::Yes, order_count * 4};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_definitions, UseMvcc::Yes, part_count};
-  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_definitions, UseMvcc::Yes, part_count * 4};
-  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_definitions, UseMvcc::Yes, supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_definitions, UseMvcc::Yes, nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_definitions, UseMvcc::Yes, region_count};
+  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
+                                UseMvcc::Yes, customer_count};
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, UseMvcc::Yes,
+                             order_count};
+  TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
+                                UseMvcc::Yes, order_count * 4};
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, UseMvcc::Yes,
+                            part_count};
+  TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
+                                UseMvcc::Yes, part_count * 4};
+  TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
+                                UseMvcc::Yes, supplier_count};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes,
+                              nation_count};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, UseMvcc::Yes,
+                              region_count};
 
   /**
    * CUSTOMER
