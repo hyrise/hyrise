@@ -806,17 +806,15 @@ TEST_F(LQPTranslatorTest, CreateTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, true);
 
-  const auto lqp = CreateTableNode::make("t", column_definitions, false,
-                                         StaticTableNode::make(Table::create_dummy_table(column_definitions)));
+  const auto lqp = CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
-  EXPECT_EQ(pqp->input_left(), nullptr);
 
   const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
   EXPECT_EQ(create_table->table_name, "t");
-  EXPECT_EQ(create_table->column_definitions, column_definitions);
+  EXPECT_EQ(create_table->column_definitions(), column_definitions);
 }
 
 TEST_F(LQPTranslatorTest, DropTable) {
