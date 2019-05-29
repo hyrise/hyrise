@@ -10,8 +10,14 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/print.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/index_scan.hpp"
+#include "operators/index_scan_loop.hpp"
+#include "operators/index_scan_copy.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -31,10 +37,11 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
-    const auto scale_factor = 0.001f;
+    const auto scale_factor = 1.0f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
+
     // TODO(anyone): setup benchmark_config with the given default_encoding
     // benchmark_config.encoding_config = EncodingConfig{SegmentEncodingSpec{default_encoding}};
 
@@ -47,6 +54,8 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     _table_wrapper_map = create_table_wrappers(sm);
 
     auto lineitem_table = sm.get_table("lineitem");
+    lineitem_table->create_index<GroupKeyIndex>({ColumnID{6}}, "dasd");
+    lineitem_table->create_index<GroupKeyIndex2>({ColumnID{6}}, "dasd123");
 
     // TPC-H Q6 predicates. With an optimal predicate order (logical costs), discount (between on float) is first
     // executed, followed by shipdate <, followed by quantity, and eventually shipdate >= (note, order calculated
@@ -56,7 +65,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     _tpchq6_discount_operand = pqp_column_(ColumnID{6}, lineitem_table->column_data_type(ColumnID{6}),
                                            lineitem_table->column_is_nullable(ColumnID{6}), "");
     _tpchq6_discount_predicate = std::make_shared<BetweenExpression>(
-        PredicateCondition::BetweenInclusive, _tpchq6_discount_operand, value_(0.05), value_(0.70001));
+        PredicateCondition::BetweenInclusive, _tpchq6_discount_operand, value_(0.072413), value_(0.092423));
 
     _tpchq6_shipdate_less_operand = pqp_column_(ColumnID{10}, lineitem_table->column_data_type(ColumnID{10}),
                                                 lineitem_table->column_is_nullable(ColumnID{10}), "");
@@ -126,6 +135,73 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   LQPColumnReference _orders_orderpriority, _orders_orderdate, _orders_orderkey;
   LQPColumnReference _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanOnly)(benchmark::State& state) {
+  for (auto _ : state) {
+    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+    table_scan->execute();
+    // std::cout << table_scan->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanOnly)(benchmark::State& state) {
+  const std::vector<AllTypeVariant> a = {0.072413};
+  std::vector<AllTypeVariant> b = {0.092423};
+  std::vector<ColumnID> column_ids = {ColumnID{6}};
+  for (auto _ : state) {
+    const std::shared_ptr<IndexScan> index_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+    index_scan->execute();
+    // std::cout << index_scan->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanLoopOnly)(benchmark::State& state) {
+  const std::vector<AllTypeVariant> a = {0.072413};
+  std::vector<AllTypeVariant> b = {0.092423};
+  std::vector<ColumnID> column_ids = {ColumnID{6}};
+  for (auto _ : state) {
+    const std::shared_ptr<IndexScanLoop> index_scan = std::make_shared<IndexScanLoop>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+    index_scan->execute();
+    // std::cout << index_scan->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanCopyOnly)(benchmark::State& state) {
+  const std::vector<AllTypeVariant> a = {0.072413};
+  std::vector<AllTypeVariant> b = {0.092423};
+  std::vector<ColumnID> column_ids = {ColumnID{6}};
+  for (auto _ : state) {
+    const std::shared_ptr<IndexScanCopy> index_scan = std::make_shared<IndexScanCopy>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey2, column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+    index_scan->execute();
+    // std::cout << index_scan->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanTableScan)(benchmark::State& state) {
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+  table_scan->execute();
+
+  for (auto _ : state) {
+    const auto table_scan_2 = std::make_shared<TableScan>(table_scan, _tpchq6_quantity_predicate);
+    table_scan_2->execute();
+    // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanTableScan)(benchmark::State& state) {
+  const std::vector<AllTypeVariant> a = {0.072413};
+  std::vector<AllTypeVariant> b = {0.092423};
+  std::vector<ColumnID> column_ids = {ColumnID{6}};
+  const std::shared_ptr<IndexScan> index_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+  index_scan->execute();
+
+  for (auto _ : state) {
+    const auto table_scan_2 = std::make_shared<TableScan>(index_scan, _tpchq6_quantity_predicate);
+    table_scan_2->execute();
+    // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+  }
+}
+
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
   for (auto _ : state) {

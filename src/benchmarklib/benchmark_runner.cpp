@@ -90,7 +90,14 @@ BenchmarkRunner::~BenchmarkRunner() {
   }
 }
 
-void BenchmarkRunner::run() {
+void BenchmarkRunner::rerun() {
+  _query_results = std::vector<QueryBenchmarkResult>();
+  _query_plans = std::vector<QueryPlans>();
+
+  run(true);
+}
+
+void BenchmarkRunner::run(bool rerun) {
   std::cout << "- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();
@@ -116,8 +123,13 @@ void BenchmarkRunner::run() {
 
   // Create report
   if (_config.output_file_path) {
-    std::ofstream output_file(*_config.output_file_path);
-    _create_report(output_file);
+    if (rerun) {
+      std::ofstream output_file(*_config.output_file_path + "_rerun");
+      _create_report(output_file);
+    } else {
+      std::ofstream output_file(*_config.output_file_path);
+      _create_report(output_file);
+    }
   }
 
   // Visualize query plans
@@ -141,8 +153,13 @@ void BenchmarkRunner::run() {
       }
       for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
         const auto file_prefix = name + "-PQP-" + std::to_string(pqp_idx);
-        PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".dot",
+        if (rerun) {
+          PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".dot",
+                                                             file_prefix + "_rerun.svg");   
+        } else {
+          PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".dot",
                                                              file_prefix + ".svg");
+        }
       }
     }
   }

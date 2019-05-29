@@ -35,7 +35,9 @@ class BenchmarkRunner {
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
   ~BenchmarkRunner();
 
-  void run();
+  void run(bool rerun=false);
+
+  void rerun();
 
   static cxxopts::Options get_basic_cli_options(const std::string& benchmark_name);
 

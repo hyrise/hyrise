@@ -15,6 +15,7 @@
 
 #include "all_type_variant.hpp"
 #include "index/segment_index_type.hpp"
+#include "index/group_key/group_key_index_2.hpp"
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
@@ -121,10 +122,30 @@ class Chunk : private Noncopyable {
     return index;
   }
 
+  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index, const ChunkID chunk_id) {
+    DebugAssert(([&]() {
+                  for (auto segment : segments_to_index) {
+                    const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
+                    if (segment_it == _segments.cend()) return false;
+                  }
+                  return true;
+                }()),
+                "All segments must be part of the chunk.");
+
+    auto index = std::make_shared<GroupKeyIndex2>(segments_to_index, chunk_id);
+    _indices.emplace_back(index);
+    return index;
+  }
+
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids) {
     const auto segments = _get_segments_for_ids(column_ids);
     return create_index<Index>(segments);
+  }
+
+  std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids, const ChunkID chunk_id) {
+    const auto segments = _get_segments_for_ids(column_ids);
+    return create_index(segments, chunk_id);
   }
 
   void remove_index(const std::shared_ptr<BaseIndex>& index);

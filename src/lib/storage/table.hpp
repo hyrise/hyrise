@@ -168,6 +168,19 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
+  template <>
+  void create_index<GroupKeyIndex2>(const std::vector<ColumnID>& column_ids, const std::string& name) {
+    SegmentIndexType index_type = SegmentIndexType::GroupKey2;
+
+    ChunkID chunk_id = ChunkID{0};
+    for (auto& chunk : _chunks) {
+      chunk->create_index(column_ids, chunk_id);
+      chunk_id++;
+    }
+    IndexInfo i = {column_ids, name, index_type};
+    _indexes.emplace_back(i);
+  }
+
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */

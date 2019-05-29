@@ -192,6 +192,10 @@ set(
     operators/import_csv.hpp
     operators/index_scan.cpp
     operators/index_scan.hpp
+    operators/index_scan_loop.cpp
+    operators/index_scan_loop.hpp
+    operators/index_scan_copy.cpp
+    operators/index_scan_copy.hpp
     operators/insert.cpp
     operators/insert.hpp
     operators/join_hash.cpp
@@ -444,6 +448,8 @@ set(
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
+    storage/index/group_key/group_key_index_2.cpp
+    storage/index/group_key/group_key_index_2.hpp
     storage/index/group_key/variable_length_key.cpp
     storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_base.cpp
