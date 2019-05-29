@@ -18,16 +18,13 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
   static constexpr auto _uses_vector_compression = false;
 
   template <typename T>
-  std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
-    const auto alloc = value_segment->values().get_allocator();
+  std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
+                                                 const PolymorphicAllocator<T>& allocator) {
+    auto values = pmr_vector<T>{allocator};
+    auto null_values = pmr_vector<bool>{allocator};
+    auto end_positions = pmr_vector<ChunkOffset>{allocator};
 
-    auto values = pmr_vector<T>{alloc};
-    auto null_values = pmr_vector<bool>{alloc};
-    auto end_positions = pmr_vector<ChunkOffset>{alloc};
-
-    auto iterable = ValueSegmentIterable<T>{*value_segment};
-
-    iterable.with_iterators([&](auto it, auto end) {
+    segment_iterable.with_iterators([&](auto it, auto end) {
       // Early out for empty segments, code below assumes it to be non-empty
       if (it == end) {
         return;
@@ -63,10 +60,10 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
     null_values.shrink_to_fit();
     end_positions.shrink_to_fit();
 
-    auto values_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(values));
-    auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
-    auto end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(alloc, std::move(end_positions));
-    return std::allocate_shared<RunLengthSegment<T>>(alloc, values_ptr, null_values_ptr, end_positions_ptr);
+    auto values_ptr = std::allocate_shared<pmr_vector<T>>(allocator, std::move(values));
+    auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(allocator, std::move(null_values));
+    auto end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(allocator, std::move(end_positions));
+    return std::allocate_shared<RunLengthSegment<T>>(allocator, values_ptr, null_values_ptr, end_positions_ptr);
   }
 };
 

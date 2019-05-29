@@ -37,7 +37,7 @@ std::string FunctionExpression::as_column_name() const {
   stream << function_type << "(";
   for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
     stream << arguments[argument_idx]->as_column_name();
-    if (argument_idx + 1 < arguments.size()) stream << ", ";
+    if (argument_idx + 1 < arguments.size()) stream << ",";
   }
   stream << ")";
   return stream.str();
