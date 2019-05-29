@@ -21,6 +21,19 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
   return std::make_shared<Table>(column_definitions, TableType::Data);
 }
 
+template <>
+void Table::create_index<GroupKeyIndex2>(const std::vector<ColumnID>& column_ids, const std::string& name) {
+  SegmentIndexType index_type = SegmentIndexType::GroupKey2;
+
+  ChunkID chunk_id = ChunkID{0};
+  for (auto& chunk : _chunks) {
+    chunk->create_index(column_ids, chunk_id);
+    chunk_id++;
+  }
+  IndexInfo i = {column_ids, name, index_type};
+  _indexes.emplace_back(i);
+}
+
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              const std::optional<uint32_t> max_chunk_size, const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),

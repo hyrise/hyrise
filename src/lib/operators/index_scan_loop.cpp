@@ -182,6 +182,7 @@ PosList IndexScanLoop::_scan_chunk(const ChunkID chunk_id) {
     range_begin++;
   }
 
+  // std::sort(matches_out.begin(), matches_out.end(), [](const auto& left, const auto& right) { return left.chunk_offset < right.chunk_offset; });
   return matches_out;
 }
 

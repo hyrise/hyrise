@@ -15,6 +15,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/index_scan_loop.hpp"
+#include "operators/index_scan_loop_sort.hpp"
 #include "operators/index_scan_copy.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
@@ -97,6 +98,10 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     _lineitem_orderkey = _lineitem_table_node->get_column("l_orderkey");
     _lineitem_commitdate = _lineitem_table_node->get_column("l_commitdate");
     _lineitem_receiptdate = _lineitem_table_node->get_column("l_receiptdate");
+
+    // const std::vector<AllTypeVariant> _index_pred_a = {0.072413};
+    // const std::vector<AllTypeVariant> _index_pred_b = {0.092423};
+    // const std::vector<ColumnID> _index_column_ids = {ColumnID{6}};
   }
 
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
@@ -134,6 +139,10 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::shared_ptr<StoredTableNode> _orders_table_node, _lineitem_table_node;
   LQPColumnReference _orders_orderpriority, _orders_orderdate, _orders_orderkey;
   LQPColumnReference _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
+
+  std::vector<AllTypeVariant> _index_pred_a = {0.072413};
+  std::vector<AllTypeVariant> _index_pred_b = {0.092423};
+  std::vector<ColumnID> _index_column_ids = {ColumnID{6}};
 };
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanOnly)(benchmark::State& state) {
@@ -145,39 +154,38 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanOnly)(benchmark::State
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanOnly)(benchmark::State& state) {
-  const std::vector<AllTypeVariant> a = {0.072413};
-  std::vector<AllTypeVariant> b = {0.092423};
-  std::vector<ColumnID> column_ids = {ColumnID{6}};
   for (auto _ : state) {
-    const std::shared_ptr<IndexScan> index_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+    const std::shared_ptr<IndexScan> index_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
     index_scan->execute();
     // std::cout << index_scan->get_output()->row_count() << std::endl;
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanLoopOnly)(benchmark::State& state) {
-  const std::vector<AllTypeVariant> a = {0.072413};
-  std::vector<AllTypeVariant> b = {0.092423};
-  std::vector<ColumnID> column_ids = {ColumnID{6}};
   for (auto _ : state) {
-    const std::shared_ptr<IndexScanLoop> index_scan = std::make_shared<IndexScanLoop>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+    const std::shared_ptr<IndexScanLoop> index_scan = std::make_shared<IndexScanLoop>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
+    index_scan->execute();
+    // std::cout << index_scan->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanLoopSortOnly)(benchmark::State& state) {
+  for (auto _ : state) {
+    const std::shared_ptr<IndexScanLoopSort> index_scan = std::make_shared<IndexScanLoopSort>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
     index_scan->execute();
     // std::cout << index_scan->get_output()->row_count() << std::endl;
   }
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanCopyOnly)(benchmark::State& state) {
-  const std::vector<AllTypeVariant> a = {0.072413};
-  std::vector<AllTypeVariant> b = {0.092423};
-  std::vector<ColumnID> column_ids = {ColumnID{6}};
   for (auto _ : state) {
-    const std::shared_ptr<IndexScanCopy> index_scan = std::make_shared<IndexScanCopy>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey2, column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+    const std::shared_ptr<IndexScanCopy> index_scan = std::make_shared<IndexScanCopy>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey2, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
     index_scan->execute();
     // std::cout << index_scan->get_output()->row_count() << std::endl;
   }
 }
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanTableScan)(benchmark::State& state) {
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanTableScanOnly)(benchmark::State& state) {
   const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
   table_scan->execute();
 
@@ -188,11 +196,8 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanTableScan)(benchmark::
   }
 }
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanTableScan)(benchmark::State& state) {
-  const std::vector<AllTypeVariant> a = {0.072413};
-  std::vector<AllTypeVariant> b = {0.092423};
-  std::vector<ColumnID> column_ids = {ColumnID{6}};
-  const std::shared_ptr<IndexScan> index_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanTableScanOnly)(benchmark::State& state) {
+  const std::shared_ptr<IndexScan> index_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
   index_scan->execute();
 
   for (auto _ : state) {
@@ -201,6 +206,82 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanTableScan)(benchmark::
     // std::cout << table_scan_2->get_output()->row_count() << std::endl;
   }
 }
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanLoopTableScanOnly)(benchmark::State& state) {
+  const std::shared_ptr<IndexScanLoop> index_scan = std::make_shared<IndexScanLoop>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
+  index_scan->execute();
+
+  for (auto _ : state) {
+    const auto table_scan_2 = std::make_shared<TableScan>(index_scan, _tpchq6_quantity_predicate);
+    table_scan_2->execute();
+    // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanLoopSortTableScanOnly)(benchmark::State& state) {
+  const std::shared_ptr<IndexScanLoopSort> index_scan = std::make_shared<IndexScanLoopSort>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
+  index_scan->execute();
+
+  for (auto _ : state) {
+    const auto table_scan_2 = std::make_shared<TableScan>(index_scan, _tpchq6_quantity_predicate);
+    table_scan_2->execute();
+    // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanTableScan)(benchmark::State& state) {
+  for (auto _ : state) {
+    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+    table_scan->execute();
+    const auto table_scan_2 = std::make_shared<TableScan>(table_scan, _tpchq6_quantity_predicate);
+    table_scan_2->execute();
+    // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanTableScan)(benchmark::State& state) {
+  for (auto _ : state) {
+    const std::shared_ptr<IndexScan> index_scan = std::make_shared<IndexScan>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
+    index_scan->execute();
+    const auto table_scan_2 = std::make_shared<TableScan>(index_scan, _tpchq6_quantity_predicate);
+    table_scan_2->execute();
+    // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanLoopTableScan)(benchmark::State& state) {
+  for (auto _ : state) {
+    const std::shared_ptr<IndexScanLoop> index_scan = std::make_shared<IndexScanLoop>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
+    index_scan->execute();
+    const auto table_scan_2 = std::make_shared<TableScan>(index_scan, _tpchq6_quantity_predicate);
+    table_scan_2->execute();
+    // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+  }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanLoopSortTableScan)(benchmark::State& state) {
+  for (auto _ : state) {
+    const std::shared_ptr<IndexScanLoopSort> index_scan = std::make_shared<IndexScanLoopSort>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
+    index_scan->execute();
+    const auto table_scan_2 = std::make_shared<TableScan>(index_scan, _tpchq6_quantity_predicate);
+    table_scan_2->execute();
+    // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+  }
+}
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanCopyTableScan)(benchmark::State& state) {
+//   const std::vector<AllTypeVariant> a = {0.072413};
+//   std::vector<AllTypeVariant> b = {0.092423};
+//   std::vector<ColumnID> column_ids = {ColumnID{6}};
+//   const std::shared_ptr<IndexScanCopy> index_scan = std::make_shared<IndexScanCopy>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey2, _index_column_ids, PredicateCondition::BetweenInclusive, a, b, nullptr);
+//   index_scan->execute();
+
+//   for (auto _ : state) {
+//     const auto table_scan_2 = std::make_shared<TableScan>(index_scan, _tpchq6_quantity_predicate);
+//     table_scan_2->execute();
+//     // std::cout << table_scan_2->get_output()->row_count() << std::endl;
+//   }
+// }
 
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {

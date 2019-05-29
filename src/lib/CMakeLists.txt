@@ -194,6 +194,8 @@ set(
     operators/index_scan.hpp
     operators/index_scan_loop.cpp
     operators/index_scan_loop.hpp
+    operators/index_scan_loop_sort.cpp
+    operators/index_scan_loop_sort.hpp
     operators/index_scan_copy.cpp
     operators/index_scan_copy.hpp
     operators/insert.cpp

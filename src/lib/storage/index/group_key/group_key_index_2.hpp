@@ -54,8 +54,9 @@ class GroupKeyIndex2 : public BaseIndex {
   GroupKeyIndex2(const GroupKeyIndex2&) = delete;
   GroupKeyIndex2& operator=(const GroupKeyIndex2&) = delete;
 
-  GroupKeyIndex2(GroupKeyIndex2&&) = default;
+  // GroupKeyIndex2(GroupKeyIndex2&&) = default;
 
+  explicit GroupKeyIndex2(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
   explicit GroupKeyIndex2(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index, const ChunkID chunk_id);
 
 

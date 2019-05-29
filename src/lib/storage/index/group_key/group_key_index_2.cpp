@@ -13,6 +13,10 @@ size_t GroupKeyIndex2::estimate_memory_consumption(ChunkOffset row_count, ChunkO
   return row_count * sizeof(ChunkOffset) + distinct_count * sizeof(std::size_t);
 }
 
+GroupKeyIndex2::GroupKeyIndex2(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index) : BaseIndex{get_index_type_of<GroupKeyIndex>()}, _indexed_segments(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index[0])) {
+  Fail("Cannot construct GroupKeyIndex2 without chunk_id");
+}
+
 GroupKeyIndex2::GroupKeyIndex2(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index, const ChunkID chunk_id)
     : BaseIndex{get_index_type_of<GroupKeyIndex2>()},
       _indexed_segments(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index[0])) {
