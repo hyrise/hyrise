@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from hyriseBenchmarkUtilities import *
+from hyriseBenchmarkCore import *
 
 def main():
 
@@ -9,6 +9,7 @@ def main():
 	arguments1["--queries"] = "'21c,22b,23c,24a'"
 	arguments1["--time"] = "1"
 	arguments1["--runs"] = "100"
+	arguments1["--output"] = "'json_output.txt'"
 	arguments1["--mode"] = "'PermutedQuerySet'"
 	arguments1["--encoding"] = "'Unencoded'"
 	arguments1["--scheduler"] = "true"
@@ -27,7 +28,7 @@ def main():
 	arguments2["--compression"] = "'Fixed-size byte-aligned'"
 	arguments2["--verify"] = "true"
 
-	run_benchmark(arguments1, arguments2, "hyriseBenchmarkJoinOrder", "third_party/join-order-benchmark")
+	run_benchmark(arguments1, arguments2, "hyriseBenchmarkJoinOrder")
 
 if __name__ == '__main__':
 	main()

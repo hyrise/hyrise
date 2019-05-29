@@ -25,8 +25,7 @@ int main(int argc, char* argv[]) {
   cli_options.add_options()
       ("table_path", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(".")) // NOLINT
       ("query_path", "A specific .sql file or a directory containing .sql files", cxxopts::value<std::string>()->default_value(".")) // NOLINT
-      ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")) // NOLINT
-      ("excluded_queries", "Non-queries to exclude as a comma separated list", cxxopts::value<std::string>()->default_value("none")); // NOLINT
+      ("q,queries", "Subset of queries to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> benchmark_config;
@@ -34,7 +33,6 @@ int main(int argc, char* argv[]) {
   std::string table_path;
   // Comma-separated query names or "all"
   std::string queries_str;
-  std::string excluded_queries_str;
 
   if (CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
@@ -42,7 +40,6 @@ int main(int argc, char* argv[]) {
     table_path = json_config.value("table_path", "");
     query_path = json_config.value("query_path", "");
     queries_str = json_config.value("queries", "all");
-    excluded_queries_str = json_config.value("excluded_queries", "none");
 
     benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
 
@@ -55,7 +52,6 @@ int main(int argc, char* argv[]) {
     query_path = cli_parse_result["query_path"].as<std::string>();
     table_path = cli_parse_result["table_path"].as<std::string>();
     queries_str = cli_parse_result["queries"].as<std::string>();
-    excluded_queries_str = cli_parse_result["excluded_queries"].as<std::string>();
 
     benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
@@ -87,22 +83,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  std::unordered_set<std::string> query_filename_blacklist;
-  if (excluded_queries_str == "none") {
-    std::cout << "- Excluding no non-queries from specified path" << std::endl;
-  } else {
-    std::cout << "- Excluding non-queries: " << excluded_queries_str << std::endl;
-
-    // "a, b, c, d" -> ["a", " b", " c", " d"]
-    auto query_filename_blacklist_untrimmed = std::vector<std::string>{};
-    boost::algorithm::split(query_filename_blacklist_untrimmed, excluded_queries_str, boost::is_any_of(","));
-
-    // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
-    query_filename_blacklist.emplace();
-    for (auto& query_name : query_filename_blacklist_untrimmed) {
-      query_filename_blacklist.emplace(boost::trim_copy(query_name));
-    }
-  }
+  // Ignore no .sql files in the directory for now (TODO(anybody): add CLI option if required)
+  const auto query_filename_blacklist = std::unordered_set<std::string>{};
 
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
