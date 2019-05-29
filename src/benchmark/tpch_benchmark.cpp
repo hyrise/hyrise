@@ -20,8 +20,8 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
-#include "tpch/tpch_query_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -43,7 +43,7 @@ using namespace opossum;  // NOLINT
  */
 
 int main(int argc, char* argv[]) {
-  auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPCH Benchmark");
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPCH Benchmark");
 
   // clang-format off
   cli_options.add_options()
@@ -52,19 +52,18 @@ int main(int argc, char* argv[]) {
     ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
-  std::shared_ptr<opossum::BenchmarkConfig> config;
+  std::shared_ptr<BenchmarkConfig> config;
   std::string comma_separated_queries;
   float scale_factor;
   bool use_prepared_statements;
 
-  if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
+  if (CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
-    const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
+    const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
     scale_factor = json_config.value("scale", 0.1f);
     comma_separated_queries = json_config.value("queries", std::string(""));
 
-    config = std::make_shared<opossum::BenchmarkConfig>(
-        opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
+    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
 
     use_prepared_statements = json_config.value("use_prepared_statements", false);
   } else {
@@ -79,58 +78,49 @@ int main(int argc, char* argv[]) {
 
     scale_factor = cli_parse_result["scale"].as<float>();
 
-    config =
-        std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
+    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
 
     use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
   }
 
-  std::vector<opossum::QueryID> query_ids;
+  std::vector<BenchmarkItemID> item_ids;
 
   // Build list of query ids to be benchmarked and display it
   if (comma_separated_queries.empty()) {
-    std::transform(opossum::tpch_queries.begin(), opossum::tpch_queries.end(), std::back_inserter(query_ids),
-                   [](auto& pair) { return opossum::QueryID{pair.first - 1}; });
+    std::transform(tpch_queries.begin(), tpch_queries.end(), std::back_inserter(item_ids),
+                   [](auto& pair) { return BenchmarkItemID{pair.first - 1}; });
   } else {
     // Split the input into query ids, ignoring leading, trailing, or duplicate commas
-    auto query_ids_str = std::vector<std::string>();
+    auto item_ids_str = std::vector<std::string>();
     boost::trim_if(comma_separated_queries, boost::is_any_of(","));
-    boost::split(query_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
-    std::transform(
-        query_ids_str.begin(), query_ids_str.end(), std::back_inserter(query_ids), [](const auto& query_id_str) {
-          const auto query_id =
-              opossum::QueryID{boost::lexical_cast<opossum::QueryID::base_type, std::string>(query_id_str) - 1};
-          DebugAssert(query_id < 22, "There are only 22 TPC-H queries");
-          return query_id;
-        });
+    boost::split(item_ids_str, comma_separated_queries, boost::is_any_of(","), boost::token_compress_on);
+    std::transform(item_ids_str.begin(), item_ids_str.end(), std::back_inserter(item_ids), [](const auto& item_id_str) {
+      const auto item_id =
+          BenchmarkItemID{boost::lexical_cast<BenchmarkItemID::base_type, std::string>(item_id_str) - 1};
+      DebugAssert(item_id < 22, "There are only 22 TPC-H queries");
+      return item_id;
+    });
   }
 
   std::cout << "- Benchmarking Queries: [ ";
-  for (const auto& query_id : query_ids) {
-    std::cout << (query_id + 1) << ", ";
+  for (const auto& item_id : item_ids) {
+    std::cout << (item_id + 1) << ", ";
   }
   std::cout << "]" << std::endl;
 
-  // TODO(leander): Enable support for queries that contain multiple statements requiring execution
-  if (config->enable_scheduler) {
-    // QueryID{14} represents TPC-H query 15 because we use 0 indexing
-    Assert(std::find(query_ids.begin(), query_ids.end(), opossum::QueryID{14}) == query_ids.end(),
-           "TPC-H query 15 is not supported for multithreaded benchmarking.");
-  }
-
-  auto context = opossum::BenchmarkRunner::create_context(*config);
+  auto context = BenchmarkRunner::create_context(*config);
 
   Assert(!use_prepared_statements || !config->verify, "SQLite validation does not work with prepared statements");
 
   if (config->verify) {
     // Hack: We cannot verify TPC-H Q15, thus we remove it from the list of queries
-    auto it = std::remove(query_ids.begin(), query_ids.end(), 15 - 1);
-    if (it != query_ids.end()) {
+    auto it = std::remove(item_ids.begin(), item_ids.end(), 15 - 1);
+    if (it != item_ids.end()) {
       // The problem is that the last part of the query, "DROP VIEW", does not return a table. Since we also have
       // the TPC-H test against a known-to-be-good table, we do not want the additional complexity for handling this
       // in the BenchmarkRunner.
       std::cout << "- Skipping Query 15 because it cannot easily be verified" << std::endl;
-      query_ids.erase(it, query_ids.end());
+      item_ids.erase(it, item_ids.end());
     }
   }
 
@@ -142,8 +132,7 @@ int main(int argc, char* argv[]) {
   context.emplace("use_prepared_statements", use_prepared_statements);
 
   // Run the benchmark
-  opossum::BenchmarkRunner(
-      *config, std::make_unique<opossum::TPCHQueryGenerator>(use_prepared_statements, scale_factor, query_ids),
-      std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+  auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
+  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TpchTableGenerator>(scale_factor, config), context)
       .run();
 }
