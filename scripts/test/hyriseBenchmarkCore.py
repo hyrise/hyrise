@@ -38,7 +38,7 @@ def initialize(arguments, benchmark_name):
 # After the second test, it checks if all queries were successfully verified with sqlite.
 def run_benchmark(arguments1, arguments2, benchmark_name):
 	return_error = False
-	
+
 	os.system("rm -rf imdb_data/*.bin")
 
 	benchmark = initialize(arguments1, benchmark_name)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script creates a very small sample from the imdb database downloaded during the setup of hyriseBenchmarkJoinOrder
-# to avoid downloading it for every new test environment and allowing fast testing
+# to avoid downloading it for every new test environment and allow fast testing.
 rm -rf imdb_sample
 mkdir imdb_sample
 

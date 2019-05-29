@@ -28,7 +28,7 @@ def main():
 	arguments2["--encoding"] = "'LZ4'"
 	arguments2["--compression"] = "'SIMD-BP128'"
 	arguments2["--verify"] = "true"
- 
+
 	run_benchmark(arguments1, arguments2, "hyriseBenchmarkTPCH")
 
 if __name__ == '__main__':
