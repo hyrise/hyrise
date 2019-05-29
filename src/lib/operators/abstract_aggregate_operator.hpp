@@ -112,9 +112,6 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         } else {
           current_secondary_aggregate = new_value * new_value;
         }
-      } else {
-        Fail("StdDevSamp not available for non-arithmetic types.");
-      }
     };
   }
 };
