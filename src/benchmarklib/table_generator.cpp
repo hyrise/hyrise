@@ -39,13 +39,13 @@ using namespace opossum;
     */
 template <typename T>
 T convert_integer_value(const int input) {
-  if constexpr (std::is_floating_point_v<T>) {
+  if constexpr (std::is_integral_v<T>) {
+    return static_cast<T>(input);
+  } else if constexpr (std::is_floating_point_v<T>) {
     // floating points are slightly shifted to avoid a zero'd mantissa.
     return static_cast<T>(input) * 0.999999f;
-  } else if constexpr (std::is_integral_v<T>) {
-    // integer values
-    return static_cast<T>(input);
   } else {
+    // TODO(Bouncner): fix the generation of strings
     const std::vector<const char> chars = {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
         'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
@@ -103,7 +103,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const size_t num_columns, 
                                                       const ChunkOffset chunk_size,
                                                       const SegmentEncodingSpec segment_encoding_spec) {
   auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                              {num_columns, {DataType::Int}}, num_rows, chunk_size, false);
+                              {num_columns, {DataType::Int}}, num_rows, chunk_size, UseMvcc::No, false);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_spec);
 
@@ -113,12 +113,13 @@ std::shared_ptr<Table> TableGenerator::generate_table(const size_t num_columns, 
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
-    const std::vector<SegmentEncodingSpec>& segment_encoding_specs, const bool numa_distribute_chunks) {
+    const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
+    const UseMvcc use_mvcc, const bool numa_distribute_chunks) {
   Assert(column_data_distributions.size() == segment_encoding_specs.size(),
          "Length of value distributions needs to equal length of column encodings.");
 
   auto table =
-      generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, numa_distribute_chunks);
+      generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, use_mvcc, numa_distribute_chunks);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_specs);
 
@@ -128,7 +129,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
-    const bool numa_distribute_chunks) {
+    const UseMvcc use_mvcc, const bool numa_distribute_chunks) {
   Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
   Assert(column_data_distributions.size() == column_data_types.size(),
          "Length of value distributions needs to equal length of column data types.");
@@ -141,7 +142,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
     const auto column_name = "column_" + std::to_string(column_id + 1);
     column_definitions.emplace_back(column_name, column_data_types[column_id]);
   }
-  std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+  std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
   std::random_device rd;
   // using mt19937 because std::default_random engine is not guaranteed to be a sensible default
@@ -210,7 +211,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
         // generate values according to distribution
         for (auto row_offset = size_t{0}; row_offset < chunk_size; ++row_offset) {
           // bounds check
-          if ((chunk_index + 1) * chunk_size + (row_offset + 1) > num_rows) {
+          if (chunk_index * chunk_size + (row_offset + 1) > num_rows) {
             break;
           }
 
@@ -220,12 +221,12 @@ std::shared_ptr<Table> TableGenerator::generate_table(
         auto typed_values = create_typed_segment_values<ColumnDataType>(values);
         segments.push_back(std::allocate_shared<ValueSegment<ColumnDataType>>(allocator_value_segment,
                                                                               std::move(typed_values), allocator));
-
-        // add full chunk to table
-        if (column_index == num_columns - 1) {
-          table->append_chunk(segments, nullptr, allocator_chunk);
-        }
       });
+      // add full chunk to table
+      if (column_index == num_columns - 1) {
+        const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+        table->append_chunk(segments, mvcc_data, allocator_chunk);
+      }
     }
   }
 
