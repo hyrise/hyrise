@@ -34,13 +34,18 @@ const auto data_type_sizes = std::unordered_map<DataType, size_t>{
 enum class HashSortMode { Hashing, Partition };
 
 struct FixedSizeGroupRunLayout {
-  FixedSizeGroupRunLayout(const size_t group_size, const size_t nullable_column_count, const std::vector<size_t>& column_base_offsets)
-      : group_size(group_size), nullable_column_count(nullable_column_count), column_base_offsets(column_base_offsets) {}
-
-        
+  FixedSizeGroupRunLayout(const size_t group_size, const std::vector<std::optional<ColumnID>>& nullable_column_indices, const std::vector<size_t>& column_base_offsets)
+      : group_size(group_size), nullable_column_indices(nullable_column_indices), column_base_offsets(column_base_offsets) {
+    nullable_column_count = std::count_if(nullable_column_indices.begin(), nullable_column_indices.end(), [&](const auto& column_id) {
+      return column_id.has_value();
+    });
+  }
 
   // Number of entries in `data` per group
   size_t group_size{};
+
+  std::vector<std::optional<ColumnID>> nullable_column_indices;
+  size_t nullable_column_count{};
 
   // Per GroupBy-column, its base offset in `data`.
   // I.e. the n-th entry of GroupBy-column 2 is at `data[column_base_offsets[2] + group_size * n];
@@ -56,11 +61,12 @@ struct FixedSizeGroupRunLayout {
 };
 
 struct FixedSizeGroupRun {
-  using DataElementType = uint64_t;
+  using DataElementType = uint32_t;
   using LayoutType = FixedSizeGroupRunLayout;
 
   FixedSizeGroupRun(const FixedSizeGroupRunLayout* layout, const size_t size) : layout(layout) {
     data.resize(size * layout->group_size);
+    null_values.resize(size * layout->nullable_column_count);
     hashes.resize(size);
   }
 
@@ -87,6 +93,12 @@ struct FixedSizeGroupRun {
   }
 
   bool compare(const size_t own_offset, const FixedSizeGroupRun& other_run, const size_t other_offset) const {
+    const auto own_null_values_iter = null_values.begin() + own_offset * layout->nullable_column_count;
+    const auto other_null_values_iter = other_run.null_values.begin() + other_offset * layout->nullable_column_count;
+    if (!std::equal(own_null_values_iter, own_null_values_iter + layout->nullable_column_count, other_null_values_iter)) {
+      return false;
+    }
+
     const auto own_begin = data.cbegin() + own_offset * layout->group_size;
     const auto other_begin = other_run.data.cbegin() + other_offset * layout->group_size;
     return std::equal(own_begin, own_begin + layout->group_size, other_begin);
@@ -99,25 +111,25 @@ struct FixedSizeGroupRun {
 
     auto target_offset = size_t{0};
 
-    auto values = std::vector<T>(end);
-    auto null_values = std::vector<bool>(nullable ? end : 0u);
+    auto output_values = std::vector<T>(end);
+    auto ouput_null_values = std::vector<bool>(nullable ? end : 0u);
+    auto null_values_iter = null_values.begin() + (nullable ? *layout->nullable_column_indices[column_id] : 0u);
 
     while (source_pointer < source_end) {
-      if (nullable) {
-        null_values[target_offset] = *source_pointer != 0;
-        memcpy(reinterpret_cast<char*>(&values[target_offset]), source_pointer + 1, sizeof(T));
-      } else {
-        memcpy(reinterpret_cast<char*>(&values[target_offset]), source_pointer, sizeof(T));
-      }
+      memcpy(reinterpret_cast<char*>(&output_values[target_offset]), source_pointer, sizeof(T));
 
+      if (nullable) {
+        ouput_null_values[target_offset] = *null_values_iter;
+        null_values_iter += layout->nullable_column_count;
+      }
       source_pointer += layout->group_size;
       ++target_offset;
     }
 
     if (nullable) {
-      return std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values));
+      return std::make_shared<ValueSegment<T>>(std::move(output_values), std::move(ouput_null_values));
     } else {
-      return std::make_shared<ValueSegment<T>>(std::move(values));
+      return std::make_shared<ValueSegment<T>>(std::move(output_values));
     }
   }
 
@@ -132,6 +144,9 @@ struct FixedSizeGroupRun {
       std::copy(source.data.begin() + source_offset * layout->group_size,
                 source.data.begin() + (source_offset + 1) * layout->group_size,
                 data.begin() + end * layout->group_size);
+      std::copy(source.null_values.begin() + source_offset * layout->nullable_column_count,
+                source.null_values.begin() + (source_offset + 1) * layout->nullable_column_count,
+                null_values.begin() + end * layout->nullable_column_count);
       hashes[end] = source.hashes[source_offset];
       ++end;
     }
@@ -700,22 +715,26 @@ inline FixedSizeGroupRunLayout produce_initial_groups_layout<FixedSizeGroupRunLa
     const Table& table, const std::vector<ColumnID>& group_by_column_ids) {
   constexpr auto BLOB_DATA_TYPE_SIZE = sizeof(FixedSizeGroupRun::DataElementType);
 
-  /**
-   * Determine layout of the `FixedSizeGroupRun::data` blob
-   */
   auto group_size = size_t{};
   auto column_base_offsets = std::vector<size_t>(group_by_column_ids.size());
+  auto nullable_column_indices = std::vector<std::optional<ColumnID>>(group_by_column_ids.size());
+  auto nullable_column_count = size_t{0};
 
   for (auto output_group_by_column_id = size_t{0}; output_group_by_column_id < group_by_column_ids.size();
        ++output_group_by_column_id) {
     const auto group_column_id = group_by_column_ids[output_group_by_column_id];
-    const auto group_column_size = data_type_sizes.at(table.column_data_type(group_column_id)) / BLOB_DATA_TYPE_SIZE +
-                                   (table.column_is_nullable(group_column_id) ? 1 : 0);
+    const auto group_column_size = data_type_sizes.at(table.column_data_type(group_column_id)) / BLOB_DATA_TYPE_SIZE;
     column_base_offsets[output_group_by_column_id] = group_size;
+
+    if (table.column_is_nullable(group_column_id)) {
+      nullable_column_indices[output_group_by_column_id] = nullable_column_count;
+      ++nullable_column_count;
+    }
+
     group_size += group_column_size;
   }
 
-  return FixedSizeGroupRunLayout{group_size, column_base_offsets};
+  return FixedSizeGroupRunLayout{group_size, nullable_column_indices, column_base_offsets};
 }
 
 template <>
@@ -774,21 +793,21 @@ inline std::pair<FixedSizeGroupRun, RowID> produce_initial_groups(const std::sha
     const auto nullable = table->column_is_nullable(group_by_column_ids[output_group_by_column_idx]);
     const auto value_size = layout->value_size(output_group_by_column_idx) * GROUP_DATA_ELEMENT_SIZE;
 
+    auto null_values_iter = group_run.null_values.begin() + layout->nullable_column_indices[output_group_by_column_idx].value_or(ColumnID{0});
+
     auto column_iterable = ColumnIterable{table, group_by_column_ids[output_group_by_column_idx]};
     end_row_id = column_iterable.for_each<ResolveDataTypeTag>([&](const auto& segment_position, const RowID& row_id) {
       if (segment_position.is_null()) {
-        group_run.data[target_offset] = 1;
-        memset(&group_run.data[target_offset + 1], 0, value_size - GROUP_DATA_ELEMENT_SIZE);
+        *null_values_iter = true;
       } else {
-        if (nullable) {
-          group_run.data[target_offset] = 0;
-          memcpy(&group_run.data[target_offset + 1], &segment_position.value(), value_size - GROUP_DATA_ELEMENT_SIZE);
-        } else {
-          memcpy(&group_run.data[target_offset], &segment_position.value(), value_size);
-        }
+        memcpy(&group_run.data[target_offset], &segment_position.value(), value_size);
       }
 
       boost::hash_combine(group_run.hashes[run_offset], hash_segment_position(segment_position));
+
+      if (nullable) {
+        null_values_iter += layout->nullable_column_count;
+      }
 
       target_offset += layout->group_size;
       ++run_offset;
@@ -798,12 +817,6 @@ inline std::pair<FixedSizeGroupRun, RowID> produce_initial_groups(const std::sha
   }
 
   group_run.end = row_count;
-
-  // Create pseudo-group for special behaviour of no group-by columns and empty table :(
-  if (group_by_column_ids.empty() && table->row_count() == 0) {
-    group_run.hashes.resize(1);
-    group_run.end = 1;
-  }
 
   return {group_run, end_row_id};
 }

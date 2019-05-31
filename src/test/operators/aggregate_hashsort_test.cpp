@@ -98,8 +98,10 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixed) {
   const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{1}, ColumnID{0}, ColumnID{2}};
 
   const auto layout = produce_initial_groups_layout<FixedSizeGroupRunLayout>(*table, group_by_column_ids);
-  EXPECT_EQ(layout.group_size, 6u);
-  EXPECT_EQ(layout.column_base_offsets, std::vector<size_t>({0, 1, 3}));
+  EXPECT_EQ(layout.group_size, 4u);
+  EXPECT_EQ(layout.column_base_offsets, std::vector<size_t>({0, 1, 2}));
+  EXPECT_EQ(layout.nullable_column_count, 2);
+  EXPECT_EQ(layout.nullable_column_indices, std::vector<std::optional<ColumnID>>({std::nullopt, ColumnID{0}, ColumnID{1}}));
 
   const auto [groups, end_row_id] = produce_initial_groups(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 3);
 
@@ -116,29 +118,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixed) {
   // clang-format on
 
   EXPECT_EQ(groups.data, expected_group_data);
-  EXPECT_EQ(groups.null_values, std::vector<bool>({false, true, false, false, false, true}));
-}
-
-TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixedNoGroupByColumns) {
-  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Float, true}};
-  const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-  table->append({4.5f});
-  table->append({2.5f});
-
-  const auto group_by_column_ids = std::vector<ColumnID>{};
-
-  const auto layout = produce_initial_groups_layout<FixedSizeGroupRunLayout>(*table, group_by_column_ids);
-  const auto [groups, end_row_id] = produce_initial_groups(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{0}}, 2);
-
-  EXPECT_EQ(end_row_id, RowID());
-  EXPECT_EQ(groups.layout->group_size, 0u);
-  EXPECT_EQ(groups.layout->column_base_offsets, std::vector<size_t>());
-
-  EXPECT_EQ(groups.hashes.size(), 2u);
-  EXPECT_EQ(groups.end, 2u);
-
-  EXPECT_EQ(groups.data, std::vector<uint32_t>());
-  EXPECT_EQ(groups.null_values, std::vector<bool>());
+  EXPECT_EQ(groups.null_values, std::vector<bool>({false, false, true, false, false, true}));
 }
 
 TEST_F(AggregateHashSortTest, ProduceInitialGroupsLayoutVariablySized) {
@@ -162,8 +142,9 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsLayoutVariablySized) {
   EXPECT_EQ(layout.column_mapping.at(1), VariablySizedGroupRunLayout::Column(true, size_t{0}, std::nullopt));
   EXPECT_EQ(layout.column_mapping.at(2), VariablySizedGroupRunLayout::Column(true, size_t{1}, size_t{0}));
   EXPECT_EQ(layout.column_mapping.at(3), VariablySizedGroupRunLayout::Column(false, size_t{1}, std::nullopt));
-  EXPECT_EQ(layout.fixed_layout.group_size, 4);
-  EXPECT_EQ(layout.fixed_layout.column_base_offsets, std::vector<size_t>({0, 2}));
+  EXPECT_EQ(layout.fixed_layout.group_size, 3);
+  EXPECT_EQ(layout.fixed_layout.column_base_offsets, std::vector<size_t>({0, 1}));
+  EXPECT_EQ(layout.fixed_layout.nullable_column_indices, std::vector<std::optional<ColumnID>>({ColumnID{}, std::nullopt}));
 }
 
 TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited) {
@@ -209,14 +190,15 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited
 
   // clang-format off
   const auto expected_fixed_group_data = std::vector<uint32_t>{
-    0, 13, lower_word(int64_t{14}), upper_word(int64_t{14}),
-    1, 0, lower_word(int64_t{15}), upper_word(int64_t{15}),
-    1, 0, lower_word(int64_t{16}), upper_word(int64_t{16}),
-    1, 0, lower_word(int64_t{17}), upper_word(int64_t{17})
+    13, lower_word(int64_t{14}), upper_word(int64_t{14}),
+    0, lower_word(int64_t{15}), upper_word(int64_t{15}),
+    0, lower_word(int64_t{16}), upper_word(int64_t{16}),
+    0, lower_word(int64_t{17}), upper_word(int64_t{17})
   };
   // clang-format on
 
   EXPECT_EQ(groups.fixed.data, expected_fixed_group_data);
+  EXPECT_EQ(groups.fixed.null_values, std::vector<bool>({false, true, true, true}));
   EXPECT_EQ(groups.fixed.end, 4);
 }
 
@@ -344,7 +326,7 @@ TEST_F(AggregateHashSortTest, Partitioning) {
 }
 
 TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
-  auto groups_layout = FixedSizeGroupRunLayout{1, {0}};
+  auto groups_layout = FixedSizeGroupRunLayout{1, {std::nullopt}, {0}};
   auto groups = FixedSizeGroupRun{&groups_layout, 7};
 
   // clang-format off
@@ -425,7 +407,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   };
   // clang-format on
 
-  auto fixed_layout = FixedSizeGroupRunLayout{0, {}};
+  auto fixed_layout = FixedSizeGroupRunLayout{0, {}, {}};
   const auto layout = VariablySizedGroupRunLayout{{ColumnID{0}, ColumnID{1}, ColumnID{2}}, {}, column_mapping, fixed_layout};
   auto groups = VariablySizedGroupRun{&layout, 4, 36};
   groups.fixed.end = 4;
@@ -501,7 +483,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
 }
 
 TEST_F(AggregateHashSortTest, HashingFixed) {
-  auto groups_layout = FixedSizeGroupRunLayout{2, {0, 2}};
+  auto groups_layout = FixedSizeGroupRunLayout{2, {}, {0, 2}};
   auto groups = FixedSizeGroupRun{&groups_layout, 4};
 
   // clang-format off
@@ -568,7 +550,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   };
   // clang-format on
 
-  auto fixed_layout = FixedSizeGroupRunLayout{0, {}};
+  auto fixed_layout = FixedSizeGroupRunLayout{0, {}, {}};
   const auto layout = VariablySizedGroupRunLayout{{ColumnID{0}}, {}, column_mapping, fixed_layout};
   auto groups = VariablySizedGroupRun{&layout, 3, 15};
   groups.fixed.end = 3;
@@ -638,7 +620,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
 }
 
 TEST_F(AggregateHashSortTest, AggregateAdaptive) {
-  auto groups_layout = FixedSizeGroupRunLayout{1, {0}};
+  auto groups_layout = FixedSizeGroupRunLayout{1, {std::nullopt}, {0}};
   auto groups = FixedSizeGroupRun{&groups_layout, 8};
 
   // clang-format off
