@@ -49,8 +49,8 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
     resize(size);
   }
 
-  explicit BaseDistributiveAggregateRun(const ColumnIterable& column_iterable) {
-    resize(column_iterable.table->row_count());
+  explicit BaseDistributiveAggregateRun(const ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) {
+    resize(row_count);
 
     auto offset = size_t{0};
     column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const RowID& row_id) {
@@ -61,7 +61,9 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
         null_values[offset] = false;
       }
       ++offset;
-    });
+
+      return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+    }, begin_row_id);
   }
 
   void resize(const size_t size) override {
@@ -195,8 +197,8 @@ struct CountNonNullAggregateRun : public BaseAggregateRun {
     resize(size);
   }
 
-  explicit CountNonNullAggregateRun(const ColumnIterable& column_iterable) {
-    resize(column_iterable.table->row_count());
+  explicit CountNonNullAggregateRun(const ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) {
+    resize(row_count);
 
     auto offset = size_t{0};
     column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const RowID& row_id) {
@@ -204,7 +206,8 @@ struct CountNonNullAggregateRun : public BaseAggregateRun {
         values[offset] = 1;
       }
       ++offset;
-    });
+      return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+    }, begin_row_id);
   }
 
   void resize(const size_t size) override { values.resize(size, 0); }
@@ -247,8 +250,8 @@ struct CountDistinctAggregateRun : public BaseAggregateRun {
     resize(size);
   }
 
-  explicit CountDistinctAggregateRun(const ColumnIterable& column_iterable) {
-    resize(column_iterable.table->row_count());
+  explicit CountDistinctAggregateRun(const ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) {
+    resize(row_count);
 
     auto offset = size_t{0};
     column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const RowID& row_id) {
@@ -256,7 +259,9 @@ struct CountDistinctAggregateRun : public BaseAggregateRun {
         sets[offset].insert(segment_position.value());
       }
       ++offset;
-    });
+
+      return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+    }, begin_row_id);
   }
 
   void resize(const size_t size) override { sets.resize(size); }
@@ -304,8 +309,8 @@ struct AvgAggregateRun : public BaseAggregateRun {
     resize(size);
   }
 
-  explicit AvgAggregateRun(const ColumnIterable& column_iterable) {
-    resize(column_iterable.table->row_count());
+  explicit AvgAggregateRun(const ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) {
+    resize(row_count);
 
     auto offset = size_t{0};
     column_iterable.for_each<SourceColumnDataType>([&](const auto& segment_position, const RowID& row_id) {
@@ -314,7 +319,9 @@ struct AvgAggregateRun : public BaseAggregateRun {
         ++pairs[offset].second;
       }
       ++offset;
-    });
+
+      return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+    }, begin_row_id);
   }
 
   void resize(const size_t size) override { pairs.resize(size); }
@@ -361,7 +368,8 @@ struct AvgAggregateRun : public BaseAggregateRun {
 };
 
 inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates(
-    const std::shared_ptr<const Table>& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions, const bool has_group_by_columns) {
+    const std::shared_ptr<const Table>& table, const std::vector<AggregateColumnDefinition>& aggregate_column_definitions, const bool has_group_by_columns,
+    const RowID& begin_row_id, const size_t row_count) {
 
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(aggregate_column_definitions.size());
 
@@ -369,7 +377,7 @@ inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates
     const auto& aggregate_column_definition = aggregate_column_definitions[aggregate_idx];
 
     if (aggregate_column_definition.function == AggregateFunction::CountRows) {
-      aggregates[aggregate_idx] = std::make_unique<CountRowsAggregateRun>(table->row_count());
+      aggregates[aggregate_idx] = std::make_unique<CountRowsAggregateRun>(row_count);
       continue;
     }
 
@@ -382,21 +390,21 @@ inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates
 
       switch (aggregate_column_definition.function) {
         case AggregateFunction::Min:
-          aggregates[aggregate_idx] = std::make_unique<MinAggregateRun<SourceColumnDataType>>(column_iterable);
+          aggregates[aggregate_idx] = std::make_unique<MinAggregateRun<SourceColumnDataType>>(column_iterable, begin_row_id, row_count);
           break;
         case AggregateFunction::Max:
-          aggregates[aggregate_idx] = std::make_unique<MaxAggregateRun<SourceColumnDataType>>(column_iterable);
+          aggregates[aggregate_idx] = std::make_unique<MaxAggregateRun<SourceColumnDataType>>(column_iterable, begin_row_id, row_count);
           break;
         case AggregateFunction::Sum:
           if constexpr (!std::is_same_v<SourceColumnDataType, pmr_string>) {
-            aggregates[aggregate_idx] = std::make_unique<SumAggregateRun<SourceColumnDataType>>(column_iterable);
+            aggregates[aggregate_idx] = std::make_unique<SumAggregateRun<SourceColumnDataType>>(column_iterable, begin_row_id, row_count);
           } else {
             Fail("Cannot compute SUM() on string column");
           }
           break;
         case AggregateFunction::Avg:
           if constexpr (!std::is_same_v<SourceColumnDataType, pmr_string>) {
-            aggregates[aggregate_idx] = std::make_unique<AvgAggregateRun<SourceColumnDataType>>(column_iterable);
+            aggregates[aggregate_idx] = std::make_unique<AvgAggregateRun<SourceColumnDataType>>(column_iterable, begin_row_id, row_count);
           } else {
             Fail("Cannot compute AVG() on string column");
           }
@@ -405,11 +413,11 @@ inline std::vector<std::unique_ptr<BaseAggregateRun>> produce_initial_aggregates
           Fail("Handled above");
           break;
         case AggregateFunction::CountNonNull:
-          aggregates[aggregate_idx] = std::make_unique<CountNonNullAggregateRun<SourceColumnDataType>>(column_iterable);
+          aggregates[aggregate_idx] = std::make_unique<CountNonNullAggregateRun<SourceColumnDataType>>(column_iterable, begin_row_id, row_count);
           break;
         case AggregateFunction::CountDistinct:
           aggregates[aggregate_idx] =
-              std::make_unique<CountDistinctAggregateRun<SourceColumnDataType>>(column_iterable);
+              std::make_unique<CountDistinctAggregateRun<SourceColumnDataType>>(column_iterable, begin_row_id, row_count);
           break;
       }
     });

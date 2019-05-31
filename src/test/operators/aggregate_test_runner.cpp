@@ -119,21 +119,6 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
       }
     };
 
-    // Test all AggregateFunctions on all DataTypes on both an empty and non-empty input table. No grouping.
-    for (const auto table_size : all_table_sizes) {
-      for (const auto aggregate_function : all_aggregate_functions) {
-        for (const auto data_type : all_data_types) {
-          auto configuration = default_configuration;
-          configuration.input.table_size = table_size;
-          configuration.aggregate_column_definitions = {
-              {aggregate_column_ids.at(data_type), aggregate_function},
-          };
-
-          add_configuration_if_supported(configuration);
-        }
-      }
-    }
-
     // Test single-column group-by for all DataTypes and on nullable/non-nullable columns.
     for (const auto data_type : all_data_types) {
       for (const auto nullable : {false, true}) {

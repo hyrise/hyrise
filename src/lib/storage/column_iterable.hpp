@@ -19,7 +19,6 @@ struct ColumnIterable {
   ColumnIterable(const std::shared_ptr<const Table>& table,
                  const ColumnID column_id);
 
-
   template <typename T, typename F>
   RowID for_each(const F& f, const RowID begin_row_id = RowID{ChunkID{0}, ChunkOffset{0}}) const {
     auto aborted = false;
@@ -27,8 +26,9 @@ struct ColumnIterable {
     auto chunk_offset = begin_row_id.chunk_offset;
 
     auto chunk_id = begin_row_id.chunk_id;
-    for (; chunk_id < chunk_count; ++chunk_id) {
-      const auto& segment = *table->get_chunk(chunk_id)->get_segment(column_id);
+    for (; chunk_id < chunk_count;) {
+      const auto chunk = table->get_chunk(chunk_id);
+      const auto& segment = *chunk->get_segment(column_id);
 
       segment_with_iterators<T>(segment, [&](auto iter, auto end) {
         using SegmentPositionType = std::decay_t<decltype(*iter)>;
@@ -50,11 +50,14 @@ struct ColumnIterable {
         }
       });
 
+      if (chunk_offset == chunk->size()) {
+        ++chunk_id;
+        chunk_offset = 0;
+      }
+
       if (aborted) {
         break;
       }
-
-      chunk_offset = 0;
     }
 
     return {chunk_id, chunk_offset};
