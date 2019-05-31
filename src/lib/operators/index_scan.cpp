@@ -178,8 +178,14 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   // Since index scans only work on data tables, we can give the single chunk gurantee without checking incoming PosLists
   matches_out.guarantee_single_chunk();
 
-  matches_out.reserve(matches_out.size() + std::distance(range_begin, range_end));
-  std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
+  const auto current_matches_size = matches_out.size();
+  const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
+  matches_out.resize(final_matches_size);
+
+  for (size_t idx = current_matches_size; idx < final_matches_size; ++idx) {
+    matches_out[idx] = RowID{chunk_id, *range_begin};
+    range_begin++;
+  }
 
   return matches_out;
 }
