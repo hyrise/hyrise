@@ -24,6 +24,7 @@
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
+#include "utils/plugin_manager.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -133,6 +134,12 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
-  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TpchTableGenerator>(scale_factor, config), context)
-      .run();
+  auto benchmark_runner = BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TpchTableGenerator>(scale_factor, config), context);
+
+  // TODO: Use with command line args instead.
+  PluginManager::get().load_plugin("/home/Leander.Neiss/pcm_plugin/build/libPcmPlugin.so", benchmark_runner);
+
+  benchmark_runner.run();
+
+  PluginManager::get().unload_plugin("PcmPlugin");
 }

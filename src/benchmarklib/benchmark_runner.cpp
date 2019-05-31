@@ -19,7 +19,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/plugin_manager.hpp"
+// #include "utils/plugin_manager.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
@@ -69,12 +69,12 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   }
 
   // TODO: Use with command line args instead.
-  PluginManager::get().load_plugin("/home/Leander.Neiss/pcm_plugin/build/libPcmPlugin.so");
+  // PluginManager::get().load_plugin("/home/Leander.Neiss/pcm_plugin/build/libPcmPlugin.so");
 }
 
-BenchmarkRunner::~BenchmarkRunner() {
-  PluginManager::get().unload_plugin("PcmPlugin");
-}
+// BenchmarkRunner::~BenchmarkRunner() {
+//   PluginManager::get().unload_plugin("PcmPlugin");
+// }
 
 void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
@@ -179,7 +179,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
     std::cout << "- Benchmarking " << name << std::endl;
-    _notify_listeners(Event::ItemStarted);
+    _notify_listeners(Event::ItemRunStarted);
 
     auto& result = _results[item_id];
 
@@ -210,7 +210,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     CurrentScheduler::wait_for_all_tasks();
-    _notify_listeners(Event::ItemFinished);
+    _notify_listeners(Event::ItemRunFinished);
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
 }

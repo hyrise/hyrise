@@ -5,6 +5,7 @@
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
+#include "../benchmarklib/benchmark_runner.hpp"
 
 namespace opossum {
 
@@ -28,6 +29,8 @@ class AbstractPlugin {
   virtual void start() = 0;
 
   virtual void stop() = 0;
+
+  virtual void register_listenable(BenchmarkRunner &benchmark_runner) {}
 };
 
 }  // namespace opossum

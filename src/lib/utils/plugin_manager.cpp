@@ -48,6 +48,35 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   plugin->start();
 }
 
+void PluginManager::load_plugin(const std::filesystem::path& path, BenchmarkRunner& listenable) {
+  const auto name = plugin_name_from_path(path);
+
+  Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name " + name + " already exists.");
+
+  PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
+  Assert(plugin_handle, "Loading plugin failed: " + dlerror());
+
+  // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
+  // factory method. See the sources of AbstractPlugin and TestPlugin for further details.
+  void* factory = dlsym(plugin_handle, "factory");
+  Assert(factory,
+         "Instantiating plugin failed: Use the EXPORT_PLUGIN (abstract_plugin.hpp) macro to export a factory method "
+         "for your plugin!");
+
+  using PluginGetter = AbstractPlugin* (*)();
+  auto plugin_get = reinterpret_cast<PluginGetter>(factory);
+
+  auto plugin = plugin_get();
+  PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, plugin};
+  Assert(!_is_duplicate(plugin_handle_wrapper.plugin),
+         "Loading plugin failed: There can only be one instance of every plugin.");
+
+  _plugins[name] = plugin_handle_wrapper;
+
+  plugin->register_listenable(listenable);
+  plugin->start();
+}
+
 void PluginManager::reset() { get() = PluginManager(); }
 
 void PluginManager::unload_plugin(const PluginName& name) {
