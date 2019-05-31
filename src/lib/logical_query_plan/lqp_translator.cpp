@@ -212,10 +212,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   // TableScan(s).
   auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
                                                 predicate->predicate_condition, right_values, right_values2);
+  index_scan->set_included_chunk_ids(indexed_chunks);
+
+  // If all chunks of a table are indexed, we don't need anything else except the IndexScan
+  if (indexed_chunks.size() == static_cast<size_t>(table->chunk_count())) return index_scan;
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
-
-  index_scan->set_included_chunk_ids(indexed_chunks);
   table_scan->set_excluded_chunk_ids(indexed_chunks);
 
   return std::make_shared<UnionPositions>(index_scan, table_scan);
