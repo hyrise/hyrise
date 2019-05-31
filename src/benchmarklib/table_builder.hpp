@@ -98,7 +98,7 @@ get_value_type<T>& get_value(T& maybe_optional) {
 namespace opossum {
 
 /**
- * Helper to build a table with a static (specified by template args `ColumnDefinitions`) column type layout. Keeps a
+ * Helper to build a table with a static column layout, specified by ctor args types and names. Keeps a
  * data vector for each column and appends values to them in append_row(). For nullable columns an additional
  * is_null_vector is kept. Automatically creates chunks in accordance with the specified chunk size.
  */
