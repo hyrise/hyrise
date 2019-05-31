@@ -11,36 +11,39 @@ namespace opossum {
 struct CalibrationQueryGeneratorPredicateConfiguration {
   const std::string table_name;
   const DataType data_type;
-  const EncodingType first_encoding_type;
-  const std::optional<EncodingType> second_encoding_type;
-  const std::optional<EncodingType> third_encoding_type;
+  const SegmentEncodingSpec first_encoding;
+  const std::optional<SegmentEncodingSpec> second_encoding;
+  const std::optional<SegmentEncodingSpec> third_encoding;
   const float selectivity;
   const bool reference_column;
   const size_t row_count;
 };
 
-    inline bool operator==(const CalibrationQueryGeneratorPredicateConfiguration& lhs, const CalibrationQueryGeneratorPredicateConfiguration& rhs) {
-      return std::tie(lhs.table_name, lhs.data_type, lhs.first_encoding_type, lhs.second_encoding_type, lhs.third_encoding_type, lhs.selectivity,
-                      lhs.reference_column, lhs.row_count) == std::tie(rhs.table_name, rhs.data_type, rhs.first_encoding_type, rhs.second_encoding_type,
-                                                rhs.third_encoding_type, rhs.selectivity, rhs.reference_column, rhs.row_count);
-    }
-    inline bool operator<(const CalibrationQueryGeneratorPredicateConfiguration& lhs, const CalibrationQueryGeneratorPredicateConfiguration& rhs) {
-      return std::tie(lhs.table_name, lhs.data_type, lhs.first_encoding_type, lhs.second_encoding_type, lhs.third_encoding_type, lhs.selectivity,
-                      lhs.reference_column, lhs.row_count) < std::tie(rhs.table_name, rhs.data_type, rhs.first_encoding_type, rhs.second_encoding_type,
-                                                                       rhs.third_encoding_type, rhs.selectivity, rhs.reference_column, rhs.row_count);
-    }
+inline bool operator==(const CalibrationQueryGeneratorPredicateConfiguration& lhs, const CalibrationQueryGeneratorPredicateConfiguration& rhs) {
+  return std::tie(lhs.table_name, lhs.data_type, lhs.first_encoding,
+                  lhs.second_encoding, lhs.third_encoding, lhs.selectivity,
+                  lhs.reference_column, lhs.row_count) == std::tie(rhs.table_name, rhs.data_type, rhs.first_encoding, rhs.second_encoding,
+                  rhs.third_encoding, rhs.selectivity, rhs.reference_column, rhs.row_count);
+}
+inline bool operator<(const CalibrationQueryGeneratorPredicateConfiguration& lhs, const CalibrationQueryGeneratorPredicateConfiguration& rhs) {
+  return std::tie(lhs.table_name, lhs.data_type, lhs.first_encoding,
+                  lhs.second_encoding, lhs.third_encoding, lhs.selectivity,
+                  lhs.reference_column, lhs.row_count) < std::tie(rhs.table_name, rhs.data_type, rhs.first_encoding,
+                   rhs.second_encoding,
+                  rhs.third_encoding, rhs.selectivity, rhs.reference_column, rhs.row_count);
+}
 
 // So that google test prints readable error messages
 inline std::ostream& operator<<(std::ostream& stream,
                                 const CalibrationQueryGeneratorPredicateConfiguration& configuration) {
   const auto reference_column_string = configuration.reference_column ? "true" : "false";
   const auto second_encoding_string =
-      configuration.second_encoding_type ? encoding_type_to_string.left.at(*configuration.second_encoding_type) : "{}";
+      configuration.second_encoding ? encoding_type_to_string.left.at((*configuration.second_encoding).encoding_type) : "{}";
   const auto third_encoding_string =
-      configuration.third_encoding_type ? encoding_type_to_string.left.at(*configuration.third_encoding_type) : "{}";
+      configuration.third_encoding ? encoding_type_to_string.left.at((*configuration.third_encoding).encoding_type) : "{}";
   return stream << "CalibrationQueryGeneratorPredicateConfiguration(" << configuration.table_name << " - "
                 << configuration.selectivity << " - "
-                << encoding_type_to_string.left.at(configuration.first_encoding_type) << " - " << second_encoding_string
+                << encoding_type_to_string.left.at(configuration.first_encoding.encoding_type) << " - " << second_encoding_string
                 << " - " << third_encoding_string << " - " << data_type_to_string.left.at(configuration.data_type)
                 << " - " << reference_column_string << " - " << configuration.row_count << ")";
 }

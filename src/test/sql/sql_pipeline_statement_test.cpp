@@ -72,7 +72,7 @@ class SQLPipelineStatementTest : public BaseTest {
     _multi_statement_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_multi_statement_dependant, _multi_statement_parse_result.get());
 
-    SQLPhysicalPlanCache::get().clear();
+    _lqp_cache = std::make_shared<SQLLogicalPlanCache>();
   }
 
   std::shared_ptr<Table> _table_a;
@@ -82,6 +82,8 @@ class SQLPipelineStatementTest : public BaseTest {
 
   TableColumnDefinitions _int_float_column_definitions;
   TableColumnDefinitions _int_int_int_column_definitions;
+
+  std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -290,51 +292,55 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPValidated) {
   // Expect cache to be empty
-  EXPECT_FALSE(SQLLogicalPlanCache::get().has(_select_query_a));
+  EXPECT_FALSE(_lqp_cache->has(_select_query_a));
 
-  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
+  auto validated_sql_pipeline =
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
 
   const auto& validated_lqp = validated_sql_pipeline.get_optimized_logical_plan();
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
 
   // Expect cache to contain validated LQP
-  EXPECT_TRUE(SQLLogicalPlanCache::get().has(_select_query_a));
-  const auto validated_cached_lqp = SQLLogicalPlanCache::get().get_entry(_select_query_a);
+  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
+  const auto validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
   EXPECT_TRUE(lqp_is_validated(validated_cached_lqp));
 
   // Evict validated version by requesting a not validated version
-  auto not_validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement();
+  auto not_validated_sql_pipeline =
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline_statement();
   const auto& not_validated_lqp = not_validated_sql_pipeline.get_optimized_logical_plan();
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
   // Expect cache to contain not validated LQP
-  EXPECT_TRUE(SQLLogicalPlanCache::get().has(_select_query_a));
-  const auto not_validated_cached_lqp = SQLLogicalPlanCache::get().get_entry(_select_query_a);
+  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
+  const auto not_validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 }
 
 TEST_F(SQLPipelineStatementTest, GetCachedOptimizedLQPNotValidated) {
   // Expect cache to be empty
-  EXPECT_FALSE(SQLLogicalPlanCache::get().has(_select_query_a));
+  EXPECT_FALSE(_lqp_cache->has(_select_query_a));
 
-  auto not_validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement();
+  auto not_validated_sql_pipeline =
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).disable_mvcc().create_pipeline_statement();
 
   const auto& not_validated_lqp = not_validated_sql_pipeline.get_optimized_logical_plan();
   EXPECT_FALSE(lqp_is_validated(not_validated_lqp));
 
   // Expect cache to contain not validated LQP
-  EXPECT_TRUE(SQLLogicalPlanCache::get().has(_select_query_a));
-  const auto not_validated_cached_lqp = SQLLogicalPlanCache::get().get_entry(_select_query_a);
+  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
+  const auto not_validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
   EXPECT_FALSE(lqp_is_validated(not_validated_cached_lqp));
 
   // Evict not validated version by requesting a validated version
-  auto validated_sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
+  auto validated_sql_pipeline =
+      SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
   const auto& validated_lqp = validated_sql_pipeline.get_optimized_logical_plan();
   EXPECT_TRUE(lqp_is_validated(validated_lqp));
 
   // Expect cache to contain not validated LQP
-  EXPECT_TRUE(SQLLogicalPlanCache::get().has(_select_query_a));
-  const auto validated_cached_lqp = SQLLogicalPlanCache::get().get_entry(_select_query_a);
+  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
+  const auto validated_cached_lqp = _lqp_cache->get_entry(_select_query_a);
   EXPECT_TRUE(lqp_is_validated(validated_cached_lqp));
 }
 
@@ -449,8 +455,9 @@ TEST_F(SQLPipelineStatementTest, GetTasksNotValidated) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTable) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
 
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 }
 
@@ -460,7 +467,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
   sql_pipeline.get_result_table();
   auto duration = sql_pipeline.metrics()->plan_execution_duration;
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   auto duration2 = sql_pipeline.metrics()->plan_execution_duration;
 
   // Make sure this was not run twice
@@ -470,7 +478,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
 
 TEST_F(SQLPipelineStatementTest, GetResultTableJoin) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline_statement();
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -480,7 +489,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
 
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
@@ -489,18 +499,21 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
   const auto sql = "UPDATE table_a SET a = 1 WHERE a < 5";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_EQ(table, nullptr);
 
   // Check that this doesn't crash. This should return the previous table, otherwise the auto-commit will fail.
-  const auto& table2 = sql_pipeline.get_result_table();
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Success);
   EXPECT_EQ(table2, nullptr);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement();
 
-  const auto& table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a);
 
@@ -508,10 +521,44 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
 }
 
-TEST_F(SQLPipelineStatementTest, GetTimes) {
-  const auto& cache = SQLPhysicalPlanCache::get();
-  EXPECT_EQ(cache.size(), 0u);
+TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransaction) {
+  // Mark a row as modified by a different transaction
+  _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids[0] = TransactionID{17};
 
+  const auto sql = "UPDATE table_a SET a = 1";
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
+
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table, nullptr);
+
+  // Retrieving it again should give us the same result
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table2, nullptr);
+
+  EXPECT_TRUE(transaction_context->aborted());
+}
+
+TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureAutoCommit) {
+  // Mark a row as modified by a different transaction
+  _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids[0] = TransactionID{17};
+
+  const auto sql = "UPDATE table_a SET a = 1";
+  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
+
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table, nullptr);
+
+  // Retrieving it again should give us the same result
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table2, nullptr);
+}
+
+TEST_F(SQLPipelineStatementTest, GetTimes) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
   const auto& metrics = sql_pipeline.metrics();
@@ -547,12 +594,11 @@ TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
 }
 
 TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
+  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_lqp_cache(_lqp_cache).create_pipeline_statement();
   sql_pipeline.get_result_table();
 
-  const auto& cache = SQLPhysicalPlanCache::get();
-  EXPECT_EQ(cache.size(), 1u);
-  EXPECT_TRUE(cache.has(_select_query_a));
+  EXPECT_EQ(_lqp_cache->size(), 1u);
+  EXPECT_TRUE(_lqp_cache->has(_select_query_a));
 }
 
 TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
@@ -560,7 +606,8 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
 
   auto first_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
 
-  const auto first_subquery_result = first_subquery_sql_pipeline.get_result_table();
+  const auto [pipeline_status, first_subquery_result] = first_subquery_sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_first_result->append({10, 10, 10});
@@ -570,7 +617,8 @@ TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
   SQLPipelineBuilder{"INSERT INTO table_int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
   auto second_subquery_sql_pipeline = SQLPipelineBuilder{subquery_query}.create_pipeline_statement();
-  const auto second_subquery_result = second_subquery_sql_pipeline.get_result_table();
+  const auto [second_pipeline_status, second_subquery_result] = second_subquery_sql_pipeline.get_result_table();
+  EXPECT_EQ(second_pipeline_status, SQLPipelineStatus::Success);
 
   auto expected_second_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
   expected_second_result->append({11, 10, 11});

@@ -68,8 +68,6 @@ std::string StoredTableNode::description() const {
   return stream.str();
 }
 
-OperatorType StoredTableNode::operator_type() const { return OperatorType::GetTable; }
-
 const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_expressions() const {
   // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
   // that in the constructor and (b) because we don't have column pruning information in the constructor

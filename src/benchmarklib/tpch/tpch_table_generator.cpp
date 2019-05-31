@@ -6,15 +6,17 @@ extern "C" {
 #include <rnd.h>
 }
 
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/integral_constant.hpp>
+#include <boost/hana/zip_with.hpp>
+#include <filesystem>
 #include <utility>
 
-#include "boost/hana/for_each.hpp"
-#include "boost/hana/integral_constant.hpp"
-#include "boost/hana/zip_with.hpp"
-
 #include "benchmark_config.hpp"
+#include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/timer.hpp"
 
 extern char** asc_date;
 extern seed_t seed[];
@@ -67,8 +69,8 @@ class TableBuilder {
   template <typename... Strings>
   // NOLINTNEXTLINE(fuchsia-trailing-return) - clang-tidy does not like the template parameter list
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
-               const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
-      : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(estimated_rows < chunk_size ? estimated_rows : chunk_size) {
+               const boost::hana::tuple<Strings...>& column_names, size_t estimated_rows = 0)
+      : _estimated_rows_per_chunk(estimated_rows < chunk_size ? estimated_rows : chunk_size) {
     /**
      * Create a tuple ((column_name0, column_type0), (column_name1, column_type1), ...) so we can iterate over the
      * columns.
@@ -89,7 +91,7 @@ class TableBuilder {
                                                       column_name_and_type[boost::hana::llong_c<1>]);
                              return definitions;
                            });
-    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, use_mvcc);
+    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, UseMvcc::Yes);
 
     // Reserve some space in the vectors
     boost::hana::for_each(_data_vectors, [&](auto&& vector) { vector.reserve(_estimated_rows_per_chunk); });
@@ -124,7 +126,6 @@ class TableBuilder {
 
  private:
   std::shared_ptr<opossum::Table> _table;
-  opossum::UseMvcc _use_mvcc;
   boost::hana::tuple<std::vector<DataTypes>...> _data_vectors;
   size_t _estimated_rows_per_chunk;
 
@@ -142,11 +143,7 @@ class TableBuilder {
       vector.reserve(_estimated_rows_per_chunk);
     });
 
-    // Create initial MvccData if MVCC is enabled
-    auto mvcc_data = std::shared_ptr<MvccData>{};
-    if (_use_mvcc == UseMvcc::Yes) {
-      mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-    }
+    auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
 
     _table->append_chunk(segments, mvcc_data);
   }
@@ -229,7 +226,26 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr
 std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
-  Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
+
+  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+
+    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
+      const auto table_name = table_file.path().stem();
+      Timer timer;
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+
+      BenchmarkTableInfo table_info;
+      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.loaded_from_binary = true;
+      table_info_by_name[table_name] = table_info;
+
+      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    return table_info_by_name;
+  }
 
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
   dbgen_reset_seeds();
@@ -244,21 +260,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
 
   // The `* 4` part is defined in the TPC-H specification.
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                UseMvcc::Yes, customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, UseMvcc::Yes,
-                             order_count};
+                                customer_count};
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                UseMvcc::Yes, order_count * 4};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, UseMvcc::Yes,
-                            part_count};
+                                order_count * 4};
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                UseMvcc::Yes, part_count * 4};
+                                part_count * 4};
   TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
-                                UseMvcc::Yes, supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes,
-                              nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, UseMvcc::Yes,
-                              region_count};
+                                supplier_count};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
 
   /**
    * CUSTOMER
@@ -355,6 +367,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   table_info_by_name["supplier"].table = supplier_builder.finish_table();
   table_info_by_name["nation"].table = nation_builder.finish_table();
   table_info_by_name["region"].table = region_builder.finish_table();
+
+  if (_benchmark_config->cache_binary_tables) {
+    std::filesystem::create_directories(cache_directory);
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+    }
+  }
 
   return table_info_by_name;
 }

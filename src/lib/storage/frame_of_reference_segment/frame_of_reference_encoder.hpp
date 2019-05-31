@@ -65,7 +65,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
         // The last value block might not be filled completely
         const auto this_value_block_end = value_block_it;
 
-        const auto [min_it, max_it] = std::minmax_element(current_value_block.begin(), this_value_block_end);  // NOLINT
+        const auto [min_it, max_it] = std::minmax_element(current_value_block.begin(), this_value_block_end);
 
         // Make sure that the largest offset fits into uint32_t (required for vector compression.)
         Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(),

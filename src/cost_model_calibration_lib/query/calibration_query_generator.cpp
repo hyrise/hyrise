@@ -138,7 +138,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
           // We don't need to generate a query for permutation of the (unused) third column.
 
           // Expect one encoding
-          if (!permutation.second_encoding_type) {
+          if (!permutation.second_encoding) {
               add_queries_if_present(
                       queries,
                       _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
@@ -161,14 +161,14 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
           }
 
           // Expect two encodings
-          if (permutation.second_encoding_type && !permutation.third_encoding_type) {
+          if (permutation.second_encoding && !permutation.third_encoding) {
               add_queries_if_present(
                       queries,
                       _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
           }
 
           // Expect three encodings
-          if (permutation.second_encoding_type && permutation.third_encoding_type) {
+          if (permutation.second_encoding && permutation.third_encoding) {
               add_queries_if_present(
                       queries, _generate_table_scan(permutation,
                                                     CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));

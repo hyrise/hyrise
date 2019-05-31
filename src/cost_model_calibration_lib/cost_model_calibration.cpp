@@ -9,7 +9,8 @@
 #include "cost_model_calibration_table_generator.hpp"
 #include "import_export/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
-#include "tpch/tpch_query_generator.hpp"
+#include "storage/storage_manager.hpp"
+#include "tpch/tpch_benchmark_item_runner.hpp"
 
 namespace opossum {
 
@@ -55,14 +56,16 @@ void CostModelCalibration::_run_tpch() const {
   const auto number_of_iterations = _configuration.calibration_runs;
   _write_csv_header(_configuration.tpch_output_path);
 
-  const auto tpch_query_generator = std::make_unique<opossum::TPCHQueryGenerator>(false, 1.0f);
+  const auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
+
+  const auto tpch_query_generator = std::make_unique<opossum::TPCHBenchmarkItemRunner>(config, false, 1.0f);
 
   // Run just a single iteration for TPCH
   for (size_t i = 0; i < number_of_iterations; i++) {
-    for (QueryID tpch_query_id{0}; tpch_query_id < 22; ++tpch_query_id) {
+    for (BenchmarkItemID tpch_query_id{0}; tpch_query_id < 22; ++tpch_query_id) {
       std::cout << "Running TPCH " << std::to_string(tpch_query_id) << std::endl;
 
-      const auto tpch_sql = tpch_query_generator->build_deterministic_query(tpch_query_id);
+      const auto tpch_sql = tpch_query_generator->build_query(tpch_query_id);
 
       // We want a warm cache.
       queryRunner.calibrate_query_from_sql(tpch_sql);
@@ -84,6 +87,9 @@ void CostModelCalibration::_calibrate() const {
   std::vector<std::pair<std::string, size_t>> table_names;
   for (const auto& table_specification : _configuration.table_specifications) {
     table_names.emplace_back(std::make_pair(table_specification.table_name, table_specification.table_size));
+  }
+  for (const auto& table_name : StorageManager::get().table_names()) {
+    table_names.emplace_back(table_name, StorageManager::get().get_table(table_name)->row_count());
   }
 
   const auto& columns = _configuration.columns;

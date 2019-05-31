@@ -110,7 +110,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::_genera
 
 const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoin::_find_primary_key() const {
   for (const auto& definition : _column_definitions) {
-    if (definition.type == _configuration.data_type && definition.encoding == _configuration.left_encoding_type &&
+    if (definition.data_type == _configuration.data_type && definition.encoding.encoding_type == _configuration.left_encoding_type &&
         boost::algorithm::starts_with(definition.column_name, "column_pk")) {
       return definition;
     }
@@ -123,7 +123,7 @@ const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoi
     const double table_ratio) const {
   for (const auto& definition : _column_definitions) {
     // In case of _configuration.table_ratio == 1, this will select the primary key
-    if (definition.type == _configuration.data_type && definition.encoding == _configuration.right_encoding_type &&
+    if (definition.data_type == _configuration.data_type && definition.encoding.encoding_type == _configuration.right_encoding_type &&
         definition.fraction == table_ratio) {
       return definition;
     }

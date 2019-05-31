@@ -61,6 +61,35 @@ struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
       : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
 
+  inline bool operator==(const SegmentEncodingSpec& other) const {
+    if (encoding_type != other.encoding_type) {
+      return false;
+    }
+
+    if (!vector_compression_type && !other.vector_compression_type) {
+      // If both vector compression types are unspecified, they both fall back the compression's default
+      return true;
+    }
+
+    if ((!vector_compression_type && other.vector_compression_type) || 
+      (vector_compression_type && !other.vector_compression_type)) {
+      // If one of the compression types is not explicitly set but the other is,
+      // default types are not guessed: inequality is assumed.
+      return false;
+    }
+
+    // At this point, the encoding type equals and both vector compression optionals are set
+    return *vector_compression_type == *other.vector_compression_type;
+  }
+
+  inline bool operator<(const SegmentEncodingSpec& other) const {
+    if (encoding_type != other.encoding_type) {
+      return encoding_type < other.encoding_type;
+    }
+
+    return vector_compression_type < other.vector_compression_type;
+  }
+
   EncodingType encoding_type;
   std::optional<VectorCompressionType> vector_compression_type;
 };

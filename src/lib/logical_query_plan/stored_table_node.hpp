@@ -38,8 +38,6 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   /** @} */
 
   std::string description() const override;
-  OperatorType operator_type() const override;
-
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
   std::shared_ptr<TableStatistics> derive_statistics_from(

@@ -12,6 +12,7 @@
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -56,8 +57,6 @@ class BaseTestWithParam
   }
 
  public:
-  BaseTestWithParam() {}
-
   /**
    * Base test uses its destructor instead of TearDown() to clean up. This way, derived test classes can override TearDown()
    * safely without preventing the BaseTest-cleanup from happening.
@@ -70,9 +69,8 @@ class BaseTestWithParam
     PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
-
-    SQLPhysicalPlanCache::get().clear();
-    SQLLogicalPlanCache::get().clear();
+    SQLPipelineBuilder::default_pqp_cache = nullptr;
+    SQLPipelineBuilder::default_lqp_cache = nullptr;
   }
 
   static std::shared_ptr<AbstractExpression> get_column_expression(const std::shared_ptr<AbstractOperator>& op,

@@ -89,7 +89,44 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
   configuration.data_types = calibration_data_types;
 
   configuration.selectivities = j.at("selectivities").get<std::vector<float>>();
-  configuration.columns = j.at("columns").get<std::vector<CalibrationColumnSpecification>>();
+
+  std::vector<SegmentEncodingSpec> segments_encodings{SegmentEncodingSpec{EncodingType::Unencoded}};
+  for (const auto& encoding : configuration.encodings) {
+    if (encoding != EncodingType::Unencoded) {
+      auto encoder = create_encoder(encoding);
+
+      if (configuration.calibrate_vector_compression_types && encoder->uses_vector_compression()) {
+        for (const auto& vector_compression : {VectorCompressionType::FixedSizeByteAligned, VectorCompressionType::SimdBp128}) {
+          segments_encodings.push_back(SegmentEncodingSpec{encoding, vector_compression});
+        }
+      } else {
+        segments_encodings.push_back(SegmentEncodingSpec{encoding});
+      }
+    }
+  }
+
+  auto column_id = size_t{0};
+  std::vector<CalibrationColumnSpecification> column_specs;
+  for (const auto& data_type : configuration.data_types) {
+    for (const auto& encoding_spec : segments_encodings) {
+      if (encoding_supports_data_type(encoding_spec.encoding_type, data_type)) {
+        // for every encoding, we create three columns that allow calibrating the query
+        // `WHERE a between b and c` with a,b,c being columns encoded in the requested encoding type.
+       for (const size_t distinct_value_count : {10, 10'000, 1'000'000}) {
+          CalibrationColumnSpecification column_spec;
+          column_spec.column_name = "column_" + std::to_string(column_id++);
+          column_spec.data_type = data_type;
+          column_spec.value_distribution = "uniform";
+          column_spec.sorted = false;
+          column_spec.distinct_value_count = distinct_value_count;
+          column_spec.encoding = encoding_spec;
+
+          column_specs.push_back(column_spec);
+        }
+      }
+    }
+  }
+  configuration.columns = column_specs;
 }
 
 }  // namespace opossum
