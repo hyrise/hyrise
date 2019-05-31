@@ -19,8 +19,14 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
       _mode(mode),
       _primary_predicate(primary_predicate),
       _secondary_predicates(secondary_predicates) {
-  DebugAssert(mode != JoinMode::Cross,
-              "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
+  Assert(mode != JoinMode::Cross, "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
+  Assert(primary_predicate.predicate_condition == PredicateCondition::Equals ||
+             primary_predicate.predicate_condition == PredicateCondition::LessThan ||
+             primary_predicate.predicate_condition == PredicateCondition::GreaterThan ||
+             primary_predicate.predicate_condition == PredicateCondition::LessThanEquals ||
+             primary_predicate.predicate_condition == PredicateCondition::GreaterThanEquals ||
+             primary_predicate.predicate_condition == PredicateCondition::NotEquals,
+         "Unsupported predicate condition");
 }
 
 JoinMode AbstractJoinOperator::mode() const { return _mode; }
@@ -58,7 +64,8 @@ const std::string AbstractJoinOperator::description(DescriptionMode description_
 
 void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-std::shared_ptr<Table> AbstractJoinOperator::_initialize_output_table() const {
+std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std::shared_ptr<Chunk>>&& chunks,
+                                                                 const TableType table_type) const {
   const auto left_in_table = _input_left->get_output();
   const auto right_in_table = _input_right->get_output();
 
@@ -83,7 +90,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_initialize_output_table() const {
     }
   }
 
-  return std::make_shared<Table>(output_column_definitions, TableType::References);
+  return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
 }
 
 }  // namespace opossum

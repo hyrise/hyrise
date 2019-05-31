@@ -61,7 +61,7 @@ void AbstractTableGenerator::generate_and_store() {
         binary_file_path.replace_extension(".bin");
       }
 
-      std::cout << "- Writing '" << table_name << "' into binary file '" << binary_file_path << "' " << std::flush;
+      std::cout << "- Writing '" << table_name << "' into binary file " << binary_file_path << " " << std::flush;
       Timer per_table_timer;
       ExportBinary::write_binary(*table_info.table, binary_file_path);
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
@@ -74,7 +74,7 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add the Tables to the StorageManager
    */
-  std::cout << "- Adding Tables to StorageManager and generating statistics " << std::endl;
+  std::cout << "- Adding tables to StorageManager and generating statistics " << std::endl;
   auto& storage_manager = StorageManager::get();
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Adding '" << table_name << "' " << std::flush;
@@ -86,7 +86,7 @@ void AbstractTableGenerator::generate_and_store() {
 
   metrics.store_duration = timer.lap();
 
-  std::cout << "- Adding Tables to StorageManager and generating statistics done ("
+  std::cout << "- Adding tables to StorageManager and generating statistics done ("
             << format_duration(metrics.store_duration) << ")" << std::endl;
 }
 

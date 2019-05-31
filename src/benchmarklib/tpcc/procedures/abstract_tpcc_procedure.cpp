@@ -13,7 +13,9 @@ std::shared_ptr<const Table> AbstractTpccProcedure::_execute_sql(std::string sql
   auto builder = SQLPipelineBuilder{sql};
   builder.with_transaction_context(_transaction_context);
   auto pipeline = builder.create_pipeline();
-  return pipeline.get_result_table();
+  auto [pipeline_status, result_table] = pipeline.get_result_table();
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Transaction conflict"); // TODO
+  return result_table;
 }
 
 std::ostream& operator<<(std::ostream& stream, const AbstractTpccProcedure& procedure) {

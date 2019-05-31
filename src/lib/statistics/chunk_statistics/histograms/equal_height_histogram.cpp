@@ -110,7 +110,7 @@ std::shared_ptr<EqualHeightHistogram<T>> EqualHeightHistogram<T>::from_segment(
   auto bins = EqualHeightHistogram<T>::_build_bins(value_counts, max_bin_count);
 
   if constexpr (std::is_same_v<T, pmr_string>) {
-    const auto [characters, prefix_length] =  // NOLINT (Extra space before [)
+    const auto [characters, prefix_length] =
         get_default_or_check_string_histogram_prefix_settings(supported_characters, string_prefix_length);
     return std::make_shared<EqualHeightHistogram<T>>(bins.minimum, std::move(bins.bin_maxima), bins.total_count,
                                                      std::move(bins.bin_distinct_counts), characters, prefix_length);

@@ -140,7 +140,7 @@ TEST_F(JitAwareLQPTranslatorTest, InputColumnsAreAddedToJitReadTupleAdapter) {
   const auto b_a = stored_table_node_b->get_column("a");
   const auto b_b = stored_table_node_b->get_column("b");
   const auto lqp = ProjectionNode::make(expression_vector(b_a, b_b),  // SELECT a, b
-                     PredicateNode::make(greater_than_(b_b, value_(0)),
+                     PredicateNode::make(greater_than_(b_b, value_(0.0f)),
                         PredicateNode::make(greater_than_(b_a, value_(1)),
                           ValidateNode::make(stored_table_node_b))));
   // clang-format on
@@ -160,11 +160,11 @@ TEST_F(JitAwareLQPTranslatorTest, InputColumnsAreAddedToJitReadTupleAdapter) {
 
   ASSERT_EQ(input_columns[0].column_id, ColumnID{0});
   ASSERT_EQ(input_columns[0].tuple_entry.data_type, DataType::Int);
-  ASSERT_TRUE(input_columns[0].tuple_entry.is_nullable);
+  ASSERT_FALSE(input_columns[0].tuple_entry.guaranteed_non_null);
 
   ASSERT_EQ(input_columns[1].column_id, ColumnID{1});
   ASSERT_EQ(input_columns[1].tuple_entry.data_type, DataType::Float);
-  ASSERT_TRUE(input_columns[1].tuple_entry.is_nullable);
+  ASSERT_FALSE(input_columns[1].tuple_entry.guaranteed_non_null);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
@@ -175,7 +175,7 @@ TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
   const auto b_a = stored_table_node_b->get_column("a");
   const auto b_b = stored_table_node_b->get_column("b");
   const auto lqp = ProjectionNode::make(expression_vector(b_a, b_b),  // SELECT a, b
-                     PredicateNode::make(greater_than_(b_b, value_(1.2)),
+                     PredicateNode::make(greater_than_(b_b, value_(1.2f)),
                         PredicateNode::make(greater_than_(b_a, value_(1)),
                            ValidateNode::make(stored_table_node_b))));
   // clang-format on
@@ -195,11 +195,11 @@ TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
 
   ASSERT_EQ(input_literals[0].value, AllTypeVariant(1));
   ASSERT_EQ(input_literals[0].tuple_entry.data_type, DataType::Int);
-  ASSERT_FALSE(input_literals[0].tuple_entry.is_nullable);
+  ASSERT_TRUE(input_literals[0].tuple_entry.guaranteed_non_null);
 
-  ASSERT_EQ(input_literals[1].value, AllTypeVariant(1.2));
-  ASSERT_EQ(input_literals[1].tuple_entry.data_type, DataType::Double);
-  ASSERT_FALSE(input_literals[1].tuple_entry.is_nullable);
+  ASSERT_EQ(input_literals[1].value, AllTypeVariant(1.2f));
+  ASSERT_EQ(input_literals[1].tuple_entry.data_type, DataType::Float);
+  ASSERT_TRUE(input_literals[1].tuple_entry.guaranteed_non_null);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, ColumnSubsetIsOutputCorrectly) {
@@ -550,7 +550,7 @@ TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
   const auto node_table_a = StoredTableNode::make("table_a");
   const auto node_table_a_col_a = node_table_a->get_column("a");
 
-  const auto value = std::make_shared<ValueExpression>(int64_t{123});
+  const auto value = std::make_shared<ValueExpression>(int32_t{123});
   const auto table_scan = PredicateNode::make(equals_(node_table_a_col_a, value), node_table_a);
   const auto limit = LimitNode::make(value, table_scan);
 

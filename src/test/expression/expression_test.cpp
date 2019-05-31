@@ -159,8 +159,8 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(between_inclusive_(5, 3, 4)->as_column_name(), "5 BETWEEN INCLUSIVE 3 AND 4");
   EXPECT_EQ(case_(1, 3, case_(0, 2, 1))->as_column_name(), "CASE WHEN 1 THEN 3 ELSE CASE WHEN 0 THEN 2 ELSE 1 END END");
   EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-03-04")->as_column_name(), "EXTRACT(MONTH FROM '1993-03-04')");
-  EXPECT_EQ(substr_("Hello", 1, 2)->as_column_name(), "SUBSTR('Hello', 1, 2)");
-  EXPECT_EQ(concat_("Hello", "World")->as_column_name(), "CONCAT('Hello', 'World')");
+  EXPECT_EQ(substr_("Hello", 1, 2)->as_column_name(), "SUBSTR('Hello',1,2)");
+  EXPECT_EQ(concat_("Hello", "World")->as_column_name(), "CONCAT('Hello','World')");
   EXPECT_EQ(and_(1, 0)->as_column_name(), "1 AND 0");
   EXPECT_EQ(or_(1, 0)->as_column_name(), "1 OR 0");
   EXPECT_EQ(is_null_(1)->as_column_name(), "1 IS NULL");

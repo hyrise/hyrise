@@ -18,7 +18,7 @@ The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guid
 
 ## Native Setup
 You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS High Sierra and Ubuntu 18.04 (apt-get).
+The install script was tested under macOS High Sierra and Ubuntu 19.04 (apt-get).
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
@@ -45,7 +45,7 @@ Subsequent calls to CMake, e.g., when adding files to the build will not be nece
 
 ### Compiler choice
 CMake will default to your system's default compiler.
-To use a different one, call like `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory.
+To use a different one, call `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory. See [dependencies](DEPENDENCIES.md) for supported compiler versions.
 
 ### ccache
 For development, we strongly suggest to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. To use ccache, simply add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call.
@@ -109,8 +109,10 @@ Contact: firstname.lastname@hpi.de
 -   Pedro     Flemming
 -   Mathias   Flüggen
 -   Johannes  Frohnhofen
+-   Pascal    Führlich
 -   Adrian    Holfter
 -   Sven      Ihde
+-   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
 -   Marvin    Keller
@@ -120,6 +122,7 @@ Contact: firstname.lastname@hpi.de
 -   Tom       Lichtenstein
 -   Alexander Löser
 -   Jan       Mattfeld
+-   Julian    Menzler
 -   Arne      Mayer
 -   Torben    Meyer
 -   Leander   Neiß

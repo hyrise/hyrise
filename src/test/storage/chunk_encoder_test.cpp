@@ -11,6 +11,7 @@
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -48,6 +49,10 @@ class ChunkEncoderTest : public BaseTest {
         const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
         EXPECT_NE(encoded_segment, nullptr);
         EXPECT_EQ(encoded_segment->encoding_type(), segment_spec.encoding_type);
+        if (segment_spec.vector_compression_type) {
+          EXPECT_EQ(*segment_spec.vector_compression_type,
+                    parent_vector_compression_type(*encoded_segment->compressed_vector_type()));
+        }
       }
     }
   }
@@ -144,6 +149,29 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
   const auto unencoded_chunk_spec = ChunkEncodingSpec{3u, SegmentEncodingSpec{EncodingType::Unencoded}};
 
   verify_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
+}
+
+TEST_F(ChunkEncoderTest, ReencodingTable) {
+  // Encoding specifications which will be applied one after another to the chunk.
+  const auto chunk_encoding_specs =
+      std::vector<ChunkEncodingSpec>{{{EncodingType::Unencoded},
+                                      {EncodingType::RunLength},
+                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+                                     {{EncodingType::Unencoded},
+                                      {EncodingType::RunLength},
+                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}},
+                                     {{EncodingType::Dictionary},
+                                      {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                                      {EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
+                                     {{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}}};
+  const auto types = _table->column_data_types();
+
+  for (auto const& chunk_encoding_spec : chunk_encoding_specs) {
+    ChunkEncoder::encode_all_chunks(_table, chunk_encoding_spec);
+    for (auto const& chunk : _table->chunks()) {
+      verify_encoding(chunk, chunk_encoding_spec);
+    }
+  }
 }
 
 }  // namespace opossum
