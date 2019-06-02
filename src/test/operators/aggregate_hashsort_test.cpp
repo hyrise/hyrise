@@ -20,6 +20,22 @@ void add_group_data(std::vector<VariablySizedGroupRun::DataElementType>& data, c
   }
 }
 
+template<typename ElementType, typename... Args>
+void add_group_data(std::vector<ElementType>& data, const Args&&... args) {
+  auto offset = data.size() * sizeof(ElementType);
+  auto group_size = divide_and_ceil((sizeof(Args) + ...), sizeof(ElementType));
+
+  data.resize(data.size() + group_size);
+
+  const auto append = [&](const auto& value) {
+    constexpr auto VALUE_SIZE = sizeof(std::decay_t<decltype(value)>);
+    memcpy(reinterpret_cast<char*>(data.data()) + offset, &value, VALUE_SIZE);
+    offset += VALUE_SIZE;
+  };
+
+  (append(args), ...);
+}
+
 template <typename S>
 uint32_t lower_word(const S& s) {
   static_assert(sizeof(S) == 8);
@@ -84,6 +100,31 @@ class AggregateHashSortTest : public ::testing::Test {
 
   std::shared_ptr<Table> table;
 };
+
+TEST_F(AggregateHashSortTest, FixedSizeGroupRun) {
+  auto layout = FixedSizeGroupRunLayout(5, {ColumnID{0}, std::nullopt, ColumnID{1}}, {0, 2, 4});
+  auto run = FixedSizeGroupRun{&layout, 5};
+
+  run.null_values = {
+    false, false,
+    false, true,
+    true, false,
+    true, true,
+    false, false
+  };
+
+  add_group_data(run.data, int64_t{1}, int64_t{2}, int32_t{3});
+  add_group_data(run.data, int64_t{4}, int64_t{5}, int32_t{0});
+  add_group_data(run.data, int64_t{1}, int64_t{2}, int32_t{3});
+  add_group_data(run.data, int64_t{0}, int64_t{8}, int32_t{0});
+  add_group_data(run.data, int64_t{1}, int64_t{2}, int32_t{3});
+
+  run.hashes = {0u, 1u, 2u, 3u, 4u};
+
+  EXPECT_FALSE(run.compare(0, run, 2));
+  EXPECT_FALSE(run.compare(0, run, 3));
+  EXPECT_TRUE(run.compare(0, run, 4));
+}
 
 TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixed) {
   const auto column_definitions =

@@ -122,9 +122,11 @@ void BM_Aggregate(benchmark::State& state, const AggregateBenchmarkConfig& confi
 
   auto aggregates = std::vector<AggregateColumnDefinition>{};
 
+  auto row_count = size_t{0};
   for (auto _ : state) {
     const auto aggregate_op = std::make_shared<AggregateHashSort>(table_op, aggregates, group_by_column_ids);
     aggregate_op->execute();
+    row_count = aggregate_op->get_output()->row_count();
   }
 }
 
@@ -134,6 +136,7 @@ BENCHMARK_CAPTURE(BM_Aggregate, BM_10kR_5kG_is, AggregateBenchmarkConfig(10'000,
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_5G_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 4}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_5kG_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 4'999}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_500kG_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 499'999}}));
+BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_500kG_ili, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 80}, {DataType::Long, 79}, {DataType::Int, 80}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500kG_ilss, AggregateBenchmarkConfig(1'000'000, {{DataType::Int, 35}, {DataType::Long, 35}, {DataType::String, 35}, {DataType::String, 35}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500kG_ss, AggregateBenchmarkConfig(1'000'000, {{DataType::String, 1'000}, {DataType::String, 1'000}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500G_ss, AggregateBenchmarkConfig(1'000'000, {{DataType::String, 22}, {DataType::String, 22}}));
