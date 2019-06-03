@@ -175,8 +175,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       Fail("Unsupported comparison type encountered");
   }
 
-  // Since index scans only work on data tables, we can guarantee that the PosList references a single chunk without
-  // checking incoming PosLists
+  DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
   matches_out.guarantee_single_chunk();
 
   const auto current_matches_size = matches_out.size();
