@@ -113,19 +113,18 @@ class TableBuilder {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
-    auto column_definitions = TableColumnDefinitions{};
-    boost::hana::fold_left(boost::hana::zip(names, types), column_definitions,
-                           [](auto& definitions, const auto& name_and_type) -> decltype(definitions) {
-                             auto name = name_and_type[boost::hana::llong_c<0>];
-                             auto type = name_and_type[boost::hana::llong_c<1>];
+    const auto column_definitions = boost::hana::fold_left(boost::hana::zip(names, types), TableColumnDefinitions{},
+      [](auto&& definitions, const auto& name_and_type) {
+         auto name = name_and_type[boost::hana::llong_c<0>];
+         auto type = name_and_type[boost::hana::llong_c<1>];
 
-                             auto data_type = data_type_from_type<table_builder::get_value_type<decltype(type)>>();
-                             auto is_nullable = table_builder::is_optional_v<decltype(type)>;
+         auto data_type = data_type_from_type<table_builder::get_value_type<decltype(type)>>();
+         auto is_nullable = table_builder::is_optional_v<decltype(type)>;
 
-                             definitions.emplace_back(name, data_type, is_nullable);
+         definitions.emplace_back(name, data_type, is_nullable);
 
-                             return definitions;
-                           });
+         return definitions;
+    });
     _table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
     // Reserve some space in the vectors
@@ -152,36 +151,29 @@ class TableBuilder {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(boost::hana::tuple<DataTypes...>()) ==
                                boost::hana::size(values_tuple));
 
-    // Create tuples ([&values0, &null_values0, value0], [&values1, &null_values1, value1], ...)
-    auto value_vectors_and_null_value_vectors_and_values = boost::hana::zip_with(
-        [](auto& values, auto& null_values, auto&& value) {
-          return boost::hana::make_tuple(std::reference_wrapper(values), std::reference_wrapper(null_values),
-                                         std::forward<decltype(value)>(value));
-        },
-        _value_vectors, _null_value_vectors, values_tuple);
-
     // Add the values to their respective value vector
-    boost::hana::for_each(value_vectors_and_null_value_vectors_and_values, [](auto&& values_and_null_values_and_value) {
-      auto& values = values_and_null_values_and_value[boost::hana::llong_c<0>].get();
-      auto& null_values = values_and_null_values_and_value[boost::hana::llong_c<1>].get();
-      auto& maybe_optional_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
+    boost::hana::zip_with(
+      [](auto& values, auto& null_values, auto&& maybe_optional_value) {
 
-      constexpr bool column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
-      auto value_is_null = table_builder::is_null(maybe_optional_value);
+        constexpr bool column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
+        auto value_is_null = table_builder::is_null(maybe_optional_value);
 
-      DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
+        DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
 
-      if (value_is_null) {
-        values.emplace_back();
-      } else {
-        // on failure: make sure append_row is called with the same types that were passed to table_builder constructor
-        values.emplace_back(std::move(table_builder::get_value(maybe_optional_value)));
-      }
+        if (value_is_null) {
+          values.emplace_back();
+        } else {
+          // on failure: make sure append_row is called with the same types that were passed to table_builder constructor
+          values.emplace_back(std::move(table_builder::get_value(maybe_optional_value)));
+        }
 
-      if constexpr (column_is_nullable) {
-        null_values.value().emplace_back(value_is_null);
-      }
-    });
+        if constexpr (column_is_nullable) {
+          null_values.value().emplace_back(value_is_null);
+        }
+
+        return boost::hana::make_tuple();
+      },
+      _value_vectors, _null_value_vectors, values_tuple);
 
     if (_current_chunk_row_count() >= _table->max_chunk_size()) {
       _emit_chunk();
@@ -200,10 +192,23 @@ class TableBuilder {
   size_t _current_chunk_row_count() const { return _value_vectors[boost::hana::llong_c<0>].size(); }
 
   void _emit_chunk() {
-    Segments segments;
+    auto segments = Segments{};
 
-    auto _value_vectors_and_null_value_vectors = boost::hana::zip_with(
-        [](auto& values, auto& null_values) {
+    auto _value_vectors_and_null_value_vectors =
+      boost::hana::zip_with(
+        [&](auto& values, auto& null_values) {
+//          using T = typename std::decay_t<decltype(values)>::value_type;
+//          if constexpr (std::decay_t<decltype(null_values)>::has_value) {
+//            segments.push_back(std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values.value())));
+//
+//            null_values.value() = std::vector<bool>{};
+//            null_values.value().reserve(_estimated_rows_per_chunk);
+//          } else {
+//            segments.push_back(std::make_shared<ValueSegment<T>>(std::move(values)));
+//          }
+//
+//          values = std::decay_t<decltype(values)>{};
+//          values.reserve(_estimated_rows_per_chunk);
           return boost::hana::make_tuple(std::reference_wrapper(values), std::reference_wrapper(null_values));
         },
         _value_vectors, _null_value_vectors);
