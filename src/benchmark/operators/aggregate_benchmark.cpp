@@ -136,6 +136,9 @@ BENCHMARK_CAPTURE(BM_Aggregate, BM_10kR_5kG_is, AggregateBenchmarkConfig(10'000,
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_5G_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 4}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_5kG_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 4'999}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_500kG_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 499'999}}));
+BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_9G_li, AggregateBenchmarkConfig(10'000'000, {{DataType::Long, 2}, {DataType::Int, 2}}));
+BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_5kG_li, AggregateBenchmarkConfig(10'000'000, {{DataType::Long, 70}, {DataType::Int, 70}}));
+BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_500kG_li, AggregateBenchmarkConfig(10'000'000, {{DataType::Long, 707}, {DataType::Int, 707}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_500kG_ili, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 80}, {DataType::Long, 79}, {DataType::Int, 80}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500kG_ilss, AggregateBenchmarkConfig(1'000'000, {{DataType::Int, 35}, {DataType::Long, 35}, {DataType::String, 35}, {DataType::String, 35}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500kG_ss, AggregateBenchmarkConfig(1'000'000, {{DataType::String, 1'000}, {DataType::String, 1'000}}));

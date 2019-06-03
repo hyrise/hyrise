@@ -96,11 +96,13 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 
 namespace opossum {
 
-bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
+std::optional<std::string> check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
                          const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
                          TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
   if (actual_segment->data_type() != expected_segment->data_type()) {
-    return false;
+    std::ostringstream stream;
+    stream << "Data type mismatch: " << actual_segment->data_type() << " vs " << expected_segment->data_type();
+    return stream.str();
   }
 
   const auto definitions =
@@ -118,8 +120,7 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
   auto expected_table = std::make_shared<Table>(definitions, table_type(expected_segment));
   expected_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{expected_segment});
 
-  // If check_table_equal returns something other than std::nullopt, a difference has been found.
-  return !check_table_equal(actual_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode);
+  return check_table_equal(actual_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode);
 }
 
 std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,

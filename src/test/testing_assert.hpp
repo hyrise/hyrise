@@ -69,8 +69,13 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
  */
 // clang-format off
 #define EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode) \
-  EXPECT_TRUE(segment_to_test && expected_segment && check_segment_equal(                                             \
-              segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode));
+{                                                                                                               \
+    if (const auto segment_difference_message = check_segment_equal(segment_to_test, expected_segment, order_sensitivity, \
+                                                                type_cmp_mode, float_comparison_mode)) {          \
+      FAIL() << *segment_difference_message;                                                                        \
+    }                                                                                                             \
+  }                                                                                                               \
+  static_assert(true, "End call of macro with a semicolon")
 // clang-format on
 
 /**
