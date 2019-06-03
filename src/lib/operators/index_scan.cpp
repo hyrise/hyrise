@@ -183,8 +183,8 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
   matches_out.resize(final_matches_size);
 
-  for (size_t idx = current_matches_size; idx < final_matches_size; ++idx) {
-    matches_out[idx] = RowID{chunk_id, *range_begin};
+  for (size_t matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
+    matches_out[matches_position] = RowID{chunk_id, *range_begin};
     range_begin++;
   }
 
