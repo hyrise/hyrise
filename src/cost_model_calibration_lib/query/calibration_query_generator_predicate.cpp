@@ -25,11 +25,10 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
     for (const auto& selectivity : configuration.selectivities) {
       for (const auto& [table_name, table_size] : tables) {
         // With and without ReferenceSegments
-        CalibrationQueryGeneratorPredicateConfiguration test{table_name, column.data_type, column.encoding, std::nullopt, std::nullopt, selectivity,
-                          false, table_size};
-        // output.push_back();
-        // output.push_back({table_name, column.data_type, column.encoding, std::nullopt, std::nullopt, selectivity,
-        //                   true, table_size});
+        output.push_back({table_name, column.data_type, column.encoding, std::nullopt, std::nullopt, selectivity,
+                          false, table_size});
+        output.push_back({table_name, column.data_type, column.encoding, std::nullopt, std::nullopt, selectivity,
+                          true, table_size});
       }
     }
   }
@@ -41,66 +40,79 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
   }
   all_encodings.push_back({});
 
-  // // Generating all combinations
-  // for (const auto& data_type : configuration.data_types) {
-  //   for (const auto& first_encoding : configuration.encodings) {
-  //       // Illegal data type - encoding combinations
-  //     if (data_type != DataType::String && first_encoding == EncodingType::FixedStringDictionary) continue;
-  //     if (data_type != DataType::Int && data_type != DataType::Long && first_encoding == EncodingType::FrameOfReference) {
-  //       continue;
-  //     }
-  //     for (const auto& second_encoding : all_encodings) {
-  //         // Illegal data type - encoding combination
-  //       if (second_encoding && data_type != DataType::String && second_encoding == EncodingType::FixedStringDictionary) {
-  //         continue;
-  //       }
-  //         // Illegal data type - encoding combination
-  //       if (second_encoding && data_type != DataType::Int && data_type != DataType::Long && second_encoding == EncodingType::FrameOfReference) {
-  //         continue;
-  //       }
-  //       for (const auto& third_encoding : all_encodings) {
-  //           // Cannot generate queries without second_encoding but with third_encoding
-  //           if (!second_encoding && third_encoding) {
-  //               continue;
-  //           }
-  //           // Illegal data type - encoding combination
-  //         if (third_encoding && data_type != DataType::String &&
-  //             third_encoding == EncodingType::FixedStringDictionary) {
-  //           continue;
-  //         }
-  //           // Illegal data type - encoding combination
-  //         if (third_encoding && data_type != DataType::Int && data_type != DataType::Long &&
-  //             third_encoding == EncodingType::FrameOfReference) {
-  //           continue;
-  //         }
+  /**
+   * Column To Column Scans:
+   * We generate not all, but most column to column scans since they are important for multi-predicate joins, where non-first
+   * predicates are executed as column to column scans after the actual join.
+   * We neglect vector compression types and only calibrate combinations of encodings and data types.
+   */
+  // Generating all combinations
+  for (const auto& data_type : configuration.data_types) {
+    for (const auto& first_encoding : configuration.encodings) {
+        // Illegal data type - encoding combinations
+      if (data_type != DataType::String && first_encoding == EncodingType::FixedStringDictionary) continue;
+      if (data_type != DataType::Int && data_type != DataType::Long && first_encoding == EncodingType::FrameOfReference) {
+        continue;
+      }
+      for (const auto& second_encoding : all_encodings) {
+          // Illegal data type - encoding combination
+        if (second_encoding && data_type != DataType::String && second_encoding == EncodingType::FixedStringDictionary) {
+          continue;
+        }
+          // Illegal data type - encoding combination
+        if (second_encoding && data_type != DataType::Int && data_type != DataType::Long && second_encoding == EncodingType::FrameOfReference) {
+          continue;
+        }
+        
+        // for (const auto& third_encoding : all_encodings) {
+        //     // Cannot generate queries without second_encoding but with third_encoding
+        //     if (!second_encoding && third_encoding) {
+        //         continue;
+        //     }
+        //     // Illegal data type - encoding combination
+        //   if (third_encoding && data_type != DataType::String &&
+        //       third_encoding == EncodingType::FixedStringDictionary) {
+        //     continue;
+        //   }
+        //     // Illegal data type - encoding combination
+        //   if (third_encoding && data_type != DataType::Int && data_type != DataType::Long &&
+        //       third_encoding == EncodingType::FrameOfReference) {
+        //     continue;
+        //   }
 
-  //         // If we have a column-to-column scan, we don't need the selectivity..
-  //         // effectively reducing the number of generated queries
-  //         if (second_encoding) {
-  //           for (const auto& table : tables) {
-  //             // With and without ReferenceSegments
-  //             output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, 0.5,
-  //                               false, table.second});
-  //             output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, 0.5,
-  //                               true, table.second});
-  //           }
-  //         } else {
-  //           for (const auto& selectivity : configuration.selectivities) {
-  //             for (const auto& table : tables) {
-  //               // With and without ReferenceSegments
-  //               output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
-  //                                 false, table.second});
-  //               output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
-  //                                 true, table.second});
-  //             }
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
+        //   // If we have a column-to-column scan, we don't need the selectivity..
+        //   // effectively reducing the number of generated queries
+        //   if (second_encoding) {
+        //     for (const auto& table : tables) {
+        //       // With and without ReferenceSegments
+        //       output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, 0.5,
+        //                         false, table.second});
+        //       output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, 0.5,
+        //                         true, table.second});
+        //     }
+        //   } else {
+        //     for (const auto& selectivity : configuration.selectivities) {
+        //       for (const auto& table : tables) {
+        //         // With and without ReferenceSegments
+        //         output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
+        //                           false, table.second});
+        //         output.push_back({table.first, data_type, first_encoding, second_encoding, third_encoding, selectivity,
+        //                           true, table.second});
+        //       }
+        //     }
+        //   }
+        // }
+      }
+    }
+  }
 
-  std::cout << "Generated " << output.size() << " Permutations for Predicates" << std::endl;
+  std::stringstream ss;
+  ss << "WARNING: Scans in the form `WHERE a between b and c` on columns a, b, c are currently not being";
+  ss << " calibrated as we consider them too rare to be of relevance here. In case they are of interest,";
+  ss << " check out previous versions of calibration_query_generator_predicate.cpp.";
+  std::cout << ss.str() << std::endl;
+
+  std::cout << "Generated " << output.size() << " permutations for Predicates" << std::endl;
   return output;
 }
 

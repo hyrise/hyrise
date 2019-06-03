@@ -24,7 +24,8 @@ struct CalibrationConfiguration {
   bool calibrate_vector_compression_types;
   std::vector<DataType> data_types;
   std::vector<float> selectivities;
-  bool use_scan;
+  bool calibrate_scans;
+  bool calibrate_joins;
   bool run_tpch;
   std::vector<CalibrationColumnSpecification> columns;
 };
@@ -40,7 +41,8 @@ inline void to_json(nlohmann::json& j, const CalibrationConfiguration& s) {
                      {"calibrate_vector_compression_types", s.calibrate_vector_compression_types},
                      {"data_types", s.data_types},
                      {"selectivities", s.selectivities},
-                     {"use_scan", s.use_scan},
+                     {"calibrate_scans", s.calibrate_scans},
+                     {"calibrate_joins", s.calibrate_joins},
                      {"run_tpch", s.run_tpch},
                      {"columns", s.columns}};
 }
@@ -64,7 +66,8 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
   configuration.calibration_runs = j.value("calibration_runs", 1000u);
   configuration.table_specifications = j.value("table_specifications", std::vector<CalibrationTableSpecification>{});
   configuration.calibrate_vector_compression_types = j.value("calibrate_vector_compression_types", false);
-  configuration.use_scan = j.value("use_scan", true);
+  configuration.calibrate_scans = j.value("calibrate_scans", true);
+  configuration.calibrate_joins = j.value("calibrate_joins", false);
   configuration.run_tpch = j.value("run_tpch", false);
 
   const auto encoding_strings = j.at("encodings").get<std::vector<std::string>>();

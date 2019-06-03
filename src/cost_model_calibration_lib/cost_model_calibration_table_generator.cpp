@@ -59,11 +59,13 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
   // Gather data required for table generator.
   std::vector<ColumnDataDistribution> column_data_distributions;
   std::vector<DataType> column_data_types;
+  std::vector<std::string> column_names;
   std::vector<SegmentEncodingSpec> column_encodings;
 
   for (const auto& column_spec : _configuration.columns) {
     column_data_distributions.push_back(ColumnDataDistribution::make_uniform_config(0.0, column_spec.distinct_value_count));
     column_data_types.push_back(column_spec.data_type);
+    column_names.push_back(column_spec.column_name);
     column_encodings.push_back(column_spec.encoding);
   }
 
@@ -71,7 +73,7 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
     auto const table_name = _configuration.table_generation_name_prefix + std::to_string(table_size);
 
     std::cout << "Generating table " << table_name << ": " << std::flush;
-    auto table = table_generator.generate_table(column_data_distributions, column_data_types, table_size, _chunk_size, column_encodings, UseMvcc::Yes, false);
+    auto table = table_generator.generate_table(column_data_distributions, column_data_types, table_size, _chunk_size, column_encodings, column_names, UseMvcc::Yes, false);
 
     std::cout << "done. Adding to storage manager: " << std::flush;
 

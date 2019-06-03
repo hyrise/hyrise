@@ -102,8 +102,6 @@ void CostModelCalibration::_calibrate() const {
 
     const auto& queries = generator.generate_queries();
     for (const auto& query : queries) {
-      // We want a warm cache.
-      queryRunner.calibrate_query_from_lqp(query);
       const auto examples = queryRunner.calibrate_query_from_lqp(query);
       _append_to_result_csv(_configuration.output_path, examples);
     }

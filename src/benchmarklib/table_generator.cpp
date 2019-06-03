@@ -103,7 +103,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const size_t num_columns, 
                                                       const ChunkOffset chunk_size,
                                                       const SegmentEncodingSpec segment_encoding_spec) {
   auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                              {num_columns, {DataType::Int}}, num_rows, chunk_size, UseMvcc::No, false);
+                              {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, UseMvcc::No, false);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_spec);
 
@@ -112,14 +112,16 @@ std::shared_ptr<Table> TableGenerator::generate_table(const size_t num_columns, 
 
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
-    const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
+    const std::vector<DataType>& column_data_types,
+    const size_t num_rows, const ChunkOffset chunk_size,
     const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
+    const std::optional<std::vector<std::string>> column_names,
     const UseMvcc use_mvcc, const bool numa_distribute_chunks) {
   Assert(column_data_distributions.size() == segment_encoding_specs.size(),
          "Length of value distributions needs to equal length of column encodings.");
 
   auto table =
-      generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, use_mvcc, numa_distribute_chunks);
+      generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, column_names, use_mvcc, numa_distribute_chunks);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_specs);
 
@@ -128,18 +130,25 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
-    const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
+    const std::vector<DataType>& column_data_types,
+    const size_t num_rows, const ChunkOffset chunk_size,
+    const std::optional<std::vector<std::string>> column_names,
     const UseMvcc use_mvcc, const bool numa_distribute_chunks) {
   Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
   Assert(column_data_distributions.size() == column_data_types.size(),
          "Length of value distributions needs to equal length of column data types.");
+  if (column_names) {
+    Assert(column_data_distributions.size() == column_names->size(),
+         "When set, the number of column names needs to equal number of value distributions.");
+  }
+
   const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
   // add column definitions and initialize each value vector
   TableColumnDefinitions column_definitions;
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
-    const auto column_name = "column_" + std::to_string(column_id + 1);
+    const auto column_name = column_names ? (*column_names)[column_id] : "column_" + std::to_string(column_id + 1);
     column_definitions.emplace_back(column_name, column_data_types[column_id]);
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);

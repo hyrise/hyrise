@@ -65,17 +65,19 @@ class TableGenerator {
                                         const SegmentEncodingSpec segment_encoding_spec = {EncodingType::Unencoded});
 
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
-                                        const std::vector<DataType>& column_data_types, const size_t num_rows,
-                                        const ChunkOffset chunk_size,
+                                        const std::vector<DataType>& column_data_types,
+                                        const size_t num_rows, const ChunkOffset chunk_size,
                                         const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
+                                        const std::optional<std::vector<std::string>> column_names = std::nullopt,
                                         const UseMvcc use_mvcc = UseMvcc::No, 
                                         const bool numa_distribute_chunks = false);
 
   // Base function that generates the actual data
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
-                                        const std::vector<DataType>& column_data_types, const size_t num_rows,
-                                        const ChunkOffset chunk_size, const UseMvcc use_mvcc = UseMvcc::No,
-                                        const bool numa_distribute_chunks = false);
+                                        const std::vector<DataType>& column_data_types,
+                                        const size_t num_rows, const ChunkOffset chunk_size,
+                                        const std::optional<std::vector<std::string>> column_names = std::nullopt,
+                                        const UseMvcc use_mvcc = UseMvcc::No, const bool numa_distribute_chunks = false);
 
  protected:
   const size_t _num_columns = 10;
