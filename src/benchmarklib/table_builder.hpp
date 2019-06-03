@@ -15,8 +15,10 @@
 
 namespace hana = boost::hana;
 
+namespace opossum {
+
 // helper structs and functions for compile time, the actual code is in namespace opossum
-namespace {
+namespace table_builder {
 // similar to std::optional but has_value is known at compile time, so "if constexpr" can be used
 // hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
 template <typename T, bool _has_value, typename Enable = void>
@@ -93,9 +95,7 @@ get_value_type<T>& get_value(T& maybe_optional) {
   }
 }
 
-}  // namespace
-
-namespace opossum {
+}  // namespace table_builder
 
 /**
  * Helper to build a table with a static column layout, specified by ctor args types and names. Keeps a
@@ -120,8 +120,8 @@ class TableBuilder {
                       auto name = name_and_type[hana::llong_c<0>];
                       auto type = name_and_type[hana::llong_c<1>];
 
-                      auto data_type = data_type_from_type<get_value_type<decltype(type)>>();
-                      auto is_nullable = is_optional<decltype(type)>();
+                      auto data_type = data_type_from_type<table_builder::get_value_type<decltype(type)>>();
+                      auto is_nullable = table_builder::is_optional_v<decltype(type)>;
 
                       definitions.emplace_back(name, data_type, is_nullable);
 
@@ -167,7 +167,7 @@ class TableBuilder {
       auto& maybe_optional_value = data_vector_and_is_null_vector_and_value[hana::llong_c<2>];
 
       constexpr bool column_is_nullable = std::decay_t<decltype(is_null_vector)>::has_value;
-      auto value_is_null = is_null(maybe_optional_value);
+      auto value_is_null = table_builder::is_null(maybe_optional_value);
 
       DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
 
@@ -175,7 +175,7 @@ class TableBuilder {
         data_vector.emplace_back();
       } else {
         // on failure: make sure append_row is called with the same types that were passed to table_builder constructor
-        data_vector.emplace_back(std::move(get_value(maybe_optional_value)));
+        data_vector.emplace_back(std::move(table_builder::get_value(maybe_optional_value)));
       }
 
       if constexpr (column_is_nullable) {
@@ -193,8 +193,9 @@ class TableBuilder {
   UseMvcc _use_mvcc;
   size_t _estimated_rows_per_chunk;
 
-  hana::tuple<std::vector<get_value_type<DataTypes>>...> _data_vectors;
-  hana::tuple<optional_constexpr<std::vector<bool>, (is_optional<DataTypes>())>...> _is_null_vectors;
+  hana::tuple<std::vector<table_builder::get_value_type<DataTypes>>...> _data_vectors;
+  hana::tuple<table_builder::optional_constexpr<std::vector<bool>, (table_builder::is_optional<DataTypes>())>...>
+      _is_null_vectors;
 
   size_t _current_chunk_row_count() const { return _data_vectors[hana::llong_c<0>].size(); }
 

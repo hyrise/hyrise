@@ -10,7 +10,7 @@ set(
 set(
     HYRISE_UNIT_TEST_SOURCES
     ${SHARED_SOURCES}
-    benchmarklib/table_builder.cpp
+    benchmarklib/table_builder_test.cpp
     cache/cache_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
