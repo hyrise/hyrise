@@ -19,16 +19,15 @@ const auto names = boost::hana::make_tuple("a", "b", "c");
 
 TEST(TableBuilderTest, CreateColumnsWithCorrectNamesAndTypesAndNullables) {
   auto table_builder = TableBuilder(4, types, names, UseMvcc::No);
-  auto table = table_builder.finish_table();
+  const auto table = table_builder.finish_table();
 
   const auto expected_table = std::make_shared<Table>(
-      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Float, true}, {"c", DataType::String, false}},
-      TableType::Data);
+      TableColumnDefinitions{{"a", DataType::Int}, {"b", DataType::Float}, {"c", DataType::String}}, TableType::Data);
 
+  // TODO(anyone): as soon as 'nullable' is checked in check_table_equal this will fail - please remove the
+  //  EXPECT_EQ and replace the TableColumnDefinitions above with:
+  //  TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Float, true}, {"c", DataType::String, false}},
   EXPECT_TABLE_EQ_UNORDERED(table, expected_table);
-
-  // TODO(anyone): check "is nullable" in EXPECT_TABLE_EQ_UNORDERED (requires fixing a bunch of tests!),
-  // then remove the following check
   EXPECT_EQ(table->columns_are_nullable(), std::vector({false, true, false}));
 }
 
@@ -36,17 +35,15 @@ TEST(TableBuilderTest, AppendsRows) {
   auto table_builder = TableBuilder(4, types, names, UseMvcc::No);
   table_builder.append_row(42, 42.0f, "42");
   table_builder.append_row(42, std::optional<float>{}, "42");
-  auto table = table_builder.finish_table();
+  const auto table = table_builder.finish_table();
 
-  // TODO(pascal): use EXPECT_TABLE_EQ_UNORDERED here
-  EXPECT_EQ(table->row_count(), 2);
-  EXPECT_EQ(table->get_value<int32_t>(ColumnID{0}, 0), 42);
-  EXPECT_EQ(table->get_value<pmr_string>(ColumnID{2}, 0), pmr_string{"42"});
+  auto expected_table = std::make_shared<Table>(
+      TableColumnDefinitions{{"a", DataType::Int}, {"b", DataType::Float, true}, {"c", DataType::String}},
+      TableType::Data);
+  expected_table->append({42, 42.0f, "42"});
+  expected_table->append({42, NULL_VALUE, "42"});
 
-  auto optional_value = get_optional_from_table<float>(*table, 1, 0);
-  EXPECT_TRUE(optional_value.has_value());
-  EXPECT_EQ(optional_value.value(), 42.0f);
-  EXPECT_FALSE(get_optional_from_table<float>(*table, 1, 1).has_value());
+  EXPECT_TABLE_EQ_UNORDERED(table, expected_table);
 }
 
 }  // namespace opossum
