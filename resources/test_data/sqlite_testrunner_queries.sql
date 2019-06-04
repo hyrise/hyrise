@@ -98,6 +98,7 @@ SELECT a AS x, SUM(b) FROM mixed GROUP BY x;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY a;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING a > 10;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
@@ -120,6 +121,7 @@ SELECT * FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".d;
 
 -- JOIN
 SELECT "left".a, "left".b, "right".a, "right".b FROM mixed AS "left" JOIN mixed_null AS "right" ON "left".b = "right".b;
+SELECT "left".e, "left".f, "right".a, "right".b FROM (SELECT a AS e, b as f FROM mixed) AS "left" JOIN mixed_null AS "right" ON "left".f = "right".b;
 SELECT * FROM mixed AS "left" LEFT JOIN mixed_null AS "right" ON "left".b = "right".b;
 SELECT b.*, a.* FROM mixed AS a JOIN mixed AS b ON a.id = b.id WHERE a.id > 50;
 SELECT * FROM mixed AS "left" INNER JOIN mixed_null AS "right" ON "left".b = "right".b;
@@ -395,7 +397,8 @@ SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT a FROM id_int_int_int_50 WHERE EXISTS (SELECT b FROM mixed))
 SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b AND s.c < r.c)
 
--- Cannot test the following expressions, because sqlite doesn't support them:
+-- Cannot test the following (expressions), because sqlite doesn't support them:
 --  * EXTRACT
 --  * CONCAT
 --  * PREPARE/EXECUTE
+--  rename columns in FROM clause

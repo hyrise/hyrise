@@ -543,6 +543,22 @@ TEST_F(SQLTranslatorTest, AliasWithGroupByAndHaving) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, AliasWithJoin) {
+  const auto actual_lqp_a = compile_query("SELECT left.c, left.d FROM (SELECT a AS c, b AS d FROM int_float) AS left JOIN int_float2 AS right ON left.d = right.b");
+
+ const auto alias = std::vector<std::string>({"x"});
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a), alias,
+    PredicateNode::make(greater_than_(int_float_a, value_(10)),
+      AggregateNode::make(expression_vector(int_float_a), expression_vector(),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
   const auto actual_lqp = compile_query("SELECT b, SUM(a) AS s FROM int_float GROUP BY b HAVING s > 1000");
 
