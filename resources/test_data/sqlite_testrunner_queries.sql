@@ -91,6 +91,11 @@ SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
 SELECT 2 / 0, b / 0, 50 / id FROM mixed;
 SELECT 2 % 0, b % 0, 50 % id FROM mixed;
 
+-- Aliases
+SELECT a AS a_alias, SUM(b) FROM mixed GROUP BY a_alias;
+SELECT a AS a_alias, SUM(b) FROM mixed GROUP BY a;
+SELECT R.a, S.a FROM mixed AS R, mixed AS S;
+
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
 -- SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
@@ -191,8 +196,6 @@ SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT SUM(min_a) FROM (SELECT 
 SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
-SELECT a AS a_alias, SUM(b) FROM mixed GROUP BY a_alias;
-SELECT a AS a_alias, SUM(b) FROM mixed GROUP BY a;
 
 -- DISTINCT
 SELECT DISTINCT a FROM mixed;

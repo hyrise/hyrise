@@ -1138,6 +1138,20 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SameExpressionForDifferentTableNames) {
+  const auto actual_lqp = compile_query("SELECT R.a, S.a FROM int_float AS R, int_float AS S");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_a),
+      JoinNode::make(JoinMode::Cross,
+        stored_table_node_int_float,
+        stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, LimitLiteral) {
   // Most common case: LIMIT to a fixed number
   const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 1;");
