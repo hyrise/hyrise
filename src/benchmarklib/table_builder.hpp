@@ -20,10 +20,10 @@ namespace table_builder {
 // similar to std::optional but has_value is known at compile time, so "if constexpr" can be used
 // boost::hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
 template <typename T, bool _has_value, typename Enable = void>
-class optional_constexpr {
+class OptionalConstexpr {
  public:
   template <typename... Args>
-  explicit optional_constexpr(Args&&... args) : _value{std::forward<Args>(args)...} {}
+  explicit OptionalConstexpr(Args&&... args) : _value{std::forward<Args>(args)...} {}
 
   static_assert(_has_value);
   static constexpr bool has_value = true;
@@ -35,10 +35,10 @@ class optional_constexpr {
 };
 
 template <typename T, bool _has_value>
-class optional_constexpr<T, _has_value, std::enable_if_t<!_has_value>> {
+class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
  public:
   template <typename... Args>
-  explicit optional_constexpr(Args&&...) {}
+  explicit OptionalConstexpr(Args&&...) {}
 
   static_assert(!_has_value);
   static constexpr bool has_value = false;
@@ -113,23 +113,21 @@ class TableBuilder {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
-    const auto column_definitions = boost::hana::fold_left(boost::hana::zip(names, types), TableColumnDefinitions{},
-      [](auto&& definitions, const auto& name_and_type) {
-         auto name = name_and_type[boost::hana::llong_c<0>];
-         auto type = name_and_type[boost::hana::llong_c<1>];
+    auto column_definitions = TableColumnDefinitions{};
+    boost::hana::for_each(boost::hana::zip(names, types), [&](const auto& name_and_type) {
+      auto name = name_and_type[boost::hana::llong_c<0>];
+      auto type = name_and_type[boost::hana::llong_c<1>];
 
-         auto data_type = data_type_from_type<table_builder::get_value_type<decltype(type)>>();
-         auto is_nullable = table_builder::is_optional_v<decltype(type)>;
+      auto data_type = data_type_from_type<table_builder::get_value_type<decltype(type)>>();
+      auto is_nullable = table_builder::is_optional_v<decltype(type)>;
 
-         definitions.emplace_back(name, data_type, is_nullable);
-
-         return definitions;
+      column_definitions.emplace_back(name, data_type, is_nullable);
     });
     _table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
     // Reserve some space in the vectors
-    boost::hana::for_each(_value_vectors, [&](auto&& values) { values.reserve(_estimated_rows_per_chunk); });
-    boost::hana::for_each(_null_value_vectors, [&](auto&& null_values) {
+    boost::hana::for_each(_value_vectors, [&](auto& values) { values.reserve(_estimated_rows_per_chunk); });
+    boost::hana::for_each(_null_value_vectors, [&](auto& null_values) {
       if constexpr (std::decay_t<decltype(null_values)>::has_value) {
         null_values.value().reserve(_estimated_rows_per_chunk);
       }
@@ -146,34 +144,34 @@ class TableBuilder {
 
   // Types == DataTypes, we deduce again to get universal references, so we can call with lvalues
   template <typename... Types>
-  void append_row(Types&&... values) {
-    auto values_tuple = boost::hana::make_tuple(std::forward<decltype(values)>(values)...);
-    BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(boost::hana::tuple<DataTypes...>()) ==
-                               boost::hana::size(values_tuple));
+  void append_row(Types&&... new_values) {
+    auto values_tuple = boost::hana::make_tuple(std::forward<decltype(new_values)>(new_values)...);
+    BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(_value_vectors) == boost::hana::size(values_tuple));
 
     // Add the values to their respective value vector
+    // zip_with is not guaranteed to run in order: e.g. (_value_vectors[2], _null_value_vectors[2], values_tuple[2])
+    // might be the first list of parameters passed to the lambda
     boost::hana::zip_with(
-      [](auto& values, auto& null_values, auto&& maybe_optional_value) {
+        [](auto& values, auto& null_values, auto&& maybe_optional_value) {
+          constexpr bool column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
+          auto value_is_null = table_builder::is_null(maybe_optional_value);
 
-        constexpr bool column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
-        auto value_is_null = table_builder::is_null(maybe_optional_value);
+          DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
 
-        DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
+          if (value_is_null) {
+            values.emplace_back();
+          } else {
+            // on failure: make sure template pack Types is the same that was passed to table_builder constructor
+            values.emplace_back(std::move(table_builder::get_value(maybe_optional_value)));
+          }
 
-        if (value_is_null) {
-          values.emplace_back();
-        } else {
-          // on failure: make sure append_row is called with the same types that were passed to table_builder constructor
-          values.emplace_back(std::move(table_builder::get_value(maybe_optional_value)));
-        }
+          if constexpr (column_is_nullable) {
+            null_values.value().emplace_back(value_is_null);
+          }
 
-        if constexpr (column_is_nullable) {
-          null_values.value().emplace_back(value_is_null);
-        }
-
-        return boost::hana::make_tuple();
-      },
-      _value_vectors, _null_value_vectors, values_tuple);
+          return boost::hana::make_tuple();
+        },
+        _value_vectors, _null_value_vectors, values_tuple);
 
     if (_current_chunk_row_count() >= _table->max_chunk_size()) {
       _emit_chunk();
@@ -186,7 +184,7 @@ class TableBuilder {
   size_t _estimated_rows_per_chunk;
 
   boost::hana::tuple<std::vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
-  boost::hana::tuple<table_builder::optional_constexpr<std::vector<bool>, (table_builder::is_optional<DataTypes>())>...>
+  boost::hana::tuple<table_builder::OptionalConstexpr<std::vector<bool>, (table_builder::is_optional<DataTypes>())>...>
       _null_value_vectors;
 
   size_t _current_chunk_row_count() const { return _value_vectors[boost::hana::llong_c<0>].size(); }
@@ -194,21 +192,9 @@ class TableBuilder {
   void _emit_chunk() {
     auto segments = Segments{};
 
-    auto _value_vectors_and_null_value_vectors =
-      boost::hana::zip_with(
-        [&](auto& values, auto& null_values) {
-//          using T = typename std::decay_t<decltype(values)>::value_type;
-//          if constexpr (std::decay_t<decltype(null_values)>::has_value) {
-//            segments.push_back(std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values.value())));
-//
-//            null_values.value() = std::vector<bool>{};
-//            null_values.value().reserve(_estimated_rows_per_chunk);
-//          } else {
-//            segments.push_back(std::make_shared<ValueSegment<T>>(std::move(values)));
-//          }
-//
-//          values = std::decay_t<decltype(values)>{};
-//          values.reserve(_estimated_rows_per_chunk);
+    // need the two steps approach here (zip_with then for_each), since order of execution matters
+    auto _value_vectors_and_null_value_vectors = boost::hana::zip_with(
+        [](auto& values, auto& null_values) {
           return boost::hana::make_tuple(std::reference_wrapper(values), std::reference_wrapper(null_values));
         },
         _value_vectors, _null_value_vectors);
