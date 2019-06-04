@@ -27,6 +27,7 @@ class SQLIdentifierResolverTest : public BaseTest {
     expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{0}));
     expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{1}));
     expression_c = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{2}));
+    fail_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{3}));
     expression_unnamed = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{3}));
 
     context.add_column_name(expression_a, {"a"s});
@@ -40,7 +41,7 @@ class SQLIdentifierResolverTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed;
+  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed, fail_expression;
   SQLIdentifierResolver context;
   std::shared_ptr<ParameterIDAllocator> parameter_id_allocator;
 };
@@ -66,13 +67,17 @@ TEST_F(SQLIdentifierResolverTest, ColumnNamesChange) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
 }
 
-TEST_F(SQLIdentifierResolverTest, NoColumnNames) {
+TEST_F(SQLIdentifierResolverTest, ResetColumnNames) {
   context.reset_column_names(expression_a);
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), nullptr);
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s, "T1"}), expression_b);
+}
+
+TEST_F(SQLIdentifierResolverTest, ResetColumnNamesForInvalidExpression) {
+  EXPECT_THROW(context.reset_column_names(fail_expression), std::exception);
 }
 
 TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
