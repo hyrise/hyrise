@@ -1,5 +1,5 @@
-[![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise/hyrise-mp19/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/hyrise%2Fhyrise/activity/)
-[![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise-mp19/job/master/lastStableBuild/Llvm-cov_5fReport/)
+[![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise-mp/hyrise/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/hyrise-mp%2Fhyrise/activity/)
+[![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise-mp/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
 
 # Welcome to the Hyrise Master Project 2019
 
@@ -8,7 +8,7 @@ Query Plan Optimizations for the TPC-DS benchmark** of the Hasso Plattner Instit
 
 # Getting started
 
-*Have a look at our [contributor guidelines](CONTRIBUTING.md)*
+*Have a look at our [contributor guidelines](CONTRIBUTING.md).*
 
 You can find definitions of most of the terms and abbreviations used in the code in the [glossary](GLOSSARY.md). If you cannot find something that you are looking for, feel free to open an issue.
 

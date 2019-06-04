@@ -274,9 +274,6 @@ try {
       if (env.BRANCH_NAME == 'master' || full_ci) {
         githubNotify context: 'Full CI', status: 'FAILURE'
       }
-      if (env.BRANCH_NAME == 'master') {
-        slackSend message: ":rotating_light: ALARM! Build on ${env.BRANCH_NAME} failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
-      }
     }
     throw error
   }
