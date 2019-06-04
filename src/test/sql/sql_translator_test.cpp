@@ -1138,7 +1138,7 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, SameExpressionForDifferentTableNames) {
+TEST_F(SQLTranslatorTest, SameColumnForDifferentTableNames) {
   const auto actual_lqp = compile_query("SELECT R.a, S.a FROM int_float AS R, int_float AS S");
 
   // clang-format off
