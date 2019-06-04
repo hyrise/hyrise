@@ -476,6 +476,22 @@ TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
   EXPECT_LQP_EQ(actual_lqp_h, expected_lqp_h);
 }
 
+TEST_F(SQLTranslatorTest, AliasWithWhere) {
+  const auto actual_lqp = compile_query("SELECT a AS x FROM int_float WHERE a > 10");
+
+  const auto alias = std::vector<std::string>({"x"});
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a), alias,
+    ProjectionNode::make(expression_vector(int_float_a),
+      PredicateNode::make(greater_than_(int_float_a, value_(10)),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto actual_lqp = compile_query("SELECT SUM(a * 3) * b FROM int_float GROUP BY b");
 
@@ -509,20 +525,22 @@ TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, AliasWithWhere) {
-  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float WHERE a > 10");
+TEST_F(SQLTranslatorTest, AliasWithGroupByAndHaving) {
+  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING a > 10");
+  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING x > 10");
 
   const auto alias = std::vector<std::string>({"x"});
 
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(expression_vector(int_float_a), alias,
-    ProjectionNode::make(expression_vector(int_float_a),
-      PredicateNode::make(greater_than_(int_float_a, value_(10)),
+    PredicateNode::make(greater_than_(int_float_a, value_(10)),
+      AggregateNode::make(expression_vector(int_float_a), expression_vector(),
         stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {

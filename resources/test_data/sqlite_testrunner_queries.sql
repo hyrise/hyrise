@@ -96,6 +96,8 @@ SELECT R.a, S.a FROM mixed AS R, mixed AS S;
 SELECT a AS x FROM mixed WHERE a > 10;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY a;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING a > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
