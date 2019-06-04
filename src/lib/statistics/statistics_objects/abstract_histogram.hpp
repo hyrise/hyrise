@@ -126,7 +126,7 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * This method is specialized for strings to handle predicates uniquely applicable to string columns.
    */
   bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+                        const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
    * Derive a Histogram from this histograms splitting its bins so that both the current bounds as well as the bounds
@@ -240,7 +240,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * If the bin that holds the value is the last bin or it is greater than max, return INVALID_BIN_ID.
    */
   virtual BinID _next_bin_for_value(const T& value) const = 0;
-
 
   HistogramDomain<T> _domain;
 };

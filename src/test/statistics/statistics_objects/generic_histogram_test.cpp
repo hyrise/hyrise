@@ -360,11 +360,12 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 }
 
 TEST_F(GenericHistogramTest, StringLikeEstimation) {
-  const auto histogram = SingleBinHistogram<pmr_string>{"a", "z", 100, 40, StringHistogramDomain{'a', 'z', 4u}};
+  const auto histogram =
+      GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 40, StringHistogramDomain{'a', 'z', 4u});
 
   // (NOT) LIKE is not estimated and has a selectivity of 1
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa_zz%"), 100.f);
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "aa_zz%"), 100.f);
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::Like, "aa_zz%"), 100.f);
+  EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::NotLike, "aa_zz%"), 100.f);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityInt) {

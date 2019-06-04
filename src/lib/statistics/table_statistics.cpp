@@ -14,11 +14,18 @@ namespace opossum {
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics(table.column_count());
 
+  /**
+   * Determine bin count, within mostly arbitrarily chose bounds: 5 (for tables with <=2k rows) up to 100 bins
+   * (for tables with >= 200m rows) are created.
+   */
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
 
   auto next_column_id = std::atomic<size_t>{0u};
   auto threads = std::vector<std::thread>{};
 
+  /**
+   * Parallely create statistics objects for the Table's columns
+   */
   for (auto thread_id = 0u;
        thread_id < std::min(static_cast<uint>(table.column_count()), std::thread::hardware_concurrency() + 1);
        ++thread_id) {
@@ -34,15 +41,13 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
 
           const auto output_column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
 
-          auto histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
-
-          histogram =
+          const auto histogram =
               EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
 
           if (histogram) {
             output_column_statistics->set_statistics_object(histogram);
 
-            // Use the insight the the histogram will only contain non-null values to generate the NullValueRatio
+            // Use the insight that the histogram will only contain non-null values to generate the NullValueRatio
             // property
             const auto null_value_ratio =
                 table.row_count() == 0 ? 0.0f

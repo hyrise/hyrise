@@ -29,7 +29,6 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
-#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
@@ -41,7 +40,7 @@ using namespace opossum;  // NOLINT
 
 template <typename T>
 std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& table_statistics,
-                                                   const ColumnStatistics<T>& column_statistics) {
+                                                         const ColumnStatistics<T>& column_statistics) {
   // If the column has an explicit null value ratio associated with it, we can just use that
   if (column_statistics.null_value_ratio) {
     return column_statistics.null_value_ratio->ratio;

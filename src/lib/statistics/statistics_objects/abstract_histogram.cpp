@@ -17,7 +17,6 @@
 #include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 #include "resolve_type.hpp"
-#include "single_bin_histogram.hpp"
 #include "static_variant_cast.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
@@ -185,8 +184,8 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
 
 template <typename T>
 bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_condition,
-                                                     const AllTypeVariant& variant_value,
-                                                     const std::optional<AllTypeVariant>& variant_value2) const {
+                                            const AllTypeVariant& variant_value,
+                                            const std::optional<AllTypeVariant>& variant_value2) const {
   if (bin_count() == 0) {
     return true;
   }

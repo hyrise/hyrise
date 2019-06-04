@@ -15,7 +15,6 @@
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/column_statistics.hpp"
-#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -49,11 +48,11 @@ class IndexScanRuleTest : public StrategyBaseTest {
     table_statistics->row_count = row_count;
 
     table_statistics->column_statistics.at(0)->set_statistics_object(
-        std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
+        GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
     table_statistics->column_statistics.at(1)->set_statistics_object(
-        std::make_shared<SingleBinHistogram<int32_t>>(0, 20, row_count, 10));
+        GenericHistogram<int32_t>::with_single_bin(0, 20, row_count, 10));
     table_statistics->column_statistics.at(2)->set_statistics_object(
-        std::make_shared<SingleBinHistogram<int32_t>>(0, 20'000, row_count, 10));
+        GenericHistogram<int32_t>::with_single_bin(0, 20'000, row_count, 10));
   }
 
   std::shared_ptr<IndexScanRule> rule;

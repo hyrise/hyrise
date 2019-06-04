@@ -10,7 +10,6 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "statistics/column_statistics.hpp"
-#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
@@ -34,13 +33,13 @@ class DpCcpTest : public BaseTest {
     cost_estimator = std::make_shared<CostEstimatorLogical>(cardinality_estimator);
 
     node_a = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
-                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10)});
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 50, 20, 10)});
     node_b = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
-                                              {std::make_shared<SingleBinHistogram<int32_t>>(40, 100, 20, 10)});
+                                              {GenericHistogram<int32_t>::with_single_bin(40, 100, 20, 10)});
     node_c = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
-                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 20, 10)});
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 100, 20, 10)});
     node_d = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 200,
-                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 200, 10)});
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 100, 200, 10)});
 
     a_a = node_a->get_column("a");
     b_a = node_b->get_column("a");

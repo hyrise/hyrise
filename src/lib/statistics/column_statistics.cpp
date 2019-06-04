@@ -8,7 +8,6 @@
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/statistics_objects/single_bin_histogram.hpp"
 
 namespace opossum {
 

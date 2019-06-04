@@ -8,7 +8,6 @@
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/statistics_objects/single_bin_histogram.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -21,10 +20,10 @@ class GreedyOperatorOrderingTest : public BaseTest {
     cost_estimator = std::make_shared<CostEstimatorLogical>(cardinality_estimator);
 
     // All columns have the same statistics, only Table row counts differ
-    const auto single_bin_histogram_a = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 5'000, 100);
-    const auto single_bin_histogram_b = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 1'000, 100);
-    const auto single_bin_histogram_c = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 200, 100);
-    const auto single_bin_histogram_d = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 500, 100);
+    const auto single_bin_histogram_a = GenericHistogram<int32_t>::with_single_bin(0, 100, 5'000, 100);
+    const auto single_bin_histogram_b = GenericHistogram<int32_t>::with_single_bin(0, 100, 1'000, 100);
+    const auto single_bin_histogram_c = GenericHistogram<int32_t>::with_single_bin(0, 100, 200, 100);
+    const auto single_bin_histogram_d = GenericHistogram<int32_t>::with_single_bin(0, 100, 500, 100);
 
     node_a =
         create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a_a"}, {DataType::Int, "a_b"}},

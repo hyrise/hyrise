@@ -20,7 +20,6 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 
 #include "utils/assert.hpp"
@@ -36,9 +35,9 @@ class PredicateReorderingTest : public StrategyBaseTest {
 
     node = create_mock_node_with_statistics(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
-        {std::make_shared<SingleBinHistogram<int32_t>>(10, 100, 100, 20),
-         std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
-         std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
+        {GenericHistogram<int32_t>::with_single_bin(10, 100, 100, 20),
+         GenericHistogram<int32_t>::with_single_bin(50, 60, 100, 5),
+         GenericHistogram<int32_t>::with_single_bin(110, 1100, 100, 2)});
 
     a = LQPColumnReference{node, ColumnID{0}};
     b = LQPColumnReference{node, ColumnID{1}};
@@ -164,12 +163,10 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   /**
      * The mocked table has one column of int32_ts with the value range 0..100
      */
-  auto table_0 =
-      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                       {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
-  auto table_1 =
-      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                       {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
+  auto table_0 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                                  {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+  auto table_1 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                                  {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
 
   auto cross_node = JoinNode::make(JoinMode::Cross);
   auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 80));
@@ -218,7 +215,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
      */
   auto table_node =
       create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                       {std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 100.0f, 100.0f)});
+                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
   auto union_node = UnionNode::make(UnionMode::Positions);
   auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
   auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));

@@ -26,7 +26,11 @@ class GenericHistogram : public AbstractHistogram<T> {
                    std::vector<HistogramCountType>&& bin_heights, std::vector<HistogramCountType>&& bin_distinct_counts,
                    const HistogramDomain<T>& domain = {});
 
-  static std::shared_ptr<GenericHistogram> with_single_bin(const T& min, const T& max, const HistogramCountType& height, const HistogramCountType& distinct_count, const HistogramDomain<T>& domain = {});
+  // Convenience builder for a GenericHistogram wiht a single bin
+  static std::shared_ptr<GenericHistogram<T>> with_single_bin(const T& min, const T& max,
+                                                              const HistogramCountType& height,
+                                                              const HistogramCountType& distinct_count,
+                                                              const HistogramDomain<T>& domain = {});
 
   std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;

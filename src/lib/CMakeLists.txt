@@ -386,8 +386,6 @@ set(
     statistics/statistics_objects/generic_histogram.hpp
     statistics/statistics_objects/histogram_domain.cpp
     statistics/statistics_objects/histogram_domain.hpp
-    statistics/statistics_objects/single_bin_histogram.cpp
-    statistics/statistics_objects/single_bin_histogram.hpp
     statistics/join_graph_statistics_cache.cpp
     statistics/join_graph_statistics_cache.hpp
     statistics/statistics_objects/counting_quotient_filter.cpp

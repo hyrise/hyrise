@@ -8,7 +8,6 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
 #include "statistics/column_statistics.hpp"
-#include "statistics/statistics_objects/single_bin_histogram.hpp"
 #include "statistics/table_statistics.hpp"
 
 #include "strategy_base_test.hpp"
@@ -29,7 +28,7 @@ class JoinOrderingRuleTest : public StrategyBaseTest {
 
     // This test only makes sure THAT something gets reordered, not what the result of this reordering is - so the stats
     // are just dummies.
-    const auto histogram = std::make_shared<SingleBinHistogram<int32_t>>(1, 50, 20, 10);
+    const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 50, 20, 10);
 
     node_a = create_mock_node_with_statistics({{DataType::Int, "a"}}, 10, {histogram});
     node_b = create_mock_node_with_statistics({{DataType::Int, "b"}}, 10, {histogram});

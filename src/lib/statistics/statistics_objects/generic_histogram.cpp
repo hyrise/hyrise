@@ -13,25 +13,29 @@ GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T
                                       std::vector<HistogramCountType>&& bin_heights,
                                       std::vector<HistogramCountType>&& bin_distinct_counts,
                                       const HistogramDomain<T>& domain)
-    : AbstractHistogram<T>(domain), _bin_minima(std::move(bin_minima)), _bin_maxima(std::move(bin_maxima)),
-    _bin_heights(std::move(bin_heights)), _bin_distinct_counts(std::move(bin_distinct_counts)) {
-  Assert(_bin_minima.size() == _bin_maxima.size(),
-         "Must have the same number of lower as upper bin edges.");
-  Assert(_bin_minima.size() == _bin_heights.size(),
-         "Must have the same number of edges and heights.");
-  Assert(_bin_minima.size() == _bin_distinct_counts.size(),
-         "Must have the same number of edges and distinct counts.");
+    : AbstractHistogram<T>(domain),
+      _bin_minima(std::move(bin_minima)),
+      _bin_maxima(std::move(bin_maxima)),
+      _bin_heights(std::move(bin_heights)),
+      _bin_distinct_counts(std::move(bin_distinct_counts)) {
+  Assert(_bin_minima.size() == _bin_maxima.size(), "Must have the same number of lower as upper bin edges.");
+  Assert(_bin_minima.size() == _bin_heights.size(), "Must have the same number of edges and heights.");
+  Assert(_bin_minima.size() == _bin_distinct_counts.size(), "Must have the same number of edges and distinct counts.");
 
   AbstractHistogram<T>::_assert_bin_validity();
 
   _total_count = std::accumulate(_bin_heights.cbegin(), _bin_heights.cend(), HistogramCountType{0});
-  _total_distinct_count = std::accumulate(_bin_distinct_counts.cbegin(), _bin_distinct_counts.cend(),
-                                          HistogramCountType{0});
+  _total_distinct_count =
+      std::accumulate(_bin_distinct_counts.cbegin(), _bin_distinct_counts.cend(), HistogramCountType{0});
 }
 
 template <typename T>
-std::shared_ptr<GenericHistogram> GenericHistogram<T>::with_single_bin(const T& min, const T& max, const HistogramCountType& height, const HistogramCountType& distinct_count, const HistogramDomain<T>& domain) {
-  return std::make_shared<GenericHistogram>
+std::shared_ptr<GenericHistogram<T>> GenericHistogram<T>::with_single_bin(const T& min, const T& max,
+                                                                          const HistogramCountType& height,
+                                                                          const HistogramCountType& distinct_count,
+                                                                          const HistogramDomain<T>& domain) {
+  return std::make_shared<GenericHistogram>(std::vector{min}, std::vector{max}, std::vector{height},
+                                            std::vector{distinct_count}, domain);
 }
 
 template <typename T>
@@ -114,8 +118,7 @@ HistogramCountType GenericHistogram<T>::total_distinct_count() const {
 
 template <typename T>
 bool GenericHistogram<T>::operator==(const GenericHistogram<T>& rhs) const {
-  return _bin_minima == rhs._bin_minima && _bin_maxima == rhs._bin_maxima &&
-         _bin_heights == rhs._bin_heights &&
+  return _bin_minima == rhs._bin_minima && _bin_maxima == rhs._bin_maxima && _bin_heights == rhs._bin_heights &&
          _bin_distinct_counts == rhs._bin_distinct_counts;
 }
 

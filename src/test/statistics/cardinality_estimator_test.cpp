@@ -48,8 +48,8 @@ class CardinalityEstimatorTest : public BaseTest {
      */
     // clang-format on
     node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100,
-                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 100, 10),
-                                               std::make_shared<SingleBinHistogram<int32_t>>(10, 129, 70, 55)});
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 100, 100, 10),
+                                               GenericHistogram<int32_t>::with_single_bin(10, 129, 70, 55)});
     // clang-format off
 
     a_a = node_a->get_column("a");
@@ -99,9 +99,9 @@ class CardinalityEstimatorTest : public BaseTest {
      */
     node_d = create_mock_node_with_statistics(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
-        {std::make_shared<SingleBinHistogram<int32_t>>(10, 100, 100, 20),
-         std::make_shared<SingleBinHistogram<int32_t>>(50, 60, 100, 5),
-         std::make_shared<SingleBinHistogram<int32_t>>(110, 1100, 100, 2)});
+        {GenericHistogram<int32_t>::with_single_bin(10, 100, 100, 20),
+         GenericHistogram<int32_t>::with_single_bin(50, 60, 100, 5),
+         GenericHistogram<int32_t>::with_single_bin(110, 1100, 100, 2)});
 
     d_a = LQPColumnReference{node_d, ColumnID{0}};
     d_b = LQPColumnReference{node_d, ColumnID{1}};
@@ -113,7 +113,7 @@ class CardinalityEstimatorTest : public BaseTest {
      */
     // clang-format on
     node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100,
-                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 10, 10), nullptr});
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 100, 10, 10), nullptr});
     // clang-format off
 
     e_a = node_e->get_column("a");
@@ -125,8 +125,8 @@ class CardinalityEstimatorTest : public BaseTest {
      */
     // clang-format on
     node_f = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Float, "b"}}, 200,
-                                              {std::make_shared<SingleBinHistogram<int32_t>>(1, 200, 200, 10),
-                                               std::make_shared<SingleBinHistogram<float>>(1.0f, 100.0f, 200, 150.0f)});
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 200, 200, 10),
+                                               GenericHistogram<float>::with_single_bin(1.0f, 100.0f, 200, 150.0f)});
     // clang-format off
 
     f_a = node_f->get_column("a");
@@ -138,7 +138,7 @@ class CardinalityEstimatorTest : public BaseTest {
      */
     // clang-format on
     node_g = create_mock_node_with_statistics({{DataType::String, "a"}}, 100,
-                                              {std::make_shared<SingleBinHistogram<pmr_string>>("a", "z", 100, 40)});
+                                              {GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 40)});
     // clang-format off
 
     g_a = node_g->get_column("a");

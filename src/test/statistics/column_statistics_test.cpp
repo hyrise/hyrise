@@ -5,7 +5,6 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
-#include "statistics/statistics_objects/single_bin_histogram.hpp"
 
 namespace opossum {
 
@@ -20,7 +19,7 @@ TEST_F(ColumnStatisticsTest, SetStatisticsObject) {
   EXPECT_EQ(column_statistics.null_value_ratio, nullptr);
   EXPECT_EQ(column_statistics.counting_quotient_filter, nullptr);
 
-  column_statistics.set_statistics_object(std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 40, 20));
+  column_statistics.set_statistics_object(GenericHistogram<int32_t>::with_single_bin(0, 100, 40, 20));
   EXPECT_NE(column_statistics.histogram, nullptr);
 
   column_statistics.set_statistics_object(std::make_shared<MinMaxFilter<int32_t>>(0, 100));
@@ -39,7 +38,7 @@ TEST_F(ColumnStatisticsTest, SetStatisticsObject) {
 
 TEST_F(ColumnStatisticsTest, Scaled) {
   ColumnStatistics<int32_t> column_statistics;
-  column_statistics.histogram = std::make_shared<SingleBinHistogram<int32_t>>(0, 100, 40, 20);
+  column_statistics.histogram = GenericHistogram<int32_t>::with_single_bin(0, 100, 40, 20);
   column_statistics.min_max_filter = std::make_shared<MinMaxFilter<int32_t>>(0, 100);
   column_statistics.range_filter =
       std::make_shared<RangeFilter<int32_t>>(std::vector{std::pair<int32_t, int32_t>(0, 100)});
@@ -69,7 +68,7 @@ TEST_F(ColumnStatisticsTest, Scaled) {
 
 TEST_F(ColumnStatisticsTest, Sliced) {
   ColumnStatistics<int32_t> column_statistics;
-  column_statistics.histogram = std::make_shared<SingleBinHistogram<int32_t>>(1, 100, 40, 20);
+  column_statistics.histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 40, 20);
   column_statistics.min_max_filter = std::make_shared<MinMaxFilter<int32_t>>(0, 100);
   column_statistics.range_filter =
       std::make_shared<RangeFilter<int32_t>>(std::vector{std::pair<int32_t, int32_t>(0, 100)});
