@@ -93,10 +93,9 @@ SELECT 2 % 0, b % 0, 50 % id FROM mixed;
 
 -- Aliases
 SELECT R.a, S.a FROM mixed AS R, mixed AS S;
-SELECT a AS a_alias FROM mixed WHERE a_alias > 10;
-SELECT a AS a_alias FROM mixed WHERE a > 10;
-SELECT a AS a_alias, SUM(b) FROM mixed GROUP BY a_alias;
-SELECT a AS a_alias, SUM(b) FROM mixed GROUP BY a;
+SELECT a AS x FROM mixed WHERE a > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY a;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;

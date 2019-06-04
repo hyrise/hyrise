@@ -511,7 +511,6 @@ TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
 
 TEST_F(SQLTranslatorTest, AliasWithWhere) {
   const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float WHERE a > 10");
-  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float WHERE x > 10");
 
   const auto alias = std::vector<std::string>({"x"});
 
@@ -524,7 +523,6 @@ TEST_F(SQLTranslatorTest, AliasWithWhere) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
-  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
@@ -1921,6 +1919,7 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"),
                InvalidInputException);  // NOLINT
   EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT a AS x FROM int_float WHERE x > 10"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM int_float LIMIT 1 OFFSET 1;"), InvalidInputException);
