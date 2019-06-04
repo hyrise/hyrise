@@ -109,7 +109,7 @@ class CardinalityEstimatorTest : public BaseTest {
 
     /**
      * node_e
-     * Has not statistics on column "b"
+     * Has no statistics on column "b"
      */
     // clang-format on
     node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100,
@@ -131,12 +131,22 @@ class CardinalityEstimatorTest : public BaseTest {
 
     f_a = node_f->get_column("a");
     f_b = node_f->get_column("b");
+
+    /**
+     * node_g
+     * Has a string column
+     */
+    // clang-format on
+    node_g = create_mock_node_with_statistics({{DataType::String, "a"}}, 100,
+                                              {std::make_shared<SingleBinHistogram<pmr_string>>("a", "z", 100, 40)});
+    // clang-format off
+
+    g_a = node_g->get_column("a");
   }
 
   CardinalityEstimator estimator;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_x, d_a, d_b, d_c, e_a, e_b, f_a, f_b;
-  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f;
-  std::shared_ptr<TableStatistics> table_statistics_a;
+  LQPColumnReference a_a, a_b, b_a, b_b, c_x, d_a, d_b, d_c, e_a, e_b, f_a, f_b, g_a;
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, node_f, node_g;
 };
 
 TEST_F(CardinalityEstimatorTest, Aggregate) {
@@ -651,6 +661,26 @@ TEST_F(CardinalityEstimatorTest, PredicateWithMissingStatistics) {
   EXPECT_FALSE(estimated_column_statistics_a_b->histogram);
   EXPECT_TRUE(estimated_column_statistics_b_a->histogram);
   EXPECT_FALSE(estimated_column_statistics_b_b->histogram);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateString) {
+  const auto input_lqp_a = PredicateNode::make(equals_(g_a, "a"), node_g);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_a), 2.5f);
+
+  const auto input_lqp_b = PredicateNode::make(equals_(g_a, "z"), node_g);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_b), 2.5f);
+
+  const auto input_lqp_c = PredicateNode::make(greater_than_equals_(g_a, "a"), node_g);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_c), 100.0f);
+
+  const auto input_lqp_d = PredicateNode::make(greater_than_equals_(g_a, "m"), node_g);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_d), 52.0f);
+
+  const auto input_lqp_e = PredicateNode::make(like_(g_a, "a%"), node_g);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_e), 10.0f);
+
+  const auto input_lqp_f = PredicateNode::make(not_like_(g_a, "a%"), node_g);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_f), 90.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, Projection) {

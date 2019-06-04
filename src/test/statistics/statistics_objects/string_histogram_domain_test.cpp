@@ -21,28 +21,28 @@ TEST_F(StringHistogramDomainTest, StringToDomain) {
 }
 
 TEST_F(StringHistogramDomainTest, NextValue) {
-  EXPECT_EQ(domain_a.next_value(""), "a");
-  EXPECT_EQ(domain_a.next_value("a"), "aa");
-  EXPECT_EQ(domain_a.next_value("ayz"), "ayza");
-  EXPECT_EQ(domain_a.next_value("ayzz"), "az");
-  EXPECT_EQ(domain_a.next_value("azzz"), "b");
-  EXPECT_EQ(domain_a.next_value("z"), "za");
-  EXPECT_EQ(domain_a.next_value("df"), "dfa");
-  EXPECT_EQ(domain_a.next_value("abcd"), "abce");
-  EXPECT_EQ(domain_a.next_value("abaz"), "abb");
-  EXPECT_EQ(domain_a.next_value("abzz"), "ac");
-  EXPECT_EQ(domain_a.next_value("abca"), "abcb");
-  EXPECT_EQ(domain_a.next_value("abaa"), "abab");
-  EXPECT_EQ(domain_a.next_value("aaaaa"), "aaab");
+  EXPECT_EQ(domain_a.next_value_clamped(""), "a");
+  EXPECT_EQ(domain_a.next_value_clamped("a"), "aa");
+  EXPECT_EQ(domain_a.next_value_clamped("ayz"), "ayza");
+  EXPECT_EQ(domain_a.next_value_clamped("ayzz"), "az");
+  EXPECT_EQ(domain_a.next_value_clamped("azzz"), "b");
+  EXPECT_EQ(domain_a.next_value_clamped("z"), "za");
+  EXPECT_EQ(domain_a.next_value_clamped("df"), "dfa");
+  EXPECT_EQ(domain_a.next_value_clamped("abcd"), "abce");
+  EXPECT_EQ(domain_a.next_value_clamped("abaz"), "abb");
+  EXPECT_EQ(domain_a.next_value_clamped("abzz"), "ac");
+  EXPECT_EQ(domain_a.next_value_clamped("abca"), "abcb");
+  EXPECT_EQ(domain_a.next_value_clamped("abaa"), "abab");
+  EXPECT_EQ(domain_a.next_value_clamped("aaaaa"), "aaab");
 
   // Special case.
-  EXPECT_EQ(domain_a.next_value("zzzz"), "zzzz");
+  EXPECT_EQ(domain_a.next_value_clamped("zzzz"), "zzzz");
 }
 
 TEST_F(StringHistogramDomainTest, NextValueThrowsOnInvalidInput) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
   // "A" is not in `domain_a`
-  EXPECT_THROW(domain_a.next_value("A"), std::logic_error);
+  EXPECT_THROW(domain_a.next_value_clamped("A"), std::logic_error);
 }
 
 TEST_F(StringHistogramDomainTest, StringToNumber) {

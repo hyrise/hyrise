@@ -12,7 +12,7 @@ namespace opossum {
 /**
  * Base class for types that hold statistical information about a column/segment of data.
  */
-class AbstractStatisticsObject {
+class AbstractStatisticsObject : private Noncopyable {
  public:
   explicit AbstractStatisticsObject(const DataType data_type);
   virtual ~AbstractStatisticsObject() = default;

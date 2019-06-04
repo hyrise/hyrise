@@ -76,7 +76,8 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   } else if constexpr (std::is_floating_point_v<T>) {
     return bin_maximum(index) - bin_minimum(index);
   } else {
-    return _domain.next_value(bin_maximum(index) - bin_minimum(index));
+    // The width of a integral-histogram bin [4,5] is 5 - 4 + 1 = 2
+    return bin_maximum(index) - bin_minimum(index) + 1;
   }
 }
 
@@ -157,7 +158,7 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
   }
 
   if constexpr (!std::is_same_v<T, pmr_string>) {
-    return bin_ratio_less_than(bin_id, _domain.next_value(value));
+    return bin_ratio_less_than(bin_id, _domain.next_value_clamped(value));
   } else {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
@@ -183,7 +184,7 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
 }
 
 template <typename T>
-bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition predicate_condition,
+bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_condition,
                                                      const AllTypeVariant& variant_value,
                                                      const std::optional<AllTypeVariant>& variant_value2) const {
   if (bin_count() == 0) {
@@ -193,11 +194,6 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
   const auto value = static_variant_cast<T>(variant_value);
   if (!value) {
     return false;
-  }
-
-  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
-  if constexpr (std::is_same_v<T, pmr_string>) {
-    Assert(_domain.contains(*value), "Invalid value");
   }
 
   switch (predicate_condition) {
@@ -225,7 +221,7 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
     case PredicateCondition::BetweenExclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
 
-      if (_does_not_contain(PredicateCondition::GreaterThanEquals, *value)) {
+      if (does_not_contain(PredicateCondition::GreaterThanEquals, *value)) {
         return true;
       }
 
@@ -233,7 +229,7 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
       if (!value2) {
         return false;
       }
-      if (_does_not_contain(PredicateCondition::LessThanEquals, *value2) || value2 < value) {
+      if (does_not_contain(PredicateCondition::LessThanEquals, *value2) || value2 < value) {
         return true;
       }
 
@@ -263,161 +259,19 @@ bool AbstractHistogram<T>::_general_does_not_contain(const PredicateCondition pr
     }
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      Fail("Predicate (NOT) LIKE is not supported for non-string columns.");
+      if constexpr (std::is_same_v<pmr_string, T>) {
+        // Generally, (NOT) LIKE is to hard to perform estimations on. Some special patterns could be estimated,
+        // e.g. `LIKE 'a'` is the same as `= 'a'` or `LIKE 'a%'` is the same as `>= a AND < b`, but we leave it to other
+        // components (e.g., the optimizer) to perform these transformations.
+        // Thus, (NOT) LIKE is not estimated and we cannot determine whether does_not_contain() could be true.
+        return false;
+      } else {
+        Fail("Predicate NOT LIKE is not supported for non-string columns.");
+      }
+
     default:
       // Do not prune predicates we cannot (yet) handle.
       return false;
-  }
-}
-
-template <typename T>
-bool AbstractHistogram<T>::_does_not_contain(const PredicateCondition predicate_condition,
-                                             const AllTypeVariant& variant_value,
-                                             const std::optional<AllTypeVariant>& variant_value2) const {
-  return _general_does_not_contain(predicate_condition, variant_value, variant_value2);
-}
-
-template <>
-bool AbstractHistogram<pmr_string>::_does_not_contain(const PredicateCondition predicate_condition,
-                                                      const AllTypeVariant& variant_value,
-                                                      const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = static_variant_cast<pmr_string>(variant_value);
-  if (!value) {
-    return false;
-  }
-
-  switch (predicate_condition) {
-    case PredicateCondition::Like: {
-      if (!LikeMatcher::contains_wildcard(*value)) {
-        return _does_not_contain(PredicateCondition::Equals, *value);
-      }
-
-      // If the pattern starts with a MatchAll, we can not prune it.
-      if (value->front() == '%') {
-        return false;
-      }
-
-      /**
-       * We can prune prefix searches iff the domain of values captured by a prefix pattern is prunable.
-       *
-       * Example:
-       * bins: [a, b], [d, e]
-       * predicate: col LIKE 'c%'
-       *
-       * With the same argument we can also prune predicates in the form of 'c%foo',
-       * where foo can be any pattern itself.
-       * We only have to consider the pattern up to the first AnyChars wildcard.
-       */
-      const auto match_all_index = value->find('%');
-      if (match_all_index != pmr_string::npos) {
-        const auto search_prefix = value->substr(0, std::min(match_all_index, _domain.prefix_length));
-        if (_does_not_contain(PredicateCondition::GreaterThanEquals, search_prefix)) {
-          return true;
-        }
-
-        const auto search_prefix_next_value =
-            StringHistogramDomain{_domain.min_char, _domain.max_char, search_prefix.length()}.next_value(search_prefix);
-
-        // If the next value is the same as the prefix, it means that there is no larger value in the domain
-        // of substrings. In that case we cannot prune, because otherwise the previous check would already return true.
-        if (search_prefix == search_prefix_next_value) {
-          return false;
-        }
-
-        if (_does_not_contain(PredicateCondition::LessThan, search_prefix_next_value)) {
-          return true;
-        }
-
-        const auto search_prefix_bin = _bin_for_value(search_prefix);
-        const auto search_prefix_next_value_bin = _bin_for_value(search_prefix_next_value);
-
-        if (search_prefix_bin == INVALID_BIN_ID) {
-          const auto search_prefix_next_bin = _next_bin_for_value(search_prefix);
-
-          // In an EqualDistinctCountHistogram, if both values fall into the same gap, we can prune the predicate.
-          // We need to have at least two bins to rule out pruning if search_prefix < min
-          // and search_prefix_next_value > max.
-          if (search_prefix_next_value_bin == INVALID_BIN_ID && bin_count() > 1ul &&
-              search_prefix_next_bin == _next_bin_for_value(search_prefix_next_value)) {
-            return true;
-          }
-
-          // In an EqualDistinctCountHistogram, if the search_prefix_next_value is exactly the lower bin edge of
-          // the upper bound of search_prefix, we can also prune.
-          // That's because search_prefix_next_value does not belong to the range covered by the pattern,
-          // but is the next value after it.
-          if (search_prefix_next_value_bin != INVALID_BIN_ID &&
-              search_prefix_next_bin == search_prefix_next_value_bin &&
-              bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value) {
-            return true;
-          }
-        }
-
-        // In an EqualWidthHistogram, if both values fall into a bin that has no elements,
-        // and there are either no bins in between or none of them have any elements, we can also prune the predicate.
-        // If the count of search_prefix_next_value_bin is not 0 but search_prefix_next_value is the lower bin edge,
-        // we can still prune, because search_prefix_next_value is not part of the range (same as above).
-        if (search_prefix_bin != INVALID_BIN_ID && search_prefix_next_value_bin != INVALID_BIN_ID &&
-            bin_height(search_prefix_bin) == 0u &&
-            (bin_height(search_prefix_next_value_bin) == 0u ||
-             bin_minimum(search_prefix_next_value_bin) == search_prefix_next_value)) {
-          for (auto current_bin = search_prefix_bin + 1; current_bin < search_prefix_next_value_bin; current_bin++) {
-            if (bin_height(current_bin) > 0u) {
-              return false;
-            }
-          }
-          return true;
-        }
-
-        return false;
-      }
-
-      return false;
-    }
-    case PredicateCondition::NotLike: {
-      if (!LikeMatcher::contains_wildcard(*value)) {
-        return _does_not_contain(PredicateCondition::NotEquals, variant_value);
-      }
-
-      // If the pattern starts with a MatchAll, we can only prune it if it matches all values.
-      if (value->front() == '%') {
-        return *value == "%";
-      }
-
-      /**
-       * We can also prune prefix searches iff the domain of values captured by the histogram is less than or equal to
-       * the domain of strings captured by a prefix pattern.
-       *
-       * Example:
-       * min: car
-       * max: crime
-       * predicate: col NOT LIKE 'c%'
-       *
-       * With the same argument we can also prune predicates in the form of 'c%foo',
-       * where foo can be any pattern itself.
-       * We only have to consider the pattern up to the first MatchAll character.
-       */
-      const auto match_all_index = value->find('%');
-      if (match_all_index != pmr_string::npos) {
-        const auto search_prefix = value->substr(0, match_all_index);
-        if (search_prefix == bin_minimum(BinID{0}).substr(0, search_prefix.length()) &&
-            search_prefix == bin_maximum(bin_count() - 1).substr(0, search_prefix.length())) {
-          return true;
-        }
-      }
-
-      return false;
-    }
-    default: {
-      auto value_in_domain = _domain.string_to_domain(*value);
-
-      std::optional<AllTypeVariant> value2_in_domain;
-      if (variant_value2) {
-        value2_in_domain = boost::get<pmr_string>(*variant_value2);
-      }
-
-      return _general_does_not_contain(predicate_condition, value_in_domain, value2_in_domain);
-    }
   }
 }
 
@@ -435,7 +289,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
     value = _domain.string_to_domain(*value);
   }
 
-  if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
+  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return {Cardinality{0}, 0.0f};
   }
 
@@ -480,7 +334,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
         distinct_count += share * bin_distinct_count(bin_id);
       }
 
-      DebugAssert(bin_id != INVALID_BIN_ID, "Should have been caught by _does_not_contain().");
+      DebugAssert(bin_id != INVALID_BIN_ID, "Should have been caught by does_not_contain().");
 
       // Sum up all bins before the bin (or gap) containing the value.
       for (BinID bin = 0u; bin < bin_id; bin++) {
@@ -504,7 +358,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       return {std::min(cardinality, static_cast<Cardinality>(total_count())), distinct_count};
     }
     case PredicateCondition::LessThanEquals:
-      return estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, _domain.next_value(*value));
+      return estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, _domain.next_value_clamped(*value));
 
     case PredicateCondition::GreaterThanEquals:
       return _invert_estimate(estimate_cardinality_and_distinct_count(PredicateCondition::LessThan, variant_value));
@@ -569,7 +423,15 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      Fail("Predicate NOT LIKE is not supported for non-string columns.");
+      if constexpr (std::is_same_v<pmr_string, T>) {
+        // Generally, (NOT) LIKE is to hard to perform estimations on. Some special patterns could be estimated,
+        // e.g. `LIKE 'a'` is the same as `= 'a'` or `LIKE 'a%'` is the same as `>= a AND < b`, but we leave it to other
+        // components (e.g., the optimizer) to perform these transformations.
+        // Thus, (NOT) LIKE is not estimated and we return a selectivity of 1.
+        return {total_count(), total_distinct_count()};
+      } else {
+        Fail("Predicate NOT LIKE is not supported for non-string columns.");
+      }
 
     default:
       Fail("Predicate not supported");
@@ -579,9 +441,8 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
 template <typename T>
 std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::_invert_estimate(
     const std::pair<Cardinality, DistinctCount>& estimate) const {
-  if (estimate.first > total_count() || estimate.second > total_distinct_count()) {
-    return {Cardinality{0.0f}, 0.0f};
-  }
+  DebugAssert(total_count() >= estimate.first, "Estimate cannot be higher than total_count()");
+  DebugAssert(total_distinct_count() >= estimate.second, "Estimate cannot be higher than total_count()");
 
   return {Cardinality{total_count() - estimate.first}, total_distinct_count() - estimate.second};
 }
@@ -595,149 +456,11 @@ Cardinality AbstractHistogram<T>::estimate_cardinality(const PredicateCondition 
   return estimate.first;
 }
 
-// Specialization for strings.
-template <>
-Cardinality AbstractHistogram<pmr_string>::estimate_cardinality(
-    const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto value = static_variant_cast<pmr_string>(variant_value);
-  if (!value) {
-    return static_cast<Cardinality>(total_count());
-  }
-
-  if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
-    return 0;
-  }
-
-  switch (predicate_condition) {
-    case PredicateCondition::Like: {
-      if (!LikeMatcher::contains_wildcard(*value)) {
-        return estimate_cardinality(PredicateCondition::Equals, variant_value);
-      }
-
-      // We don't deal with this for now because it is not worth the effort.
-      // TODO(anyone): think about good way to handle SingleChar wildcard in patterns.
-      const auto has_single_char_wildcard = std::find(value->cbegin(), value->cend(), '_') != value->cend();
-      if (has_single_char_wildcard) {
-        return static_cast<Cardinality>(total_count());
-      }
-
-      const auto any_chars_count = std::count(value->cbegin(), value->cend(), '%');
-      DebugAssert(any_chars_count > 0,
-                  "contains_wildcard() should not return true if there is neither a '%' nor a '_' in the string.");
-
-      // Match everything.
-      if (*value == "%") {
-        return static_cast<Cardinality>(total_count());
-      }
-
-      if (value->front() != '%') {
-        /**
-         * We now know we have some sort of prefix search, because there is at least one AnyChars wildcard,
-         * and it is not at the start of the pattern.
-         *
-         * We differentiate two cases:
-         *  1. Simple prefix searches, e.g., 'foo%', where there is exactly one AnyChars wildcard in the pattern,
-         *  and it is at the end of the pattern.
-         *  2. All others, e.g., 'foo%bar' or 'foo%bar%'.
-         *
-         *  The way we handle these cases is that we only estimate simple prefix patterns and assume uniform distribution
-         *  for additional fixed characters for the second case.
-         *  Note: this is obviously far from great because not only do characters not appear with equal probability,
-         *  they also appear with different probability depending on characters around them.
-         *  The combination 'ing' in English is far more likely than 'qzy'.
-         *  One improvement would be to have a frequency table for characters and take the probability from there,
-         *  but it only gets you so far. It does not help with the second property.
-         *  Nevertheless, it could be helpful especially if the number of actually occurring characters in a column are
-         *  small compared to the supported characters and the frequency table would be not static but built during
-         *  histogram generation.
-         *  TODO(anyone): look into that in more detail.
-         *
-         *  That is, to estimate the first case ('foo%'), we calculate
-         *  estimate_cardinality(LessThan, fop) - estimate_cardinaliy(LessThan, foo).
-         *  That covers all strings starting with foo.
-         *
-         *  In the second case we assume that all characters in _supported_characters are equally likely to appear in
-         *  a string, and therefore divide the above cardinality by the number of supported characters for each
-         *  additional character that is fixed in the string after the prefix.
-         *
-         *  Example for 'foo%bar%baz', if we only supported the 26 lowercase latin characters:
-         *  (estimate_cardinality(LessThan, fop) - estimate_cardinality(LessThan, foo)) / 26^6
-         *  There are six additional fixed characters in the string ('b', 'a', 'r', 'b', 'a', and 'z').
-         */
-        const auto search_prefix = value->substr(0, std::min(value->find('%'), _domain.prefix_length));
-        auto additional_characters = value->length() - search_prefix.length() - any_chars_count;
-
-        // If there are too many fixed characters for the power to be calculated without overflow, cap the exponent.
-        const auto maximum_exponent =
-            std::log(std::numeric_limits<uint64_t>::max()) / std::log(_domain.character_range_width());
-        if (additional_characters > maximum_exponent) {
-          additional_characters = static_cast<uint64_t>(maximum_exponent);
-        }
-
-        const auto search_prefix_next_value =
-            StringHistogramDomain{_domain.min_char, _domain.max_char, search_prefix.length()}.next_value(search_prefix);
-
-        // If the next value is the same as the prefix, it means that there is no larger value in the domain
-        // of substrings. In that case all values (total_count()) are smaller than search_prefix_next_value.
-        const auto count_smaller_next_value =
-            search_prefix == search_prefix_next_value
-                ? total_count()
-                : estimate_cardinality(PredicateCondition::LessThan, search_prefix_next_value);
-
-        const auto cardinality =
-            Cardinality{(count_smaller_next_value - estimate_cardinality(PredicateCondition::LessThan, search_prefix)) /
-                        ipow(_domain.character_range_width(), additional_characters)};
-
-        return cardinality;
-      }
-
-      /**
-       * If we do not have a prefix search, but a suffix or contains search, the prefix histograms do not help us.
-       * We simply assume uniform distribution for all supported characters and divide the total number of rows
-       * by the number of supported characters for each additional character that is fixed (see comment above).
-       *
-       * Example for '%foo%b%a%', if we only supported the 26 lowercase latin characters:
-       * total_count() / 26^5
-       * There are five fixed characters in the string ('f', 'o', 'o', 'b', and 'a').
-       */
-      const auto fixed_characters = value->length() - any_chars_count;
-      const auto cardinality =
-          Cardinality{static_cast<float>(total_count()) / ipow(_domain.character_range_width(), fixed_characters)};
-      return cardinality;
-    }
-
-    case PredicateCondition::NotLike: {
-      if (!LikeMatcher::contains_wildcard(*value)) {
-        return estimate_cardinality(PredicateCondition::NotEquals, variant_value);
-      }
-
-      // TODO(anyone): think about good way to handle SingleChar wildcard in patterns.
-      //               We don't deal with this for now because it is not worth the effort.
-      const auto single_char_wildcard = std::find(value->cbegin(), value->cend(), '_') != value->cend();
-      if (single_char_wildcard) {
-        return static_cast<Cardinality>(total_count());
-      }
-
-      return _invert_estimate(estimate_cardinality(PredicateCondition::Like, variant_value));
-    }
-
-    default:
-      const auto estimate = estimate_cardinality_and_distinct_count(predicate_condition, variant_value, variant_value2);
-      return estimate.first;
-  }
-}
-
-template <typename T>
-Cardinality AbstractHistogram<T>::_invert_estimate(const Cardinality& estimate) const {
-  return Cardinality{total_count() - estimate};
-}
-
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  if (_does_not_contain(predicate_condition, variant_value, variant_value2)) {
+  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
     return nullptr;
   }
 
@@ -778,11 +501,11 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
         if constexpr (!std::is_same_v<pmr_string, T>) {
           if (minimum == *value) {
-            minimum = _domain.next_value(*value);
+            minimum = _domain.next_value_clamped(*value);
           }
 
           if (maximum == *value) {
-            maximum = _domain.previous_value(*value);
+            maximum = _domain.previous_value_clamped(*value);
           }
         }
 
@@ -799,7 +522,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     }
 
     case PredicateCondition::LessThanEquals:
-      return sliced(PredicateCondition::LessThan, _domain.next_value(*value));
+      return sliced(PredicateCondition::LessThan, _domain.next_value_clamped(*value));
 
     case PredicateCondition::LessThan: {
       auto last_included_bin_id = _bin_for_value(*value);
@@ -814,16 +537,16 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         }
       }
 
-      if (predicate_condition == PredicateCondition::LessThan && *value == bin_minimum(last_included_bin_id)) {
+      if (*value == bin_minimum(last_included_bin_id)) {
         --last_included_bin_id;
       }
 
       auto last_bin_maximum = T{};
-      // previous_value(value) is not available for strings, but we do not expect it to make a big difference.
+      // previous_value_clamped(value) is not available for strings, but we do not expect it to make a big difference.
       // TODO(anybody) Correctly implement bin bounds trimming for strings
       // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
       if constexpr (!std::is_same_v<T, pmr_string>) {
-        last_bin_maximum = std::min(bin_maximum(last_included_bin_id), _domain.previous_value(*value));
+        last_bin_maximum = std::min(bin_maximum(last_included_bin_id), _domain.previous_value_clamped(*value));
       } else {
         last_bin_maximum = std::min(bin_maximum(last_included_bin_id), *value);
       }
@@ -836,7 +559,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     }
 
     case PredicateCondition::GreaterThan:
-      return sliced(PredicateCondition::GreaterThanEquals, _domain.next_value(*value));
+      return sliced(PredicateCondition::GreaterThanEquals, _domain.next_value_clamped(*value));
 
     case PredicateCondition::GreaterThanEquals: {
       auto first_new_bin_id = _bin_for_value(*value);
@@ -845,7 +568,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         first_new_bin_id = _next_bin_for_value(*value);
       }
 
-      DebugAssert(first_new_bin_id < bin_count(), "This should have been caught by _does_not_contain().");
+      DebugAssert(first_new_bin_id < bin_count(), "This should have been caught by does_not_contain().");
 
       GenericHistogramBuilder<T> builder{bin_count() - first_new_bin_id, _domain};
 
@@ -902,8 +625,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
 
   /**
    * Create vector with pairs for each split.
-   * For a lower bin edge e, the new histogram will have to be split at previous_value(e) and e.
-   * For an upper bin edge e, the new histogram will have to be split at e and next_value(e).
+   * For a lower bin edge e, the new histogram will have to be split at previous_value_clamped(e) and e.
+   * For an upper bin edge e, the new histogram will have to be split at e and next_value_clamped(e).
    *
    * We can safely ignore duplicate splits, so we use a set first and then copy the splits to a vector.
    * Also, we will create splits in gaps for now, but we will not create any actual bins for them later on.
@@ -917,8 +640,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     const auto bin_max = bin_maximum(bin_id);
     // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if constexpr (std::is_arithmetic_v<T>) {
-      split_set.insert(std::make_pair(_domain.previous_value(bin_min), bin_min));
-      split_set.insert(std::make_pair(bin_max, _domain.next_value(bin_max)));
+      split_set.insert(std::make_pair(_domain.previous_value_clamped(bin_min), bin_min));
+      split_set.insert(std::make_pair(bin_max, _domain.next_value_clamped(bin_max)));
     } else {
       // TODO(tim): turn into compile-time error
       Fail("Not supported for strings.");
@@ -928,8 +651,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   for (const auto& edge_pair : additional_bin_edges) {
     // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if constexpr (std::is_arithmetic_v<T>) {
-      split_set.insert(std::make_pair(_domain.previous_value(edge_pair.first), edge_pair.first));
-      split_set.insert(std::make_pair(edge_pair.second, _domain.next_value(edge_pair.second)));
+      split_set.insert(std::make_pair(_domain.previous_value_clamped(edge_pair.first), edge_pair.first));
+      split_set.insert(std::make_pair(edge_pair.second, _domain.next_value_clamped(edge_pair.second)));
     } else {
       // TODO(tim): turn into compile-time error
       Fail("Not supported for strings.");
@@ -1001,7 +724,7 @@ std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_bounds() const {
 template <typename T>
 void AbstractHistogram<T>::_assert_bin_validity() {
   for (BinID bin_id{0}; bin_id < bin_count(); ++bin_id) {
-    Assert(bin_minimum(bin_id) <= bin_maximum(bin_id), "Cannot have overlapping bins.");
+    Assert(bin_minimum(bin_id) <= bin_maximum(bin_id), "Bin minimum must be <= bin maximum.");
 
     if (bin_id < bin_count() - 1) {
       Assert(bin_maximum(bin_id) < bin_minimum(bin_id + 1), "Bins must be sorted and cannot overlap.");

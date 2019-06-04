@@ -28,12 +28,12 @@ struct Predicate {
 
 template <typename T>
 T next_value(T v) {
-  return HistogramDomain<T>{}.next_value(v);
+  return HistogramDomain<T>{}.next_value_clamped(v);
 }
 
 template <typename T>
 T previous_value(T v) {
-  return HistogramDomain<T>{}.previous_value(v);
+  return HistogramDomain<T>{}.previous_value_clamped(v);
 }
 
 }  // namespace
@@ -360,83 +360,11 @@ TEST_F(GenericHistogramTest, StringLessThan) {
 }
 
 TEST_F(GenericHistogramTest, StringLikeEstimation) {
-  const auto histogram = GenericHistogram<pmr_string>{{"abcd", "ijkl", "oopp", "uvwx"},
-                                                      {"efgh", "mnop", "qrst", "yyzz"},
-                                                      {4, 6, 3, 3},
-                                                      {3, 3, 3, 3},
-                                                      StringHistogramDomain{'a', 'z', 4u}};
+  const auto histogram = SingleBinHistogram<pmr_string>{"a", "z", 100, 40, StringHistogramDomain{'a', 'z', 4u}};
 
-  // First bin: [abcd, efgh], so everything before is prunable.
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a"), 0.f);
-
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa%"), 0.f);
-
-  // Complexity of prefix pattern does not matter for pruning decision.
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa%zz%"), 0.f);
-
-  // Even though "aa%" is prunable, "a%" is not!
-  // Since there are no values smaller than "abcd", [abcd, azzz] is the range that "a%" covers.
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%"),
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "b") -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "a"));
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "a%"),
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "b") -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "abcd"));
-
-  // No wildcard, no party.
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "abcd"),
-                  histogram.estimate_cardinality(PredicateCondition::Equals, "abcd"));
-
-  // Classic cases for prefix search.
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "ab%"),
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "ac") -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "ab"));
-
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "c%"),
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "d") -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "c"));
-
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "cfoo%"),
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "cfop") -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "cfoo"));
-
-  // Use upper bin boundary as range limit, since there are no other values starting with e in other bins.
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "e%"),
-                  histogram.estimate_cardinality(PredicateCondition::LessThan, "f") -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "e"));
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "e%"),
-                  histogram.estimate_cardinality(PredicateCondition::LessThanEquals, "efgh") -
-                      histogram.estimate_cardinality(PredicateCondition::LessThan, "e"));
-
-  // Second bin starts at ijkl, so there is a gap between efgh and ijkl.
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "f%"), 0.f);
-
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "ii%"), 0.f);
-
-  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "iizzzzzzzz%"), 0.f);
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%a%"), histogram.total_count() / ipow(26, 1));
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "%a%b"), histogram.total_count() / ipow(26, 2));
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar"),
-            histogram.estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 3));
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%"),
-            histogram.estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 3));
-
-  // If the number of fixed characters is too large and the power would overflow, cap it.
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux"),
-            histogram.estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 13));
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "foo%bar%baz%qux%quux%corge"),
-            histogram.estimate_cardinality(PredicateCondition::Like, "foo%") / ipow(26, 13));
-}
-
-TEST_F(GenericHistogramTest, StringNotLikeEstimation) {
-  const auto histogram = GenericHistogram<pmr_string>{{"abcd", "ijkl", "oopp", "uvwx"},
-                                                      {"efgh", "mnop", "qrst", "yyzz"},
-                                                      {4, 6, 3, 3},
-                                                      {3, 3, 3, 3},
-                                                      StringHistogramDomain{'a', 'z', 4u}};
-
-  EXPECT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "%"), 0.f);
+  // (NOT) LIKE is not estimated and has a selectivity of 1
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::Like, "aa_zz%"), 100.f);
+  EXPECT_FLOAT_EQ(histogram.estimate_cardinality(PredicateCondition::NotLike, "aa_zz%"), 100.f);
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityInt) {
@@ -585,6 +513,38 @@ TEST_F(GenericHistogramTest, EstimateCardinalityFloat) {
   EXPECT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, 2.0f, 30.0f), 67.0f);
   EXPECT_FLOAT_EQ(histogram->estimate_cardinality(PredicateCondition::BetweenInclusive, previous_value(2.0f), 2.0f), 0.0f);  // NOLINT
   // clang-format on
+}
+
+TEST_F(GenericHistogramTest, DoesNotContain) {
+  // clang-format off
+  const auto histogram_a = GenericHistogram<float>{
+  std::vector<float>             {2.0f,  23.0f, next_value(25.0f),            31.0f,  32.0f},
+  std::vector<float>             {22.0f, 25.0f,            30.0f,  next_value(31.0f), 32.0f},
+  std::vector<HistogramCountType>{17,    30,               20,                 7,      3},
+  std::vector<HistogramCountType>{ 5,     3,                5,                 2,      1}};
+  // clang-format on
+
+  EXPECT_TRUE(histogram_a.does_not_contain(PredicateCondition::Equals, 1.0f));
+  EXPECT_TRUE(histogram_a.does_not_contain(PredicateCondition::Equals, 22.5f));
+  EXPECT_TRUE(histogram_a.does_not_contain(PredicateCondition::Equals, 33.0f));
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::Equals, 24.0f));
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::Equals, 32.0f));
+
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::NotEquals, 1.0f));
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::NotEquals, 22.5f));
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::NotEquals, 33.0f));
+
+  EXPECT_TRUE(histogram_a.does_not_contain(PredicateCondition::GreaterThan, 32.0f));
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::GreaterThan, 31.0f));
+
+  EXPECT_TRUE(histogram_a.does_not_contain(PredicateCondition::GreaterThanEquals, 32.1f));
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::GreaterThanEquals, 32.0f));
+
+  EXPECT_TRUE(histogram_a.does_not_contain(PredicateCondition::LessThan, 2.0f));
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::LessThan, 22.5f));
+
+  EXPECT_TRUE(histogram_a.does_not_contain(PredicateCondition::LessThanEquals, 1.9f));
+  EXPECT_FALSE(histogram_a.does_not_contain(PredicateCondition::LessThanEquals, 2.0f));
 }
 
 TEST_F(GenericHistogramTest, EstimateCardinalityString) {

@@ -33,7 +33,8 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
   auto bitmask = std::optional<Bitmask>{_vertex_indices.size() + _predicate_indices.size()};
 
   visit_lqp(lqp, [&](const auto& node) {
-    if (!bitmask) return LQPVisitation::DoNotVisitInputs;
+    // Early out if `bitmask.reset()` was called during the search below
+    if (!bitmask.has_value()) return LQPVisitation::DoNotVisitInputs;
 
     if (const auto vertex_iter = _vertex_indices.find(node); vertex_iter != _vertex_indices.end()) {
       DebugAssert(vertex_iter->second < bitmask->size(), "Vertex index out of range");

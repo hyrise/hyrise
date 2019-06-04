@@ -47,7 +47,7 @@ struct LQPOutputRelation {
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
-class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
+class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   AbstractLQPNode(const LQPNodeType node_type,
                   const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});

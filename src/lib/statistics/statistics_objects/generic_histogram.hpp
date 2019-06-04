@@ -12,24 +12,6 @@
 namespace opossum {
 
 /**
- * We use multiple vectors rather than a vector of structs for ease-of-use with STL library functions.
- */
-template <typename T>
-struct GenericBinData {
-  // Min values on a per-bin basis.
-  std::vector<T> bin_minima;
-
-  // Max values on a per-bin basis.
-  std::vector<T> bin_maxima;
-
-  // Number of values on a per-bin basis.
-  std::vector<HistogramCountType> bin_heights;
-
-  // Number of distinct values on a per-bin basis.
-  std::vector<HistogramCountType> bin_distinct_counts;
-};
-
-/**
  * Generic histogram.
  * Bins do not necessarily share any common traits such as height or width or distinct count.
  * This histogram should only be used to create temporary statistics objects, as its memory requirements are higher than
@@ -43,6 +25,8 @@ class GenericHistogram : public AbstractHistogram<T> {
   GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                    std::vector<HistogramCountType>&& bin_heights, std::vector<HistogramCountType>&& bin_distinct_counts,
                    const HistogramDomain<T>& domain = {});
+
+  static std::shared_ptr<GenericHistogram> with_single_bin(const T& min, const T& max, const HistogramCountType& height, const HistogramCountType& distinct_count, const HistogramDomain<T>& domain = {});
 
   std::string name() const override;
   std::shared_ptr<AbstractHistogram<T>> clone() const override;
@@ -64,7 +48,24 @@ class GenericHistogram : public AbstractHistogram<T> {
   BinID _next_bin_for_value(const T& value) const override;
 
  private:
-  const GenericBinData<T> _bin_data;
+  /**
+   * We use multiple vectors rather than a vector of structs for ease-of-use with STL library functions.
+   */
+  // Min values on a per-bin basis.
+  std::vector<T> _bin_minima;
+
+  // Max values on a per-bin basis.
+  std::vector<T> _bin_maxima;
+
+  // Number of values on a per-bin basis.
+  std::vector<HistogramCountType> _bin_heights;
+
+  // Number of distinct values on a per-bin basis.
+  std::vector<HistogramCountType> _bin_distinct_counts;
+
+  // Aggregated counts over all bins, to avoid redundant computation
+  HistogramCountType _total_count;
+  HistogramCountType _total_distinct_count;
 };
 
 // For gtest

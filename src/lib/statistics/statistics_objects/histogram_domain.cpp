@@ -5,7 +5,8 @@
 namespace opossum {
 
 HistogramDomain<pmr_string>::HistogramDomain()
-    :  // Support most of ASCII with maximum prefix length for number of characters.
+    :  // Support most of ASCII with maximum prefix length for number of characters. The character range and the prefix
+      // length were chosen so that the entire range of IntegralType is covered
       HistogramDomain<pmr_string>(' ', '~', 9) {}
 
 HistogramDomain<pmr_string>::HistogramDomain(const char min_char, const char max_char, const size_t prefix_length)
@@ -60,7 +61,7 @@ bool HistogramDomain<pmr_string>::contains(const pmr_string& string_value) const
   return true;
 }
 
-pmr_string HistogramDomain<pmr_string>::next_value(const pmr_string& string_value) const {
+pmr_string HistogramDomain<pmr_string>::next_value_clamped(const pmr_string& string_value) const {
   DebugAssert(contains(string_value), "Unsupported character, cannot compute next_value()");
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
@@ -74,9 +75,9 @@ pmr_string HistogramDomain<pmr_string>::next_value(const pmr_string& string_valu
   }
 
   // Otherwise, work on the substring trimmed to `prefix_length` characters.
-  const auto cleaned_value = string_value.substr(0, prefix_length);
-  const auto last_char = cleaned_value.back();
-  const auto substring = cleaned_value.substr(0, cleaned_value.length() - 1);
+  const auto value_clipped_to_prefix_length = string_value.substr(0, prefix_length);
+  const auto last_char = value_clipped_to_prefix_length.back();
+  const auto substring = value_clipped_to_prefix_length.substr(0, value_clipped_to_prefix_length.length() - 1);
 
   // If the last character of the substring is not the last supported character,
   // simply exchange it with the character following it.
@@ -90,7 +91,7 @@ pmr_string HistogramDomain<pmr_string>::next_value(const pmr_string& string_valu
   // - prefix_length: 4
   // - value: abcz
   // - next_value: abd
-  return StringHistogramDomain{min_char, max_char, prefix_length - 1}.next_value(substring);
+  return StringHistogramDomain{min_char, max_char, prefix_length - 1}.next_value_clamped(substring);
 }
 
 bool HistogramDomain<pmr_string>::operator==(const StringHistogramDomain& rhs) const {
@@ -98,8 +99,6 @@ bool HistogramDomain<pmr_string>::operator==(const StringHistogramDomain& rhs) c
 }
 
 HistogramDomain<pmr_string>::IntegralType HistogramDomain<pmr_string>::_base_number() const {
-  DebugAssert(prefix_length > 0, "Prefix length must be greater than 0.");
-
   auto result = uint64_t{1};
   for (auto exp = uint64_t{1}; exp < prefix_length; exp++) {
     result += ipow(character_range_width(), exp);

@@ -83,14 +83,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
 
   explicit AbstractHistogram(const HistogramDomain<T>& domain = {});
 
-  ~AbstractHistogram() override = default;
-
-  // Non-copyable
-  AbstractHistogram(AbstractHistogram&&) = default;
-  AbstractHistogram& operator=(AbstractHistogram&&) = default;
-  AbstractHistogram(const AbstractHistogram&) = delete;
-  const AbstractHistogram& operator=(const AbstractHistogram&) = delete;
-
   /**
    * @return name of the histogram type, e.g., "EqualDistinctCount"
    */
@@ -124,6 +116,17 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
+
+  /**
+   * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.
+   * Still an estimation, do not use for pruning decisions!
+   *
+   * Specifically, if this method returns true, the predicate does not yield any results.
+   * If this method returns false, the predicate might yield results.
+   * This method is specialized for strings to handle predicates uniquely applicable to string columns.
+   */
+  bool does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
    * Derive a Histogram from this histograms splitting its bins so that both the current bounds as well as the bounds
@@ -184,7 +187,9 @@ class AbstractHistogram : public AbstractStatisticsObject {
   virtual HistogramWidthType bin_width(const BinID index) const;
 
   /**
-   * Helper function
+   * Helper function to retrieve all properties of a bin in a single struct. Convenience method, as histogram
+   * implementations do store bins in different ways (EqualDistinctCountHistogram, e.g., has a single member holding
+   * the distinct count of all bins).
    * @return {bin_minimum(index), bin_maximum(index), bin_height(index), bin_distinct_count(index)}
    */
   HistogramBin<T> bin(const BinID index) const;
@@ -199,24 +204,28 @@ class AbstractHistogram : public AbstractStatisticsObject {
   /** @} */
 
  protected:
-  Cardinality _invert_estimate(const Cardinality& estimate) const;
+  // Call after constructor of the derived histogram has finished to check whether the bins are valid
+  // (e.g. do not overlap).
+  void _assert_bin_validity();
+
+  /**
+   * Given a Bin with @param value_count total values and @param distinct_count, estimate the resulting distinct count
+   * if a subset of the total values (@param selectivity) is taken.
+   * Currently, this is just a dummy heuristic that ensures the resulting distinct count does not exceed the resulting
+   * value count.
+   *
+   * E.g. _scale_distinct_count(100, 5, 0.1) -> 5
+   *      _scale_distinct_count(100, 5, 0.01) -> 1
+   */
+  static Cardinality _scale_distinct_count(Cardinality value_count, Cardinality distinct_count,
+                                           Selectivity selectivity);
+
+ private:
+  /**
+   * Helper for implementing, e.g., LessThan as an inversion of GreaterThanEquals.
+   * @return total_[distinct_]count() - estimate
+   */
   std::pair<Cardinality, DistinctCount> _invert_estimate(const std::pair<Cardinality, DistinctCount>& estimate) const;
-
-  /**
-   * Returns whether a given predicate type and its parameter(s) can belong to a bin or not.
-   * Specifically, if this method returns true, the predicate does not yield any results.
-   * If this method returns false, the predicate might yield results.
-   * This method is specialized for strings to handle predicates uniquely applicable to string columns.
-   */
-  bool _does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-                         const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
-
-  /**
-   * Returns whether a given predicate type and its parameter(s) can belong to a bin or not
-   * for predicate types supported by all data types.
-   */
-  bool _general_does_not_contain(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-                                 const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   /**
    * Returns the id of the bin that holds the given `value`.
@@ -232,21 +241,6 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   virtual BinID _next_bin_for_value(const T& value) const = 0;
 
-  /**
-   * Given a Bin with @param value_count total values and @param distinct_count, estimate the resulting distinct count
-   * if a subset of the total values (@param selectivity) is taken.
-   * Currently, this is just a dummy heuristic that ensures the resulting distinct count does not exceed the resulting
-   * value count.
-   *
-   * E.g. _scale_distinct_count(100, 5, 0.1) -> 5
-   *      _scale_distinct_count(100, 5, 0.01) -> 1
-   */
-  static Cardinality _scale_distinct_count(Cardinality value_count, Cardinality distinct_count,
-                                           Selectivity selectivity);
-
-  // Call after constructor of the derived histogram has finished to check whether the bins are valid
-  // (e.g. do not overlap).
-  void _assert_bin_validity();
 
   HistogramDomain<T> _domain;
 };

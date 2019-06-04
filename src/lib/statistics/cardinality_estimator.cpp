@@ -40,14 +40,14 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-std::optional<float> estimate_null_ratio_of_column(const TableStatistics& table_statistics,
+std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& table_statistics,
                                                    const ColumnStatistics<T>& column_statistics) {
   // If the column has an explicit null value ratio associated with it, we can just use that
   if (column_statistics.null_value_ratio) {
     return column_statistics.null_value_ratio->ratio;
   }
 
-  // Otherwise derive the null ratio from the total count of a histogram (which excludes NULLs) and the
+  // Otherwise derive the null value ratio from the total count of a histogram (which excludes NULLs) and the
   // TableStatistics row count (which includes NULLs)
   if (column_statistics.histogram && table_statistics.row_count != 0.0f) {
     return 1.0f - (static_cast<float>(column_statistics.histogram->total_count()) / table_statistics.row_count);
@@ -440,7 +440,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
       const auto is_not_null = predicate.predicate_condition == PredicateCondition::IsNotNull;
 
       const auto null_value_ratio =
-          estimate_null_ratio_of_column(*input_table_statistics, *left_input_column_statistics);
+          estimate_null_value_ratio_of_column(*input_table_statistics, *left_input_column_statistics);
 
       if (null_value_ratio) {
         selectivity = is_not_null ? 1 - *null_value_ratio : *null_value_ratio;

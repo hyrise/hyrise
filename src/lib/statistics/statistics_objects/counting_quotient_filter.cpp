@@ -132,7 +132,7 @@ Cardinality CountingQuotientFilter<ElementType>::estimate_cardinality(
     return static_cast<Cardinality>(count(variant_value));
   } else {
     // Cannot use CQFs for cardinality estimation beyond equality predicates
-    return 0;
+    return static_cast<Cardinality>(count(variant_value));
   }
 }
 

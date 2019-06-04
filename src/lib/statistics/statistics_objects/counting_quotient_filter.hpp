@@ -31,7 +31,7 @@ smallest number greater than `S` that is a power of 2 as the number of slots." -
 */
 
 template <typename ElementType>
-class CountingQuotientFilter : public AbstractStatisticsObject, public Noncopyable {
+class CountingQuotientFilter : public AbstractStatisticsObject {
  public:
   CountingQuotientFilter(const size_t quotient_size, const size_t remainder_size);
   ~CountingQuotientFilter() override;
