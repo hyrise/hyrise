@@ -15,13 +15,13 @@ public:
   AbstractTpccProcedure(BenchmarkSQLExecutor sql_executor);
   virtual ~AbstractTpccProcedure() = default;
 
-  // TODO Doc
+  // Executes the procedure; returns true if it was successful and false if a transaction conflict occurred
   [[nodiscard]] virtual bool execute() = 0;
 
+  // A single character (D/N/O/P/S) used to identify the procedure in result CSVs
   virtual char identifier() const = 0;
 
 protected:
-  // TODO add semi-random seed, also to TpccRandomGenerator
   static thread_local std::minstd_rand _random_engine;
   static thread_local TpccRandomGenerator _tpcc_random_generator;
 

@@ -6,8 +6,7 @@
 namespace opossum {
 
 TpccDelivery::TpccDelivery(const int num_warehouses, BenchmarkSQLExecutor sql_executor) : AbstractTpccProcedure(sql_executor) {
-  // TODO this should be [1, n], but our data generator does [0, n-1]
-  std::uniform_int_distribution<> warehouse_dist{0, num_warehouses - 1};
+  std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
 	_w_id = warehouse_dist(_random_engine);
 
   std::uniform_int_distribution<> carrier_dist{1, 10};
@@ -18,11 +17,11 @@ TpccDelivery::TpccDelivery(const int num_warehouses, BenchmarkSQLExecutor sql_ex
 
 bool TpccDelivery::execute() {
   for (auto d_id = 1; d_id <= 10; ++d_id) {
-    // This could be optimized by querying only once and grouping by NO_D_ID
+    // This could be optimized by querying only once and grouping by NO_D_ID - would that be legal?
     const auto new_order_select_pair = _sql_executor.execute(std::string{"SELECT COUNT(*), MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} + std::to_string(_w_id) + " AND NO_D_ID = " + std::to_string(d_id));
     const auto& new_order_table = new_order_select_pair.second;
 
-    // TODO(anyone): this would not be necessary if get_value returned NULLs as nullopt
+    // This would not be necessary if get_value returned NULLs as nullopt
     if (new_order_table->get_value<int64_t>(ColumnID{0}, 0) == 0) continue;
 
     const auto no_o_id = new_order_table->get_value<int32_t>(ColumnID{1}, 0);
@@ -45,7 +44,7 @@ bool TpccDelivery::execute() {
     const auto order_line_select_pair = _sql_executor.execute(std::string{"SELECT SUM(OL_AMOUNT) FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(_w_id) + " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = " + std::to_string(no_o_id));
     const auto& order_line_table = order_line_select_pair.second;
     Assert(order_line_table->row_count() == 1, "Did not find order lines");
-    auto amount = order_line_table->get_value<double>(ColumnID{0}, 0);
+    const auto amount = order_line_table->get_value<double>(ColumnID{0}, 0);
 
     // Set delivery date in ORDER_LINE
     const auto order_line_update_pair = _sql_executor.execute(std::string{"UPDATE ORDER_LINE SET OL_DELIVERY_D = "} + std::to_string(_ol_delivery_d) + " WHERE OL_W_ID = " + std::to_string(_w_id) + " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = " + std::to_string(no_o_id));

@@ -6,13 +6,10 @@
 namespace opossum {
 
 TpccPayment::TpccPayment(const int num_warehouses, BenchmarkSQLExecutor sql_executor) : AbstractTpccProcedure(sql_executor) {
-  // TODO this should be [1, n], but our data generator does [0, n-1]
-  std::uniform_int_distribution<> warehouse_dist{0, num_warehouses - 1};
+  std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
 	_w_id = warehouse_dist(_random_engine);
 
-  // There are always exactly 9 districts per warehouse
-  // TODO this should be [1, 10], but our data generator does [0, 9]
-  std::uniform_int_distribution<> district_dist{0, 9};
+  std::uniform_int_distribution<> district_dist{1, 10};
 	_d_id = district_dist(_random_engine);
 
   // Use home warehouse in 85% of cases, otherwise select a random one
@@ -33,8 +30,7 @@ TpccPayment::TpccPayment(const int num_warehouses, BenchmarkSQLExecutor sql_exec
   if (_select_customer_by_name) {
     _customer = pmr_string{_tpcc_random_generator.last_name(_tpcc_random_generator.nurand(255, 0, 999))};
   } else {
-    // TODO this should be [1, 3000], but our data generator does [1, 2999]
-    _customer = _tpcc_random_generator.nurand(1023, 1, 2999);
+    _customer = _tpcc_random_generator.nurand(1023, 1, 3000);
   }
 
   // Generate payment information
@@ -50,21 +46,21 @@ bool TpccPayment::execute() {
   const auto warehouse_select_pair = _sql_executor.execute(std::string{"SELECT W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_YTD FROM WAREHOUSE WHERE W_ID = "} + std::to_string(_w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
-  _w_name = warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
-  _w_ytd = warehouse_table->get_value<float>(ColumnID{6}, 0);
+  auto w_name = warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
+  auto w_ytd = warehouse_table->get_value<float>(ColumnID{6}, 0);
 
   // Update warehouse YTD
-  std::tie(pipeline_status, std::ignore) = _sql_executor.execute(std::string{"UPDATE WAREHOUSE SET W_YTD = "} + std::to_string(_w_ytd + _h_amount) + " WHERE W_ID = " + std::to_string(_w_id));
+  std::tie(pipeline_status, std::ignore) = _sql_executor.execute(std::string{"UPDATE WAREHOUSE SET W_YTD = "} + std::to_string(w_ytd + _h_amount) + " WHERE W_ID = " + std::to_string(_w_id));
 
   // Retrieve information about the district
   const auto district_select_pair = _sql_executor.execute(std::string{"SELECT D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_YTD FROM DISTRICT WHERE D_W_ID = "} + std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
   const auto& district_table = district_select_pair.second;
   Assert(district_table->row_count() == 1, "Did not find district (or found more than one)");
-  _d_name = district_table->get_value<pmr_string>(ColumnID{0}, 0);
-  _d_ytd = district_table->get_value<float>(ColumnID{6}, 0);
+  auto d_name = district_table->get_value<pmr_string>(ColumnID{0}, 0);
+  auto d_ytd = district_table->get_value<float>(ColumnID{6}, 0);
 
   // Update district YTD
-  const auto district_update_pair = _sql_executor.execute(std::string{"UPDATE DISTRICT SET D_YTD = "} + std::to_string(_d_ytd + _h_amount) + " WHERE D_W_ID = " + std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
+  const auto district_update_pair = _sql_executor.execute(std::string{"UPDATE DISTRICT SET D_YTD = "} + std::to_string(d_ytd + _h_amount) + " WHERE D_W_ID = " + std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
   if(district_update_pair.first != SQLPipelineStatus::Success)  {_sql_executor.rollback(); return false;}
 
   auto customer_table = std::shared_ptr<const Table>{};
@@ -110,7 +106,7 @@ bool TpccPayment::execute() {
 
   // Insert into history table
   // TODO - why is HISTORY a keyword?
-  const auto history_insert_pair = _sql_executor.execute(std::string{"INSERT INTO \"HISTORY\" (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, H_DATE, H_AMOUNT) VALUES (" + std::to_string(customer_id) + ", " + std::to_string(_c_d_id) + ", " + std::to_string(_c_w_id) + ", " + std::to_string(_d_id) + ", " + std::to_string(_w_id) + ", '" + std::string{_w_name + "    " + _d_name} + "', '" + std::to_string(_h_date) + "', " + std::to_string(_h_amount) + ")"});
+  const auto history_insert_pair = _sql_executor.execute(std::string{"INSERT INTO \"HISTORY\" (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, H_DATE, H_AMOUNT) VALUES (" + std::to_string(customer_id) + ", " + std::to_string(_c_d_id) + ", " + std::to_string(_c_w_id) + ", " + std::to_string(_d_id) + ", " + std::to_string(_w_id) + ", '" + std::string{w_name + "    " + d_name} + "', '" + std::to_string(_h_date) + "', " + std::to_string(_h_amount) + ")"});
   Assert(history_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   _sql_executor.commit();

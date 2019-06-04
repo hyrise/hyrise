@@ -32,16 +32,6 @@ protected:
 
   int64_t _o_entry_d;        // Current datetime
 
-  // Values calculated DURING the execution of the procedure:
-  float _w_tax = NAN;          // Warehouse's tax rate
-  float _d_tax = NAN;          // District's tax rate
-  int32_t _d_next_o_id = -1;   // District's next order ID
-  int32_t _o_id;               // Order ID
-  float _c_discount = NAN;     // Customer's discount rate
-  pmr_string _c_last;          // Customer's last name
-  pmr_string _c_credit;        // Customer's credit status
-  bool _o_all_local = true;    // Is for every order lines ol_supply_w_id == _w_id?
-
 };
 
 }

@@ -201,6 +201,7 @@ set (
     ${SHARED_SOURCES}
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    tpc/tpcc_test.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp

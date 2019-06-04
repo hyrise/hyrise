@@ -6,13 +6,11 @@
 namespace opossum {
 
 TpccOrderStatus::TpccOrderStatus(const int num_warehouses, BenchmarkSQLExecutor sql_executor) : AbstractTpccProcedure(sql_executor) {
-  // TODO this should be [1, n], but our data generator does [0, n-1]
-  std::uniform_int_distribution<> warehouse_dist{0, num_warehouses - 1};
+  std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
 	_w_id = warehouse_dist(_random_engine);
 
   // There are always exactly 9 districts per warehouse
-  // TODO this should be [1, 10], but our data generator does [0, 9]
-  std::uniform_int_distribution<> district_dist{0, 9};
+  std::uniform_int_distribution<> district_dist{1, 10};
 	_d_id = district_dist(_random_engine);
 
   // Select 6 out of 10 customers by last name
@@ -21,8 +19,7 @@ TpccOrderStatus::TpccOrderStatus(const int num_warehouses, BenchmarkSQLExecutor 
   if (_select_customer_by_name) {
     _customer = pmr_string{_tpcc_random_generator.last_name(_tpcc_random_generator.nurand(255, 0, 999))};
   } else {
-    // TODO this should be [1, 3000], but our data generator does [1, 2999]
-    _customer = _tpcc_random_generator.nurand(1023, 1, 2999);
+    _customer = _tpcc_random_generator.nurand(1023, 1, 3000);
   }
 }
 

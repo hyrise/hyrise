@@ -8,12 +8,10 @@
 namespace opossum {
 
 TpccStockLevel::TpccStockLevel(const int num_warehouses, BenchmarkSQLExecutor sql_executor) : AbstractTpccProcedure(sql_executor) {
-  // TODO this should be [1, n], but our data generator does [0, n-1]
-  std::uniform_int_distribution<> warehouse_dist{0, num_warehouses - 1};
+  std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
 	_w_id = warehouse_dist(_random_engine);
 
-  // TODO this should be [1, 10], but our data generator does [0, 9]
-  std::uniform_int_distribution<> district_dist{0, 9};
+  std::uniform_int_distribution<> district_dist{1, 10};
   _d_id = district_dist(_random_engine);
 
   std::uniform_int_distribution<> threshold_dist{10, 20};

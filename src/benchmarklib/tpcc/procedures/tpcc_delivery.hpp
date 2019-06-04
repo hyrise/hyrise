@@ -13,7 +13,7 @@ public:
 
 protected:
   // Values generated BEFORE the procedure is executed:
-  int32_t _w_id;           // Home warehouse ID    [1..num_warehouses]  // TODO const these
+  int32_t _w_id;           // Home warehouse ID    [1..num_warehouses]
   int64_t _o_carrier_id;   // Carrier ID           [1..10]
   int64_t _ol_delivery_d;  // Current datetime
 };
