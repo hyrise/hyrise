@@ -29,6 +29,8 @@ int main(int argc, char* argv[]) {
     StorageManager::get().add_table(name, table);
   }
 
+  std::cout << "timestamp,procedure,success,duration" << std::endl;
+
   const auto benchmark_begin = std::chrono::high_resolution_clock::now();
 
   std::minstd_rand random_engine;
@@ -38,22 +40,24 @@ int main(int argc, char* argv[]) {
 
     auto procedure_random = procedure_dist(random_engine);
 
+    BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
+
     if (procedure_random < 4) {
-      procedure = std::make_unique<TpccStockLevel>(num_warehouses);
+      procedure = std::make_unique<TpccStockLevel>(num_warehouses, sql_executor);
     } else if (procedure_random < 8) {
-      procedure = std::make_unique<TpccDelivery>(num_warehouses);
+      procedure = std::make_unique<TpccDelivery>(num_warehouses, sql_executor);
     } else if (procedure_random < 12) {
-      procedure = std::make_unique<TpccOrderStatus>(num_warehouses);
+      procedure = std::make_unique<TpccOrderStatus>(num_warehouses, sql_executor);
     } else if (procedure_random < 55) {
-      procedure = std::make_unique<TpccPayment>(num_warehouses);
+      procedure = std::make_unique<TpccPayment>(num_warehouses, sql_executor);
     } else {
-      procedure = std::make_unique<TpccNewOrder>(num_warehouses);
+      procedure = std::make_unique<TpccNewOrder>(num_warehouses, sql_executor);
     }
 
     const auto procedure_begin = std::chrono::high_resolution_clock::now();
-    procedure->execute();
+    const bool success = procedure->execute();
     const auto procedure_end = std::chrono::high_resolution_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - benchmark_begin).count() << "," << procedure->identifier() << "," << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - procedure_begin).count() << std::endl;
+    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - benchmark_begin).count() << ',' << procedure->identifier() << ',' << (success ? '1' : '0') << "," << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - procedure_begin).count() << std::endl;
   }
 
   return 0;

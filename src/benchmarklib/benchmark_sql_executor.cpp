@@ -13,13 +13,12 @@ BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_pt
                                            const std::optional<std::string>& visualize_prefix)
     : _enable_jit(enable_jit),
       _sqlite_wrapper(sqlite_wrapper),
-      _visualize_prefix(visualize_prefix),
-      _transaction_context(TransactionManager::get().new_transaction_context()) {}
+      _visualize_prefix(visualize_prefix) {}
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(const std::string& sql) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
   if (_visualize_prefix) pipeline_builder.dont_cleanup_temporaries();
-  pipeline_builder.with_transaction_context(_transaction_context);
+  if (transaction_context) pipeline_builder.with_transaction_context(transaction_context);
   if (_enable_jit) pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
 
   auto pipeline = pipeline_builder.create_pipeline();
@@ -42,6 +41,24 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   }
 
   return {pipeline_status, result_table};
+}
+
+BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
+  if (transaction_context) {
+    Assert(transaction_context->phase() == TransactionPhase::Committed || transaction_context->phase() == TransactionPhase::RolledBack, "If a transaction is explicitly set, it should either be committed or aborted.");
+  }
+}
+
+void BenchmarkSQLExecutor::commit() {
+  DebugAssert(transaction_context, "Can only explicitly commit transaction if auto-commit is disabled");
+  DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
+  transaction_context->commit();
+}
+
+void BenchmarkSQLExecutor::rollback() {
+  DebugAssert(transaction_context, "Can only explicitly roll back transaction if auto-commit is disabled");
+  DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
+  transaction_context->rollback();
 }
 
 void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {

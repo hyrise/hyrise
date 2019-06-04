@@ -7,11 +7,10 @@ namespace opossum {
 
 class TpccOrderStatus : public AbstractTpccProcedure {
 public:
-  TpccOrderStatus(const int num_warehouses);
+  TpccOrderStatus(const int num_warehouses, BenchmarkSQLExecutor sql_executor);
 
-  void execute() override;
+  [[nodiscard]] bool execute() override;
   char identifier() const override;
-  std::ostream& print(std::ostream& stream = std::cout) const override;
 
 protected:
   // Values generated BEFORE the procedure is executed:

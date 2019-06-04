@@ -5,8 +5,6 @@ set(
 
     tpcc/constants.hpp
     tpcc/defines.hpp
-    tpcc/helper.hpp
-    tpcc/helper.cpp
     tpcc/tpcc_random_generator.hpp
     tpcc/tpcc_table_generator.cpp
     tpcc/tpcc_table_generator.hpp
