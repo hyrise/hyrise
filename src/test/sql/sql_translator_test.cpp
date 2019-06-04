@@ -493,7 +493,8 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
-  const auto actual_lqp = compile_query("SELECT a AS x FROM int_float GROUP BY a");
+  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float GROUP BY a");
+  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float GROUP BY x");
 
   const auto aliases = std::vector<std::string>({"x"});
 
@@ -504,7 +505,8 @@ TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
       stored_table_node_int_float));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
