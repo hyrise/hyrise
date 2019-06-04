@@ -1,6 +1,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "sparsehash/dense_hash_map"
+
 #include "all_type_variant.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/aggregate/aggregate_hashsort_aggregates.hpp"
@@ -199,8 +201,6 @@ struct VariablySizedGroupRun {
   // Number of `data` elements occupied after append_buffer is flushed
   size_t data_watermark{0};
 
-  std::vector<bool> null_values;
-
   // End indices in `data`
   std::vector<size_t> group_end_offsets;
 
@@ -213,7 +213,6 @@ struct VariablySizedGroupRun {
   explicit VariablySizedGroupRun(const VariablySizedGroupRunLayout* layout, const size_t size, const size_t data_size)
       : layout(layout), fixed(&layout->fixed_layout, size) {
     data.resize(data_size);
-    null_values.resize(size * layout->nullable_column_count);
     group_end_offsets.resize(size);
     value_end_offsets.resize(size * layout->column_count);
   }
@@ -252,13 +251,6 @@ struct VariablySizedGroupRun {
       return false;
     }
 
-    // Compare null values
-    const auto own_null_values_iter = null_values.begin() + own_offset * layout->nullable_column_count;
-    const auto other_null_values_iter = other_run.null_values.begin() + other_offset * layout->nullable_column_count;
-    if (!std::equal(own_null_values_iter, own_null_values_iter + layout->nullable_column_count, other_null_values_iter, other_null_values_iter + layout->nullable_column_count)) {
-      return false;
-    }
-
     // Compare the actual data
     const auto own_data_begin_iter = data.begin() + (own_offset == 0 ? 0 : group_end_offsets[own_offset - 1]);
     const auto own_data_end_iter = data.begin() + group_end_offsets[own_offset];
@@ -269,18 +261,18 @@ struct VariablySizedGroupRun {
   }
 
   template <typename T>
-  std::shared_ptr<BaseSegment> materialize_output(const ColumnID column_id, const bool nullable) const {
+  std::shared_ptr<BaseSegment> materialize_output(const ColumnID column_id, const bool column_is_nullable) const {
     const auto& [is_variably_sized, local_column_id, nullable_column_idx] = layout->column_mapping[column_id];
 
     if (!is_variably_sized) {
-      return fixed.materialize_output<T>(ColumnID{local_column_id}, nullable);
+      return fixed.materialize_output<T>(ColumnID{local_column_id}, column_is_nullable);
     }
 
     const auto row_count = fixed.end;
 
     auto output_values = std::vector<pmr_string>(row_count);
     auto output_null_values = std::vector<bool>();
-    if (nullable) {
+    if (column_is_nullable) {
       output_null_values.resize(row_count);
     }
 
@@ -293,12 +285,18 @@ struct VariablySizedGroupRun {
 
       output_values[row_idx] = {source, value_size};
 
-      if (nullable) {
-        output_null_values[row_idx] = null_values[row_idx * layout->nullable_column_count + *nullable_column_idx];
+      if (column_is_nullable) {
+        if (*source != 0) {
+          output_null_values[row_idx] = true;
+        } else {
+          output_values[row_idx] = {source + 1, value_size - 1};          
+        }
+      } else {
+        output_values[row_idx] = {source, value_size};        
       }
     }
 
-    if (nullable) {
+    if (column_is_nullable) {
       return std::make_shared<ValueSegment<pmr_string>>(std::move(output_values), std::move(output_null_values));
     } else {
       return std::make_shared<ValueSegment<pmr_string>>(std::move(output_values));
@@ -309,10 +307,6 @@ struct VariablySizedGroupRun {
     auto end = fixed.end;
 
     for (const auto source_offset : fixed.append_buffer()) {
-      // Copy null values
-      const auto source_null_values_iter = source.null_values.begin() + source_offset * layout->nullable_column_count;
-      std::copy(source_null_values_iter, source_null_values_iter + layout->nullable_column_count, null_values.begin() + end * layout->nullable_column_count);
-
       // Copy intra-group layout
       const auto source_value_end_offsets_iter = source.value_end_offsets.begin() + source_offset * layout->column_count;
       std::copy(source_value_end_offsets_iter, source_value_end_offsets_iter + layout->column_count, value_end_offsets.begin() + end * layout->column_count);
@@ -343,7 +337,6 @@ struct VariablySizedGroupRun {
     fixed.finish();
     group_end_offsets.resize(fixed.end);
     value_end_offsets.resize(fixed.end * layout->column_count);
-    null_values.resize(fixed.end * layout->nullable_column_count);
     data.resize(fixed.end == 0 ? 0 : group_end_offsets.back());
   }
 };
@@ -547,14 +540,50 @@ std::pair<bool, std::vector<Partition<GroupRun>>> hashing(const AggregateHashSor
                                                           size_t& run_offset) {
   auto partitions = std::vector<Partition<GroupRun>>(partitioning.partition_count);
 
-  const auto hash_fn = [&](const auto& key) { return run_source.runs[key.first].groups.hash(key.second); };
+#if 1
+  auto hash_fn = [&](const auto& key) { return run_source.runs[key.first].groups.hash(key.second); };
 
-  const auto compare_fn = [&](const auto& lhs, const auto& rhs) {
+  auto compare_fn = [&](const auto& lhs, const auto& rhs) {
     return run_source.runs[lhs.first].groups.compare(lhs.second, run_source.runs[rhs.first].groups, rhs.second);
   };
 
   auto hash_table = std::unordered_map<std::pair<size_t, size_t>, size_t, decltype(hash_fn), decltype(compare_fn)>{
       config.hash_table_size, hash_fn, compare_fn};
+#else
+  using HashTableKey = std::pair<size_t, size_t>;
+
+  constexpr static auto EMPTY_KEY = std::make_pair(std::numeric_limits<size_t>::max(), size_t{0});
+
+  struct Hasher {
+    AbstractRunSource<GroupRun>* run_source{};
+    size_t operator()(const HashTableKey& key) const {
+      //std::cout << "Hash: " << key.first << " " << key.second << std::endl;
+      if (key.first == EMPTY_KEY.first) return 0;
+      return run_source->runs[key.first].groups.hash(key.second);
+    }
+  };
+
+  struct EqualTo {
+    AbstractRunSource<GroupRun>* run_source{};
+    bool operator()(const HashTableKey& lhs, const HashTableKey& rhs) const {
+      //std::cout << "EqualTo: " << lhs.first << " " << lhs.second << " vs "  << rhs.first << " " << rhs.second << std::endl;
+      if (lhs.first == EMPTY_KEY.first && rhs.first == EMPTY_KEY.first) return true;
+      if (lhs.first == EMPTY_KEY.first || rhs.first == EMPTY_KEY.first) return false;
+
+      return run_source->runs[lhs.first].groups.compare(lhs.second, run_source->runs[rhs.first].groups, rhs.second);
+    }
+  };
+
+  auto hasher = Hasher{&run_source};
+  auto equal_to = EqualTo{&run_source};
+
+  auto hash_table = google::dense_hash_map<std::pair<size_t, size_t>, size_t, Hasher, EqualTo>{
+  static_cast<size_t>(config.hash_table_size *  config.hash_table_max_load_factor), hasher, equal_to};
+  hash_table.set_empty_key(EMPTY_KEY);
+  hash_table.min_load_factor(0.0f);
+#endif
+
+  hash_table.max_load_factor(1.0f);
 
   auto counter = size_t{0};
   auto continue_hashing = true;
@@ -572,7 +601,7 @@ std::pair<bool, std::vector<Partition<GroupRun>>> hashing(const AggregateHashSor
       auto& partition = partitions[partition_idx];
       auto hash_table_iter = hash_table.find({run_idx, run_offset});
       if (hash_table_iter == hash_table.end()) {
-        hash_table.emplace(std::pair{run_idx, run_offset}, partition.group_key_counter);
+        hash_table.insert(std::pair{std::pair{run_idx, run_offset}, partition.group_key_counter});
         partition.append(input_run, run_offset);
         ++partition.group_key_counter;
       } else {
@@ -581,6 +610,7 @@ std::pair<bool, std::vector<Partition<GroupRun>>> hashing(const AggregateHashSor
 
       ++counter;
 
+      //std::cout << "Load factor: " << hash_table.load_factor() << std::endl;
       if (hash_table.load_factor() >= config.hash_table_max_load_factor) {
         if (static_cast<float>(counter) / hash_table.size() < 3) {
           continue_hashing = false;
@@ -806,7 +836,7 @@ inline std::pair<FixedSizeGroupRun, RowID> produce_initial_groups(const std::sha
 
   group_run.end = row_count;
 
-  return {group_run, end_row_id};
+  return {std::move(group_run), end_row_id};
 }
 
 inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
@@ -817,7 +847,7 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
     const size_t row_budget,
     const size_t per_column_data_budget_bytes) {
 
-  constexpr auto BLOB_DATA_TYPE_SIZE = sizeof(VariablySizedGroupRun::DataElementType);
+  constexpr auto DATA_ELEMENT_SIZE = sizeof(VariablySizedGroupRun::DataElementType);
 
   Assert(row_budget > 0, "");
   Assert(!layout->variably_sized_column_ids.empty(), "FixedGroupRun should be used if there are no variably sized columns");
@@ -833,11 +863,10 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
    *    - determine the layout of the interleaved layout in the final VariablySizedGroupRun (`value_end_offsets`)
    *    - materialize `null_values`
    */
-  auto null_values = std::vector<bool>(row_budget * layout->nullable_column_count);
   auto value_end_offsets = std::vector<size_t>(row_budget * column_count);
   auto data_per_column = std::vector<std::vector<VariablySizedGroupRun::DataElementType>>(column_count);
 
-  const auto per_column_element_budget = divide_and_ceil(per_column_data_budget_bytes, BLOB_DATA_TYPE_SIZE);
+  const auto per_column_element_budget = divide_and_ceil(per_column_data_budget_bytes, DATA_ELEMENT_SIZE);
 
   {
     auto nullable_column_idx = size_t{0};
@@ -851,10 +880,9 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
 
       auto column_row_count = size_t{0};
       auto column_remaining_data_budget_bytes = per_column_data_budget_bytes;
-      auto* column_data_pointer = reinterpret_cast<char*>(column_data.data());
+      auto* target = reinterpret_cast<char*>(column_data.data());
 
       auto value_end_offsets_iter = value_end_offsets.begin() + column_id;
-      auto null_values_iter = column_is_nullable ? null_values.begin() + nullable_column_idx : null_values.end();
 
       auto column_end_row_id = begin_row_id;
 
@@ -867,28 +895,43 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
           return ColumnIteration::Break;
         }
 
-        const auto previous_value_end = column_id == 0 ? 0 : *(value_end_offsets_iter - 1);
-        *value_end_offsets_iter =
-        previous_value_end + (segment_position.is_null() ? 0 : segment_position.value().size());
-        value_end_offsets_iter += column_count;
-
+        const auto& value = segment_position.value();
+        
+        // Determine `value_size`
+        auto value_size = size_t{};
         if (column_is_nullable) {
-          *null_values_iter = segment_position.is_null();
-          null_values_iter += layout->nullable_column_count;
-        }
-
-        if (!segment_position.is_null()) {
-          const auto& value = segment_position.value();
-
-          if (value.size() > column_remaining_data_budget_bytes) {
-            return ColumnIteration::Break;
+          if (segment_position.is_null()) {
+            value_size = 1;
+          } else {
+            value_size = 1 + value.size();
           }
-
-          memcpy(column_data_pointer, value.data(), value.size());
-          column_data_pointer += value.size();
-
-          column_remaining_data_budget_bytes -= value.size();
+        } else {
+          value_size = value.size();
         }
+        
+        if (value_size > column_remaining_data_budget_bytes) {
+          return ColumnIteration::Break;
+        }
+
+        // Set `value_end_offsets`
+        const auto previous_value_end = column_id == 0 ? 0 : *(value_end_offsets_iter - 1);
+        *value_end_offsets_iter = previous_value_end + value_size;
+        value_end_offsets_iter += column_count;        
+        
+        // Write `column_data`
+        if (column_is_nullable) {
+          if (segment_position.is_null()) {
+            *target = 1;
+          } else {
+            *target = 0;
+            memcpy(target + 1, value.data(), value_size - 1);
+          }
+        } else {
+          memcpy(target, value.data(), value_size);
+        }
+        
+        target += value_size;
+        column_remaining_data_budget_bytes -= value_size;
 
         ++column_row_count;
 
@@ -907,9 +950,7 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
       }
     }
   }
-
-
-  null_values.resize(run_row_count * layout->nullable_column_count);
+  
   value_end_offsets.resize(run_row_count * layout->column_count);
 
   /**
@@ -919,8 +960,8 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
   auto previous_group_end_offset = size_t{0};
   auto value_end_offset_iter = value_end_offsets.begin() + (column_count - 1);
   for (auto row_idx = size_t{0}; row_idx < run_row_count; ++row_idx) {
-    // Round up to a full BLOB_DATA_TYPE_SIZE
-    const auto group_element_count = *value_end_offset_iter / BLOB_DATA_TYPE_SIZE + (*value_end_offset_iter % BLOB_DATA_TYPE_SIZE > 0 ? 1 : 0);
+    // Round up to a full DATA_ELEMENT_SIZE
+    const auto group_element_count = *value_end_offset_iter / DATA_ELEMENT_SIZE + (*value_end_offset_iter % DATA_ELEMENT_SIZE > 0 ? 1 : 0);
 
     previous_group_end_offset += group_element_count;
 
@@ -943,23 +984,10 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
 
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     auto& column_data = data_per_column[column_id];
-    const auto group_by_column_id = layout->variably_sized_column_ids[column_id];
-    const auto column_is_nullable = table->column_is_nullable(group_by_column_id);
-    auto nullable_column_idx = size_t{0};
-
-    auto null_values_iter = column_is_nullable ? null_values.begin() + nullable_column_idx : null_values.end();
 
     auto* source = reinterpret_cast<char*>(column_data.data());
 
     for (auto row_idx = size_t{0}; row_idx < run_row_count; ++row_idx) {
-      if (column_is_nullable) {
-        if (*null_values_iter) {
-          null_values_iter += layout->nullable_column_count;
-          boost::hash_combine(group_run.fixed.hashes[row_idx], 0);
-          continue;
-        }
-      }
-
       const auto group_begin_offset = row_idx == 0 ? 0 : group_end_offsets[row_idx - 1];
       const auto value_begin_offset = column_id == 0 ? 0 : value_end_offsets[row_idx * column_count + column_id - 1];
       auto* target = &reinterpret_cast<char*>(&group_data[group_begin_offset])[value_begin_offset];
@@ -977,11 +1005,10 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
   }
 
   group_run.data = std::move(group_data);
-  group_run.null_values = std::move(null_values);
   group_run.group_end_offsets = std::move(group_end_offsets);
   group_run.value_end_offsets = std::move(value_end_offsets);
 
-  return {group_run, end_row_id};
+  return {std::move(group_run), end_row_id};
 }
 
 // Wraps a Table from which the runs are materialized
@@ -1007,7 +1034,7 @@ struct TableRunSource : public AbstractRunSource<GroupRun> {
 };
 
 template<> inline void TableRunSource<FixedSizeGroupRun>::fetch_run() {
-  const auto run_row_count = std::min(remaining_rows, size_t{800'000});
+  const auto run_row_count = std::min(remaining_rows, size_t{300'000});
   remaining_rows -= run_row_count;
 
   auto pair = produce_initial_groups(table, layout, groupby_column_ids, begin_row_id, run_row_count);
@@ -1018,8 +1045,8 @@ template<> inline void TableRunSource<FixedSizeGroupRun>::fetch_run() {
 }
 
 template<> inline void TableRunSource<VariablySizedGroupRun>::fetch_run() {
-  const auto run_row_budget = std::min(remaining_rows, size_t{800'000});
-  const auto run_group_data_budget = std::max(size_t{128}, run_row_budget * 4u);
+  const auto run_row_budget = std::min(remaining_rows, size_t{300'000});
+  const auto run_group_data_budget = std::max(size_t{128}, run_row_budget * 7u);
 
   auto pair = produce_initial_groups(table, layout, groupby_column_ids, begin_row_id, run_row_budget, run_group_data_budget);
   auto input_aggregates = produce_initial_aggregates(table, aggregate_column_definitions, !groupby_column_ids.empty(), begin_row_id, pair.first.size());

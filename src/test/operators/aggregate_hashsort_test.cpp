@@ -54,22 +54,6 @@ void add_group_data(std::vector<ElementType>& data, const Args&&... args) {
   (append(args), ...);
 }
 
-template <typename S>
-uint32_t lower_word(const S& s) {
-  static_assert(sizeof(S) == 8);
-  uint32_t t;
-  memcpy(&t, &s, 4);
-  return t;
-}
-
-template <typename S>
-uint32_t upper_word(const S& s) {
-  static_assert(sizeof(S) == 8);
-  uint32_t t;
-  memcpy(&t, &reinterpret_cast<const char*>(&s)[4], 4);
-  return t;
-}
-
 VariablySizedGroupRun::DataElementType chars_to_blob_element(const std::string& chars) {
   Assert(chars.size() <= sizeof(VariablySizedGroupRun::DataElementType), "Invalid string size");
 
@@ -158,12 +142,13 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
   add_group_data(variably_sized_run.data, false, "aaa"s, false, "bbbb"s);
   add_group_data(variably_sized_run.data, false, "ccccc"s, true, ""s);
   add_group_data(variably_sized_run.data, true,  ""s, false, "d"s);
-  variably_sized_run.group_end_offsets = {9, 18, 25, 28};
+  variably_sized_run.group_end_offsets = {3, 6, 8, 9};
   variably_sized_run.value_end_offsets = {4, 9, 4, 9, 6, 7, 1, 3};
   add_group_data(variably_sized_run.fixed.data, int32_t{0});
   add_group_data(variably_sized_run.fixed.data, int32_t{0});
   add_group_data(variably_sized_run.fixed.data, int32_t{1});
   add_group_data(variably_sized_run.fixed.data, int32_t{1});
+  variably_sized_run.fixed.end = 4;
 
   EXPECT_TRUE(variably_sized_run.compare(0, variably_sized_run, 1));
   EXPECT_FALSE(variably_sized_run.compare(0, variably_sized_run, 2));
@@ -251,29 +236,22 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited
 
   // clang-format off
   auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::DataElementType>();
-  add_group_data(expected_variably_sized_group_data, "yabcdbcdef"s);
-  add_group_data(expected_variably_sized_group_data, "xyiiii"s);
-  // NULL, "", NULL is a group without data
-  add_group_data(expected_variably_sized_group_data, "jjjcccoof"s);
+  add_group_data(expected_variably_sized_group_data, false, "y"s, "abcd"s, false, "bcdef"s);
+  add_group_data(expected_variably_sized_group_data, false, "xy"s, "iiii"s, true, ""s);
+  add_group_data(expected_variably_sized_group_data, true, ""s, ""s, true, ""s);
+  add_group_data(expected_variably_sized_group_data, false, "jjj"s, "ccc"s, false, "oof"s);
   // clang-format on
 
   EXPECT_EQ(groups.data, expected_variably_sized_group_data);
 
   // clang-format off
-  EXPECT_EQ(groups.null_values, std::vector<bool>({
-    false, false,
-    false, true,
-    true, true,
-    false, false
-  }));
-
-  EXPECT_EQ(groups.group_end_offsets, std::vector<size_t>({3, 5, 5, 8}));
+  EXPECT_EQ(groups.group_end_offsets, std::vector<size_t>({3, 5, 6, 9}));
 
   EXPECT_EQ(groups.value_end_offsets, std::vector<size_t>({
-    1, 5, 10,
-    2, 6, 6,
-    0, 0, 0,
-    3, 6, 9
+    2, 6, 12,
+    3, 7, 8,
+    1, 1, 2,
+    4, 7, 11
   }));
   // clang-format on
 
@@ -281,10 +259,10 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited
 
   // clang-format off
   auto expected_fixed_group_data = std::vector<FixedSizeGroupRun::DataElementType>{};
-  add_group_data(expected_fixed_group_data, false, 13, lower_word(int64_t{14}), upper_word(int64_t{14}));
-  add_group_data(expected_fixed_group_data, true, 0, lower_word(int64_t{15}), upper_word(int64_t{15}));
-  add_group_data(expected_fixed_group_data, true, 0, lower_word(int64_t{16}), upper_word(int64_t{16}));
-  add_group_data(expected_fixed_group_data, true, 0, lower_word(int64_t{17}), upper_word(int64_t{17}));
+  add_group_data(expected_fixed_group_data, false, 13, int64_t{14});
+  add_group_data(expected_fixed_group_data, true, 0, int64_t{15});
+  add_group_data(expected_fixed_group_data, true, 0, int64_t{16});
+  add_group_data(expected_fixed_group_data, true, 0, int64_t{17});
   // clang-format on
 
   EXPECT_EQ(groups.fixed.data, expected_fixed_group_data);
@@ -303,34 +281,27 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedRowBudgetLimited)
 
   // clang-format off
   auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::DataElementType>();
-  add_group_data(expected_variably_sized_group_data, "yabcdbcdef"s);
-  add_group_data(expected_variably_sized_group_data, "xyiiii"s);
-  // NULL, "", NULL is a group without data
-  add_group_data(expected_variably_sized_group_data, "jjjcccoof"s);
+  add_group_data(expected_variably_sized_group_data, false, "y"s, "abcd"s, false, "bcdef"s);
+  add_group_data(expected_variably_sized_group_data, false, "xy"s, "iiii"s, true, ""s);
+  add_group_data(expected_variably_sized_group_data, true, ""s, ""s, true, ""s);
+  add_group_data(expected_variably_sized_group_data, false, "jjj"s, "ccc"s, false, "oof"s);
   // clang-format on
 
   EXPECT_EQ(groups.data, expected_variably_sized_group_data);
 
   // clang-format off
-  EXPECT_EQ(groups.null_values, std::vector<bool>({
-    false, false,
-    false, true,
-    true, true,
-    false, false
-  }));
-
-  EXPECT_EQ(groups.group_end_offsets, std::vector<size_t>({3, 5, 5, 8}));
+  EXPECT_EQ(groups.group_end_offsets, std::vector<size_t>({3, 5, 6, 9}));
 
   EXPECT_EQ(groups.value_end_offsets, std::vector<size_t>({
-    1, 5, 10,
-    2, 6, 6,
-    0, 0, 0,
-    3, 6, 9
+    2, 6, 12,
+    3, 7, 8,
+    1, 1, 2,
+    4, 7, 11
   }));
   // clang-format on
 
   EXPECT_EQ(groups.fixed.hashes.size(), 4u);
-  EXPECT_EQ(groups.fixed.data, std::vector<uint32_t>());
+  EXPECT_EQ(groups.fixed.data, std::vector<FixedSizeGroupRun::DataElementType>());
   EXPECT_EQ(groups.fixed.end, 4);
 }
 
@@ -346,21 +317,14 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedTableSizeLimitted
 
   // clang-format off
   auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::DataElementType>();
-  add_group_data(expected_variably_sized_group_data, "bbddd"s);
+  add_group_data(expected_variably_sized_group_data, false, "bb"s, "ddd"s, true, ""s);
   // clang-format on
 
   EXPECT_EQ(groups.data, expected_variably_sized_group_data);
-
   // clang-format off
-  EXPECT_EQ(groups.null_values, std::vector<bool>({
-    false, true
-  }));
 
   EXPECT_EQ(groups.group_end_offsets, std::vector<size_t>({2}));
-
-  EXPECT_EQ(groups.value_end_offsets, std::vector<size_t>({
-    2, 5, 5
-  }));
+  EXPECT_EQ(groups.value_end_offsets, std::vector<size_t>({3, 6, 7}));
   // clang-format on
 
   EXPECT_EQ(groups.fixed.hashes.size(), 1u);
@@ -515,12 +479,12 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
     4, 4, 4,
     6, 9, 13
   };
-  groups.null_values = {
-    false, false,
-    false, false,
-    true, true,
-    false, false
-  };
+//  groups.null_values = {
+//    false, false,
+//    false, false,
+//    true, true,
+//    false, false
+//  };
   groups.fixed.hashes = {0b1, 0b0, 0b0, 0b1};
   groups.fixed.end = 4;
   // clang-format on
@@ -557,7 +521,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.data, partition_0_expected_data);
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.group_end_offsets, std::vector<size_t>({3, 4}));
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.value_end_offsets, std::vector<size_t>({4, 6, 11, 4, 4, 4}));
-  EXPECT_EQ(partitions.at(0).runs.at(0).groups.null_values, std::vector<bool>({false, false, true, true}));
+//  EXPECT_EQ(partitions.at(0).runs.at(0).groups.null_values, std::vector<bool>({false, false, true, true}));
 
   // clang-format off
   const auto partition_1_expected_data = std::vector<VariablySizedGroupRun::DataElementType>{
@@ -568,7 +532,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.data, partition_1_expected_data);
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.group_end_offsets, std::vector<size_t>({4, 7}));
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.value_end_offsets, std::vector<size_t>({5, 10, 14, 6, 9, 13}));
-  EXPECT_EQ(partitions.at(1).runs.at(0).groups.null_values, std::vector<bool>({false, false, false, false}));
+//  EXPECT_EQ(partitions.at(1).runs.at(0).groups.null_values, std::vector<bool>({false, false, false, false}));
 }
 
 TEST_F(AggregateHashSortTest, HashingFixed) {
@@ -656,7 +620,6 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
     5,
     5
   };
-  groups.null_values = {};
   groups.fixed.hashes = {0b0, 0b1, 0b1};
   // clang-format on
 
@@ -692,7 +655,6 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.data, partition_0_expected_data);
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.group_end_offsets, std::vector<size_t>({2}));
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.value_end_offsets, std::vector<size_t>({5}));
-  EXPECT_EQ(partitions.at(0).runs.at(0).groups.null_values, std::vector<bool>({}));
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.fixed.hashes, std::vector<size_t>({0b0}));
 
   // clang-format off
@@ -704,7 +666,6 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.data, partition_1_expected_data);
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.group_end_offsets, std::vector<size_t>({2}));
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.value_end_offsets, std::vector<size_t>({5}));
-  EXPECT_EQ(partitions.at(1).runs.at(0).groups.null_values, std::vector<bool>({}));
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.fixed.hashes, std::vector<size_t>({0b1}));
 }
 

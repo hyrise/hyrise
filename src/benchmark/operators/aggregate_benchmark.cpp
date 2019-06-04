@@ -123,11 +123,15 @@ void BM_Aggregate(benchmark::State& state, const AggregateBenchmarkConfig& confi
   auto aggregates = std::vector<AggregateColumnDefinition>{};
 
   auto row_count = size_t{0};
+  auto chunk_count = size_t{0};
   for (auto _ : state) {
     const auto aggregate_op = std::make_shared<AggregateHashSort>(table_op, aggregates, group_by_column_ids);
     aggregate_op->execute();
     row_count = aggregate_op->get_output()->row_count();
+    chunk_count = aggregate_op->get_output()->chunk_count();
   }
+
+  std::cout << "Chunk count: " << chunk_count << std::endl;
 }
 
 // clang-format off
@@ -136,13 +140,15 @@ BENCHMARK_CAPTURE(BM_Aggregate, BM_10kR_5kG_is, AggregateBenchmarkConfig(10'000,
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_5G_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 4}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_5kG_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 4'999}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_500kG_i, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 499'999}}));
+BENCHMARK_CAPTURE(BM_Aggregate, BM_50mR_10mG_i, AggregateBenchmarkConfig(50'000'000, {{DataType::Int, 10'000'000}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_9G_li, AggregateBenchmarkConfig(10'000'000, {{DataType::Long, 2}, {DataType::Int, 2}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_5kG_li, AggregateBenchmarkConfig(10'000'000, {{DataType::Long, 70}, {DataType::Int, 70}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_500kG_li, AggregateBenchmarkConfig(10'000'000, {{DataType::Long, 707}, {DataType::Int, 707}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_10mR_500kG_ili, AggregateBenchmarkConfig(10'000'000, {{DataType::Int, 80}, {DataType::Long, 79}, {DataType::Int, 80}}));
-BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500kG_ilss, AggregateBenchmarkConfig(1'000'000, {{DataType::Int, 35}, {DataType::Long, 35}, {DataType::String, 35}, {DataType::String, 35}}));
-BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500kG_ss, AggregateBenchmarkConfig(1'000'000, {{DataType::String, 1'000}, {DataType::String, 1'000}}));
+BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500kG_ilss, AggregateBenchmarkConfig(1'000'000, {{DataType::Int, 34}, {DataType::Long, 34}, {DataType::String, 35}, {DataType::String, 35}}));
+BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500kG_ss, AggregateBenchmarkConfig(1'000'000, {{DataType::String, 1'200}, {DataType::String, 1'200}}));
 BENCHMARK_CAPTURE(BM_Aggregate, BM_1mR_500G_ss, AggregateBenchmarkConfig(1'000'000, {{DataType::String, 22}, {DataType::String, 22}}));
+BENCHMARK_CAPTURE(BM_Aggregate, BM_20mR_4mG_is, AggregateBenchmarkConfig(20'000'000, {{DataType::Int, 2'100}, {DataType::String, 2'100}}));
 // clang-format on
 
 }  // namespace opossum

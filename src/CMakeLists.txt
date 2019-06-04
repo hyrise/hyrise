@@ -97,6 +97,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/cqf/include
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
     ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
+    ${PROJECT_SOURCE_DIR}/third_party/sparsehash-c11
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/lz4
     ${PROJECT_SOURCE_DIR}/third_party/zstd
