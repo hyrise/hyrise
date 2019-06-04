@@ -7,11 +7,6 @@
 namespace opossum {
 
 namespace {
-template <typename T>
-std::optional<T> get_optional_from_table(const Table& table, ColumnID x, ChunkOffset y) {
-  return std::static_pointer_cast<ValueSegment<T>>(table.get_chunk(ChunkID{0})->get_segment(x))->get_typed_value(y);
-}
-
 const auto types = boost::hana::tuple<int32_t, std::optional<float>, pmr_string>();
 const auto names = boost::hana::make_tuple("a", "b", "c");
 }  // namespace
