@@ -44,7 +44,7 @@ class SQLIdentifierResolver final {
    * @return    The SQLIdentifiers, or std::nullopt if the expression has no identifiers associated with it
    */
   const std::vector<SQLIdentifier> get_expression_identifiers(
-      const std::shared_ptr<AbstractExpression>& expression) const;
+      const std::shared_ptr<AbstractExpression>& expression);
 
   /**
    * @return   The column expressions of a table/subquery identified by @param table_name.
