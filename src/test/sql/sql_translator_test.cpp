@@ -477,7 +477,7 @@ TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
 }
 
 TEST_F(SQLTranslatorTest, AliasWithWhere) {
-  const auto actual_lqp = compile_query("SELECT a AS x FROM int_float WHERE a > 10");
+  const auto actual_lqp = compile_query("SELECT a AS x FROM int_float WHERE a > 5");
 
   const auto aliases = std::vector<std::string>({"x"});
 
@@ -485,8 +485,25 @@ TEST_F(SQLTranslatorTest, AliasWithWhere) {
   const auto expected_lqp =
   AliasNode::make(expression_vector(int_float_a), aliases,
     ProjectionNode::make(expression_vector(int_float_a),
-      PredicateNode::make(greater_than_(int_float_a, value_(10)),
+      PredicateNode::make(greater_than_(int_float_a, value_(5)),
         stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AliasWithWhereColumnsSwitchNames) {
+  // Tricky: Columns "switch names". a becomes b and b becomes a
+
+  const auto actual_lqp = compile_query("SELECT a AS b, b AS a FROM int_float WHERE a > 5");
+
+  const auto aliases = std::vector<std::string>({"b", "a"});
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
+    PredicateNode::make(greater_than_(int_float_a, value_(5)),
+      stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -526,15 +543,15 @@ TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
 }
 
 TEST_F(SQLTranslatorTest, AliasWithGroupByAndHaving) {
-  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING a > 10");
-  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING x > 10");
+  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING a > 5");
+  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING x > 5");
 
   const auto aliases = std::vector<std::string>({"x"});
 
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(expression_vector(int_float_a), aliases,
-    PredicateNode::make(greater_than_(int_float_a, value_(10)),
+    PredicateNode::make(greater_than_(int_float_a, value_(5)),
       AggregateNode::make(expression_vector(int_float_a), expression_vector(),
         stored_table_node_int_float)));
   // clang-format on
@@ -1975,7 +1992,8 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"),
                InvalidInputException);  // NOLINT
   EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT a AS x FROM int_float WHERE x > 10"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT a AS x FROM int_float WHERE x > 5"), InvalidInputException);
+  // EXPECT_THROW(compile_query("SELECT a AS b FROM int_float WHERE b > 5"), InvalidInputException);
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM int_float LIMIT 1 OFFSET 1;"), InvalidInputException);
