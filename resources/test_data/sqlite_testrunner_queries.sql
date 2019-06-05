@@ -99,7 +99,8 @@ SELECT a AS x, SUM(b) FROM mixed GROUP BY a;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING a > 10;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
-SELECT a AS b, b AS a FROM mixed WHERE a > 5;
+--SELECT a AS b, b AS a FROM mixed WHERE a > 5;
+--SELECT a + 5 AS a FROM mixed WHERE a > 90
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
@@ -130,7 +131,7 @@ SELECT * FROM mixed NATURAL JOIN (SELECT id FROM id_int_int_int_100) AS T2;
 SELECT * FROM mixed NATURAL JOIN (SELECT c AS foo, id FROM id_int_int_int_100) AS T2;
 SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mixed AS "right" ON "left".a = "right".a) t where t.a > 0;
 SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5;
-SELECT l.id, r.id + 10 AS a FROM (SELECT id + 5 AS id FROM mixed WHERE id > 90) AS l LEFT JOIN mixed AS r ON l.id = r.id
+SELECT l.new_id, r.id + 10 AS a FROM (SELECT id + 5 AS new_id FROM mixed WHERE new_id > 90) AS l LEFT JOIN mixed AS r ON l.new_id = r.id
 SELECT (SELECT r.id AS a FROM (SELECT id + 5 AS id FROM mixed) AS l LEFT JOIN mixed AS r ON l.id = r.id WHERE l.id >= 100 LIMIT 1) + 5 AS a
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a < t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
@@ -143,7 +144,7 @@ SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a <= t2.a AND t1.b = t2.b AND t1.c > t2.c;
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a >= t2.a AND t1.b = t2.b AND t1.c < t2.c;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
-SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b < t2.b;
+--SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b < t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b <= t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b > t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b >= t2.b;

@@ -214,6 +214,25 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
     _sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   }
 
+  // Build the select_list_elements
+  // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
+  // Create an SQLIdentifierResolver that knows the aliases
+  std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
+  auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
+  for (const auto& hsql_select_expr : *select.selectList) {
+    if (hsql_select_expr->type == hsql::kExprStar) {
+      select_list_elements.emplace_back(nullptr);
+    } else {
+      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
+      select_list_elements.emplace_back(expression);
+
+      if (hsql_select_expr->alias) {
+        post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
+      }
+    }
+  }
+  _sql_identifier_resolver = post_select_sql_identifier_resolver;
+
   // Translate WHERE
   if (select.whereClause) {
     const auto where_expression = _translate_hsql_expr(*select.whereClause, _sql_identifier_resolver);
@@ -221,7 +240,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent
-  _translate_select_list_groupby_having(select);
+  _translate_select_list_groupby_having(select, select_list_elements);
 
   // Translate ORDER BY and LIMIT
   if (select.order) _translate_order_by(*select.order);
@@ -744,7 +763,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
   return result_table_source_state;
 }
 
-void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStatement& select) {
+void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStatement& select,
+    const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) {
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
@@ -775,24 +795,12 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
     return ExpressionVisitation::DoNotVisitArguments;
   };
 
-  // Identify all Aggregates and their arguments needed for SELECT and build the select_list_elements
-  // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
-  std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
-  auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
-  for (const auto& hsql_select_expr : *select.selectList) {
-    if (hsql_select_expr->type == hsql::kExprStar) {
-      select_list_elements.emplace_back(nullptr);
-    } else {
-      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
+  // Identify all Aggregates and their arguments needed for SELECT
+  for (const auto& expression : select_list_elements) {
+    if (expression) {
       visit_expression(expression, find_aggregates_and_arguments);
-      select_list_elements.emplace_back(expression);
-
-      if (hsql_select_expr->alias) {
-        post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
-      }
     }
   }
-  _sql_identifier_resolver = post_select_sql_identifier_resolver;
 
   // Identify all GROUP BY expressions
   auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};

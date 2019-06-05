@@ -477,7 +477,8 @@ TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
 }
 
 TEST_F(SQLTranslatorTest, AliasWithWhere) {
-  const auto actual_lqp = compile_query("SELECT a AS x FROM int_float WHERE a > 5");
+  const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float WHERE a > 5");
+  const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float WHERE x > 5");
 
   const auto aliases = std::vector<std::string>({"x"});
 
@@ -489,24 +490,8 @@ TEST_F(SQLTranslatorTest, AliasWithWhere) {
         stored_table_node_int_float)));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(SQLTranslatorTest, AliasWithWhereColumnsSwitchNames) {
-  // Tricky: Columns "switch names". a becomes b and b becomes a
-
-  const auto actual_lqp = compile_query("SELECT a AS b, b AS a FROM int_float WHERE a > 5");
-
-  const auto aliases = std::vector<std::string>({"b", "a"});
-
-  // clang-format off
-  const auto expected_lqp =
-  AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
-    PredicateNode::make(greater_than_(int_float_a, value_(5)),
-      stored_table_node_int_float));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
@@ -1294,9 +1279,9 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(int_float_a, placeholder_(ParameterID{1})),
-                                         placeholder_(ParameterID{2})),
-    PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{0})),
+  ProjectionNode::make(expression_vector(add_(int_float_a, placeholder_(ParameterID{0})),
+                                         placeholder_(ParameterID{1})),
+    PredicateNode::make(greater_than_(int_float_a, placeholder_(ParameterID{2})),
       stored_table_node_int_float));
   // clang-format on
 
@@ -1394,20 +1379,20 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(query);
 
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
-  EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
-  EXPECT_EQ(parameter_ids_of_value_placeholders.at(1), ParameterID{3});
-  EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{5});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{1});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(1), ParameterID{2});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{4});
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{0});
-  EXPECT_EQ(parameter_ids_of_value_placeholders.at(4), ParameterID{1});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(4), ParameterID{6});
 
-  const auto placeholder_0 = placeholder_(ParameterID{2});
-  const auto placeholder_1 = placeholder_(ParameterID{3});
-  const auto placeholder_2 = placeholder_(ParameterID{5});
+  const auto placeholder_0 = placeholder_(ParameterID{1});
+  const auto placeholder_1 = placeholder_(ParameterID{2});
+  const auto placeholder_2 = placeholder_(ParameterID{4});
   const auto placeholder_3 = placeholder_(ParameterID{0});
-  const auto placeholder_4 = placeholder_(ParameterID{1});
+  const auto placeholder_4 = placeholder_(ParameterID{6});
 
-  const auto parameter_int_float2_a = correlated_parameter_(ParameterID{4}, int_float2_a);
-  const auto parameter_int_float2_b = correlated_parameter_(ParameterID{6}, int_float2_b);
+  const auto parameter_int_float2_a = correlated_parameter_(ParameterID{3}, int_float2_a);
+  const auto parameter_int_float2_b = correlated_parameter_(ParameterID{5}, int_float2_b);
 
   // clang-format off
 
@@ -1415,8 +1400,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   const auto subquery_a_lqp =
   ProjectionNode::make(expression_vector(add_(add_(parameter_int_float2_a, placeholder_2), parameter_int_float2_b)),
     DummyTableNode::make());
-  const auto subquery_a = lqp_subquery_(subquery_a_lqp, std::make_pair(ParameterID{6}, int_float2_b),
-    std::make_pair(ParameterID{4}, int_float2_a));
+  const auto subquery_a = lqp_subquery_(subquery_a_lqp, std::make_pair(ParameterID{5}, int_float2_b),
+    std::make_pair(ParameterID{3}, int_float2_a));
 
   // (SELECT ? + MAX(b) + (subquery_a) FROM int_float2)
   const auto subquery_b_lqp =
@@ -1994,9 +1979,9 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"),
                InvalidInputException);  // NOLINT
   EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT a AS x FROM int_float WHERE x > 5"), InvalidInputException);
-  // EXPECT_THROW(compile_query("SELECT a AS b FROM int_float WHERE b > 5"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT a AS b FROM int_float WHERE b > 5"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT a AS x FROM int_float GROUP BY int_float.x"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT a AS b, b AS a FROM int_float WHERE a > 5"), InvalidInputException);;
   EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT a, SUM(b) FROM int_float GROUP BY a HAVING b > 10;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM int_float LIMIT 1 OFFSET 1;"), InvalidInputException);
