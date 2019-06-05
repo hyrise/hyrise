@@ -806,7 +806,8 @@ TEST_F(LQPTranslatorTest, CreateTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, true);
 
-  const auto lqp = CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
+  const auto lqp =
+      CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
@@ -814,6 +815,9 @@ TEST_F(LQPTranslatorTest, CreateTable) {
 
   const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
   EXPECT_EQ(create_table->table_name, "t");
+
+  // CreateTable input must be executed to enable access to column definitions
+  create_table->mutable_input_left()->execute();
   EXPECT_EQ(create_table->column_definitions(), column_definitions);
 }
 

@@ -40,7 +40,8 @@ TEST_F(CreateTableNodeTest, Equals) {
 
   TableColumnDefinitions different_column_definitions;
   different_column_definitions.emplace_back("a", DataType::Int, false);
-  const auto different_input_node = std::make_shared<StaticTableNode>(Table::create_dummy_table(different_column_definitions));
+  const auto different_input_node =
+      std::make_shared<StaticTableNode>(Table::create_dummy_table(different_column_definitions));
   const auto different_create_table_node_c = CreateTableNode::make("some_table", false, different_input_node);
 
   EXPECT_NE(*different_create_table_node_a, *create_table_node);

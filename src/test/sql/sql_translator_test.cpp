@@ -1662,10 +1662,10 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       "NULL)");
 
   const auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
-                                                   {"a_long", DataType::Long, false},
-                                                   {"a_float", DataType::Float, false},
-                                                   {"a_double", DataType::Double, true},
-                                                   {"a_string", DataType::String, false}};
+                                                         {"a_long", DataType::Long, false},
+                                                         {"a_float", DataType::Float, false},
+                                                         {"a_double", DataType::Double, true},
+                                                         {"a_string", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
@@ -1679,10 +1679,10 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
       "VARCHAR(10) NOT NULL)");
 
   const auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
-                                                   {"a_long", DataType::Long, false},
-                                                   {"a_float", DataType::Float, false},
-                                                   {"a_double", DataType::Double, true},
-                                                   {"a_string", DataType::String, false}};
+                                                         {"a_long", DataType::Long, false},
+                                                         {"a_float", DataType::Float, false},
+                                                         {"a_double", DataType::Double, true},
+                                                         {"a_string", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   const auto expected_lqp = CreateTableNode::make("a_table", true, static_table_node);

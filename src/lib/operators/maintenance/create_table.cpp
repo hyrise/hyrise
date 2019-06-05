@@ -10,10 +10,9 @@
 
 namespace opossum {
 
-CreateTable::CreateTable(const std::string& table_name, const bool if_not_exists, const std::shared_ptr<const AbstractOperator> in)
-    : AbstractReadOnlyOperator(OperatorType::CreateTable, in),
-      table_name(table_name),
-      if_not_exists(if_not_exists) {}
+CreateTable::CreateTable(const std::string& table_name, const bool if_not_exists,
+                         const std::shared_ptr<const AbstractOperator> in)
+    : AbstractReadWriteOperator(OperatorType::CreateTable, in), table_name(table_name), if_not_exists(if_not_exists) {}
 
 const std::string CreateTable::name() const { return "Create Table"; }
 
@@ -48,26 +47,22 @@ const TableColumnDefinitions CreateTable::column_definitions() const {
   return input_table_left()->column_definitions();
 }
 
-std::shared_ptr<const Table> CreateTable::_on_execute() {
+std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<TransactionContext> context) {
   const auto column_definitions = _input_left->get_output()->column_definitions();
 
   // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
   if (!if_not_exists || !StorageManager::get().has_table(table_name)) {
     // TODO(anybody) chunk size and mvcc not yet specifiable
-    const auto table =
-            std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     StorageManager::get().add_table(table_name, table);
   }
 
   if (input_left()) {
     const auto input_table = input_table_left();
-    const auto insert = std::make_shared<Insert>(table_name, _input_left);
-    // TODO(david) get context from outside
-    const auto context = TransactionManager::get().new_transaction_context();
+    _insert = std::make_shared<Insert>(table_name, _input_left);
 
-    insert->set_transaction_context(context);
-    insert->execute();
-    context->commit();
+    _insert->set_transaction_context(context);
+    _insert->execute();
   }
 
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table

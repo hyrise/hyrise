@@ -8,9 +8,7 @@
 namespace opossum {
 
 CreateTableNode::CreateTableNode(const std::string& table_name, const bool if_not_exists)
-    : BaseNonQueryNode(LQPNodeType::CreateTable),
-      table_name(table_name),
-      if_not_exists(if_not_exists) {}
+    : BaseNonQueryNode(LQPNodeType::CreateTable), table_name(table_name), if_not_exists(if_not_exists) {}
 
 std::string CreateTableNode::description() const {
   std::ostringstream stream;
@@ -44,7 +42,7 @@ std::shared_ptr<AbstractLQPNode> CreateTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool CreateTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& create_table_node = static_cast<const CreateTableNode&>(rhs);
-  return table_name == create_table_node.table_name && if_not_exists == create_table_node.if_not_exists && left_input() == create_table_node.left_input();
+  return table_name == create_table_node.table_name && if_not_exists == create_table_node.if_not_exists;
 }
 
 }  // namespace opossum

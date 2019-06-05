@@ -1032,7 +1032,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     column_definition.nullable = parser_column_definition->nullable;
   }
 
-  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, create_statement.select ? _translate_select_statement(*create_statement.select) : StaticTableNode::make(Table::create_dummy_table(column_definitions)));
+  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists,
+                               create_statement.select
+                                   ? _translate_select_statement(*create_statement.select)
+                                   : StaticTableNode::make(Table::create_dummy_table(column_definitions)));
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
