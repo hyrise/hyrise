@@ -27,8 +27,7 @@ class SQLIdentifierResolverTest : public BaseTest {
     expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{0}));
     expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{1}));
     expression_c = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{2}));
-    fail_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{3}));
-    expression_unnamed = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{3}));
+    unnamed_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{3}));
 
     context.add_column_name(expression_a, {"a"s});
     context.add_column_name(expression_b, {"b"s});
@@ -41,7 +40,7 @@ class SQLIdentifierResolverTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed, fail_expression;
+  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, unnamed_expression;
   SQLIdentifierResolver context;
   std::shared_ptr<ParameterIDAllocator> parameter_id_allocator;
 };
@@ -77,7 +76,7 @@ TEST_F(SQLIdentifierResolverTest, ResetColumnNames) {
 }
 
 TEST_F(SQLIdentifierResolverTest, ResetColumnNamesForInvalidExpression) {
-  EXPECT_THROW(context.reset_column_names(fail_expression), std::exception);
+  EXPECT_THROW(context.reset_column_names(unnamed_expression), std::exception);
 }
 
 TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
@@ -176,7 +175,7 @@ TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
 
 TEST_F(SQLIdentifierResolverTest, GetExpressionIdentifiers) {
   EXPECT_EQ(context.get_expression_identifiers(expression_a), std::vector<SQLIdentifier>{SQLIdentifier("a", "T1")});
-  EXPECT_EQ(context.get_expression_identifiers(expression_unnamed), std::vector<SQLIdentifier>{});
+  EXPECT_EQ(context.get_expression_identifiers(unnamed_expression), std::vector<SQLIdentifier>{});
 }
 
 TEST_F(SQLIdentifierResolverTest, DeepEqualsIsUsed) {
