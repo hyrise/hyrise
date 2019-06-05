@@ -148,30 +148,41 @@ class TableBuilder {
     auto values_tuple = boost::hana::make_tuple(std::forward<decltype(new_values)>(new_values)...);
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(_value_vectors) == boost::hana::size(values_tuple));
 
-    // Add the values to their respective value vector
-    // zip_with is not guaranteed to run in order: e.g. (_value_vectors[2], _null_value_vectors[2], values_tuple[2])
-    // might be the first list of parameters passed to the lambda
-    boost::hana::zip_with(
-        [](auto& values, auto& null_values, auto&& maybe_optional_value) {
-          constexpr bool column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
-          auto value_is_null = table_builder::is_null(maybe_optional_value);
-
-          DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
-
-          if (value_is_null) {
-            values.emplace_back();
-          } else {
-            // on failure: make sure template pack Types is the same that was passed to table_builder constructor
-            values.emplace_back(std::move(table_builder::get_value(maybe_optional_value)));
-          }
-
-          if constexpr (column_is_nullable) {
-            null_values.value().emplace_back(value_is_null);
-          }
-
-          return boost::hana::make_tuple();
+    // Create tuples ([&values0, &null_values0, value0], [&values1, &null_values1, value1], ...)
+    auto value_vectors_and_null_value_vectors_and_values = boost::hana::zip_with(
+        [](auto& values, auto& null_values, auto&& value) {
+          return boost::hana::make_tuple(std::reference_wrapper(values), std::reference_wrapper(null_values),
+                                         std::forward<decltype(value)>(value));
         },
         _value_vectors, _null_value_vectors, values_tuple);
+
+    // The reason why we can't do the for_each stuff in zip_with is the following:
+    // boost::hana's higher order functions (like zip_with) do not guarantee the order of execution of a passed
+    // function f or even the number of executions of f. Therefore it should only be used with pure functions (no side
+    // effects). There are exceptions to that, for_each gives these guarantees and expects impure functions.
+
+    // Add the values to their respective value vector
+    boost::hana::for_each(value_vectors_and_null_value_vectors_and_values, [](auto& values_and_null_values_and_value) {
+      auto& values = values_and_null_values_and_value[boost::hana::llong_c<0>].get();
+      auto& null_values = values_and_null_values_and_value[boost::hana::llong_c<1>].get();
+      auto& maybe_optional_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
+
+      constexpr bool column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
+      auto value_is_null = table_builder::is_null(maybe_optional_value);
+
+      DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
+
+      if (value_is_null) {
+        values.emplace_back();
+      } else {
+        // on failure: make sure template pack Types is the same that was passed to table_builder constructor
+        values.emplace_back(std::move(table_builder::get_value(maybe_optional_value)));
+      }
+
+      if constexpr (column_is_nullable) {
+        null_values.value().emplace_back(value_is_null);
+      }
+    });
 
     if (_current_chunk_row_count() >= _table->max_chunk_size()) {
       _emit_chunk();
@@ -192,7 +203,6 @@ class TableBuilder {
   void _emit_chunk() {
     auto segments = Segments{};
 
-    // need the two steps approach here (zip_with then for_each), since order of execution matters
     auto _value_vectors_and_null_value_vectors = boost::hana::zip_with(
         [](auto& values, auto& null_values) {
           return boost::hana::make_tuple(std::reference_wrapper(values), std::reference_wrapper(null_values));
@@ -200,18 +210,18 @@ class TableBuilder {
         _value_vectors, _null_value_vectors);
 
     // Create a segment from each value vector and add it to the Chunk, then re-initialize the vector
-    boost::hana::for_each(_value_vectors_and_null_value_vectors, [&](auto&& values_and_null_values) {
+    boost::hana::for_each(_value_vectors_and_null_value_vectors, [&](auto& values_and_null_values) {
       auto& values = values_and_null_values[boost::hana::llong_c<0>].get();
       auto& null_values = values_and_null_values[boost::hana::llong_c<1>].get();
 
       using T = typename std::decay_t<decltype(values)>::value_type;
-      if constexpr (std::decay_t<decltype(null_values)>::has_value) {
-        segments.push_back(std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values.value())));
+      if constexpr (std::decay_t<decltype(null_values)>::has_value) {  // column is nullable
+        segments.emplace_back(std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values.value())));
 
         null_values.value() = std::vector<bool>{};
         null_values.value().reserve(_estimated_rows_per_chunk);
       } else {
-        segments.push_back(std::make_shared<ValueSegment<T>>(std::move(values)));
+        segments.emplace_back(std::make_shared<ValueSegment<T>>(std::move(values)));
       }
 
       values = std::decay_t<decltype(values)>{};
