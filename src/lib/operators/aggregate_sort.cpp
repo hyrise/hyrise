@@ -191,7 +191,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
  * @param aggregate_index current aggregate's offset in <code>_aggregates</code>
  * @param current_primary_aggregate the value of the aggregate (return value of the aggregate function) - used by all except COUNT (all versions)
  * @param current_secondary_aggregates the value of a supportive aggregate - used by StdDevSamp
- * @param value_count the number of non-null values - used by COUNT(<name>), AVG and StdDevSamp
+ * @param value_count the number of non-null values - used by COUNT(<name>), AVG
  * @param value_count_with_null the number of rows  - used by COUNT(*)
  * @param unique_value_count the number of unique values
  */
