@@ -14,6 +14,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -31,7 +32,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
-    const auto scale_factor = 0.001f;
+    const auto scale_factor = 2.0f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -293,6 +294,30 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationLarger)(
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state) {
+  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  auto& sm = StorageManager::get();
+  auto orders_table = sm.get_table("orders");
+
+  auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
+                                       orders_table->column_is_nullable(ColumnID{0}), "");
+  auto int_predicate =
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(10));
+
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
+  table_scan->execute();
+
+  for (auto _ : state) {
+    auto join =
+        std::make_shared<JoinSortMerge>(table_scan, _table_wrapper_map.at("lineitem"), JoinMode::FullOuter,
+                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::GreaterThan});
+    join->execute();
+  }
+
+  // CurrentScheduler::get()->finish();
 }
 
 }  // namespace opossum
