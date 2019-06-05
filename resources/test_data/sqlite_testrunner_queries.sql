@@ -102,7 +102,7 @@ SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
--- SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
+SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
 SELECT a AS x, b AS y FROM mixed ORDER BY x, y;
 SELECT b + 13 AS t FROM mixed ORDER BY a, b ASC;
 SELECT * FROM mixed ORDER BY a, b DESC;
@@ -158,8 +158,7 @@ SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
-
--- SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 
 -- JOIN multiple tables

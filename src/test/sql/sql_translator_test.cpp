@@ -479,11 +479,11 @@ TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
 TEST_F(SQLTranslatorTest, AliasWithWhere) {
   const auto actual_lqp = compile_query("SELECT a AS x FROM int_float WHERE a > 10");
 
-  const auto alias = std::vector<std::string>({"x"});
+  const auto aliases = std::vector<std::string>({"x"});
 
   // clang-format off
   const auto expected_lqp =
-  AliasNode::make(expression_vector(int_float_a), alias,
+  AliasNode::make(expression_vector(int_float_a), aliases,
     ProjectionNode::make(expression_vector(int_float_a),
       PredicateNode::make(greater_than_(int_float_a, value_(10)),
         stored_table_node_int_float)));
@@ -512,11 +512,11 @@ TEST_F(SQLTranslatorTest, AliasWithGroupBy) {
   const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float GROUP BY a");
   const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float GROUP BY x");
 
-  const auto alias = std::vector<std::string>({"x"});
+  const auto aliases = std::vector<std::string>({"x"});
 
   // clang-format off
   const auto expected_lqp =
-  AliasNode::make(expression_vector(int_float_a), alias,
+  AliasNode::make(expression_vector(int_float_a), aliases,
     AggregateNode::make(expression_vector(int_float_a), expression_vector(),
       stored_table_node_int_float));
   // clang-format on
@@ -529,11 +529,11 @@ TEST_F(SQLTranslatorTest, AliasWithGroupByAndHaving) {
   const auto actual_lqp_a = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING a > 10");
   const auto actual_lqp_b = compile_query("SELECT a AS x FROM int_float GROUP BY x HAVING x > 10");
 
-  const auto alias = std::vector<std::string>({"x"});
+  const auto aliases = std::vector<std::string>({"x"});
 
   // clang-format off
   const auto expected_lqp =
-  AliasNode::make(expression_vector(int_float_a), alias,
+  AliasNode::make(expression_vector(int_float_a), aliases,
     PredicateNode::make(greater_than_(int_float_a, value_(10)),
       AggregateNode::make(expression_vector(int_float_a), expression_vector(),
         stored_table_node_int_float)));
@@ -543,20 +543,42 @@ TEST_F(SQLTranslatorTest, AliasWithGroupByAndHaving) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, AliasWithJoin) {
-  const auto actual_lqp_a = compile_query("SELECT left.c, left.d FROM (SELECT a AS c, b AS d FROM int_float) AS left JOIN int_float2 AS right ON left.d = right.b");
+TEST_F(SQLTranslatorTest, AliasWithOrderBy) {
+    const auto actual_lqp_a = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY a, b");
+    const auto actual_lqp_b = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
 
- const auto alias = std::vector<std::string>({"x"});
+    const auto aliases = std::vector<std::string>({"x", "y"});
+    const auto order_by_modes = std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Ascending});
+
+    // clang-format off
+    const auto expected_lqp =
+    AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
+      SortNode::make(expression_vector(int_float_a, int_float_b), order_by_modes,
+        stored_table_node_int_float));
+    // clang-format on
+
+    EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+    EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AliasWithJoin) {
+ const auto actual_lqp_a = compile_query("SELECT R.a, R.b FROM (SELECT a AS c, b AS d FROM int_float) AS R JOIN int_float2 AS S ON R.b = S.b");
+ const auto actual_lqp_b = compile_query("SELECT R.c, R.d FROM (SELECT a AS c, b AS d FROM int_float) AS R JOIN int_float2 AS S ON R.d = S.b");
+
+ const auto aliases = std::vector<std::string>({"c", "d"});
 
   // clang-format off
   const auto expected_lqp =
-  AliasNode::make(expression_vector(int_float_a), alias,
-    PredicateNode::make(greater_than_(int_float_a, value_(10)),
-      AggregateNode::make(expression_vector(int_float_a), expression_vector(),
-        stored_table_node_int_float)));
+  AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+      JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
+        AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
+          stored_table_node_int_float),
+        stored_table_node_int_float2)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithGroupByAndHaving) {
