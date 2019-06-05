@@ -57,10 +57,8 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     StorageManager::get().add_table(table_name, table);
   }
 
-  if (input_left()) {
-    const auto input_table = input_table_left();
+  if (input_table_left()->row_count() > 0) {
     _insert = std::make_shared<Insert>(table_name, _input_left);
-
     _insert->set_transaction_context(context);
     _insert->execute();
   }
