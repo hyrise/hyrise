@@ -61,21 +61,21 @@ bool HistogramDomain<pmr_string>::contains(const pmr_string& string_value) const
   return true;
 }
 
-pmr_string HistogramDomain<pmr_string>::next_value_clamped(const pmr_string& string_value) const {
-  DebugAssert(contains(string_value), "Unsupported character, cannot compute next_value()");
+pmr_string HistogramDomain<pmr_string>::next_value_clamped(const pmr_string& string_in_domain) const {
+  DebugAssert(contains(string_in_domain), "Unsupported character, cannot compute next_value()");
 
   // If the value is shorter than the prefix length, simply append the first supported character and return.
-  if (string_value.length() < prefix_length) {
-    return string_value + min_char;
+  if (string_in_domain.length() < prefix_length) {
+    return string_in_domain + min_char;
   }
 
   // Special case: return `value` if it is the last supported one.
-  if (string_value == pmr_string(prefix_length, max_char)) {
-    return string_value;
+  if (string_in_domain == pmr_string(prefix_length, max_char)) {
+    return string_in_domain;
   }
 
   // Otherwise, work on the substring trimmed to `prefix_length` characters.
-  const auto value_clipped_to_prefix_length = string_value.substr(0, prefix_length);
+  const auto value_clipped_to_prefix_length = string_in_domain.substr(0, prefix_length);
   const auto last_char = value_clipped_to_prefix_length.back();
   const auto substring = value_clipped_to_prefix_length.substr(0, value_clipped_to_prefix_length.length() - 1);
 
