@@ -173,7 +173,6 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
  *
  * Sometimes it is simple, e.g. for Min, Max and Sum the value we want to add is directly the <code>current_primary_aggregate</code>.
  * But sometimes it is more complicated, e.g. Avg effectively only calculates a sum, and we manually need to divide the sum by the number of (non-null) elements that contributed to it.
- * Additionally.
  * Further, Count and CountDistinct do not use <code>current_x_aggregate</code>, instead we pass <code>value_count</code> and <code>value_count_with_null</code> directly to the function.
  * The latter might look ugly at the first sight, but we need those counts (or at least <code>value_count</code>) anyway for Avg, and it is consistent with the hash aggregate.
  *
