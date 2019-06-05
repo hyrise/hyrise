@@ -100,35 +100,43 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
               std::vector<AggregateType>& current_secondary_aggregates) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+        // Welford's online algorithm
         // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
         // For a new value, compute the new count, new mean and the new squared_distance_from_mean.
         // mean accumulates the mean of the entire dataset.
         // squared_distance_from_mean aggregates the squared distance from the mean.
         // count aggregates the number of samples seen so far.
-
-        if (!current_primary_aggregate) {
-          current_primary_aggregate = 0;  // storage for squared_distance_from_mean
-        }
+        // The sample standard deviation is stored as current_primary_aggregate.
         if (current_secondary_aggregates.empty()) {
-          current_secondary_aggregates.emplace_back(0);  // storage for count
-          current_secondary_aggregates.emplace_back(0);  // storage for mean
+          current_secondary_aggregates.resize(3);
+          // current_secondary_aggregates[0]:   storage for count
+          // current_secondary_aggregates[1]:   storage for mean
+          // current_secondary_aggregates[2]:   storage for squared_distance_from_mean
         }
+
         // get values
-        double squared_distance_from_mean = *current_primary_aggregate;
         double count = current_secondary_aggregates[0];
         double mean = current_secondary_aggregates[1];
+        double squared_distance_from_mean = current_secondary_aggregates[2];
 
         // update values
         ++count;
-        double delta = new_value - mean;
+        const double delta = new_value - mean;
         mean += delta / count;
-        double delta2 = new_value - mean;
+        const double delta2 = new_value - mean;
         squared_distance_from_mean += delta * delta2;
 
         // store values
-        current_primary_aggregate = squared_distance_from_mean;
+        if (count > 1) {
+          const auto variance = squared_distance_from_mean / (count - 1);
+          current_primary_aggregate = std::sqrt(variance);
+        } else {
+          current_primary_aggregate = std::nullopt;
+        }
+
         current_secondary_aggregates[0] = count;
         current_secondary_aggregates[1] = mean;
+        current_secondary_aggregates[2] = squared_distance_from_mean;
 
       } else {
         Fail("StdDevSamp not available for non-arithmetic types.");

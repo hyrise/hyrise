@@ -230,11 +230,6 @@ void AggregateSort::_set_and_write_aggregate_value(
     if (value_count <= 1) {
       current_primary_aggregate = std::optional<AggregateType>();
       current_secondary_aggregates = std::vector<AggregateType>{};
-    } else {
-      // using the Welford's online algorithm
-      const double squared_distance_from_mean = *current_primary_aggregate;
-      const auto variance = squared_distance_from_mean / (value_count - 1);
-      current_primary_aggregate = std::sqrt(variance);
     }
   }
   if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT

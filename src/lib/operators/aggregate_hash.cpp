@@ -592,10 +592,7 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
     const auto count = static_cast<AggregateType>(result.aggregate_count);
 
     if (result.current_primary_aggregate && count > 1) {
-      // using the Welford's online algorithm
-      const double squared_distance_from_mean = *result.current_primary_aggregate;
-      const auto variance = squared_distance_from_mean / (count - 1);
-      values[i] = std::sqrt(variance);
+      values[i] = *result.current_primary_aggregate;
     } else {
       null_values[i] = true;
     }
