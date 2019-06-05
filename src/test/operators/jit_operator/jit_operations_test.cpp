@@ -53,11 +53,11 @@ TEST_F(JitOperationsTest, ArithmeticComputations) {
   JitRuntimeContext context;
   context.tuple.resize(5);
 
-  const JitTupleEntry int_tuple_entry{DataType::Int, false, 0};
-  const JitTupleEntry long_tuple_entry{DataType::Long, false, 1};
-  const JitTupleEntry float_tuple_entry{DataType::Float, false, 2};
-  const JitTupleEntry double_tuple_entry{DataType::Double, false, 3};
-  const JitTupleEntry zero_tuple_entry{DataType::Int, false, 4};
+  const JitTupleEntry int_tuple_entry{DataType::Int, true, 0};
+  const JitTupleEntry long_tuple_entry{DataType::Long, true, 1};
+  const JitTupleEntry float_tuple_entry{DataType::Float, true, 2};
+  const JitTupleEntry double_tuple_entry{DataType::Double, true, 3};
+  const JitTupleEntry zero_tuple_entry{DataType::Int, true, 4};
 
   int_tuple_entry.set<int32_t>(2, context);
   long_tuple_entry.set<int64_t>(5l, context);
@@ -100,13 +100,13 @@ TEST_F(JitOperationsTest, Predicates) {
   JitRuntimeContext context;
   context.tuple.resize(8);
 
-  const JitTupleEntry int_1{DataType::Int, false, 0};
-  const JitTupleEntry int_2{DataType::Int, false, 1};
-  const JitTupleEntry float_1{DataType::Float, false, 2};
-  const JitTupleEntry float_2{DataType::Float, false, 3};
-  const JitTupleEntry string_1{DataType::String, false, 4};
-  const JitTupleEntry string_2{DataType::String, false, 5};
-  const JitTupleEntry string_3{DataType::String, false, 6};
+  const JitTupleEntry int_1{DataType::Int, true, 0};
+  const JitTupleEntry int_2{DataType::Int, true, 1};
+  const JitTupleEntry float_1{DataType::Float, true, 2};
+  const JitTupleEntry float_2{DataType::Float, true, 3};
+  const JitTupleEntry string_1{DataType::String, true, 4};
+  const JitTupleEntry string_2{DataType::String, true, 5};
+  const JitTupleEntry string_3{DataType::String, true, 6};
 
   int_1.set<int32_t>(1, context);
   int_2.set<int32_t>(2, context);
@@ -199,8 +199,8 @@ TEST_F(JitOperationsTest, ValueIDPredicates) {
   JitRuntimeContext context;
   context.tuple.resize(3);
 
-  const JitTupleEntry int_1{DataType::Int, true, 0};
-  const JitTupleEntry int_2{DataType::Int, true, 1};
+  const JitTupleEntry int_1{DataType::Int, false, 0};
+  const JitTupleEntry int_2{DataType::Int, false, 1};
 
   int_1.set<ValueID>(ValueID{1}, context);
   int_1.set_is_null(false, context);
@@ -224,9 +224,9 @@ TEST_F(JitOperationsTest, JitAnd) {
   JitRuntimeContext context;
   context.tuple.resize(4);
 
-  const JitTupleEntry null_tuple_entry{DataType::Bool, true, 0};
-  const JitTupleEntry true_tuple_entry{DataType::Bool, false, 1};
-  const JitTupleEntry false_tuple_entry{DataType::Bool, false, 2};
+  const JitTupleEntry null_tuple_entry{DataType::Bool, false, 0};
+  const JitTupleEntry true_tuple_entry{DataType::Bool, true, 1};
+  const JitTupleEntry false_tuple_entry{DataType::Bool, true, 2};
 
   null_tuple_entry.set_is_null(true, context);
   true_tuple_entry.set(true, context);
@@ -294,9 +294,9 @@ TEST_F(JitOperationsTest, JitOr) {
   JitRuntimeContext context;
   context.tuple.resize(4);
 
-  const JitTupleEntry null_tuple_entry{DataType::Bool, true, 0};
-  const JitTupleEntry true_tuple_entry{DataType::Bool, false, 1};
-  const JitTupleEntry false_tuple_entry{DataType::Bool, false, 2};
+  const JitTupleEntry null_tuple_entry{DataType::Bool, false, 0};
+  const JitTupleEntry true_tuple_entry{DataType::Bool, true, 1};
+  const JitTupleEntry false_tuple_entry{DataType::Bool, true, 2};
 
   null_tuple_entry.set_is_null(true, context);
   true_tuple_entry.set(true, context);
@@ -354,7 +354,7 @@ TEST_F(JitOperationsTest, JitOr) {
 
   // Check that invalid data type combinations are rejected
   if (HYRISE_DEBUG) {
-    const JitTupleEntry long_tuple_entry{DataType::Long, false, 0};
+    const JitTupleEntry long_tuple_entry{DataType::Long, true, 0};
     const JitExpression long_value_expression{long_tuple_entry};
     EXPECT_THROW(jit_or(true_value_expression, long_value_expression, context), std::logic_error);
   }
@@ -364,9 +364,9 @@ TEST_F(JitOperationsTest, JitNot) {
   JitRuntimeContext context;
   context.tuple.resize(4);
 
-  const JitTupleEntry null_tuple_entry{DataType::Bool, true, 0};
-  const JitTupleEntry true_tuple_entry{DataType::Bool, false, 1};
-  const JitTupleEntry false_tuple_entry{DataType::Bool, false, 2};
+  const JitTupleEntry null_tuple_entry{DataType::Bool, false, 0};
+  const JitTupleEntry true_tuple_entry{DataType::Bool, true, 1};
+  const JitTupleEntry false_tuple_entry{DataType::Bool, true, 2};
 
   null_tuple_entry.set_is_null(true, context);
   true_tuple_entry.set(true, context);
@@ -396,7 +396,7 @@ TEST_F(JitOperationsTest, JitNot) {
 
   // Check that invalid data type combinations are rejected
   if (HYRISE_DEBUG) {
-    const JitTupleEntry long_tuple_entry{DataType::Long, false, 0};
+    const JitTupleEntry long_tuple_entry{DataType::Long, true, 0};
     const JitExpression long_value_expression{long_tuple_entry};
     EXPECT_THROW(jit_not(long_value_expression, context), std::logic_error);
   }
@@ -406,8 +406,8 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
   JitRuntimeContext context;
   context.tuple.resize(3);
 
-  const JitTupleEntry null_tuple_entry{DataType::Bool, true, 0};
-  const JitTupleEntry non_null_tuple_entry{DataType::Int, true, 1};
+  const JitTupleEntry null_tuple_entry{DataType::Bool, false, 0};
+  const JitTupleEntry non_null_tuple_entry{DataType::Int, false, 1};
 
   null_tuple_entry.set_is_null(true, context);
   non_null_tuple_entry.set_is_null(true, context);
@@ -463,7 +463,7 @@ TEST_F(JitOperationsTest, JitHash) {
   // Perform the following test for each Hyrise data type
   const auto typed_test = [&](const DataType data_type, auto value) {
     using ValueType = decltype(value);
-    const JitTupleEntry tuple_entry{data_type, false, 0};
+    const JitTupleEntry tuple_entry{data_type, true, 0};
     tuple_entry.set(value, context);
     const auto expected_hash = std::hash<ValueType>()(value);
     const auto actual_hash = jit_hash(tuple_entry, context);
@@ -477,7 +477,7 @@ TEST_F(JitOperationsTest, JitHash) {
   typed_test(DataType::String, pmr_string("some string"));
 
   // Check jit_hash with NULL value
-  const JitTupleEntry tuple_entry{DataType::Int, true, 0};
+  const JitTupleEntry tuple_entry{DataType::Int, false, 0};
   tuple_entry.set_is_null(true, context);
   EXPECT_EQ(jit_hash(tuple_entry, context), 0u);
 }
@@ -488,12 +488,12 @@ TEST_F(JitOperationsTest, JitAggregateEquals) {
   context.hashmap.columns.resize(1);
   context.hashmap.columns[0].resize(2);
 
-  const JitTupleEntry tuple_entry_1{DataType::Int, false, 0};
-  const JitTupleEntry tuple_entry_2{DataType::Int, false, 1};
-  const JitTupleEntry tuple_entry_3{DataType::Int, true, 2};
+  const JitTupleEntry tuple_entry_1{DataType::Int, true, 0};
+  const JitTupleEntry tuple_entry_2{DataType::Int, true, 1};
+  const JitTupleEntry tuple_entry_3{DataType::Int, false, 2};
 
-  const JitHashmapEntry hashmap_entry_1{DataType::Int, false, 0};
-  const JitHashmapEntry hashmap_count_for_avg{DataType::Int, true, 0};
+  const JitHashmapEntry hashmap_entry_1{DataType::Int, true, 0};
+  const JitHashmapEntry hashmap_count_for_avg{DataType::Int, false, 0};
 
   const auto value = static_cast<int32_t>(std::rand() % 1000);
   tuple_entry_1.set<int32_t>(value, context);
@@ -526,8 +526,8 @@ TEST_F(JitOperationsTest, JitAssign) {
   // Perform the following test for each Hyrise data type
   const auto typed_test = [&](const DataType data_type, auto value) {
     using ValueType = decltype(value);
-    const JitTupleEntry tuple_entry{data_type, true, 0};
-    const JitHashmapEntry hashmap_entry{data_type, true, 0};
+    const JitTupleEntry tuple_entry{data_type, false, 0};
+    const JitHashmapEntry hashmap_entry{data_type, false, 0};
 
     tuple_entry.set(value, context);
     jit_assign(tuple_entry, hashmap_entry, 0, context);
@@ -542,8 +542,8 @@ TEST_F(JitOperationsTest, JitAssign) {
   typed_test(DataType::Double, static_cast<double>(std::rand()));
   typed_test(DataType::String, pmr_string("some string"));
 
-  const JitTupleEntry tuple_entry{DataType::Int, true, 0};
-  const JitHashmapEntry hashmap_entry{DataType::Int, true, 0};
+  const JitTupleEntry tuple_entry{DataType::Int, false, 0};
+  const JitHashmapEntry hashmap_entry{DataType::Int, false, 0};
 
   // Check jit_assign with NULL value
   tuple_entry.set_is_null(true, context);
@@ -559,7 +559,7 @@ TEST_F(JitOperationsTest, JitGrowByOne) {
   // Perform the following test for each Hyrise data type
   const auto typed_test = [&](const DataType data_type, auto value, size_t column_index) {
     using ValueType = decltype(value);
-    JitHashmapEntry hashmap_entry{data_type, false, column_index};
+    JitHashmapEntry hashmap_entry{data_type, true, column_index};
 
     // The vector should be empty initially
     EXPECT_EQ(context.hashmap.columns[0].get_vector<ValueType>().size(), 0u);
@@ -591,9 +591,9 @@ TEST_F(JitOperationsTest, JitAggregateCompute) {
 
   // jit_increment operation
   {
-    const JitTupleEntry tuple_entry{DataType::String, false, 0};
-    const JitTupleEntry null_tuple_entry{DataType::String, true, 1};
-    const JitHashmapEntry hashmap_entry{DataType::Long, false, 0};
+    const JitTupleEntry tuple_entry{DataType::String, true, 0};
+    const JitTupleEntry null_tuple_entry{DataType::String, false, 1};
+    const JitHashmapEntry hashmap_entry{DataType::Long, true, 0};
 
     tuple_entry.set<pmr_string>("some string", context);
     null_tuple_entry.set_is_null(true, context);
@@ -612,10 +612,10 @@ TEST_F(JitOperationsTest, JitAggregateCompute) {
 
   // jit_maximum operation
   {
-    const JitTupleEntry tuple_entry_1{DataType::Float, false, 0};
-    const JitTupleEntry tuple_entry_2{DataType::Float, false, 1};
-    const JitTupleEntry null_tuple_entry{DataType::Float, true, 2};
-    const JitHashmapEntry hashmap_entry{DataType::Float, false, 0};
+    const JitTupleEntry tuple_entry_1{DataType::Float, true, 0};
+    const JitTupleEntry tuple_entry_2{DataType::Float, true, 1};
+    const JitTupleEntry null_tuple_entry{DataType::Float, false, 2};
+    const JitHashmapEntry hashmap_entry{DataType::Float, true, 0};
 
     tuple_entry_1.set<float>(1.234f, context);
     tuple_entry_2.set<float>(3.456f, context);
@@ -635,10 +635,10 @@ TEST_F(JitOperationsTest, JitAggregateCompute) {
 
   // jit_minimum operation
   {
-    const JitTupleEntry tuple_entry_1{DataType::Double, false, 0};
-    const JitTupleEntry tuple_entry_2{DataType::Double, false, 1};
-    const JitTupleEntry null_tuple_entry{DataType::Double, true, 2};
-    const JitHashmapEntry hashmap_entry{DataType::Double, false, 0};
+    const JitTupleEntry tuple_entry_1{DataType::Double, true, 0};
+    const JitTupleEntry tuple_entry_2{DataType::Double, true, 1};
+    const JitTupleEntry null_tuple_entry{DataType::Double, false, 2};
+    const JitHashmapEntry hashmap_entry{DataType::Double, true, 0};
 
     tuple_entry_1.set<double>(3.456f, context);
     tuple_entry_2.set<double>(1.234f, context);
@@ -658,10 +658,10 @@ TEST_F(JitOperationsTest, JitAggregateCompute) {
 
   // jit_addition operation
   {
-    const JitTupleEntry tuple_entry_1{DataType::Long, false, 0};
-    const JitTupleEntry tuple_entry_2{DataType::Long, false, 1};
-    const JitTupleEntry null_tuple_entry{DataType::Long, true, 2};
-    const JitHashmapEntry hashmap_entry{DataType::Long, false, 0};
+    const JitTupleEntry tuple_entry_1{DataType::Long, true, 0};
+    const JitTupleEntry tuple_entry_2{DataType::Long, true, 1};
+    const JitTupleEntry null_tuple_entry{DataType::Long, false, 2};
+    const JitHashmapEntry hashmap_entry{DataType::Long, true, 0};
 
     tuple_entry_1.set<int64_t>(5, context);
     tuple_entry_2.set<int64_t>(-10, context);

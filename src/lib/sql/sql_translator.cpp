@@ -268,6 +268,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const auto table_name = std::string{insert.tableName};
+  AssertInput(StorageManager::get().has_table(table_name), std::string{"Did not find a table with name "} + table_name);
   const auto target_table = StorageManager::get().get_table(table_name);
   auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
   auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -540,6 +541,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
     const std::string& name, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
+  AssertInput(StorageManager::get().has_table(name), std::string{"Did not find a table with name "} + name);
+
   const auto stored_table_node = StoredTableNode::make(name);
   const auto validated_stored_table_node = _validate_if_active(stored_table_node);
 
@@ -990,7 +993,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
     }
   }
 
-  return CreateViewNode::make(create_statement.tableName, std::make_shared<LQPView>(lqp, column_names));
+  return CreateViewNode::make(create_statement.tableName, std::make_shared<LQPView>(lqp, column_names),
+                              create_statement.ifNotExists);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
@@ -1031,7 +1035,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     column_definition.nullable = parser_column_definition->nullable;
   }
 
-  return CreateTableNode::make(create_statement.tableName, column_definitions);
+  return CreateTableNode::make(create_statement.tableName, column_definitions, create_statement.ifNotExists);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {

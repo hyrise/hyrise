@@ -19,8 +19,12 @@ namespace opossum {
 class ExpressionReductionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    mock_node = MockNode::make(MockNode::ColumnDefinitions{
-        {DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}, {DataType::Int, "d"}, {DataType::Int, "e"}});
+    mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"},
+                                                           {DataType::Int, "b"},
+                                                           {DataType::Int, "c"},
+                                                           {DataType::Int, "d"},
+                                                           {DataType::Int, "e"},
+                                                           {DataType::String, "s"}});
 
     // Create two objects for each expression to make sure the algorithm tests for expression equality, not for pointer
     // equality
@@ -34,12 +38,14 @@ class ExpressionReductionRuleTest : public StrategyBaseTest {
     d2 = equals_(mock_node->get_column("d"), 0);
     e = equals_(mock_node->get_column("e"), 0);
     e2 = equals_(mock_node->get_column("e"), 0);
+    s = mock_node->get_column("s");
 
     rule = std::make_shared<ExpressionReductionRule>();
   }
 
   std::shared_ptr<MockNode> mock_node;
   std::shared_ptr<AbstractExpression> a, b, c, d, e;
+  LQPColumnReference s;
   std::shared_ptr<AbstractExpression> a2, b2, c2, d2, e2;
   std::shared_ptr<ExpressionReductionRule> rule;
 };
@@ -110,6 +116,47 @@ TEST_F(ExpressionReductionRuleTest, ReduceConstantExpression) {
   auto expression_c = std::shared_ptr<AbstractExpression>(in_(a, list_(5)));
   ExpressionReductionRule::reduce_constant_expression(expression_c);
   EXPECT_EQ(*expression_c, *in_(a, list_(5)));
+}
+
+TEST_F(ExpressionReductionRuleTest, RewriteLikePrefixWildcard) {
+  // Test LIKE patterns where a rewrite to simple comparison is possible
+  auto expression_a = std::shared_ptr<AbstractExpression>(like_(s, "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_a);
+  EXPECT_EQ(*expression_a, *between_upper_exclusive_(s, "RED", "REE"));
+
+  auto expression_i = std::shared_ptr<AbstractExpression>(not_like_(s, "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_i);
+  EXPECT_EQ(*expression_i, *or_(less_than_(s, "RED"), greater_than_equals_(s, "REE")));
+
+  auto expression_b = std::shared_ptr<AbstractExpression>(like_(concat_(s, s), "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_b);
+  EXPECT_EQ(*expression_b, *between_upper_exclusive_(concat_(s, s), "RED", "REE"));
+
+  // Test LIKE patterns where a rewrite to BETWEEN UPPER EXCLUSIVE is NOT possible
+  auto expression_c = std::shared_ptr<AbstractExpression>(like_(s, "RED%E%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_c);
+  EXPECT_EQ(*expression_c, *like_(s, "RED%E%"));
+
+  auto expression_d = std::shared_ptr<AbstractExpression>(like_(s, "%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_d);
+  EXPECT_EQ(*expression_d, *like_(s, "%"));
+
+  auto expression_e = std::shared_ptr<AbstractExpression>(like_(s, "%RED"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_e);
+  EXPECT_EQ(*expression_e, *like_(s, "%RED"));
+
+  auto expression_f = std::shared_ptr<AbstractExpression>(like_(s, "R_D%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_f);
+  EXPECT_EQ(*expression_f, *like_(s, "R_D%"));
+
+  auto expression_g = std::shared_ptr<AbstractExpression>(like_(s, "RE\x7F%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_g);
+  EXPECT_EQ(*expression_g, *like_(s, "RE\x7F%"));
+
+  // Test that non-LIKE expressions remain unaltered
+  auto expression_h = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
+  ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_h);
+  EXPECT_EQ(*expression_h, *greater_than_(s, "RED%"));
 }
 
 TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {

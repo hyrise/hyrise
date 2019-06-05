@@ -78,8 +78,6 @@ std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
 std::shared_ptr<const Table> TableScan::_on_execute() {
   const auto in_table = input_table_left();
 
-  const auto output_table = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
-
   _impl = create_impl();
   _impl_description = _impl->description();
 
@@ -87,13 +85,16 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   const auto excluded_chunk_set = std::unordered_set<ChunkID>{_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend()};
 
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
+  output_chunks.reserve(in_table->chunk_count() - excluded_chunk_set.size());
+
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(in_table->chunk_count() - excluded_chunk_set.size());
 
   for (ChunkID chunk_id{0u}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     if (excluded_chunk_set.count(chunk_id)) continue;
 
-    auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+    auto job_task = std::make_shared<JobTask>([=, &output_mutex, &output_chunks]() {
       const auto chunk_guard = in_table->get_chunk(chunk_id);
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
@@ -155,7 +156,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_table->append_chunk(out_segments, chunk_guard->get_allocator());
+      output_chunks.emplace_back(std::make_shared<Chunk>(out_segments, nullptr, chunk_guard->get_allocator()));
     });
 
     jobs.push_back(job_task);
@@ -164,7 +165,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return output_table;
+  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
 std::shared_ptr<AbstractExpression> TableScan::_resolve_uncorrelated_subqueries(

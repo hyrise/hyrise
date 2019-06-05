@@ -1,10 +1,10 @@
 #pragma once
 
+#include <filesystem>
 #include <unordered_map>
 
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/singleton.hpp"
 #include "utils/string_utils.hpp"
 
@@ -23,7 +23,7 @@ class PluginManager : public Singleton<PluginManager> {
   friend class SingletonTest;
 
  public:
-  void load_plugin(const filesystem::path& path);
+  void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
 
   ~PluginManager();

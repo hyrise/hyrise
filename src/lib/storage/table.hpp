@@ -30,8 +30,12 @@ class Table : private Noncopyable {
   // We want a common interface for tables that contain data (TableType::Data) and tables that contain reference
   // segments (TableType::References). The attribute max_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
-  explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
-                 const std::optional<uint32_t> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+  Table(const TableColumnDefinitions& column_definitions, const TableType type,
+        const std::optional<uint32_t> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+
+  Table(const TableColumnDefinitions& column_definitions, const TableType type,
+        std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
+
   /**
    * @defgroup Getter and convenience functions for the column definitions
    * @{
@@ -86,37 +90,32 @@ class Table : private Noncopyable {
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
 
-  /*
+  /**
    * Removes the chunk with the given id.
    * Makes sure that the the chunk was fully invalidated by the logical delete before deleting it physically.
-  */
+   */
   void remove_chunk(ChunkID chunk_id);
 
   /**
-   * Creates a new Chunk and appends it to this table.
-   * Makes sure the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
-   * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
-   * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
-   * @param alloc
+   * Creates a new Chunk from a set of segments and appends it to this table.
+   * When implementing operators, prefer building the Chunks upfront and adding them to the output table on
+   * construction of the Table. This avoids having to append repeatedly to the tbb::concurrent_vector storing the Chunks
+   *
+   * Asserts that the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
+   *
+   * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
-  void append_chunk(const Segments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
-
-  /**
-   * Appends an existing chunk to this table.
-   * Makes sure the segments in the chunk match with the TableType and the MVCC setting is the same as for the table.
-   */
-  void append_chunk(const std::shared_ptr<Chunk>& chunk);
+  void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
+                    const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   // Create and append a Chunk consisting of ValueSegments.
   void append_mutable_chunk();
-
   /** @} */
 
   /**
    * @defgroup Convenience methods for accessing/adding Table data. Slow, use only for testing!
    * @{
    */
-
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(const std::vector<AllTypeVariant>& values);
@@ -143,6 +142,11 @@ class Table : private Noncopyable {
     Fail("Row does not exist.");
   }
 
+  // Materialize a single Tuple
+  std::vector<AllTypeVariant> get_row(size_t row_idx) const;
+
+  // Materialize the entire Table
+  std::vector<std::vector<AllTypeVariant>> get_rows() const;
   /** @} */
 
   std::unique_lock<std::mutex> acquire_append_mutex();

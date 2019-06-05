@@ -121,10 +121,11 @@ SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mix
 SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5;
 SELECT l.id, r.id + 10 AS a FROM (SELECT id + 5 AS id FROM mixed WHERE id > 90) AS l LEFT JOIN mixed AS r ON l.id = r.id
 SELECT (SELECT r.id AS a FROM (SELECT id + 5 AS id FROM mixed) AS l LEFT JOIN mixed AS r ON l.id = r.id WHERE l.id >= 100 LIMIT 1) + 5 AS a
--- #1527 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a < t2.a;
--- #1527 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a < t2.a;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
+SELECT * FROM mixed AS t1 LEFT JOIN mixed AS t2 ON t1.id >= t2.b WHERE t1.id > 90;
 
 -- Join multiple predicates
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
@@ -136,8 +137,8 @@ SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b <= 
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b > t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b >= t2.b;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a = t2.a;
--- #1527 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a AND t1.b >= t2.b AND t1.c < t2.c;
--- #1527 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a AND t1.b > t2.b AND t1.c < t2.c;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a AND t1.b >= t2.b AND t1.c < t2.c;
+SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a AND t1.b > t2.b AND t1.c < t2.c;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a AND t1.b <= t2.b AND t1.c <= t2.c;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a AND t1.b >= t2.b AND t1.c >= t2.c;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a AND t1.b > t2.b AND t1.c < t2.c AND t1.b > t2.c AND t1.a = t2.c;
@@ -364,6 +365,8 @@ SELECT * FROM mixed WHERE d LIKE '%y__%g_%';
 SELECT * FROM mixed WHERE d LIKE '%y__%g_%' OR (id > 50 AND a LIKE '%a%');
 SELECT CASE WHEN d LIKE '%ab%' THEN 'contains AB' WHEN d NOT LIKE '%x%' THEN 'doesnt contain x' ELSE a END AS c FROM mixed;
 SELECT * FROM mixed WHERE d LIKE 'a%';
+SELECT * FROM mixed WHERE d NOT LIKE 'a%';
+SELECT * FROM mixed WHERE d LIKE '%';
 
 -- EXISTS
 SELECT EXISTS(SELECT 1) AS some_exists;

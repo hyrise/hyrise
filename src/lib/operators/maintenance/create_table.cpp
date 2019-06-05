@@ -8,10 +8,12 @@
 
 namespace opossum {
 
-CreateTable::CreateTable(const std::string& table_name, const TableColumnDefinitions& column_definitions)
+CreateTable::CreateTable(const std::string& table_name, const TableColumnDefinitions& column_definitions,
+                         const bool if_not_exists)
     : AbstractReadOnlyOperator(OperatorType::CreateTable),
       table_name(table_name),
-      column_definitions(column_definitions) {}
+      column_definitions(column_definitions),
+      if_not_exists(if_not_exists) {}
 
 const std::string CreateTable::name() const { return "Create Table"; }
 
@@ -41,18 +43,19 @@ const std::string CreateTable::description(DescriptionMode description_mode) con
 }
 
 std::shared_ptr<const Table> CreateTable::_on_execute() {
-  // TODO(anybody) chunk size and mvcc not yet specifiable
-  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-
-  StorageManager::get().add_table(table_name, table);
-
+  // If IF NOT EXISTS is not set and the table already exists, StorageManager throws an exception
+  if (!if_not_exists || !StorageManager::get().has_table(table_name)) {
+    // TODO(anybody) chunk size and mvcc not yet specifiable
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
+    StorageManager::get().add_table(table_name, table);
+  }
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
 }
 
 std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<CreateTable>(table_name, column_definitions);
+  return std::make_shared<CreateTable>(table_name, column_definitions, if_not_exists);
 }
 
 void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_single_column_table_scan_impl.hpp"
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -22,7 +22,7 @@ namespace opossum {
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
  *   enables us to detect if all or none of the values in the segment satisfy the expression.
  */
-class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
+class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
  public:
   ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                              const PredicateCondition& predicate_condition, const AllTypeVariant& value);
