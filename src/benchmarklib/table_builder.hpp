@@ -75,9 +75,9 @@ using get_value_type = typename GetValueType<T>::value_type;
 
 // check if std::optional<V> or V is null using the same syntax - needed for templating
 template <typename T>
-constexpr bool is_null(const T& maybe_optional) {
+constexpr bool is_null(const T& optional_or_value) {
   if constexpr (is_optional_v<T>) {
-    return !maybe_optional.has_value();
+    return !optional_or_value.has_value();
   } else {
     return false;
   }
@@ -85,18 +85,18 @@ constexpr bool is_null(const T& maybe_optional) {
 
 // get the value of std::optional<V> or V using the same syntax - needed for templating
 template <typename T>
-get_value_type<T>& get_value(T& maybe_optional) {
+get_value_type<T>& get_value(T& optional_or_value) {
   if constexpr (is_optional_v<T>) {
-    return maybe_optional.value();
+    return optional_or_value.value();
   } else {
-    return maybe_optional;
+    return optional_or_value;
   }
 }
 
 }  // namespace table_builder
 
 /**
- * Helper to build a table with a static column layout, specified by constructor args types and names. Keeps a
+ * Helper to build a table with a static column layout, specified by constructor arguments types and names. Keeps a
  * value vector for each column and appends values to them in append_row(). For nullable columns an additional
  * null_values vector is kept. Automatically creates chunks in accordance with the specified chunk size.
  */
@@ -107,8 +107,8 @@ class TableBuilder {
   // column types types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not
   // nullable
   template <typename Names>
-  TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               opossum::UseMvcc use_mvcc, size_t estimated_rows = 0)
+  TableBuilder(const size_t chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
+               const opossum::UseMvcc use_mvcc, const size_t estimated_rows = 0)
       : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
@@ -156,33 +156,33 @@ class TableBuilder {
         },
         _value_vectors, _null_value_vectors, values_tuple);
 
-    // The reason why we can't do the for_each stuff in zip_with is the following:
-    // boost::hana's higher order functions (like zip_with) do not guarantee the order of execution of a passed
-    // function f or even the number of executions of f. Therefore it should only be used with pure functions (no side
-    // effects). There are exceptions to that, for_each gives these guarantees and expects impure functions.
-
     // Add the values to their respective value vector
     boost::hana::for_each(value_vectors_and_null_value_vectors_and_values, [](auto& values_and_null_values_and_value) {
       auto& values = values_and_null_values_and_value[boost::hana::llong_c<0>].get();
       auto& null_values = values_and_null_values_and_value[boost::hana::llong_c<1>].get();
-      auto& maybe_optional_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
+      auto& optional_or_value_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
 
-      constexpr bool column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
-      auto value_is_null = table_builder::is_null(maybe_optional_value);
+      constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
+      auto value_is_null = table_builder::is_null(optional_or_value_value);
 
       DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
 
       if (value_is_null) {
         values.emplace_back();
       } else {
-        // on failure: make sure template pack Types is the same that was passed to table_builder constructor
-        values.emplace_back(std::move(table_builder::get_value(maybe_optional_value)));
+        // this will fail if append_row is not called with values of the types passed to the TableBuilder constructor
+        values.emplace_back(std::move(table_builder::get_value(optional_or_value_value)));
       }
 
       if constexpr (column_is_nullable) {
         null_values.value().emplace_back(value_is_null);
       }
     });
+
+    // The reason why we can't do the for_each stuff in zip_with is the following:
+    // boost::hana's higher order functions (like zip_with) do not guarantee the order of execution of a passed
+    // function f or even the number of executions of f. Therefore it should only be used with pure functions (no side
+    // effects). There are exceptions to that, for_each gives these guarantees and expects impure functions.
 
     if (_current_chunk_row_count() >= _table->max_chunk_size()) {
       _emit_chunk();
