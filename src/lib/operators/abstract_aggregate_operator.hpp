@@ -41,7 +41,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {
+              std::vector<AggregateType>& current_secondary_aggregates) {
       if (!current_primary_aggregate || value_smaller(new_value, *current_primary_aggregate)) {
         // New minimum found
         current_primary_aggregate = new_value;
@@ -55,7 +55,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {
+              std::vector<AggregateType>& current_secondary_aggregates) {
       if (!current_primary_aggregate || value_greater(new_value, *current_primary_aggregate)) {
         // New maximum found
         current_primary_aggregate = new_value;
@@ -69,7 +69,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {
+              std::vector<AggregateType>& current_secondary_aggregates) {
       // add new value to sum
       if (current_primary_aggregate) {
         *current_primary_aggregate += new_value;
@@ -98,20 +98,38 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {
+              std::vector<AggregateType>& current_secondary_aggregates) {
       if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-        // add new value to sum of x
-        if (current_primary_aggregate) {
-          *current_primary_aggregate += new_value;
-        } else {
-          current_primary_aggregate = new_value;
+        // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+        // For a new value, compute the new count, new mean and the new squared_distance_from_mean.
+        // mean accumulates the mean of the entire dataset.
+        // squared_distance_from_mean aggregates the squared distance from the mean.
+        // count aggregates the number of samples seen so far.
+
+        if (!current_primary_aggregate) {
+          current_primary_aggregate = 0;  // storage for squared_distance_from_mean
         }
-        // add new value to sum of x²
-        if (current_secondary_aggregate) {
-          *current_secondary_aggregate += new_value * new_value;
-        } else {
-          current_secondary_aggregate = new_value * new_value;
+        if (current_secondary_aggregates.empty()) {
+          current_secondary_aggregates.emplace_back(0);  // storage for count
+          current_secondary_aggregates.emplace_back(0);  // storage for mean
         }
+        // get values
+        double squared_distance_from_mean = *current_primary_aggregate;
+        double count = current_secondary_aggregates[0];
+        double mean = current_secondary_aggregates[1];
+
+        // update values
+        ++count;
+        double delta = new_value - mean;
+        mean += delta / count;
+        double delta2 = new_value - mean;
+        squared_distance_from_mean += delta * delta2;
+
+        // store values
+        current_primary_aggregate = squared_distance_from_mean;
+        current_secondary_aggregates[0] = count;
+        current_secondary_aggregates[1] = mean;
+
       } else {
         Fail("StdDevSamp not available for non-arithmetic types.");
       }
@@ -124,7 +142,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {};
+              std::vector<AggregateType>& current_secondary_aggregates) {};
   }
 };
 
@@ -133,7 +151,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
-              std::optional<AggregateType>& current_secondary_aggregate) {};
+              std::vector<AggregateType>& current_secondary_aggregates) {};
   }
 };
 

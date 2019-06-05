@@ -62,7 +62,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   const auto& chunks = sorted_table->chunks();
 
   std::optional<AggregateType> current_primary_aggregate;
-  std::optional<AggregateType> current_secondary_aggregate;
+  std::vector<AggregateType> current_secondary_aggregates{};
   ChunkID current_chunk_id{0};
   if (function == AggregateFunction::Count && !_aggregates[aggregate_index].column) {
     /*
@@ -89,7 +89,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
       }
       _set_and_write_aggregate_value<AggregateType, function>(
           aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_primary_aggregate,
-          current_secondary_aggregate, value_count, value_count_with_null, unique_values.size());
+          current_secondary_aggregates, value_count, value_count_with_null, unique_values.size());
       current_group_begin_pointer = group_boundary;
       aggregate_group_index++;
     }
@@ -129,12 +129,12 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
           // New group is starting. Store the aggregate value of the just finished group
           _set_and_write_aggregate_value<AggregateType, function>(
               aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index,
-              current_primary_aggregate, current_secondary_aggregate, value_count, value_count_with_null,
+              current_primary_aggregate, current_secondary_aggregates, value_count, value_count_with_null,
               unique_values.size());
 
           // Reset helper variables
           current_primary_aggregate = std::optional<AggregateType>();
-          current_secondary_aggregate = std::optional<AggregateType>();
+          current_secondary_aggregates = std::vector<AggregateType>{};
           unique_values.clear();
           value_count = 0u;
           value_count_with_null = 0u;
@@ -146,7 +146,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
 
         // Update helper variables
         if (!position.is_null()) {
-          aggregate_function(new_value, current_primary_aggregate, current_secondary_aggregate);
+          aggregate_function(new_value, current_primary_aggregate, current_secondary_aggregates);
           value_count++;
           if constexpr (function == AggregateFunction::CountDistinct) {  // NOLINT
             unique_values.insert(new_value);
@@ -160,7 +160,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   // Aggregate value for the last group was not written yet
   _set_and_write_aggregate_value<AggregateType, function>(
       aggregate_results, aggregate_null_values, aggregate_group_index, aggregate_index, current_primary_aggregate,
-      current_secondary_aggregate, value_count, value_count_with_null, unique_values.size());
+      current_secondary_aggregates, value_count, value_count_with_null, unique_values.size());
 
   // Store the aggregate values in a value segment
   _output_segments[aggregate_index + _groupby_column_ids.size()] =
@@ -192,7 +192,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
  * @param aggregate_group_index the offset to use for <code>aggregate_results</code> and <code>aggregate_null_values</code>
  * @param aggregate_index current aggregate's offset in <code>_aggregates</code>
  * @param current_primary_aggregate the value of the aggregate (return value of the aggregate function) - used by all except COUNT (all versions)
- * @param current_secondary_aggregate the value of a supportive aggregate - used by StdDevSamp
+ * @param current_secondary_aggregates the value of a supportive aggregate - used by StdDevSamp
  * @param value_count the number of non-null values - used by COUNT(<name>), AVG and StdDevSamp
  * @param value_count_with_null the number of rows  - used by COUNT(*)
  * @param unique_value_count the number of unique values
@@ -201,7 +201,7 @@ template <typename AggregateType, AggregateFunction function>
 void AggregateSort::_set_and_write_aggregate_value(
     std::vector<AggregateType>& aggregate_results, std::vector<bool>& aggregate_null_values,
     const uint64_t aggregate_group_index, [[maybe_unused]] const uint64_t aggregate_index,
-    std::optional<AggregateType>& current_primary_aggregate, std::optional<AggregateType>& current_secondary_aggregate,
+    std::optional<AggregateType>& current_primary_aggregate, std::vector<AggregateType>& current_secondary_aggregates,
     [[maybe_unused]] const uint64_t value_count, [[maybe_unused]] const uint64_t value_count_with_null,
     [[maybe_unused]] const uint64_t unique_value_count) const {
   if constexpr (function == AggregateFunction::Count) {  // NOLINT
@@ -229,13 +229,11 @@ void AggregateSort::_set_and_write_aggregate_value(
 
     if (value_count <= 1) {
       current_primary_aggregate = std::optional<AggregateType>();
-      current_secondary_aggregate = std::optional<AggregateType>();
+      current_secondary_aggregates = std::vector<AggregateType>{};
     } else {
-      // normal StdDevSamp calculation
-      const auto sum = *current_primary_aggregate;
-      const auto sum_square = *current_secondary_aggregate;
-      const double n = value_count;
-      const auto variance = (1 / (n - 1)) * (sum_square - (1 / n) * sum * sum);
+      // using the Welford's online algorithm
+      const double squared_distance_from_mean = *current_primary_aggregate;
+      const auto variance = squared_distance_from_mean / (value_count - 1);
       current_primary_aggregate = std::sqrt(variance);
     }
   }

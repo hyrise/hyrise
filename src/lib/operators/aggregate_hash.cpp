@@ -118,7 +118,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     */
     if (!position.is_null()) {
       // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-      aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregate);
+      aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates);
 
       // increase value counter
       ++result.aggregate_count;
@@ -589,12 +589,12 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
   size_t i = 0;
   for (const auto& result : results) {
-    const auto n = static_cast<AggregateType>(result.aggregate_count);
+    const auto count = static_cast<AggregateType>(result.aggregate_count);
 
-    if (result.current_primary_aggregate && n > 1) {
-      const auto sum = *result.current_primary_aggregate;
-      const auto sum_square = *result.current_secondary_aggregate;
-      const auto variance = (1 / (n - 1)) * (sum_square - (1 / n) * sum * sum);
+    if (result.current_primary_aggregate && count > 1) {
+      // using the Welford's online algorithm
+      const double squared_distance_from_mean = *result.current_primary_aggregate;
+      const auto variance = squared_distance_from_mean / (count - 1);
       values[i] = std::sqrt(variance);
     } else {
       null_values[i] = true;

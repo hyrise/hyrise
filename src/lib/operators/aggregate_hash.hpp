@@ -41,7 +41,7 @@ For each group in the output, one AggregateResult is created.
 This result contains:
 [1] the current (primary) aggregated value,
 [2] the number of rows that were used,
-[3] an additional current (secondary) aggregated value.
+[3] a vector for additional current (secondary) aggregated values.
 
 [2] is used for AVG and COUNT.
 [3] is used for STDDEV_SAMP.
@@ -50,7 +50,7 @@ This result contains:
 template <typename ColumnDataType, typename AggregateType>
 struct AggregateResult {
   std::optional<AggregateType> current_primary_aggregate;
-  std::optional<AggregateType> current_secondary_aggregate;
+  std::vector<AggregateType> current_secondary_aggregates;
   size_t aggregate_count = 0;
   std::set<ColumnDataType> distinct_values;
   RowID row_id;
