@@ -175,8 +175,17 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       Fail("Unsupported comparison type encountered");
   }
 
-  matches_out.reserve(matches_out.size() + std::distance(range_begin, range_end));
-  std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
+  DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
+  matches_out.guarantee_single_chunk();
+
+  const auto current_matches_size = matches_out.size();
+  const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
+  matches_out.resize(final_matches_size);
+
+  for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
+    matches_out[matches_position] = RowID{chunk_id, *range_begin};
+    range_begin++;
+  }
 
   return matches_out;
 }

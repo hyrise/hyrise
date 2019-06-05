@@ -109,8 +109,10 @@ Contact: firstname.lastname@hpi.de
 -   Pedro     Flemming
 -   Mathias   Flüggen
 -   Johannes  Frohnhofen
+-   Pascal    Führlich
 -   Adrian    Holfter
 -   Sven      Ihde
+-   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
 -   Marvin    Keller
@@ -120,6 +122,7 @@ Contact: firstname.lastname@hpi.de
 -   Tom       Lichtenstein
 -   Alexander Löser
 -   Jan       Mattfeld
+-   Julian    Menzler
 -   Arne      Mayer
 -   Torben    Meyer
 -   Leander   Neiß
