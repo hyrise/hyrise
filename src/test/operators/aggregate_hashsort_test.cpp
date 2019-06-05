@@ -54,10 +54,10 @@ void add_group_data(std::vector<ElementType>& data, const Args&&... args) {
   (append(args), ...);
 }
 
-VariablySizedGroupRun::DataElementType chars_to_blob_element(const std::string& chars) {
-  Assert(chars.size() <= sizeof(VariablySizedGroupRun::DataElementType), "Invalid string size");
+VariablySizedGroupRunElementType chars_to_blob_element(const std::string& chars) {
+  Assert(chars.size() <= sizeof(VariablySizedGroupRunElementType), "Invalid string size");
 
-  auto blob_element = VariablySizedGroupRun::DataElementType{};
+  auto blob_element = VariablySizedGroupRunElementType{};
   memcpy(&blob_element, chars.data(), chars.size());
   return blob_element;
 }
@@ -188,7 +188,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixed) {
   EXPECT_EQ(groups.end, 3u);
 
   // clang-format off
-  auto expected_group_data = std::vector<FixedSizeGroupRun::DataElementType>{};
+  auto expected_group_data = std::vector<FixedSizeGroupRunElementType>{};
   add_group_data(expected_group_data, int32_t{13}, false, 4.5f, false, 1.0);
   add_group_data(expected_group_data, int32_t{12}, true, 0.0f, false, -2.0);
   add_group_data(expected_group_data, int32_t{14}, false, 1.5f, true, 0.0);
@@ -235,7 +235,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited
   EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
 
   // clang-format off
-  auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::DataElementType>();
+  auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRunElementType>();
   add_group_data(expected_variably_sized_group_data, false, "y"s, "abcd"s, false, "bcdef"s);
   add_group_data(expected_variably_sized_group_data, false, "xy"s, "iiii"s, true, ""s);
   add_group_data(expected_variably_sized_group_data, true, ""s, ""s, true, ""s);
@@ -258,7 +258,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited
   EXPECT_EQ(groups.fixed.hashes.size(), 4u);
 
   // clang-format off
-  auto expected_fixed_group_data = std::vector<FixedSizeGroupRun::DataElementType>{};
+  auto expected_fixed_group_data = std::vector<FixedSizeGroupRunElementType>{};
   add_group_data(expected_fixed_group_data, false, 13, int64_t{14});
   add_group_data(expected_fixed_group_data, true, 0, int64_t{15});
   add_group_data(expected_fixed_group_data, true, 0, int64_t{16});
@@ -280,7 +280,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedRowBudgetLimited)
   EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
 
   // clang-format off
-  auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::DataElementType>();
+  auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRunElementType>();
   add_group_data(expected_variably_sized_group_data, false, "y"s, "abcd"s, false, "bcdef"s);
   add_group_data(expected_variably_sized_group_data, false, "xy"s, "iiii"s, true, ""s);
   add_group_data(expected_variably_sized_group_data, true, ""s, ""s, true, ""s);
@@ -301,7 +301,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedRowBudgetLimited)
   // clang-format on
 
   EXPECT_EQ(groups.fixed.hashes.size(), 4u);
-  EXPECT_EQ(groups.fixed.data, std::vector<FixedSizeGroupRun::DataElementType>());
+  EXPECT_EQ(groups.fixed.data, std::vector<FixedSizeGroupRunElementType>());
   EXPECT_EQ(groups.fixed.end, 4);
 }
 
@@ -316,7 +316,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedTableSizeLimitted
   EXPECT_EQ(end_row_id, RowID(ChunkID{3}, ChunkOffset{1}));
 
   // clang-format off
-  auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRun::DataElementType>();
+  auto expected_variably_sized_group_data = std::vector<VariablySizedGroupRunElementType>();
   add_group_data(expected_variably_sized_group_data, false, "bb"s, "ddd"s, true, ""s);
   // clang-format on
 
@@ -412,7 +412,7 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   AggregateHashSortConfig config;
   config.max_partitioning_counter = 6;
 
-  auto run_source = PartitionRunSource<FixedSizeGroupRun>{std::move(runs)};
+  auto run_source = PartitionRunSource<FixedSizeGroupRun>{&groups_layout, std::move(runs)};
   const auto partitions = partition(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 0);
   EXPECT_EQ(run_offset, 6);
@@ -479,12 +479,6 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
     4, 4, 4,
     6, 9, 13
   };
-//  groups.null_values = {
-//    false, false,
-//    false, false,
-//    true, true,
-//    false, false
-//  };
   groups.fixed.hashes = {0b1, 0b0, 0b0, 0b1};
   groups.fixed.end = 4;
   // clang-format on
@@ -502,7 +496,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   AggregateHashSortConfig config;
   config.max_partitioning_counter = 100; // Partition the entire run
 
-  auto run_source = PartitionRunSource<VariablySizedGroupRun>(std::move(runs));
+  auto run_source = PartitionRunSource<VariablySizedGroupRun>(&layout, std::move(runs));
   const auto partitions = partition(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
@@ -513,7 +507,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   ASSERT_EQ(partitions.at(1).runs.size(), 1u);
 
   // clang-format off
-  const auto partition_0_expected_data = std::vector<VariablySizedGroupRun::DataElementType >{
+  const auto partition_0_expected_data = std::vector<VariablySizedGroupRunElementType >{
     chars_to_blob_element("yesn"), chars_to_blob_element("omay"), chars_to_blob_element("be"),
     chars_to_blob_element("yet")
   };
@@ -524,7 +518,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
 //  EXPECT_EQ(partitions.at(0).runs.at(0).groups.null_values, std::vector<bool>({false, false, true, true}));
 
   // clang-format off
-  const auto partition_1_expected_data = std::vector<VariablySizedGroupRun::DataElementType>{
+  const auto partition_1_expected_data = std::vector<VariablySizedGroupRunElementType>{
     chars_to_blob_element("hell"), chars_to_blob_element("owor"), chars_to_blob_element("ldwh"), chars_to_blob_element("y"), // NOLINT
     chars_to_blob_element("grea"), chars_to_blob_element("tbad"), chars_to_blob_element("go"),
   };
@@ -568,7 +562,7 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   config.hash_table_size = 100;
   config.hash_table_max_load_factor = 1.0f;
 
-  auto run_source = PartitionRunSource<FixedSizeGroupRun>{std::move(runs)};
+  auto run_source = PartitionRunSource<FixedSizeGroupRun>{&groups_layout, std::move(runs)};
   const auto [continue_hashing, partitions] = hashing(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
@@ -598,12 +592,12 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
 
 TEST_F(AggregateHashSortTest, HashingVariablySized) {
   // clang-format off
-  auto column_mapping = std::vector<VariablySizedGroupRunLayout::Column>{
+  const auto column_mapping = std::vector<VariablySizedGroupRunLayout::Column>{
     {true, ColumnID{0}, std::nullopt},
   };
   // clang-format on
 
-  auto fixed_layout = FixedSizeGroupRunLayout{0, {}, {}};
+  const auto fixed_layout = FixedSizeGroupRunLayout{0, {}, {}};
   const auto layout = VariablySizedGroupRunLayout{{ColumnID{0}}, {}, column_mapping, fixed_layout};
   auto groups = VariablySizedGroupRun{&layout, 3, 15};
   groups.fixed.end = 3;
@@ -636,7 +630,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   AggregateHashSortConfig config;
   config.max_partitioning_counter = 100; // Partition the entire run
 
-  auto run_source = PartitionRunSource<VariablySizedGroupRun>{std::move(runs)};
+  auto run_source = PartitionRunSource<VariablySizedGroupRun>{&layout, std::move(runs)};
   const auto [continue_hashing, partitions] = hashing(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
@@ -647,7 +641,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   ASSERT_EQ(partitions.at(1).runs.size(), 1u);
 
   // clang-format off
-  const auto partition_0_expected_data = std::vector<VariablySizedGroupRun::DataElementType >{
+  const auto partition_0_expected_data = std::vector<VariablySizedGroupRunElementType >{
   chars_to_blob_element("hell"), chars_to_blob_element("o"),
   };
   // clang-format on
@@ -658,7 +652,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.fixed.hashes, std::vector<size_t>({0b0}));
 
   // clang-format off
-  const auto partition_1_expected_data = std::vector<VariablySizedGroupRun::DataElementType >{
+  const auto partition_1_expected_data = std::vector<VariablySizedGroupRunElementType >{
   chars_to_blob_element("worl"), chars_to_blob_element("d"),
   };
   // clang-format on
@@ -697,7 +691,7 @@ TEST_F(AggregateHashSortTest, AggregateAdaptive) {
 
   auto partitioning = Partitioning{2, 0, 1};
 
-  auto run_source = std::make_unique<PartitionRunSource<FixedSizeGroupRun>>(std::move(runs));
+  auto run_source = std::make_unique<PartitionRunSource<FixedSizeGroupRun>>(&groups_layout, std::move(runs));
   const auto partitions = adaptive_hashing_and_partition<FixedSizeGroupRun>(config, std::move(run_source), partitioning);
 
   ASSERT_EQ(partitions.size(), 2u);
