@@ -561,28 +561,30 @@ TEST_F(SQLTranslatorTest, AliasWithGroupByAndHaving) {
 }
 
 TEST_F(SQLTranslatorTest, AliasWithOrderBy) {
-    const auto actual_lqp_a = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY a, b");
-    const auto actual_lqp_b = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
+  const auto actual_lqp_a = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY a, b");
+  const auto actual_lqp_b = compile_query("SELECT a AS x, b AS y FROM int_float ORDER BY x, y");
 
-    const auto aliases = std::vector<std::string>({"x", "y"});
-    const auto order_by_modes = std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Ascending});
+  const auto aliases = std::vector<std::string>({"x", "y"});
+  const auto order_by_modes = std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Ascending});
 
-    // clang-format off
-    const auto expected_lqp =
-    AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
-      SortNode::make(expression_vector(int_float_a, int_float_b), order_by_modes,
-        stored_table_node_int_float));
-    // clang-format on
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
+    SortNode::make(expression_vector(int_float_a, int_float_b), order_by_modes,
+      stored_table_node_int_float));
+  // clang-format on
 
-    EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
-    EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, AliasWithJoin) {
- const auto actual_lqp_a = compile_query("SELECT R.a, R.b FROM (SELECT a AS c, b AS d FROM int_float) AS R JOIN int_float2 AS S ON R.b = S.b");
- const auto actual_lqp_b = compile_query("SELECT R.c, R.d FROM (SELECT a AS c, b AS d FROM int_float) AS R JOIN int_float2 AS S ON R.d = S.b");
+  const auto actual_lqp_a = compile_query(
+      "SELECT R.a, R.b FROM (SELECT a AS c, b AS d FROM int_float) AS R JOIN int_float2 AS S ON R.b = S.b");
+  const auto actual_lqp_b = compile_query(
+      "SELECT R.c, R.d FROM (SELECT a AS c, b AS d FROM int_float) AS R JOIN int_float2 AS S ON R.d = S.b");
 
- const auto aliases = std::vector<std::string>({"c", "d"});
+  const auto aliases = std::vector<std::string>({"c", "d"});
 
   // clang-format off
   const auto expected_lqp =

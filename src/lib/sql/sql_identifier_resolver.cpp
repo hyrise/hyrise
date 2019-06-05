@@ -81,11 +81,11 @@ void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
 }
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_expression_entry(
-  const std::shared_ptr<AbstractExpression>& expression) {
-    auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
-                                   [&](const auto& entry) { return *entry.expression == *expression; });
-    Assert(entry_iter != _entries.end(), "The expression does not exist.");
-    return *entry_iter;
+    const std::shared_ptr<AbstractExpression>& expression) {
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
+                                 [&](const auto& entry) { return *entry.expression == *expression; });
+  Assert(entry_iter != _entries.end(), "The expression does not exist.");
+  return *entry_iter;
 }
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(
