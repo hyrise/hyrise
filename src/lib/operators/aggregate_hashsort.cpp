@@ -36,17 +36,29 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
       [&](const ColumnID column_id) { return input_table.column_data_type(column_id) != DataType::String; });
 
   if (fixed_size_groups) {
-    return _on_execute_with_group_run<FixedSizeGroupRun>();
+    auto layout = produce_initial_groups_layout<FixedSizeGroupRunLayout>(input_table, _groupby_column_ids);
+    if (layout.group_size == 1) {
+      return _on_execute_with_group_run<FixedSizeGroupRun<GetStaticGroupSize<1>>>(layout);
+    } else if (layout.group_size == 2) {
+      return _on_execute_with_group_run<FixedSizeGroupRun<GetStaticGroupSize<2>>>(layout);
+    } else if (layout.group_size == 3) {
+      return _on_execute_with_group_run<FixedSizeGroupRun<GetStaticGroupSize<3>>>(layout);
+    } else if (layout.group_size == 4) {
+      return _on_execute_with_group_run<FixedSizeGroupRun<GetStaticGroupSize<4>>>(layout);
+    } else {
+      return _on_execute_with_group_run<FixedSizeGroupRun<GetDynamicGroupSize>>(layout);
+    }
+
   } else {
-    return _on_execute_with_group_run<VariablySizedGroupRun>();
+    auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(input_table, _groupby_column_ids);
+    return _on_execute_with_group_run<VariablySizedGroupRun>(layout);
   }
 }
 
 template <typename GroupRun>
-std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run() {
+std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run(const typename GroupRun::LayoutType& layout) {
   auto input_table = input_table_left();
 
-  auto layout = produce_initial_groups_layout<typename GroupRun::LayoutType>(*input_table, _groupby_column_ids);
 
   auto run_source = std::make_unique<TableRunSource<GroupRun>>(input_table, &layout, _config, _aggregates, _groupby_column_ids);
 

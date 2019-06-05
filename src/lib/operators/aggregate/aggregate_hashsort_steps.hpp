@@ -70,17 +70,43 @@ struct FixedSizeGroupKeyCompare {
   }
 };
 
+template<size_t group_size>
+struct GetStaticGroupSize {
+  const FixedSizeGroupRunLayout* layout{};
+
+  explicit GetStaticGroupSize(const FixedSizeGroupRunLayout* layout) {
+    DebugAssert(group_size == layout->group_size, "Invalid static group size");
+  }
+
+  constexpr size_t operator()() const {
+    return group_size;
+  }
+};
+
+struct GetDynamicGroupSize {
+  const FixedSizeGroupRunLayout* layout{};
+
+  explicit GetDynamicGroupSize(const FixedSizeGroupRunLayout* layout): layout(layout) { }
+
+  size_t operator()() const {
+    return layout->group_size;
+  }
+};
+
+template<typename GetGroupSize>
 struct FixedSizeGroupRun {
   using LayoutType = FixedSizeGroupRunLayout;
   using HashTableKey = FixedSizeGroupRemoteKey;
   using HashTableCompare = FixedSizeGroupKeyCompare;
+  using GetGroupSizeType = GetGroupSize;
 
-  FixedSizeGroupRun(const FixedSizeGroupRunLayout* layout, const size_t size) : layout(layout) {
+  FixedSizeGroupRun(const FixedSizeGroupRunLayout* layout, const size_t size) : layout(layout), get_group_size(layout) {
     data.resize(size * layout->group_size);
     hashes.resize(size);
   }
 
   const FixedSizeGroupRunLayout* layout;
+  GetGroupSize get_group_size;
 
   std::vector<size_t> _append_buffer;
 
@@ -101,19 +127,13 @@ struct FixedSizeGroupRun {
   }
 
   FixedSizeGroupRemoteKey make_key(const size_t offset) {
-    return {hashes[offset], &data[offset * layout->group_size]};
-  }
-
-  bool compare(const size_t own_offset, const FixedSizeGroupRun& other_run, const size_t other_offset) const {
-    const auto own_begin = data.begin() + own_offset * layout->group_size;
-    const auto other_begin = other_run.data.begin() + other_offset * layout->group_size;
-    return std::equal(own_begin, own_begin + layout->group_size, other_begin);
+    return {hashes[offset], &data[offset * get_group_size()]};
   }
 
   template <typename T>
   std::shared_ptr<BaseSegment> materialize_output(const ColumnID column_id, const bool column_is_nullable) const {
     const auto* source = reinterpret_cast<const char*>(data.data()) + layout->column_base_offsets[column_id];
-    const auto* source_end = reinterpret_cast<const char*>(data.data() + end * layout->group_size);
+    const auto* source_end = reinterpret_cast<const char*>(data.data() + end * get_group_size());
 
     auto output_values = std::vector<T>(end);
     auto output_null_values = std::vector<bool>(column_is_nullable ? end : 0u);
@@ -153,9 +173,9 @@ struct FixedSizeGroupRun {
     DebugAssert(end + _append_buffer.size() <= hashes.size(), "Append buffer to big for this run");
 
     for (const auto& source_offset : _append_buffer) {
-      std::copy(source.data.begin() + source_offset * layout->group_size,
-                source.data.begin() + (source_offset + 1) * layout->group_size,
-                data.begin() + end * layout->group_size);
+      std::copy(source.data.begin() + source_offset * get_group_size(),
+                source.data.begin() + (source_offset + 1) * get_group_size(),
+                data.begin() + end * get_group_size());
       hashes[end] = source.hashes[source_offset];
       ++end;
     }
@@ -169,7 +189,7 @@ struct FixedSizeGroupRun {
   void resize(const size_t size) {
     DebugAssert(size >= end, "Resize would discard data");
 
-    data.resize(size * layout->group_size);
+    data.resize(size * get_group_size());
     hashes.resize(size);
   }
 
@@ -267,7 +287,7 @@ struct VariablySizedGroupRun {
   std::vector<size_t> value_end_offsets;
 
   // Non-variably sized values in the group and hash values
-  FixedSizeGroupRun fixed;
+  FixedSizeGroupRun<GetDynamicGroupSize> fixed;
 
   explicit VariablySizedGroupRun(const VariablySizedGroupRunLayout* layout, const size_t size, const size_t data_size)
       : layout(layout), fixed(&layout->fixed_layout, size) {
@@ -308,29 +328,6 @@ struct VariablySizedGroupRun {
 
     const auto source_size = source_offset == 0 ? source.group_end_offsets[0] : source.group_end_offsets[source_offset] - source.group_end_offsets[source_offset - 1];
     data_watermark += source_size;
-  }
-
-  bool compare(const size_t own_offset, const VariablySizedGroupRun& other_run, const size_t other_offset) const {
-    // Compare fixed size values
-    if (!fixed.compare(own_offset, other_run.fixed, other_offset)) {
-      return false;
-    }
-
-    // Compare intra-group layout
-    const auto own_value_end_offsets_iter = value_end_offsets.begin() + own_offset * layout->column_count;
-    const auto other_value_end_offsets_iter = other_run.value_end_offsets.begin() + other_offset * layout->column_count;
-    if (!std::equal(own_value_end_offsets_iter, own_value_end_offsets_iter + layout->column_count,
-                    other_value_end_offsets_iter, other_value_end_offsets_iter + layout->column_count)) {
-      return false;
-    }
-
-    // Compare the actual data
-    const auto own_data_begin_iter = data.begin() + (own_offset == 0 ? 0 : group_end_offsets[own_offset - 1]);
-    const auto own_data_end_iter = data.begin() + group_end_offsets[own_offset];
-    const auto other_data_begin_iter = other_run.data.begin() + (other_offset == 0 ? 0 : other_run.group_end_offsets[other_offset - 1]);
-    const auto other_data_end_iter = other_run.data.begin() + other_run.group_end_offsets[other_offset];
-
-    return std::equal(own_data_begin_iter, own_data_end_iter, other_data_begin_iter, other_data_end_iter);
   }
 
   template <typename T>
@@ -871,14 +868,15 @@ inline VariablySizedGroupRunLayout produce_initial_groups_layout<VariablySizedGr
   return VariablySizedGroupRunLayout{variably_sized_column_ids, fixed_size_column_ids, column_mapping, fixed_layout};
 }
 
-inline std::pair<FixedSizeGroupRun, RowID> produce_initial_groups(const std::shared_ptr<const Table>& table,
+template<typename GetGroupSize>
+inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(const std::shared_ptr<const Table>& table,
                                                                    const FixedSizeGroupRunLayout* layout,
                                                                    const std::vector<ColumnID>& group_by_column_ids,
                                                                    const RowID& begin_row_id,
                                                                    const size_t row_count) {
   constexpr auto GROUP_DATA_ELEMENT_SIZE = sizeof(FixedSizeGroupRunElementType);
 
-  auto group_run = FixedSizeGroupRun{layout, row_count};
+  auto group_run = FixedSizeGroupRun<GetGroupSize>{layout, row_count};
 
   auto end_row_id = RowID{};
 
@@ -1053,7 +1051,7 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
    * Materialize fixed-size group-by columns, now that we know the row count we want to materialize for this run
    */
   auto group_run = VariablySizedGroupRun{layout, 0, 0};
-  group_run.fixed = produce_initial_groups(table, &layout->fixed_layout, layout->fixed_size_column_ids, begin_row_id, run_row_count).first;
+  group_run.fixed = produce_initial_groups<GetDynamicGroupSize>(table, &layout->fixed_layout, layout->fixed_size_column_ids, begin_row_id, run_row_count).first;
 
   /**
    * Rearrange `data_per_column` into an interleaved blob
@@ -1107,32 +1105,31 @@ struct TableRunSource : public AbstractRunSource<GroupRun> {
   }
 
   bool can_fetch_run() const override { return remaining_rows > 0; }
-  void fetch_run() override;
+
+  void fetch_run() override {
+    if constexpr (std::is_same_v<GroupRun, VariablySizedGroupRun>) {
+      const auto run_row_budget = std::min(remaining_rows, size_t{300'000});
+      const auto run_group_data_budget = std::max(size_t{128}, run_row_budget * 7u);
+
+      auto pair = produce_initial_groups(table, this->layout, groupby_column_ids, begin_row_id, run_row_budget, run_group_data_budget);
+      auto input_aggregates = produce_initial_aggregates(table, aggregate_column_definitions, !groupby_column_ids.empty(), begin_row_id, pair.first.size());
+
+      remaining_rows -= pair.first.fixed.size();
+
+      begin_row_id = pair.second;
+      this->runs.emplace_back(std::move(pair.first), std::move(input_aggregates));
+    } else {
+      const auto run_row_count = std::min(remaining_rows, size_t{300'000});
+      remaining_rows -= run_row_count;
+
+      auto pair = produce_initial_groups<typename GroupRun::GetGroupSizeType>(table, this->layout, groupby_column_ids, begin_row_id, run_row_count);
+      auto input_aggregates = produce_initial_aggregates(table, aggregate_column_definitions, !groupby_column_ids.empty(), begin_row_id, pair.first.size());
+
+      begin_row_id = pair.second;
+      this->runs.emplace_back(std::move(pair.first), std::move(input_aggregates));
+    }
+  }
 };
-
-template<> inline void TableRunSource<FixedSizeGroupRun>::fetch_run() {
-  const auto run_row_count = std::min(remaining_rows, size_t{300'000});
-  remaining_rows -= run_row_count;
-
-  auto pair = produce_initial_groups(table, layout, groupby_column_ids, begin_row_id, run_row_count);
-  auto input_aggregates = produce_initial_aggregates(table, aggregate_column_definitions, !groupby_column_ids.empty(), begin_row_id, pair.first.size());
-
-  begin_row_id = pair.second;
-  runs.emplace_back(std::move(pair.first), std::move(input_aggregates));
-}
-
-template<> inline void TableRunSource<VariablySizedGroupRun>::fetch_run() {
-  const auto run_row_budget = std::min(remaining_rows, size_t{300'000});
-  const auto run_group_data_budget = std::max(size_t{128}, run_row_budget * 7u);
-
-  auto pair = produce_initial_groups(table, layout, groupby_column_ids, begin_row_id, run_row_budget, run_group_data_budget);
-  auto input_aggregates = produce_initial_aggregates(table, aggregate_column_definitions, !groupby_column_ids.empty(), begin_row_id, pair.first.size());
-
-  remaining_rows -= pair.first.fixed.size();
-
-  begin_row_id = pair.second;
-  runs.emplace_back(std::move(pair.first), std::move(input_aggregates));
-}
 
 }  // namespace aggregate_hashsort
 
