@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
   }
 
   // For the data generation, the official tpc-ds toolkit is used.
-  // This toolkit does not provide the option to generate data using a scale factor less than 1. 
+  // This toolkit does not provide the option to generate data using a scale factor less than 1.
   Assert(scale_factor >= 1, "For now, TPC-DS benchmark only supports scale factor 1");
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
@@ -72,11 +72,15 @@ int main(int argc, char* argv[]) {
   // TPC-DS FileBasedQueryGenerator specification
   std::optional<std::unordered_set<std::string>> query_subset;
   const auto query_filename_blacklist = std::unordered_set<std::string>{};
-  std::string query_path = "resources/benchmark/tpcds/queries";
+  std::string query_path = "resources/benchmark/tpcds/queries/supported";
   std::string table_path = "resources/benchmark/tpcds/tables";
+  std::filesystem::path example_query_path = query_path + "/query_07.sql";
+  std::filesystem::path example_table_schema_path = table_path + "/call_center.csv.json";
 
   Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
   Assert(std::filesystem::is_directory(table_path), "Table path (" + table_path + ") has to be a directory.");
+  Assert(std::filesystem::exists(example_query_path), "Queries have to be available.");
+  Assert(std::filesystem::exists(example_table_schema_path), "Table schemes have to be available.");
 
   auto query_generator =
       std::make_unique<FileBasedQueryGenerator>(*config, query_path, query_filename_blacklist, query_subset);
@@ -104,9 +108,10 @@ int main(int argc, char* argv[]) {
     benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
 
     // Add foreign keys
-    std::ifstream foreign_key_file("resources/benchmark/tpcds/create_indices.sql");
-    std::string foreign_key_sql((std::istreambuf_iterator<char>(foreign_key_file)), std::istreambuf_iterator<char>());
-    benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_sql);
+    std::ifstream create_indices_file("resources/benchmark/tpcds/create_indices.sql");
+    std::string create_indices_sql((std::istreambuf_iterator<char>(create_indices_file)),
+                                   std::istreambuf_iterator<char>());
+    benchmark_runner.sqlite_wrapper->raw_execute_query(create_indices_sql);
 
     // Copy over data
     for (const auto& table_name : StorageManager::get().table_names()) {
