@@ -31,7 +31,7 @@
 using namespace opossum;  // NOLINT
 
 int main(int argc, char* argv[]) {
-  auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPCDS Benchmark");
+  auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPC-DS Benchmark");
 
   // clang-format off
   cli_options.add_options()
@@ -61,12 +61,13 @@ int main(int argc, char* argv[]) {
         std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
-  Assert(scale_factor == 1, "For now, TPC-DS benchmark only supports scale factor 1");
-  Assert(!config->enable_scheduler, "Multithreaded benchmark execution is currently not supported for TPC-DS");
+  // For the data generation, the official tpc-ds toolkit is used.
+  // This toolkit does not provide the option to generate data using a scale factor less than 1. 
+  Assert(scale_factor >= 1, "For now, TPC-DS benchmark only supports scale factor 1");
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
 
-  std::cout << "- TPCDS scale factor is " << scale_factor << std::endl;
+  std::cout << "- TPC-DS scale factor is " << scale_factor << std::endl;
 
   // TPC-DS FileBasedQueryGenerator specification
   std::optional<std::unordered_set<std::string>> query_subset;
