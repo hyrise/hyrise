@@ -61,7 +61,7 @@ TEST_F(CreateTableTest, TableAlreadyExists) {
   const auto context = TransactionManager::get().new_transaction_context();
   create_table->set_transaction_context(context);
 
-  create_table->execute(); // Table name "t" is taken now
+  create_table->execute();  // Table name "t" is taken now
   context->commit();
 
   const auto create_different_table = std::make_shared<CreateTable>("t2", false, dummy_table_wrapper);

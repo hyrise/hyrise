@@ -44,6 +44,7 @@
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -819,6 +820,18 @@ TEST_F(LQPTranslatorTest, CreateTable) {
   // CreateTable input must be executed to enable access to column definitions
   create_table->mutable_input_left()->execute();
   EXPECT_EQ(create_table->column_definitions(), column_definitions);
+}
+
+TEST_F(LQPTranslatorTest, StaticTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto lqp = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::TableWrapper);
 }
 
 TEST_F(LQPTranslatorTest, DropTable) {
