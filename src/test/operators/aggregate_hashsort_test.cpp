@@ -138,7 +138,7 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
 
   auto variably_sized_layout = VariablySizedGroupRunLayout{std::vector({ColumnID{2}, ColumnID{1}}), std::vector({ColumnID{0}}), column_mapping, fixed_size_layout};
 
-  auto variably_sized_run = VariablySizedGroupRun{&variably_sized_layout, 0u, 0u};
+  auto variably_sized_run = VariablySizedGroupRun<GetDynamicGroupSize>{&variably_sized_layout, 0u, 0u};
 
   add_group_data(variably_sized_run.data, false, "aaa"s, false, "bbbb"s);
   add_group_data(variably_sized_run.data, false, "aaa"s, false, "bbbb"s);
@@ -153,7 +153,7 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
   variably_sized_run.fixed.end = 4;
   variably_sized_run.fixed.hashes = {0b0, 0b0, 0b1, 0b1};
 
-  auto compare = VariablySizedGroupKeyCompare{&variably_sized_layout};
+  auto compare = VariablySizedGroupKeyCompare<GetDynamicGroupSize>{&variably_sized_layout};
 
   EXPECT_TRUE(compare(variably_sized_run.make_key(0), variably_sized_run.make_key(1)));
   EXPECT_FALSE(compare(variably_sized_run.make_key(0), variably_sized_run.make_key(2)));
@@ -235,7 +235,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited
 
   // Produce groups with data/row budget so that the data budget per column (12 * uint32_t) gets exhausted first, after
   // 4 rows
-  const auto [groups, end_row_id] = produce_initial_groups(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 100, 12);
+  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 100, 12);
 
   EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
 
@@ -280,7 +280,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedRowBudgetLimited)
   const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
 
   // Produce groups with data/row budget so that the row budget gets exhausted before the group data budget
-  const auto [groups, end_row_id] = produce_initial_groups(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 4, 50);
+  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 4, 50);
 
   EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
 
@@ -316,7 +316,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedTableSizeLimitted
   const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
 
   // Produce groups with data/row budget so that the row budget gets exhausted before the group data budget
-  const auto [groups, end_row_id] = produce_initial_groups(table, &layout, group_by_column_ids, RowID{ChunkID{3}, ChunkOffset{1}}, 50, 100);
+  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(table, &layout, group_by_column_ids, RowID{ChunkID{3}, ChunkOffset{1}}, 50, 100);
 
   EXPECT_EQ(end_row_id, RowID(ChunkID{3}, ChunkOffset{1}));
 
@@ -467,7 +467,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
 
   auto fixed_layout = FixedSizeGroupRunLayout{0, {}, {}};
   const auto layout = VariablySizedGroupRunLayout{{ColumnID{0}, ColumnID{1}, ColumnID{2}}, {}, column_mapping, fixed_layout};
-  auto groups = VariablySizedGroupRun{&layout, 4, 36};
+  auto groups = VariablySizedGroupRun<GetDynamicGroupSize>{&layout, 4, 36};
   groups.fixed.end = 4;
 
   // clang-format off
@@ -494,14 +494,14 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
 
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
 
-  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun>{std::move(groups), std::move(aggregates)};
-  auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun>>{};
+  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>{std::move(groups), std::move(aggregates)};
+  auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
   AggregateHashSortConfig config;
   config.max_partitioning_counter = 100; // Partition the entire run
 
-  auto run_source = PartitionRunSource<VariablySizedGroupRun>(&layout, std::move(runs));
+  auto run_source = PartitionRunSource<VariablySizedGroupRun<GetDynamicGroupSize>>(&layout, std::move(runs));
   const auto partitions = partition(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
@@ -604,7 +604,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
 
   const auto fixed_layout = FixedSizeGroupRunLayout{0, {}, {}};
   const auto layout = VariablySizedGroupRunLayout{{ColumnID{0}}, {}, column_mapping, fixed_layout};
-  auto groups = VariablySizedGroupRun{&layout, 3, 15};
+  auto groups = VariablySizedGroupRun<GetDynamicGroupSize>{&layout, 3, 15};
   groups.fixed.end = 3;
 
   // clang-format off
@@ -628,14 +628,14 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
 
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
 
-  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun>{std::move(groups), std::move(aggregates)};
-  auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun>>{};
+  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>{std::move(groups), std::move(aggregates)};
+  auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
   AggregateHashSortConfig config;
   config.max_partitioning_counter = 100; // Partition the entire run
 
-  auto run_source = PartitionRunSource<VariablySizedGroupRun>{&layout, std::move(runs)};
+  auto run_source = PartitionRunSource<VariablySizedGroupRun<GetDynamicGroupSize>>{&layout, std::move(runs)};
   const auto [continue_hashing, partitions] = hashing(config, run_source, partitioning, run_idx, run_offset);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);

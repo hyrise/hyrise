@@ -274,6 +274,7 @@ struct VariablySizedGroupKey {
   boost::variant<VariablySizedInPlaceGroupKey, VariablySizedRemoteGroupKey> variant;
 };
 
+template<typename GetFixedGroupSize>
 struct VariablySizedGroupKeyCompare {
   const VariablySizedGroupRunLayout* layout{};
 
@@ -318,16 +319,19 @@ struct VariablySizedGroupKeyCompare {
         return true;
       }
 
-      return std::equal(remote_lhs.fixed_sized_group, remote_lhs.fixed_sized_group + layout->fixed_layout.group_size, remote_rhs.fixed_sized_group);
+      const auto fixed_group_size = GetFixedGroupSize{&layout->fixed_layout}();
+      return std::equal(remote_lhs.fixed_sized_group, remote_lhs.fixed_sized_group + fixed_group_size, remote_rhs.fixed_sized_group);
     }
 
   }
 };
 
+template<typename GetFixedGroupSize>
 struct VariablySizedGroupRun {
   using LayoutType = VariablySizedGroupRunLayout;
   using HashTableKey = VariablySizedGroupKey;
-  using HashTableCompare = VariablySizedGroupKeyCompare;
+  using HashTableCompare = VariablySizedGroupKeyCompare<GetFixedGroupSize>;
+  using GetFixedGroupSizeType = GetFixedGroupSize;
 
   const VariablySizedGroupRunLayout* layout;
 
@@ -343,7 +347,7 @@ struct VariablySizedGroupRun {
   std::vector<size_t> value_end_offsets;
 
   // Non-variably sized values in the group and hash values
-  FixedSizeGroupRun<GetDynamicGroupSize> fixed;
+  FixedSizeGroupRun<GetFixedGroupSize> fixed;
 
   explicit VariablySizedGroupRun(const VariablySizedGroupRunLayout* layout, const size_t size, const size_t data_size)
       : layout(layout), fixed(&layout->fixed_layout, size) {
@@ -360,9 +364,9 @@ struct VariablySizedGroupRun {
     const auto group_begin_offset = offset == 0 ? size_t{0} : group_end_offsets[offset - 1];
     const auto variably_sized_group_size = group_end_offsets[offset] - group_begin_offset;
     const auto* variably_sized_group = &data[group_begin_offset];
-    const auto* fixed_size_group = layout->fixed_layout.group_size == 0 ? nullptr : &fixed.data[offset * layout->fixed_layout.group_size];
+    const auto* fixed_size_group = fixed.get_group_size() == 0 ? nullptr : &fixed.data[offset * fixed.get_group_size()];
 
-    const auto total_group_size = variably_sized_group_size + layout->fixed_layout.group_size;
+    const auto total_group_size = variably_sized_group_size + fixed.get_group_size();
 
     if (total_group_size <= VariablySizedInPlaceGroupKey::CAPACITY) {
       auto key = VariablySizedGroupKey{};
@@ -373,7 +377,7 @@ struct VariablySizedGroupRun {
       in_place.size = total_group_size;
       in_place.value_end_offsets = &value_end_offsets[offset * layout->column_count];
       std::copy(variably_sized_group, variably_sized_group + variably_sized_group_size, in_place.group.begin());
-      std::copy(fixed_size_group, fixed_size_group + layout->fixed_layout.group_size, in_place.group.begin() + variably_sized_group_size);
+      std::copy(fixed_size_group, fixed_size_group + fixed.get_group_size(), in_place.group.begin() + variably_sized_group_size);
 
       return key;
     } else {
@@ -408,7 +412,7 @@ struct VariablySizedGroupRun {
     const auto& [is_variably_sized, local_column_id, nullable_column_idx] = layout->column_mapping[column_id];
 
     if (!is_variably_sized) {
-      return fixed.materialize_output<T>(ColumnID{local_column_id}, column_is_nullable);
+      return fixed.template materialize_output<T>(ColumnID{local_column_id}, column_is_nullable);
     }
 
     const auto row_count = fixed.end;
@@ -484,6 +488,11 @@ struct VariablySizedGroupRun {
   }
 };
 
+template<typename T> struct IsVariablySizedGroupRun { static constexpr auto value = false; };
+template<typename T> struct IsVariablySizedGroupRun<VariablySizedGroupRun<T>> { static constexpr auto value = true; };
+
+template<typename T> constexpr auto is_variably_sized_group_run_v = IsVariablySizedGroupRun<T>::value;
+
 template <typename GroupRun>
 struct Run {
   Run(GroupRun&& groups, std::vector<std::unique_ptr<BaseAggregateRun>>&& aggregates)
@@ -497,7 +506,7 @@ struct Run {
       new_aggregates[aggregate_idx] = this->aggregates[aggregate_idx]->new_instance(memory_budget);
     }
 
-    if constexpr (std::is_same_v<GroupRun, VariablySizedGroupRun>) {
+    if constexpr (is_variably_sized_group_run_v<GroupRun>) {
       auto new_groups = GroupRun{groups.layout, memory_budget, memory_budget * 2};
       return Run<GroupRun>{std::move(new_groups), std::move(new_aggregates)};
     } else {
@@ -988,7 +997,8 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
   return {std::move(group_run), end_row_id};
 }
 
-inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
+template<typename GetFixedGroupSize>
+inline std::pair<VariablySizedGroupRun<GetFixedGroupSize>, RowID> produce_initial_groups(
     const std::shared_ptr<const Table>& table,
     const VariablySizedGroupRunLayout* layout,
     const std::vector<ColumnID>& group_by_column_ids,
@@ -1123,8 +1133,8 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
   /**
    * Materialize fixed-size group-by columns, now that we know the row count we want to materialize for this run
    */
-  auto group_run = VariablySizedGroupRun{layout, 0, 0};
-  group_run.fixed = produce_initial_groups<GetDynamicGroupSize>(table, &layout->fixed_layout, layout->fixed_size_column_ids, begin_row_id, run_row_count).first;
+  auto group_run = VariablySizedGroupRun<GetFixedGroupSize>{layout, 0, 0};
+  group_run.fixed = produce_initial_groups<GetFixedGroupSize>(table, &layout->fixed_layout, layout->fixed_size_column_ids, begin_row_id, run_row_count).first;
 
   /**
    * Rearrange `data_per_column` into an interleaved blob
@@ -1180,11 +1190,11 @@ struct TableRunSource : public AbstractRunSource<GroupRun> {
   bool can_fetch_run() const override { return remaining_rows > 0; }
 
   void fetch_run() override {
-    if constexpr (std::is_same_v<GroupRun, VariablySizedGroupRun>) {
+    if constexpr (is_variably_sized_group_run_v<GroupRun>) {
       const auto run_row_budget = std::min(remaining_rows, size_t{300'000});
       const auto run_group_data_budget = std::max(size_t{128}, run_row_budget * 7u);
 
-      auto pair = produce_initial_groups(table, this->layout, groupby_column_ids, begin_row_id, run_row_budget, run_group_data_budget);
+      auto pair = produce_initial_groups<typename GroupRun::GetFixedGroupSizeType>(table, this->layout, groupby_column_ids, begin_row_id, run_row_budget, run_group_data_budget);
       auto input_aggregates = produce_initial_aggregates(table, aggregate_column_definitions, !groupby_column_ids.empty(), begin_row_id, pair.first.size());
 
       remaining_rows -= pair.first.fixed.size();

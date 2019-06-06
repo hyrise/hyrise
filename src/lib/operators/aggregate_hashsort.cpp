@@ -50,7 +50,17 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     }
   } else {
     auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(input_table, _groupby_column_ids);
-    return _on_execute_with_group_run<VariablySizedGroupRun>(layout);
+    if (layout.fixed_layout.group_size == 1) {
+      return _on_execute_with_group_run<VariablySizedGroupRun<GetStaticGroupSize<1>>>(layout);
+    } else if (layout.fixed_layout.group_size == 2) {
+      return _on_execute_with_group_run<VariablySizedGroupRun<GetStaticGroupSize<2>>>(layout);
+    } else if (layout.fixed_layout.group_size == 3) {
+      return _on_execute_with_group_run<VariablySizedGroupRun<GetStaticGroupSize<3>>>(layout);
+    } else if (layout.fixed_layout.group_size == 4) {
+      return _on_execute_with_group_run<VariablySizedGroupRun<GetStaticGroupSize<4>>>(layout);
+    } else {
+      return _on_execute_with_group_run<VariablySizedGroupRun<GetDynamicGroupSize>>(layout);
+    }
   }
 }
 
