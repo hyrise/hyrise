@@ -27,7 +27,8 @@ class TableStatistics {
    */
   static std::shared_ptr<TableStatistics> from_table(const Table& table);
 
-  TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& column_statistics, const Cardinality row_count);
+  TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& column_statistics,
+                  const Cardinality row_count);
 
   /**
    * @return column_statistics[column_id]->data_type

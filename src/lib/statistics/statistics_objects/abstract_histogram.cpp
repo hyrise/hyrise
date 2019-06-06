@@ -624,7 +624,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
 
   const auto input_bin_count = bin_count();
 
-
   /**
    * Collect "candidate" splits from the histogram itself and the `additional_bin_edges`.
    *

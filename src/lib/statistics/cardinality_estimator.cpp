@@ -24,8 +24,8 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "static_variant_cast.hpp"
-#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
@@ -209,7 +209,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
     const AliasNode& alias_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // For AliasNodes, just reorder/remove AttributeStatistics from the input
 
-  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{alias_node.column_expressions().size()};
+  auto column_statistics =
+      std::vector<std::shared_ptr<BaseAttributeStatistics>>{alias_node.column_expressions().size()};
 
   for (size_t expression_idx{0}; expression_idx < alias_node.column_expressions().size(); ++expression_idx) {
     const auto& expression = *alias_node.column_expressions()[expression_idx];
@@ -224,8 +225,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
     const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // For ProjectionNodes, reorder/remove AttributeStatistics from the input. They also perform calculations creating new
   // colums.
-  // TODO(anybody) For these, no meaningful statistics can be generated yet, hence an empty AttributeStatistics object is
-  //               created.
+  // TODO(anybody) For these, no meaningful statistics can be generated yet, hence an empty AttributeStatistics object
+  //               is created.
 
   auto column_statistics =
       std::vector<std::shared_ptr<BaseAttributeStatistics>>{projection_node.column_expressions().size()};
@@ -393,7 +394,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
 
   if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit_node.num_rows_expression())) {
     const auto num_rows = Cardinality{lenient_variant_cast<float>(value_expression->value)};
-    auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{limit_node.column_expressions().size()};
+    auto column_statistics =
+        std::vector<std::shared_ptr<BaseAttributeStatistics>>{limit_node.column_expressions().size()};
 
     for (auto column_id = ColumnID{0}; column_id < input_table_statistics->column_statistics.size(); ++column_id) {
       resolve_data_type(input_table_statistics->column_data_type(column_id), [&](const auto data_type_t) {
