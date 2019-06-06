@@ -15,7 +15,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics(table.column_count());
 
   /**
-   * Determine bin count, within mostly arbitrarily chose bounds: 5 (for tables with <=2k rows) up to 100 bins
+   * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
    * (for tables with >= 200m rows) are created.
    */
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
