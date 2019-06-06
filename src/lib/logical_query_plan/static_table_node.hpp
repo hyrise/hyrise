@@ -8,11 +8,11 @@
 namespace opossum {
 
 /**
- * This node type represents the CREATE TABLE management command. TODO
+ * This node type wraps a table.
  */
 class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public BaseNonQueryNode {
  public:
-  explicit StaticTableNode(const std::shared_ptr<Table> table);
+  explicit StaticTableNode(const std::shared_ptr<Table>& table);
 
   std::string description() const override;
 
