@@ -26,6 +26,8 @@ class JoinGraphStatisticsCache {
  public:
   // One bit for each of JoinGraph's vertices followed by one bit for each predicate. Represents a subgraph of a
   // JoinGraph. "1" means that the vertex/predicate is included in the subgraph.
+  // A Bitmask is a unique identifier for a subplan of a JoinGraph (not a hash). If the bit for a predicate
+  // `V1.a = V2.a` is set the bits for `V1` and `V2` need to be set as well.
   using Bitmask = boost::dynamic_bitset<>;
 
   // Maps vertices to their index in the Bitmask
@@ -42,7 +44,8 @@ class JoinGraphStatisticsCache {
 
   /**
    * Try to build a bitmask (aka cache key) from an LQP. This will either return the bitmask or std::nullopt, if
-   * Predicates or Vertices not registered in _vertex_indices and _predicate_indices are encountered.
+   * Predicates or Vertices not registered in _vertex_indices and _predicate_indices are encountered. The latter can be
+   * the case if `lqp` is a suplan of a vertex node.
    */
   std::optional<Bitmask> bitmask(const std::shared_ptr<AbstractLQPNode>& lqp) const;
 

@@ -622,25 +622,27 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     Fail("Cannot split_at_bin_bounds() on string histogram");
   }
 
+  const auto input_bin_count = bin_count();
+
+
   /**
-   * Create vector with pairs for each split.
-   * For a lower bin edge e, the new histogram will have to be split at previous_value_clamped(e) and e.
-   * For an upper bin edge e, the new histogram will have to be split at e and next_value_clamped(e).
+   * Collect "candidate" splits from the histogram itself and the `additional_bin_edges`.
    *
-   * We can safely ignore duplicate splits, so we use a set first and then copy the splits to a vector.
-   * Also, we will create splits in gaps for now, but we will not create any actual bins for them later on.
+   * A split is a pair, where pair.first is the upper bound of a (potential) bin in the
+   * result histogram and pair.second is the lower bound of the (potential) subsequent bin.
+   *
+   * E.g. if the histogram has the bins {[0, 10], [15, 20]} and additional_bin_edges is {[-4, 5], [16, 18]})
+   * then candidate_split_set becomes {[-1, 0], [10, 11], [14, 15], [20, 21], [-5, -4], [5, 6], [15, 16], [18, 19]}
    */
-  const auto current_bin_count = bin_count();
+  auto candidate_split_set = std::unordered_set<std::pair<T, T>, boost::hash<std::pair<T, T>>>{};
 
-  std::unordered_set<std::pair<T, T>, boost::hash<std::pair<T, T>>> split_set;
-
-  for (auto bin_id = BinID{0}; bin_id < current_bin_count; bin_id++) {
+  for (auto bin_id = BinID{0}; bin_id < input_bin_count; bin_id++) {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
     // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if constexpr (std::is_arithmetic_v<T>) {
-      split_set.insert(std::make_pair(_domain.previous_value_clamped(bin_min), bin_min));
-      split_set.insert(std::make_pair(bin_max, _domain.next_value_clamped(bin_max)));
+      candidate_split_set.insert(std::make_pair(_domain.previous_value_clamped(bin_min), bin_min));
+      candidate_split_set.insert(std::make_pair(bin_max, _domain.next_value_clamped(bin_max)));
     } else {
       // TODO(tim): turn into compile-time error
       Fail("Not supported for strings.");
@@ -650,8 +652,8 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   for (const auto& edge_pair : additional_bin_edges) {
     // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
     if constexpr (std::is_arithmetic_v<T>) {
-      split_set.insert(std::make_pair(_domain.previous_value_clamped(edge_pair.first), edge_pair.first));
-      split_set.insert(std::make_pair(edge_pair.second, _domain.next_value_clamped(edge_pair.second)));
+      candidate_split_set.insert(std::make_pair(_domain.previous_value_clamped(edge_pair.first), edge_pair.first));
+      candidate_split_set.insert(std::make_pair(edge_pair.second, _domain.next_value_clamped(edge_pair.second)));
     } else {
       // TODO(tim): turn into compile-time error
       Fail("Not supported for strings.");
@@ -659,18 +661,20 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   }
 
   /**
-   * Split pairs into single values.
-   * These are the new bin edges, and we have to sort them.
+   * Sequentialize `candidate_split_set` and sort it.
+   *
+   * E.g. {[-1, 0], [10, 11], [14, 15], [20, 21], [-5, -4], [5, 6], [15, 16], [18, 19]} becomes
+   * [-5, -4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20, 21]
    */
-  std::vector<T> all_edges(split_set.size() * 2);
-  size_t edge_idx = 0;
-  for (const auto& split_pair : split_set) {
-    all_edges[edge_idx] = split_pair.first;
-    all_edges[edge_idx + 1] = split_pair.second;
+  auto candidate_edges = std::vector<T>(candidate_split_set.size() * 2);
+  auto edge_idx = size_t{0};
+  for (const auto& split_pair : candidate_split_set) {
+    candidate_edges[edge_idx] = split_pair.first;
+    candidate_edges[edge_idx + 1] = split_pair.second;
     edge_idx += 2;
   }
 
-  std::sort(all_edges.begin(), all_edges.end());
+  std::sort(candidate_edges.begin(), candidate_edges.end());
 
   /**
    * Remove the first and last value.
@@ -678,22 +682,29 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
    * The lower edge of bin 0 basically added the upper edge of bin -1,
    * and the upper edge of the last bin basically added the lower edge of the bin after the last bin.
    * Both values are obviously not needed.
+   *
+   * E.g., [-5, -4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20, 21] becomes
+   * [-4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20]
    */
-  all_edges.erase(all_edges.begin());
-  all_edges.pop_back();
+  candidate_edges.erase(candidate_edges.begin());
+  candidate_edges.pop_back();
 
   // We do not resize the vectors because we might not need all the slots because bins can be empty.
-  const auto new_bin_count = all_edges.size() / 2;
+  const auto new_bin_count = candidate_edges.size() / 2;
 
   GenericHistogramBuilder<T> builder{new_bin_count, _domain};
 
   /**
    * Create new bins.
-   * Bin edges are defined by consecutive values in pairs of two.
+   * Bin edges are defined by two consecutive values in candidate_edges in pairs of two.
+   *
+   * E.g. [-4, -1, 0, 5, 6, 10, 11, 14, 15, 15, 16, 18, 19, 20] becomes
+   * {[-4, -1], [0, 5], [6, 10], [11, 14], [15, 15], [16, 18], [19, 20]} but since some of these bins contain not data
+   * in the original histogram, the resulting histogram is {[0, 5], [6, 10], [15, 15], [16, 18], [19, 20]}
    */
   for (auto bin_id = BinID{0}; bin_id < new_bin_count; bin_id++) {
-    const auto bin_min = all_edges[bin_id * 2];
-    const auto bin_max = all_edges[bin_id * 2 + 1];
+    const auto bin_min = candidate_edges[bin_id * 2];
+    const auto bin_max = candidate_edges[bin_id * 2 + 1];
 
     const auto estimate =
         estimate_cardinality_and_distinct_count(PredicateCondition::BetweenInclusive, bin_min, bin_max);
