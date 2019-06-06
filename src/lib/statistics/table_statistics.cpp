@@ -3,7 +3,7 @@
 #include <numeric>
 #include <thread>
 
-#include "column_statistics.hpp"
+#include "attribute_statistics.hpp"
 #include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "storage/table.hpp"
@@ -12,7 +12,7 @@
 namespace opossum {
 
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
-  std::vector<std::shared_ptr<BaseColumnStatistics>> column_statistics(table.column_count());
+  std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
 
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
@@ -39,7 +39,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
         resolve_data_type(column_data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
-          const auto output_column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
+          const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
           const auto histogram =
               EqualDistinctCountHistogram<ColumnDataType>::from_column(table, my_column_id, histogram_bin_count);
@@ -73,7 +73,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   return std::make_shared<TableStatistics>(std::move(column_statistics), table.row_count());
 }
 
-TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseColumnStatistics>>&& column_statistics,
+TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& column_statistics,
                                  const Cardinality row_count)
     : column_statistics(std::move(column_statistics)), row_count(row_count) {}
 
@@ -89,7 +89,7 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_stat
   for (const auto& column_statistics : table_statistics.column_statistics) {
     resolve_data_type(column_statistics->data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      stream << *std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(column_statistics) << std::endl;
+      stream << *std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(column_statistics) << std::endl;
     });
   }
 

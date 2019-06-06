@@ -7,7 +7,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/table_statistics.hpp"
 
@@ -28,12 +28,12 @@ class JoinGraphStatisticsCacheTest : public ::testing::Test {
     b_b = node_b->get_column("b");
     c_a = node_c->get_column("a");
 
-    statistics_a_a = std::make_shared<ColumnStatistics<int32_t>>();
-    statistics_a_b = std::make_shared<ColumnStatistics<int32_t>>();
-    statistics_b_a = std::make_shared<ColumnStatistics<int32_t>>();
-    statistics_b_b = std::make_shared<ColumnStatistics<int32_t>>();
+    statistics_a_a = std::make_shared<AttributeStatistics<int32_t>>();
+    statistics_a_b = std::make_shared<AttributeStatistics<int32_t>>();
+    statistics_b_a = std::make_shared<AttributeStatistics<int32_t>>();
+    statistics_b_b = std::make_shared<AttributeStatistics<int32_t>>();
 
-    auto column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{statistics_a_a, statistics_a_b,
+    auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{statistics_a_a, statistics_a_b,
                                                                                 statistics_b_a, statistics_b_b};
 
     table_statistics_a_b = std::make_shared<TableStatistics>(std::move(column_statistics), 5);
@@ -64,7 +64,7 @@ class JoinGraphStatisticsCacheTest : public ::testing::Test {
   std::shared_ptr<AbstractLQPNode> validate_c;
   LQPColumnReference a_a, a_b, b_a, b_b, c_a;
   std::shared_ptr<TableStatistics> table_statistics_a_b;
-  std::shared_ptr<BaseColumnStatistics> statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b;
+  std::shared_ptr<BaseAttributeStatistics> statistics_a_a, statistics_a_b, statistics_b_a, statistics_b_b;
   std::shared_ptr<JoinGraphStatisticsCache> cache;
 };
 

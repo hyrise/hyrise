@@ -15,7 +15,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -117,13 +117,13 @@ class BaseTestWithParam
     std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
                    [&](const auto& column_definition) { return column_definition.first; });
 
-    auto output_column_statistics = std::vector<std::shared_ptr<BaseColumnStatistics>>{column_definitions.size()};
+    auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{column_definitions.size()};
 
     for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
 
-        const auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>();
+        const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
         column_statistics->set_statistics_object(statistics_objects[column_id]);
         output_column_statistics[column_id] = column_statistics;
       });

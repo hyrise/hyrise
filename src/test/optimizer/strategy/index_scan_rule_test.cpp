@@ -14,7 +14,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"

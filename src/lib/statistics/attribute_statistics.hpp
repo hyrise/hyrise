@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 
-#include "base_column_statistics.hpp"
+#include "base_attribute_statistics.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
@@ -22,20 +22,22 @@ template <typename T>
 class CountingQuotientFilter;
 
 /**
- * Statistically represents a Column (when used in TableStatistics) or a Segment (when used in ColumnPruningStatistics).
+ * Statistically represents
+ * - a Column, when used in TableStatistics, i.e., for cardinality estimation
+ * - a Segment, when used in ColumnPruningStatistics, i.e., for Chunk pruning
  *
  * Contains any number of AbstractStatisticsObjects (Histograms, Filters, etc.).
  */
 template <typename T>
-class ColumnStatistics : public BaseColumnStatistics {
+class AttributeStatistics : public BaseAttributeStatistics {
  public:
-  ColumnStatistics();
+  AttributeStatistics();
 
   void set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) override;
 
-  std::shared_ptr<BaseColumnStatistics> scaled(const Selectivity selectivity) const override;
+  std::shared_ptr<BaseAttributeStatistics> scaled(const Selectivity selectivity) const override;
 
-  std::shared_ptr<BaseColumnStatistics> sliced(
+  std::shared_ptr<BaseAttributeStatistics> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
@@ -47,30 +49,30 @@ class ColumnStatistics : public BaseColumnStatistics {
 };
 
 template <typename T>
-std::ostream& operator<<(std::ostream& stream, const ColumnStatistics<T>& column_statistics) {
+std::ostream& operator<<(std::ostream& stream, const AttributeStatistics<T>& attribute_statistics) {
   stream << "{" << std::endl;
 
-  if (column_statistics.histogram) {
-    stream << column_statistics.histogram->description() << std::endl;
+  if (attribute_statistics.histogram) {
+    stream << attribute_statistics.histogram->description() << std::endl;
   }
 
-  if (column_statistics.min_max_filter) {
+  if (attribute_statistics.min_max_filter) {
     // TODO(anybody) implement printing of MinMaxFilter if ever required
     stream << "Has MinMaxFilter" << std::endl;
   }
 
-  if (column_statistics.range_filter) {
+  if (attribute_statistics.range_filter) {
     // TODO(anybody) implement printing of RangeFilter if ever required
     stream << "Has RangeFilter" << std::endl;
   }
 
-  if (column_statistics.counting_quotient_filter) {
+  if (attribute_statistics.counting_quotient_filter) {
     // TODO(anybody) implement printing of CQD if ever required
     stream << "Has CQF" << std::endl;
   }
 
-  if (column_statistics.null_value_ratio) {
-    stream << "NullValueRatio: " << column_statistics.null_value_ratio->ratio << std::endl;
+  if (attribute_statistics.null_value_ratio) {
+    stream << "NullValueRatio: " << attribute_statistics.null_value_ratio->ratio << std::endl;
   }
 
   stream << "}" << std::endl;

@@ -15,7 +15,7 @@ class AbstractHistogram;
 template <typename T>
 class GenericHistogram;
 template <typename T>
-class ColumnStatistics;
+class AttributeStatistics;
 class AliasNode;
 class ProjectionNode;
 class AggregateNode;

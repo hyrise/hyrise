@@ -7,7 +7,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/strategy/join_ordering_rule.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
 #include "strategy_base_test.hpp"

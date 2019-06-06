@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"

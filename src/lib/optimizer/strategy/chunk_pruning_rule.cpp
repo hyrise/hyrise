@@ -12,7 +12,7 @@
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
@@ -85,8 +85,8 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const Table& table, const AbstractExpression& predicate,
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
   // Hacky:
-  // `statistics` contains ColumnStatistics for all columns, even those that are pruned in `stored_table_node`.
-  // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct ColumnStatistics in
+  // `statistics` contains AttributeStatistics for all columns, even those that are pruned in `stored_table_node`.
+  // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct AttributeStatistics in
   // `statistics`, we create a clone of `stored_table_node` without the pruning info.
   auto stored_table_node_without_column_pruning =
       std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
@@ -150,27 +150,27 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
   return result;
 }
 
-bool ChunkPruningRule::_can_prune(const BaseColumnStatistics& base_column_statistics,
+bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_statistics,
                                   const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                                   const std::optional<AllTypeVariant>& variant_value2) const {
   auto can_prune = false;
 
-  resolve_data_type(base_column_statistics.data_type, [&](const auto data_type_t) {
+  resolve_data_type(base_segment_statistics.data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
 
-    const auto& column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
+    const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);
 
     // Range filters are only available for arithmetic (non-string) types.
     if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-      if (column_statistics.range_filter) {
-        if (column_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
+      if (segment_statistics.range_filter) {
+        if (segment_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
           can_prune = true;
         }
       }
     }
 
-    if (column_statistics.min_max_filter) {
-      if (column_statistics.min_max_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
+    if (segment_statistics.min_max_filter) {
+      if (segment_statistics.min_max_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
         can_prune = true;
       }
     }

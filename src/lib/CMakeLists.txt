@@ -369,8 +369,8 @@ set(
     statistics/abstract_cardinality_estimator.hpp
     statistics/statistics_objects/abstract_statistics_object.cpp
     statistics/statistics_objects/abstract_statistics_object.hpp
-    statistics/base_column_statistics.cpp
-    statistics/base_column_statistics.hpp
+    statistics/base_attribute_statistics.cpp
+    statistics/base_attribute_statistics.hpp
     statistics/cardinality_estimation_cache.hpp
     statistics/cardinality_estimator.cpp
     statistics/cardinality_estimator.hpp
@@ -398,8 +398,8 @@ set(
     statistics/statistics_objects/range_filter.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
-    statistics/column_statistics.cpp
-    statistics/column_statistics.hpp
+    statistics/attribute_statistics.cpp
+    statistics/attribute_statistics.hpp
     storage/abstract_segment_visitor.hpp
     storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp

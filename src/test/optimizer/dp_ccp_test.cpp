@@ -9,7 +9,7 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"

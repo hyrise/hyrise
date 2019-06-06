@@ -1,4 +1,4 @@
-#include "column_statistics.hpp"
+#include "attribute_statistics.hpp"
 
 #include <memory>
 
@@ -12,10 +12,10 @@
 namespace opossum {
 
 template <typename T>
-ColumnStatistics<T>::ColumnStatistics() : BaseColumnStatistics(data_type_from_type<T>()) {}
+AttributeStatistics<T>::AttributeStatistics() : BaseAttributeStatistics(data_type_from_type<T>()) {}
 
 template <typename T>
-void ColumnStatistics<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
+void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<AbstractStatisticsObject>& statistics_object) {
   // We allow call patterns like `c.set_statistics_object(o.scaled(0.1f))` where `o.scaled()` might return nullptr
   // because, e.g., scaling is not possible for `o`.
   if (!statistics_object) {
@@ -46,8 +46,8 @@ void ColumnStatistics<T>::set_statistics_object(const std::shared_ptr<AbstractSt
 }
 
 template <typename T>
-std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::scaled(const Selectivity selectivity) const {
-  const auto statistics = std::make_shared<ColumnStatistics<T>>();
+std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Selectivity selectivity) const {
+  const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
   if (histogram) {
     statistics->set_statistics_object(histogram->scaled(selectivity));
@@ -76,10 +76,10 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::scaled(const Selectiv
 }
 
 template <typename T>
-std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::sliced(
+std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  const auto statistics = std::make_shared<ColumnStatistics<T>>();
+  const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
   if (histogram) {
     statistics->set_statistics_object(histogram->sliced(predicate_condition, variant_value, variant_value2));
@@ -108,6 +108,6 @@ std::shared_ptr<BaseColumnStatistics> ColumnStatistics<T>::sliced(
   return statistics;
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(ColumnStatistics);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(AttributeStatistics);
 
 }  // namespace opossum

@@ -25,10 +25,10 @@ namespace opossum {
 
 class BaseIndex;
 class BaseSegment;
-class BaseColumnStatistics;
+class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
-using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseColumnStatistics>>;
+using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
  * A Chunk is a horizontal partition of a table.

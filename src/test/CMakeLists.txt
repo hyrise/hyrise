@@ -138,7 +138,7 @@ set(
     sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     statistics/cardinality_estimator_test.cpp
-    statistics/column_statistics_test.cpp
+    statistics/attribute_statistics_test.cpp
     statistics/join_graph_statistics_cache_test.cpp
     statistics/statistics_objects/equal_distinct_count_histogram_test.cpp
     statistics/statistics_objects/generic_histogram_test.cpp
