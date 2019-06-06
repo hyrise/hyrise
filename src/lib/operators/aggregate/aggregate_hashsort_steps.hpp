@@ -688,11 +688,11 @@ std::vector<Partition<GroupRun>> partition(const AggregateHashSortConfig& config
 }
 
 template <typename GroupRun>
-std::pair<bool, std::vector<Partition<GroupRun>>> hashing(const AggregateHashSortConfig& config,
+std::pair<bool, Partition<GroupRun>> hashing(const AggregateHashSortConfig& config,
                                                           AbstractRunSource<GroupRun>& run_source,
                                                           const Partitioning& partitioning, size_t& run_idx,
                                                           size_t& run_offset) {
-  auto partitions = std::vector<Partition<GroupRun>>(partitioning.partition_count);
+  auto partition = Partition<GroupRun>{};
 
 #if 1
   auto hash_fn = [&](const auto& key) { return key.hash; };
@@ -750,7 +750,6 @@ std::pair<bool, std::vector<Partition<GroupRun>>> hashing(const AggregateHashSor
 
     for (; run_offset < input_run.size() && !done; ++run_offset) {
       const auto partition_idx = partitioning.get_partition_index(input_run.groups.hash(run_offset));
-      auto& partition = partitions[partition_idx];
 
       const auto key = input_run.groups.make_key(run_offset);
 
@@ -780,32 +779,30 @@ std::pair<bool, std::vector<Partition<GroupRun>>> hashing(const AggregateHashSor
       run_offset = 0;
     }
 
-    for (auto& partition : partitions) {
-      partition.flush_buffers(input_run);
-    }
+    partition.flush_buffers(input_run);
 
     if (done) {
       break;
     }
   }
 
-  for (auto& partition : partitions) {
-    for (auto& run : partition.runs) {
-      run.is_aggregated = true;
-    }
-    partition.finish();
+  for (auto& run : partition.runs) {
+    run.is_aggregated = true;
   }
+  partition.finish();
 
-  return {continue_hashing, std::move(partitions)};
+  return {continue_hashing, std::move(partition)};
 }
 
 template <typename GroupRun>
 std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateHashSortConfig& config,
                                                                 std::unique_ptr<AbstractRunSource<GroupRun>> run_source,
                                                                 const Partitioning& partitioning) {
-  auto partitions = std::vector<Partition<GroupRun>>(partitioning.partition_count);
-
+  // Start with a single partition and expand to `partitioning.partition_count` partitions if `hashing()` detects a too
+  // low density of groups
+  auto partitions = std::vector<Partition<GroupRun>>{1};
   auto mode = HashSortMode::Hashing;
+  auto partition_while_hashing = false;
 
   auto run_idx = size_t{0};
   auto run_offset = size_t{0};
@@ -814,11 +811,23 @@ std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateH
     auto phase_partitions = std::vector<Partition<GroupRun>>{};
 
     if (mode == HashSortMode::Hashing) {
+      const auto partitioning_for_hashing = partition_while_hashing ? partitioning : Partitioning{1, 0, 0};
+
       auto [continue_hashing, hashing_partitions] =
-          hashing(config, *run_source, partitioning, run_idx, run_offset);
+          hashing(config, *run_source, partitioning_for_hashing, run_idx, run_offset);
+
       if (!continue_hashing) {
+        if (!partition_while_hashing) {
+          const auto run_source2 = PartitionRunSource<GroupRun>(run_source->layout, std::move(partitions.front()->runs));
+
+          partitions = partition(config, run_source2, partitioning, run_idx, run_offset);
+
+          partition_while_hashing = true;
+        }
+
         mode = HashSortMode::Partition;
       }
+
       phase_partitions = std::move(hashing_partitions);
     } else {
       phase_partitions = partition(config, *run_source, partitioning, run_idx, run_offset);
