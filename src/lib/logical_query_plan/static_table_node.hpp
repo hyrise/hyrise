@@ -12,7 +12,7 @@ namespace opossum {
  */
 class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public BaseNonQueryNode {
  public:
-  StaticTableNode(const std::shared_ptr<Table> table);
+  explicit StaticTableNode(const std::shared_ptr<Table> table);
 
   std::string description() const override;
 
