@@ -48,7 +48,6 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     } else {
       return _on_execute_with_group_run<FixedSizeGroupRun<GetDynamicGroupSize>>(layout);
     }
-
   } else {
     auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(input_table, _groupby_column_ids);
     return _on_execute_with_group_run<VariablySizedGroupRun>(layout);

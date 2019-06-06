@@ -55,11 +55,17 @@ struct FixedSizeGroupRunLayout {
   std::vector<size_t> column_base_offsets;
 };
 
-using FixedSizeGroupRunElementType = uint32_t;
+using GroupRunElementType = uint32_t;
 
 struct FixedSizeGroupRemoteKey {
   size_t hash{};
-  const FixedSizeGroupRunElementType* group{};
+  const GroupRunElementType* group{};
+};
+
+template<size_t group_size>
+struct FixedSizeGroupInPlaceKey {
+  size_t hash{};
+  std::array<GroupRunElementType, group_size> group{};
 };
 
 struct FixedSizeGroupKeyCompare {
@@ -68,10 +74,17 @@ struct FixedSizeGroupKeyCompare {
   bool operator()(const FixedSizeGroupRemoteKey& lhs, const FixedSizeGroupRemoteKey& rhs) const {
     return std::equal(lhs.group, lhs.group + layout->group_size, rhs.group);
   }
+
+  template<size_t group_size>
+  bool operator()(const FixedSizeGroupInPlaceKey<group_size>& lhs, const FixedSizeGroupInPlaceKey<group_size>& rhs) const {
+    return lhs.group == rhs.group;
+  }
 };
 
 template<size_t group_size>
 struct GetStaticGroupSize {
+  using KeyType = FixedSizeGroupInPlaceKey<group_size>;
+
   const FixedSizeGroupRunLayout* layout{};
 
   explicit GetStaticGroupSize(const FixedSizeGroupRunLayout* layout) {
@@ -84,6 +97,8 @@ struct GetStaticGroupSize {
 };
 
 struct GetDynamicGroupSize {
+  using KeyType = FixedSizeGroupRemoteKey;
+
   const FixedSizeGroupRunLayout* layout{};
 
   explicit GetDynamicGroupSize(const FixedSizeGroupRunLayout* layout): layout(layout) { }
@@ -96,7 +111,7 @@ struct GetDynamicGroupSize {
 template<typename GetGroupSize>
 struct FixedSizeGroupRun {
   using LayoutType = FixedSizeGroupRunLayout;
-  using HashTableKey = FixedSizeGroupRemoteKey;
+  using HashTableKey = typename GetGroupSize::KeyType;
   using HashTableCompare = FixedSizeGroupKeyCompare;
   using GetGroupSizeType = GetGroupSize;
 
@@ -110,7 +125,7 @@ struct FixedSizeGroupRun {
 
   std::vector<size_t> _append_buffer;
 
-  std::vector<FixedSizeGroupRunElementType> data;
+  std::vector<GroupRunElementType> data;
 
   // Hash per group
   std::vector<size_t> hashes;
@@ -126,8 +141,15 @@ struct FixedSizeGroupRun {
     return end + _append_buffer.size() < hashes.size();
   }
 
-  FixedSizeGroupRemoteKey make_key(const size_t offset) {
-    return {hashes[offset], &data[offset * get_group_size()]};
+  HashTableKey make_key(const size_t offset) const {
+    if constexpr (std::is_same_v<GetGroupSize, GetDynamicGroupSize>) {
+      return {hashes[offset], &data[offset * get_group_size()]};
+    } else {
+      HashTableKey key;
+      key.hash = hashes[offset];
+      memcpy(&key.group, &data[offset * get_group_size()], get_group_size());
+      return key;
+    }
   }
 
   template <typename T>
@@ -155,7 +177,7 @@ struct FixedSizeGroupRun {
       }
 
       ++output_values_iter;
-      source += layout->group_size * sizeof(FixedSizeGroupRunElementType);
+      source += layout->group_size * sizeof(GroupRunElementType);
     }
 
     if (column_is_nullable) {
@@ -230,41 +252,75 @@ struct VariablySizedGroupRunLayout {
   }
 };
 
-using VariablySizedGroupRunElementType = uint32_t;
+using GroupRunElementType = uint32_t;
+
+struct VariablySizedRemoteGroupKey {
+  const GroupRunElementType* variably_sized_group;
+  size_t variably_sized_group_length;
+  const size_t* value_end_offsets;
+  const GroupRunElementType* fixed_sized_group;
+};
+
+struct VariablySizedInPlaceGroupKey {
+  constexpr static auto CAPACITY = 4;// sizeof(VariablySizedRemoteGroupKey) / sizeof(GroupRunElementType);
+
+  const size_t* value_end_offsets;
+  size_t size;
+  std::array<GroupRunElementType, CAPACITY> group;
+};
 
 struct VariablySizedGroupKey {
   size_t hash{};
-  const VariablySizedGroupRunElementType* variably_sized_group{};
-  size_t variably_sized_group_length{};
-  const size_t* value_end_offsets{};
-  const FixedSizeGroupRunElementType* fixed_sized_group{};
+  boost::variant<VariablySizedInPlaceGroupKey, VariablySizedRemoteGroupKey> variant;
 };
 
 struct VariablySizedGroupKeyCompare {
   const VariablySizedGroupRunLayout* layout{};
 
   bool operator()(const VariablySizedGroupKey& lhs, const VariablySizedGroupKey& rhs) const {
-    if (lhs.variably_sized_group_length != rhs.variably_sized_group_length) {
-      return false;
+    if (lhs.variant.which() != rhs.variant.which()) return false;
+
+    if (lhs.variant.which() == 0) {
+      const auto& in_place_lhs = boost::get<VariablySizedInPlaceGroupKey>(lhs.variant);
+      const auto& in_place_rhs = boost::get<VariablySizedInPlaceGroupKey>(rhs.variant);
+
+      if (in_place_lhs.size != in_place_rhs.size) {
+        return false;
+      }
+
+      if (!std::equal(in_place_lhs.group.begin(), in_place_lhs.group.begin() + in_place_lhs.size, in_place_rhs.group.begin())) {
+        return false;
+      }
+
+      // Compare intra-group layout
+      return std::equal(in_place_lhs.value_end_offsets, in_place_lhs.value_end_offsets + layout->column_count,  in_place_rhs.value_end_offsets);
+    } else {
+      const auto& remote_lhs = boost::get<VariablySizedRemoteGroupKey>(lhs.variant);
+      const auto& remote_rhs = boost::get<VariablySizedRemoteGroupKey>(rhs.variant);
+
+      if (remote_lhs.variably_sized_group_length != remote_rhs.variably_sized_group_length) {
+        return false;
+      }
+
+      // Compare intra-group layout
+      if (!std::equal(remote_lhs.value_end_offsets, remote_lhs.value_end_offsets + layout->column_count,  remote_rhs.value_end_offsets)) {
+        return false;
+      }
+
+      // Compare the variably sized group data
+      if (!std::equal(remote_lhs.variably_sized_group, remote_lhs.variably_sized_group + remote_lhs.variably_sized_group_length, remote_rhs.variably_sized_group)) {
+        return false;
+      }
+
+      // Compare the fixed size group data
+      DebugAssert((remote_lhs.fixed_sized_group == nullptr) == (remote_rhs.fixed_sized_group == nullptr), "");
+      if (!remote_lhs.fixed_sized_group) {
+        return true;
+      }
+
+      return std::equal(remote_lhs.fixed_sized_group, remote_lhs.fixed_sized_group + layout->fixed_layout.group_size, remote_rhs.fixed_sized_group);
     }
 
-    // Compare intra-group layout
-    if (!std::equal(lhs.value_end_offsets, lhs.value_end_offsets + layout->column_count,  rhs.value_end_offsets)) {
-      return false;
-    }
-
-    // Compare the variably sized group data
-    if (!std::equal(lhs.variably_sized_group, lhs.variably_sized_group + lhs.variably_sized_group_length, rhs.variably_sized_group)) {
-      return false;
-    }
-
-    // Compare the fixed size group data
-    DebugAssert((lhs.fixed_sized_group == nullptr) == (rhs.fixed_sized_group == nullptr), "");
-    if (!lhs.fixed_sized_group) {
-      return true;
-    }
-
-    return std::equal(lhs.fixed_sized_group, lhs.fixed_sized_group + layout->fixed_layout.group_size, rhs.fixed_sized_group);
   }
 };
 
@@ -275,7 +331,7 @@ struct VariablySizedGroupRun {
 
   const VariablySizedGroupRunLayout* layout;
 
-  std::vector<VariablySizedGroupRunElementType> data;
+  std::vector<GroupRunElementType> data;
 
   // Number of `data` elements occupied after append_buffer is flushed
   size_t data_watermark{0};
@@ -302,16 +358,33 @@ struct VariablySizedGroupRun {
 
   VariablySizedGroupKey make_key(const size_t offset) {
     const auto group_begin_offset = offset == 0 ? size_t{0} : group_end_offsets[offset - 1];
-    const auto group_size = group_end_offsets[offset] - group_begin_offset;
+    const auto variably_sized_group_size = group_end_offsets[offset] - group_begin_offset;
+    const auto* variably_sized_group = &data[group_begin_offset];
     const auto* fixed_size_group = layout->fixed_layout.group_size == 0 ? nullptr : &fixed.data[offset * layout->fixed_layout.group_size];
 
-    return {
-      fixed.hashes[offset],
-      &data[group_begin_offset],
-      group_size,
-      &value_end_offsets[offset * layout->column_count],
-      fixed_size_group
-    };
+    const auto total_group_size = variably_sized_group_size + layout->fixed_layout.group_size;
+
+    if (total_group_size <= VariablySizedInPlaceGroupKey::CAPACITY) {
+      auto key = VariablySizedGroupKey{};
+      key.hash = fixed.hashes[offset];
+
+      key.variant = VariablySizedInPlaceGroupKey{};
+      auto& in_place = boost::get<VariablySizedInPlaceGroupKey>(key.variant);
+      in_place.size = total_group_size;
+      in_place.value_end_offsets = &value_end_offsets[offset * layout->column_count];
+      std::copy(variably_sized_group, variably_sized_group + variably_sized_group_size, in_place.group.begin());
+      std::copy(fixed_size_group, fixed_size_group + layout->fixed_layout.group_size, in_place.group.begin() + variably_sized_group_size);
+
+      return key;
+    } else {
+      return {fixed.hashes[offset], VariablySizedRemoteGroupKey{
+        variably_sized_group,
+        variably_sized_group_size,
+        &value_end_offsets[offset * layout->column_count],
+        fixed_size_group
+      }};
+    }
+
   }
 
   bool can_append(const VariablySizedGroupRun& source_run, const size_t source_offset) const {
@@ -826,7 +899,7 @@ inline FixedSizeGroupRunLayout produce_initial_groups_layout<FixedSizeGroupRunLa
     group_size_in_bytes += group_column_size;
   }
 
-  const auto group_size_in_elements = divide_and_ceil(group_size_in_bytes, sizeof(FixedSizeGroupRunElementType));
+  const auto group_size_in_elements = divide_and_ceil(group_size_in_bytes, sizeof(GroupRunElementType));
 
   return FixedSizeGroupRunLayout{group_size_in_elements, nullable_column_indices, column_base_offsets};
 }
@@ -874,7 +947,7 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
                                                                    const std::vector<ColumnID>& group_by_column_ids,
                                                                    const RowID& begin_row_id,
                                                                    const size_t row_count) {
-  constexpr auto GROUP_DATA_ELEMENT_SIZE = sizeof(FixedSizeGroupRunElementType);
+  constexpr auto GROUP_DATA_ELEMENT_SIZE = sizeof(GroupRunElementType);
 
   auto group_run = FixedSizeGroupRun<GetGroupSize>{layout, row_count};
 
@@ -923,7 +996,7 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
     const size_t row_budget,
     const size_t per_column_data_budget_bytes) {
 
-  constexpr auto DATA_ELEMENT_SIZE = sizeof(VariablySizedGroupRunElementType);
+  constexpr auto DATA_ELEMENT_SIZE = sizeof(GroupRunElementType);
 
   Assert(row_budget > 0, "");
   Assert(!layout->variably_sized_column_ids.empty(), "FixedGroupRun should be used if there are no variably sized columns");
@@ -940,7 +1013,7 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
    *    - materialize `null_values`
    */
   auto value_end_offsets = std::vector<size_t>(row_budget * column_count);
-  auto data_per_column = std::vector<std::vector<VariablySizedGroupRunElementType>>(column_count);
+  auto data_per_column = std::vector<std::vector<GroupRunElementType>>(column_count);
 
   const auto per_column_element_budget = divide_and_ceil(per_column_data_budget_bytes, DATA_ELEMENT_SIZE);
 
@@ -1056,7 +1129,7 @@ inline std::pair<VariablySizedGroupRun, RowID> produce_initial_groups(
   /**
    * Rearrange `data_per_column` into an interleaved blob
    */
-  auto group_data = std::vector<VariablySizedGroupRunElementType>(data_element_count);
+  auto group_data = std::vector<GroupRunElementType>(data_element_count);
 
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     auto& column_data = data_per_column[column_id];
