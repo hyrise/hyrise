@@ -11,7 +11,7 @@
 namespace opossum {
 
 CreateTable::CreateTable(const std::string& table_name, const bool if_not_exists,
-                         const std::shared_ptr<const AbstractOperator> in)
+                         const std::shared_ptr<const AbstractOperator>& in)
     : AbstractReadWriteOperator(OperatorType::CreateTable, in), table_name(table_name), if_not_exists(if_not_exists) {}
 
 const std::string CreateTable::name() const { return "Create Table"; }
