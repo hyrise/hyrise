@@ -100,30 +100,30 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
       value_distribution.size() < max_bin_count ? static_cast<BinID>(value_distribution.size()) : max_bin_count;
 
   // Split values evenly among bins.
-  const auto _distinct_count_per_bin = static_cast<size_t>(value_distribution.size() / bin_count);
-  const BinID _bin_count_with_extra_value = value_distribution.size() % bin_count;
+  const auto distinct_count_per_bin = static_cast<size_t>(value_distribution.size() / bin_count);
+  const BinID bin_count_with_extra_value = value_distribution.size() % bin_count;
 
-  std::vector<T> _bin_minima(bin_count);
-  std::vector<T> _bin_maxima(bin_count);
-  std::vector<HistogramCountType> _bin_heights(bin_count);
+  std::vector<T> bin_minima(bin_count);
+  std::vector<T> bin_maxima(bin_count);
+  std::vector<HistogramCountType> bin_heights(bin_count);
 
   auto current_bin_begin_index = BinID{0};
   for (BinID bin_index = 0; bin_index < bin_count; bin_index++) {
-    auto current_bin_end_index = current_bin_begin_index + _distinct_count_per_bin - 1;
-    if (bin_index < _bin_count_with_extra_value) {
+    auto current_bin_end_index = current_bin_begin_index + distinct_count_per_bin - 1;
+    if (bin_index < bin_count_with_extra_value) {
       current_bin_end_index++;
     }
 
     // We'd like to move strings, but have to copy if we need the same string for the bin_maximum
     if (std::is_same_v<T, std::string> && current_bin_begin_index != current_bin_end_index) {
-      _bin_minima[bin_index] = std::move(value_distribution[current_bin_begin_index].first);
+      bin_minima[bin_index] = std::move(value_distribution[current_bin_begin_index].first);
     } else {
-      _bin_minima[bin_index] = value_distribution[current_bin_begin_index].first;
+      bin_minima[bin_index] = value_distribution[current_bin_begin_index].first;
     }
 
-    _bin_maxima[bin_index] = std::move(value_distribution[current_bin_end_index].first);
+    bin_maxima[bin_index] = std::move(value_distribution[current_bin_end_index].first);
 
-    _bin_heights[bin_index] =
+    bin_heights[bin_index] =
         std::accumulate(value_distribution.cbegin() + current_bin_begin_index,
                         value_distribution.cbegin() + current_bin_end_index + 1, HistogramCountType{0},
                         [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
@@ -132,8 +132,8 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   }
 
   return std::make_shared<EqualDistinctCountHistogram<T>>(
-      std::move(_bin_minima), std::move(_bin_maxima), std::move(_bin_heights),
-      static_cast<HistogramCountType>(_distinct_count_per_bin), _bin_count_with_extra_value);
+      std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
+      static_cast<HistogramCountType>(distinct_count_per_bin), bin_count_with_extra_value);
 }
 
 template <typename T>
