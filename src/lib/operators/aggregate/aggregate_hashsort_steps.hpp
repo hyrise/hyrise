@@ -116,7 +116,7 @@ struct FixedSizeGroupRun {
   using GetGroupSizeType = GetGroupSize;
 
   FixedSizeGroupRun(const FixedSizeGroupRunLayout* layout, const size_t size) : layout(layout), get_group_size(layout) {
-    data.resize(size * layout->group_size);
+    data.resize(size * get_group_size());
     hashes.resize(size);
   }
 
@@ -177,7 +177,7 @@ struct FixedSizeGroupRun {
       }
 
       ++output_values_iter;
-      source += layout->group_size * sizeof(GroupRunElementType);
+      source += get_group_size() * sizeof(GroupRunElementType);
     }
 
     if (column_is_nullable) {
@@ -262,7 +262,7 @@ struct VariablySizedRemoteGroupKey {
 };
 
 struct VariablySizedInPlaceGroupKey {
-  constexpr static auto CAPACITY = 4;// sizeof(VariablySizedRemoteGroupKey) / sizeof(GroupRunElementType);
+  constexpr static auto CAPACITY = 1; // sizeof(VariablySizedRemoteGroupKey) / sizeof(GroupRunElementType);
 
   const size_t* value_end_offsets;
   size_t size;
@@ -368,7 +368,7 @@ struct VariablySizedGroupRun {
 
     const auto total_group_size = variably_sized_group_size + fixed.get_group_size();
 
-    if (total_group_size <= VariablySizedInPlaceGroupKey::CAPACITY) {
+    if (total_group_size <= VariablySizedInPlaceGroupKey::CAPACITY && false) {
       auto key = VariablySizedGroupKey{};
       key.hash = fixed.hashes[offset];
 
@@ -985,7 +985,7 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
 
       boost::hash_combine(group_run.hashes[run_offset], hash_segment_position(segment_position));
 
-      target += layout->group_size * GROUP_DATA_ELEMENT_SIZE;
+      target += group_run.get_group_size() * GROUP_DATA_ELEMENT_SIZE;
       ++run_offset;
 
       return run_offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
