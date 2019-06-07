@@ -28,6 +28,8 @@
 
 using namespace opossum;  // NOLINT
 
+bool data_files_available(std::string table_path);
+
 int main(int argc, char* argv[]) {
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPC-DS Benchmark");
 
@@ -72,13 +74,27 @@ int main(int argc, char* argv[]) {
   const auto query_filename_blacklist = std::unordered_set<std::string>{};
   std::string query_path = "resources/benchmark/tpcds/queries/supported";
   std::string table_path = "resources/benchmark/tpcds/tables";
-  std::filesystem::path example_query_path = query_path + "/query_07.sql";
-  std::filesystem::path example_table_schema_path = table_path + "/call_center.csv.json";
 
   Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
   Assert(std::filesystem::is_directory(table_path), "Table path (" + table_path + ") has to be a directory.");
-  Assert(std::filesystem::exists(example_query_path), "Queries have to be available.");
-  Assert(std::filesystem::exists(example_table_schema_path), "Table schemes have to be available.");
+  Assert(std::filesystem::exists(std::filesystem::path{query_path + "/query_07.sql"}), "Queries have to be available.");
+  Assert(std::filesystem::exists(std::filesystem::path{table_path + "/call_center.csv.json"}),
+         "Table schemes have to be available.");
+
+  if (!data_files_available(table_path)) {
+    if (std::filesystem::exists(std::filesystem::path{"third_party/tpcds-dsdgen/dsdgen"})) {
+      system(
+          "cd ./third_party/tpcds-dsdgen/ &&"
+          "./dsdgen -scale 1 -dir ../../resources/benchmark/tpcds/tables -terminate n -verbose -f &&"
+          "cd ../../resources/benchmark/tpcds/tables &&"
+          "for x in *.dat; do mv $x ${x%.dat}.csv; done &&"
+          "cd ../../../../");
+    } else {
+      Fail("Could not find 'third_party/tpcds-dsdgen/dsdgen'. Did you run the benchmark from the project root dir?");
+    }
+  }
+
+  Assert(data_files_available(table_path), "Table data files are missing.");
 
   auto query_generator =
       std::make_unique<FileBasedQueryGenerator>(*config, query_path, query_filename_blacklist, query_subset);
@@ -93,4 +109,29 @@ int main(int argc, char* argv[]) {
   std::cout << "done." << std::endl;
 
   benchmark_runner.run();
+}
+
+bool data_files_available(std::string table_path) {
+  return std::filesystem::exists(table_path + "/call_center.csv") &&
+         std::filesystem::exists(table_path + "/catalog_page.csv") &&
+         std::filesystem::exists(table_path + "/catalog_returns.csv") &&
+         std::filesystem::exists(table_path + "/catalog_sales.csv") &&
+         std::filesystem::exists(table_path + "/customer_address.csv") &&
+         std::filesystem::exists(table_path + "/customer.csv") &&
+         std::filesystem::exists(table_path + "/customer_demographics.csv") &&
+         std::filesystem::exists(table_path + "/date_dim.csv") &&
+         std::filesystem::exists(table_path + "/household_demographics.csv") &&
+         std::filesystem::exists(table_path + "/income_band.csv") &&
+         std::filesystem::exists(table_path + "/inventory.csv") && std::filesystem::exists(table_path + "/item.csv") &&
+         std::filesystem::exists(table_path + "/promotion.csv") &&
+         std::filesystem::exists(table_path + "/reason.csv") &&
+         std::filesystem::exists(table_path + "/ship_mode.csv") && std::filesystem::exists(table_path + "/store.csv") &&
+         std::filesystem::exists(table_path + "/store_returns.csv") &&
+         std::filesystem::exists(table_path + "/store_sales.csv") &&
+         std::filesystem::exists(table_path + "/time_dim.csv") &&
+         std::filesystem::exists(table_path + "/warehouse.csv") &&
+         std::filesystem::exists(table_path + "/web_page.csv") &&
+         std::filesystem::exists(table_path + "/web_returns.csv") &&
+         std::filesystem::exists(table_path + "/web_sales.csv") &&
+         std::filesystem::exists(table_path + "/web_site.csv");
 }
