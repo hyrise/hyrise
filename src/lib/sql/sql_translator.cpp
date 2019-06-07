@@ -191,6 +191,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(const hsql::SelectStatement& select) {
   // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
+
+  // 0. WITH clauses / Temporary views
   // 1. FROM clause (incl. JOINs and sub-SELECTs that are part of this)
   // 2. WHERE clause
   // 3. GROUP BY clause
@@ -203,6 +205,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   AssertInput(select.selectList, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
   AssertInput(!select.unionSelect, "Set operations (UNION/INTERSECT/...) are not supported yet");
+
+  // Translate WITH, if set
+  if(select.withDescriptions) {
+    for(const auto& desc : *select.withDescriptions) {
+      auto& lqp = _translate_select_statement(desc->select);
+      SQLTranslator with_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator};
+      // lqp = with_translator._translate_select_statement(*hsql_table_ref.select);
+    }
+  }
 
   // Translate FROM
   if (select.fromTable) {
