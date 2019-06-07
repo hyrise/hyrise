@@ -142,8 +142,10 @@ class TableBuilder {
     return _table;
   }
 
-  void append_row(DataTypes&&... new_values) {
-    auto values_tuple = boost::hana::make_tuple(std::forward<DataTypes>(new_values)...);
+  // TODO: do we still need universal references?
+  template <typename... Types>
+  void append_row(Types&&... new_values) {
+    auto values_tuple = boost::hana::make_tuple(std::forward<Types>(new_values)...);
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(_value_vectors) == boost::hana::size(values_tuple));
 
     // Create tuples ([&values0, &null_values0, value0], [&values1, &null_values1, value1], ...)

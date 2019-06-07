@@ -7,6 +7,7 @@ extern "C" {
 #include <dbgen_version.h>
 #include <decimal.h>
 #include <genrand.h>
+#include <nulls.h>
 #include <parallel.h>
 #include <r_params.h>
 #include <tables.h>
@@ -89,35 +90,67 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   return {k_first_row, k_row_count};
 }
 
+
 float decimal_to_float(decimal_t decimal) {
   auto result = 0.0;
   dectof(&result, &decimal);
   return static_cast<float>(result / 10);
 }
 
-pmr_string resolve_date_id(ds_key_t date_id) {
-  if (date_id <= 0) {
-    return pmr_string{};
+template<int column_id = 0>  // TODO remove " = 0"
+std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
+  if (date_id <= 0 || nullCheck(column_id)) {
+    return std::nullopt;
   }
 
   auto date = date_t{};
   jtodt(&date, static_cast<int>(date_id));
-  return pmr_string{dttostr(&date)};
+
+  auto result = pmr_string(10, ' ');
+  sprintf(result.data(), "%4d-%02d-%02d", date.year, date.month, date.day);
+
+  return result;
 }
 
-pmr_string convert_boolean(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
+pmr_string convert_boolean(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }  // TODO remove
 
-std::optional<int64_t> convert_key(ds_key_t key) {
-  return key == -1 ? std::nullopt : std::optional<int64_t>{static_cast<int64_t>(key)};
+
+template<int column_id = 0, bool return_optional = true>  // TODO remove " = 0"
+auto resolve_key(ds_key_t key) {
+  if constexpr (return_optional) {
+    return nullCheck(column_id) || key == -1 ? std::nullopt : std::optional{static_cast<int64_t>(key)};
+  } else {
+    return static_cast<int64_t>(key);
+  }
 }
+
+template<int column_id, bool return_optional = true>
+auto resolve_string(const char* string) {
+  if constexpr (return_optional){
+    return nullCheck(column_id) ? std::nullopt : std::optional{pmr_string{string}};
+  } else {
+    return pmr_string{string};
+  }
+}
+
+template<int column_id>
+std::optional<int32_t> resolve_int(int value) {
+  return nullCheck(column_id) ? std::nullopt : std::optional{int32_t{value}};
+}
+
+template<int column_id>
+std::optional<pmr_string> resolve_bool(bool boolean) {
+  return nullCheck(column_id) ? std::nullopt : std::optional{pmr_string(1, boolean ? 'Y' : 'N')};
+}
+
+// TODO print time
 
 // mapping types used by tpcds-dbgen as follows:
 // ds_key_t -> int64_t
 // int -> int32_t
-// char* and char[] -> pmr_string
-// decimal -> float (using decimal_to_float function)
+// char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
+// decimal, float -> float (using decimal_to_float function)
 // ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
-// date_t / ds_key_t (as date id) -> pmr_string (using resolve_date_id function)
 
 // the types are derived from print functions (eg. pr_w_call_center in w_call_center.c), because these are used by the
 // dsdgen command line tool to create the *.dat files
@@ -183,7 +216,7 @@ const auto time_column_names = boost::hana::make_tuple("t_time_sk", "t_time_id",
 const auto warehouse_column_types = boost::hana::tuple<std::optional<int64_t>, pmr_string, pmr_string, int32_t, int32_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, int32_t, pmr_string, int32_t>(); // NOLINT
 const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk", "w_warehouse_id", "w_warehouse_name", "w_warehouse_sq_ft", "w_street_number", "w_street_name", "w_street_type", "w_suite_number", "w_city", "w_county", "w_state", "w_zip", "w_country", "w_gmt_offset"); // NOLINT
 
-const auto web_page_column_types = boost::hana::tuple<std::optional<int64_t>, pmr_string, pmr_string, pmr_string, std::optional<int64_t>, std::optional<int64_t>, pmr_string, std::optional<int64_t>, pmr_string, pmr_string, int32_t, int32_t, int32_t, int32_t>(); // NOLINT
+const auto web_page_column_types = boost::hana::tuple<int64_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int64_t>, std::optional<int64_t>, std::optional<pmr_string>, std::optional<int64_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, int32_t>(); // NOLINT
 const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk", "wp_web_page_id", "wp_rec_start_date", "wp_rec_end_date", "wp_creation_date_sk", "wp_access_date_sk", "wp_autogen_flag", "wp_customer_sk", "wp_url", "wp_type", "wp_char_count", "wp_link_count", "wp_image_count", "wp_max_ad_count"); // NOLINT
 
 const auto web_returns_column_types = boost::hana::tuple<std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, int32_t, float, float, float, float, float, float, float, float, float>(); // NOLINT
@@ -216,6 +249,46 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   set_rng_seed(0);
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
 
+  // web page
+  {
+    const auto [web_page_first, web_page_count] = prepare_for_table(WEB_PAGE);
+
+    auto web_page_builder = TableBuilder{_benchmark_config->chunk_size, web_page_column_types, web_page_column_names,
+                                         static_cast<size_t>(web_page_count)};
+
+    for (auto i = ds_key_t{0}; i < web_page_count; i++) {
+      const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + i);
+
+      auto imagecount = resolve_int<WP_IMAGE_COUNT>(web_page.wp_image_count);
+      auto adcount = resolve_int<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count);
+      std::cout << imagecount.value() << adcount.value();
+
+
+      web_page_builder.append_row(
+        resolve_key<WP_PAGE_SK, false>(web_page.wp_page_sk),
+        resolve_string<WP_PAGE_ID, false>(web_page.wp_page_id),
+        resolve_date_id<WP_REC_START_DATE_ID>(web_page.wp_rec_start_date_id),
+        resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
+        resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
+        resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
+        resolve_bool<WP_AUTOGEN_FLAG>(web_page.wp_autogen_flag),
+        resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk),
+        resolve_string<WP_URL>(web_page.wp_url),
+        resolve_string<WP_TYPE>(web_page.wp_type),
+        resolve_int<WP_CHAR_COUNT>(web_page.wp_char_count),
+        resolve_int<WP_LINK_COUNT>(web_page.wp_link_count),
+        resolve_int<WP_IMAGE_COUNT>(web_page.wp_image_count),
+        resolve_int<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count));
+    }
+
+    table_info_by_name["web_page"].table = web_page_builder.finish_table();
+    std::cout << "web_page table generated" << std::endl;
+  }
+
+  if (true){
+    return table_info_by_name;
+  }
+
   // call center
   {
     const auto [call_center_first, call_center_count] = prepare_for_table(CALL_CENTER);
@@ -237,9 +310,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       }
 
       call_center_builder.append_row(
-          convert_key(call_center.cc_call_center_sk), call_center.cc_call_center_id,
+          resolve_key(call_center.cc_call_center_sk), call_center.cc_call_center_id,
           resolve_date_id(call_center.cc_rec_start_date_id), resolve_date_id(call_center.cc_rec_end_date_id),
-          convert_key(call_center.cc_closed_date_id), convert_key(call_center.cc_open_date_id), call_center.cc_name,
+          resolve_key(call_center.cc_closed_date_id), resolve_key(call_center.cc_open_date_id), call_center.cc_name,
           call_center.cc_class, call_center.cc_employees, call_center.cc_sq_ft, call_center.cc_hours,
           call_center.cc_manager, call_center.cc_market_id, call_center.cc_market_class, call_center.cc_market_desc,
           call_center.cc_market_manager, call_center.cc_division_id, call_center.cc_division_name,
@@ -268,9 +341,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       mk_w_catalog_page(&catalog_page, catalog_page_first + i);
       tpcds_row_stop(CATALOG_PAGE);
 
-      catalog_page_builder.append_row(convert_key(catalog_page.cp_catalog_page_sk), catalog_page.cp_catalog_page_id,
-                                      convert_key(catalog_page.cp_start_date_id),
-                                      convert_key(catalog_page.cp_end_date_id), catalog_page.cp_department,
+      catalog_page_builder.append_row(resolve_key(catalog_page.cp_catalog_page_sk), catalog_page.cp_catalog_page_id,
+                                      resolve_key(catalog_page.cp_start_date_id),
+                                      resolve_key(catalog_page.cp_end_date_id), catalog_page.cp_department,
                                       catalog_page.cp_catalog_number, catalog_page.cp_catalog_page_number,
                                       catalog_page.cp_description, catalog_page.cp_type);
     }
@@ -305,15 +378,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       tpcds_row_stop(CATALOG_SALES);
 
       catalog_sales_builder.append_row(
-          convert_key(catalog_sales.cs_sold_date_sk), convert_key(catalog_sales.cs_sold_time_sk),
-          convert_key(catalog_sales.cs_ship_date_sk), convert_key(catalog_sales.cs_bill_customer_sk),
-          convert_key(catalog_sales.cs_bill_cdemo_sk), convert_key(catalog_sales.cs_bill_hdemo_sk),
-          convert_key(catalog_sales.cs_bill_addr_sk), convert_key(catalog_sales.cs_ship_customer_sk),
-          convert_key(catalog_sales.cs_ship_cdemo_sk), convert_key(catalog_sales.cs_ship_hdemo_sk),
-          convert_key(catalog_sales.cs_ship_addr_sk), convert_key(catalog_sales.cs_call_center_sk),
-          convert_key(catalog_sales.cs_catalog_page_sk), convert_key(catalog_sales.cs_ship_mode_sk),
-          convert_key(catalog_sales.cs_warehouse_sk), convert_key(catalog_sales.cs_sold_item_sk),
-          convert_key(catalog_sales.cs_promo_sk), convert_key(catalog_sales.cs_order_number),
+          resolve_key(catalog_sales.cs_sold_date_sk), resolve_key(catalog_sales.cs_sold_time_sk),
+          resolve_key(catalog_sales.cs_ship_date_sk), resolve_key(catalog_sales.cs_bill_customer_sk),
+          resolve_key(catalog_sales.cs_bill_cdemo_sk), resolve_key(catalog_sales.cs_bill_hdemo_sk),
+          resolve_key(catalog_sales.cs_bill_addr_sk), resolve_key(catalog_sales.cs_ship_customer_sk),
+          resolve_key(catalog_sales.cs_ship_cdemo_sk), resolve_key(catalog_sales.cs_ship_hdemo_sk),
+          resolve_key(catalog_sales.cs_ship_addr_sk), resolve_key(catalog_sales.cs_call_center_sk),
+          resolve_key(catalog_sales.cs_catalog_page_sk), resolve_key(catalog_sales.cs_ship_mode_sk),
+          resolve_key(catalog_sales.cs_warehouse_sk), resolve_key(catalog_sales.cs_sold_item_sk),
+          resolve_key(catalog_sales.cs_promo_sk), resolve_key(catalog_sales.cs_order_number),
           catalog_sales.cs_pricing.quantity, decimal_to_float(catalog_sales.cs_pricing.wholesale_cost),
           decimal_to_float(catalog_sales.cs_pricing.list_price), decimal_to_float(catalog_sales.cs_pricing.sales_price),
           decimal_to_float(catalog_sales.cs_pricing.ext_discount_amt),
@@ -329,15 +402,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
       if (was_returned != 0) {
         catalog_returns_builder.append_row(
-            convert_key(catalog_returns.cr_returned_date_sk), convert_key(catalog_returns.cr_returned_time_sk),
-            convert_key(catalog_returns.cr_item_sk), convert_key(catalog_returns.cr_refunded_customer_sk),
-            convert_key(catalog_returns.cr_refunded_cdemo_sk), convert_key(catalog_returns.cr_refunded_hdemo_sk),
-            convert_key(catalog_returns.cr_refunded_addr_sk), convert_key(catalog_returns.cr_returning_customer_sk),
-            convert_key(catalog_returns.cr_returning_cdemo_sk), convert_key(catalog_returns.cr_returning_hdemo_sk),
-            convert_key(catalog_returns.cr_returning_addr_sk), convert_key(catalog_returns.cr_call_center_sk),
-            convert_key(catalog_returns.cr_catalog_page_sk), convert_key(catalog_returns.cr_ship_mode_sk),
-            convert_key(catalog_returns.cr_warehouse_sk), convert_key(catalog_returns.cr_reason_sk),
-            convert_key(catalog_returns.cr_order_number), catalog_returns.cr_pricing.quantity,
+            resolve_key(catalog_returns.cr_returned_date_sk), resolve_key(catalog_returns.cr_returned_time_sk),
+            resolve_key(catalog_returns.cr_item_sk), resolve_key(catalog_returns.cr_refunded_customer_sk),
+            resolve_key(catalog_returns.cr_refunded_cdemo_sk), resolve_key(catalog_returns.cr_refunded_hdemo_sk),
+            resolve_key(catalog_returns.cr_refunded_addr_sk), resolve_key(catalog_returns.cr_returning_customer_sk),
+            resolve_key(catalog_returns.cr_returning_cdemo_sk), resolve_key(catalog_returns.cr_returning_hdemo_sk),
+            resolve_key(catalog_returns.cr_returning_addr_sk), resolve_key(catalog_returns.cr_call_center_sk),
+            resolve_key(catalog_returns.cr_catalog_page_sk), resolve_key(catalog_returns.cr_ship_mode_sk),
+            resolve_key(catalog_returns.cr_warehouse_sk), resolve_key(catalog_returns.cr_reason_sk),
+            resolve_key(catalog_returns.cr_order_number), catalog_returns.cr_pricing.quantity,
             decimal_to_float(catalog_returns.cr_pricing.net_paid), decimal_to_float(catalog_returns.cr_pricing.ext_tax),
             decimal_to_float(catalog_returns.cr_pricing.net_paid_inc_tax),
             decimal_to_float(catalog_returns.cr_pricing.fee),
@@ -367,8 +440,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       const auto customer = call_dbgen_mk<W_CUSTOMER_TBL, &mk_w_customer, CUSTOMER>(customer_first + i);
 
       customer_builder.append_row(
-          convert_key(customer.c_customer_sk), customer.c_customer_id, convert_key(customer.c_current_cdemo_sk),
-          convert_key(customer.c_current_hdemo_sk), convert_key(customer.c_current_addr_sk),
+          resolve_key(customer.c_customer_sk), customer.c_customer_id, resolve_key(customer.c_current_cdemo_sk),
+          resolve_key(customer.c_current_hdemo_sk), resolve_key(customer.c_current_addr_sk),
           customer.c_first_shipto_date_id, customer.c_first_sales_date_id, customer.c_salutation, customer.c_first_name,
           customer.c_last_name, convert_boolean(customer.c_preferred_cust_flag), customer.c_birth_day,
           customer.c_birth_month, customer.c_birth_year, customer.c_birth_country, customer.c_login,
@@ -397,7 +470,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       }
 
       customer_address_builder.append_row(
-          convert_key(customer_address.ca_addr_sk), customer_address.ca_addr_id, customer_address.ca_address.street_num,
+          resolve_key(customer_address.ca_addr_sk), customer_address.ca_addr_id, customer_address.ca_address.street_num,
           std::move(street_name), customer_address.ca_address.street_type, customer_address.ca_address.suite_num,
           customer_address.ca_address.city, customer_address.ca_address.county, customer_address.ca_address.state,
           customer_address.ca_address.zip, customer_address.ca_address.country, customer_address.ca_address.gmt_offset,
@@ -422,7 +495,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
               customer_demographics_first + i);
 
       customer_demographics_builder.append_row(
-          convert_key(customer_demographics.cd_demo_sk), customer_demographics.cd_gender,
+          resolve_key(customer_demographics.cd_demo_sk), customer_demographics.cd_gender,
           customer_demographics.cd_marital_status, customer_demographics.cd_education_status,
           customer_demographics.cd_purchase_estimate, customer_demographics.cd_credit_rating,
           customer_demographics.cd_dep_count, customer_demographics.cd_dep_employed_count,
@@ -446,7 +519,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       auto quarter_name = pmr_string{std::to_string(date.d_year)};
       quarter_name += "Q" + std::to_string(date.d_qoy);
 
-      date_builder.append_row(convert_key(date.d_date_sk), date.d_date_id, resolve_date_id(date.d_date_sk),
+      date_builder.append_row(resolve_key(date.d_date_sk), date.d_date_id, resolve_date_id(date.d_date_sk),
                               date.d_month_seq, date.d_week_seq, date.d_quarter_seq, date.d_year, date.d_dow,
                               date.d_moy, date.d_dom, date.d_qoy, date.d_fy_year, date.d_fy_quarter_seq,
                               date.d_fy_week_seq, date.d_day_name, std::move(quarter_name),
@@ -475,7 +548,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
               household_demographics_first + i);
 
       household_demographics_builder.append_row(
-          convert_key(household_demographics.hd_demo_sk), convert_key(household_demographics.hd_income_band_id),
+          resolve_key(household_demographics.hd_demo_sk), resolve_key(household_demographics.hd_income_band_id),
           household_demographics.hd_buy_potential, household_demographics.hd_dep_count,
           household_demographics.hd_vehicle_count);
     }
@@ -513,8 +586,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     for (auto i = ds_key_t{0}; i < inventory_count; i++) {
       const auto inventory = call_dbgen_mk<W_INVENTORY_TBL, &mk_w_inventory, INVENTORY>(inventory_first + i);
 
-      inventory_builder.append_row(convert_key(inventory.inv_date_sk), convert_key(inventory.inv_item_sk),
-                                   convert_key(inventory.inv_warehouse_sk), inventory.inv_quantity_on_hand);
+      inventory_builder.append_row(resolve_key(inventory.inv_date_sk), resolve_key(inventory.inv_item_sk),
+                                   resolve_key(inventory.inv_warehouse_sk), inventory.inv_quantity_on_hand);
     }
 
     table_info_by_name["inventory"].table = inventory_builder.finish_table();
@@ -531,13 +604,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     for (auto i = ds_key_t{0}; i < item_count; i++) {
       const auto item = call_dbgen_mk<W_ITEM_TBL, &mk_w_item, ITEM>(item_first + i);
 
-      item_builder.append_row(convert_key(item.i_item_sk), item.i_item_id, resolve_date_id(item.i_rec_start_date_id),
+      item_builder.append_row(resolve_key(item.i_item_sk), item.i_item_id, resolve_date_id(item.i_rec_start_date_id),
                               resolve_date_id(item.i_rec_end_date_id), item.i_item_desc,
                               decimal_to_float(item.i_current_price), decimal_to_float(item.i_wholesale_cost),
-                              convert_key(item.i_brand_id), item.i_brand, convert_key(item.i_class_id), item.i_class,
-                              convert_key(item.i_category_id), item.i_category, convert_key(item.i_manufact_id),
+                              resolve_key(item.i_brand_id), item.i_brand, resolve_key(item.i_class_id), item.i_class,
+                              resolve_key(item.i_category_id), item.i_category, resolve_key(item.i_manufact_id),
                               item.i_manufact, item.i_size, item.i_formulation, item.i_color, item.i_units,
-                              item.i_container, convert_key(item.i_manager_id), item.i_product_name);
+                              item.i_container, resolve_key(item.i_manager_id), item.i_product_name);
     }
 
     table_info_by_name["item"].table = item_builder.finish_table();
@@ -555,8 +628,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       const auto promotion = call_dbgen_mk<W_PROMOTION_TBL, &mk_w_promotion, PROMOTION>(promotion_first + i);
 
       promotion_builder.append_row(
-          convert_key(promotion.p_promo_sk), promotion.p_promo_id, convert_key(promotion.p_start_date_id),
-          convert_key(promotion.p_end_date_id), convert_key(promotion.p_item_sk), decimal_to_float(promotion.p_cost),
+          resolve_key(promotion.p_promo_sk), promotion.p_promo_id, resolve_key(promotion.p_start_date_id),
+          resolve_key(promotion.p_end_date_id), resolve_key(promotion.p_item_sk), decimal_to_float(promotion.p_cost),
           promotion.p_response_target, promotion.p_promo_name, convert_boolean(promotion.p_channel_dmail),
           convert_boolean(promotion.p_channel_email), convert_boolean(promotion.p_channel_catalog),
           convert_boolean(promotion.p_channel_tv), convert_boolean(promotion.p_channel_radio),
@@ -579,7 +652,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     for (auto i = ds_key_t{0}; i < reason_count; i++) {
       const auto reason = call_dbgen_mk<W_REASON_TBL, &mk_w_reason, REASON>(reason_first + i);
 
-      reason_builder.append_row(convert_key(reason.r_reason_sk), reason.r_reason_id, reason.r_reason_description);
+      reason_builder.append_row(resolve_key(reason.r_reason_sk), reason.r_reason_id, reason.r_reason_description);
     }
 
     table_info_by_name["reason"].table = reason_builder.finish_table();
@@ -596,7 +669,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     for (auto i = ds_key_t{0}; i < ship_mode_count; i++) {
       const auto ship_mode = call_dbgen_mk<W_SHIP_MODE_TBL, &mk_w_ship_mode, SHIP_MODE>(ship_mode_first + i);
 
-      ship_mode_builder.append_row(convert_key(ship_mode.sm_ship_mode_sk), ship_mode.sm_ship_mode_id, ship_mode.sm_type,
+      ship_mode_builder.append_row(resolve_key(ship_mode.sm_ship_mode_sk), ship_mode.sm_ship_mode_id, ship_mode.sm_type,
                                    ship_mode.sm_code, ship_mode.sm_carrier, ship_mode.sm_contract);
     }
 
@@ -619,11 +692,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
         street_name += pmr_string{" "} + store.address.street_name2;
       }
 
-      store_builder.append_row(convert_key(store.store_sk), store.store_id, resolve_date_id(store.rec_start_date_id),
-                               resolve_date_id(store.rec_end_date_id), convert_key(store.closed_date_id),
+      store_builder.append_row(resolve_key(store.store_sk), store.store_id, resolve_date_id(store.rec_start_date_id),
+                               resolve_date_id(store.rec_end_date_id), resolve_key(store.closed_date_id),
                                store.store_name, store.employees, store.floor_space, store.hours, store.store_manager,
                                store.market_id, store.geography_class, store.market_desc, store.market_manager,
-                               convert_key(store.division_id), store.division_name, convert_key(store.company_id),
+                               resolve_key(store.division_id), store.division_name, resolve_key(store.company_id),
                                store.company_name, store.address.street_num, std::move(street_name),
                                store.address.street_type, store.address.suite_num, store.address.city,
                                store.address.county, store.address.state, store.address.zip, store.address.country,
@@ -659,11 +732,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       tpcds_row_stop(STORE_SALES);
 
       store_sales_builder.append_row(
-          convert_key(store_sales.ss_sold_date_sk), convert_key(store_sales.ss_sold_time_sk),
-          convert_key(store_sales.ss_sold_item_sk), convert_key(store_sales.ss_sold_customer_sk),
-          convert_key(store_sales.ss_sold_cdemo_sk), convert_key(store_sales.ss_sold_hdemo_sk),
-          convert_key(store_sales.ss_sold_addr_sk), convert_key(store_sales.ss_sold_store_sk),
-          convert_key(store_sales.ss_sold_promo_sk), convert_key(store_sales.ss_ticket_number),
+          resolve_key(store_sales.ss_sold_date_sk), resolve_key(store_sales.ss_sold_time_sk),
+          resolve_key(store_sales.ss_sold_item_sk), resolve_key(store_sales.ss_sold_customer_sk),
+          resolve_key(store_sales.ss_sold_cdemo_sk), resolve_key(store_sales.ss_sold_hdemo_sk),
+          resolve_key(store_sales.ss_sold_addr_sk), resolve_key(store_sales.ss_sold_store_sk),
+          resolve_key(store_sales.ss_sold_promo_sk), resolve_key(store_sales.ss_ticket_number),
           store_sales.ss_pricing.quantity, decimal_to_float(store_sales.ss_pricing.wholesale_cost),
           decimal_to_float(store_sales.ss_pricing.list_price), decimal_to_float(store_sales.ss_pricing.sales_price),
           decimal_to_float(store_sales.ss_pricing.coupon_amt), decimal_to_float(store_sales.ss_pricing.ext_sales_price),
@@ -675,11 +748,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
       if (was_returned != 0) {
         store_returns_builder.append_row(
-            convert_key(store_returns.sr_returned_date_sk), convert_key(store_returns.sr_returned_time_sk),
-            convert_key(store_returns.sr_item_sk), convert_key(store_returns.sr_customer_sk),
-            convert_key(store_returns.sr_cdemo_sk), convert_key(store_returns.sr_hdemo_sk),
-            convert_key(store_returns.sr_addr_sk), convert_key(store_returns.sr_store_sk),
-            convert_key(store_returns.sr_reason_sk), convert_key(store_returns.sr_ticket_number),
+            resolve_key(store_returns.sr_returned_date_sk), resolve_key(store_returns.sr_returned_time_sk),
+            resolve_key(store_returns.sr_item_sk), resolve_key(store_returns.sr_customer_sk),
+            resolve_key(store_returns.sr_cdemo_sk), resolve_key(store_returns.sr_hdemo_sk),
+            resolve_key(store_returns.sr_addr_sk), resolve_key(store_returns.sr_store_sk),
+            resolve_key(store_returns.sr_reason_sk), resolve_key(store_returns.sr_ticket_number),
             store_returns.sr_pricing.quantity, decimal_to_float(store_returns.sr_pricing.net_paid),
             decimal_to_float(store_returns.sr_pricing.ext_tax),
             decimal_to_float(store_returns.sr_pricing.net_paid_inc_tax), decimal_to_float(store_returns.sr_pricing.fee),
@@ -708,7 +781,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     for (auto i = ds_key_t{0}; i < time_count; i++) {
       const auto time = call_dbgen_mk<W_TIME_TBL, &mk_w_time, TIME>(time_first + i);
 
-      time_builder.append_row(convert_key(time.t_time_sk), time.t_time_id, time.t_time, time.t_hour, time.t_minute,
+      time_builder.append_row(resolve_key(time.t_time_sk), time.t_time_id, time.t_time, time.t_hour, time.t_minute,
                               time.t_second, time.t_am_pm, time.t_shift, time.t_sub_shift, time.t_meal_time);
     }
 
@@ -732,7 +805,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       }
 
       warehouse_builder.append_row(
-          convert_key(warehouse.w_warehouse_sk), warehouse.w_warehouse_id, warehouse.w_warehouse_name,
+          resolve_key(warehouse.w_warehouse_sk), warehouse.w_warehouse_id, warehouse.w_warehouse_name,
           warehouse.w_warehouse_sq_ft, warehouse.w_address.street_num, std::move(street_name),
           warehouse.w_address.street_type, warehouse.w_address.suite_num, warehouse.w_address.city,
           warehouse.w_address.county, warehouse.w_address.state, warehouse.w_address.zip, warehouse.w_address.country,
@@ -754,11 +827,20 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + i);
 
       web_page_builder.append_row(
-          convert_key(web_page.wp_page_sk), web_page.wp_page_id, resolve_date_id(web_page.wp_rec_start_date_id),
-          resolve_date_id(web_page.wp_rec_end_date_id), convert_key(web_page.wp_creation_date_sk),
-          convert_key(web_page.wp_access_date_sk), convert_boolean(web_page.wp_autogen_flag),
-          convert_key(web_page.wp_customer_sk), web_page.wp_url, web_page.wp_type, web_page.wp_char_count,
-          web_page.wp_link_count, web_page.wp_image_count, web_page.wp_max_ad_count);
+          resolve_key<WP_PAGE_SK, false>(web_page.wp_page_sk),
+          resolve_string<WP_PAGE_ID, false>(web_page.wp_page_id),
+          resolve_date_id<WP_REC_START_DATE_ID>(web_page.wp_rec_start_date_id),
+          resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
+          resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
+          resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
+          resolve_bool<WP_AUTOGEN_FLAG>(web_page.wp_autogen_flag),
+          resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk),
+          resolve_string<WP_URL>(web_page.wp_url),
+          resolve_string<WP_TYPE>(web_page.wp_type),
+          resolve_int<WP_CHAR_COUNT>(web_page.wp_char_count),
+          resolve_int<WP_LINK_COUNT>(web_page.wp_link_count),
+          resolve_int<WP_IMAGE_COUNT>(web_page.wp_image_count),
+          resolve_int<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count));
     }
 
     table_info_by_name["web_page"].table = web_page_builder.finish_table();
@@ -786,15 +868,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       tpcds_row_stop(WEB_SALES);
 
       web_sales_builder.append_row(
-          convert_key(web_sales.ws_sold_date_sk), convert_key(web_sales.ws_sold_time_sk),
-          convert_key(web_sales.ws_ship_date_sk), convert_key(web_sales.ws_item_sk),
-          convert_key(web_sales.ws_bill_customer_sk), convert_key(web_sales.ws_bill_cdemo_sk),
-          convert_key(web_sales.ws_bill_hdemo_sk), convert_key(web_sales.ws_bill_addr_sk),
-          convert_key(web_sales.ws_ship_customer_sk), convert_key(web_sales.ws_ship_cdemo_sk),
-          convert_key(web_sales.ws_ship_hdemo_sk), convert_key(web_sales.ws_ship_addr_sk),
-          convert_key(web_sales.ws_web_page_sk), convert_key(web_sales.ws_web_site_sk),
-          convert_key(web_sales.ws_ship_mode_sk), convert_key(web_sales.ws_warehouse_sk),
-          convert_key(web_sales.ws_promo_sk), convert_key(web_sales.ws_order_number), web_sales.ws_pricing.quantity,
+          resolve_key(web_sales.ws_sold_date_sk), resolve_key(web_sales.ws_sold_time_sk),
+          resolve_key(web_sales.ws_ship_date_sk), resolve_key(web_sales.ws_item_sk),
+          resolve_key(web_sales.ws_bill_customer_sk), resolve_key(web_sales.ws_bill_cdemo_sk),
+          resolve_key(web_sales.ws_bill_hdemo_sk), resolve_key(web_sales.ws_bill_addr_sk),
+          resolve_key(web_sales.ws_ship_customer_sk), resolve_key(web_sales.ws_ship_cdemo_sk),
+          resolve_key(web_sales.ws_ship_hdemo_sk), resolve_key(web_sales.ws_ship_addr_sk),
+          resolve_key(web_sales.ws_web_page_sk), resolve_key(web_sales.ws_web_site_sk),
+          resolve_key(web_sales.ws_ship_mode_sk), resolve_key(web_sales.ws_warehouse_sk),
+          resolve_key(web_sales.ws_promo_sk), resolve_key(web_sales.ws_order_number), web_sales.ws_pricing.quantity,
           decimal_to_float(web_sales.ws_pricing.wholesale_cost), decimal_to_float(web_sales.ws_pricing.list_price),
           decimal_to_float(web_sales.ws_pricing.sales_price), decimal_to_float(web_sales.ws_pricing.ext_discount_amt),
           decimal_to_float(web_sales.ws_pricing.ext_sales_price),
@@ -808,13 +890,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
       if (was_returned != 0) {
         web_returns_builder.append_row(
-            convert_key(web_returns.wr_returned_date_sk), convert_key(web_returns.wr_returned_time_sk),
-            convert_key(web_returns.wr_item_sk), convert_key(web_returns.wr_refunded_customer_sk),
-            convert_key(web_returns.wr_refunded_cdemo_sk), convert_key(web_returns.wr_refunded_hdemo_sk),
-            convert_key(web_returns.wr_refunded_addr_sk), convert_key(web_returns.wr_returning_customer_sk),
-            convert_key(web_returns.wr_returning_cdemo_sk), convert_key(web_returns.wr_returning_hdemo_sk),
-            convert_key(web_returns.wr_returning_addr_sk), convert_key(web_returns.wr_web_page_sk),
-            convert_key(web_returns.wr_reason_sk), convert_key(web_returns.wr_order_number),
+            resolve_key(web_returns.wr_returned_date_sk), resolve_key(web_returns.wr_returned_time_sk),
+            resolve_key(web_returns.wr_item_sk), resolve_key(web_returns.wr_refunded_customer_sk),
+            resolve_key(web_returns.wr_refunded_cdemo_sk), resolve_key(web_returns.wr_refunded_hdemo_sk),
+            resolve_key(web_returns.wr_refunded_addr_sk), resolve_key(web_returns.wr_returning_customer_sk),
+            resolve_key(web_returns.wr_returning_cdemo_sk), resolve_key(web_returns.wr_returning_hdemo_sk),
+            resolve_key(web_returns.wr_returning_addr_sk), resolve_key(web_returns.wr_web_page_sk),
+            resolve_key(web_returns.wr_reason_sk), resolve_key(web_returns.wr_order_number),
             web_returns.wr_pricing.quantity, decimal_to_float(web_returns.wr_pricing.net_paid),
             decimal_to_float(web_returns.wr_pricing.ext_tax), decimal_to_float(web_returns.wr_pricing.net_paid_inc_tax),
             decimal_to_float(web_returns.wr_pricing.fee), decimal_to_float(web_returns.wr_pricing.ext_ship_cost),
@@ -847,9 +929,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       }
 
       web_site_builder.append_row(
-          convert_key(web_site.web_site_sk), web_site.web_site_id, resolve_date_id(web_site.web_rec_start_date_id),
-          resolve_date_id(web_site.web_rec_end_date_id), web_site.web_name, convert_key(web_site.web_open_date),
-          convert_key(web_site.web_close_date), web_site.web_class, web_site.web_manager, web_site.web_market_id,
+          resolve_key(web_site.web_site_sk), web_site.web_site_id, resolve_date_id(web_site.web_rec_start_date_id),
+          resolve_date_id(web_site.web_rec_end_date_id), web_site.web_name, resolve_key(web_site.web_open_date),
+          resolve_key(web_site.web_close_date), web_site.web_class, web_site.web_manager, web_site.web_market_id,
           web_site.web_market_class, web_site.web_market_desc, web_site.web_market_manager, web_site.web_company_id,
           web_site.web_company_name, web_site.web_address.street_num, std::move(street_name),
           web_site.web_address.street_type, web_site.web_address.suite_num, web_site.web_address.city,
