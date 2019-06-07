@@ -530,6 +530,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
     for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
       const auto& expression = column_expressions[column_id];
+
+      // The original column names should not be accessible anymore because the table schema is renamed.
       sql_identifier_resolver->reset_column_names(expression);
       sql_identifier_resolver->add_column_name(expression, (*hsql_table_ref.alias->columns)[column_id]);
     }
