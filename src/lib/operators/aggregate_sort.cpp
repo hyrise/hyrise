@@ -190,7 +190,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
  * @param aggregate_group_index the offset to use for <code>aggregate_results</code> and <code>aggregate_null_values</code>
  * @param aggregate_index current aggregate's offset in <code>_aggregates</code>
  * @param current_primary_aggregate the value of the aggregate (return value of the aggregate function) - used by all except COUNT (all versions)
- * @param current_secondary_aggregates the value of a supportive aggregate - used by StdDevSamp
+ * @param current_secondary_aggregates the value of a supportive aggregate - used by StandardDeviationSample
  * @param value_count the number of non-null values - used by COUNT(<name>), AVG
  * @param value_count_with_null the number of rows  - used by COUNT(*)
  * @param unique_value_count the number of unique values
@@ -222,8 +222,8 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_primary_aggregate = *current_primary_aggregate / value_count;
     }
   }
-  if constexpr (function == AggregateFunction::StdDevSamp && std::is_arithmetic_v<AggregateType>) {  // NOLINT
-    // this ignores the case of StdDevSamp on strings, but we check in _on_execute() this does not happen
+  if constexpr (function == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>) {  // NOLINT
+    // this ignores the case of StandardDeviationSample on strings, but we check in _on_execute() this does not happen
 
     if (value_count <= 1) {
       current_primary_aggregate = std::optional<AggregateType>();
@@ -544,9 +544,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
               group_boundaries, aggregate_index, sorted_table);
           break;
         }
-        case AggregateFunction::StdDevSamp: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::StdDevSamp>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::StdDevSamp>(
+        case AggregateFunction::StandardDeviationSample: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample>(
               group_boundaries, aggregate_index, sorted_table);
           break;
         }
@@ -599,8 +599,8 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
     case AggregateFunction::CountDistinct:
       create_aggregate_column_definitions<ColumnType, AggregateFunction::CountDistinct>(column_index);
       break;
-    case AggregateFunction::StdDevSamp:
-      create_aggregate_column_definitions<ColumnType, AggregateFunction::StdDevSamp>(column_index);
+    case AggregateFunction::StandardDeviationSample:
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::StandardDeviationSample>(column_index);
       break;
   }
 }
