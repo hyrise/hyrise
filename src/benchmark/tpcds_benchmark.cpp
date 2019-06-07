@@ -15,16 +15,14 @@
 #include "file_based_query_generator.hpp"
 #include "file_based_table_generator.hpp"
 #include "json.hpp"
+#include "sqlite_add_indices.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
-#include "utils/sqlite_wrapper.hpp"
-#include "utils/timer.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -88,43 +86,8 @@ int main(int argc, char* argv[]) {
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator), context};
 
   if (config->verify) {
-    // TODO(anyone) encapsulate this code somewhere else since it us used for the TPC-DS and JOIN ORDER BENCHMARK
-
-    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
-    // Without this, SQLite would never finish.
-    std::cout << "- Adding indexes to SQLite" << std::endl;
-    Timer timer;
-
-    // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
-    // schema and copy the data.
-    for (const auto& table_name : StorageManager::get().table_names()) {
-      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
-                                                         " RENAME TO " + table_name + "_unindexed");
-    }
-
-    // Recreate tables from schema.sql
-    std::ifstream schema_file("resources/benchmark/tpcds/schema.sql");
-    std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
-    benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
-
-    // Add foreign keys
-    std::ifstream create_indices_file("resources/benchmark/tpcds/create_indices.sql");
-    std::string create_indices_sql((std::istreambuf_iterator<char>(create_indices_file)),
-                                   std::istreambuf_iterator<char>());
-    benchmark_runner.sqlite_wrapper->raw_execute_query(create_indices_sql);
-
-    // Copy over data
-    for (const auto& table_name : StorageManager::get().table_names()) {
-      Timer per_table_time;
-      std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
-
-      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "} + table_name +  // NOLINT
-                                                         " SELECT * FROM " + table_name + "_unindexed");
-
-      std::cout << " (" << per_table_time.lap_formatted() << ")" << std::endl;
-    }
-
-    std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")" << std::endl;
+    add_indices_to_sqlite("resources/benchmark/tpcds/schema.sql", "resources/benchmark/tpcds/create_indices.sql",
+                          benchmark_runner);
   }
 
   std::cout << "done." << std::endl;

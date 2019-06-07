@@ -39,11 +39,13 @@ set(
     file_based_table_generator.hpp
     file_based_query_generator.cpp
     file_based_query_generator.hpp
-    table_generator.cpp
-    table_generator.hpp
-    random_generator.hpp
     query_benchmark_result.cpp
     query_benchmark_result.hpp
+    random_generator.hpp
+    sqlite_add_indices.cpp
+    sqlite_add_indices.hpp
+    table_generator.cpp
+    table_generator.hpp
 )
 
 
