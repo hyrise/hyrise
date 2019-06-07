@@ -1129,9 +1129,9 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateA) {
   const auto b_times_a = mul_(int_float2_b, int_float_a);
   const auto expected_lqp =
   PredicateNode::make(equals_(a_plus_a, b_times_a),
-      JoinNode::make(JoinMode::Cross,
-        stored_table_node_int_float,
-        stored_table_node_int_float2));
+    JoinNode::make(JoinMode::Cross,
+      stored_table_node_int_float,
+      stored_table_node_int_float2));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1150,9 +1150,9 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicateB) {
 
   const auto expected_lqp =
   PredicateNode::make(join_predicate,
-      JoinNode::make(JoinMode::Cross,
-        stored_table_node_int_float,
-        stored_table_node_int_float));
+    JoinNode::make(JoinMode::Cross,
+      stored_table_node_int_float,
+      stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1223,9 +1223,9 @@ TEST_F(SQLTranslatorTest, SameColumnForDifferentTableNames) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_a),
-      JoinNode::make(JoinMode::Cross,
-        stored_table_node_int_float,
-        stored_table_node_int_float));
+    JoinNode::make(JoinMode::Cross,
+      stored_table_node_int_float,
+      stored_table_node_int_float));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
