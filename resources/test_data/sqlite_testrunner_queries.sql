@@ -99,8 +99,6 @@ SELECT a AS x, SUM(b) FROM mixed GROUP BY a;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING a > 10;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
---SELECT a AS b, b AS a FROM mixed WHERE a > 5;
---SELECT a + 5 AS a FROM mixed WHERE a > 90
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;

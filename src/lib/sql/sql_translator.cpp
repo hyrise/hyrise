@@ -190,15 +190,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(const hsql::SelectStatement& select) {
-  // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
+  // SQL Orders of Operations
   // 1. FROM clause (incl. JOINs and sub-SELECTs that are part of this)
-  // 2. WHERE clause
-  // 3. GROUP BY clause
-  // 4. HAVING clause
-  // 5. SELECT clause (incl. DISTINCT)
-  // 6. UNION clause
-  // 7. ORDER BY clause
-  // 8. LIMIT clause
+  // 2. SELECT list (to retrieve aliases)
+  // 3. WHERE clause
+  // 4. GROUP BY clause
+  // 5. HAVING clause
+  // 6. SELECT clause (incl. DISTINCT)
+  // 7. UNION clause
+  // 8. ORDER BY clause
+  // 9. LIMIT clause
 
   AssertInput(select.selectList, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
@@ -214,24 +215,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
     _sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   }
 
-  // Build the select_list_elements
-  // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
-  // Create an SQLIdentifierResolver that knows the aliases
-  std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
-  auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
-  for (const auto& hsql_select_expr : *select.selectList) {
-    if (hsql_select_expr->type == hsql::kExprStar) {
-      select_list_elements.emplace_back(nullptr);
-    } else {
-      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
-      select_list_elements.emplace_back(expression);
-
-      if (hsql_select_expr->alias) {
-        post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
-      }
-    }
-  }
-  _sql_identifier_resolver = post_select_sql_identifier_resolver;
+  // Translate SELECT list (to retrieve aliases)
+  const auto select_list_elements = _translate_select_list(select);
 
   // Translate WHERE
   if (select.whereClause) {
@@ -240,7 +225,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent
-  _translate_select_list_groupby_having(select, select_list_elements);
+  _translate_select_groupby_having(select, select_list_elements);
 
   // Translate ORDER BY and LIMIT
   if (select.order) _translate_order_by(*select.order);
@@ -763,7 +748,30 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
   return result_table_source_state;
 }
 
-void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStatement& select,
+std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_translate_select_list(
+    const hsql::SelectStatement& select) {
+  // Build the select_list_elements
+  // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
+  // Create an SQLIdentifierResolver that knows the aliases
+  std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
+  auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
+  for (const auto& hsql_select_expr : *select.selectList) {
+    if (hsql_select_expr->type == hsql::kExprStar) {
+      select_list_elements.emplace_back(nullptr);
+    } else {
+      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
+      select_list_elements.emplace_back(expression);
+
+      if (hsql_select_expr->alias) {
+        post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
+      }
+    }
+  }
+  _sql_identifier_resolver = post_select_sql_identifier_resolver;
+  return select_list_elements;
+}
+
+void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement& select,
     const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) {
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
