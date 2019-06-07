@@ -171,15 +171,15 @@ class RadixClusterSort {
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
   std::unique_ptr<MaterializedSegmentList<T>> _cluster(const std::unique_ptr<MaterializedSegmentList<T>>& input_chunks,
-                                                       std::function<size_t(const T&)> clusterer) {
+                                                       const std::function<size_t(const T&)> clusterer) {
     auto output_table = std::make_unique<MaterializedSegmentList<T>>(_cluster_count);
     TableInformation table_information(input_chunks->size(), _cluster_count);
 
     // Count for every chunk the number of entries for each cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
+    for (auto chunk_number = size_t{0}; chunk_number < input_chunks->size(); ++chunk_number) {
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
-      auto job = std::make_shared<JobTask>([&, this] {
+      auto job = std::make_shared<JobTask>([&, chunk_number, this] {
         auto& chunk_information = table_information.chunk_information[chunk_number];
         auto input_chunk = (*input_chunks)[chunk_number];
         auto local_clusterer{clusterer};  // obtain functor copy (see RangeClusterFunctor)
@@ -194,8 +194,9 @@ class RadixClusterSort {
                     "Input chunks need to be sorted.");
 
         if (_cluster_count > 1) {
-          for (auto& entry : *input_chunk) {
-            auto cluster_id = local_clusterer(entry.value);
+          const auto& input_chunk_ref = *input_chunk;
+          for (const auto& entry : input_chunk_ref) {
+            const auto cluster_id = local_clusterer(entry.value);
             ++chunk_information.cluster_histogram[cluster_id];
           }
         }
@@ -214,19 +215,19 @@ class RadixClusterSort {
     if (_cluster_count > 1) {
       // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
       for (auto& chunk_information : table_information.chunk_information) {
-        for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
+        for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
           chunk_information.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
           table_information.cluster_histogram[cluster_id] += chunk_information.cluster_histogram[cluster_id];
         }
       }
 
       // Reserve the appropriate output space for the clusters
-      for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-        auto cluster_size = table_information.cluster_histogram[cluster_id];
+      for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
+        const auto cluster_size = table_information.cluster_histogram[cluster_id];
         (*output_table)[cluster_id] = std::make_shared<MaterializedSegment<T>>(cluster_size);
       }
     } else {
-      size_t single_cluster_size = 0;
+      auto single_cluster_size = size_t{0};
       for (const auto& chunk : *input_chunks) {
         single_cluster_size += chunk->size();
       }
@@ -235,14 +236,15 @@ class RadixClusterSort {
 
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
-    for (size_t chunk_number = 0; chunk_number < input_chunks->size(); ++chunk_number) {
-      auto job =
-          std::make_shared<JobTask>([&] {
-            auto local_clusterer{clusterer};  // obtain functor copy (see RangeClusterFunctor)
+    const auto input_chunks_size = input_chunks->size();
+    for (auto chunk_number = size_t{0}; chunk_number < input_chunks_size; ++chunk_number) {
+      auto job = std::make_shared<JobTask>([&, clusterer] {  // copy cluster functor per task
             auto& chunk_information = table_information.chunk_information[chunk_number];
-            for (auto& entry : *(*input_chunks)[chunk_number]) {
-              const auto cluster_id = local_clusterer(entry.value);
-              auto& output_cluster = *(*output_table)[cluster_id];
+            const auto& input_chunk = *(*input_chunks)[chunk_number];
+            const auto& output_table_ref = *output_table;
+            for (auto& entry : input_chunk) {
+              const auto cluster_id = clusterer(entry.value);
+              auto& output_cluster = *(output_table_ref)[cluster_id];
               auto& insert_position = chunk_information.insert_position[cluster_id];
               output_cluster[insert_position] = entry;
               ++insert_position;
@@ -315,9 +317,8 @@ class RadixClusterSort {
     DebugAssert(std::is_sorted(split_values.begin(), split_values.end()), "Split values need to be sorted.");
 
     // This functor returns the corresponding cluster for a given value. Since both the split values and values to
-    // cluster are sorted, we can assign clusters in linear time. Required for that is state, this the overhead of a
-    // functor over a lambda. To ensure multiple threads do not interfere with each other, each cluster job needs to
-    // have own instance of the functor.
+    // cluster are sorted, we can assign clusters in linear time. State within the functor is required. To ensure
+    // multiple threads do not interfere with each other, each cluster job needs to have own instance of the functor.
     class RangeClusterFunctor {
      public:
       // split_values are copied to ensure data locality (sort-merge shines on large joins).
