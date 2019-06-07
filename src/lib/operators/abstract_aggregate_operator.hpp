@@ -94,7 +94,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
-class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::StdDevSamp> {
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample> {
  public:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
@@ -115,9 +115,9 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         }
 
         // get values
-        double count = current_secondary_aggregates[0];
-        double mean = current_secondary_aggregates[1];
-        double squared_distance_from_mean = current_secondary_aggregates[2];
+        auto& count = current_secondary_aggregates[0];
+        auto& mean = current_secondary_aggregates[1];
+        auto& squared_distance_from_mean = current_secondary_aggregates[2];
 
         // update values
         ++count;
@@ -126,7 +126,6 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
         const double delta2 = new_value - mean;
         squared_distance_from_mean += delta * delta2;
 
-        // store values
         if (count > 1) {
           const auto variance = squared_distance_from_mean / (count - 1);
           current_primary_aggregate = std::sqrt(variance);
@@ -134,12 +133,8 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
           current_primary_aggregate = std::nullopt;
         }
 
-        current_secondary_aggregates[0] = count;
-        current_secondary_aggregates[1] = mean;
-        current_secondary_aggregates[2] = squared_distance_from_mean;
-
       } else {
-        Fail("StdDevSamp not available for non-arithmetic types.");
+        Fail("StandardDeviationSample not available for non-arithmetic types.");
       }
     };
   }

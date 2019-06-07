@@ -219,7 +219,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       break;
     case AggregateFunction::CountDistinct:
       Fail("Aggregate function count distinct not supported");
-    case AggregateFunction::StdDevSamp:
+    case AggregateFunction::StandardDeviationSample:
       Fail("Aggregate function standard deviation sample is not supported.");
   }
 }
@@ -317,7 +317,7 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         case AggregateFunction::CountDistinct: {
           Fail("Aggregate function count distinct not supported");
         }
-        case AggregateFunction::StdDevSamp:
+        case AggregateFunction::StandardDeviationSample:
           Fail("Aggregate function standard deviation sample is not supported.");
       }
     }
@@ -356,7 +356,7 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
       case AggregateFunction::CountDistinct: {
         Fail("Aggregate function count distinct not supported");
       }
-      case AggregateFunction::StdDevSamp:
+      case AggregateFunction::StandardDeviationSample:
         Fail("Aggregate function standard deviation sample is not supported.");
     }
   }

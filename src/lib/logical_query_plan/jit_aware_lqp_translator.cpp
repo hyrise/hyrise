@@ -447,7 +447,7 @@ bool JitAwareLQPTranslator::_expression_is_jittable(const std::shared_ptr<Abstra
         case AggregateFunction::Count:
           return true;
         case AggregateFunction::CountDistinct:
-        case AggregateFunction::StdDevSamp:
+        case AggregateFunction::StandardDeviationSample:
           return false;
       }
       return aggregate_expression->aggregate_function != AggregateFunction::CountDistinct;
