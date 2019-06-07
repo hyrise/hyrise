@@ -1,7 +1,7 @@
 #include "sqlite_add_indices.hpp"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <string>
 
 #include "benchmark_runner.hpp"
@@ -9,7 +9,7 @@
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum{
+namespace opossum {
 
 void add_indices_to_sqlite(std::string schema_file_path, std::string create_indices_file_path,
                            BenchmarkRunner& benchmark_runner) {
@@ -48,4 +48,4 @@ void add_indices_to_sqlite(std::string schema_file_path, std::string create_indi
   std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")" << std::endl;
 }
 
-} // namespace opossum
+}  // namespace opossum
