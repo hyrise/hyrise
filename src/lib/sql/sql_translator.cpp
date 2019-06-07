@@ -216,7 +216,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   // Translate SELECT list (to retrieve aliases)
-  const auto select_list_elements = _translate_select_list(select);
+  const auto select_list_elements = _translate_select_list(*select.selectList);
 
   // Translate WHERE
   if (select.whereClause) {
@@ -751,13 +751,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_translate_select_list(
-    const hsql::SelectStatement& select) {
+    const std::vector<hsql::Expr*>& selectList) {
   // Build the select_list_elements
   // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
   // Create an SQLIdentifierResolver that knows the aliases
   std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
   auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
-  for (const auto& hsql_select_expr : *select.selectList) {
+  for (const auto& hsql_select_expr : selectList) {
     if (hsql_select_expr->type == hsql::kExprStar) {
       select_list_elements.emplace_back(nullptr);
     } else {

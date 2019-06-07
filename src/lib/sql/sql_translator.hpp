@@ -105,7 +105,7 @@ class SQLTranslator final {
   TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
-  std::vector<std::shared_ptr<AbstractExpression>> _translate_select_list(const hsql::SelectStatement& select);
+  std::vector<std::shared_ptr<AbstractExpression>> _translate_select_list(const std::vector<hsql::Expr*>& selectList);
   void _translate_select_groupby_having(const hsql::SelectStatement& select,
                                         const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements);
 
