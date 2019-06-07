@@ -216,7 +216,7 @@ const auto time_column_names = boost::hana::make_tuple("t_time_sk", "t_time_id",
 const auto warehouse_column_types = boost::hana::tuple<std::optional<int64_t>, pmr_string, pmr_string, int32_t, int32_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, int32_t, pmr_string, int32_t>(); // NOLINT
 const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk", "w_warehouse_id", "w_warehouse_name", "w_warehouse_sq_ft", "w_street_number", "w_street_name", "w_street_type", "w_suite_number", "w_city", "w_county", "w_state", "w_zip", "w_country", "w_gmt_offset"); // NOLINT
 
-const auto web_page_column_types = boost::hana::tuple<int64_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int64_t>, std::optional<int64_t>, std::optional<pmr_string>, std::optional<int64_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, int32_t>(); // NOLINT
+const auto web_page_column_types = boost::hana::tuple<int64_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int64_t>, std::optional<int64_t>, std::optional<pmr_string>, std::optional<int64_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
 const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk", "wp_web_page_id", "wp_rec_start_date", "wp_rec_end_date", "wp_creation_date_sk", "wp_access_date_sk", "wp_autogen_flag", "wp_customer_sk", "wp_url", "wp_type", "wp_char_count", "wp_link_count", "wp_image_count", "wp_max_ad_count"); // NOLINT
 
 const auto web_returns_column_types = boost::hana::tuple<std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, std::optional<int64_t>, int32_t, float, float, float, float, float, float, float, float, float>(); // NOLINT
@@ -249,45 +249,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   set_rng_seed(0);
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
 
-  // web page
-  {
-    const auto [web_page_first, web_page_count] = prepare_for_table(WEB_PAGE);
-
-    auto web_page_builder = TableBuilder{_benchmark_config->chunk_size, web_page_column_types, web_page_column_names,
-                                         static_cast<size_t>(web_page_count)};
-
-    for (auto i = ds_key_t{0}; i < web_page_count; i++) {
-      const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + i);
-
-      auto imagecount = resolve_int<WP_IMAGE_COUNT>(web_page.wp_image_count);
-      auto adcount = resolve_int<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count);
-      std::cout << imagecount.value() << adcount.value();
-
-
-      web_page_builder.append_row(
-        resolve_key<WP_PAGE_SK, false>(web_page.wp_page_sk),
-        resolve_string<WP_PAGE_ID, false>(web_page.wp_page_id),
-        resolve_date_id<WP_REC_START_DATE_ID>(web_page.wp_rec_start_date_id),
-        resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
-        resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
-        resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
-        resolve_bool<WP_AUTOGEN_FLAG>(web_page.wp_autogen_flag),
-        resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk),
-        resolve_string<WP_URL>(web_page.wp_url),
-        resolve_string<WP_TYPE>(web_page.wp_type),
-        resolve_int<WP_CHAR_COUNT>(web_page.wp_char_count),
-        resolve_int<WP_LINK_COUNT>(web_page.wp_link_count),
-        resolve_int<WP_IMAGE_COUNT>(web_page.wp_image_count),
-        resolve_int<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count));
-    }
-
-    table_info_by_name["web_page"].table = web_page_builder.finish_table();
-    std::cout << "web_page table generated" << std::endl;
-  }
-
-  if (true){
-    return table_info_by_name;
-  }
+//  if (!std::string().size()){  // TODO: remove this
+//    return table_info_by_name;
+//  }
 
   // call center
   {
@@ -821,26 +785,26 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [web_page_first, web_page_count] = prepare_for_table(WEB_PAGE);
 
     auto web_page_builder = TableBuilder{_benchmark_config->chunk_size, web_page_column_types, web_page_column_names,
-                                          static_cast<size_t>(web_page_count)};
+                                         static_cast<size_t>(web_page_count)};
 
     for (auto i = ds_key_t{0}; i < web_page_count; i++) {
       const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + i);
 
       web_page_builder.append_row(
-          resolve_key<WP_PAGE_SK, false>(web_page.wp_page_sk),
-          resolve_string<WP_PAGE_ID, false>(web_page.wp_page_id),
-          resolve_date_id<WP_REC_START_DATE_ID>(web_page.wp_rec_start_date_id),
-          resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
-          resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
-          resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
-          resolve_bool<WP_AUTOGEN_FLAG>(web_page.wp_autogen_flag),
-          resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk),
-          resolve_string<WP_URL>(web_page.wp_url),
-          resolve_string<WP_TYPE>(web_page.wp_type),
-          resolve_int<WP_CHAR_COUNT>(web_page.wp_char_count),
-          resolve_int<WP_LINK_COUNT>(web_page.wp_link_count),
-          resolve_int<WP_IMAGE_COUNT>(web_page.wp_image_count),
-          resolve_int<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count));
+        resolve_key<WP_PAGE_SK, false>(web_page.wp_page_sk),
+        resolve_string<WP_PAGE_ID, false>(web_page.wp_page_id),
+        resolve_date_id<WP_REC_START_DATE_ID>(web_page.wp_rec_start_date_id),
+        resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
+        resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
+        resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
+        resolve_bool<WP_AUTOGEN_FLAG>(web_page.wp_autogen_flag),
+        resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk),
+        resolve_string<WP_URL>(web_page.wp_url),
+        resolve_string<WP_TYPE>(web_page.wp_type),
+        resolve_int<WP_CHAR_COUNT>(web_page.wp_char_count),
+        resolve_int<WP_LINK_COUNT>(web_page.wp_link_count),
+        resolve_int<WP_IMAGE_COUNT>(web_page.wp_image_count),
+        resolve_int<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count));
     }
 
     table_info_by_name["web_page"].table = web_page_builder.finish_table();
