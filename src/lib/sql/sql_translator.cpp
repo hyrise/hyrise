@@ -771,8 +771,8 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_translate_selec
   return select_list_elements;
 }
 
-void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement& select,
-    const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) {
+void SQLTranslator::_translate_select_groupby_having(
+    const hsql::SelectStatement& select, const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) {
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
