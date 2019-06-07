@@ -83,7 +83,8 @@ DataType AggregateExpression::data_type() const {
         aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Sum>::AGGREGATE_DATA_TYPE;
         break;
       case AggregateFunction::StandardDeviationSample:
-        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::StandardDeviationSample>::AGGREGATE_DATA_TYPE;
+        aggregate_data_type =
+            AggregateTraits<AggregateDataType, AggregateFunction::StandardDeviationSample>::AGGREGATE_DATA_TYPE;
         break;
     }
   });

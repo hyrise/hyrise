@@ -782,7 +782,8 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
         break;
       case AggregateFunction::StandardDeviationSample:
         context = std::make_shared<AggregateContext<
-            ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType,
+            ColumnDataType,
+            typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType,
             AggregateKey>>();
         break;
     }

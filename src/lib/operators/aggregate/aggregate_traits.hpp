@@ -66,7 +66,8 @@ struct AggregateTraits<
 template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<ColumnType>, void>> {
+    typename std::enable_if_t<
+        function == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<ColumnType>, void>> {
   typedef double AggregateType;
   static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
 };

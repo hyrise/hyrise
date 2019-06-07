@@ -222,7 +222,8 @@ void AggregateSort::_set_and_write_aggregate_value(
       current_primary_aggregate = *current_primary_aggregate / value_count;
     }
   }
-  if constexpr (function == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>) {  // NOLINT
+  if constexpr (function == AggregateFunction::StandardDeviationSample &&
+                std::is_arithmetic_v<AggregateType>) {  // NOLINT
     // this ignores the case of StandardDeviationSample on strings, but we check in _on_execute() this does not happen
 
     if (value_count <= 1) {
@@ -545,7 +546,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           break;
         }
         case AggregateFunction::StandardDeviationSample: {
-          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType;
+          using AggregateType =
+              typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType;
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample>(
               group_boundaries, aggregate_index, sorted_table);
           break;

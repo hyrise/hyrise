@@ -171,10 +171,10 @@ TYPED_TEST(OperatorsAggregateTest, CannotAvgStringColumns) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
-  auto aggregate =
-      std::make_shared<TypeParam>(this->_table_wrapper_1_1_string,
-                                  std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::StandardDeviationSample}},
-                                  std::vector<ColumnID>{ColumnID{0}});
+  auto aggregate = std::make_shared<TypeParam>(
+      this->_table_wrapper_1_1_string,
+      std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::StandardDeviationSample}},
+      std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
@@ -204,12 +204,13 @@ TYPED_TEST(OperatorsAggregateTest, SingleAggregateAvg) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {ColumnID{0}},
-                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp.tbl", 1);
+  this->test_output(this->_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+                    {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateStandardDeviationSampleLarge) {
-  this->test_output(this->_table_wrapper_1_1_large, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_1_large, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+                    {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp_large.tbl", 1);
 }
 
@@ -254,7 +255,8 @@ TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateAvg) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, StringSingleAggregateStandardDeviationSample) {
-  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+                    {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/stddev_samp_null.tbl", 1);
 }
 
@@ -295,9 +297,10 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateAvgMax) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateMaxStandardDeviationSample) {
-  this->test_output(
-      this->_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Max}, {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
-      {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/max_stddev_samp.tbl", 1);
+  this->test_output(this->_table_wrapper_1_2,
+                    {{ColumnID{1}, AggregateFunction::Max}, {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
+                    {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/max_stddev_samp.tbl",
+                    1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateMinAvg) {
@@ -307,9 +310,10 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateMinAvg) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateMinStandardDeviationSample) {
-  this->test_output(
-      this->_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Min}, {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
-      {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/min_stddev_samp.tbl", 1);
+  this->test_output(this->_table_wrapper_1_2,
+                    {{ColumnID{1}, AggregateFunction::Min}, {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
+                    {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/min_stddev_samp.tbl",
+                    1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateMinMax) {
@@ -326,7 +330,8 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateAvgAvg) {
 
 TYPED_TEST(OperatorsAggregateTest, TwoAggregateStandardDeviationSampleStandardDeviationSample) {
   this->test_output(this->_table_wrapper_1_2,
-                    {{ColumnID{1}, AggregateFunction::StandardDeviationSample}, {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
+                    {{ColumnID{1}, AggregateFunction::StandardDeviationSample},
+                     {ColumnID{2}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/stddev_samp_stddev_samp.tbl", 1);
 }
@@ -449,7 +454,8 @@ TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateStandardDeviationSam
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateStandardDeviationSampleStandardDeviationSample) {
   this->test_output(this->_table_wrapper_2_2,
-                    {{ColumnID{2}, AggregateFunction::StandardDeviationSample}, {ColumnID{3}, AggregateFunction::StandardDeviationSample}},
+                    {{ColumnID{2}, AggregateFunction::StandardDeviationSample},
+                     {ColumnID{3}, AggregateFunction::StandardDeviationSample}},
                     {ColumnID{0}, ColumnID{1}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/stddev_samp_stddev_samp.tbl", 1);
 }
@@ -541,7 +547,8 @@ TYPED_TEST(OperatorsAggregateTest, SingleAggregateAvgWithNull) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, SingleAggregateStandardDeviationSampleWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+                    {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp_null.tbl", 1, false);
 }
 
@@ -593,7 +600,8 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAvgWithNull) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateStandardDeviationSampleWithNull) {
-  this->test_output(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}},
+                    {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/stddev_samp_null.tbl", 1, false);
 }
 
@@ -676,9 +684,9 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateStandardDeviationSampleAvgOnRef) 
       this->_table_wrapper_1_2, less_than_(this->get_column_expression(this->_table_wrapper_1_2, ColumnID{0}), "100"));
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}, {ColumnID{2}, AggregateFunction::Avg}},
-                    {ColumnID{0}},
-                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/stddev_samp_avg_filtered.tbl", 1);
+  this->test_output(
+      filtered, {{ColumnID{1}, AggregateFunction::StandardDeviationSample}, {ColumnID{2}, AggregateFunction::Avg}},
+      {ColumnID{0}}, "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/stddev_samp_avg_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
