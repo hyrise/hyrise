@@ -305,14 +305,14 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state)
   auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
                                        orders_table->column_is_nullable(ColumnID{0}), "");
   auto int_predicate =
-      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(10));
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(40));
 
   const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
   table_scan->execute();
 
   for (auto _ : state) {
     auto join =
-        std::make_shared<JoinSortMerge>(table_scan, _table_wrapper_map.at("lineitem"), JoinMode::FullOuter,
+        std::make_shared<JoinSortMerge>(table_scan, _table_wrapper_map.at("lineitem"), JoinMode::Inner,
                                         OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::GreaterThan});
     join->execute();
   }
