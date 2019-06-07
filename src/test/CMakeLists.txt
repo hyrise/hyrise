@@ -10,6 +10,7 @@ set(
 set(
     HYRISE_UNIT_TEST_SOURCES
     ${SHARED_SOURCES}
+    benchmarklib/table_builder_test.cpp
     cache/cache_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
@@ -32,6 +33,7 @@ set(
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
     lib/utils/load_table_test.cpp
+    lib/utils/verify_tables_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
@@ -70,17 +72,16 @@ set(
     operators/import_csv_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
-    operators/join_equi_test.cpp
-    operators/join_full_test.cpp
     operators/join_hash_test.cpp
     operators/join_hash_types_test.cpp
     operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
-    operators/join_null_test.cpp
-    operators/join_semi_anti_test.cpp
-    operators/join_test.hpp
-    operators/join_multi_predicates_test.cpp
+    operators/join_mpsm_test.cpp
+    operators/join_nested_loop_test.cpp
+    operators/join_sort_merge_test.cpp
+    operators/join_test_runner.cpp
+    operators/join_verification_test.cpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/create_prepared_plan_test.cpp

@@ -111,8 +111,6 @@ std::optional<int64_t> convert_key(ds_key_t key) {
   return key == -1 ? std::nullopt : std::optional<int64_t>{static_cast<int64_t>(key)};
 }
 
-// clang-format off
-
 // mapping types used by tpcds-dbgen as follows:
 // ds_key_t -> int64_t
 // int -> int32_t
@@ -124,6 +122,7 @@ std::optional<int64_t> convert_key(ds_key_t key) {
 // the types are derived from print functions (eg. pr_w_call_center in w_call_center.c), because these are used by the
 // dsdgen command line tool to create the *.dat files
 
+// clang-format off
 const auto call_center_column_types = boost::hana::tuple<std::optional<int64_t>, pmr_string, pmr_string, pmr_string, std::optional<int64_t>, std::optional<int64_t>, pmr_string, pmr_string, int32_t, int32_t, pmr_string, pmr_string, int32_t, pmr_string, pmr_string, pmr_string, int32_t, pmr_string, int32_t, pmr_string, int32_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, int32_t, pmr_string, int32_t, float>(); // NOLINT
 const auto call_center_column_names = boost::hana::make_tuple("cc_call_center_sk", "cc_call_center_id", "cc_rec_start_date", "cc_rec_end_date", "cc_closed_date_sk", "cc_open_date_sk", "cc_name", "cc_class", "cc_employees", "cc_sq_ft", "cc_hours", "cc_manager", "cc_mkt_id", "cc_mkt_class", "cc_mkt_desc", "cc_market_manager", "cc_division", "cc_division_name", "cc_company", "cc_company_name", "cc_street_number", "cc_street_name", "cc_street_type", "cc_suite_number", "cc_city", "cc_county", "cc_state", "cc_zip", "cc_country", "cc_gmt_offset", "cc_tax_percentage"); // NOLINT
 
@@ -198,7 +197,6 @@ const auto web_site_column_names = boost::hana::make_tuple("web_site_sk", "web_s
 
 const auto dbgen_version_column_types = boost::hana::tuple<pmr_string, pmr_string, pmr_string, pmr_string>(); // NOLINT
 const auto dbgen_version_column_names = boost::hana::make_tuple("dv_version", "dv_create_date", "dv_create_time", "dv_cmdline_args"); // NOLINT
-
 // clang-format on
 }  // namespace
 
@@ -213,9 +211,6 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
                                          const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
-// TODO(pascal): broken: web_site, promotion
-// ok: warehouse, store, ship_mode, income_band, reason, call_center, catalog_page (broken dsdgen?)
-
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
   set_scale_factor(_scale_factor);
   set_rng_seed(0);
@@ -226,7 +221,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [call_center_first, call_center_count] = prepare_for_table(CALL_CENTER);
 
     auto call_center_builder =
-        TableBuilder{_benchmark_config->chunk_size, call_center_column_types, call_center_column_names, UseMvcc::Yes,
+        TableBuilder{_benchmark_config->chunk_size, call_center_column_types, call_center_column_names, 
                      static_cast<size_t>(call_center_count)};
 
     auto call_center = CALL_CENTER_TBL{};
@@ -264,7 +259,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [catalog_page_first, catalog_page_count] = prepare_for_table(CATALOG_PAGE);
 
     auto catalog_page_builder =
-        TableBuilder{_benchmark_config->chunk_size, catalog_page_column_types, catalog_page_column_names, UseMvcc::Yes,
+        TableBuilder{_benchmark_config->chunk_size, catalog_page_column_types, catalog_page_column_names, 
                      static_cast<size_t>(catalog_page_count)};
 
     auto catalog_page = CATALOG_PAGE_TBL{};
@@ -296,10 +291,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     auto catalog_sales_builder =
         TableBuilder{_benchmark_config->chunk_size, catalog_sales_column_types, catalog_sales_column_names,
-                     UseMvcc::Yes, static_cast<size_t>(catalog_sales_count)};
+                      static_cast<size_t>(catalog_sales_count)};
 
     auto catalog_returns_builder = TableBuilder{_benchmark_config->chunk_size, catalog_returns_column_types,
-                                                catalog_returns_column_names, UseMvcc::Yes};
+                                                catalog_returns_column_names};
 
     for (auto i = ds_key_t{0}; i < catalog_sales_count; i++) {
       auto catalog_sales = W_CATALOG_SALES_TBL{};
@@ -366,7 +361,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [customer_first, customer_count] = prepare_for_table(CUSTOMER);
 
     auto customer_builder = TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                         UseMvcc::Yes, static_cast<size_t>(customer_count)};
+                                          static_cast<size_t>(customer_count)};
 
     for (auto i = ds_key_t{0}; i < customer_count; i++) {
       const auto customer = call_dbgen_mk<W_CUSTOMER_TBL, &mk_w_customer, CUSTOMER>(customer_first + i);
@@ -390,7 +385,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     auto customer_address_builder =
         TableBuilder{_benchmark_config->chunk_size, customer_address_column_types, customer_address_column_names,
-                     UseMvcc::Yes, static_cast<size_t>(customer_address_count)};
+                      static_cast<size_t>(customer_address_count)};
 
     for (auto i = ds_key_t{0}; i < customer_address_count; i++) {
       const auto customer_address =
@@ -418,7 +413,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [customer_demographics_first, customer_demographics_count] = prepare_for_table(CUSTOMER_DEMOGRAPHICS);
 
     auto customer_demographics_builder = TableBuilder{_benchmark_config->chunk_size, customer_demographics_column_types,
-                                                      customer_demographics_column_names, UseMvcc::Yes,
+                                                      customer_demographics_column_names, 
                                                       static_cast<size_t>(customer_demographics_count)};
 
     for (auto i = ds_key_t{0}; i < customer_demographics_count; i++) {
@@ -442,7 +437,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   {
     const auto [date_first, date_count] = prepare_for_table(DATE);
 
-    auto date_builder = TableBuilder{_benchmark_config->chunk_size, date_column_types, date_column_names, UseMvcc::Yes,
+    auto date_builder = TableBuilder{_benchmark_config->chunk_size, date_column_types, date_column_names, 
                                      static_cast<size_t>(date_count)};
 
     for (auto i = ds_key_t{0}; i < date_count; i++) {
@@ -472,7 +467,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     auto household_demographics_builder = TableBuilder{
         _benchmark_config->chunk_size, household_demographics_column_types, household_demographics_column_names,
-        UseMvcc::Yes, static_cast<size_t>(household_demographics_count)};
+         static_cast<size_t>(household_demographics_count)};
 
     for (auto i = ds_key_t{0}; i < household_demographics_count; i++) {
       const auto household_demographics =
@@ -494,7 +489,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [income_band_first, income_band_count] = prepare_for_table(INCOME_BAND);
 
     auto income_band_builder =
-        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, UseMvcc::Yes,
+        TableBuilder{_benchmark_config->chunk_size, income_band_column_types, income_band_column_names, 
                      static_cast<size_t>(income_band_count)};
 
     for (auto i = ds_key_t{0}; i < income_band_count; i++) {
@@ -513,7 +508,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [inventory_first, inventory_count] = prepare_for_table(INVENTORY);
 
     auto inventory_builder = TableBuilder{_benchmark_config->chunk_size, inventory_column_types, inventory_column_names,
-                                          UseMvcc::Yes, static_cast<size_t>(inventory_count)};
+                                           static_cast<size_t>(inventory_count)};
 
     for (auto i = ds_key_t{0}; i < inventory_count; i++) {
       const auto inventory = call_dbgen_mk<W_INVENTORY_TBL, &mk_w_inventory, INVENTORY>(inventory_first + i);
@@ -530,7 +525,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   {
     const auto [item_first, item_count] = prepare_for_table(ITEM);
 
-    auto item_builder = TableBuilder{_benchmark_config->chunk_size, item_column_types, item_column_names, UseMvcc::Yes,
+    auto item_builder = TableBuilder{_benchmark_config->chunk_size, item_column_types, item_column_names, 
                                      static_cast<size_t>(item_count)};
 
     for (auto i = ds_key_t{0}; i < item_count; i++) {
@@ -554,7 +549,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [promotion_first, promotion_count] = prepare_for_table(PROMOTION);
 
     auto promotion_builder = TableBuilder{_benchmark_config->chunk_size, promotion_column_types, promotion_column_names,
-                                          UseMvcc::Yes, static_cast<size_t>(promotion_count)};
+                                           static_cast<size_t>(promotion_count)};
 
     for (auto i = ds_key_t{0}; i < promotion_count; i++) {
       const auto promotion = call_dbgen_mk<W_PROMOTION_TBL, &mk_w_promotion, PROMOTION>(promotion_first + i);
@@ -579,7 +574,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [reason_first, reason_count] = prepare_for_table(REASON);
 
     auto reason_builder = TableBuilder{_benchmark_config->chunk_size, reason_column_types, reason_column_names,
-                                       UseMvcc::Yes, static_cast<size_t>(reason_count)};
+                                        static_cast<size_t>(reason_count)};
 
     for (auto i = ds_key_t{0}; i < reason_count; i++) {
       const auto reason = call_dbgen_mk<W_REASON_TBL, &mk_w_reason, REASON>(reason_first + i);
@@ -596,7 +591,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [ship_mode_first, ship_mode_count] = prepare_for_table(SHIP_MODE);
 
     auto ship_mode_builder = TableBuilder{_benchmark_config->chunk_size, ship_mode_column_types, ship_mode_column_names,
-                                          UseMvcc::Yes, static_cast<size_t>(ship_mode_count)};
+                                           static_cast<size_t>(ship_mode_count)};
 
     for (auto i = ds_key_t{0}; i < ship_mode_count; i++) {
       const auto ship_mode = call_dbgen_mk<W_SHIP_MODE_TBL, &mk_w_ship_mode, SHIP_MODE>(ship_mode_first + i);
@@ -614,7 +609,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [store_first, store_count] = prepare_for_table(STORE);
 
     auto store_builder = TableBuilder{_benchmark_config->chunk_size, store_column_types, store_column_names,
-                                      UseMvcc::Yes, static_cast<size_t>(store_count)};
+                                       static_cast<size_t>(store_count)};
 
     for (auto i = ds_key_t{0}; i < store_count; i++) {
       const auto store = call_dbgen_mk<W_STORE_TBL, &mk_w_store, STORE>(store_first + i);
@@ -650,10 +645,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [store_sales_first, store_sales_count] = prepare_for_table(STORE_SALES);
 
     auto store_sales_builder =
-        TableBuilder{_benchmark_config->chunk_size, store_sales_column_types, store_sales_column_names, UseMvcc::Yes,
+        TableBuilder{_benchmark_config->chunk_size, store_sales_column_types, store_sales_column_names, 
                      static_cast<size_t>(store_sales_count)};
     auto store_returns_builder = TableBuilder{_benchmark_config->chunk_size, store_returns_column_types,
-                                              store_returns_column_names, UseMvcc::Yes};
+                                              store_returns_column_names};
 
     for (auto i = ds_key_t{0}; i < store_sales_count; i++) {
       auto store_sales = W_STORE_SALES_TBL{};
@@ -707,7 +702,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   {
     const auto [time_first, time_count] = prepare_for_table(TIME);
 
-    auto time_builder = TableBuilder{_benchmark_config->chunk_size, time_column_types, time_column_names, UseMvcc::Yes,
+    auto time_builder = TableBuilder{_benchmark_config->chunk_size, time_column_types, time_column_names, 
                                      static_cast<size_t>(time_count)};
 
     for (auto i = ds_key_t{0}; i < time_count; i++) {
@@ -726,7 +721,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [warehouse_first, warehouse_count] = prepare_for_table(WAREHOUSE);
 
     auto warehouse_builder = TableBuilder{_benchmark_config->chunk_size, warehouse_column_types, warehouse_column_names,
-                                          UseMvcc::Yes, static_cast<size_t>(warehouse_count)};
+                                           static_cast<size_t>(warehouse_count)};
 
     for (auto i = ds_key_t{0}; i < warehouse_count; i++) {
       const auto warehouse = call_dbgen_mk<W_WAREHOUSE_TBL, &mk_w_warehouse, WAREHOUSE>(warehouse_first + i);
@@ -753,7 +748,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [web_page_first, web_page_count] = prepare_for_table(WEB_PAGE);
 
     auto web_page_builder = TableBuilder{_benchmark_config->chunk_size, web_page_column_types, web_page_column_names,
-                                         UseMvcc::Yes, static_cast<size_t>(web_page_count)};
+                                          static_cast<size_t>(web_page_count)};
 
     for (auto i = ds_key_t{0}; i < web_page_count; i++) {
       const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + i);
@@ -778,9 +773,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [web_sales_first, web_sales_count] = prepare_for_table(WEB_SALES);
 
     auto web_sales_builder = TableBuilder{_benchmark_config->chunk_size, web_sales_column_types, web_sales_column_names,
-                                          UseMvcc::Yes, static_cast<size_t>(web_sales_count)};
+                                           static_cast<size_t>(web_sales_count)};
     auto web_returns_builder =
-        TableBuilder{_benchmark_config->chunk_size, web_returns_column_types, web_returns_column_names, UseMvcc::Yes};
+        TableBuilder{_benchmark_config->chunk_size, web_returns_column_types, web_returns_column_names};
 
     for (auto i = ds_key_t{0}; i < web_sales_count; i++) {
       auto web_sales = W_WEB_SALES_TBL{};
@@ -841,7 +836,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     const auto [web_site_first, web_site_count] = prepare_for_table(WEB_SITE);
 
     auto web_site_builder = TableBuilder{_benchmark_config->chunk_size, web_site_column_types, web_site_column_names,
-                                         UseMvcc::Yes, static_cast<size_t>(web_site_count)};
+                                          static_cast<size_t>(web_site_count)};
 
     for (auto i = ds_key_t{0}; i < web_site_count; i++) {
       const auto web_site = call_dbgen_mk<W_WEB_SITE_TBL, &mk_w_web_site, WEB_SITE>(web_site_first + i);
@@ -872,7 +867,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
 
     auto dbgen_version_builder =
         TableBuilder{_benchmark_config->chunk_size, dbgen_version_column_types, dbgen_version_column_names,
-                     UseMvcc::Yes, static_cast<size_t>(dbgen_version_count)};
+                      static_cast<size_t>(dbgen_version_count)};
 
     for (auto i = ds_key_t{0}; i < dbgen_version_count; i++) {
       auto dbgen_version = call_dbgen_mk<DBGEN_VERSION_TBL, &mk_dbgen_version, DBGEN_VERSION>(dbgen_version_first + i);

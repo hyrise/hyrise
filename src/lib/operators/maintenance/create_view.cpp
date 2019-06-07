@@ -18,6 +18,9 @@ CreateView::CreateView(const std::string& view_name, const std::shared_ptr<LQPVi
 
 const std::string CreateView::name() const { return "CreateView"; }
 
+const std::string& CreateView::view_name() const { return _view_name; }
+bool CreateView::if_not_exists() const { return _if_not_exists; }
+
 std::shared_ptr<AbstractOperator> CreateView::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {

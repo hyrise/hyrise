@@ -6,16 +6,15 @@ extern "C" {
 #include <rnd.h>
 }
 
+#include <filesystem>
 #include <utility>
 
-#include "boost/hana/for_each.hpp"
-#include "boost/hana/integral_constant.hpp"
-#include "boost/hana/zip_with.hpp"
-
-#include "../table_builder.hpp"
 #include "benchmark_config.hpp"
+#include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
+#include "table_builder.hpp"
+#include "utils/timer.hpp"
 
 extern char** asc_date;
 extern seed_t seed[];
@@ -28,30 +27,29 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // clang-format off
-const auto customer_column_types = boost::hana::tuple <int32_t, pmr_string, pmr_string, int32_t, pmr_string, float, pmr_string, pmr_string>(); // NOLINT
-const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name", "c_address", "c_nationkey", "c_phone", "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
+const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();  // NOLINT
+const auto customer_column_names = boost::hana::make_tuple("c_custkey", "c_name",    "c_address", "c_nationkey", "c_phone",   "c_acctbal", "c_mktsegment", "c_comment"); // NOLINT
 
-const auto order_column_types = boost::hana::tuple <int32_t, int32_t, pmr_string, float, pmr_string, pmr_string, pmr_string, int32_t, pmr_string>(); // NOLINT
-const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk", "o_shippriority", "o_comment"); // NOLINT
+const auto order_column_types = boost::hana::tuple      <int32_t,     int32_t,     pmr_string,      float,          pmr_string,    pmr_string,        pmr_string,  int32_t,          pmr_string>();  // NOLINT
+const auto order_column_names = boost::hana::make_tuple("o_orderkey", "o_custkey", "o_orderstatus", "o_totalprice", "o_orderdate", "o_orderpriority", "o_clerk",   "o_shippriority", "o_comment");  // NOLINT
 
-const auto lineitem_column_types = boost::hana::tuple <int32_t, int32_t, int32_t, int32_t, float, float, float, float, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string>(); // NOLINT
-const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment"); // NOLINT
+const auto lineitem_column_types = boost::hana::tuple      <int32_t,     int32_t,     int32_t,     int32_t,        float,        float,             float,        float,   pmr_string,     pmr_string,     pmr_string,   pmr_string,     pmr_string,      pmr_string,       pmr_string,   pmr_string>();  // NOLINT
+const auto lineitem_column_names = boost::hana::make_tuple("l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment");  // NOLINT
 
-const auto part_column_types = boost::hana::tuple <int32_t, pmr_string, pmr_string, pmr_string, pmr_string, int32_t, pmr_string, float, pmr_string>(); // NOLINT
-const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name", "p_mfgr", "p_brand", "p_type", "p_size", "p_container", "p_retailsize", "p_comment"); // NOLINT
+const auto part_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  pmr_string,  pmr_string,  int32_t,  pmr_string,    float,        pmr_string>();  // NOLINT
+const auto part_column_names = boost::hana::make_tuple("p_partkey", "p_name",    "p_mfgr",    "p_brand",   "p_type",    "p_size", "p_container", "p_retailsize", "p_comment");  // NOLINT
 
-const auto partsupp_column_types = boost::hana::tuple<int32_t, int32_t, int32_t, float, pmr_string>(); // NOLINT
-const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment"); // NOLINT
+const auto partsupp_column_types = boost::hana::tuple<     int32_t,      int32_t,      int32_t,       float,           pmr_string>();  // NOLINT
+const auto partsupp_column_names = boost::hana::make_tuple("ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment");  // NOLINT
 
-const auto supplier_column_types = boost::hana::tuple<int32_t, pmr_string, pmr_string, int32_t, pmr_string, float, pmr_string>(); // NOLINT
-const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name", "s_address", "s_nationkey", "s_phone", "s_acctbal", "s_comment"); // NOLINT
+const auto supplier_column_types = boost::hana::tuple<     int32_t,     pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string>();  // NOLINT
+const auto supplier_column_names = boost::hana::make_tuple("s_suppkey", "s_name",    "s_address", "s_nationkey", "s_phone",   "s_acctbal", "s_comment");  // NOLINT
 
-const auto nation_column_types = boost::hana::tuple<int32_t, pmr_string, int32_t, pmr_string>(); // NOLINT
-const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name", "n_regionkey", "n_comment"); // NOLINT
+const auto nation_column_types = boost::hana::tuple<     int32_t,       pmr_string,  int32_t,       pmr_string>();  // NOLINT
+const auto nation_column_names = boost::hana::make_tuple("n_nationkey", "n_name",    "n_regionkey", "n_comment");  // NOLINT
 
-const auto region_column_types = boost::hana::tuple<int32_t, pmr_string, pmr_string>(); // NOLINT
-const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name", "r_comment"); // NOLINT
-
+const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_string,  pmr_string>();  // NOLINT
+const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 // clang-format on
 
 std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable>> tpch_table_to_dbgen_id = {
@@ -125,7 +123,26 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr
 std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
-  Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
+
+  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+
+    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
+      const auto table_name = table_file.path().stem();
+      Timer timer;
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+
+      BenchmarkTableInfo table_info;
+      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.loaded_from_binary = true;
+      table_info_by_name[table_name] = table_info;
+
+      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    return table_info_by_name;
+  }
 
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
   dbgen_reset_seeds();
@@ -140,21 +157,17 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
 
   // The `* 4` part is defined in the TPC-H specification.
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                UseMvcc::Yes, customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, UseMvcc::Yes,
-                             order_count};
+                                customer_count};
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                UseMvcc::Yes, order_count * 4};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, UseMvcc::Yes,
-                            part_count};
+                                order_count * 4};
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                UseMvcc::Yes, part_count * 4};
+                                part_count * 4};
   TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
-                                UseMvcc::Yes, supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, UseMvcc::Yes,
-                              nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, UseMvcc::Yes,
-                              region_count};
+                                supplier_count};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
 
   /**
    * CUSTOMER
@@ -251,6 +264,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   table_info_by_name["supplier"].table = supplier_builder.finish_table();
   table_info_by_name["nation"].table = nation_builder.finish_table();
   table_info_by_name["region"].table = region_builder.finish_table();
+
+  if (_benchmark_config->cache_binary_tables) {
+    std::filesystem::create_directories(cache_directory);
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+    }
+  }
 
   return table_info_by_name;
 }

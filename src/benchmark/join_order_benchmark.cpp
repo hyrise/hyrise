@@ -6,7 +6,7 @@
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
-#include "file_based_query_generator.hpp"
+#include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "import_export/csv_parser.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -112,11 +112,11 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
-  auto query_generator =
-      std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, non_query_file_names, query_subset);
+  auto benchmark_item_runner =
+      std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, non_query_file_names, query_subset);
 
   auto benchmark_runner =
-      BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context};
+      BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};
 
   if (benchmark_config->verify) {
     // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
