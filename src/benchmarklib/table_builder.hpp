@@ -103,13 +103,13 @@ get_value_type<T>& get_value(T& optional_or_value) {
 template <typename... DataTypes>
 class TableBuilder {
  public:
-  // names is a boost::hana::tuple of strings defining column names, types is a list of equal length defining respective
-  // column types types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not
-  // nullable
+  // names is a boost::hana::tuple of strings defining column names
+  // types is a list of equal length defining respective column types
+  // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
   TableBuilder(const size_t chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const opossum::UseMvcc use_mvcc, const size_t estimated_rows = 0)
-      : _use_mvcc(use_mvcc), _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
+               const size_t estimated_rows = 0)
+      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
@@ -123,7 +123,7 @@ class TableBuilder {
 
       column_definitions.emplace_back(name, data_type, is_nullable);
     });
-    _table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
+    _table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
     // Reserve some space in the vectors
     boost::hana::for_each(_value_vectors, [&](auto& values) { values.reserve(_estimated_rows_per_chunk); });
@@ -142,10 +142,8 @@ class TableBuilder {
     return _table;
   }
 
-  // Types == DataTypes, we deduce again to get universal references, so we can call with lvalues
-  template <typename... Types>
-  void append_row(Types&&... new_values) {
-    auto values_tuple = boost::hana::make_tuple(std::forward<decltype(new_values)>(new_values)...);
+  void append_row(DataTypes&&... new_values) {
+    auto values_tuple = boost::hana::make_tuple(std::forward<DataTypes>(new_values)...);
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(_value_vectors) == boost::hana::size(values_tuple));
 
     // Create tuples ([&values0, &null_values0, value0], [&values1, &null_values1, value1], ...)
@@ -170,7 +168,6 @@ class TableBuilder {
       if (value_is_null) {
         values.emplace_back();
       } else {
-        // this will fail if append_row is not called with values of the types passed to the TableBuilder constructor
         values.emplace_back(std::move(table_builder::get_value(optional_or_value_value)));
       }
 
@@ -179,7 +176,7 @@ class TableBuilder {
       }
     });
 
-    // The reason why we can't do the for_each stuff in zip_with is the following:
+    // The reason why we can't put the for_each lambda's code into zip_with's lambda is the following:
     // boost::hana's higher order functions (like zip_with) do not guarantee the order of execution of a passed
     // function f or even the number of executions of f. Therefore it should only be used with pure functions (no side
     // effects). There are exceptions to that, for_each gives these guarantees and expects impure functions.
@@ -191,7 +188,6 @@ class TableBuilder {
 
  private:
   std::shared_ptr<Table> _table;
-  UseMvcc _use_mvcc;
   size_t _estimated_rows_per_chunk;
 
   boost::hana::tuple<std::vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
@@ -228,11 +224,7 @@ class TableBuilder {
       values.reserve(_estimated_rows_per_chunk);
     });
 
-    // Create initial MvccData if MVCC is enabled
-    auto mvcc_data = std::shared_ptr<MvccData>{};
-    if (_use_mvcc == UseMvcc::Yes) {
-      mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-    }
+    auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
 
     _table->append_chunk(segments, mvcc_data);
   }
