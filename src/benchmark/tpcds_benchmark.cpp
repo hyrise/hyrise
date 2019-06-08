@@ -12,7 +12,7 @@
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
-#include "file_based_query_generator.hpp"
+#include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "json.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
   Assert(data_files_available(table_path), "Table data files are missing.");
 
   auto query_generator =
-      std::make_unique<FileBasedQueryGenerator>(*config, query_path, query_filename_blacklist, query_subset);
+      std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, query_filename_blacklist, query_subset);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(config, table_path);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator), context};
 
