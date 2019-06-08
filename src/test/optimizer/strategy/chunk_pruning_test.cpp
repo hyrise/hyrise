@@ -103,7 +103,7 @@ TEST_F(ChunkPruningTest, BetweenPruningTest) {
 
 TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
   auto table = StorageManager::get().get_table("uncompressed");
-  const auto& chunk = table->get_chunk(ChunkID(0));
+  const auto chunk = table->get_chunk(ChunkID(0));
   EXPECT_FALSE(chunk->statistics());
 
   auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");

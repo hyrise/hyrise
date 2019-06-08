@@ -79,7 +79,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
    * a row-based representation takes some effort.
    */
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    const auto& chunk = table->get_chunk(chunk_id);
+    const auto chunk = table->get_chunk(chunk_id);
     if (!chunk) continue;
 
     for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); ++chunk_offset) {

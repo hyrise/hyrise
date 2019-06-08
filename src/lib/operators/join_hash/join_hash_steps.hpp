@@ -82,7 +82,7 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     chunk_offsets[chunk_id] = offset;
 
-    const auto& chunk = table->get_chunk(chunk_id);
+    const auto chunk = table->get_chunk(chunk_id);
     if (!chunk) continue;
 
     offset += chunk->size();

@@ -25,7 +25,7 @@ ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const
 std::string ColumnIsNullTableScanImpl::description() const { return "IsNullScan"; }
 
 std::shared_ptr<PosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
-  const auto& chunk = _in_table->get_chunk(chunk_id);
+  const auto chunk = _in_table->get_chunk(chunk_id);
   const auto& segment = chunk->get_segment(_column_id);
 
   auto matches = std::make_shared<PosList>();

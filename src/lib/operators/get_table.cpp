@@ -92,7 +92,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
     // Check whether the Chunk is deleted
     if (transaction_context_is_set()) {
-      const auto& chunk = stored_table->get_chunk(stored_chunk_id);
+      const auto chunk = stored_table->get_chunk(stored_chunk_id);
 
       if (!chunk || (chunk->get_cleanup_commit_id() &&
                      *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
@@ -153,7 +153,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
 
     // The Chunk is to be included in the output Table, now we progress to excluding Columns
-    const auto& stored_chunk = stored_table->get_chunk(stored_chunk_id);
+    const auto stored_chunk = stored_table->get_chunk(stored_chunk_id);
 
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;

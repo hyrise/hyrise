@@ -38,7 +38,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // Iterating over all chunks and for each chunk over all segments
   for (ChunkID chunk_id{0}; chunk_id < input_table_right()->chunk_count(); chunk_id++) {
-    const auto& chunk = input_table_right()->get_chunk(chunk_id);
+    const auto chunk = input_table_right()->get_chunk(chunk_id);
     if (!chunk) continue;
 
     // creating a temporary row representation with strings to be filled segment-wise
@@ -68,7 +68,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // Iterating over all chunks and for each chunk over all segment
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
-    const auto& in_chunk = input_table_left()->get_chunk(chunk_id);
+    const auto in_chunk = input_table_left()->get_chunk(chunk_id);
     if (!in_chunk) continue;
 
     Segments output_segments;

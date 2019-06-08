@@ -41,12 +41,12 @@ class OperatorsIndexScanTest : public BaseTest {
     _column_ids = std::vector<ColumnID>{ColumnID{0u}};
 
     for (const auto& chunk_id : _chunk_ids) {
-      const auto& chunk = int_int_7->get_chunk(chunk_id);
+      const auto chunk = int_int_7->get_chunk(chunk_id);
       chunk->template create_index<DerivedIndex>(_column_ids);
     }
 
     for (const auto& chunk_id : _chunk_ids_partly_compressed) {
-      const auto& chunk = int_int_5->get_chunk(chunk_id);
+      const auto chunk = int_int_5->get_chunk(chunk_id);
       chunk->template create_index<DerivedIndex>(_column_ids);
     }
 
@@ -59,7 +59,7 @@ class OperatorsIndexScanTest : public BaseTest {
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& chunk = table->get_chunk(chunk_id);
+      const auto chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
         const auto& segment = *chunk->get_segment(column_id);
