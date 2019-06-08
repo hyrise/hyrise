@@ -112,6 +112,7 @@ int main(int argc, char* argv[]) {
 }
 
 bool data_files_available(std::string table_path) {
+  // clang-format off
   return std::filesystem::exists(table_path + "/call_center.csv") &&
          std::filesystem::exists(table_path + "/catalog_page.csv") &&
          std::filesystem::exists(table_path + "/catalog_returns.csv") &&
@@ -122,10 +123,12 @@ bool data_files_available(std::string table_path) {
          std::filesystem::exists(table_path + "/date_dim.csv") &&
          std::filesystem::exists(table_path + "/household_demographics.csv") &&
          std::filesystem::exists(table_path + "/income_band.csv") &&
-         std::filesystem::exists(table_path + "/inventory.csv") && std::filesystem::exists(table_path + "/item.csv") &&
+         std::filesystem::exists(table_path + "/inventory.csv") &&
+         std::filesystem::exists(table_path + "/item.csv") &&
          std::filesystem::exists(table_path + "/promotion.csv") &&
          std::filesystem::exists(table_path + "/reason.csv") &&
-         std::filesystem::exists(table_path + "/ship_mode.csv") && std::filesystem::exists(table_path + "/store.csv") &&
+         std::filesystem::exists(table_path + "/ship_mode.csv") &&
+         std::filesystem::exists(table_path + "/store.csv") &&
          std::filesystem::exists(table_path + "/store_returns.csv") &&
          std::filesystem::exists(table_path + "/store_sales.csv") &&
          std::filesystem::exists(table_path + "/time_dim.csv") &&
@@ -134,4 +137,5 @@ bool data_files_available(std::string table_path) {
          std::filesystem::exists(table_path + "/web_returns.csv") &&
          std::filesystem::exists(table_path + "/web_sales.csv") &&
          std::filesystem::exists(table_path + "/web_site.csv");
+  // clang-format off
 }

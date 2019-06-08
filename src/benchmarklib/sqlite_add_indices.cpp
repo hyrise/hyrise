@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-void add_indices_to_sqlite(std::string schema_file_path, std::string create_indices_file_path,
+void add_indices_to_sqlite(const std::string& schema_file_path, const std::string& create_indices_file_path,
                            BenchmarkRunner& benchmark_runner) {
   std::cout << "- Adding indexes to SQLite" << std::endl;
   Timer timer;
@@ -19,8 +19,8 @@ void add_indices_to_sqlite(std::string schema_file_path, std::string create_indi
   // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
   // schema and copy the data.
   for (const auto& table_name : StorageManager::get().table_names()) {
-    benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
-                                                       " RENAME TO " + table_name + "_unindexed");
+    benchmark_runner.sqlite_wrapper->raw_execute_query(
+        std::string{"ALTER TABLE "}.append(table_name).append(" RENAME TO ").append(table_name).append("_unindexed"));
   }
 
   // Recreate tables from schema.sql
@@ -39,8 +39,11 @@ void add_indices_to_sqlite(std::string schema_file_path, std::string create_indi
     Timer per_table_time;
     std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 
-    benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "} + table_name +  // NOLINT
-                                                       " SELECT * FROM " + table_name + "_unindexed");
+    benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "}
+                                                           .append(table_name)
+                                                           .append(" SELECT * FROM ")
+                                                           .append(table_name)
+                                                           .append("_unindexed"));
 
     std::cout << " (" << per_table_time.lap_formatted() << ")" << std::endl;
   }
