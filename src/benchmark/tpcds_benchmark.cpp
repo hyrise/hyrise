@@ -83,12 +83,13 @@ int main(int argc, char* argv[]) {
 
   if (!data_files_available(table_path)) {
     if (std::filesystem::exists(std::filesystem::path{"third_party/tpcds-dsdgen/dsdgen"})) {
-      system(
+      const auto setup_table_data_files_return_code = system(
           "cd ./third_party/tpcds-dsdgen/ &&"
           "./dsdgen -scale 1 -dir ../../resources/benchmark/tpcds/tables -terminate n -verbose -f &&"
           "cd ../../resources/benchmark/tpcds/tables &&"
           "for x in *.dat; do mv $x ${x%.dat}.csv; done &&"
           "cd ../../../../");
+      Assert(setup_table_data_files_return_code == 0, "Generating table data files failed.");
     } else {
       Fail("Could not find 'third_party/tpcds-dsdgen/dsdgen'. Did you run the benchmark from the project root dir?");
     }
