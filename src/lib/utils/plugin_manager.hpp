@@ -7,7 +7,7 @@
 #include "utils/abstract_plugin.hpp"
 #include "utils/singleton.hpp"
 #include "utils/string_utils.hpp"
-#include "../benchmarklib/benchmark_runner.hpp"
+#include "../benchmarklib/listenable.hpp"
 
 namespace opossum {
 
@@ -25,7 +25,7 @@ class PluginManager : public Singleton<PluginManager> {
 
  public:
   void load_plugin(const std::filesystem::path& path);
-  void load_plugin(const std::filesystem::path& path, BenchmarkRunner& listenable);
+  void load_plugin(const std::filesystem::path& path, Listenable& listenable);
   void unload_plugin(const PluginName& name);
 
   ~PluginManager();

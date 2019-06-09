@@ -48,7 +48,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   plugin->start();
 }
 
-void PluginManager::load_plugin(const std::filesystem::path& path, BenchmarkRunner& listenable) {
+void PluginManager::load_plugin(const std::filesystem::path& path, Listenable& listenable) {
   const auto name = plugin_name_from_path(path);
 
   Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name " + name + " already exists.");
