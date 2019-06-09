@@ -34,6 +34,7 @@ class SQLiteWrapper;
 enum class Event {
   ItemRunStarted,
   ItemRunFinished,
+  CreateReport,
 };
 
 using EventListener = std::function<void ()>;
@@ -55,6 +56,8 @@ class BenchmarkRunner {
 
   void add_listener(const Event event, EventListener listener);
 
+  void add_to_json_report(const nlohmann::json& result);
+
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
@@ -75,7 +78,7 @@ class BenchmarkRunner {
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
 
-  void _notify_listeners(const Event event);
+  void _notify_listeners(const Event event) const;
 
   const BenchmarkConfig _config;
 
@@ -88,6 +91,7 @@ class BenchmarkRunner {
   std::vector<BenchmarkItemResult> _results;
 
   nlohmann::json _context;
+  nlohmann::json _plugin_listener_results;
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 

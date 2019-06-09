@@ -104,6 +104,8 @@ void BenchmarkRunner::run() {
   if (_config.output_file_path) {
     if (!_config.verify && !_config.enable_visualization) {
       std::ofstream output_file(*_config.output_file_path);
+      _plugin_listener_results = nlohmann::json{};
+      _notify_listeners(Event::CreateReport);
       _create_report(output_file);
     } else {
       std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
@@ -354,7 +356,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json report{{"context", _context},
                         {"benchmarks", benchmarks},
                         {"summary", summary},
-                        {"table_generation", _table_generator->metrics}};
+                        {"table_generation", _table_generator->metrics},
+                        {"listener_results", _plugin_listener_results}};
 
   stream << std::setw(2) << report << std::endl;
 }
@@ -443,7 +446,11 @@ void BenchmarkRunner::add_listener(const Event event, EventListener listener) {
   }
 }
 
-void BenchmarkRunner::_notify_listeners(const Event event) {
+void BenchmarkRunner::add_to_json_report(const nlohmann::json& result) {
+  _plugin_listener_results.push_back(result);
+}
+
+void BenchmarkRunner::_notify_listeners(const Event event) const {
   auto it = _event_listeners.find(event);
   if (it != _event_listeners.end()) {
     for (auto listener : it->second) {
