@@ -16,6 +16,7 @@
 #include "abstract_table_generator.hpp"
 #include "benchmark_item_result.hpp"
 #include "benchmark_state.hpp"
+#include "listenable.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -31,18 +32,10 @@ class SQLPipeline;
 struct SQLPipelineMetrics;
 class SQLiteWrapper;
 
-enum class Event {
-  ItemRunStarted,
-  ItemRunFinished,
-  CreateReport,
-};
-
-using EventListener = std::function<void ()>;
-
 // The BenchmarkRunner is the main class for the benchmark framework. It gets initialized by the benchmark binaries
 // (e.g., tpch_benchmark.cpp). They then hand over the control to the BenchmarkRunner (inversion of control), which
 // calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
-class BenchmarkRunner {
+class BenchmarkRunner : public Listenable {
  public:
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
@@ -53,8 +46,6 @@ class BenchmarkRunner {
   static cxxopts::Options get_basic_cli_options(const std::string& benchmark_name);
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
-
-  void add_listener(const Event event, EventListener listener);
 
   void add_to_json_report(const nlohmann::json& result);
 
@@ -77,8 +68,6 @@ class BenchmarkRunner {
 
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
-
-  void _notify_listeners(const Event event) const;
 
   const BenchmarkConfig _config;
 
@@ -105,8 +94,6 @@ class BenchmarkRunner {
   std::atomic_uint _total_finished_runs{0};
 
   BenchmarkState _state{Duration{0}};
-
-  std::map<Event, std::vector<EventListener>> _event_listeners;
 };
 
 }  // namespace opossum

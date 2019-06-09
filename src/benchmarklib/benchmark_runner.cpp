@@ -438,25 +438,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 
-void BenchmarkRunner::add_listener(const Event event, EventListener listener) {
-  if (_event_listeners.find(event) == _event_listeners.end()) {
-    _event_listeners.emplace(event, std::vector<EventListener>{listener});
-  } else {
-  _event_listeners[event].push_back(listener);
-  }
-}
-
 void BenchmarkRunner::add_to_json_report(const nlohmann::json& result) {
   _plugin_listener_results.push_back(result);
-}
-
-void BenchmarkRunner::_notify_listeners(const Event event) const {
-  auto it = _event_listeners.find(event);
-  if (it != _event_listeners.end()) {
-    for (auto listener : it->second) {
-      listener();
-    }
-  }
 }
 
 }  // namespace opossum
