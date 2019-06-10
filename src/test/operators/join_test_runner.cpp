@@ -167,9 +167,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
-    const auto all_encoding_types =
-        std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::FrameOfReference,
-                    EncodingType::FixedStringDictionary, EncodingType::RunLength, EncodingType::LZ4};
+    const auto all_encoding_types = std::vector{EncodingType::Unencoded,        EncodingType::Dictionary,
+                                                EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
+                                                EncodingType::RunLength,        EncodingType::LZ4};
 
     // clang-format off
     JoinTestConfiguration default_configuration{

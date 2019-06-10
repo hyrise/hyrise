@@ -36,7 +36,7 @@ std::optional<bool> jit_not(const JitExpression& left_side, JitRuntimeContext& c
   DebugAssert((left_side.result_entry.data_type == DataType::Bool || left_side.result_entry.data_type == DataType::Int),
               "invalid type for jit operation not");
   const auto value = left_side.compute<bool>(context);
-  if (left_side.result_entry.is_nullable && !value) {
+  if (!left_side.result_entry.guaranteed_non_null && !value) {
     return std::nullopt;
   } else {
     return !value.value();
@@ -60,17 +60,17 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is false and not null
-  if (!left_entry.is_nullable || left_result) {  // Left result is not null
-    if (!left_result.value()) {                  // Left result is false
+  if (left_entry.guaranteed_non_null || left_result) {  // Left result is not null
+    if (!left_result.value()) {                         // Left result is false
       return false;
     }
   }
 
   // Left result is null or true
   const auto right_result = right_side.compute<bool>(context);
-  if (left_entry.is_nullable && !left_result) {  // Left result is null
+  if (!left_entry.guaranteed_non_null && !left_result) {  // Left result is null
     // Right result is null or true
-    if ((right_entry.is_nullable && !right_result) || right_result.value()) {
+    if ((!right_entry.guaranteed_non_null && !right_result) || right_result.value()) {
       return std::nullopt;
     } else {  // Right result is false
       return false;
@@ -78,7 +78,7 @@ std::optional<bool> jit_and(const JitExpression& left_side, const JitExpression&
   }
 
   // Left result is false and not null
-  if (right_entry.is_nullable && !right_result) {
+  if (!right_entry.guaranteed_non_null && !right_result) {
     return std::nullopt;
   } else {
     return right_result.value();
@@ -102,17 +102,17 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
 
   const auto left_result = left_side.compute<bool>(context);
   // Computation of right hand side can be pruned if left result is true and not null
-  if (!left_entry.is_nullable || left_result) {  // Left result is not null
-    if (left_result.value()) {                   // Left result is true
+  if (left_entry.guaranteed_non_null || left_result) {  // Left result is not null
+    if (left_result.value()) {                          // Left result is true
       return true;
     }
   }
 
   // Left result is null or false
   const auto right_result = right_side.compute<bool>(context);
-  if (left_entry.is_nullable && !left_result) {  // Left result is null
+  if (!left_entry.guaranteed_non_null && !left_result) {  // Left result is null
     // Right result is null or false
-    if ((right_entry.is_nullable && !right_result) || !right_result.value()) {
+    if ((!right_entry.guaranteed_non_null && !right_result) || !right_result.value()) {
       return std::nullopt;
     } else {  // Right result is true
       return true;
@@ -120,7 +120,7 @@ std::optional<bool> jit_or(const JitExpression& left_side, const JitExpression& 
   }
 
   // Left result is false and not null
-  if (right_entry.is_nullable && !right_result) {
+  if (!right_entry.guaranteed_non_null && !right_result) {
     return std::nullopt;
   } else {
     return right_result.value();
@@ -211,7 +211,7 @@ void jit_assign(const JitTupleEntry& from, const JitHashmapEntry& to, const size
   // jit_compute function.
   DebugAssert(from.data_type == to.data_type, "Data types don't match in jit_assign.");
 
-  if (to.is_nullable) {
+  if (!to.guaranteed_non_null) {
     const bool is_null = from.is_null(context);
     to.set_is_null(is_null, to_index, context);
     // The value is NULL - our work is done here.

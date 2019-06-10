@@ -25,9 +25,9 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
   context.tuple.resize(5);
 
   // Create tuple entries for inputs
-  JitTupleEntry a_tuple_entry{DataType::Int, false, 0};
-  JitTupleEntry b_tuple_entry{DataType::Int, false, 1};
-  JitTupleEntry c_tuple_entry{DataType::Int, false, 2};
+  JitTupleEntry a_tuple_entry{DataType::Int, true, 0};
+  JitTupleEntry b_tuple_entry{DataType::Int, true, 1};
+  JitTupleEntry c_tuple_entry{DataType::Int, true, 2};
 
   // Construct expression tree for "A + B > C"
   auto a_expression = std::make_shared<JitExpression>(a_tuple_entry);
@@ -64,6 +64,31 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
     source->emit(context);
     ASSERT_EQ(a + b > c, context.tuple.get<bool>(4));
   }
+}
+
+TEST_F(JitComputeTest, UpdateNullableInformationBeforeSpecialization) {
+  // The nullable information of the compute expression must be updated before specialization
+
+  // Create tuple entry without setting the correct nullable information
+  JitTupleEntry bool_tuple_entry{DataType::Bool, false, 0};
+
+  auto bool_expression = std::make_shared<JitExpression>(bool_tuple_entry);
+  auto not_expression = std::make_shared<JitExpression>(bool_expression, JitExpressionType::Not, 1);
+
+  JitCompute jit_compute(not_expression);
+
+  EXPECT_FALSE(jit_compute.expression->result_entry.guaranteed_non_null);
+
+  // Update nullable information
+  auto input_table = Table::create_dummy_table(TableColumnDefinitions{});
+  bool unused_value = false;
+  std::vector<bool> tuple_non_nullable_information{true, unused_value};
+  jit_compute.before_specialization(*input_table, tuple_non_nullable_information);
+
+  // Nullable information is updated in the result entry ...
+  EXPECT_TRUE(jit_compute.expression->result_entry.guaranteed_non_null);
+  // ... and the tuple_non_nullable_information vector
+  EXPECT_TRUE(tuple_non_nullable_information[1]);
 }
 
 }  // namespace opossum
