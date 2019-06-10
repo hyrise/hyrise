@@ -180,8 +180,9 @@ void BenchmarkRunner::_benchmark_ordered() {
     _warmup(item_id);
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
+    const auto listener_payload = nlohmann::json{{"item_name", name}};
     std::cout << "- Benchmarking " << name << std::endl;
-    _notify_listeners(Event::ItemRunStarted);
+    _notify_listeners(Event::ItemRunStarted, listener_payload);
 
     auto& result = _results[item_id];
 
@@ -212,7 +213,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     CurrentScheduler::wait_for_all_tasks();
-    _notify_listeners(Event::ItemRunFinished);
+    _notify_listeners(Event::ItemRunFinished, listener_payload);
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
 }
@@ -438,8 +439,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 
-void BenchmarkRunner::add_to_json_report(const nlohmann::json& result) {
-  _plugin_listener_results.push_back(result);
+void BenchmarkRunner::add_to_json_report(const std::string &listener_name, const nlohmann::json& result) {
+  _plugin_listener_results.push_back({listener_name, result});
 }
 
 }  // namespace opossum

@@ -47,7 +47,7 @@ class BenchmarkRunner : public Listenable {
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
-  void add_to_json_report(const nlohmann::json& result);
+  void add_to_json_report(const std::string &listener_name, const nlohmann::json& result);
 
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
