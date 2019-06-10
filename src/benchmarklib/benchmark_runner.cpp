@@ -435,7 +435,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 
-void BenchmarkRunner::add_to_json_report(const std::string &listener_name, const nlohmann::json& report) {
+void BenchmarkRunner::add_to_json_report(const std::string& listener_name, const nlohmann::json& report) {
   _listener_reports.push_back(nlohmann::json{{"listener", listener_name}, {"report", report}});
 }
 
