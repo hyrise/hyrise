@@ -104,7 +104,7 @@ void BenchmarkRunner::run() {
   if (_config.output_file_path) {
     if (!_config.verify && !_config.enable_visualization) {
       std::ofstream output_file(*_config.output_file_path);
-      _plugin_listener_results = nlohmann::json{};
+      _listener_reports = nlohmann::json{};
       _notify_listeners(Event::CreateReport);
       _create_report(output_file);
     } else {
@@ -358,7 +358,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                         {"benchmarks", benchmarks},
                         {"summary", summary},
                         {"table_generation", _table_generator->metrics},
-                        {"listener_results", _plugin_listener_results}};
+                        {"listener_reports", _listener_reports}};
 
   stream << std::setw(2) << report << std::endl;
 }
@@ -439,8 +439,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 
-void BenchmarkRunner::add_to_json_report(const std::string &listener_name, const nlohmann::json& result) {
-  _plugin_listener_results.push_back({listener_name, result});
+void BenchmarkRunner::add_to_json_report(const std::string &listener_name, const nlohmann::json& report) {
+  _listener_reports.push_back(nlohmann::json{{"listener", listener_name}, {"report", report}});
 }
 
 }  // namespace opossum
