@@ -18,6 +18,7 @@ using EventListener = std::function<void ()>;
 
 class Listenable {
  public:
+  virtual ~Listenable(){}
   virtual void add_listener(const Event event, EventListener listener);
 
  protected:
