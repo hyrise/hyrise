@@ -7,9 +7,10 @@
 #include "utils/abstract_plugin.hpp"
 #include "utils/singleton.hpp"
 #include "utils/string_utils.hpp"
-#include "../benchmarklib/listenable.hpp"
 
 namespace opossum {
+
+class Listenable;
 
 using PluginHandle = void*;
 using PluginName = std::string;
@@ -25,7 +26,7 @@ class PluginManager : public Singleton<PluginManager> {
 
  public:
   void load_plugin(const std::filesystem::path& path);
-  void load_plugin(const std::filesystem::path& path, Listenable& listenable);
+  void load_plugin(const std::filesystem::path& path, std::shared_ptr<Listenable> listenable);
   void unload_plugin(const PluginName& name);
 
   ~PluginManager();
