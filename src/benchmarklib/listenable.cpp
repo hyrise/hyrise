@@ -10,11 +10,11 @@ void Listenable::add_listener(const Event event, EventListener listener) {
   }
 }
 
-void Listenable::_notify_listeners(const Event event) const {
+void Listenable::_notify_listeners(const Event event, const nlohmann::json &payload) const {
   auto it = _event_listeners.find(event);
   if (it != _event_listeners.end()) {
     for (auto listener : it->second) {
-      listener();
+      listener(payload);
     }
   }
 }

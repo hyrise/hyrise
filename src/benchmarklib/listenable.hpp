@@ -1,5 +1,7 @@
 #pragma once
 
+#include <json.hpp>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -14,7 +16,7 @@ enum class Event {
   CreateReport,
 };
 
-using EventListener = std::function<void ()>;
+using EventListener = std::function<void (const nlohmann::json &payload)>;
 
 class Listenable {
  public:
@@ -22,7 +24,7 @@ class Listenable {
   virtual void add_listener(const Event event, EventListener listener);
 
  protected:
-  virtual void _notify_listeners(const Event event) const;
+  virtual void _notify_listeners(const Event event, const nlohmann::json &payload = nlohmann::json{}) const;
 
   std::unordered_map<Event, std::vector<EventListener>> _event_listeners;
 };
