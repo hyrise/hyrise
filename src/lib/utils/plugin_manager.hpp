@@ -25,8 +25,7 @@ class PluginManager : public Singleton<PluginManager> {
   friend class SingletonTest;
 
  public:
-  void load_plugin(const std::filesystem::path& path);
-  void load_plugin(const std::filesystem::path& path, std::shared_ptr<Listenable> listenable);
+  void load_plugin(const std::filesystem::path& path, std::shared_ptr<Listenable> listenable = nullptr);
   void unload_plugin(const PluginName& name);
 
   ~PluginManager();
