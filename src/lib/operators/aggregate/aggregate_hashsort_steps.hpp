@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "sparsehash/dense_hash_map"
+#include "uninitialized_vector.hpp"
 
 #include "all_type_variant.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
@@ -12,21 +13,28 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
+#define VERBOSE 0
+
 namespace opossum {
 
 namespace aggregate_hashsort {
+
+inline std::string indent(const size_t depth) {
+  return std::string(depth*2, ' ');
+}
 
 template<typename T>
 T divide_and_ceil(const T& a, const T& b) {
   return a / b + (a % b > 0 ? 1 : 0);
 }
 
-template<typename F>
-void resolve_bool(const bool v, const F& f) {
-  if (v) {
-    f(true);
+
+template <typename SegmentPosition>
+size_t hash_segment_position(const SegmentPosition& segment_position) {
+  if (segment_position.is_null()) {
+    return 0;
   } else {
-    f(false);
+    return boost::hash_value(segment_position.value());
   }
 }
 
@@ -125,10 +133,10 @@ struct FixedSizeGroupRun {
 
   std::vector<size_t> _append_buffer;
 
-  std::vector<GroupRunElementType> data;
+  uninitialized_vector<GroupRunElementType> data;
 
   // Hash per group
-  std::vector<size_t> hashes;
+  uninitialized_vector<size_t> hashes;
 
   // Number of groups in this run
   size_t end{0};
@@ -335,16 +343,16 @@ struct VariablySizedGroupRun {
 
   const VariablySizedGroupRunLayout* layout;
 
-  std::vector<GroupRunElementType> data;
+  uninitialized_vector<GroupRunElementType> data;
 
   // Number of `data` elements occupied after append_buffer is flushed
   size_t data_watermark{0};
 
   // End indices in `data`
-  std::vector<size_t> group_end_offsets;
+  uninitialized_vector<size_t> group_end_offsets;
 
   // Offsets (in bytes) for all values in all groups, relative to the beginning of the group.
-  std::vector<size_t> value_end_offsets;
+  uninitialized_vector<size_t> value_end_offsets;
 
   // Non-variably sized values in the group and hash values
   FixedSizeGroupRun<GetFixedGroupSize> fixed;
@@ -467,7 +475,7 @@ struct VariablySizedGroupRun {
       const auto source_data_iter = source.data.begin() + source_group_offset;
       const auto target_data_offset = end == 0 ? 0 : group_end_offsets[end - 1];
       const auto target_data_iter = data.begin() + target_data_offset;
-      DebugAssert(target_data_offset + source_group_size < data.size(), "");
+      DebugAssert(target_data_offset + source_group_size <= data.size(), "");
       std::copy(source_data_iter, source_data_iter + source_group_size, target_data_iter);
 
       ++end;
@@ -493,6 +501,10 @@ template<typename T> struct IsVariablySizedGroupRun<VariablySizedGroupRun<T>> { 
 
 template<typename T> constexpr auto is_variably_sized_group_run_v = IsVariablySizedGroupRun<T>::value;
 
+enum class RunIsAggregated {
+  NotSet, Yes, No
+};
+
 template <typename GroupRun>
 struct Run {
   Run(GroupRun&& groups, std::vector<std::unique_ptr<BaseAggregateRun>>&& aggregates)
@@ -507,7 +519,7 @@ struct Run {
     }
 
     if constexpr (is_variably_sized_group_run_v<GroupRun>) {
-      auto new_groups = GroupRun{groups.layout, memory_budget, memory_budget * 2};
+      auto new_groups = GroupRun{groups.layout, memory_budget, memory_budget * 5};
       return Run<GroupRun>{std::move(new_groups), std::move(new_aggregates)};
     } else {
       auto new_groups = GroupRun{groups.layout, memory_budget};
@@ -515,17 +527,18 @@ struct Run {
     }
   }
 
-  void finish() {
+  void finish(const RunIsAggregated is_aggregated2) {
     groups.finish();
     for (auto& aggregate : aggregates) {
       aggregate->resize(groups.size());
     }
+    is_aggregated = is_aggregated2;
   }
 
   GroupRun groups;
   std::vector<std::unique_ptr<BaseAggregateRun>> aggregates;
 
-  bool is_aggregated{false};
+  RunIsAggregated is_aggregated{RunIsAggregated::NotSet};
 };
 
 template <typename GroupRun>
@@ -563,11 +576,14 @@ struct Partition {
     aggregation_buffer.clear();
   }
 
-  void append(const Run<GroupRun>& source_run, const size_t source_offset) {
+  void append(const Run<GroupRun>& source_run, const size_t source_offset, const size_t new_run_row_count, const size_t level) {
     if (runs.empty() || !runs.back().groups.can_append(source_run.groups, source_offset)) {
       flush_buffers(source_run);
-      next_run_memory_budget = std::min(2 * next_run_memory_budget, size_t{1'000'000});
-      runs.emplace_back(source_run.new_instance(next_run_memory_budget));
+#if VERBOSE
+      std::cout << indent(level) << " Partition allocates new run with a budget of " << new_run_row_count << std::endl;
+#endif
+
+      runs.emplace_back(source_run.new_instance(new_run_row_count));
     }
 
     auto& target_run = runs.back();
@@ -594,9 +610,12 @@ struct Partition {
                            [&](const auto size, const auto& run) { return size + run.size(); });
   }
 
-  void finish() {
-    for (auto& run : runs) {
-      run.finish();
+  void finish(const RunIsAggregated is_aggregated) {
+    for (auto run_iter = runs.rbegin(); run_iter != runs.rend(); ++run_iter) {
+      if (run_iter->is_aggregated != RunIsAggregated::NotSet) {
+        break;
+      }
+      run_iter->finish(is_aggregated);
     }
   }
 };
@@ -633,338 +652,12 @@ struct Partitioning {
   size_t get_partition_index(const size_t hash) const { return (hash >> hash_shift) & hash_mask; }
 };
 
-inline Partitioning determine_partitioning(const size_t level) {
-  // Best partitioning as determined by magic
-  return {16, level * 4, 0b1111};
-}
-
-template <typename GroupRun>
-std::vector<Partition<GroupRun>> partition(const AggregateHashSortConfig& config,
-                                           AbstractRunSource<GroupRun>& run_source, const Partitioning& partitioning,
-                                           size_t& run_idx, size_t& run_offset) {
-  auto partitions = std::vector<Partition<GroupRun>>(partitioning.partition_count);
-
-  auto counter = size_t{0};
-  auto done = false;
-
-  while (run_idx < run_source.runs.size() || run_source.can_fetch_run()) {
-    if (run_idx == run_source.runs.size()) {
-      run_source.fetch_run();
-    }
-
-    auto&& input_run = run_source.runs[run_idx];
-
-    for (; run_offset < input_run.size() && !done; ++run_offset) {
-      const auto partition_idx = partitioning.get_partition_index(input_run.groups.hash(run_offset));
-
-      auto& partition = partitions[partition_idx];
-      partition.append(input_run, run_offset);
-      ++counter;
-
-      if (counter >= config.max_partitioning_counter) {
-        done = true;
-      }
-    }
-
-    if (run_offset >= input_run.size()) {
-      ++run_idx;
-      run_offset = 0;
-    }
-
-    for (auto& partition : partitions) {
-      partition.flush_buffers(input_run);
-    }
-
-    if (done) {
-      break;
-    }
-  }
-
-  for (auto& partition : partitions) {
-    partition.finish();
-  }
-
-  return partitions;
-}
-
-template <typename GroupRun>
-std::pair<bool, Partition<GroupRun>> hashing(const AggregateHashSortConfig& config,
-                                                          AbstractRunSource<GroupRun>& run_source,
-                                                          const Partitioning& partitioning, size_t& run_idx,
-                                                          size_t& run_offset) {
-  auto partition = Partition<GroupRun>{};
-
-#if 1
-  auto hash_fn = [&](const auto& key) { return key.hash; };
-
-  auto compare_fn = typename GroupRun::HashTableCompare{run_source.layout};
-
-  auto hash_table = std::unordered_map<typename GroupRun::HashTableKey, size_t, decltype(hash_fn), decltype(compare_fn)>{
-      config.hash_table_size, hash_fn, compare_fn};
-#else
-  using HashTableKey = std::pair<size_t, size_t>;
-
-  constexpr static auto EMPTY_KEY = std::make_pair(std::numeric_limits<size_t>::max(), size_t{0});
-
-  struct Hasher {
-    AbstractRunSource<GroupRun>* run_source{};
-    size_t operator()(const HashTableKey& key) const {
-      //std::cout << "Hash: " << key.first << " " << key.second << std::endl;
-      if (key.first == EMPTY_KEY.first) return 0;
-      return run_source->runs[key.first].groups.hash(key.second);
-    }
-  };
-
-  struct EqualTo {
-    AbstractRunSource<GroupRun>* run_source{};
-    bool operator()(const HashTableKey& lhs, const HashTableKey& rhs) const {
-      //std::cout << "EqualTo: " << lhs.first << " " << lhs.second << " vs "  << rhs.first << " " << rhs.second << std::endl;
-      if (lhs.first == EMPTY_KEY.first && rhs.first == EMPTY_KEY.first) return true;
-      if (lhs.first == EMPTY_KEY.first || rhs.first == EMPTY_KEY.first) return false;
-
-      return run_source->runs[lhs.first].groups.compare(lhs.second, run_source->runs[rhs.first].groups, rhs.second);
-    }
-  };
-
-  auto hasher = Hasher{&run_source};
-  auto equal_to = EqualTo{&run_source};
-
-  auto hash_table = google::dense_hash_map<std::pair<size_t, size_t>, size_t, Hasher, EqualTo>{
-  static_cast<size_t>(config.hash_table_size *  config.hash_table_max_load_factor), hasher, equal_to};
-  hash_table.set_empty_key(EMPTY_KEY);
-  hash_table.min_load_factor(0.0f);
-#endif
-
-  hash_table.max_load_factor(1.0f);
-
-  auto counter = size_t{0};
-  auto continue_hashing = true;
-  auto done = false;
-
-  while (run_idx < run_source.runs.size() || run_source.can_fetch_run()) {
-    if (run_idx == run_source.runs.size()) {
-      run_source.fetch_run();
-    }
-
-    auto&& input_run = run_source.runs[run_idx];
-
-    for (; run_offset < input_run.size() && !done; ++run_offset) {
-      const auto partition_idx = partitioning.get_partition_index(input_run.groups.hash(run_offset));
-
-      const auto key = input_run.groups.make_key(run_offset);
-
-      auto hash_table_iter = hash_table.find(key);
-      if (hash_table_iter == hash_table.end()) {
-        hash_table.insert({key, partition.group_key_counter});
-        partition.append(input_run, run_offset);
-        ++partition.group_key_counter;
-      } else {
-        partition.aggregate(hash_table_iter->second, input_run, run_offset);
-      }
-
-      ++counter;
-
-      //std::cout << "Load factor: " << hash_table.load_factor() << std::endl;
-      if (hash_table.load_factor() >= config.hash_table_max_load_factor) {
-        if (static_cast<float>(counter) / hash_table.size() < 3) {
-          continue_hashing = false;
-        }
-
-        done = true;
-      }
-    }
-
-    if (run_offset >= input_run.size()) {
-      ++run_idx;
-      run_offset = 0;
-    }
-
-    partition.flush_buffers(input_run);
-
-    if (done) {
-      break;
-    }
-  }
-
-  for (auto& run : partition.runs) {
-    run.is_aggregated = true;
-  }
-  partition.finish();
-
-  return {continue_hashing, std::move(partition)};
-}
-
-template <typename GroupRun>
-std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateHashSortConfig& config,
-                                                                std::unique_ptr<AbstractRunSource<GroupRun>> run_source,
-                                                                const Partitioning& partitioning) {
-  // Start with a single partition and expand to `partitioning.partition_count` partitions if `hashing()` detects a too
-  // low density of groups
-  auto partitions = std::vector<Partition<GroupRun>>{1};
-  auto mode = HashSortMode::Hashing;
-  auto partition_while_hashing = false;
-
-  auto run_idx = size_t{0};
-  auto run_offset = size_t{0};
-
-  while (run_idx < run_source->runs.size() || run_source->can_fetch_run()) {
-    auto phase_partitions = std::vector<Partition<GroupRun>>{};
-
-    if (mode == HashSortMode::Hashing) {
-      const auto partitioning_for_hashing = partition_while_hashing ? partitioning : Partitioning{1, 0, 0};
-
-      auto [continue_hashing, hashing_partitions] =
-          hashing(config, *run_source, partitioning_for_hashing, run_idx, run_offset);
-
-      if (!continue_hashing) {
-        if (!partition_while_hashing) {
-          const auto run_source2 = PartitionRunSource<GroupRun>(run_source->layout, std::move(partitions.front()->runs));
-
-          partitions = partition(config, run_source2, partitioning, run_idx, run_offset);
-
-          partition_while_hashing = true;
-        }
-
-        mode = HashSortMode::Partition;
-      }
-
-      phase_partitions = std::move(hashing_partitions);
-    } else {
-      phase_partitions = partition(config, *run_source, partitioning, run_idx, run_offset);
-      mode = HashSortMode::Hashing;
-    }
-
-    DebugAssert(phase_partitions.size() == partitions.size(), "");
-
-    for (auto partition_idx = size_t{0}; partition_idx < partitioning.partition_count; ++partition_idx) {
-      auto& partition = partitions[partition_idx];
-      auto& phase_partition = phase_partitions[partition_idx];
-      partition.runs.insert(partition.runs.end(), std::make_move_iterator(phase_partition.runs.begin()),
-                            std::make_move_iterator(phase_partition.runs.end()));
-    }
-  }
-
-  return partitions;
-}
-
-template <typename GroupRun>
-std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std::unique_ptr<AbstractRunSource<GroupRun>> run_source,
-                                     const size_t level) {
-  if (run_source->runs.empty() && !run_source->can_fetch_run()) {
-    return {};
-  }
-
-  auto output_runs = std::vector<Run<GroupRun>>{};
-
-  if (run_source->runs.size() == 1 && run_source->runs.front().is_aggregated) {
-    output_runs.emplace_back(std::move(run_source->runs.front()));
-    return output_runs;
-  }
-
-  const auto partitioning = determine_partitioning(level);
-
-  auto partitions = adaptive_hashing_and_partition(config, std::move(run_source), partitioning);
-
-  for (auto&& partition : partitions) {
-    if (partition.size() == 0) {
-      continue;
-    }
-
-    const auto* layout = partition.runs.front().groups.layout;
-
-    std::unique_ptr<AbstractRunSource<GroupRun>> partition_run_source = std::make_unique<PartitionRunSource<GroupRun>>(layout, std::move(partition.runs));
-    auto aggregated_partition = aggregate(config, std::move(partition_run_source), level + 1);
-    output_runs.insert(output_runs.end(), std::make_move_iterator(aggregated_partition.begin()),
-                       std::make_move_iterator(aggregated_partition.end()));
-  }
-
-  return output_runs;
-}
-
-template <typename SegmentPosition>
-size_t hash_segment_position(const SegmentPosition& segment_position) {
-  if (segment_position.is_null()) {
-    return 0;
-  } else {
-    return boost::hash_value(segment_position.value());
-  }
-}
-
-template <typename GroupRunLayout>
-GroupRunLayout produce_initial_groups_layout(const Table& table, const std::vector<ColumnID>& group_by_column_ids);
-
-template <>
-inline FixedSizeGroupRunLayout produce_initial_groups_layout<FixedSizeGroupRunLayout>(
-    const Table& table, const std::vector<ColumnID>& group_by_column_ids) {
-  auto group_size_in_bytes = size_t{};
-  auto column_base_offsets = std::vector<size_t>(group_by_column_ids.size());
-  auto nullable_column_indices = std::vector<std::optional<ColumnID>>(group_by_column_ids.size());
-  auto nullable_column_count = size_t{0};
-
-  for (auto output_group_by_column_id = size_t{0}; output_group_by_column_id < group_by_column_ids.size();
-       ++output_group_by_column_id) {
-    const auto group_column_id = group_by_column_ids[output_group_by_column_id];
-    const auto group_column_size = data_type_sizes.at(table.column_data_type(group_column_id));
-
-    column_base_offsets[output_group_by_column_id] = group_size_in_bytes;
-
-    if (table.column_is_nullable(group_column_id)) {
-      nullable_column_indices[output_group_by_column_id] = nullable_column_count;
-      ++nullable_column_count;
-      ++group_size_in_bytes;
-    }
-
-    group_size_in_bytes += group_column_size;
-  }
-
-  const auto group_size_in_elements = divide_and_ceil(group_size_in_bytes, sizeof(GroupRunElementType));
-
-  return FixedSizeGroupRunLayout{group_size_in_elements, nullable_column_indices, column_base_offsets};
-}
-
-template <>
-inline VariablySizedGroupRunLayout produce_initial_groups_layout<VariablySizedGroupRunLayout>(
-    const Table& table, const std::vector<ColumnID>& group_by_column_ids) {
-  Assert(!group_by_column_ids.empty(), "");
-
-  auto column_mapping = std::vector<VariablySizedGroupRunLayout::Column>(group_by_column_ids.size());
-  auto nullable_count = size_t{0};
-  auto variably_sized_column_ids = std::vector<ColumnID>{};
-  auto fixed_size_column_ids = std::vector<ColumnID>{};
-
-  for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < group_by_column_ids.size();
-       ++output_group_by_column_id) {
-    const auto group_by_column_id = group_by_column_ids[output_group_by_column_id];
-    const auto data_type = table.column_data_type(group_by_column_id);
-
-    if (data_type == DataType::String) {
-      const auto local_column_id = ColumnID{static_cast<ColumnID::base_type>(variably_sized_column_ids.size())};
-      if (table.column_is_nullable(group_by_column_id)) {
-        column_mapping[output_group_by_column_id] = {true, local_column_id, nullable_count};
-        ++nullable_count;
-      } else {
-        column_mapping[output_group_by_column_id] = {true, local_column_id, std::nullopt};
-      }
-      variably_sized_column_ids.emplace_back(group_by_column_id);
-    } else {
-      const auto local_column_id = ColumnID{static_cast<ColumnID::base_type>(fixed_size_column_ids.size())};
-      column_mapping[output_group_by_column_id] = {false, local_column_id, std::nullopt};
-      fixed_size_column_ids.emplace_back(group_by_column_id);
-    }
-  }
-
-  const auto fixed_layout =
-      produce_initial_groups_layout<FixedSizeGroupRunLayout>(table, fixed_size_column_ids);
-
-  return VariablySizedGroupRunLayout{variably_sized_column_ids, fixed_size_column_ids, column_mapping, fixed_layout};
-}
-
 template<typename GetGroupSize>
 inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(const std::shared_ptr<const Table>& table,
-                                                                   const FixedSizeGroupRunLayout* layout,
-                                                                   const std::vector<ColumnID>& group_by_column_ids,
-                                                                   const RowID& begin_row_id,
-                                                                   const size_t row_count) {
+                                                                                const FixedSizeGroupRunLayout* layout,
+                                                                                const std::vector<ColumnID>& group_by_column_ids,
+                                                                                const RowID& begin_row_id,
+                                                                                const size_t row_count) {
   constexpr auto GROUP_DATA_ELEMENT_SIZE = sizeof(GroupRunElementType);
 
   auto group_run = FixedSizeGroupRun<GetGroupSize>{layout, row_count};
@@ -1008,12 +701,12 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
 
 template<typename GetFixedGroupSize>
 inline std::pair<VariablySizedGroupRun<GetFixedGroupSize>, RowID> produce_initial_groups(
-    const std::shared_ptr<const Table>& table,
-    const VariablySizedGroupRunLayout* layout,
-    const std::vector<ColumnID>& group_by_column_ids,
-    const RowID& begin_row_id,
-    const size_t row_budget,
-    const size_t per_column_data_budget_bytes) {
+const std::shared_ptr<const Table>& table,
+const VariablySizedGroupRunLayout* layout,
+const std::vector<ColumnID>& group_by_column_ids,
+const RowID& begin_row_id,
+const size_t row_budget,
+const size_t per_column_data_budget_bytes) {
 
   constexpr auto DATA_ELEMENT_SIZE = sizeof(GroupRunElementType);
 
@@ -1064,7 +757,7 @@ inline std::pair<VariablySizedGroupRun<GetFixedGroupSize>, RowID> produce_initia
         }
 
         const auto& value = segment_position.value();
-        
+
         // Determine `value_size`
         auto value_size = size_t{};
         if (column_is_nullable) {
@@ -1076,7 +769,7 @@ inline std::pair<VariablySizedGroupRun<GetFixedGroupSize>, RowID> produce_initia
         } else {
           value_size = value.size();
         }
-        
+
         if (value_size > column_remaining_data_budget_bytes) {
           return ColumnIteration::Break;
         }
@@ -1084,8 +777,8 @@ inline std::pair<VariablySizedGroupRun<GetFixedGroupSize>, RowID> produce_initia
         // Set `value_end_offsets`
         const auto previous_value_end = column_id == 0 ? 0 : *(value_end_offsets_iter - 1);
         *value_end_offsets_iter = previous_value_end + value_size;
-        value_end_offsets_iter += column_count;        
-        
+        value_end_offsets_iter += column_count;
+
         // Write `column_data`
         if (column_is_nullable) {
           if (segment_position.is_null()) {
@@ -1097,7 +790,7 @@ inline std::pair<VariablySizedGroupRun<GetFixedGroupSize>, RowID> produce_initia
         } else {
           memcpy(target, value.data(), value_size);
         }
-        
+
         target += value_size;
         column_remaining_data_budget_bytes -= value_size;
 
@@ -1118,7 +811,7 @@ inline std::pair<VariablySizedGroupRun<GetFixedGroupSize>, RowID> produce_initia
       }
     }
   }
-  
+
   value_end_offsets.resize(run_row_count * layout->column_count);
 
   /**
@@ -1222,6 +915,350 @@ struct TableRunSource : public AbstractRunSource<GroupRun> {
     }
   }
 };
+
+inline Partitioning determine_partitioning(const size_t level) {
+  // Best partitioning as determined by magic
+  return {16, level * 4, 0b1111};
+}
+
+template <typename GroupRun>
+void partition(const size_t new_run_element_count,
+               const size_t max_partitioning_counter,
+               AbstractRunSource<GroupRun>& run_source, const Partitioning& partitioning,
+               size_t& run_idx, size_t& run_offset, std::vector<Partition<GroupRun>>& partitions, const size_t level) {
+  auto counter = size_t{0};
+  auto done = false;
+
+  while (run_idx < run_source.runs.size() || run_source.can_fetch_run()) {
+    if (run_idx == run_source.runs.size()) {
+      run_source.fetch_run();
+    }
+
+    auto&& input_run = run_source.runs[run_idx];
+
+    for (; run_offset < input_run.size() && !done; ++run_offset) {
+      const auto partition_idx = partitioning.get_partition_index(input_run.groups.hash(run_offset));
+
+      auto& partition = partitions[partition_idx];
+      partition.append(input_run, run_offset, new_run_element_count, level);
+      ++counter;
+
+      if (counter >= max_partitioning_counter) {
+        done = true;
+      }
+    }
+
+    if (run_offset >= input_run.size()) {
+      ++run_idx;
+      run_offset = 0;
+    }
+
+    for (auto& partition : partitions) {
+      partition.flush_buffers(input_run);
+    }
+
+    if (done) {
+      break;
+    }
+  }
+
+  for (auto& partition : partitions) {
+    partition.finish(RunIsAggregated::No);
+  }
+
+#if VERBOSE
+  std::cout << indent(level) << " partition() processed " << counter << " elements" << std::endl;
+#endif
+}
+
+/**
+ * @return              Whether to continue hashing
+ */
+template <typename GroupRun>
+bool hashing(const AggregateHashSortConfig& config,
+             const size_t new_run_element_count,
+                                                          AbstractRunSource<GroupRun>& run_source,
+                                                          const Partitioning& partitioning, size_t& run_idx,
+                                                          size_t& run_offset,
+                                             std::vector<Partition<GroupRun>>& partitions, const size_t level) {
+#if 1
+  auto hash_fn = [&](const auto& key) { return key.hash; };
+
+  auto compare_fn = typename GroupRun::HashTableCompare{run_source.layout};
+
+  auto hash_table = std::unordered_map<typename GroupRun::HashTableKey, size_t, decltype(hash_fn), decltype(compare_fn)>{
+      config.hash_table_size, hash_fn, compare_fn};
+#else
+  using HashTableKey = std::pair<size_t, size_t>;
+
+  constexpr static auto EMPTY_KEY = std::make_pair(std::numeric_limits<size_t>::max(), size_t{0});
+
+  struct Hasher {
+    AbstractRunSource<GroupRun>* run_source{};
+    size_t operator()(const HashTableKey& key) const {
+      //std::cout << "Hash: " << key.first << " " << key.second << std::endl;
+      if (key.first == EMPTY_KEY.first) return 0;
+      return run_source->runs[key.first].groups.hash(key.second);
+    }
+  };
+
+  struct EqualTo {
+    AbstractRunSource<GroupRun>* run_source{};
+    bool operator()(const HashTableKey& lhs, const HashTableKey& rhs) const {
+      //std::cout << "EqualTo: " << lhs.first << " " << lhs.second << " vs "  << rhs.first << " " << rhs.second << std::endl;
+      if (lhs.first == EMPTY_KEY.first && rhs.first == EMPTY_KEY.first) return true;
+      if (lhs.first == EMPTY_KEY.first || rhs.first == EMPTY_KEY.first) return false;
+
+      return run_source->runs[lhs.first].groups.compare(lhs.second, run_source->runs[rhs.first].groups, rhs.second);
+    }
+  };
+
+  auto hasher = Hasher{&run_source};
+  auto equal_to = EqualTo{&run_source};
+
+  auto hash_table = google::dense_hash_map<std::pair<size_t, size_t>, size_t, Hasher, EqualTo>{
+  static_cast<size_t>(config.hash_table_size *  config.hash_table_max_load_factor), hasher, equal_to};
+  hash_table.set_empty_key(EMPTY_KEY);
+  hash_table.min_load_factor(0.0f);
+#endif
+
+  hash_table.max_load_factor(1.0f);
+
+  auto counter = size_t{0};
+  auto continue_hashing = true;
+  auto done = false;
+
+  while (run_idx < run_source.runs.size() || run_source.can_fetch_run()) {
+    if (run_idx == run_source.runs.size()) {
+      run_source.fetch_run();
+    }
+
+    auto&& input_run = run_source.runs[run_idx];
+
+    for (; run_offset < input_run.size() && !done; ++run_offset) {
+      const auto partition_idx = partitioning.get_partition_index(input_run.groups.hash(run_offset));
+      auto& partition = partitions[partition_idx];
+
+      const auto key = input_run.groups.make_key(run_offset);
+
+      auto hash_table_iter = hash_table.find(key);
+      if (hash_table_iter == hash_table.end()) {
+        hash_table.insert({key, partition.group_key_counter});
+        partition.append(input_run, run_offset, new_run_element_count, level);
+        ++partition.group_key_counter;
+      } else {
+        partition.aggregate(hash_table_iter->second, input_run, run_offset);
+      }
+
+      ++counter;
+
+      //std::cout << "Load factor: " << hash_table.load_factor() << std::endl;
+      if (hash_table.load_factor() >= config.hash_table_max_load_factor) {
+        if (static_cast<float>(counter) / hash_table.size() < 3) {
+          continue_hashing = false;
+        }
+
+        done = true;
+      }
+    }
+
+    if (run_offset >= input_run.size()) {
+      ++run_idx;
+      run_offset = 0;
+    }
+
+    for (auto& partition : partitions) {
+      partition.flush_buffers(input_run);
+    }
+
+    if (done) {
+      break;
+    }
+  }
+
+  for (auto& partition : partitions) {
+    partition.finish(RunIsAggregated::Yes);
+  }
+
+#if VERBOSE
+  std::cout << indent(level) << " hashing() processed " << counter << " elements and will continue hashing(): " << continue_hashing << std::endl;
+#endif
+
+  return continue_hashing;
+}
+
+template <typename GroupRun>
+std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateHashSortConfig& config,
+                                                                std::unique_ptr<AbstractRunSource<GroupRun>> run_source,
+                                                                const Partitioning& partitioning, const size_t level) {
+  // Start with a single partition and expand to `partitioning.partition_count` partitions if `hashing()` detects a too
+  // low density of groups and determines the switch to HashSortMode::Partitioning
+  auto partitions = std::vector<Partition<GroupRun>>{partitioning.partition_count};
+  auto mode = HashSortMode::Hashing;
+  auto partition_while_hashing = true;
+
+  auto run_idx = size_t{0};
+  auto run_offset = size_t{0};
+
+  if (!partition_while_hashing) {
+    const auto max_group_count = config.hash_table_size * config.hash_table_size;
+    const auto continue_hashing = hashing(config, max_group_count, *run_source, Partitioning{1, 0, 0}, run_idx, run_offset, partitions, level);
+    if (!continue_hashing) {
+      mode = HashSortMode::Partition;
+    }
+
+    if (run_idx < run_source->runs.size() || run_source->can_fetch_run() || partitions.front().runs.size() > 1) {
+      const auto initial_fan_out_row_count = partitions.front().size();
+      auto initial_fan_out_source = PartitionRunSource<GroupRun>(run_source->layout, std::move(partitions.front().runs));
+      auto initial_fan_out_run_idx = size_t{0};
+      auto initial_fan_out_run_offset = size_t{0};
+      partitions = std::vector<Partition<GroupRun>>{partitioning.partition_count};
+      const auto estimated_per_partition_size = static_cast<size_t>((max_group_count / partitioning.partition_count) * 1.2f);
+      partition(estimated_per_partition_size, initial_fan_out_row_count, initial_fan_out_source, partitioning, initial_fan_out_run_idx, initial_fan_out_run_offset, partitions, level);
+    }
+  }
+
+  while (run_idx < run_source->runs.size() || run_source->can_fetch_run()) {
+    if (mode == HashSortMode::Hashing) {
+      const auto continue_hashing = hashing(config, config.hashing_run_size, *run_source, partitioning, run_idx, run_offset, partitions, level);
+      if (!continue_hashing) {
+        mode = HashSortMode::Partition;
+      }
+
+    } else {
+      partition(config.partition_run_size, config.max_partitioning_counter, *run_source, partitioning, run_idx, run_offset, partitions, level);
+      mode = HashSortMode::Hashing;
+    }
+  }
+
+  return partitions;
+}
+
+template <typename GroupRun>
+std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std::unique_ptr<AbstractRunSource<GroupRun>> run_source,
+                                     const size_t level) {
+  if (run_source->runs.empty() && !run_source->can_fetch_run()) {
+    return {};
+  }
+
+#if VERBOSE
+  std::cout << indent(level) << "aggregate() ";
+
+  if (const auto* table_run_source = dynamic_cast<TableRunSource<GroupRun>*>(run_source.get())) {
+    std::cout << "groups from Table with " << table_run_source->table->row_count() << " rows";
+  } else if (const auto* partition_run_source = dynamic_cast<PartitionRunSource<GroupRun>*>(run_source.get())) {
+    auto rows = size_t{0};
+    for (const auto& run : partition_run_source->runs) {
+      rows += run.size();
+    }
+
+    std::cout << "groups from Partition with " << partition_run_source->runs.size() << " runs and " << rows << " rows";
+  } else {
+    Fail("");
+  }
+
+  std::cout << std::endl;
+#endif
+
+  auto output_runs = std::vector<Run<GroupRun>>{};
+
+  if (run_source->runs.size() == 1 && run_source->runs.front().is_aggregated == RunIsAggregated::Yes) {
+#if VERBOSE
+    std::cout << indent(level) << " Single run in partition is aggregated, our job here is done" << std::endl;
+#endif
+    output_runs.emplace_back(std::move(run_source->runs.front()));
+    return output_runs;
+  }
+
+  const auto partitioning = determine_partitioning(level);
+
+  auto partitions = adaptive_hashing_and_partition(config, std::move(run_source), partitioning, level);
+
+  for (auto&& partition : partitions) {
+    if (partition.size() == 0) {
+      continue;
+    }
+
+    const auto* layout = partition.runs.front().groups.layout;
+
+    std::unique_ptr<AbstractRunSource<GroupRun>> partition_run_source = std::make_unique<PartitionRunSource<GroupRun>>(layout, std::move(partition.runs));
+    auto aggregated_partition = aggregate(config, std::move(partition_run_source), level + 1);
+    output_runs.insert(output_runs.end(), std::make_move_iterator(aggregated_partition.begin()),
+                       std::make_move_iterator(aggregated_partition.end()));
+  }
+
+  return output_runs;
+}
+
+template <typename GroupRunLayout>
+GroupRunLayout produce_initial_groups_layout(const Table& table, const std::vector<ColumnID>& group_by_column_ids);
+
+template <>
+inline FixedSizeGroupRunLayout produce_initial_groups_layout<FixedSizeGroupRunLayout>(
+    const Table& table, const std::vector<ColumnID>& group_by_column_ids) {
+  auto group_size_in_bytes = size_t{};
+  auto column_base_offsets = std::vector<size_t>(group_by_column_ids.size());
+  auto nullable_column_indices = std::vector<std::optional<ColumnID>>(group_by_column_ids.size());
+  auto nullable_column_count = size_t{0};
+
+  for (auto output_group_by_column_id = size_t{0}; output_group_by_column_id < group_by_column_ids.size();
+       ++output_group_by_column_id) {
+    const auto group_column_id = group_by_column_ids[output_group_by_column_id];
+    const auto group_column_size = data_type_sizes.at(table.column_data_type(group_column_id));
+
+    column_base_offsets[output_group_by_column_id] = group_size_in_bytes;
+
+    if (table.column_is_nullable(group_column_id)) {
+      nullable_column_indices[output_group_by_column_id] = nullable_column_count;
+      ++nullable_column_count;
+      ++group_size_in_bytes;
+    }
+
+    group_size_in_bytes += group_column_size;
+  }
+
+  const auto group_size_in_elements = divide_and_ceil(group_size_in_bytes, sizeof(GroupRunElementType));
+
+  return FixedSizeGroupRunLayout{group_size_in_elements, nullable_column_indices, column_base_offsets};
+}
+
+template <>
+inline VariablySizedGroupRunLayout produce_initial_groups_layout<VariablySizedGroupRunLayout>(
+    const Table& table, const std::vector<ColumnID>& group_by_column_ids) {
+  Assert(!group_by_column_ids.empty(), "");
+
+  auto column_mapping = std::vector<VariablySizedGroupRunLayout::Column>(group_by_column_ids.size());
+  auto nullable_count = size_t{0};
+  auto variably_sized_column_ids = std::vector<ColumnID>{};
+  auto fixed_size_column_ids = std::vector<ColumnID>{};
+
+  for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < group_by_column_ids.size();
+       ++output_group_by_column_id) {
+    const auto group_by_column_id = group_by_column_ids[output_group_by_column_id];
+    const auto data_type = table.column_data_type(group_by_column_id);
+
+    if (data_type == DataType::String) {
+      const auto local_column_id = ColumnID{static_cast<ColumnID::base_type>(variably_sized_column_ids.size())};
+      if (table.column_is_nullable(group_by_column_id)) {
+        column_mapping[output_group_by_column_id] = {true, local_column_id, nullable_count};
+        ++nullable_count;
+      } else {
+        column_mapping[output_group_by_column_id] = {true, local_column_id, std::nullopt};
+      }
+      variably_sized_column_ids.emplace_back(group_by_column_id);
+    } else {
+      const auto local_column_id = ColumnID{static_cast<ColumnID::base_type>(fixed_size_column_ids.size())};
+      column_mapping[output_group_by_column_id] = {false, local_column_id, std::nullopt};
+      fixed_size_column_ids.emplace_back(group_by_column_id);
+    }
+  }
+
+  const auto fixed_layout =
+      produce_initial_groups_layout<FixedSizeGroupRunLayout>(table, fixed_size_column_ids);
+
+  return VariablySizedGroupRunLayout{variably_sized_column_ids, fixed_size_column_ids, column_mapping, fixed_layout};
+}
+
 
 }  // namespace aggregate_hashsort
 
