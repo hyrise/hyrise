@@ -18,10 +18,10 @@ using EventListener = std::function<void ()>;
 
 class Listenable {
  public:
-  void add_listener(const Event event, EventListener listener);
+  virtual void add_listener(const Event event, EventListener listener);
 
  protected:
-  void _notify_listeners(const Event event) const;
+  virtual void _notify_listeners(const Event event) const;
 
   std::unordered_map<Event, std::vector<EventListener>> _event_listeners;
 };
