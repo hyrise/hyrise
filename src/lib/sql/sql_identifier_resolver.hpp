@@ -57,11 +57,8 @@ class SQLIdentifierResolver final {
    */
   void append(SQLIdentifierResolver&& rhs);
 
-  /**
-   * Count how many identifiers have an expression with similar content.
-   * @return   The number of identifiers
-   */
-  int count_identifiers(const std::shared_ptr<AbstractExpression>& expression);
+  // TODO(jj): comment
+  bool has_expression(const std::shared_ptr<AbstractExpression>& expression);
 
  private:
   SQLIdentifierContextEntry& _find_expression_entry(const std::shared_ptr<AbstractExpression>& expression);

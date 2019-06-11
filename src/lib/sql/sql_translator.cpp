@@ -750,20 +750,6 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
   return result_table_source_state;
 }
 
-void SQLTranslator::_create_new_expression_for_different_alias(
-    std::shared_ptr<AbstractExpression>& expression,
-    const std::shared_ptr<SQLIdentifierResolver>& current_sql_identifier_resolver) {
-  auto old_identifier_count = _sql_identifier_resolver->count_identifiers(expression);
-  auto current_identifier_count = current_sql_identifier_resolver->count_identifiers(expression);
-  auto new_identifier_count = current_identifier_count - old_identifier_count;
-  if (new_identifier_count > 0) {
-    // This expression equals another expression but has a different alias.
-    // Therefore, create a new expression with a different id.
-    expression = expression->deep_copy();
-    expression->id = new_identifier_count;
-  }
-}
-
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_translate_select_list(
     const std::vector<hsql::Expr*>& select_list) {
   // Build the select_list_elements
@@ -819,25 +805,6 @@ void SQLTranslator::_translate_select_groupby_having(
     return ExpressionVisitation::DoNotVisitArguments;
   };
 
-//  // Identify all Aggregates and their arguments needed for SELECT and build the select_list_elements #todo
-//  // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
-//  std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
-//  auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
-//  for (const auto& hsql_select_expr : *select.selectList) {
-//    if (hsql_select_expr->type == hsql::kExprStar) {
-//      select_list_elements.emplace_back(nullptr);
-//    } else {
-//      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
-//
-//      if (hsql_select_expr->alias) {
-//        _create_new_expression_for_different_alias(expression, post_select_sql_identifier_resolver);
-//      }
-//      visit_expression(expression, find_aggregates_and_arguments);
-//      select_list_elements.emplace_back(expression);
-//
-//      if (hsql_select_expr->alias) {
-//        post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
-//      }
   // Identify all Aggregates and their arguments needed for SELECT
   for (const auto& expression : select_list_elements) {
     if (expression) {

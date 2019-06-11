@@ -71,22 +71,18 @@ void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
   _entries.insert(_entries.end(), rhs._entries.begin(), rhs._entries.end());
 }
 
-int SQLIdentifierResolver::count_identifiers(const std::shared_ptr<opossum::AbstractExpression>& expression) {
-  int count = 0;
-  for (const auto &entry : _entries) {
-    if (entry.expression->has_same_content(*expression)) {
-      count += entry.identifiers.size();
-    }
-  }
-  return count;
-}
-
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_expression_entry(
     const std::shared_ptr<AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
-                                 [&](const auto& entry) { return *entry.expression == *expression; });
+                                 [&](const auto &entry) { return *entry.expression == *expression; });
   Assert(entry_iter != _entries.end(), "The expression does not exist.");
   return *entry_iter;
+}
+
+bool SQLIdentifierResolver::has_expression(const std::shared_ptr<opossum::AbstractExpression> &expression) {
+  return std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
+    return *entry.expression == *expression;
+  }) != _entries.end();
 }
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(
