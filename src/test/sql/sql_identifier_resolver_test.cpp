@@ -60,7 +60,8 @@ TEST_F(SQLIdentifierResolverTest, ColumnNamesChange) {
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T2"}), nullptr);
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s}), expression_a);
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);

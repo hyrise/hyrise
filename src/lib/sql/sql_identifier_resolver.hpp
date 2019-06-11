@@ -14,7 +14,8 @@ class AbstractExpression;
 
 struct SQLIdentifierContextEntry final {
   std::shared_ptr<AbstractExpression> expression;
-  std::vector<SQLIdentifier> identifiers;
+  std::optional<std::string> table_name;
+  std::vector<std::string> column_names;
 };
 
 /**
@@ -42,9 +43,9 @@ class SQLIdentifierResolver final {
 
   /**
    * Resolve the identifiers of an @param expression
-   * @return    The SQLIdentifiers, or std::nullopt if the expression has no identifiers associated with it
+   * @return    The SQLIdentifiers
    */
-  const std::vector<SQLIdentifier>& get_expression_identifiers(
+  const std::vector<SQLIdentifier> get_expression_identifiers(
       const std::shared_ptr<AbstractExpression>& expression) const;
 
   /**

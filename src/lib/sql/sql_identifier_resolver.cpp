@@ -10,40 +10,31 @@ namespace opossum {
 void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpression>& expression,
                                             const std::string& column_name) {
   auto& entry = _find_or_create_expression_entry(expression);
-  entry.identifiers.emplace_back(column_name);
+  entry.column_names.emplace_back(column_name);
 }
 
 void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<opossum::AbstractExpression>& expression) {
   auto& entry = _find_expression_entry(expression);
-  entry.identifiers.clear();
+  entry.column_names.clear();
 }
 
 void SQLIdentifierResolver::set_table_name(const std::shared_ptr<AbstractExpression>& expression,
                                            const std::string& table_name) {
   auto& entry = _find_or_create_expression_entry(expression);
-  if (entry.identifiers.empty()) entry.identifiers.emplace_back(expression->as_column_name());
-
-  for (auto& identifier : entry.identifiers) {
-    identifier.table_name = table_name;
-  }
+  entry.table_name = table_name;
 }
 
 std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_relaxed(
     const SQLIdentifier& identifier) const {
   std::vector<std::shared_ptr<AbstractExpression>> matching_expressions;
   for (const auto& entry : _entries) {
-    for (const auto& entry_identifier : entry.identifiers) {
-      if (identifier.table_name) {
-        if (identifier.table_name == entry_identifier.table_name &&
-            identifier.column_name == entry_identifier.column_name) {
-          matching_expressions.emplace_back(entry.expression);
-          break;
-        }
-      } else {
-        if (identifier.column_name == entry_identifier.column_name) {
-          matching_expressions.emplace_back(entry.expression);
-          break;
-        }
+    if (identifier.table_name && entry.table_name != identifier.table_name) {
+      continue;
+    }
+    for (const auto& column_name : entry.column_names) {
+      if (identifier.column_name == column_name) {
+        matching_expressions.emplace_back(entry.expression);
+        break;
       }
     }
   }
@@ -53,24 +44,27 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
   return matching_expressions[0];
 }
 
-const std::vector<SQLIdentifier>& SQLIdentifierResolver::get_expression_identifiers(
+const std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
     const std::shared_ptr<AbstractExpression>& expression) const {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
   const auto empty_vector = std::make_shared<std::vector<SQLIdentifier>>();
+
   if (entry_iter == _entries.end()) return *empty_vector;
-  return entry_iter->identifiers;
+
+  std::vector<SQLIdentifier> identifiers;
+  for (const auto &column_name : entry_iter->column_names) {
+    identifiers.emplace_back(SQLIdentifier(column_name, entry_iter->table_name));
+  }
+  return identifiers;
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierResolver::resolve_table_name(
     const std::string& table_name) const {
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
-  for (const auto& entry : _entries) {
-    for (const auto& identifier : entry.identifiers) {
-      if (identifier.table_name == table_name) {
-        expressions.emplace_back(entry.expression);
-        break;
-      }
+  for (const auto &entry : _entries) {
+    if (entry.table_name == table_name) {
+      expressions.emplace_back(entry.expression);
     }
   }
   return expressions;
@@ -95,7 +89,7 @@ SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_ent
 
   // If there is no entry for this Expression, just add one
   if (entry_iter == _entries.end()) {
-    SQLIdentifierContextEntry entry{expression, {}};
+    SQLIdentifierContextEntry entry{expression, std::nullopt, {}};
     entry_iter = _entries.emplace(_entries.end(), entry);
   }
 
