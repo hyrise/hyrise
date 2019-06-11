@@ -57,9 +57,6 @@ class SQLIdentifierResolver final {
    */
   void append(SQLIdentifierResolver&& rhs);
 
-  // TODO(jj): comment
-  bool has_expression(const std::shared_ptr<AbstractExpression>& expression);
-
  private:
   SQLIdentifierContextEntry& _find_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
   SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);

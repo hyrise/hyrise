@@ -27,7 +27,10 @@ bool AbstractExpression::is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
 }
 
 bool AbstractExpression::operator==(const AbstractExpression& other) const {
-  return has_same_content(other) && id == other.id;
+  if (type != other.type) return false;
+  if (!expressions_equal(arguments, other.arguments)) return false;
+  if (id != other.id) return false;
+  return _shallow_equals(other);
 }
 
 bool AbstractExpression::operator!=(const AbstractExpression& other) const { return !operator==(other); }
