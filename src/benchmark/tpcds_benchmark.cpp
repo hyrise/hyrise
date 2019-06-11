@@ -139,8 +139,8 @@ bool data_files_available(const std::string table_path) {
                             "web_sales",
                             "web_site"}) {
     if (!std::filesystem::exists(table_path + "/" + table + ".csv")) {
-      return true;
+      return false;
     }
   }
-  return false;
+  return true;
 }
