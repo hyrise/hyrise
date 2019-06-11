@@ -232,8 +232,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   if (select.limit) _translate_limit(*select.limit);
 
   /**
-     * Name, select and arrange the Columns as specified in the SELECT clause
-     */
+   * Name, select and arrange the Columns as specified in the SELECT clause
+   */
   // Only add a ProjectionNode if necessary
   if (!expressions_equal(_current_lqp->column_expressions(), _inflated_select_list_expressions)) {
     _current_lqp = ProjectionNode::make(_inflated_select_list_expressions, _current_lqp);
@@ -281,10 +281,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   auto insert_data_projection_required = false;
 
   /**
-     * 1. Create the expressions/LQP producing the data to insert.
-     *        - For `INSERT INTO <table> SELECT ...` this means evaluating the select statement
-     *        - For `INSERT INTO <table> VALUES ...` this means creating a one row table with the VALUES
-     */
+   * 1. Create the expressions/LQP producing the data to insert.
+   *        - For `INSERT INTO <table> SELECT ...` this means evaluating the select statement
+   *        - For `INSERT INTO <table> VALUES ...` this means creating a one row table with the VALUES
+   */
   if (insert.type == hsql::kInsertSelect) {
     // `INSERT INTO newtable SELECT ... FROM oldtable WHERE condition`
     AssertInput(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
@@ -305,9 +305,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   }
 
   /**
-     * 2. Rearrange the columns of the data to insert to match the target table
-     *    E.g., `SELECT INTO table (c, a) VALUES (1, 2)` becomes `SELECT INTO table (a, b, c) VALUES (2, NULL, 1)
-     */
+   * 2. Rearrange the columns of the data to insert to match the target table
+   *    E.g., `SELECT INTO table (c, a) VALUES (1, 2)` becomes `SELECT INTO table (a, b, c) VALUES (2, NULL, 1)
+   */
   if (insert.columns) {
     // `INSERT INTO table_name (column1, column2, column3, ...) ...;`
     // Create a Projection that matches the specified columns with the columns of `table_name`
@@ -329,10 +329,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   }
 
   /**
-     * 3. When inserting NULL literals (or not inserting into all columns), wrap NULLs in
-     *    `CAST(NULL AS <column_data_type>), since a temporary table with the data to insert will be created and NULL is
-     *    an invalid column data type in Hyrise.
-     */
+   * 3. When inserting NULL literals (or not inserting into all columns), wrap NULLs in
+   *    `CAST(NULL AS <column_data_type>), since a temporary table with the data to insert will be created and NULL is
+   *    an invalid column data type in Hyrise.
+   */
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Turn `expression` into `CAST(expression AS <column_data_type>)`, if expression is a NULL literal
     auto expression = column_expressions[column_id];
@@ -345,8 +345,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   }
 
   /**
-     * 4. Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
-     */
+   * 4. Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
+   */
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.
@@ -357,9 +357,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   }
 
   /**
-     * 5. Project the data to insert ONLY if required, i.e. when column order needed to be arranged or NULLs were wrapped
-     *    in `CAST(NULL as <data_type>)`
-     */
+   * 5. Project the data to insert ONLY if required, i.e. when column order needed to be arranged or NULLs were wrapped
+   *    in `CAST(NULL as <data_type>)`
+   */
   if (insert_data_projection_required) {
     insert_data_node = ProjectionNode::make(column_expressions, insert_data_node);
   }
@@ -368,8 +368,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
               "INSERT: Column count mismatch");
 
   /**
-     * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
-     */
+   * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
+   */
 
   return InsertNode::make(table_name, insert_data_node);
 }
@@ -584,13 +584,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   result_state.append(std::move(right_state));
 
   /**
-     * Hyrise doesn't have support for complex join predicates in OUTER JOINs
-     * The current implementation expects a single join condition in a set of conjunctive
-     * clauses. The remaining clauses are expected to be relevant for only one of
-     * the join partners and are therefore converted into predicates inserted in between the
-     * source relations and the actual join node.
-     * See TPC-H 13 for an example query.
-     */
+   * Hyrise doesn't have support for complex join predicates in OUTER JOINs
+   * The current implementation expects a single join condition in a set of conjunctive
+   * clauses. The remaining clauses are expected to be relevant for only one of
+   * the join partners and are therefore converted into predicates inserted in between the
+   * source relations and the actual join node.
+   * See TPC-H 13 for an example query.
+   */
   const auto raw_join_predicate = _translate_hsql_expr(*join.condition, result_state.sql_identifier_resolver);
   const auto raw_join_predicate_cnf = flatten_logical_expressions(raw_join_predicate, LogicalOperator::And);
 
@@ -617,8 +617,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
               "Local predicates not supported on right side of right outer join. See #1436");
 
   /**
-     * Add local predicates - ignore local predicates on the preserving side of OUTER JOINs
-     */
+   * Add local predicates - ignore local predicates on the preserving side of OUTER JOINs
+   */
   if (join_mode != JoinMode::Left && join_mode != JoinMode::FullOuter) {
     for (const auto& left_local_predicate : left_local_predicates) {
       left_input_lqp = _translate_predicate_expression(left_local_predicate, left_input_lqp);
@@ -631,8 +631,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   }
 
   /**
-     * Add the join predicates
-     */
+   * Add the join predicates
+   */
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
   if (join_mode != JoinMode::Inner && join_predicates.size() > 1) {
@@ -1116,8 +1116,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
     const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node) const {
   /**
-     * Translate AbstractPredicateExpression
-     */
+   * Translate AbstractPredicateExpression
+   */
   switch (expression->type) {
     case ExpressionType::Predicate: {
       const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
@@ -1414,9 +1414,9 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
     const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const {
   /**
-     * There is a "simple" and a "searched" CASE syntax, see http://www.oratable.com/simple-case-searched-case/
-     * Hyrise supports both.
-     */
+   * There is a "simple" and a "searched" CASE syntax, see http://www.oratable.com/simple-case-searched-case/
+   * Hyrise supports both.
+   */
 
   Assert(expr.exprList, "Unexpected SQLParserResult. Case needs exprList");
   Assert(!expr.exprList->empty(), "Unexpected SQLParserResult. Case needs non-empty exprList");
@@ -1453,8 +1453,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const AbstractExpression& expression) const {
   /**
-     * Inverse a boolean expression
-     */
+   * Inverse a boolean expression
+   */
 
   switch (expression.type) {
     case ExpressionType::Predicate: {
