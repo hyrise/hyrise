@@ -58,6 +58,33 @@ def main():
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
+
+  benchmark = initialize(arguments2, "hyriseBenchmarkTPCH")
+
+  benchmark.expect("Writing benchmark results to stdout")
+  benchmark.expect("MVCC is disabled")
+  benchmark.expect("Running in single-threaded mode")
+  benchmark.expect("1 simulated clients are scheduling queries in parallel")
+  benchmark.expect("Running benchmark in 'IndividualQueries' mode")
+  benchmark.expect("Visualization is off")
+  benchmark.expect("Encoding is 'LZ4'")
+  benchmark.expect("Chunk size is 100000")
+  benchmark.expect("Max runs per query is 100")
+  benchmark.expect("Max duration per query is 1 seconds")
+  benchmark.expect("Warmup duration per query is 1 seconds")
+  benchmark.expect("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
+  benchmark.expect("Benchmarking Queries: \[ 2, 4, 6, \]")
+  benchmark.expect("TPCH scale factor is 0.005")
+  benchmark.expect("Using prepared statements: no")
+
+  benchmark.expect("-> Executed")
+
+  if benchmark.before.count('Verification failed'):
+    return_error = True
+
+  close_benchmark(benchmark)
+  check_exit_status(benchmark)
+
   if not os.path.isfile(arguments1["--output"].replace("'", "")):
     print ("Cannot find output file " + arguments1["--output"])
     return_error = True
@@ -68,7 +95,7 @@ def main():
   if output["summary"]["table_size_in_bytes"] == 0:
     return_error = True
     print("ERROR: Table size is zero.")
-  if abs(output["context"]["scale_factor"] - float(arguments1["--scale"])) >= 0.001:
+  if abs(output["context"]["scale_factor"] - float(arguments1["--scale"])) > 0.001:
     return_error = True
     print("ERROR: Scale factor doesn't match with JSON:", output["context"]["scale_factor"], float(arguments1["--scale"]))
   for i in xrange(0,3):
@@ -99,32 +126,6 @@ def main():
   if output["context"]["using_visualization"] != bool(arguments1["--visualize"]):
     return_error = True
     print("ERROR: Visualization doesn't match with JSON:", output["context"]["using_visualization"], bool(arguments1["--visualize"]))
-
-  benchmark = initialize(arguments2, "hyriseBenchmarkTPCH")
-
-  benchmark.expect("Writing benchmark results to stdout")
-  benchmark.expect("MVCC is disabled")
-  benchmark.expect("Running in single-threaded mode")
-  benchmark.expect("1 simulated clients are scheduling queries in parallel")
-  benchmark.expect("Running benchmark in 'IndividualQueries' mode")
-  benchmark.expect("Visualization is off")
-  benchmark.expect("Encoding is 'LZ4'")
-  benchmark.expect("Chunk size is 100000")
-  benchmark.expect("Max runs per query is 100")
-  benchmark.expect("Max duration per query is 1 seconds")
-  benchmark.expect("Warmup duration per query is 1 seconds")
-  benchmark.expect("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
-  benchmark.expect("Benchmarking Queries: \[ 2, 4, 6, \]")
-  benchmark.expect("TPCH scale factor is 0.005")
-  benchmark.expect("Using prepared statements: no")
-
-  benchmark.expect("-> Executed")
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
-
-  close_benchmark(benchmark)
-  check_exit_status(benchmark)
 
   if return_error:
     sys.exit(1)

@@ -65,6 +65,35 @@ def main():
     print ("Cannot find binary tables in " + arguments1["--table_path"])
     return_error = True
 
+  os.system("rm -rf " + arguments1["--table_path"] + "/*.bin")
+
+  benchmark = initialize(arguments2, "hyriseBenchmarkJoinOrder")
+
+  benchmark.expect("Writing benchmark results to stdout")
+  benchmark.expect("MVCC is disabled")
+  benchmark.expect("Running in single-threaded mode")
+  benchmark.expect("1 simulated clients are scheduling queries in parallel")
+  benchmark.expect("Running benchmark in 'IndividualQueries' mode")
+  benchmark.expect("Visualization is off")
+  benchmark.expect("Encoding is 'LZ4'")
+  benchmark.expect("Chunk size is 100000")
+  benchmark.expect("Max runs per query is 100")
+  benchmark.expect("Max duration per query is 1 seconds")
+  benchmark.expect("Warmup duration per query is 1 seconds")
+  benchmark.expect("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
+  benchmark.expect("Not caching tables as binary files")
+  benchmark.expect("Benchmarking queries from third_party/join-order-benchmark")
+  benchmark.expect("Running on tables from resources/test_data/imdb_sample/")
+  benchmark.expect("Running subset of queries: 3b")
+
+  benchmark.expect("-> Executed")
+
+  if benchmark.before.count('Verification failed'):
+    return_error = True
+
+  close_benchmark(benchmark)
+  check_exit_status(benchmark)
+
   if not os.path.isfile(arguments1["--output"].replace("'", "")):
     print ("Cannot find output file " + arguments1["--output"])
     return_error = True
@@ -103,35 +132,6 @@ def main():
   if output["context"]["using_visualization"] != bool(arguments1["--visualize"]):
     return_error = True
     print("ERROR: Visualization doesn't match with JSON:", output["context"]["using_visualization"], bool(arguments1["--visualize"]))
-
-  os.system("rm -rf " + arguments1["--table_path"] + "/*.bin")
-
-  benchmark = initialize(arguments2, "hyriseBenchmarkJoinOrder")
-
-  benchmark.expect("Writing benchmark results to stdout")
-  benchmark.expect("MVCC is disabled")
-  benchmark.expect("Running in single-threaded mode")
-  benchmark.expect("1 simulated clients are scheduling queries in parallel")
-  benchmark.expect("Running benchmark in 'IndividualQueries' mode")
-  benchmark.expect("Visualization is off")
-  benchmark.expect("Encoding is 'LZ4'")
-  benchmark.expect("Chunk size is 100000")
-  benchmark.expect("Max runs per query is 100")
-  benchmark.expect("Max duration per query is 1 seconds")
-  benchmark.expect("Warmup duration per query is 1 seconds")
-  benchmark.expect("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
-  benchmark.expect("Not caching tables as binary files")
-  benchmark.expect("Benchmarking queries from third_party/join-order-benchmark")
-  benchmark.expect("Running on tables from resources/test_data/imdb_sample/")
-  benchmark.expect("Running subset of queries: 3b")
-
-  benchmark.expect("-> Executed")
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
-
-  close_benchmark(benchmark)
-  check_exit_status(benchmark)
 
   if return_error:
     sys.exit(1)
