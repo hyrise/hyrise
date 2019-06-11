@@ -21,6 +21,23 @@ std::string JitAggregate::description() const {
   return desc.str();
 }
 
+void JitAggregate::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
+  // Update the groupby and aggregate column nullable information from the tuple_non_nullable_information
+  for (auto& groupby_column : _groupby_columns) {
+    groupby_column.tuple_entry.guaranteed_non_null =
+        tuple_non_nullable_information[groupby_column.tuple_entry.tuple_index];
+    groupby_column.hashmap_entry.guaranteed_non_null =
+        tuple_non_nullable_information[groupby_column.tuple_entry.tuple_index];
+  }
+
+  // Only update the input information (tuple_entry) to the aggregate function and not the output information
+  // (hashmap_entry), which is already correct.
+  for (auto& aggregate_column : _aggregate_columns) {
+    aggregate_column.tuple_entry.guaranteed_non_null =
+        tuple_non_nullable_information[aggregate_column.tuple_entry.tuple_index];
+  }
+}
+
 std::shared_ptr<Table> JitAggregate::create_output_table(const Table& in_table) const {
   auto num_columns = _aggregate_columns.size() + _groupby_columns.size();
   TableColumnDefinitions column_definitions(num_columns);
@@ -28,7 +45,7 @@ std::shared_ptr<Table> JitAggregate::create_output_table(const Table& in_table) 
   // Add each groupby column to the output table
   for (const auto& column : _groupby_columns) {
     const auto data_type = column.hashmap_entry.data_type;
-    const auto is_nullable = column.hashmap_entry.is_nullable;
+    const auto is_nullable = !column.hashmap_entry.guaranteed_non_null;
     column_definitions[column.position_in_table] = {column.column_name, data_type, is_nullable};
   }
 
@@ -38,7 +55,7 @@ std::shared_ptr<Table> JitAggregate::create_output_table(const Table& in_table) 
     // (that is later used to produce averages in a post-processing step) and may thus have a different data type.
     const auto data_type =
         column.function == AggregateFunction::Avg ? DataType::Double : column.hashmap_entry.data_type;
-    const auto is_nullable = column.hashmap_entry.is_nullable;
+    const auto is_nullable = !column.hashmap_entry.guaranteed_non_null;
     column_definitions[column.position_in_table] = {column.column_name, data_type, is_nullable};
   }
 
@@ -113,11 +130,11 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
       // pmr_concurrent_vector performs a lot of synchronization. It is thus better to use the faster std::vector and
       // perform a single copy in the end.
       auto& values = context.hashmap.columns[column.hashmap_entry.column_index].template get_vector<ColumnDataType>();
-      if (column.hashmap_entry.is_nullable) {
+      if (column.hashmap_entry.guaranteed_non_null) {
+        segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values);
+      } else {
         auto& null_values = context.hashmap.columns[column.hashmap_entry.column_index].get_is_null_vector();
         segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
-      } else {
-        segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values);
       }
     });
   }
@@ -141,11 +158,11 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
         auto avg_values = std::vector<double>(sum_values.size());
         compute_averages(sum_values, count_values, avg_values);
 
-        if (column.hashmap_entry.is_nullable) {
+        if (column.hashmap_entry.guaranteed_non_null) {
+          segments[column.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values);
+        } else {
           auto& null_values = context.hashmap.columns[column.hashmap_entry.column_index].get_is_null_vector();
           segments[column.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values, null_values);
-        } else {
-          segments[column.position_in_table] = std::make_shared<ValueSegment<double>>(avg_values);
         }
       });
     } else {
@@ -154,11 +171,11 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
         using ColumnDataType = typename decltype(type)::type;
         auto column_index = column.hashmap_entry.column_index;
         auto& values = context.hashmap.columns[column_index].template get_vector<ColumnDataType>();
-        if (column.hashmap_entry.is_nullable) {
+        if (column.hashmap_entry.guaranteed_non_null) {
+          segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values);
+        } else {
           auto& null_values = context.hashmap.columns[column.hashmap_entry.column_index].get_is_null_vector();
           segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values, null_values);
-        } else {
-          segments[column.position_in_table] = std::make_shared<ValueSegment<ColumnDataType>>(values);
         }
       });
     }
@@ -193,7 +210,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       // Count aggregates always produce a non-nullable long column.
       _aggregate_columns.emplace_back(
           JitAggregateColumn{column_name, column_position, function, tuple_entry,
-                             JitHashmapEntry(DataType::Long, false, _num_hashmap_columns++)});
+                             JitHashmapEntry(DataType::Long, true, _num_hashmap_columns++)});
       break;
     case AggregateFunction::Sum:
       DebugAssert(tuple_entry.data_type != DataType::String, "Invalid data type string for aggregate function sum.");
@@ -205,7 +222,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       const auto data_type =
           function == AggregateFunction::Sum ? get_sum_data_type(tuple_entry.data_type) : tuple_entry.data_type;
       _aggregate_columns.emplace_back(JitAggregateColumn{column_name, column_position, function, tuple_entry,
-                                                         JitHashmapEntry(data_type, true, _num_hashmap_columns++)});
+                                                         JitHashmapEntry(data_type, false, _num_hashmap_columns++)});
       break;
     }
     case AggregateFunction::Avg:
@@ -214,8 +231,8 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       // Average aggregates are computed by first computing two aggregates: a SUM and a COUNT
       _aggregate_columns.emplace_back(
           JitAggregateColumn{column_name, column_position, function, tuple_entry,
-                             JitHashmapEntry(get_sum_data_type(tuple_entry.data_type), true, _num_hashmap_columns++),
-                             JitHashmapEntry(DataType::Long, false, _num_hashmap_columns++)});
+                             JitHashmapEntry(get_sum_data_type(tuple_entry.data_type), false, _num_hashmap_columns++),
+                             JitHashmapEntry(DataType::Long, true, _num_hashmap_columns++)});
       break;
     case AggregateFunction::CountDistinct:
       Fail("Aggregate function count distinct not supported");
@@ -224,9 +241,9 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
 
 void JitAggregate::add_groupby_column(const std::string& column_name, const JitTupleEntry& tuple_entry) {
   auto column_position = _aggregate_columns.size() + _groupby_columns.size();
-  _groupby_columns.emplace_back(
-      JitGroupByColumn{column_name, column_position, tuple_entry,
-                       JitHashmapEntry(tuple_entry.data_type, tuple_entry.is_nullable, _num_hashmap_columns++)});
+  _groupby_columns.emplace_back(JitGroupByColumn{
+      column_name, column_position, tuple_entry,
+      JitHashmapEntry(tuple_entry.data_type, tuple_entry.guaranteed_non_null, _num_hashmap_columns++)});
 }
 
 const std::vector<JitAggregateColumn> JitAggregate::aggregate_columns() const { return _aggregate_columns; }

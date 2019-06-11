@@ -31,11 +31,6 @@ using TPCHTestParam = std::tuple<BenchmarkItemID, bool /* use_jit */, bool /* us
 
 class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
  public:
-  void SetUp() override {
-    SQLLogicalPlanCache::get().clear();
-    SQLPhysicalPlanCache::get().clear();
-  }
-
   // Scale factors chosen so the query
   //   -> actually returns result rows (which some don't for small scale factors)
   //   -> doesn't crush a 16GB dev machine
@@ -86,12 +81,15 @@ TEST_P(TPCHTest, Test) {
    * Run the query and obtain the result tables, TPC-H 15 needs special handling
    */
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
+  auto result_table_pair = sql_pipeline.get_result_tables();
+  Assert(result_table_pair.first == SQLPipelineStatus::Success, "Unexpected pipeline status");
   std::shared_ptr<const Table> result_table;
   if (tpch_idx == 15) {
     Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15");
-    result_table = sql_pipeline.get_result_tables()[1];
+    result_table = result_table_pair.second[1];
   } else {
-    result_table = sql_pipeline.get_result_table();
+    Assert(sql_pipeline.statement_count() == 1u, "Expected single statement");
+    result_table = result_table_pair.second[0];
   }
 
   /**

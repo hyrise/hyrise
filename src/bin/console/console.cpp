@@ -113,7 +113,9 @@ Console::Console()
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
       _pagination_active(false),
-      _use_jit(false) {
+      _use_jit(false),
+      _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
+      _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
   rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
@@ -242,7 +244,10 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
-    auto builder = SQLPipelineBuilder{sql}.dont_cleanup_temporaries();  // keep tables for debugging and visualization
+    auto builder = SQLPipelineBuilder{sql}
+                       .with_lqp_cache(_lqp_cache)
+                       .with_pqp_cache(_pqp_cache)
+                       .dont_cleanup_temporaries();  // keep tables for debugging and visualization
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }
@@ -263,9 +268,6 @@ int Console::_eval_sql(const std::string& sql) {
 
   try {
     _sql_pipeline->get_result_tables();
-    Assert(!_sql_pipeline->failed_pipeline_statement(),
-           "The transaction has failed. This should never happen in the console, where only one statement gets "
-           "executed at a time.");
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && !_explicitly_created_transaction_context && _sql_pipeline->statement_count() > 1) {
@@ -274,7 +276,20 @@ int Console::_eval_sql(const std::string& sql) {
     return ReturnCode::Error;
   }
 
-  const auto& table = _sql_pipeline->get_result_table();
+  const auto [pipeline_status, table] = _sql_pipeline->get_result_table();
+  if (pipeline_status == SQLPipelineStatus::RolledBack) {
+    _handle_rollback();
+    out("A transaction conflict has been detected:");
+    out(_sql_pipeline->failed_pipeline_statement()->get_sql_string());
+    if (_explicitly_created_transaction_context) {
+      out("The transaction has been rolled back");
+    } else {
+      out("The statement was rolled back, but previous statements have been auto-committed");
+    }
+    return ReturnCode::Error;
+  }
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+
   auto row_count = table ? table->row_count() : 0;
 
   // Print result (to Console and logfile)
@@ -792,7 +807,7 @@ int Console::_change_runtime_setting(const std::string& input) {
     return 0;
   } else if (property == "jit") {
     if constexpr (HYRISE_JIT_SUPPORT) {
-      SQLPhysicalPlanCache::get().clear();
+      _pqp_cache->clear();
       if (value == "on") {
         _use_jit = true;
         out("Just-in-time query compilation turned on\n");
@@ -964,7 +979,7 @@ int Console::_unload_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
   // using IndexScans, these query plans might become unusable after the plugin is unloaded.
-  SQLPhysicalPlanCache::get().clear();
+  _pqp_cache->clear();
 
   out("Plugin (" + plugin_name + ") stopped.\n");
 

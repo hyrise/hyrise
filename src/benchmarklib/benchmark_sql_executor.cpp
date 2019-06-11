@@ -16,7 +16,7 @@ BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_pt
       _visualize_prefix(visualize_prefix),
       _transaction_context(TransactionManager::get().new_transaction_context()) {}
 
-std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sql) {
+std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(const std::string& sql) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
   if (_visualize_prefix) pipeline_builder.dont_cleanup_temporaries();
   pipeline_builder.with_transaction_context(_transaction_context);
@@ -24,7 +24,13 @@ std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sq
 
   auto pipeline = pipeline_builder.create_pipeline();
 
-  const auto& result_table = pipeline.get_result_table();
+  const auto [pipeline_status, result_table] = pipeline.get_result_table();
+
+  if (pipeline_status == SQLPipelineStatus::RolledBack) {
+    return {pipeline_status, nullptr};
+  }
+  DebugAssert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+
   metrics.emplace_back(std::move(pipeline.metrics()));
 
   if (_sqlite_wrapper) {
@@ -35,14 +41,15 @@ std::shared_ptr<const Table> BenchmarkSQLExecutor::execute(const std::string& sq
     _visualize(pipeline);
   }
 
-  return result_table;
+  return {pipeline_status, result_table};
 }
 
 void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification");
 
   const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline.get_sql());
-  const auto& result_table = pipeline.get_result_table();
+  const auto [pipeline_status, result_table] = pipeline.get_result_table();
+  DebugAssert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
 
   Timer timer;
 
