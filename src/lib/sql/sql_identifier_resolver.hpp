@@ -27,7 +27,7 @@ class SQLIdentifierResolver final {
   /**
    * @{
    * Set/Update/Delete the column/table names of an expression. There can be multiple column names referring to a single
-   * expression.
+   * expression because a new alias does not replace a former column name or alias.
    */
   void add_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name);
   void reset_column_names(const std::shared_ptr<AbstractExpression>& expression);
