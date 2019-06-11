@@ -135,7 +135,8 @@ struct FixedSizeGroupRun {
 
   uninitialized_vector<GroupRunElementType> data;
 
-  // Hash per group
+  // Hash per group - using std::vector because we build the hash incrementally and thus want this to be
+  // zero-initialized
   uninitialized_vector<size_t> hashes;
 
   // Number of groups in this run
@@ -660,13 +661,24 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
                                                                                 const size_t row_count) {
   constexpr auto GROUP_DATA_ELEMENT_SIZE = sizeof(GroupRunElementType);
 
+  const auto group_by_column_count = group_by_column_ids.size();
+
   auto group_run = FixedSizeGroupRun<GetGroupSize>{layout, row_count};
 
   auto end_row_id = RowID{};
 
-  for (auto output_group_by_column_idx = ColumnID{0}; output_group_by_column_idx < group_by_column_ids.size();
-       ++output_group_by_column_idx) {
+  // Memzero the last element of each group, as it may contain bytes not written to during materialization
+  {
+    auto *target = group_run.data.data() + layout->group_size - 1;
+    const auto *end = group_run.data.data() + row_count * layout->group_size;
+    while (target < end) {
+      *target = 0;
+      target += layout->group_size;
+    }
+  }
 
+  for (auto output_group_by_column_idx = ColumnID{0}; output_group_by_column_idx < group_by_column_count;
+       ++output_group_by_column_idx) {
     auto* target = reinterpret_cast<char*>(group_run.data.data()) + layout->column_base_offsets[output_group_by_column_idx];
     auto run_offset = size_t{0};
     const auto column_is_nullable = table->column_is_nullable(group_by_column_ids[output_group_by_column_idx]);
@@ -678,14 +690,20 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
       if (column_is_nullable) {
         if (segment_position.is_null()) {
           *target = 1;
+          memset(target + 1, 0, sizeof(ColumnDataType));
         } else {
+          *target = 0;
           memcpy(target + 1, &segment_position.value(), sizeof(ColumnDataType));
         }
       } else {
         memcpy(target, &segment_position.value(), sizeof(ColumnDataType));
       }
 
-      boost::hash_combine(group_run.hashes[run_offset], hash_segment_position(segment_position));
+      if (output_group_by_column_idx == 0) {
+        group_run.hashes[run_offset] = hash_segment_position(segment_position);
+      } else {
+        boost::hash_combine(group_run.hashes[run_offset], hash_segment_position(segment_position));
+      }
 
       target += group_run.get_group_size() * GROUP_DATA_ELEMENT_SIZE;
       ++run_offset;
@@ -695,6 +713,10 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
   }
 
   group_run.end = row_count;
+
+  if (group_by_column_count == 0) {
+    std::fill(group_run.hashes.begin(), group_run.hashes.end(), 0);
+  }
 
   return {std::move(group_run), end_row_id};
 }
@@ -724,8 +746,8 @@ const size_t per_column_data_budget_bytes) {
    *    - determine the layout of the interleaved layout in the final VariablySizedGroupRun (`value_end_offsets`)
    *    - materialize `null_values`
    */
-  auto value_end_offsets = std::vector<size_t>(row_budget * column_count);
-  auto data_per_column = std::vector<std::vector<GroupRunElementType>>(column_count);
+  auto value_end_offsets = uninitialized_vector<size_t>(row_budget * column_count);
+  auto data_per_column = std::vector<uninitialized_vector<GroupRunElementType>>(column_count);
 
   const auto per_column_element_budget = divide_and_ceil(per_column_data_budget_bytes, DATA_ELEMENT_SIZE);
 
@@ -817,7 +839,7 @@ const size_t per_column_data_budget_bytes) {
   /**
    * From `value_end_offsets`, determine `group_end_offsets`
    */
-  auto group_end_offsets = std::vector<size_t>(run_row_count);
+  auto group_end_offsets = uninitialized_vector<size_t>(run_row_count);
   auto previous_group_end_offset = size_t{0};
   auto value_end_offset_iter = value_end_offsets.begin() + (column_count - 1);
   for (auto row_idx = size_t{0}; row_idx < run_row_count; ++row_idx) {
@@ -839,9 +861,18 @@ const size_t per_column_data_budget_bytes) {
   group_run.fixed = produce_initial_groups<GetFixedGroupSize>(table, &layout->fixed_layout, layout->fixed_size_column_ids, begin_row_id, run_row_count).first;
 
   /**
+   * Initialize the interleaved group data blob
+   */
+  auto group_data = uninitialized_vector<GroupRunElementType>(data_element_count);
+  for (auto row_idx = size_t{0}; row_idx < run_row_count; ++row_idx) {
+    if (group_end_offsets[row_idx] > 0) {
+      group_data[group_end_offsets[row_idx] - 1] = 0;
+    }
+  }
+
+  /**
    * Rearrange `data_per_column` into an interleaved blob
    */
-  auto group_data = std::vector<GroupRunElementType>(data_element_count);
 
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     auto& column_data = data_per_column[column_id];
@@ -849,6 +880,7 @@ const size_t per_column_data_budget_bytes) {
     auto* source = reinterpret_cast<char*>(column_data.data());
 
     for (auto row_idx = size_t{0}; row_idx < run_row_count; ++row_idx) {
+
       const auto group_begin_offset = row_idx == 0 ? 0 : group_end_offsets[row_idx - 1];
       const auto value_begin_offset = column_id == 0 ? 0 : value_end_offsets[row_idx * column_count + column_id - 1];
       auto* target = &reinterpret_cast<char*>(&group_data[group_begin_offset])[value_begin_offset];
@@ -1095,13 +1127,13 @@ std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateH
   // low density of groups and determines the switch to HashSortMode::Partitioning
   auto partitions = std::vector<Partition<GroupRun>>{partitioning.partition_count};
   auto mode = HashSortMode::Hashing;
-  auto partition_while_hashing = true;
+  auto partition_while_hashing = false;
 
   auto run_idx = size_t{0};
   auto run_offset = size_t{0};
 
   if (!partition_while_hashing) {
-    const auto max_group_count = config.hash_table_size * config.hash_table_size;
+    const auto max_group_count = static_cast<size_t>(config.hash_table_size * config.hash_table_max_load_factor);
     const auto continue_hashing = hashing(config, max_group_count, *run_source, Partitioning{1, 0, 0}, run_idx, run_offset, partitions, level);
     if (!continue_hashing) {
       mode = HashSortMode::Partition;
