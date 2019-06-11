@@ -379,7 +379,6 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInJoin) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
-
 TEST_F(SQLTranslatorTest, WhereSimple) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a < 200;");
 

@@ -474,8 +474,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         lqp = view->lqp;
 
         /**
-           * Add all named columns from the view to the IdentifierContext
-           */
+         * Add all named columns from the view to the IdentifierContext
+         */
         for (auto column_id = ColumnID{0}; column_id < view->lqp->column_expressions().size(); ++column_id) {
           const auto column_expression = view->lqp->column_expressions()[column_id];
 
@@ -785,11 +785,11 @@ void SQLTranslator::_translate_select_groupby_having(
     if (sub_expression->type != ExpressionType::Aggregate) return ExpressionVisitation::VisitArguments;
 
     /**
-       * If the AggregateExpression has already been computed in a previous node (consider "x" in
-       * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it doesn't count as a new Aggregate and is therefore not
-       * considered an "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
-       * but it's the best solution I can come up with right now.
-       */
+     * If the AggregateExpression has already been computed in a previous node (consider "x" in
+     * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it doesn't count as a new Aggregate and is therefore not
+     * considered an "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
+     * but it's the best solution I can come up with right now.
+     */
     if (_current_lqp->find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
 
     auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
@@ -1247,8 +1247,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
 
       /**
-         * Aggregate function
-         */
+       * Aggregate function
+       */
       const auto aggregate_iter = aggregate_function_to_string.right.find(name);
       if (aggregate_iter != aggregate_function_to_string.right.end()) {
         auto aggregate_function = aggregate_iter->second;
@@ -1281,8 +1281,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       }
 
       /**
-         * "Normal" function
-         */
+       * "Normal" function
+       */
       const auto function_iter = function_type_to_string.right.find(name);
 
       if (function_iter != function_type_to_string.right.end()) {

@@ -45,12 +45,12 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
 }
 
 const std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
-    const std::shared_ptr<AbstractExpression> &expression) const {
+    const std::shared_ptr<AbstractExpression>& expression) const {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
   std::vector<SQLIdentifier> identifiers;
   if (entry_iter == _entries.end()) return identifiers;
-  for (const auto &column_name : entry_iter->column_names) {
+  for (const auto& column_name : entry_iter->column_names) {
     identifiers.emplace_back(SQLIdentifier(column_name, entry_iter->table_name));
   }
   return identifiers;
@@ -59,7 +59,7 @@ const std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifie
 std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierResolver::resolve_table_name(
     const std::string& table_name) const {
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
-  for (const auto &entry : _entries) {
+  for (const auto& entry : _entries) {
     if (entry.table_name == table_name) {
       expressions.emplace_back(entry.expression);
     }
@@ -74,15 +74,9 @@ void SQLIdentifierResolver::append(SQLIdentifierResolver&& rhs) {
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_expression_entry(
     const std::shared_ptr<AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
-                                 [&](const auto &entry) { return *entry.expression == *expression; });
+                                 [&](const auto& entry) { return *entry.expression == *expression; });
   Assert(entry_iter != _entries.end(), "The expression does not exist.");
   return *entry_iter;
-}
-
-bool SQLIdentifierResolver::has_expression(const std::shared_ptr<opossum::AbstractExpression> &expression) {
-  return std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) {
-    return *entry.expression == *expression;
-  }) != _entries.end();
 }
 
 SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_entry(
