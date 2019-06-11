@@ -40,8 +40,7 @@ class SQLIdentifierResolverTest : public BaseTest {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed, expression_a1,
-      expression_a2;
+  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed;
   SQLIdentifierResolver context;
   std::shared_ptr<ParameterIDAllocator> parameter_id_allocator;
 };
@@ -108,36 +107,6 @@ TEST_F(SQLIdentifierResolverTest, ColumnNameRedundancy) {
 
   context.set_table_name(expression_a2, "T2");
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T2"}), expression_a2);
-}
-
-TEST_F(SQLIdentifierResolverTest, CountIdentifiers) {
-  /**
-   * Simulate a scenario in which identical expressions have different aliases
-   */
-
-  EXPECT_EQ(context.count_identifiers(expression_a), 1);
-  EXPECT_EQ(context.count_identifiers(expression_a1), 1);
-  EXPECT_EQ(context.count_identifiers(expression_a2), 1);
-  EXPECT_EQ(context.count_identifiers(expression_b), 1);
-  EXPECT_EQ(context.count_identifiers(expression_c), 1);
-
-  context.set_table_name(expression_a1, {"T1"s});
-  context.set_table_name(expression_a2, {"T1"s});
-
-  EXPECT_EQ(context.count_identifiers(expression_a), 3);
-  EXPECT_EQ(context.count_identifiers(expression_a1), 3);
-  EXPECT_EQ(context.count_identifiers(expression_a2), 3);
-  EXPECT_EQ(context.count_identifiers(expression_b), 1);
-  EXPECT_EQ(context.count_identifiers(expression_c), 1);
-
-  context.add_column_name(expression_a1, {"a1"s});
-  context.add_column_name(expression_a2, {"a2"s});
-
-  EXPECT_EQ(context.count_identifiers(expression_a), 5);
-  EXPECT_EQ(context.count_identifiers(expression_a1), 5);
-  EXPECT_EQ(context.count_identifiers(expression_a2), 5);
-  EXPECT_EQ(context.count_identifiers(expression_b), 1);
-  EXPECT_EQ(context.count_identifiers(expression_c), 1);
 }
 
 TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
