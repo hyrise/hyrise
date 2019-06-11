@@ -13,7 +13,8 @@ class AbstractExpression;
 
 struct SQLIdentifierContextEntry final {
   std::shared_ptr<AbstractExpression> expression;
-  std::vector<SQLIdentifier> identifiers;
+  std::optional<std::string> table_name;
+  std::vector<std::string> column_names;
 };
 
 /**
@@ -24,7 +25,8 @@ class SQLIdentifierResolver final {
  public:
   /**
    * @{
-   * Set/Update/Delete the column/table names of an expression
+   * Set/Update/Delete the column/table names of an expression. There can be multiple column names referring to a single
+   * expression because a new alias does not replace a former column name or alias.
    */
   void add_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name);
   void reset_column_names(const std::shared_ptr<AbstractExpression>& expression);
@@ -62,6 +64,7 @@ class SQLIdentifierResolver final {
   int count_identifiers(const std::shared_ptr<AbstractExpression>& expression);
 
  private:
+  SQLIdentifierContextEntry& _find_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
   SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
 
   std::vector<SQLIdentifierContextEntry> _entries;

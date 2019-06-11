@@ -29,11 +29,6 @@ class SQLIdentifierResolverTest : public BaseTest {
     expression_c = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{2}));
     expression_unnamed = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{3}));
 
-    expression_a1 = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{0}));
-    expression_a2 = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, ColumnID{0}));
-    static_cast<std::shared_ptr<AbstractExpression>>(expression_a1)->id = 1;
-    static_cast<std::shared_ptr<AbstractExpression>>(expression_a2)->id = 2;
-
     context.add_column_name(expression_a, {"a"s});
     context.add_column_name(expression_b, {"b"s});
     context.add_column_name(expression_c, {"c"s});
@@ -66,19 +61,24 @@ TEST_F(SQLIdentifierResolverTest, ColumnNamesChange) {
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), expression_a);
-  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), expression_a);
+  EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T2"}), nullptr);
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s}), expression_a);
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
 }
 
-TEST_F(SQLIdentifierResolverTest, NoColumnNames) {
+TEST_F(SQLIdentifierResolverTest, ResetColumnNames) {
   context.reset_column_names(expression_a);
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T1"}), nullptr);
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s, "T1"}), expression_b);
+}
+
+TEST_F(SQLIdentifierResolverTest, ResetColumnNamesForInvalidExpression) {
+  EXPECT_THROW(context.reset_column_names(expression_unnamed), std::exception);
 }
 
 TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
@@ -205,7 +205,7 @@ TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
   EXPECT_EQ(intermediate_context_proxy->accessed_expressions().count(intermediate_expression_a), 1u);
 }
 
-TEST_F(SQLIdentifierResolverTest, GetExpressionIdentifier) {
+TEST_F(SQLIdentifierResolverTest, GetExpressionIdentifiers) {
   EXPECT_EQ(context.get_expression_identifiers(expression_a), std::vector<SQLIdentifier>{SQLIdentifier("a", "T1")});
   EXPECT_EQ(context.get_expression_identifiers(expression_unnamed), std::vector<SQLIdentifier>{});
 }

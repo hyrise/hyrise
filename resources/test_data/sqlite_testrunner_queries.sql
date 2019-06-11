@@ -91,9 +91,18 @@ SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
 SELECT 2 / 0, b / 0, 50 / id FROM mixed;
 SELECT 2 % 0, b % 0, 50 % id FROM mixed;
 
+-- Aliases
+SELECT R.a, S.a FROM mixed AS R, mixed AS S;
+SELECT a AS x FROM mixed WHERE a > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY a;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING a > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
+
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
--- SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
+SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
 SELECT a AS x, b AS y FROM mixed ORDER BY x, y;
 SELECT b + 13 AS t FROM mixed ORDER BY a, b ASC;
 SELECT * FROM mixed ORDER BY a, b DESC;
@@ -112,6 +121,7 @@ SELECT * FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".d;
 
 -- JOIN
 SELECT "left".a, "left".b, "right".a, "right".b FROM mixed AS "left" JOIN mixed_null AS "right" ON "left".b = "right".b;
+SELECT "left".e, "left".f, "right".a, "right".b FROM (SELECT a AS e, b as f FROM mixed) AS "left" JOIN mixed_null AS "right" ON "left".f = "right".b;
 SELECT * FROM mixed AS "left" LEFT JOIN mixed_null AS "right" ON "left".b = "right".b;
 SELECT b.*, a.* FROM mixed AS a JOIN mixed AS b ON a.id = b.id WHERE a.id > 50;
 SELECT * FROM mixed AS "left" INNER JOIN mixed_null AS "right" ON "left".b = "right".b;
@@ -119,7 +129,7 @@ SELECT * FROM mixed NATURAL JOIN (SELECT id FROM id_int_int_int_100) AS T2;
 SELECT * FROM mixed NATURAL JOIN (SELECT c AS foo, id FROM id_int_int_int_100) AS T2;
 SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mixed AS "right" ON "left".a = "right".a) t where t.a > 0;
 SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5;
-SELECT l.id, r.id + 10 AS a FROM (SELECT id + 5 AS id FROM mixed WHERE id > 90) AS l LEFT JOIN mixed AS r ON l.id = r.id
+SELECT l.new_id, r.id + 10 AS a FROM (SELECT id + 5 AS new_id FROM mixed WHERE new_id > 90) AS l LEFT JOIN mixed AS r ON l.new_id = r.id
 SELECT (SELECT r.id AS a FROM (SELECT id + 5 AS id FROM mixed) AS l LEFT JOIN mixed AS r ON l.id = r.id WHERE l.id >= 100 LIMIT 1) + 5 AS a
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a < t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
@@ -132,7 +142,7 @@ SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a <= t2.a AND t1.b = t2.b AND t1.c > t2.c;
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a >= t2.a AND t1.b = t2.b AND t1.c < t2.c;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
-SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b < t2.b;
+--SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b < t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b <= t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b > t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b >= t2.b;
@@ -148,8 +158,7 @@ SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
-
--- SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 
 -- JOIN multiple tables
@@ -191,8 +200,6 @@ SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT SUM(min_a) FROM (SELECT 
 SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
-SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
-SELECT a AS whatever, SUM(b) FROM mixed GROUP BY a;
 
 -- DISTINCT
 SELECT DISTINCT a FROM mixed;
@@ -389,7 +396,8 @@ SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT a FROM id_int_int_int_50 WHERE EXISTS (SELECT b FROM mixed))
 SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b AND s.c < r.c)
 
--- Cannot test the following expressions, because sqlite doesn't support them:
+-- Cannot test the following (expressions), because sqlite doesn't support them:
 --  * EXTRACT
 --  * CONCAT
 --  * PREPARE/EXECUTE
+--  rename columns in FROM clause

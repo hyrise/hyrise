@@ -108,8 +108,9 @@ class SQLTranslator final {
   void _create_new_expression_for_different_alias(
       std::shared_ptr<AbstractExpression>& expression,
       const std::shared_ptr<SQLIdentifierResolver>& current_sql_identifier_resolver);
-
-  void _translate_select_list_groupby_having(const hsql::SelectStatement& select);
+  std::vector<std::shared_ptr<AbstractExpression>> _translate_select_list(const std::vector<hsql::Expr*>& select_list);
+  void _translate_select_groupby_having(const hsql::SelectStatement& select,
+                                        const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements);
 
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
