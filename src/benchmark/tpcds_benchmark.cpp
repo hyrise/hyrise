@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
     if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
       return 0;
     }
-    scale_factor = cli_parse_result["scale"].as<int>();
+    scale_factor = cli_parse_result["scale"].as<int32_t>();
 
     config =
         std::make_shared<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
