@@ -916,20 +916,24 @@ void SQLTranslator::_translate_select_groupby_having(
 
           _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
                                                    from_element_iter->second.begin(), from_element_iter->second.end());
-          new_select_list_identifiers.emplace_back(SQLIdentifier{"", hsql_expr->table});
+          new_select_list_identifiers.insert(new_select_list_identifiers.end(), from_element_iter->second.size(),
+                                             SQLIdentifier{"", hsql_expr->table});
         }
       } else {
         if (is_aggregate) {
           // Select all GROUP BY columns
           _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
                                                    group_by_expressions.begin(), group_by_expressions.end());
+          new_select_list_identifiers.insert(new_select_list_identifiers.end(), group_by_expressions.size(),
+                                             SQLIdentifier{""});
         } else {
           // Select all columns from the FROM elements
           _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
                                                    _from_clause_result->elements_in_order.begin(),
                                                    _from_clause_result->elements_in_order.end());
+          new_select_list_identifiers.insert(new_select_list_identifiers.end(),
+                                             _from_clause_result->elements_in_order.size(), SQLIdentifier{""});
         }
-        new_select_list_identifiers.emplace_back(SQLIdentifier{"", hsql_expr->table});
       }
     } else {
       auto output_expression = select_list_elements[select_list_idx];

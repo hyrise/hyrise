@@ -164,7 +164,7 @@ class SQLTranslator final {
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
-  std::vector<SQLIdentifier> _inflated_select_list_identifiers;
+  std::vector<SQLIdentifier> _inflated_select_list_identifiers; // todo(jj) merge both data structures to ensure consistency
 };
 
 }  // namespace opossum
