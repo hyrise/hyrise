@@ -241,13 +241,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
   // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
   // that is not its generated name.
-  const auto need_alias_node = std::any_of(
-      _inflated_select_list_expressions.begin(), _inflated_select_list_expressions.end(), [&](const auto& expression) {
-        const auto identifiers = _filter_identifiers_by_expression(expression, _inflated_select_list_expressions);
-        return std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
-          return identifier.column_name != expression->as_column_name();
-        });
-      });
+  auto need_alias_node = false;
+  for (auto idx = size_t{0}; idx < _inflated_select_list_expressions.size(); ++idx) {
+    Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj)");
+    const auto& expression = _inflated_select_list_expressions[idx];
+    const auto& identifier = _inflated_select_list_identifiers[idx];
+    need_alias_node = (identifier.column_name != "" && identifier.column_name != expression->as_column_name());
+    if (need_alias_node) break;
+  }
 
   if (need_alias_node) {
     std::vector<std::string> aliases;
