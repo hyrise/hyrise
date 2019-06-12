@@ -12,4 +12,4 @@ AbstractTpccProcedure::AbstractTpccProcedure(BenchmarkSQLExecutor sql_executor) 
 thread_local std::minstd_rand AbstractTpccProcedure::_random_engine = std::minstd_rand{42};
 thread_local TpccRandomGenerator AbstractTpccProcedure::_tpcc_random_generator = TpccRandomGenerator{42};
 
-}
+}  // namespace opossum

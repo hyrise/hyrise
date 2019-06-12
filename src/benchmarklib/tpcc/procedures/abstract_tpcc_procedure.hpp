@@ -11,7 +11,7 @@
 namespace opossum {
 
 class AbstractTpccProcedure {
-public:
+ public:
   AbstractTpccProcedure(BenchmarkSQLExecutor sql_executor);
   virtual ~AbstractTpccProcedure() = default;
 
@@ -21,7 +21,7 @@ public:
   // A single character (D/N/O/P/S) used to identify the procedure in result CSVs
   virtual char identifier() const = 0;
 
-protected:
+ protected:
   static thread_local std::minstd_rand _random_engine;
   static thread_local TpccRandomGenerator _tpcc_random_generator;
 
@@ -30,4 +30,4 @@ protected:
 
 std::ostream& operator<<(std::ostream& stream, const AbstractTpccProcedure& procedure);
 
-}
+}  // namespace opossum

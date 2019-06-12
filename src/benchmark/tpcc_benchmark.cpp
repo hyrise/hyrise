@@ -57,7 +57,10 @@ int main(int argc, char* argv[]) {
     const auto procedure_begin = std::chrono::high_resolution_clock::now();
     const bool success = procedure->execute();
     const auto procedure_end = std::chrono::high_resolution_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - benchmark_begin).count() << ',' << procedure->identifier() << ',' << (success ? '1' : '0') << "," << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - procedure_begin).count() << std::endl;
+    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - benchmark_begin).count() << ','
+              << procedure->identifier() << ',' << (success ? '1' : '0') << ","
+              << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - procedure_begin).count()
+              << std::endl;
   }
 
   return 0;
