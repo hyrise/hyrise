@@ -28,7 +28,6 @@ def initialize(arguments, benchmark_name):
   build_dir = sys.argv[1]
 
   concat_arguments = ' '.join(['='.join(map(str, x)) for x in arguments.items()])
-  print(concat_arguments)
 
   benchmark = pexpect.spawn(build_dir + "/" + benchmark_name + " " + concat_arguments, maxread=1000000, timeout=600, dimensions=(200, 64))
   benchmark.logfile = sys.stdout
