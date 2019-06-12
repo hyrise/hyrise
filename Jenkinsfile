@@ -62,8 +62,6 @@ try {
       } finally {
         sh "ls -A1 | xargs rm -rf"
       }
-    } else {
-      Utils.markStageSkippedForConditional("clangDebugMac")
     }
   }
 
