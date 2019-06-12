@@ -10,6 +10,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -315,6 +316,31 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state)
         std::make_shared<JoinSortMerge>(table_scan, _table_wrapper_map.at("lineitem"), JoinMode::FullOuter,
                                         OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::GreaterThan});
     join->execute();
+  }
+
+  // CurrentScheduler::get()->finish();
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3)(benchmark::State& state) {
+  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  auto& sm = StorageManager::get();
+  auto orders_table = sm.get_table("orders");
+
+  auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
+                                       orders_table->column_is_nullable(ColumnID{0}), "");
+  auto int_predicate =
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(10));
+
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
+  table_scan->execute();
+
+  for (auto _ : state) {
+    auto radix_clusterer = RadixClusterSort<int>(
+        table_scan->get_output(), sm.get_table("lineitem"),
+        {ColumnID{0}, ColumnID{1}}, false,
+        false, false, 64);
+    auto sort_output = radix_clusterer.execute();
   }
 
   // CurrentScheduler::get()->finish();

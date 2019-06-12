@@ -896,8 +896,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
-    _sorted_left_table = std::move(sort_output.clusters_left);
-    _sorted_right_table = std::move(sort_output.clusters_right);
+    _sorted_left_table = std::move(std::make_unique<MaterializedSegmentList<T>>(sort_output.clusters_left));
+    _sorted_right_table = std::move(std::make_unique<MaterializedSegmentList<T>>(sort_output.clusters_right));
     _null_rows_left = std::move(sort_output.null_rows_left);
     _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);

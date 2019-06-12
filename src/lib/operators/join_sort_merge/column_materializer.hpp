@@ -60,12 +60,12 @@ class ColumnMaterializer {
    * by creating multiple jobs that materialize chunks.
    * Returns the materialized segments and a list of null row ids if materialize_null is enabled.
    **/
-  std::tuple<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<PosList>, std::vector<T>> materialize(
+  std::tuple<MaterializedSegmentList<T>, std::unique_ptr<PosList>, std::vector<T>> materialize(
       const std::shared_ptr<const Table> input, const ColumnID column_id) {
     const ChunkOffset samples_per_chunk = 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
 
-    auto output = std::make_unique<MaterializedSegmentList<T>>(chunk_count);
+    auto output = MaterializedSegmentList<T>(chunk_count);
     auto null_rows = std::make_unique<PosList>();
 
     std::vector<Subsample<T>> subsamples;
@@ -97,7 +97,7 @@ class ColumnMaterializer {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedSegmentList<T>>& output,
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(MaterializedSegmentList<T>& output,
                                                                   std::unique_ptr<PosList>& null_rows_output,
                                                                   const ChunkID chunk_id,
                                                                   std::shared_ptr<const Table> input,
@@ -106,10 +106,10 @@ class ColumnMaterializer {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
       if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-        (*output)[chunk_id] =
+        output[chunk_id] =
             _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
       } else {
-        (*output)[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
+        output[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
       }
     });
   }

@@ -18,8 +18,8 @@ namespace opossum {
 */
 template <typename T>
 struct RadixClusterOutput {
-  std::unique_ptr<MaterializedSegmentList<T>> clusters_left;
-  std::unique_ptr<MaterializedSegmentList<T>> clusters_right;
+  MaterializedSegmentList<T> clusters_left;
+  MaterializedSegmentList<T> clusters_right;
   std::unique_ptr<PosList> null_rows_left;
   std::unique_ptr<PosList> null_rows_right;
 };
@@ -134,10 +134,10 @@ class RadixClusterSort {
   /**
   * Determines the total size of a materialized segment list.
   **/
-  static size_t _materialized_table_size(std::unique_ptr<MaterializedSegmentList<T>>& table) {
+  static size_t _materialized_table_size(const MaterializedSegmentList<T>& materialized_segments) {
     size_t total_size = 0;
-    for (auto chunk : *table) {
-      total_size += chunk->size();
+    for (const auto& materialized_segment : materialized_segments) {
+      total_size += materialized_segment->size();
     }
 
     return total_size;
@@ -146,19 +146,24 @@ class RadixClusterSort {
   /**
   * Concatenates multiple materialized segments to a single materialized segment.
   **/
-  static std::unique_ptr<MaterializedSegmentList<T>> _concatenate_chunks(
-      std::unique_ptr<MaterializedSegmentList<T>>& input_chunks) {
-    auto output_table = std::make_unique<MaterializedSegmentList<T>>(1);
-    (*output_table)[0] = std::make_shared<MaterializedSegment<T>>();
+  static MaterializedSegmentList<T> _concatenate_materialized_segments(
+      const MaterializedSegmentList<T>& materialized_segments) {
+    // auto output = MaterializedSegmentList<T>(1);
+    auto output = MaterializedSegment<T>();
+    // output[0] = std::make_shared<MaterializedSegment<T>>();
 
     // Reserve the required space and move the data to the output
-    auto output_chunk = (*output_table)[0];
-    output_chunk->reserve(_materialized_table_size(input_chunks));
-    for (auto& chunk : *input_chunks) {
-      output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
+    output.reserve(_materialized_table_size(materialized_segments));
+    for (const auto& materialized_segment : materialized_segments) {
+      output.insert(output.end(), materialized_segment->cbegin(), materialized_segment->cend());
     }
 
-    return output_table;
+    std::sort(output.begin(), output.end(),
+                  [](const auto& a, const auto& b) { return a.value < b.value; });
+
+    const auto shared = std::make_shared<MaterializedSegment<T>>(output);
+
+    return {shared};
   }
 
   /**
@@ -170,19 +175,19 @@ class RadixClusterSort {
   * -> Reserve the appropriate space for each output cluster to avoid ongoing vector resizing.
   * -> At last, each value of each chunk is moved to the appropriate cluster.
   **/
-  std::unique_ptr<MaterializedSegmentList<T>> _cluster(const std::unique_ptr<MaterializedSegmentList<T>>& input_chunks,
-                                                       const std::function<size_t(const T&)> clusterer) {
-    auto output_table = std::make_unique<MaterializedSegmentList<T>>(_cluster_count);
-    TableInformation table_information(input_chunks->size(), _cluster_count);
+  MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& input_chunks,
+                                      const std::function<size_t(const T&)> clusterer) {
+    auto output = MaterializedSegmentList<T>(_cluster_count);
+    TableInformation table_information(input_chunks.size(), _cluster_count);
 
     // Count for every chunk the number of entries for each cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> histogram_jobs;
-    for (auto chunk_number = size_t{0}; chunk_number < input_chunks->size(); ++chunk_number) {
+    for (auto chunk_number = size_t{0}; chunk_number < input_chunks.size(); ++chunk_number) {
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
-      auto job = std::make_shared<JobTask>([&, chunk_number, this] {
+      auto job = std::make_shared<JobTask>([&, chunk_number, clusterer, this] {
+        // clusterer is passed by value to have a job-local copy
         auto& chunk_information = table_information.chunk_information[chunk_number];
-        auto input_chunk = (*input_chunks)[chunk_number];
-        auto local_clusterer{clusterer};  // obtain functor copy (see RangeClusterFunctor)
+        auto input_chunk = input_chunks[chunk_number];
 
         // Sort each input chunk to improve histogram building and especially the clustered writes.
         // Writing sorted sets later allows to use in_place merging over sorting the whole array.
@@ -194,9 +199,8 @@ class RadixClusterSort {
                     "Input chunks need to be sorted.");
 
         if (_cluster_count > 1) {
-          const auto& input_chunk_ref = *input_chunk;
-          for (const auto& entry : input_chunk_ref) {
-            const auto cluster_id = local_clusterer(entry.value);
+          for (const auto& entry : *input_chunk) {
+            const auto cluster_id = clusterer(entry.value);
             ++chunk_information.cluster_histogram[cluster_id];
           }
         }
@@ -224,27 +228,25 @@ class RadixClusterSort {
       // Reserve the appropriate output space for the clusters
       for (auto cluster_id = size_t{0}; cluster_id < _cluster_count; ++cluster_id) {
         const auto cluster_size = table_information.cluster_histogram[cluster_id];
-        (*output_table)[cluster_id] = std::make_shared<MaterializedSegment<T>>(cluster_size);
+        output[cluster_id] = std::make_shared<MaterializedSegment<T>>(cluster_size);
       }
     } else {
       auto single_cluster_size = size_t{0};
-      for (const auto& chunk : *input_chunks) {
+      for (const auto& chunk : input_chunks) {
         single_cluster_size += chunk->size();
       }
-      (*output_table)[0] = std::make_shared<MaterializedSegment<T>>(single_cluster_size);
+      output[0] = std::make_shared<MaterializedSegment<T>>(single_cluster_size);
     }
 
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
-    const auto input_chunks_size = input_chunks->size();
+    const auto input_chunks_size = input_chunks.size();
     for (auto chunk_number = size_t{0}; chunk_number < input_chunks_size; ++chunk_number) {
       auto job = std::make_shared<JobTask>([&, clusterer] {  // copy cluster functor per task
             auto& chunk_information = table_information.chunk_information[chunk_number];
-            const auto& input_chunk = *(*input_chunks)[chunk_number];
-            const auto& output_table_ref = *output_table;
-            for (auto& entry : input_chunk) {
+            for (const auto& entry : *(input_chunks[chunk_number])) {
               const auto cluster_id = clusterer(entry.value);
-              auto& output_cluster = *(output_table_ref)[cluster_id];
+              auto& output_cluster = *(output[cluster_id]);
               auto& insert_position = chunk_information.insert_position[cluster_id];
               output_cluster[insert_position] = entry;
               ++insert_position;
@@ -256,7 +258,7 @@ class RadixClusterSort {
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
 
-    return output_table;
+    return output;
   }
 
   /**
@@ -266,10 +268,10 @@ class RadixClusterSort {
   * - manually select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
-  std::unique_ptr<MaterializedSegmentList<T>> _radix_cluster(
-      std::unique_ptr<MaterializedSegmentList<T>>& input_chunks) {
+  MaterializedSegmentList<T> _radix_cluster(
+      const MaterializedSegmentList<T>& materialized_segments) {
     auto radix_bitmask = _cluster_count - 1;
-    return _cluster(input_chunks, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
+    return _cluster(materialized_segments, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
   /**
@@ -310,9 +312,9 @@ class RadixClusterSort {
   * be sorted and not only the clusters in themselves. Returns the clustered data from the left table and the
   * right table in a pair.
   **/
-  std::pair<std::unique_ptr<MaterializedSegmentList<T>>, std::unique_ptr<MaterializedSegmentList<T>>> _range_cluster(
-      const std::unique_ptr<MaterializedSegmentList<T>>& input_left,
-      const std::unique_ptr<MaterializedSegmentList<T>>& input_right, std::vector<T> sample_values) {
+  std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> _range_cluster(
+      const MaterializedSegmentList<T>& input_left,
+      const MaterializedSegmentList<T>& input_right, std::vector<T> sample_values) {
     const std::vector<T> split_values = _pick_split_values(sample_values);
     DebugAssert(std::is_sorted(split_values.begin(), split_values.end()), "Split values need to be sorted.");
 
@@ -356,7 +358,6 @@ class RadixClusterSort {
       const T max_split_value;
     };
 
-    std::function<size_t(const T&)> clusterer;
     auto output_left = _cluster(input_left, RangeClusterFunctor(split_values));
     auto output_right = _cluster(input_right, RangeClusterFunctor(split_values));
 
@@ -366,9 +367,9 @@ class RadixClusterSort {
   /**
   * Sorts all clusters of a materialized table.
   **/
-  void _sort_clusters(std::unique_ptr<MaterializedSegmentList<T>>& clusters) {
-    for (auto cluster : *clusters) {
-      std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
+  void _sort_clusters(MaterializedSegmentList<T>& materialized_segments) {
+    for (const auto& materialized_segment : materialized_segments) {
+      std::sort(materialized_segment->begin(), materialized_segment->end(), [](auto& left, auto& right) { return left.value < right.value; });
     }
   }
 
@@ -394,8 +395,8 @@ class RadixClusterSort {
     samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
     if (_cluster_count == 1) {
-      output.clusters_left = _concatenate_chunks(materialized_left_segments);
-      output.clusters_right = _concatenate_chunks(materialized_right_segments);
+      output.clusters_left = std::move(_concatenate_materialized_segments(materialized_left_segments));
+      output.clusters_right = std::move(_concatenate_materialized_segments(materialized_right_segments));
     } else if (_equi_case) {
       output.clusters_left = _radix_cluster(materialized_left_segments);
       output.clusters_right = _radix_cluster(materialized_right_segments);
