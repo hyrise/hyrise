@@ -73,13 +73,11 @@ struct FixedSizeGroupRunLayout {
 using GroupRunElementType = uint32_t;
 
 struct FixedSizeGroupRemoteKey {
-  size_t hash{};
   const GroupRunElementType* group{};
 };
 
 template<size_t group_size>
 struct FixedSizeGroupInPlaceKey {
-  size_t hash{};
   std::array<GroupRunElementType, group_size> group{};
 };
 
@@ -93,6 +91,19 @@ struct FixedSizeGroupKeyCompare {
   template<size_t group_size>
   bool operator()(const FixedSizeGroupInPlaceKey<group_size>& lhs, const FixedSizeGroupInPlaceKey<group_size>& rhs) const {
     return lhs.group == rhs.group;
+  }
+};
+
+struct FixedSizeGroupKeyHasher {
+  const FixedSizeGroupRunLayout* layout{};
+
+  size_t operator()(const FixedSizeGroupRemoteKey& key) const {
+    return boost::hash_range(key.group, key.group + layout->group_size);
+  }
+
+  template<size_t group_size>
+  size_t operator()(const FixedSizeGroupInPlaceKey<group_size>& key) const {
+    return boost::hash_range(key.group.begin(), key.group.end());
   }
 };
 
@@ -128,11 +139,13 @@ struct FixedSizeGroupRun {
   using LayoutType = FixedSizeGroupRunLayout;
   using HashTableKey = typename GetGroupSize::KeyType;
   using HashTableCompare = FixedSizeGroupKeyCompare;
+  using Hasher = FixedSizeGroupKeyHasher;
   using GetGroupSizeType = GetGroupSize;
 
   FixedSizeGroupRun(const FixedSizeGroupRunLayout* layout, const size_t size) : layout(layout), get_group_size(layout) {
     data.resize(size * get_group_size());
-    hashes.resize(size);
+    capacity = size;
+//    hashes.resize(size);
   }
 
   const FixedSizeGroupRunLayout* layout;
@@ -142,9 +155,7 @@ struct FixedSizeGroupRun {
 
   uninitialized_vector<GroupRunElementType> data;
 
-  // Hash per group - using std::vector because we build the hash incrementally and thus want this to be
-  // zero-initialized
-  uninitialized_vector<size_t> hashes;
+  size_t capacity{};
 
   // Number of groups in this run
   size_t end{0};
@@ -154,16 +165,18 @@ struct FixedSizeGroupRun {
   }
 
   bool can_append(const FixedSizeGroupRun& source_run, const size_t source_offset) const {
-    return end + _append_buffer.size() < hashes.size();
+    return end + _append_buffer.size() < capacity;
   }
 
   HashTableKey make_key(const size_t offset) const {
     if constexpr (std::is_same_v<GetGroupSize, GetDynamicGroupSize>) {
-      return {hashes[offset], &data[offset * get_group_size()]};
+      return {&data[offset * get_group_size()]};
     } else {
       HashTableKey key;
-      key.hash = hashes[offset];
-      memcpy(&key.group, &data[offset * get_group_size()], get_group_size());
+
+      const auto iter = data.begin() + offset * get_group_size();
+      std::copy(iter, iter + get_group_size(), key.group.begin());
+
       return key;
     }
   }
@@ -208,19 +221,22 @@ struct FixedSizeGroupRun {
   }
 
   void flush_append_buffer(const FixedSizeGroupRun& source) {
-    DebugAssert(end + _append_buffer.size() <= hashes.size(), "Append buffer to big for this run");
+    DebugAssert(end + _append_buffer.size() <= capacity, "Append buffer to big for this run");
 
     for (const auto& source_offset : _append_buffer) {
       std::copy(source.data.begin() + source_offset * get_group_size(),
                 source.data.begin() + (source_offset + 1) * get_group_size(),
                 data.begin() + end * get_group_size());
-      hashes[end] = source.hashes[source_offset];
+      //hashes[end] = source.hashes[source_offset];
       ++end;
     }
     _append_buffer.clear();
   }
 
-  size_t hash(const size_t offset) const { return hashes[offset]; }
+  size_t hash(const size_t offset) const {
+    const auto iter = data.begin() + offset * get_group_size();
+    return boost::hash_range(iter, iter + get_group_size());
+  }
 
   size_t size() const { return end; }
 
@@ -228,7 +244,7 @@ struct FixedSizeGroupRun {
     DebugAssert(size >= end, "Resize would discard data");
 
     data.resize(size * get_group_size());
-    hashes.resize(size);
+    //hashes.resize(size);
   }
 
   void finish() {
@@ -270,13 +286,6 @@ struct VariablySizedGroupRunLayout {
 
 using GroupRunElementType = uint32_t;
 
-struct VariablySizedRemoteGroupKey {
-  const GroupRunElementType* variably_sized_group;
-  size_t variably_sized_group_length;
-  const size_t* value_end_offsets;
-  const GroupRunElementType* fixed_sized_group;
-};
-
 struct VariablySizedInPlaceGroupKey {
   constexpr static auto CAPACITY = 1; // sizeof(VariablySizedRemoteGroupKey) / sizeof(GroupRunElementType);
 
@@ -285,8 +294,15 @@ struct VariablySizedInPlaceGroupKey {
   std::array<GroupRunElementType, CAPACITY> group;
 };
 
+struct VariablySizedRemoteGroupKey {
+  const GroupRunElementType* variably_sized_group;
+  size_t variably_sized_group_length;
+  const size_t* value_end_offsets;
+  const GroupRunElementType* fixed_sized_group;
+};
+
 struct VariablySizedGroupKey {
-  size_t hash{};
+  //size_t hash{};
   boost::variant<VariablySizedInPlaceGroupKey, VariablySizedRemoteGroupKey> variant;
 };
 
@@ -338,7 +354,27 @@ struct VariablySizedGroupKeyCompare {
       const auto fixed_group_size = GetFixedGroupSize{&layout->fixed_layout}();
       return std::equal(remote_lhs.fixed_sized_group, remote_lhs.fixed_sized_group + fixed_group_size, remote_rhs.fixed_sized_group);
     }
+  }
+};
 
+template<typename GetFixedGroupSize>
+struct VariablySizedGroupKeyHasher {
+  const VariablySizedGroupRunLayout* layout{};
+
+  bool operator()(const VariablySizedGroupKey& key) const {
+    if (key.variant.which() == 0) {
+      Fail("");
+    } else {
+      const auto& remote_key = boost::get<VariablySizedRemoteGroupKey>(key.variant);
+      auto hash = size_t{0};
+
+      boost::hash_combine(hash, boost::hash_range(remote_key.variably_sized_group, remote_key.variably_sized_group + remote_key.variably_sized_group_length));
+      boost::hash_combine(hash, boost::hash_range(remote_key.value_end_offsets, remote_key.value_end_offsets + layout->column_count));
+
+      const auto fixed_group_size = GetFixedGroupSize{&layout->fixed_layout}();
+      boost::hash_combine(hash, boost::hash_range(remote_key.fixed_sized_group, remote_key.fixed_sized_group + fixed_group_size));
+      return hash;
+    }
   }
 };
 
@@ -347,6 +383,7 @@ struct VariablySizedGroupRun {
   using LayoutType = VariablySizedGroupRunLayout;
   using HashTableKey = VariablySizedGroupKey;
   using HashTableCompare = VariablySizedGroupKeyCompare<GetFixedGroupSize>;
+  using Hasher = VariablySizedGroupKeyHasher<GetFixedGroupSize>;
   using GetFixedGroupSizeType = GetFixedGroupSize;
 
   const VariablySizedGroupRunLayout* layout;
@@ -386,7 +423,7 @@ struct VariablySizedGroupRun {
 
     if (total_group_size <= VariablySizedInPlaceGroupKey::CAPACITY && false) {
       auto key = VariablySizedGroupKey{};
-      key.hash = fixed.hashes[offset];
+      //key.hash = fixed.hashes[offset];
 
       key.variant = VariablySizedInPlaceGroupKey{};
       auto& in_place = boost::get<VariablySizedInPlaceGroupKey>(key.variant);
@@ -397,7 +434,7 @@ struct VariablySizedGroupRun {
 
       return key;
     } else {
-      return {fixed.hashes[offset], VariablySizedRemoteGroupKey{
+      return {/*fixed.hashes[offset],*/ VariablySizedRemoteGroupKey{
         variably_sized_group,
         variably_sized_group_size,
         &value_end_offsets[offset * layout->column_count],
@@ -494,7 +531,13 @@ struct VariablySizedGroupRun {
 
   size_t size() const { return fixed.end; }
 
-  size_t hash(const size_t offset) const { return fixed.hash(offset); }
+  size_t hash(const size_t offset) const {
+    auto hash = fixed.hash(offset);
+    const auto iter = data.begin() + (offset > 0 ? group_end_offsets[offset - 1] : 0);
+    const auto group_size = offset == 0 ? group_end_offsets[0] : group_end_offsets[offset] - group_end_offsets[offset - 1];
+    boost::hash_combine(hash, boost::hash_range(iter, iter + group_size));
+    return hash;
+  }
 
   void finish() {
     fixed.finish();
@@ -723,14 +766,13 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
        ++output_group_by_column_idx) {
     auto* target = reinterpret_cast<char*>(group_run.data.data()) + layout->column_base_offsets[output_group_by_column_idx];
     auto run_offset = size_t{0};
+    const auto column_is_nullable = table->column_is_nullable(group_by_column_ids[output_group_by_column_idx]);
 
     auto column_iterable = ColumnIterable{table, group_by_column_ids[output_group_by_column_idx]};
     end_row_id = column_iterable.for_each<ResolveDataTypeTag>([&](const auto& segment_position, const RowID& row_id) {
       using ColumnDataType = typename std::decay_t<decltype(segment_position)>::Type;
 
-      constexpr auto ColumnIsNullable = std::decay_t<decltype(segment_position)>::Nullable;
-
-      if constexpr (ColumnIsNullable) {
+      if (column_is_nullable) {
         if (segment_position.is_null()) {
           *target = 1;
           memset(target + 1, 0, sizeof(ColumnDataType));
@@ -741,12 +783,12 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
       } else {
         memcpy(target, &segment_position.value(), sizeof(ColumnDataType));
       }
-
-      if (output_group_by_column_idx == 0) {
-        group_run.hashes[run_offset] = hash_segment_position(segment_position);
-      } else {
-        boost::hash_combine(group_run.hashes[run_offset], hash_segment_position(segment_position));
-      }
+//
+//      if (output_group_by_column_idx == 0) {
+//        group_run.hashes[run_offset] = hash_segment_position(segment_position);
+//      } else {
+//        boost::hash_combine(group_run.hashes[run_offset], hash_segment_position(segment_position));
+//      }
 
       target += group_run.get_group_size() * GROUP_DATA_ELEMENT_SIZE;
       ++run_offset;
@@ -756,10 +798,10 @@ inline std::pair<FixedSizeGroupRun<GetGroupSize>, RowID> produce_initial_groups(
   }
 
   group_run.end = row_count;
-
-  if (group_by_column_count == 0) {
-    std::fill(group_run.hashes.begin(), group_run.hashes.end(), 0);
-  }
+//
+//  if (group_by_column_count == 0) {
+//    std::fill(group_run.hashes.begin(), group_run.hashes.end(), 0);
+//  }
 
   return {std::move(group_run), end_row_id};
 }
@@ -934,7 +976,7 @@ const size_t per_column_data_budget_bytes) {
 
       memcpy(target, source, source_size);
 
-      boost::hash_combine(group_run.fixed.hashes[row_idx], boost::hash_range(source, source + source_size));
+//      boost::hash_combine(group_run.fixed.hashes[row_idx], boost::hash_range(source, source + source_size));
 
       source += source_size;
     }
@@ -1084,8 +1126,7 @@ std::pair<bool, size_t> hashing(const size_t hash_table_size,
 #endif
 
 #if 1
-  auto hash_fn = [&](const auto& key) { return key.get_hash(); };
-
+  auto hash_fn = typename GroupRun::Hasher{run_source.layout};
   auto compare_fn = typename GroupRun::HashTableCompare{run_source.layout};
 
   auto hash_table = std::unordered_map<typename GroupRun::HashTableKey, size_t, decltype(hash_fn), decltype(compare_fn)>{

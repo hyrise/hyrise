@@ -107,7 +107,7 @@ TEST_F(AggregateHashSortTest, FixedSizeGroupRun) {
   add_group_data(run.data, true,  int64_t{0}, int64_t{8}, true, int32_t{0});
   add_group_data(run.data, false, int64_t{1}, int64_t{2}, false, int32_t{3});
 
-  run.hashes = {0u, 1u, 2u, 3u, 4u};
+  // run.hashes = {0u, 1u, 2u, 3u, 4u};
   run.end = 5u;
 
   auto compare = FixedSizeGroupKeyCompare{&layout};
@@ -153,7 +153,7 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
   add_group_data(variably_sized_run.fixed.data, int32_t{1});
   add_group_data(variably_sized_run.fixed.data, int32_t{1});
   variably_sized_run.fixed.end = 4;
-  variably_sized_run.fixed.hashes = {0b0, 0b0, 0b1, 0b1};
+  //variably_sized_run.fixed.hashes = {0b0, 0b0, 0b1, 0b1};
 
   auto compare = VariablySizedGroupKeyCompare<GetDynamicGroupSize>{&variably_sized_layout};
 
@@ -191,7 +191,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixed) {
   const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 3);
 
   EXPECT_EQ(end_row_id, RowID(ChunkID{0}, ChunkOffset{4}));
-  EXPECT_EQ(groups.hashes.size(), 3u);
+  //EXPECT_EQ(groups.hashes.size(), 3u);
   EXPECT_EQ(groups.end, 3u);
 
   // clang-format off
@@ -262,7 +262,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited
   }));
   // clang-format on
 
-  EXPECT_EQ(groups.fixed.hashes.size(), 4u);
+  //EXPECT_EQ(groups.fixed.hashes.size(), 4u);
 
   // clang-format off
   auto expected_fixed_group_data = uninitialized_vector<GroupRunElementType>{};
@@ -307,7 +307,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedRowBudgetLimited)
   }));
   // clang-format on
 
-  EXPECT_EQ(groups.fixed.hashes.size(), 4u);
+  //EXPECT_EQ(groups.fixed.hashes.size(), 4u);
   EXPECT_EQ(groups.fixed.data, uninitialized_vector<GroupRunElementType>());
   EXPECT_EQ(groups.fixed.end, 4);
 }
@@ -334,7 +334,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedTableSizeLimitted
   EXPECT_EQ(groups.value_end_offsets, uninitialized_vector<size_t>({3, 6, 7}));
   // clang-format on
 
-  EXPECT_EQ(groups.fixed.hashes.size(), 1u);
+  //3EXPECT_EQ(groups.fixed.hashes.size(), 1u);
   EXPECT_EQ(groups.fixed.data, uninitialized_vector<uint32_t>());
   EXPECT_EQ(groups.fixed.end, 1);
 }
@@ -390,13 +390,13 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   auto groups = FixedSizeGroupRun<GetDynamicGroupSize>{&groups_layout, 7};
 
   // clang-format off
-  groups.hashes[0] = size_t{0b001}; groups.data[0] = int32_t{5};
-  groups.hashes[1] = size_t{0b100}; groups.data[1] = int32_t{2};
-  groups.hashes[2] = size_t{0b101}; groups.data[2] = int32_t{5};
-  groups.hashes[3] = size_t{0b110}; groups.data[3] = int32_t{6};
-  groups.hashes[4] = size_t{0b000}; groups.data[4] = int32_t{7};
-  groups.hashes[5] = size_t{0b100}; groups.data[5] = int32_t{8};
-  groups.hashes[6] = size_t{0b100}; groups.data[6] = int32_t{8};
+  /*groups.hashes[0] = size_t{0b001}; */ groups.data[0] = int32_t{5};
+  /*groups.hashes[1] = size_t{0b100}; */ groups.data[1] = int32_t{2};
+  /*groups.hashes[2] = size_t{0b101}; */ groups.data[2] = int32_t{5};
+  /*groups.hashes[3] = size_t{0b110}; */ groups.data[3] = int32_t{6};
+  /*groups.hashes[4] = size_t{0b000}; */ groups.data[4] = int32_t{7};
+  /*groups.hashes[5] = size_t{0b100}; */ groups.data[5] = int32_t{8};
+  /*groups.hashes[6] = size_t{0b100}; */ groups.data[6] = int32_t{8};
   groups.end = 7;
   // clang-format off
 
@@ -430,7 +430,7 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   ASSERT_EQ(partitions.at(3).runs.size(), 1u);
 
   ASSERT_EQ(partitions.at(0).runs.at(0).groups.data, uninitialized_vector<uint32_t>({5, 7}));
-  ASSERT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b001, 0b000}));
+  //ASSERT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b001, 0b000}));
   ASSERT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
   const auto* aggregate_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(0).runs.at(0).aggregates.at(0).get());
   ASSERT_TRUE(aggregate_0);
@@ -438,7 +438,7 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
 
   ASSERT_EQ(partitions.at(2).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2, 5}));
-  ASSERT_EQ(partitions.at(2).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b100, 0b101}));
+  //ASSERT_EQ(partitions.at(2).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b100, 0b101}));
   ASSERT_EQ(partitions.at(2).runs.at(0).aggregates.size(), 1u);
   const auto* aggregate_2_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(0).aggregates.at(0).get());
   ASSERT_TRUE(aggregate_2_0);
@@ -446,7 +446,7 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   EXPECT_EQ(aggregate_2_0->null_values, std::vector<bool>({false, false}));
 
   ASSERT_EQ(partitions.at(2).runs.at(1).groups.data, uninitialized_vector<uint32_t>({8}));
-  ASSERT_EQ(partitions.at(2).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b100}));
+  //ASSERT_EQ(partitions.at(2).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b100}));
   ASSERT_EQ(partitions.at(2).runs.at(1).aggregates.size(), 1u);
   const auto* aggregate_2_1 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(1).aggregates.at(0).get());
   ASSERT_TRUE(aggregate_2_1);
@@ -454,7 +454,7 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   EXPECT_EQ(aggregate_2_1->null_values, std::vector<bool>({false}));
 
   ASSERT_EQ(partitions.at(3).runs.at(0).groups.data, uninitialized_vector<uint32_t>({6}));
-  ASSERT_EQ(partitions.at(3).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b110}));
+  //ASSERT_EQ(partitions.at(3).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b110}));
   ASSERT_EQ(partitions.at(3).runs.at(0).aggregates.size(), 1u);
   const auto* aggregate_3 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(3).runs.at(0).aggregates.at(0).get());
   ASSERT_TRUE(aggregate_3);
@@ -492,7 +492,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
     4, 4, 4,
     6, 9, 13
   };
-  groups.fixed.hashes = {0b1, 0b0, 0b0, 0b1};
+  //groups.fixed.hashes = {0b1, 0b0, 0b0, 0b1};
   groups.fixed.end = 4;
   // clang-format on
 
@@ -544,10 +544,10 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   auto groups = FixedSizeGroupRun<GetDynamicGroupSize>{&groups_layout, 4};
 
   // clang-format off
-  groups.hashes[0] = size_t{12}; groups.data[0] = int32_t{5}; groups.data[1] = int32_t{3};
-  groups.hashes[1] = size_t{13}; groups.data[2] = int32_t{2}; groups.data[3] = int32_t{2};
-  groups.hashes[2] = size_t{12}; groups.data[4] = int32_t{5}; groups.data[5] = int32_t{3};
-  groups.hashes[3] = size_t{12}; groups.data[6] = int32_t{5}; groups.data[7] = int32_t{4};
+  /* groups.hashes[0] = size_t{12}; */ groups.data[0] = int32_t{5}; groups.data[1] = int32_t{3};
+  /* groups.hashes[1] = size_t{13}; */ groups.data[2] = int32_t{2}; groups.data[3] = int32_t{2};
+  /* groups.hashes[2] = size_t{12}; */ groups.data[4] = int32_t{5}; groups.data[5] = int32_t{3};
+  /* groups.hashes[3] = size_t{12}; */ groups.data[6] = int32_t{5}; groups.data[7] = int32_t{4};
   groups.end = 4;
   // clang-format on
 
@@ -581,17 +581,17 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   ASSERT_EQ(partitions.at(0).size(), 2u);
   ASSERT_EQ(partitions.at(1).size(), 1u);
 
-  ASSERT_EQ(partitions.at(0).runs.at(0).groups.data, uninitialized_vector<uint32_t>({5, 3, 5, 4}));
-  ASSERT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({12, 12}));
-  ASSERT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
+  EXPECT_EQ(partitions.at(0).runs.at(0).groups.data, uninitialized_vector<uint32_t>({5, 3, 5, 4}));
+ // ASSERT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({12, 12}));
+  EXPECT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
   const auto* aggregate_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(0).runs.at(0).aggregates.at(0).get());
   ASSERT_TRUE(aggregate_0);
   EXPECT_EQ(aggregate_0->values, std::vector<int64_t>({12, 0}));
   EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
 
-  ASSERT_EQ(partitions.at(1).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2, 2}));
-  ASSERT_EQ(partitions.at(1).runs.at(0).groups.hashes, uninitialized_vector<size_t>({13}));
-  ASSERT_EQ(partitions.at(1).runs.at(0).aggregates.size(), 1u);
+  EXPECT_EQ(partitions.at(1).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2, 2}));
+//  ASSERT_EQ(partitions.at(1).runs.at(0).groups.hashes, uninitialized_vector<size_t>({13}));
+  EXPECT_EQ(partitions.at(1).runs.at(0).aggregates.size(), 1u);
   const auto* aggregate_1 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(1).runs.at(0).aggregates.at(0).get());
   ASSERT_TRUE(aggregate_1);
   EXPECT_EQ(aggregate_1->values, std::vector<int64_t>({6}));
@@ -622,7 +622,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
     5,
     5
   };
-  groups.fixed.hashes = {0b0, 0b1, 0b1};
+ // groups.fixed.hashes = {0b0, 0b1, 0b1};
   // clang-format on
 
   auto partitioning = Partitioning{2, 0, 1};
@@ -656,7 +656,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.data, partition_0_expected_data);
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.group_end_offsets, uninitialized_vector<size_t>({2}));
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.value_end_offsets, uninitialized_vector<size_t>({5}));
-  EXPECT_EQ(partitions.at(0).runs.at(0).groups.fixed.hashes, uninitialized_vector<size_t>({0b0}));
+//  EXPECT_EQ(partitions.at(0).runs.at(0).groups.fixed.hashes, uninitialized_vector<size_t>({0b0}));
 
   // clang-format off
   auto partition_1_expected_data = uninitialized_vector<GroupRunElementType >{};
@@ -666,7 +666,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.data, partition_1_expected_data);
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.group_end_offsets, uninitialized_vector<size_t>({2}));
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.value_end_offsets, uninitialized_vector<size_t>({5}));
-  EXPECT_EQ(partitions.at(1).runs.at(0).groups.fixed.hashes, uninitialized_vector<size_t>({0b1}));
+ // EXPECT_EQ(partitions.at(1).runs.at(0).groups.fixed.hashes, uninitialized_vector<size_t>({0b1}));
 }
 
 TEST_F(AggregateHashSortTest, AggregateAdaptive) {
@@ -674,14 +674,14 @@ TEST_F(AggregateHashSortTest, AggregateAdaptive) {
   auto groups = FixedSizeGroupRun<GetDynamicGroupSize>{&groups_layout, 8};
 
   // clang-format off
-  groups.hashes[0] = size_t{0b1}; groups.data[0] = int32_t{5};
-  groups.hashes[1] = size_t{0b1}; groups.data[1] = int32_t{3};
-  groups.hashes[2] = size_t{0b1}; groups.data[2] = int32_t{5};
-  groups.hashes[3] = size_t{0b0}; groups.data[3] = int32_t{2};
-  groups.hashes[4] = size_t{0b1}; groups.data[4] = int32_t{3};
-  groups.hashes[5] = size_t{0b1}; groups.data[5] = int32_t{5};
-  groups.hashes[6] = size_t{0b0}; groups.data[6] = int32_t{2};
-  groups.hashes[7] = size_t{0b0}; groups.data[7] = int32_t{2};
+  /*groups.hashes[0] = size_t{0b1}; */groups.data[0] = int32_t{5};
+  /*groups.hashes[1] = size_t{0b1}; */groups.data[1] = int32_t{3};
+  /*groups.hashes[2] = size_t{0b1}; */groups.data[2] = int32_t{5};
+  /*groups.hashes[3] = size_t{0b0}; */groups.data[3] = int32_t{2};
+  /*groups.hashes[4] = size_t{0b1}; */groups.data[4] = int32_t{3};
+  /*groups.hashes[5] = size_t{0b1}; */groups.data[5] = int32_t{5};
+  /*groups.hashes[6] = size_t{0b0}; */groups.data[6] = int32_t{2};
+  /*groups.hashes[7] = size_t{0b0}; */groups.data[7] = int32_t{2};
   groups.end = 8;
   // clang-format off
 
@@ -714,14 +714,14 @@ TEST_F(AggregateHashSortTest, AggregateAdaptive) {
   EXPECT_EQ(partitions.at(1).runs.at(1).is_aggregated, RunIsAggregated::No);
 
   EXPECT_EQ(partitions.at(0).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2}));
-  EXPECT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b0}));
+  //EXPECT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b0}));
   EXPECT_EQ(partitions.at(0).runs.at(1).groups.data, uninitialized_vector<uint32_t>({2}));
-  EXPECT_EQ(partitions.at(0).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b0}));
+  //EXPECT_EQ(partitions.at(0).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b0}));
 
   EXPECT_EQ(partitions.at(1).runs.at(0).groups.data, uninitialized_vector<uint32_t>({5, 3}));
-  EXPECT_EQ(partitions.at(1).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b1, 0b1}));
+  //EXPECT_EQ(partitions.at(1).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b1, 0b1}));
   EXPECT_EQ(partitions.at(1).runs.at(1).groups.data, uninitialized_vector<uint32_t>({3, 5}));
-  EXPECT_EQ(partitions.at(1).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b1, 0b1}));
+  //EXPECT_EQ(partitions.at(1).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b1, 0b1}));
 }
 
 }  // namespace opossum
