@@ -62,7 +62,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 #endif
 
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
-          if constexpr (std::is_integral_v<T>) {
+          if constexpr (std::is_same_v<T, int32_t>) {
             if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
           }
 #endif
