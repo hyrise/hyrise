@@ -440,7 +440,17 @@ bool JitAwareLQPTranslator::_expression_is_jittable(const std::shared_ptr<Abstra
     }
     case ExpressionType::Aggregate: {
       const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(expression);
-      // We do not support the count distinct function yet.
+      switch (aggregate_expression->aggregate_function) {
+        case AggregateFunction::Min:
+        case AggregateFunction::Max:
+        case AggregateFunction::Sum:
+        case AggregateFunction::Avg:
+        case AggregateFunction::Count:
+          return true;
+        case AggregateFunction::CountDistinct:
+        case AggregateFunction::StandardDeviationSample:
+          return false;
+      }
       return aggregate_expression->aggregate_function != AggregateFunction::CountDistinct;
     }
     case ExpressionType::Arithmetic:
