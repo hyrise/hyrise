@@ -149,6 +149,10 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
+  std::vector<SQLIdentifier> _filter_identifiers_by_expression(
+      const std::shared_ptr<AbstractExpression>& expression,
+      const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) const;
+
  private:
   const UseMvcc _use_mvcc;
 
@@ -160,6 +164,7 @@ class SQLTranslator final {
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
+  std::vector<SQLIdentifier> _inflated_select_list_identifiers;
 };
 
 }  // namespace opossum

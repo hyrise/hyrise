@@ -243,7 +243,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // that is not its generated name.
   const auto need_alias_node = std::any_of(
       _inflated_select_list_expressions.begin(), _inflated_select_list_expressions.end(), [&](const auto& expression) {
-//        const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression); //todo(jj)
+        const auto identifiers = _filter_identifiers_by_expression(expression, _inflated_select_list_expressions);
         return std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
           return identifier.column_name != expression->as_column_name();
         });
@@ -251,10 +251,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
   if (need_alias_node) {
     std::vector<std::string> aliases;
-    for (const auto& output_column_expression : _inflated_select_list_expressions) {
-//      const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(output_column_expression); //todo(jj)
-      if (!identifiers.empty()) {
-        aliases.emplace_back(identifiers.back().column_name);
+    for (auto idx = size_t{0}; idx < _inflated_select_list_expressions.size(); ++idx) {
+      Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj)");
+      const auto& output_column_expression = _inflated_select_list_expressions[idx];
+      const auto& identifier = _inflated_select_list_identifiers[idx];
+      if (identifier.column_name != "") {
+        aliases.emplace_back(identifier.column_name);
       } else {
         aliases.emplace_back(output_column_expression->as_column_name());
       }
@@ -503,7 +505,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
       for (const auto& subquery_expression : lqp->column_expressions()) {
         const auto identifiers =
-//            subquery_translator._sql_identifier_resolver->get_expression_identifiers(subquery_expression); //todo(jj)
+            subquery_translator._filter_identifiers_by_expression(subquery_expression, subquery_translator._inflated_select_list_expressions);
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
@@ -683,7 +685,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
   // a) Find matching columns and create JoinPredicates from them
   // b) Add columns from right input to the output when they have no match in the left input
   for (const auto& right_expression : right_state.elements_in_order) {
-//    const auto right_identifiers = right_sql_identifier_resolver->get_expression_identifiers(right_expression); //todo(jj)
+//    const auto right_identifiers = right_sql_identifier_resolver->get_expression_identifiers(right_expression);
+    const auto right_identifiers = _filter_identifiers_by_expression(right_expression, _inflated_select_list_expressions); //todo(jj)
 
     if (!right_identifiers.empty()) {
       // Ignore previous names if there is an alias
@@ -766,6 +769,9 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_translate_selec
 
       if (hsql_select_expr->alias) {
         post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
+        _inflated_select_list_identifiers.emplace_back(SQLIdentifier{hsql_select_expr->alias});
+      } else {
+        _inflated_select_list_identifiers.emplace_back(SQLIdentifier{""});
       }
     }
   }
@@ -858,8 +864,7 @@ void SQLTranslator::_translate_select_groupby_having(
     _current_lqp = _translate_predicate_expression(having_expression, _current_lqp);
   }
 
-  // Create output_expressions from SELECT list, including column wildcards
-  std::unordered_map<std::shared_ptr<AbstractExpression>, std::string> column_aliases;
+  std::vector<SQLIdentifier> new_select_list_identifiers;
 
   for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
@@ -872,8 +877,8 @@ void SQLTranslator::_translate_select_groupby_having(
         for (const auto& pre_aggregate_expression : pre_aggregate_lqp->column_expressions()) {
           if (hsql_expr->table) {
             // Dealing with SELECT t.* here
-//            auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression); //todo(jj)
-            if (std::any_of(identifiers.begin(), identifiers.end(),
+            const auto identifiers = _filter_identifiers_by_expression(pre_aggregate_expression, select_list_elements);
+            if (std::any_of(_inflated_select_list_identifiers.begin(), _inflated_select_list_identifiers.end(),
                             [&](const auto& identifier) { return identifier.table_name != hsql_expr->table; })) {
               // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
               // different table, it is not included in the `SELECT t.*`.
@@ -894,10 +899,11 @@ void SQLTranslator::_translate_select_groupby_having(
         if (is_aggregate) {
           // Select all GROUP BY columns with the specified table name
           for (const auto& group_by_expression : group_by_expressions) {
-//            const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(group_by_expression); //todo(jj)
+            const auto identifiers = _filter_identifiers_by_expression(group_by_expression, select_list_elements);
             for (const auto& identifier : identifiers) {
               if (identifier.table_name == hsql_expr->table) {
                 _inflated_select_list_expressions.emplace_back(group_by_expression);
+                new_select_list_identifiers.emplace_back(SQLIdentifier{"", hsql_expr->table});
               }
             }
           }
@@ -909,6 +915,7 @@ void SQLTranslator::_translate_select_groupby_having(
 
           _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
                                                    from_element_iter->second.begin(), from_element_iter->second.end());
+          new_select_list_identifiers.emplace_back(SQLIdentifier{"", hsql_expr->table});
         }
       } else {
         if (is_aggregate) {
@@ -921,12 +928,16 @@ void SQLTranslator::_translate_select_groupby_having(
                                                    _from_clause_result->elements_in_order.begin(),
                                                    _from_clause_result->elements_in_order.end());
         }
+        new_select_list_identifiers.emplace_back(SQLIdentifier{"", hsql_expr->table});
       }
     } else {
       auto output_expression = select_list_elements[select_list_idx];
       _inflated_select_list_expressions.emplace_back(output_expression);
     }
   }
+  _inflated_select_list_identifiers.insert(_inflated_select_list_identifiers.begin(),
+                                           new_select_list_identifiers.begin(),
+                                           new_select_list_identifiers.end());
 
   // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
   // functions, e.g.: `SELECT DISTINCT a, b ...` becomes  `SELECT a, b ... GROUP BY a, b`.
@@ -1009,7 +1020,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
   } else {
     for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
       const auto identifiers =
-//          _sql_identifier_resolver->get_expression_identifiers(lqp->column_expressions()[column_id]); //todo(jj)
+          _filter_identifiers_by_expression(lqp->column_expressions()[column_id], _inflated_select_list_expressions);
       for (const auto& identifier : identifiers) {
         column_names.emplace(column_id, identifier.column_name);
       }
@@ -1511,6 +1522,21 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
   }
 
   Fail("GCC thinks this is reachable");
+}
+
+std::vector<SQLIdentifier> SQLTranslator::_filter_identifiers_by_expression(
+    const std::shared_ptr<AbstractExpression>& expression,
+    const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) const {
+  std::vector<SQLIdentifier> filtered_identifiers;
+  Assert(select_list_elements.size() == _inflated_select_list_identifiers.size(), "todo(jj)");
+
+  for (auto idx = size_t{0}; idx < select_list_elements.size(); ++idx) {
+    if (select_list_elements[idx] == expression) {
+      filtered_identifiers.emplace_back(_inflated_select_list_identifiers[idx]);
+    }
+  }
+
+  return filtered_identifiers;
 }
 
 SQLTranslator::TableSourceState::TableSourceState(
