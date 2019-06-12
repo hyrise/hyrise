@@ -40,3 +40,6 @@
 [submodule "third_party/tpcds-result-reproduction"]
 	path = third_party/tpcds-result-reproduction
 	url = https://github.com/cwida/tpcds-result-reproduction.git
+[submodule "tpcds-result-reproduction"]
+	path = tpcds-result-reproduction
+	url = https://github.com/hyrise-mp/tpcds-result-reproduction.git
