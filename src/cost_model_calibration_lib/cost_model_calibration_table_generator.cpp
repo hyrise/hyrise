@@ -53,7 +53,6 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
 }
 
 void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
-  const auto& table_sizes = _configuration.table_generation_table_sizes;
   TableGenerator table_generator;
 
   // Gather data required for table generator.

@@ -103,6 +103,8 @@ std::pair<SegmentEncodingSpec, bool> ColumnFeatureExtractor::_get_encoding_type_
   }
 
   auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment_to_encode);
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
   if (encoded_scan_segment) {
     auto segment_encoding_spec = SegmentEncodingSpec{encoded_scan_segment->encoding_type()};
     if (encoded_scan_segment->compressed_vector_type()) {
@@ -110,6 +112,7 @@ std::pair<SegmentEncodingSpec, bool> ColumnFeatureExtractor::_get_encoding_type_
     }
     return std::make_pair(segment_encoding_spec, is_reference_segment);
   }
+  #pragma GCC diagnostic pop
   return std::make_pair(SegmentEncodingSpec{EncodingType::Unencoded}, is_reference_segment);
 }
 
