@@ -890,7 +890,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<const Table> _on_execute() override {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
-    auto radix_clusterer = RadixClusterSort<T>(
+    auto radix_clusterer = JoinSortMergeClusterer<T>(
         _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(),
         _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
         include_null_left, include_null_right, _cluster_count);

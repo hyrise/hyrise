@@ -33,7 +33,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
-    const auto scale_factor = 2.0f;
+    const auto scale_factor = 0.1f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -321,7 +321,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state)
   // CurrentScheduler::get()->finish();
 }
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3)(benchmark::State& state) {
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling2)(benchmark::State& state) {
   // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   auto& sm = StorageManager::get();
@@ -336,9 +336,108 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3)(benchmark::State& state
   table_scan->execute();
 
   for (auto _ : state) {
-    auto radix_clusterer = RadixClusterSort<int>(
+    auto join =
+        std::make_shared<JoinSortMerge>(table_scan, _table_wrapper_map.at("lineitem"), JoinMode::Inner,
+                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals});
+    join->execute();
+  }
+
+  // CurrentScheduler::get()->finish();
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_MT)(benchmark::State& state) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  auto& sm = StorageManager::get();
+  auto orders_table = sm.get_table("orders");
+
+  auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
+                                       orders_table->column_is_nullable(ColumnID{0}), "");
+  auto int_predicate =
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(10));
+
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
+  table_scan->execute();
+
+  for (auto _ : state) {
+    auto radix_clusterer = JoinSortMergeClusterer<int>(
         table_scan->get_output(), sm.get_table("lineitem"),
-        {ColumnID{0}, ColumnID{1}}, false,
+        {ColumnID{1}, ColumnID{1}}, false,
+        false, false, 64);
+    auto sort_output = radix_clusterer.execute();
+  }
+
+  CurrentScheduler::get()->finish();
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_ST)(benchmark::State& state) {
+  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  auto& sm = StorageManager::get();
+  auto orders_table = sm.get_table("orders");
+
+  auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
+                                       orders_table->column_is_nullable(ColumnID{0}), "");
+  auto int_predicate =
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(10));
+
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
+  table_scan->execute();
+
+  for (auto _ : state) {
+    auto radix_clusterer = JoinSortMergeClusterer<int>(
+        table_scan->get_output(), sm.get_table("lineitem"),
+        {ColumnID{1}, ColumnID{1}}, false,
+        false, false, 64);
+    auto sort_output = radix_clusterer.execute();
+  }
+
+  // CurrentScheduler::get()->finish();
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_MT)(benchmark::State& state) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  auto& sm = StorageManager::get();
+  auto orders_table = sm.get_table("orders");
+
+  auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
+                                       orders_table->column_is_nullable(ColumnID{0}), "");
+  auto int_predicate =
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(10));
+
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
+  table_scan->execute();
+
+  for (auto _ : state) {
+    auto radix_clusterer = JoinSortMergeClusterer<int>(
+        table_scan->get_output(), sm.get_table("lineitem"),
+        {ColumnID{1}, ColumnID{1}}, true,
+        false, false, 64);
+    auto sort_output = radix_clusterer.execute();
+  }
+
+  CurrentScheduler::get()->finish();
+}
+
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_ST)(benchmark::State& state) {
+  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+
+  auto& sm = StorageManager::get();
+  auto orders_table = sm.get_table("orders");
+
+  auto lorderkey_operand = pqp_column_(ColumnID{0}, orders_table->column_data_type(ColumnID{0}),
+                                       orders_table->column_is_nullable(ColumnID{0}), "");
+  auto int_predicate =
+      std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, lorderkey_operand, value_(10));
+
+  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("orders"), int_predicate);
+  table_scan->execute();
+
+  for (auto _ : state) {
+    auto radix_clusterer = JoinSortMergeClusterer<int>(
+        table_scan->get_output(), sm.get_table("lineitem"),
+        {ColumnID{1}, ColumnID{1}}, true,
         false, false, 64);
     auto sort_output = radix_clusterer.execute();
   }
