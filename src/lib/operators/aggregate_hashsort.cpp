@@ -78,6 +78,10 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run(const
   /**
    * Build output Table
    */
+#if VERBOSE
+  Timer t;
+#endif
+
   const auto output_column_definitions = _get_output_column_defintions();
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>(output_runs.size());
 
@@ -102,7 +106,13 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run(const
     output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);
   }
 
-  return std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
+  const auto output_table = std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
+
+#if VERBOSE
+  std::cout << "Building output table with " << output_table->row_count() << " rows and " << output_table->chunk_count() << " chunks in " << t.lap_formatted() << std::endl;
+#endif
+
+  return output_table;
 }
 
 }  // namespace opossum

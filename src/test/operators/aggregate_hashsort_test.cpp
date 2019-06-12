@@ -418,7 +418,7 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
 
   auto run_source = PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>{&groups_layout, std::move(runs)};
   auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
-  partition(3, 6, run_source, partitioning, run_idx, run_offset, partitions, 0);
+  partition(6, run_source, partitioning, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 0);
   EXPECT_EQ(run_offset, 6);
 
@@ -426,7 +426,7 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
 
   ASSERT_EQ(partitions.at(0).runs.size(), 1u);
   ASSERT_EQ(partitions.at(1).runs.size(), 0u);
-  ASSERT_EQ(partitions.at(2).runs.size(), 1u);
+  ASSERT_EQ(partitions.at(2).runs.size(), 2u);
   ASSERT_EQ(partitions.at(3).runs.size(), 1u);
 
   ASSERT_EQ(partitions.at(0).runs.at(0).groups.data, uninitialized_vector<uint32_t>({5, 7}));
@@ -437,13 +437,21 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   EXPECT_EQ(aggregate_0->values, std::vector<int64_t>({0, 0}));
   EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
 
-  ASSERT_EQ(partitions.at(2).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2, 5, 8}));
-  ASSERT_EQ(partitions.at(2).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b100, 0b101, 0b100}));
+  ASSERT_EQ(partitions.at(2).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2, 5}));
+  ASSERT_EQ(partitions.at(2).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b100, 0b101}));
   ASSERT_EQ(partitions.at(2).runs.at(0).aggregates.size(), 1u);
-  const auto* aggregate_2 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(0).aggregates.at(0).get());
-  ASSERT_TRUE(aggregate_2);
-  EXPECT_EQ(aggregate_2->values, std::vector<int64_t>({1, 2, 5}));
-  EXPECT_EQ(aggregate_2->null_values, std::vector<bool>({false, false, false}));
+  const auto* aggregate_2_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_2_0);
+  EXPECT_EQ(aggregate_2_0->values, std::vector<int64_t>({1, 2}));
+  EXPECT_EQ(aggregate_2_0->null_values, std::vector<bool>({false, false}));
+
+  ASSERT_EQ(partitions.at(2).runs.at(1).groups.data, uninitialized_vector<uint32_t>({8}));
+  ASSERT_EQ(partitions.at(2).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b100}));
+  ASSERT_EQ(partitions.at(2).runs.at(1).aggregates.size(), 1u);
+  const auto* aggregate_2_1 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(1).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_2_1);
+  EXPECT_EQ(aggregate_2_1->values, std::vector<int64_t>({5}));
+  EXPECT_EQ(aggregate_2_1->null_values, std::vector<bool>({false}));
 
   ASSERT_EQ(partitions.at(3).runs.at(0).groups.data, uninitialized_vector<uint32_t>({6}));
   ASSERT_EQ(partitions.at(3).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b110}));
@@ -501,7 +509,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   auto run_source = PartitionRunSource<VariablySizedGroupRun<GetDynamicGroupSize>>(&layout, std::move(runs));
   auto partitions = std::vector<Partition<VariablySizedGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
   // Partition the entire run
-  partition(2, 100, run_source, partitioning, run_idx, run_offset, partitions, 0);
+  partition(4, run_source, partitioning, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
 
@@ -559,16 +567,13 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   auto run_idx = size_t{0};
   auto run_offset = size_t{0};
 
-  // Config hash table so that the entire input is hashed
-  AggregateHashSortConfig config;
-  config.hash_table_size = 100;
-  config.hash_table_max_load_factor = 1.0f;
-
   auto run_source = PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>{&groups_layout, std::move(runs)};
   auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
-  const auto continue_hashing = hashing(config, 2, run_source, partitioning, run_idx, run_offset, partitions, 0);
+  // Config hashing() so that the entire input is hashed
+  const auto [continue_hashing, processed_row_count] = hashing(3, 1.0f, run_source, partitioning, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
+  EXPECT_EQ(processed_row_count, 4);
   EXPECT_TRUE(continue_hashing);
 
   ASSERT_EQ(partitions.size(), 2u);
@@ -630,14 +635,13 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
-  AggregateHashSortConfig config;
-  config.max_partitioning_counter = 100; // Partition the entire run
-
   auto run_source = PartitionRunSource<VariablySizedGroupRun<GetDynamicGroupSize>>{&layout, std::move(runs)};
   auto partitions = std::vector<Partition<VariablySizedGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
-  const auto continue_hashing = hashing(config, 1, run_source, partitioning, run_idx, run_offset, partitions, 0);
+  // Configure hashing() so that the entire input is aggregated
+  const auto [continue_hashing, processed_row_count] = hashing(3, 1.0f, run_source, partitioning, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
+  EXPECT_EQ(processed_row_count, 3);
   EXPECT_TRUE(continue_hashing);
 
   ASSERT_EQ(partitions.size(), 2u);
