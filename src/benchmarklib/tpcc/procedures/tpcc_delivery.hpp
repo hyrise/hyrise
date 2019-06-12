@@ -16,11 +16,10 @@ class TpccDelivery : public AbstractTpccProcedure {
   [[nodiscard]] bool execute() override;
   char identifier() const override;
 
- protected:
   // Values generated BEFORE the procedure is executed:
-  int32_t _w_id;           // Home warehouse ID    [1..num_warehouses]
-  int64_t _o_carrier_id;   // Carrier ID           [1..10]
-  int64_t _ol_delivery_d;  // Current datetime
+  int32_t w_id;           // Home warehouse ID    [1..num_warehouses]
+  int64_t o_carrier_id;   // Carrier ID           [1..10]
+  int64_t ol_delivery_d;  // Current datetime
 };
 
 }  // namespace opossum
