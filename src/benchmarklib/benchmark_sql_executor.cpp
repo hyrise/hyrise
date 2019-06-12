@@ -11,9 +11,7 @@
 namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix)
-    : _enable_jit(enable_jit),
-      _sqlite_wrapper(sqlite_wrapper),
-      _visualize_prefix(visualize_prefix) {}
+    : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {}
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(const std::string& sql) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
@@ -41,12 +39,6 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   }
 
   return {pipeline_status, result_table};
-}
-
-BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
-  if (transaction_context) {
-    Assert(transaction_context->phase() == TransactionPhase::Committed || transaction_context->phase() == TransactionPhase::RolledBack, "If a transaction is explicitly set, it should either be committed or aborted.");
-  }
 }
 
 void BenchmarkSQLExecutor::commit() {
