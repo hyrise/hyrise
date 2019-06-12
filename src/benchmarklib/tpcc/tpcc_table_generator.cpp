@@ -111,7 +111,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_warehouse_table() {
 
 std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
   auto cardinalities =
-      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, NUM_STOCK_ITEMS});
+      std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, NUM_STOCK_ITEMS_PER_WAREHOUSE});
 
   /**
    * indices[0] = warehouse
@@ -195,7 +195,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_district_table() {
   add_column<float>(segments_by_chunk, column_definitions, "D_YTD", cardinalities,
                     [&](std::vector<size_t>) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT; });
   add_column<int>(segments_by_chunk, column_definitions, "D_NEXT_O_ID", cardinalities,
-                  [&](std::vector<size_t>) { return NUM_ORDERS + 1; });
+                  [&](std::vector<size_t>) { return NUM_ORDERS_PER_DISTRICT + 1; });
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
@@ -279,7 +279,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_customer_table() {
 
 std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{
-      _warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT, NUM_HISTORY_ENTRIES});
+      _warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT, NUM_HISTORY_ENTRIES_PER_CUSTOMER});
 
   /**
    * indices[0] = warehouse
@@ -320,7 +320,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
 std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
     const TpccTableGenerator::order_line_counts_type& order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS_PER_DISTRICT});
 
   /**
    * indices[0] = warehouse
@@ -348,7 +348,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
 
   add_column<int>(segments_by_chunk, column_definitions, "O_CARRIER_ID", cardinalities,
                   [&](std::vector<size_t> indices) {
-                    return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? _random_gen.random_number(1, 10) : -1;
+                    return indices[2] <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT ? _random_gen.random_number(1, 10) : -1;
                   });
   add_column<int>(segments_by_chunk, column_definitions, "O_OL_CNT", cardinalities,
                   [&](std::vector<size_t> indices) { return order_line_counts[indices[0]][indices[1]][indices[2]]; });
@@ -370,7 +370,7 @@ TpccTableGenerator::order_line_counts_type TpccTableGenerator::generate_order_li
   for (auto& v_per_warehouse : v) {
     v_per_warehouse.resize(NUM_DISTRICTS_PER_WAREHOUSE);
     for (auto& v_per_district : v_per_warehouse) {
-      v_per_district.resize(NUM_ORDERS);
+      v_per_district.resize(NUM_ORDERS_PER_DISTRICT);
       for (auto& v_per_order : v_per_district) {
         v_per_order = _random_gen.random_number(5, 15);
       }
@@ -422,7 +422,7 @@ void TpccTableGenerator::_add_order_line_column(std::vector<Segments>& segments_
 std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
     const TpccTableGenerator::order_line_counts_type& order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS_PER_DISTRICT});
 
   /**
    * indices[0] = warehouse
@@ -448,14 +448,14 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
   // TODO(anybody) -1 should be null
   _add_order_line_column<int>(
       segments_by_chunk, column_definitions, "OL_DELIVERY_D", cardinalities, order_line_counts,
-      [&](std::vector<size_t> indices) { return indices[2] + 1 <= NUM_ORDERS - NUM_NEW_ORDERS ? _current_date : -1; });
+      [&](std::vector<size_t> indices) { return indices[2] + 1 <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT ? _current_date : -1; });
   _add_order_line_column<int>(segments_by_chunk, column_definitions, "OL_QUANTITY", cardinalities, order_line_counts,
                               [&](std::vector<size_t>) { return 5; });
 
   _add_order_line_column<float>(
       segments_by_chunk, column_definitions, "OL_AMOUNT", cardinalities, order_line_counts,
       [&](std::vector<size_t> indices) {
-        return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? 0.f : _random_gen.random_number(1, 999999) / 100.f;
+        return indices[2] <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT ? 0.f : _random_gen.random_number(1, 999999) / 100.f;
       });
   _add_order_line_column<pmr_string>(segments_by_chunk, column_definitions, "OL_DIST_INFO", cardinalities,
                                      order_line_counts,
@@ -473,7 +473,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
 
 std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
-      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
+      std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_NEW_ORDERS_PER_DISTRICT});
 
   /**
    * indices[0] = warehouse
@@ -484,7 +484,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
   TableColumnDefinitions column_definitions;
 
   add_column<int>(segments_by_chunk, column_definitions, "NO_O_ID", cardinalities,
-                  [&](std::vector<size_t> indices) { return indices[2] + 1 + NUM_ORDERS + 1 - NUM_NEW_ORDERS; });
+                  [&](std::vector<size_t> indices) { return indices[2] + 1 + NUM_ORDERS_PER_DISTRICT + 1 - NUM_NEW_ORDERS_PER_DISTRICT; });
   add_column<int>(segments_by_chunk, column_definitions, "NO_D_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[1] + 1; });
   add_column<int>(segments_by_chunk, column_definitions, "NO_W_ID", cardinalities,
