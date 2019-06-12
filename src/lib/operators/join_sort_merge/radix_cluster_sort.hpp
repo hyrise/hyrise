@@ -13,7 +13,7 @@
 
 namespace {
 
-using namespace opossum;
+using namespace opossum;  // NOLINT
 
 /**
 * The ClusterOutput holds the data structures that belong to the output of the clustering stage.
@@ -26,7 +26,7 @@ struct ClusterOutput {
   std::unique_ptr<PosList> null_rows_right;
 };
 
-} // anonymous namespace
+}  // anonymous namespace
 
 namespace opossum {
 
@@ -56,8 +56,8 @@ template <typename T>
 class JoinSortMergeClusterer {
  public:
   JoinSortMergeClusterer(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                   const ColumnIDPair& column_ids, const bool equi_case, const bool materialize_null_left,
-                   const bool materialize_null_right, const size_t cluster_count)
+                         const ColumnIDPair& column_ids, const bool equi_case, const bool materialize_null_left,
+                         const bool materialize_null_right, const size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
         _left_column_id{column_ids.first},
@@ -152,7 +152,7 @@ class JoinSortMergeClusterer {
   /**
   * Concatenates multiple materialized segments to a single materialized segment.
   **/
-  // TODO: add test
+  // TODO(Bouncner): add test
   static MaterializedSegmentList<T> _concatenate_materialized_segments(
       const MaterializedSegmentList<T>& materialized_segments) {
     auto output = MaterializedSegment<T>();
@@ -177,29 +177,31 @@ class JoinSortMergeClusterer {
     return {shared};
   }
 
-// Add test
-static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& materialized_segment,
-    std::vector<size_t>& sorted_run_start_positions) {
-  DebugAssert(sorted_run_start_positions.size() > 1, "Expecting at least two sorted runs to merge.");
-  DebugAssert(std::is_sorted(sorted_run_start_positions.begin(), sorted_run_start_positions.end()), "Positions of the sorted runs need to be sorted ascendingly.");
+  // TODO(Bouncner): Add test
+  static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& materialized_segment,
+                                                         std::vector<size_t>& sorted_run_start_positions) {
+    DebugAssert(sorted_run_start_positions.size() > 1, "Expecting at least two sorted runs to merge.");
+    DebugAssert(std::is_sorted(sorted_run_start_positions.begin(), sorted_run_start_positions.end()),
+                "Positions of the sorted runs need to be sorted ascendingly.");
 
-  // To ease the iiterator assignment within the loop (see assignment of `last`)
-  sorted_run_start_positions.push_back(materialized_segment.size());
+    // To ease the iiterator assignment within the loop (see assignment of `last`)
+    sorted_run_start_positions.push_back(materialized_segment.size());
 
-  auto first = materialized_segment.begin();
-  auto merge_step = size_t{0};
-  // loop until `middle` iterator reaches .end(), which shows that `last` would point to an invalid address
-  while ((first + sorted_run_start_positions[merge_step + 1]) != materialized_segment.end()) {
-    auto middle = first + sorted_run_start_positions[merge_step + 1];
-    auto last = first + sorted_run_start_positions[merge_step + 2];
-    std::inplace_merge(first, middle, last, [](auto& left, auto& right) { return left.value < right.value; });
+    auto first = materialized_segment.begin();
+    auto merge_step = size_t{0};
+    // loop until `middle` iterator reaches .end(), which shows that `last` would point to an invalid address
+    while ((first + sorted_run_start_positions[merge_step + 1]) != materialized_segment.end()) {
+      auto middle = first + sorted_run_start_positions[merge_step + 1];
+      auto last = first + sorted_run_start_positions[merge_step + 2];
+      std::inplace_merge(first, middle, last, [](auto& left, auto& right) { return left.value < right.value; });
 
-    ++merge_step;
+      ++merge_step;
+    }
+
+    DebugAssert(std::is_sorted(materialized_segment.begin(), materialized_segment.end(),
+                               [](auto& left, auto& right) { return left.value < right.value; }),
+                "Resulting materializied segment is unsorted.");
   }
-
-  DebugAssert(std::is_sorted(materialized_segment.begin(), materialized_segment.end(), [](auto& left, auto& right) { return left.value < right.value; }),
-      "Resulting materializied segment is unsorted.");
-}
 
   /**
   * Performs the clustering on a materialized table using a clustering function that determines
@@ -212,7 +214,8 @@ static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& m
   **/
   MaterializedSegmentList<T> _cluster(const MaterializedSegmentList<T>& materialized_input_segments,
                                       const std::function<size_t(const T&)> clusterer) {
-    DebugAssert(_cluster_count > 1, "_cluster() clusters the input data into multiple chunks, thus the cluster count needs to be > 1.");
+    DebugAssert(_cluster_count > 1,
+                "_cluster() clusters the input data into multiple chunks, thus the cluster count needs to be > 1.");
     auto output = MaterializedSegmentList<T>(_cluster_count);
     TableInformation table_information(materialized_input_segments.size(), _cluster_count);
 
@@ -275,15 +278,15 @@ static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& m
     const auto input_segment_count = materialized_input_segments.size();
     for (auto input_segment_id = size_t{0}; input_segment_id < input_segment_count; ++input_segment_id) {
       auto job = std::make_shared<JobTask>([&, input_segment_id, clusterer] {  // copy cluster functor per task
-            auto& segment_information = table_information.segment_information[input_segment_id];
-            for (const auto& entry : *(materialized_input_segments[input_segment_id])) {
-              const auto cluster_id = clusterer(entry.value);
-              auto& output_cluster = *(output[cluster_id]);
-              auto& insert_position = segment_information.insert_position[cluster_id];
-              output_cluster[insert_position] = entry;
-              ++insert_position;
-            }
-          });
+        auto& segment_information = table_information.segment_information[input_segment_id];
+        for (const auto& entry : *(materialized_input_segments[input_segment_id])) {
+          const auto cluster_id = clusterer(entry.value);
+          auto& output_cluster = *(output[cluster_id]);
+          auto& insert_position = segment_information.insert_position[cluster_id];
+          output_cluster[insert_position] = entry;
+          ++insert_position;
+        }
+      });
       cluster_jobs.push_back(job);
       job->schedule();
     }
@@ -297,11 +300,13 @@ static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& m
         std::vector<size_t> sorted_run_start_positions;
         for (auto chunk_id = ChunkID{0}; chunk_id < materialized_input_segments.size(); ++chunk_id) {
           const auto& segment_information = table_information.segment_information[chunk_id];
-          sorted_run_start_positions.push_back(segment_information.insert_position[segment_id] - segment_information.cluster_histogram[segment_id]);
+          sorted_run_start_positions.push_back(segment_information.insert_position[segment_id] -
+                                               segment_information.cluster_histogram[segment_id]);
         }
         sort_partially_sorted_materialized_segment(*segment, sorted_run_start_positions);
-        DebugAssert(std::is_sorted(segment->begin(), segment->end(), [](auto& left, auto& right) { return left.value < right.value; }),
-          "Resulting clusters are expected to be sorted.");
+        DebugAssert(std::is_sorted(segment->begin(), segment->end(),
+                                   [](auto& left, auto& right) { return left.value < right.value; }),
+                    "Resulting clusters are expected to be sorted.");
       });
       sort_jobs.push_back(job);
       job->schedule();
@@ -321,8 +326,7 @@ static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& m
   * - manually select the clustering bits based on statistics.
   * - consolidate clusters in order to reduce skew.
   **/
-  MaterializedSegmentList<T> _radix_cluster(
-      const MaterializedSegmentList<T>& materialized_segments) {
+  MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& materialized_segments) {
     auto radix_bitmask = _cluster_count - 1;
     return _cluster(materialized_segments, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
@@ -366,8 +370,7 @@ static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& m
   * right table in a pair.
   **/
   std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> _range_cluster(
-      const MaterializedSegmentList<T>& input_left,
-      const MaterializedSegmentList<T>& input_right,
+      const MaterializedSegmentList<T>& input_left, const MaterializedSegmentList<T>& input_right,
       const std::vector<T> sample_values) {
     const std::vector<T> split_values = _pick_split_values(sample_values);
     DebugAssert(std::is_sorted(split_values.begin(), split_values.end()), "Split values need to be sorted.");
@@ -378,12 +381,12 @@ static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& m
     class RangeClusterFunctor {
      public:
       // split_values are copied to ensure data locality (sort-merge shines on large joins).
-      RangeClusterFunctor(const std::vector<T>& splits)
+      explicit RangeClusterFunctor(const std::vector<T>& splits)
           : split_values(splits),
             current_value_and_split_id(std::make_pair(split_values.front(), 0)),
             max_split_value(split_values.back()) {}
 
-      RangeClusterFunctor(const RangeClusterFunctor& functor)
+      explicit RangeClusterFunctor(const RangeClusterFunctor& functor)
           : split_values(functor.split_values),
             current_value_and_split_id(functor.current_value_and_split_id),
             max_split_value(functor.max_split_value) {}
@@ -423,7 +426,8 @@ static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& m
   **/
   void _sort_clusters(MaterializedSegmentList<T>& materialized_segments) {
     for (const auto& materialized_segment : materialized_segments) {
-      std::sort(materialized_segment->begin(), materialized_segment->end(), [](auto& left, auto& right) { return left.value < right.value; });
+      std::sort(materialized_segment->begin(), materialized_segment->end(),
+                [](auto& left, auto& right) { return left.value < right.value; });
     }
   }
 

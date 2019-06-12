@@ -106,8 +106,7 @@ class ColumnMaterializer {
       auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
       if (const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<T>>(segment)) {
-        output[chunk_id] =
-            _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
+        output[chunk_id] = _materialize_dictionary_segment(*dictionary_segment, chunk_id, null_rows_output, subsample);
       } else {
         output[chunk_id] = _materialize_generic_segment(*segment, chunk_id, null_rows_output, subsample);
       }

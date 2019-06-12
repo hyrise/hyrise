@@ -240,7 +240,8 @@ class RadixClusterSortNUMA {
       auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
         (*output)[node_id] = _cluster(
             (*input_chunks)[node_id],
-            [=](const T& value) { return JoinSortMergeClusterer<T>::template get_radix<T>(value, radix_bitmask); }, node_id);
+            [=](const T& value) { return JoinSortMergeClusterer<T>::template get_radix<T>(value, radix_bitmask); },
+            node_id);
       });
 
       cluster_jobs.push_back(job);
