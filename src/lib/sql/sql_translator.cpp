@@ -996,46 +996,49 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
-  Assert(create_statement.columns, "CREATE TABLE: No columns specified. Parser bug?");
+  Assert(create_statement.columns || create_statement.select, "CREATE TABLE: No columns specified. Parser bug?");
 
-  auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
+  std::shared_ptr<AbstractLQPNode> input_node;
 
-  for (auto column_id = ColumnID{0}; column_id < create_statement.columns->size(); ++column_id) {
-    const auto* parser_column_definition = create_statement.columns->at(column_id);
-    auto& column_definition = column_definitions[column_id];
+  if (create_statement.columns) {
+    auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
 
-    // TODO(anybody) SQLParser is missing support for Hyrise's other types
-    switch (parser_column_definition->type.data_type) {
-      case hsql::DataType::INT:
-        column_definition.data_type = DataType::Int;
-        break;
-      case hsql::DataType::LONG:
-        column_definition.data_type = DataType::Long;
-        break;
-      case hsql::DataType::FLOAT:
-        column_definition.data_type = DataType::Float;
-        break;
-      case hsql::DataType::DOUBLE:
-        column_definition.data_type = DataType::Double;
-        break;
-      case hsql::DataType::CHAR:
-      case hsql::DataType::VARCHAR:
-      case hsql::DataType::TEXT:
-        // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
-        column_definition.data_type = DataType::String;
-        break;
-      default:
-        Fail("CREATE TABLE: Data type not supported");
+    for (auto column_id = ColumnID{0}; column_id < create_statement.columns->size(); ++column_id) {
+      const auto* parser_column_definition = create_statement.columns->at(column_id);
+      auto& column_definition = column_definitions[column_id];
+
+      // TODO(anybody) SQLParser is missing support for Hyrise's other types
+      switch (parser_column_definition->type.data_type) {
+        case hsql::DataType::INT:
+          column_definition.data_type = DataType::Int;
+          break;
+        case hsql::DataType::LONG:
+          column_definition.data_type = DataType::Long;
+          break;
+        case hsql::DataType::FLOAT:
+          column_definition.data_type = DataType::Float;
+          break;
+        case hsql::DataType::DOUBLE:
+          column_definition.data_type = DataType::Double;
+          break;
+        case hsql::DataType::CHAR:
+        case hsql::DataType::VARCHAR:
+        case hsql::DataType::TEXT:
+          // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise as no way of working with these
+          column_definition.data_type = DataType::String;
+          break;
+        default:
+          Fail("CREATE TABLE: Data type not supported");
+      }
+
+      column_definition.name = parser_column_definition->name;
+      column_definition.nullable = parser_column_definition->nullable;
     }
-
-    column_definition.name = parser_column_definition->name;
-    column_definition.nullable = parser_column_definition->nullable;
+    input_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  } else {
+    input_node = _translate_select_statement(*create_statement.select);
   }
-
-  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists,
-                               create_statement.select
-                                   ? _translate_select_statement(*create_statement.select)
-                                   : StaticTableNode::make(Table::create_dummy_table(column_definitions)));
+  return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {

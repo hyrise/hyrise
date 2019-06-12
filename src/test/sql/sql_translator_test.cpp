@@ -1691,16 +1691,12 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
 }
 
 TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
-  // TODO(David) uncomment when SQLParser supports CREATE TABLE AS syntax
-  /*
   const auto actual_lqp = compile_query("CREATE TABLE a_table AS SELECT * FROM int_float");
 
-  const auto int_float_table = StorageManager::get().get_table("int_float");
-  const auto static_table_node = StaticTableNode::make(int_float_table);
-  const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
+  const auto stored_table_node = StoredTableNode::make("int_float");
+  const auto expected_lqp = CreateTableNode::make("a_table", false, stored_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-  */
 }
 
 TEST_F(SQLTranslatorTest, DropTable) {
