@@ -361,7 +361,7 @@ template<typename GetFixedGroupSize>
 struct VariablySizedGroupKeyHasher {
   const VariablySizedGroupRunLayout* layout{};
 
-  bool operator()(const VariablySizedGroupKey& key) const {
+  size_t operator()(const VariablySizedGroupKey& key) const {
     if (key.variant.which() == 0) {
       Fail("");
     } else {
@@ -373,6 +373,7 @@ struct VariablySizedGroupKeyHasher {
 
       const auto fixed_group_size = GetFixedGroupSize{&layout->fixed_layout}();
       boost::hash_combine(hash, boost::hash_range(remote_key.fixed_sized_group, remote_key.fixed_sized_group + fixed_group_size));
+
       return hash;
     }
   }
@@ -1196,9 +1197,8 @@ std::pair<bool, size_t> hashing(const size_t hash_table_size,
 
       const auto key = input_run.groups.make_key(run_offset);
 
-      auto hash_table_iter = hash_table.find(key);
-      if (hash_table_iter == hash_table.end()) {
-        hash_table.insert({key, partition.group_key_counter});
+      auto [hash_table_iter, exists] = hash_table.try_emplace(key, partition.group_key_counter);
+      if (!exists) {
         partition.append(input_run, run_offset, level, partition_idx);
         ++partition.group_key_counter;
       } else {
@@ -1308,6 +1308,8 @@ std::vector<Partition<GroupRun>> adaptive_hashing_and_partition(const AggregateH
 template <typename GroupRun>
 std::vector<Run<GroupRun>> aggregate(const AggregateHashSortConfig& config, std::unique_ptr<AbstractRunSource<GroupRun>> run_source,
                                      const size_t level) {
+  Assert(level < 7, "Deep recursion detected, is the hash function bad?");
+
   if (run_source->runs.empty() && !run_source->can_fetch_run()) {
     return {};
   }
