@@ -241,6 +241,8 @@ try {
         try {
           checkout scm
 
+          sh "pwd"
+
           // We do not use install.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4"
 
