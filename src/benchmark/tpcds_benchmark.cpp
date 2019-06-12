@@ -28,7 +28,11 @@
 
 using namespace opossum;  // NOLINT
 
-bool data_files_available(std::string table_path);
+namespace {
+
+bool data_files_available(const std::string& table_path);
+
+}
 
 int main(int argc, char* argv[]) {
   const std::string binary_path = argv[0];
@@ -42,7 +46,7 @@ int main(int argc, char* argv[]) {
   // clang-format on
 
   std::shared_ptr<opossum::BenchmarkConfig> config;
-  int32_t scale_factor;
+  int32_t scale_factor{};
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
@@ -115,7 +119,9 @@ int main(int argc, char* argv[]) {
   benchmark_runner.run();
 }
 
-bool data_files_available(const std::string table_path) {
+namespace {
+
+bool data_files_available(const std::string& table_path) {
   for (const auto& table : {"call_center",
                             "catalog_page",
                             "catalog_returns",
@@ -146,3 +152,5 @@ bool data_files_available(const std::string table_path) {
   }
   return true;
 }
+
+}  // namespace

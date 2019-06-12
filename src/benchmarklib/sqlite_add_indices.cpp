@@ -23,7 +23,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
         std::string{"ALTER TABLE "}.append(table_name).append(" RENAME TO ").append(table_name).append("_unindexed"));
   }
 
-  // Recreate tables from schema.sql
+  // Recreate tables using the passed schema sql file
   std::ifstream schema_file(schema_file_path);
   std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
   benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
