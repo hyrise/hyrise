@@ -88,6 +88,7 @@ endif()
 
 # Add Libraries with their own build setup
 add_subdirectory(tpch-dbgen)
+add_subdirectory(tpcds-tools)
 add_subdirectory(googletest)
 
 # Add PGASUS

@@ -81,6 +81,8 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+add_dependencies(hyriseBenchmarkTPCDS dsdgen)
+
 # Configure hyriseBenchmarkJoinOrder
 add_executable(
     hyriseBenchmarkJoinOrder
