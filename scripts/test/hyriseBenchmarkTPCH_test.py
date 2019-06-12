@@ -58,7 +58,6 @@ def main():
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
-
   benchmark = initialize(arguments2, "hyriseBenchmarkTPCH")
 
   benchmark.expect("Writing benchmark results to stdout")

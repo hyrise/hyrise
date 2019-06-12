@@ -22,7 +22,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for formula in boost cmake tbb pkg-config readline ncurses sqlite3 parallel libpq autoconf; do
+            for formula in boost cmake tbb graphviz pkg-config readline ncurses sqlite3 parallel libpq autoconf; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue

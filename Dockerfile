@@ -33,6 +33,7 @@ RUN apt-get update \
         python2.7 \
         python-pip \
         python-pexpect \
+        python-glob2 \
         sudo \
         valgrind \
         libpq-dev \
