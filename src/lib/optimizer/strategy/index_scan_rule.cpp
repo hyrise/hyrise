@@ -22,11 +22,11 @@ namespace opossum {
 // Only if we expect num_output_rows <= num_input_rows * selectivity_threshold, the ScanType can be set to IndexScan.
 // This value is kind of arbitrarily chosen, but the following paper suggests something similar:
 // Access Path Selection in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?
-constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.9f;
+// constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.9f;
 
 // Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan.
 // The number is taken from: Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance.
-constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
+// constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
@@ -72,14 +72,16 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   if (index_info.column_ids[0] != operator_predicate.column_id) return false;
 
-  const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
-  if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
+  return true;
 
-  const auto row_count_predicate =
-      predicate_node->derive_statistics_from(predicate_node->left_input(), nullptr)->row_count();
-  const float selectivity = row_count_predicate / row_count_table;
+  // const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
+  // if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
 
-  return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
+  // const auto row_count_predicate =
+  //     predicate_node->derive_statistics_from(predicate_node->left_input(), nullptr)->row_count();
+  // const float selectivity = row_count_predicate / row_count_table;
+
+  // return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }
 
 inline bool IndexScanRule::_is_single_segment_index(const IndexInfo& index_info) const {
