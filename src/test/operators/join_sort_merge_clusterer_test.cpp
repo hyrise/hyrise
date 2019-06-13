@@ -40,24 +40,18 @@ class JoinSortMergeClustererTest : public BaseTest {
   inline static std::shared_ptr<TableScan> _table_tpch_orders_scanned, _table_tpch_lineitems_scanned;
 };
 
-TEST_F(JoinSortMergeClustererTest, RangeClustering) {
-  EXPECT_TRUE(false);
-}
+TEST_F(JoinSortMergeClustererTest, RangeClustering) { EXPECT_TRUE(false); }
 
-TEST_F(JoinSortMergeClustererTest, RadixClustering) {
-  EXPECT_TRUE(false);
-}
+TEST_F(JoinSortMergeClustererTest, RadixClustering) { EXPECT_TRUE(false); }
 
-TEST_F(JoinSortMergeClustererTest, ConcatenateForSingleCluster) {
-  EXPECT_TRUE(false);
-}
+TEST_F(JoinSortMergeClustererTest, ConcatenateForSingleCluster) { EXPECT_TRUE(false); }
 
 TEST_F(JoinSortMergeClustererTest, SortPartiallySortedSegments) {
   EXPECT_TRUE(false);
 
-	// DebugAssert(std::is_sorted(materialized_segment.begin(), materialized_segment.end(),
-	//                            [](auto& left, auto& right) { return left.value < right.value; }),
-	//             "Resulting materializied segment is unsorted.");
+  // DebugAssert(std::is_sorted(materialized_segment.begin(), materialized_segment.end(),
+  //                            [](auto& left, auto& right) { return left.value < right.value; }),
+  //             "Resulting materializied segment is unsorted.");
 }
 
 }  // namespace opossum

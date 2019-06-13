@@ -186,13 +186,16 @@ class JoinSortMergeClusterer {
     DebugAssert(std::is_sorted(sorted_run_start_positions.begin(), sorted_run_start_positions.end()),
                 "Positions of the sorted runs need to be sorted ascendingly.");
 
-    size_t estimated_cost_full_sorting = static_cast<size_t>(materialized_segment.size() * std::log2(materialized_segment.size()));
-    size_t estimated_cost_partial_sorting = static_cast<size_t>(sorted_run_start_positions.size() / 2 * materialized_segment.size());
+    size_t estimated_cost_full_sorting =
+        static_cast<size_t>(materialized_segment.size() * std::log2(materialized_segment.size()));
+    size_t estimated_cost_partial_sorting =
+        static_cast<size_t>(sorted_run_start_positions.size() / 2 * materialized_segment.size());
 
     // The factor of 1.5 has been determine on a MacBook Pro and accounts for the sequential
     // access patterns of the partial sorting over the random access patterns of std::sort.
     if (estimated_cost_full_sorting * 1.5 < estimated_cost_partial_sorting) {
-      std::sort(materialized_segment.begin(), materialized_segment.end(), [](auto& left, auto& right) { return left.value < right.value; });
+      std::sort(materialized_segment.begin(), materialized_segment.end(),
+                [](auto& left, auto& right) { return left.value < right.value; });
       return;
     }
 
