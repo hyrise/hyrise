@@ -170,7 +170,7 @@ class JoinSortMergeClusterer {
     // std::sort(output.begin(), output.end(),
     //               [](const auto& a, const auto& b) { return a.value < b.value; });
 
-    sort_partially_sorted_materialized_segment(output, sorted_run_start_positions);
+    merge_partially_sorted_materialized_segment(output, sorted_run_start_positions);
 
     const auto shared = std::make_shared<MaterializedSegment<T>>(output);
 
@@ -178,24 +178,39 @@ class JoinSortMergeClusterer {
   }
 
   // TODO(Bouncner): Add test
-  static void sort_partially_sorted_materialized_segment(MaterializedSegment<T>& materialized_segment,
+  static void merge_partially_sorted_materialized_segment(MaterializedSegment<T>& materialized_segment,
                                                          std::vector<size_t>& sorted_run_start_positions) {
-    DebugAssert(sorted_run_start_positions.size() > 1, "Expecting at least two sorted runs to merge.");
+    if (materialized_segment.size() < 2 || sorted_run_start_positions.size() < 2) {
+      // Trivial cases for early outs.
+      return;
+    }
+    DebugAssert(!sorted_run_start_positions.empty(), "List of sorted runs to merge cannot be empty.");
+    DebugAssert(sorted_run_start_positions[0] == 0, "First sorted run does not start at the beginning.");
     DebugAssert(std::is_sorted(sorted_run_start_positions.begin(), sorted_run_start_positions.end()),
                 "Positions of the sorted runs need to be sorted ascendingly.");
 
-    // To ease the iiterator assignment within the loop (see assignment of `last`)
+    /**
+     * To sort the partially sorted lists, we merge two sorted lists in each iteration.
+     * The `first` iterator stays at the very beginning of the input segment, while the
+     * `middle` and `last` are the next two positions from the `sorted_run_start_positions`
+     * vector (note, `last` points behind the last position to sort).
+     * We first add a position which denotes segment.end() (i.e., segment.size()) to the
+     * position list to ease the assignments within the loop.
+     */
     sorted_run_start_positions.push_back(materialized_segment.size());
 
     auto first = materialized_segment.begin();
     auto merge_step = size_t{0};
-    // loop until `middle` iterator reaches .end(), which shows that `last` would point to an invalid address
-    while ((first + sorted_run_start_positions[merge_step + 1]) != materialized_segment.end()) {
+    for (;;) {
       auto middle = first + sorted_run_start_positions[merge_step + 1];
       auto last = first + sorted_run_start_positions[merge_step + 2];
       std::inplace_merge(first, middle, last, [](auto& left, auto& right) { return left.value < right.value; });
 
       ++merge_step;
+
+      if (last == materialized_segment.end()) {
+        break;
+      }
     }
 
     DebugAssert(std::is_sorted(materialized_segment.begin(), materialized_segment.end(),
@@ -303,7 +318,7 @@ class JoinSortMergeClusterer {
           sorted_run_start_positions.push_back(segment_information.insert_position[segment_id] -
                                                segment_information.cluster_histogram[segment_id]);
         }
-        sort_partially_sorted_materialized_segment(*segment, sorted_run_start_positions);
+        merge_partially_sorted_materialized_segment(*segment, sorted_run_start_positions);
         DebugAssert(std::is_sorted(segment->begin(), segment->end(),
                                    [](auto& left, auto& right) { return left.value < right.value; }),
                     "Resulting clusters are expected to be sorted.");
