@@ -75,12 +75,12 @@ class JoinSortMergeClusterer {
   virtual ~JoinSortMergeClusterer() = default;
 
   template <typename T2>
-  static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+  static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(const T2 value, const size_t radix_bitmask) {
     return static_cast<int64_t>(value) & radix_bitmask;
   }
 
   template <typename T2>
-  static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(T2 value, size_t radix_bitmask) {
+  static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(const T2 value, const size_t radix_bitmask) {
     PerformanceWarning("Using hash to perform bit_cast/radix partitioning of floating point number and strings");
     return std::hash<T2>{}(value)&radix_bitmask;
   }
@@ -348,7 +348,7 @@ class JoinSortMergeClusterer {
   * - consolidate clusters in order to reduce skew.
   **/
   MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& materialized_segments) {
-    auto radix_bitmask = _cluster_count - 1;
+    const auto radix_bitmask = _cluster_count - 1;
     return _cluster(materialized_segments, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
