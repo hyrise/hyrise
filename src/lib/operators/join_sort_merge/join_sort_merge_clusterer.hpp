@@ -318,16 +318,22 @@ class JoinSortMergeClusterer {
     auto segment_id = size_t{0};
     for (const auto& segment : output) {
       auto job = std::make_shared<JobTask>([&, segment, segment_id] {
-        std::vector<size_t> sorted_run_start_positions;
-        for (auto chunk_id = ChunkID{0}; chunk_id < materialized_input_segments.size(); ++chunk_id) {
-          const auto& segment_information = table_information.segment_information[chunk_id];
-          sorted_run_start_positions.push_back(segment_information.insert_position[segment_id] -
-                                               segment_information.cluster_histogram[segment_id]);
+        if (_equi_case) {
+          std::sort(segment->begin(), segment->end(),
+                [](auto& left, auto& right) { return left.value < right.value; });
+        } else {
+          std::vector<size_t> sorted_run_start_positions;
+          for (auto chunk_id = ChunkID{0}; chunk_id < materialized_input_segments.size(); ++chunk_id) {
+            const auto& segment_information = table_information.segment_information[chunk_id];
+            sorted_run_start_positions.push_back(segment_information.insert_position[segment_id] -
+                                                 segment_information.cluster_histogram[segment_id]);
+          }
+          merge_partially_sorted_materialized_segment(*segment, sorted_run_start_positions);
         }
-        merge_partially_sorted_materialized_segment(*segment, sorted_run_start_positions);
+
         DebugAssert(std::is_sorted(segment->begin(), segment->end(),
-                                   [](auto& left, auto& right) { return left.value < right.value; }),
-                    "Resulting clusters are expected to be sorted.");
+                                     [](auto& left, auto& right) { return left.value < right.value; }),
+                      "Resulting clusters are expected to be sorted.");
       });
       sort_jobs.push_back(job);
       job->schedule();
@@ -456,8 +462,8 @@ class JoinSortMergeClusterer {
      *       merging as each chunk's values (sorted) are written in sequential order, hence the
      *       cluster is partially sorted.
      */
-    ColumnMaterializer<T> left_column_materializer(true, _materialize_null_left);
-    ColumnMaterializer<T> right_column_materializer(true, _materialize_null_right);
+    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
+    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_input_table_left, _left_column_id);
     auto [materialized_right_segments, null_rows_right, samples_right] =
