@@ -46,6 +46,8 @@ class BenchmarkRunner {
   // If the query execution should be validated, this stores a pointer to the used SQLite instance
   std::unique_ptr<SQLiteWrapper> sqlite_wrapper;
 
+  std::unique_ptr<AbstractQueryGenerator>& query_generator();
+
  private:
   // Run benchmark in BenchmarkMode::PermutedQuerySet mode
   void _benchmark_permuted_query_set();

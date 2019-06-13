@@ -243,6 +243,10 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
   Assert(currently_running_clients == 0, "All query set runs must be finished at this point");
 }
 
+std::unique_ptr<AbstractQueryGenerator>& BenchmarkRunner::query_generator() {
+  return _query_generator;
+}
+
 void BenchmarkRunner::_benchmark_individual_queries() {
   for (const auto& query_id : _query_generator->selected_queries()) {
     _warmup_query(query_id);
