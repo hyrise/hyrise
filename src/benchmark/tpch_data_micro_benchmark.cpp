@@ -33,7 +33,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
-    const auto scale_factor = 0.1f;
+    const auto scale_factor = 2.0f;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
 
