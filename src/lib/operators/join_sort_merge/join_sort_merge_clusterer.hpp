@@ -75,14 +75,14 @@ class JoinSortMergeClusterer {
   virtual ~JoinSortMergeClusterer() = default;
 
   template <typename T2>
-  static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(const T2 value, const size_t radix_bitmask) {
-    return static_cast<int64_t>(value) & radix_bitmask;
+  inline static std::enable_if_t<std::is_integral_v<T2>, size_t> get_radix(const T2 value, const size_t radix_bitmask) {
+    return static_cast<size_t>(value) & radix_bitmask;
   }
 
   template <typename T2>
-  static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(const T2 value, const size_t radix_bitmask) {
+  inline static std::enable_if_t<!std::is_integral_v<T2>, size_t> get_radix(const T2 value, const size_t radix_bitmask) {
     PerformanceWarning("Using hash to perform bit_cast/radix partitioning of floating point number and strings");
-    return std::hash<T2>{}(value)&radix_bitmask;
+    return std::hash<T2>{}(value) & radix_bitmask;
   }
 
  protected:
@@ -412,7 +412,7 @@ class JoinSortMergeClusterer {
             current_value_and_split_id(functor.current_value_and_split_id),
             max_split_value(functor.max_split_value) {}
 
-      size_t operator()(const T& value) {
+      inline size_t operator()(const T& value) {
         // For the majority of cases, this early exit should be taken
         if (value <= current_value_and_split_id.first) {
           return current_value_and_split_id.second;
