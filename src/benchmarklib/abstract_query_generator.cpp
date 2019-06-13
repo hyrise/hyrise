@@ -10,4 +10,8 @@ const std::vector<QueryID>& AbstractQueryGenerator::selected_queries() const { r
 
 std::string AbstractQueryGenerator::build_deterministic_query(const QueryID query_id) { return build_query(query_id); }
 
+void AbstractQueryGenerator::selected_queries(const std::vector<QueryID>& queries) {
+  _selected_queries = queries;
+}
+
 }  // namespace opossum

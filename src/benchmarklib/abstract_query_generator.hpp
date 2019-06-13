@@ -39,6 +39,8 @@ class AbstractQueryGenerator {
   // Returns the QueryIDs of all selected queries
   const std::vector<QueryID>& selected_queries() const;
 
+  void selected_queries(const std::vector<QueryID>& queries);
+
  protected:
   std::vector<QueryID> _selected_queries;
 
