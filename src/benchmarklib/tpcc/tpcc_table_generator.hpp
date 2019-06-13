@@ -38,13 +38,13 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   std::shared_ptr<Table> generate_history_table();
 
-  typedef std::vector<std::vector<std::vector<size_t>>> order_line_counts_type;  // TODO change to using
+  using OrderLineCounts = std::vector<std::vector<std::vector<size_t>>>;
 
-  order_line_counts_type generate_order_line_counts();
+  OrderLineCounts generate_order_line_counts();
 
-  std::shared_ptr<Table> generate_order_table(const order_line_counts_type& order_line_counts);
+  std::shared_ptr<Table> generate_order_table(const OrderLineCounts& order_line_counts);
 
-  std::shared_ptr<Table> generate_order_line_table(const order_line_counts_type& order_line_counts);
+  std::shared_ptr<Table> generate_order_line_table(const OrderLineCounts& order_line_counts);
 
   std::shared_ptr<Table> generate_new_order_table();
 
@@ -63,13 +63,13 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   template <typename T>
   std::vector<T> _generate_inner_order_line_column(std::vector<size_t> indices,
-                                                   order_line_counts_type order_line_counts,
+                                                   OrderLineCounts order_line_counts,
                                                    const std::function<T(std::vector<size_t>)>& generator_function);
 
   template <typename T>
   void _add_order_line_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                               std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                              order_line_counts_type order_line_counts,
+                              OrderLineCounts order_line_counts,
                               const std::function<T(std::vector<size_t>)>& generator_function);
 
   TpccRandomGenerator _random_gen;

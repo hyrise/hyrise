@@ -318,7 +318,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
 }
 
 std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
-    const TpccTableGenerator::order_line_counts_type& order_line_counts) {
+    const TpccTableGenerator::OrderLineCounts& order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS_PER_DISTRICT});
 
@@ -365,8 +365,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
   return table;
 }
 
-TpccTableGenerator::order_line_counts_type TpccTableGenerator::generate_order_line_counts() {
-  order_line_counts_type v(_warehouse_size);
+TpccTableGenerator::OrderLineCounts TpccTableGenerator::generate_order_line_counts() {
+  OrderLineCounts v(_warehouse_size);
   for (auto& v_per_warehouse : v) {
     v_per_warehouse.resize(NUM_DISTRICTS_PER_WAREHOUSE);
     for (auto& v_per_district : v_per_warehouse) {
@@ -391,7 +391,7 @@ TpccTableGenerator::order_line_counts_type TpccTableGenerator::generate_order_li
  */
 template <typename T>
 std::vector<T> TpccTableGenerator::_generate_inner_order_line_column(
-    std::vector<size_t> indices, TpccTableGenerator::order_line_counts_type order_line_counts,
+    std::vector<size_t> indices, TpccTableGenerator::OrderLineCounts order_line_counts,
     const std::function<T(std::vector<size_t>)>& generator_function) {
   auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
 
@@ -410,7 +410,7 @@ template <typename T>
 void TpccTableGenerator::_add_order_line_column(std::vector<Segments>& segments_by_chunk,
                                                 TableColumnDefinitions& column_definitions, std::string name,
                                                 std::shared_ptr<std::vector<size_t>> cardinalities,
-                                                TpccTableGenerator::order_line_counts_type order_line_counts,
+                                                TpccTableGenerator::OrderLineCounts order_line_counts,
                                                 const std::function<T(std::vector<size_t>)>& generator_function) {
   const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
       [&](std::vector<size_t> indices) {
@@ -420,7 +420,7 @@ void TpccTableGenerator::_add_order_line_column(std::vector<Segments>& segments_
 }
 
 std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
-    const TpccTableGenerator::order_line_counts_type& order_line_counts) {
+    const TpccTableGenerator::OrderLineCounts& order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS_PER_DISTRICT});
 

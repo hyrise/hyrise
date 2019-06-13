@@ -31,8 +31,8 @@ bool TpccStockLevel::execute() {
       std::string{"SELECT OL_I_ID FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(_w_id) +
       " AND OL_D_ID = " + std::to_string(_d_id) + " AND OL_O_ID >= " + std::to_string(first_o_id));
   const auto& order_line_table = order_line_table_pair.second;
-  Assert(order_line_table->row_count() > 0,
-         "Did not find latest orders");  // TODO - check if 20 should exist even at start time
+  Assert(order_line_table->row_count() > 0, "Did not find latest orders");
+
   std::stringstream ol_i_ids_stream;
   const auto NUM_ORDERS_PER_WAREHOUSE = static_cast<int>(order_line_table->row_count());
   for (auto order_line_idx = 0; order_line_idx < NUM_ORDERS_PER_WAREHOUSE; ++order_line_idx) {

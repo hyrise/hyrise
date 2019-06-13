@@ -29,9 +29,8 @@ TpccNewOrder::TpccNewOrder(const int num_warehouses, BenchmarkSQLExecutor sql_ex
   for (auto& order_line : _order_lines) {
     order_line.ol_i_id = static_cast<int32_t>(_tpcc_random_generator.nurand(8191, 1, 100000));
 
-    // TODO Deal with single warehouse
     std::uniform_int_distribution<> home_warehouse_dist{1, 100};
-    auto is_home_warehouse = home_warehouse_dist(_random_engine) != 17;
+    auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) != 17;
     if (is_home_warehouse) {
       order_line.ol_supply_w_id = _w_id;
     } else {
@@ -152,7 +151,6 @@ bool TpccNewOrder::execute() {
       new_s_quantity = s_quantity - order_line.ol_quantity + 91;
     }
     const auto new_s_ytd = s_ytd + order_line.ol_quantity;
-    // TODO Is this increased even for remote orders?
     const auto new_s_order_cnt = s_order_cnt + 1;
     const auto new_s_remote_cnt = s_remote_cnt + (order_line.ol_supply_w_id == _w_id ? 0 : 1);
 
@@ -171,7 +169,7 @@ bool TpccNewOrder::execute() {
     const auto ol_amount = order_line.ol_quantity * i_price;
 
     // Add to ORDER_LINE
-    // TODO This can be made faster if we interpret "For each O_OL_CNT item on the order" less strictly and allow for a single insert at the end
+    // TODO(anyone): This can be made faster if we interpret "For each O_OL_CNT item on the order" less strictly and allow for a single insert at the end
     // TODO(anyone): Use actual NULL for OL_DELIVERY_D
     const auto order_line_insert_pair = _sql_executor.execute(
         std::string{"INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, "

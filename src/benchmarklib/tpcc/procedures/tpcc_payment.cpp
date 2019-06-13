@@ -14,11 +14,10 @@ TpccPayment::TpccPayment(const int num_warehouses, BenchmarkSQLExecutor sql_exec
   _d_id = district_dist(_random_engine);
 
   // Use home warehouse in 85% of cases, otherwise select a random one
-  // TODO Deal with single warehouse
   std::uniform_int_distribution<> home_warehouse_dist{1, 100};
   _c_w_id = _w_id;
   _c_d_id = _d_id;
-  if (home_warehouse_dist(_random_engine) > 85) {
+  if (num_warehouses > 2 && home_warehouse_dist(_random_engine) > 85) {
     do {
       _c_w_id = warehouse_dist(_random_engine);
     } while (_c_w_id == _w_id);
