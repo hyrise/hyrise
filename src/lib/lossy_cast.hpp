@@ -4,14 +4,26 @@
 #include <string>
 #include <type_traits>
 
-#include "boost/variant.hpp"
+#include <boost/variant.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "resolve_type.hpp"
 
 namespace opossum {
 
+/**
+ * Contrary to the functions in lossless_cast.hpp, converts from an AllTypeVariant to any target, even if accuracy/data
+ * is lost by the conversion.
+ *
+ * Use this function only in contexts where (query-)result accuracy is not affected (e.g., statistics/estimations)
+ *
+ * If @param source is NULL, return std::nullopt
+ * If @param source is a string, perform a boost::lexical_cast<>
+ * If @param source is arithmetic, perform a static_cast<>, clamping the returned value at
+ *                                 `std::numeric_limits<Target>::min()/max()` to avoid undefined behaviour.
+ */
 template <typename Target>
-std::optional<Target> static_variant_cast(const AllTypeVariant& source) {
+std::optional<Target> lossy_variant_cast(const AllTypeVariant& source) {
   if (variant_is_null(source)) return std::nullopt;
 
   std::optional<Target> result;
@@ -38,13 +50,6 @@ std::optional<Target> static_variant_cast(const AllTypeVariant& source) {
   });
 
   return result;
-}
-
-template <typename Target>
-Target lenient_variant_cast(const AllTypeVariant& source) {
-  const auto target = static_variant_cast<Target>(source);
-  Assert(target, "Lenient variant cast failed");
-  return *target;
 }
 
 }  // namespace opossum

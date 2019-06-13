@@ -65,7 +65,7 @@ void PredicateReorderingRule::_reorder_predicates(
   // Setup cardinality estimation cache so that the statistics of `input` (which might be a big plan) do not need to
   // be determined repeatedly. For this, we hijack the `guarantee_join_graph()`-guarantee and via it promise the
   // CardinalityEstimator that we will not change the LQP below the `input` node by marking it as a "vertex".
-  // This allows the CardinalityEstimator to compute the statistics of `input` once, chache them and then re-use them.
+  // This allows the CardinalityEstimator to compute the statistics of `input` once, cache them and then re-use them.
   const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
   caching_cardinality_estimator->guarantee_join_graph(JoinGraph{{input}, {}});
 

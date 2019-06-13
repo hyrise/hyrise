@@ -139,6 +139,7 @@ set(
     sql/sql_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
+    lossy_cast_test.cpp
     statistics/cardinality_estimator_test.cpp
     statistics/attribute_statistics_test.cpp
     statistics/join_graph_statistics_cache_test.cpp

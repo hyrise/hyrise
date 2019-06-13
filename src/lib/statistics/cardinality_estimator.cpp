@@ -23,7 +23,7 @@
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
-#include "static_variant_cast.hpp"
+#include "lossy_cast.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
@@ -393,7 +393,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
   // Otherwise, forward the input statistics for now.
 
   if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit_node.num_rows_expression())) {
-    const auto num_rows = Cardinality{lenient_variant_cast<float>(value_expression->value)};
+    const auto num_rows = lossy_variant_cast<int64_t>(value_expression->value);
+    if (!num_rows) {
+      // `value_expression->value` being NULL does not make much sense, but that is not the concern of the
+      // CardinalityEstimator
+      return input_table_statistics;
+    }
+
+
     auto column_statistics =
         std::vector<std::shared_ptr<BaseAttributeStatistics>>{limit_node.column_expressions().size()};
 
@@ -404,7 +411,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
       });
     }
 
-    return std::make_shared<TableStatistics>(std::move(column_statistics), num_rows);
+    return std::make_shared<TableStatistics>(std::move(column_statistics), *num_rows);
   } else {
     return input_table_statistics;
   }

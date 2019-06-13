@@ -17,7 +17,7 @@
 #include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
 #include "resolve_type.hpp"
-#include "static_variant_cast.hpp"
+#include "lossy_cast.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
@@ -190,7 +190,7 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
     return true;
   }
 
-  const auto value = static_variant_cast<T>(variant_value);
+  const auto value = lossy_variant_cast<T>(variant_value);
   if (!value) {
     return false;
   }
@@ -224,7 +224,7 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
         return true;
       }
 
-      const auto value2 = static_variant_cast<T>(*variant_value2);
+      const auto value2 = lossy_variant_cast<T>(*variant_value2);
       if (!value2) {
         return false;
       }
@@ -278,7 +278,7 @@ template <typename T>
 std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality_and_distinct_count(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-  auto value = static_variant_cast<T>(variant_value);
+  auto value = lossy_variant_cast<T>(variant_value);
   if (!value) {
     return {static_cast<Cardinality>(total_count()), static_cast<float>(total_distinct_count())};
   }
@@ -371,7 +371,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
     case PredicateCondition::BetweenUpperExclusive:
     case PredicateCondition::BetweenExclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = static_variant_cast<T>(*variant_value2);
+      const auto value2 = lossy_variant_cast<T>(*variant_value2);
       if (!value2) {
         return {total_count(), total_distinct_count()};
       }
@@ -463,7 +463,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
     return nullptr;
   }
 
-  const auto value = static_variant_cast<T>(variant_value);
+  const auto value = lossy_variant_cast<T>(variant_value);
   if (!value) {
     // variant_value is NULL and slicing with NULL is nothing we can do anything meaningful for.
     return clone();

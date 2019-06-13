@@ -21,7 +21,7 @@ class AbstractCostEstimator {
 
   /**
    * Estimate the Cost of a (sub-)plan.
-   * If `cost_estimation_by_lqp_cache` is enabled:
+   * If `cost_estimation_by_lqp_cache` is enabled by calling `guarantee_bottom_up_construction()`:
    *     Tries to obtain subplan costs from `cost_estimation_by_lqp_cache`. Stores the cost for @param lqp in the
    *     `cost_estimation_by_lqp_cache` cache
    * @return The estimated cost of an @param lqp. Calls estimate_node_cost() on each individual node of the plan.
@@ -42,7 +42,7 @@ class AbstractCostEstimator {
   /**
    * Promises to the CostEstimator (and underlying CardinalityEstimator) that it will only be used to estimate bottom-up
    * constructed plans. That is, the Cost/Cardinality of a node, once constructed, never changes.
-   * This enables the usage of a <lqp-ptr> -> <cost> cache.
+   * This enables the usage of a <lqp-ptr> -> <cost> cache (`cost_estimation_by_lqp_cache`).
    */
   void guarantee_bottom_up_construction();
 

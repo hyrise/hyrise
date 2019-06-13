@@ -36,7 +36,7 @@ enum class SQLPipelineStatus {
  *
  * NOTE:
  *  Calling get_result_table() will result in the following "call stack"
- *  get_result_table() -> get_tasks() -> get_pyhsical_plan() -> get_optimized_logical_plan() ->
+ *  get_result_table() -> get_tasks() -> get_physical_plan() -> get_optimized_logical_plan() ->
  *  get_unoptimized_logical_plan() -> get_parsed_sql()
  *
  * NOTE:

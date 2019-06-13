@@ -364,7 +364,7 @@ set(
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    static_variant_cast.hpp
+    lossy_cast.hpp
     statistics/abstract_cardinality_estimator.cpp
     statistics/abstract_cardinality_estimator.hpp
     statistics/statistics_objects/abstract_statistics_object.cpp
