@@ -54,6 +54,10 @@ TEST_F(JoinSortMergeClustererTest, ConcatenateForSingleCluster) {
 
 TEST_F(JoinSortMergeClustererTest, SortPartiallySortedSegments) {
   EXPECT_TRUE(false);
+
+	// DebugAssert(std::is_sorted(materialized_segment.begin(), materialized_segment.end(),
+	//                            [](auto& left, auto& right) { return left.value < right.value; }),
+	//             "Resulting materializied segment is unsorted.");
 }
 
 }  // namespace opossum
