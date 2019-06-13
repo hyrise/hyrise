@@ -62,8 +62,7 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
   void _encode_table(const std::string& table_name, const std::shared_ptr<Table>& table);
 
   template <typename T>
-  std::vector<T> _generate_inner_order_line_column(std::vector<size_t> indices,
-                                                   OrderLineCounts order_line_counts,
+  std::vector<T> _generate_inner_order_line_column(std::vector<size_t> indices, OrderLineCounts order_line_counts,
                                                    const std::function<T(std::vector<size_t>)>& generator_function);
 
   template <typename T>
