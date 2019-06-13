@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "column_materializer_numa.hpp"
-#include "operators/join_sort_merge/radix_cluster_sort.hpp"
+#include "operators/join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {

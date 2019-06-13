@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "join_sort_merge/radix_cluster_sort.hpp"
+#include "join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -35,8 +35,8 @@ bool JoinSortMerge::supports(JoinMode join_mode, PredicateCondition predicate_co
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:
-* -> The input tables are materialized and clustered to a specified amount of clusters.
-*    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
+* -> The input tables are materialized, clustered to a specified number of clusters, and sorted per cluster.
+*    See join_sort_merge_clusterer.hpp for more info on the clustering phase.
 * -> The join is performed per cluster. For the joining phase, runs of entries with the same value are identified
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
 * -> Using the join result, the output table is built using pos lists referencing the original tables.
@@ -890,12 +890,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<const Table> _on_execute() override {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
-    auto radix_clusterer = JoinSortMergeClusterer<T>(
+    auto clusterer = JoinSortMergeClusterer<T>(
         _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(),
         _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
         include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
-    auto sort_output = radix_clusterer.execute();
+    auto sort_output = clusterer.execute();
     _sorted_left_table = std::move(std::make_unique<MaterializedSegmentList<T>>(sort_output.clusters_left));
     _sorted_right_table = std::move(std::make_unique<MaterializedSegmentList<T>>(sort_output.clusters_right));
     _null_rows_left = std::move(sort_output.null_rows_left);

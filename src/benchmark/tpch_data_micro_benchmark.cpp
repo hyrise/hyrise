@@ -11,7 +11,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
-#include "operators/join_sort_merge/radix_cluster_sort.hpp"
+#include "operators/join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -34,15 +34,11 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
     const auto scale_factor = 0.1f;
-    const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
-    // TODO(anyone): setup benchmark_config with the given default_encoding
-    // benchmark_config.encoding_config = EncodingConfig{SegmentEncodingSpec{default_encoding}};
 
     if (!sm.has_table("lineitem")) {
-      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
-                << " encoding:" << std::endl;
+      std::cout << "Generating TPC-H data set with scale factor " << scale_factor << "." << std::endl;
       TpchTableGenerator(scale_factor, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
     }
 
@@ -360,12 +356,13 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_MT)(benchmark::State& st
   table_scan->execute();
 
   for (auto _ : state) {
-    auto radix_clusterer = JoinSortMergeClusterer<int>(table_scan->get_output(), sm.get_table("lineitem"),
-                                                       {ColumnID{1}, ColumnID{1}}, false, false, false, 64);
-    auto sort_output = radix_clusterer.execute();
+    auto clusterer = JoinSortMergeClusterer<int>(table_scan->get_output(), sm.get_table("lineitem"),
+                                                 {ColumnID{1}, ColumnID{1}}, false, false, false, 64);
+    auto sort_output = clusterer.execute();
   }
 
   CurrentScheduler::get()->finish();
+  CurrentScheduler::set(nullptr);
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_ST)(benchmark::State& state) {
@@ -383,9 +380,9 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_ST)(benchmark::State& st
   table_scan->execute();
 
   for (auto _ : state) {
-    auto radix_clusterer = JoinSortMergeClusterer<int>(table_scan->get_output(), sm.get_table("lineitem"),
-                                                       {ColumnID{1}, ColumnID{1}}, false, false, false, 64);
-    auto sort_output = radix_clusterer.execute();
+    auto clusterer = JoinSortMergeClusterer<int>(table_scan->get_output(), sm.get_table("lineitem"),
+                                                 {ColumnID{1}, ColumnID{1}}, false, false, false, 64);
+    auto sort_output = clusterer.execute();
   }
 
   // CurrentScheduler::get()->finish();
@@ -406,12 +403,13 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_MT)(benchmark::State& st
   table_scan->execute();
 
   for (auto _ : state) {
-    auto radix_clusterer = JoinSortMergeClusterer<int>(table_scan->get_output(), sm.get_table("lineitem"),
-                                                       {ColumnID{1}, ColumnID{1}}, true, false, false, 64);
-    auto sort_output = radix_clusterer.execute();
+    auto clusterer = JoinSortMergeClusterer<int>(table_scan->get_output(), sm.get_table("lineitem"),
+                                                 {ColumnID{1}, ColumnID{1}}, true, false, false, 64);
+    auto sort_output = clusterer.execute();
   }
 
   CurrentScheduler::get()->finish();
+  CurrentScheduler::set(nullptr);
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_ST)(benchmark::State& state) {
@@ -429,9 +427,9 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_ST)(benchmark::State& st
   table_scan->execute();
 
   for (auto _ : state) {
-    auto radix_clusterer = JoinSortMergeClusterer<int>(table_scan->get_output(), sm.get_table("lineitem"),
-                                                       {ColumnID{1}, ColumnID{1}}, true, false, false, 64);
-    auto sort_output = radix_clusterer.execute();
+    auto clusterer = JoinSortMergeClusterer<int>(table_scan->get_output(), sm.get_table("lineitem"),
+                                                 {ColumnID{1}, ColumnID{1}}, true, false, false, 64);
+    auto sort_output = clusterer.execute();
   }
 
   // CurrentScheduler::get()->finish();

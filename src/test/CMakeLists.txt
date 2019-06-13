@@ -79,6 +79,7 @@ set(
     operators/join_index_test.cpp
     operators/join_mpsm_test.cpp
     operators/join_nested_loop_test.cpp
+    operators/join_sort_merge_clusterer_test.cpp
     operators/join_sort_merge_test.cpp
     operators/join_test_runner.cpp
     operators/join_verification_test.cpp
