@@ -100,6 +100,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/lz4
     ${PROJECT_SOURCE_DIR}/third_party/zstd
+    ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
 )
 
 if (${ENABLE_JIT_SUPPORT})

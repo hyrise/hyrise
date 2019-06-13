@@ -39,3 +39,4 @@
 - cqf (https://github.com/ArneMayer/cqf)
 - jemalloc (https://github.com/jemalloc/jemalloc)
 - zstd (https://github.com/facebook/zstd)
+- tpcds-result-reproduction (https://github.com/hyrise-mp/tpcds-result-reproduction.git)
