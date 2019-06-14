@@ -931,8 +931,8 @@ namespace opossum {
           if (is_aggregate) {
             // Select all GROUP BY columns with the specified table name
             for (const auto &group_by_expression : group_by_expressions) {
-              const auto identifiers = _filter_identifiers_by_expression(group_by_expression, select_list_elements);
-//            const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(group_by_expression); // todo(jj): Can I get rid off this?
+//              const auto identifiers = _filter_identifiers_by_expression(group_by_expression, select_list_elements);
+            const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(group_by_expression); // todo(jj): Can I get rid off this?
               for (const auto &identifier : identifiers) {
                 if (identifier.table_name == hsql_expr->table) {
                   _inflated_select_list_expressions.emplace_back(group_by_expression);
