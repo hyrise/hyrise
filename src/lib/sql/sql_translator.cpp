@@ -243,7 +243,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // that is not its generated name.
   auto need_alias_node = false;
   for (auto idx = size_t{0}; idx < _inflated_select_list_expressions.size(); ++idx) {
-    Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj)");
+    Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj) 1");
     const auto& expression = _inflated_select_list_expressions[idx];
     const auto& identifier = _inflated_select_list_identifiers[idx];
     need_alias_node = (identifier.column_name != "" && identifier.column_name != expression->as_column_name());
@@ -253,7 +253,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   if (need_alias_node) {
     std::vector<std::string> aliases;
     for (auto idx = size_t{0}; idx < _inflated_select_list_expressions.size(); ++idx) {
-      Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj)");
+      Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj) 2");
       const auto& output_column_expression = _inflated_select_list_expressions[idx];
       const auto& identifier = _inflated_select_list_identifiers[idx];
       if (identifier.column_name != "") {
@@ -1536,8 +1536,8 @@ std::vector<SQLIdentifier> SQLTranslator::_filter_identifiers_by_expression(
   std::vector<SQLIdentifier> filtered_identifiers;
 
   Assert(!select_list_elements.empty(), "jj: The list cannot be empty!");
-  select_list_elements.erase(std::remove(select_list_elements.begin(), select_list_elements.end(), nullptr));
-  Assert(select_list_elements.size() == _inflated_select_list_identifiers.size(), "todo(jj)");
+  select_list_elements.erase(std::remove(select_list_elements.begin(), select_list_elements.end(), nullptr), select_list_elements.end());
+  Assert(select_list_elements.size() == _inflated_select_list_identifiers.size(), "todo(jj) 3");
 
   for (auto idx = size_t{0}; idx < select_list_elements.size(); ++idx) {
     if (select_list_elements[idx] == expression) {

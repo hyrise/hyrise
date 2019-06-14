@@ -34,7 +34,6 @@ class SQLIdentifierResolver final {
   /** @} */
 
   /**
-   * Resolve the expression that an SQLIdentifier refers to.
    * @return    The expression referenced to by @param identifier.
    *            nullptr, if no or multiple such expressions exist
    */
