@@ -150,6 +150,8 @@ class Chunk : private Noncopyable {
 
   void remove_index(const std::shared_ptr<BaseIndex>& index);
 
+  void remove_index(const SegmentIndexType index_type, const std::vector<ColumnID>& column_ids);
+
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
   bool references_exactly_one_table() const;

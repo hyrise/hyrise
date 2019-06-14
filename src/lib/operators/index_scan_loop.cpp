@@ -175,14 +175,18 @@ PosList IndexScanLoop::_scan_chunk(const ChunkID chunk_id) {
     default:
       Fail("Unsupported comparison type encountered");
   }
-  const auto d = static_cast<size_t>(std::distance(range_begin, range_end));
-  matches_out.resize(d);
-  for (size_t i = 0; i < d; ++i) {
-    matches_out[i] = RowID{chunk_id, *range_begin};
+  // Since index scans only work on data tables, we can ensure that without checking any incoming pos list
+  matches_out.guarantee_single_chunk();
+
+  const auto matches_out_index_start_adding = matches_out.size();
+  const auto distance_begin_end = static_cast<size_t>(std::distance(range_begin, range_end));
+  matches_out.resize(matches_out_index_start_adding + distance_begin_end);
+
+  for (size_t idx = matches_out_index_start_adding; idx < distance_begin_end; ++idx) {
+    matches_out[idx] = RowID{chunk_id, *range_begin};
     range_begin++;
   }
 
-  // std::sort(matches_out.begin(), matches_out.end(), [](const auto& left, const auto& right) { return left.chunk_offset < right.chunk_offset; });
   return matches_out;
 }
 

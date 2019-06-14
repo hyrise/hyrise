@@ -26,6 +26,7 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -382,75 +383,72 @@ struct hash<TableColumnIdentifier> {
 
 int main(int argc, const char* argv[]) {
   auto config = BenchmarkConfig::get_default_config();
-  config.max_num_query_runs = 50;
-  config.enable_visualization = true;
+  config.max_num_query_runs = 150;
+  config.enable_visualization = false;
   config.output_file_path = "perf.json";
+  config.chunk_size = 1'000'000;
+  config.cache_binary_tables = true;
   
-  const std::vector<QueryID> tpch_query_ids = {QueryID{0},  QueryID{1},  QueryID{2},  QueryID{3},  QueryID{4},
-                                               QueryID{5},  QueryID{6},  QueryID{7},  QueryID{8},  QueryID{9},
-                                               QueryID{10}, QueryID{11}, QueryID{12}, QueryID{13}, QueryID{14},
-                                               QueryID{15}, QueryID{16}, QueryID{17}, QueryID{18}};
-  // const std::vector<QueryID> tpch_query_ids = {QueryID{5}};
+  // const std::vector<QueryID> tpch_query_ids = {QueryID{0},  QueryID{1},  QueryID{2},  QueryID{3},  QueryID{4},
+  //                                              QueryID{5},  QueryID{6},  QueryID{7},  QueryID{8},  QueryID{3},
+  //                                              QueryID{10}, QueryID{11}, QueryID{12}, QueryID{13}, QueryID{14},
+  //                                              QueryID{15}, QueryID{16}, QueryID{17}, QueryID{18}};
+  // Indexes applicable
 
-  auto br = BenchmarkRunner(config, std::make_unique<TPCHQueryGenerator>(false, SCALE_FACTOR, tpch_query_ids),
-                  std::make_unique<TpchTableGenerator>(SCALE_FACTOR, std::make_shared<BenchmarkConfig>(config)),
-                  100'000);
-  br.run();
+
+  // const std::vector<QueryID> tpch_query_ids = {QueryID{0},  QueryID{1},  QueryID{2},  QueryID{3},  QueryID{4},
+  //                                              QueryID{5},  QueryID{6},  QueryID{7},  QueryID{9},
+  //                                              QueryID{11}, QueryID{13}, QueryID{14},
+  //                                              QueryID{15}, QueryID{16}, QueryID{17}, QueryID{18}};
+
+  // auto br = std::make_shared<BenchmarkRunner>(config, std::make_unique<TPCHQueryGenerator>(false, SCALE_FACTOR, tpch_query_ids),
+  //                 std::make_unique<TpchTableGenerator>(SCALE_FACTOR, std::make_shared<BenchmarkConfig>(config)),
+  //                 100'000);
+
+  // for (const auto& [table_name, table] : StorageManager::get().tables()) {
+  //   for (ColumnID column_id = ColumnID{0}; column_id < table->column_count(); column_id++) {
+  //     table->create_index<GroupKeyIndex>({column_id}, "idx" + std::to_string(column_id));
+  //   }
+  // }
+  // br->run();
+  // TODO andere lineitem spalte mit weniger distinkten elementen filtern (danach vielleicht groupen), damit weniger gepruned werden kann als bei equi auf comment
+  // visualize current plan
+// TODO avg wieder rein
+  // TODO queries tauschen
 
   const std::filesystem::path plugin_path(argv[1]);
   const auto plugin_name = plugin_name_from_path(plugin_path);
 
   PluginManager::get().load_plugin(plugin_path);
 
-  // const auto table = StorageManager::get().get_table("lineitem");
+  const std::vector<QueryID> tpch_query_ids = {QueryID{22}};
+  auto br = std::make_shared<BenchmarkRunner>(config, std::make_unique<TPCHQueryGenerator>(false, SCALE_FACTOR, tpch_query_ids),
+                  std::make_unique<TpchTableGenerator>(SCALE_FACTOR, std::make_shared<BenchmarkConfig>(config)),
+                  100'000);
+  StorageManager::get().add_benchmark_runner(br);
+  auto& query_gen = br->query_generator();
+  br->run();
 
-  // for (const auto& chunk : table->chunks()) {
-    // const auto index = chunk->get_index(SegmentIndexType::GroupKey, {ColumnID{10}});
-    // Assert(index, "creation error");
-  // }
-
+  std::this_thread::sleep_for(std::chrono::milliseconds(1'500));
+  br->rerun();
   SQLPhysicalPlanCache::get().clear();
   SQLLogicalPlanCache::get().clear();
 
-  // for (const auto& chunk : table->chunks()) {
-  //   const auto index = chunk->get_index(SegmentIndexType::GroupKey, {ColumnID{10}});
-  //   Assert(index, "creation error");
-  // }
+  br->runs(75);
+  query_gen->selected_queries({QueryID{13}, QueryID{22}});
+  br->rerun();
 
-  br.rerun();
+  std::this_thread::sleep_for(std::chrono::milliseconds(1'500));
+  br->rerun();
+  SQLPhysicalPlanCache::get().clear();
+  SQLLogicalPlanCache::get().clear();
 
-  // uint16_t next_table_id = 0;
-  // for (const auto& table_name : StorageManager::get().table_names()) {
-  //   table_name_id_map.insert(table_name_id(table_name, next_table_id));
+  br->runs(50);
+  query_gen->selected_queries({QueryID{13}, QueryID{22}, QueryID{5}});
+  br->rerun();
 
-  //   auto next_attribute_id = 0;
-  //   const auto table = StorageManager::get().get_table(table_name);
-  //   for (const auto& column_def : table->column_definitions()) {
-  //     const auto& column_name = column_def.name;
-  //     const auto identifier = std::make_pair(next_table_id, next_attribute_id++);
-  //     attribute_id_name_map.emplace(identifier, column_name);
-  //   }
-
-  //   ++next_table_id;
-  // }
-
-  // ToDo: Think about parameterized queries
-  // for (const auto& [query_string, physical_query_plan] : SQLPhysicalPlanCache::get()) {
-    // physical_query_plan->print(std::cout);
-    // process_pqp(physical_query_plan);
-  // }
-
-  // print_operator_map(scan_map);
-  // std::cout << "#####" << std::endl << " JOIN " << std::endl << "#####" << std::endl << std::endl;
-  // print_operator_map(join_map);
-
-  // auto index_candidates = enumerate_index_candidates();
-  // auto index_assessments = assess_index_candidates(index_candidates);
-  // auto index_choices = select_assessments_greedy(index_assessments, static_cast<size_t>(SCALE_FACTOR * 30'000'000));
-
-  // for (const auto& index_choice : index_choices) {
-  //   std::cout << TCID_to_string(index_choice.tcid) << std::endl;
-  // }
+  std::this_thread::sleep_for(std::chrono::milliseconds(1'500));
+  br->rerun();
 
   return 0;
 }

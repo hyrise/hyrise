@@ -129,6 +129,11 @@ void Chunk::remove_index(const std::shared_ptr<BaseIndex>& index) {
   _indices.erase(it);
 }
 
+void Chunk::remove_index(const SegmentIndexType index_type, const std::vector<ColumnID>& column_ids) {
+  auto segments = _get_segments_for_ids(column_ids);
+  remove_index(get_index(index_type, segments));
+}
+
 bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) return false;
 

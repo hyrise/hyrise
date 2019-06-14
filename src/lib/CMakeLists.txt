@@ -678,6 +678,11 @@ if (${ENABLE_JIT_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
 endif()
 
+# include_directories(
+#     ${PROJECT_SOURCE_DIR}/hyrise/third_party/json                              
+#     ${PROJECT_SOURCE_DIR}/hyrise/third_party/cxxopts                                      
+# )
+
 if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()

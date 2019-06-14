@@ -128,6 +128,13 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
     return (*it->second).priority;
   }
 
+  size_t get_frequency(const Key& key) {
+    auto it = _map.find(key);
+    Handle handle = it->second;
+    GDFSCacheEntry& entry = (*handle);
+    return entry.frequency;
+  }
+
   ErasedIterator begin() { return ErasedIterator{std::make_unique<Iterator>(_map.begin())}; }
 
   ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }

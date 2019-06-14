@@ -13,8 +13,11 @@ extern "C" {
 #include "boost/hana/zip_with.hpp"
 
 #include "benchmark_config.hpp"
+#include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/timer.hpp"
+
 
 extern char** asc_date;
 extern seed_t seed[];
@@ -229,7 +232,26 @@ TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr
 std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
-  Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
+  // Assert(!_benchmark_config->cache_binary_tables, "Caching binary Tables not supported by TpchTableGenerator, yet");
+  const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+
+    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
+      const auto table_name = table_file.path().stem();
+      Timer timer;
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+
+      BenchmarkTableInfo table_info;
+      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.loaded_from_binary = true;
+      table_info_by_name[table_name] = table_info;
+
+      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    return table_info_by_name;
+  }
 
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
   dbgen_reset_seeds();
@@ -355,6 +377,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
   table_info_by_name["supplier"].table = supplier_builder.finish_table();
   table_info_by_name["nation"].table = nation_builder.finish_table();
   table_info_by_name["region"].table = region_builder.finish_table();
+
+  if (_benchmark_config->cache_binary_tables) {
+    std::filesystem::create_directories(cache_directory);
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
+    }
+  }
 
   return table_info_by_name;
 }

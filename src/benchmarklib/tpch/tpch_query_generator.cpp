@@ -388,6 +388,13 @@ std::string TPCHQueryGenerator::build_query(const QueryID query_id) {
       break;
     }
 
+    case 23 - 1: {
+      // std::uniform_int_distribution<> custkey{0, static_cast<int>(_scale_factor * 1'499'999)};
+      // const auto c_key = custkey(random_engine);
+      // parameters.emplace_back(std::to_string(c_key));
+      break;
+    }
+
     default:
       Fail("There are only 22 TPC-H queries");
   }
@@ -444,7 +451,7 @@ std::string TPCHQueryGenerator::query_name(const QueryID query_id) const {
   return std::string("TPC-H ") + std::to_string(query_id + 1);
 }
 
-size_t TPCHQueryGenerator::available_query_count() const { return 22u; }
+size_t TPCHQueryGenerator::available_query_count() const { return 23u; }
 
 std::string TPCHQueryGenerator::_build_executable_query(const QueryID query_id,
                                                         const std::vector<std::string>& parameter_values) {

@@ -46,6 +46,10 @@ class Cache : public Singleton<Cache<Value, Key>> {
     return _impl->get(query);
   }
 
+  size_t get_frequency(const Key& query) {
+    return _impl->get_frequency(query);
+  }
+
   // Checks whether an entry for the query exists.
   bool has(const Key& query) const { return _impl->has(query); }
 

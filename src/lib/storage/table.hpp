@@ -168,6 +168,19 @@ class Table : private Noncopyable {
     _indexes.emplace_back(i);
   }
 
+  void remove_index(const std::vector<ColumnID>& column_ids) {
+    // for (auto& index : _indexes) {
+    for (auto it = _indexes.begin(); it != _indexes.end(); ++it) {
+      if (it->column_ids == column_ids) {
+        for (auto& chunk : _chunks) {
+          chunk->remove_index(it->type, it->column_ids);
+        }
+        _indexes.erase(it);
+        return;
+      }
+    }
+  }
+
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */

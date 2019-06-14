@@ -48,6 +48,10 @@ class BenchmarkRunner {
 
   std::unique_ptr<AbstractQueryGenerator>& query_generator();
 
+  void runs(size_t runs);
+
+  bool runs();
+
  private:
   // Run benchmark in BenchmarkMode::PermutedQuerySet mode
   void _benchmark_permuted_query_set();
@@ -90,7 +94,7 @@ class BenchmarkRunner {
   // available queries.
   std::vector<QueryPlans> _query_plans;
 
-  const BenchmarkConfig _config;
+  BenchmarkConfig _config;
 
   std::unique_ptr<AbstractQueryGenerator> _query_generator;
   std::unique_ptr<AbstractTableGenerator> _table_generator;
@@ -103,6 +107,8 @@ class BenchmarkRunner {
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   Duration _total_run_duration{};
+
+  bool _is_running = false;
 };
 
 }  // namespace opossum

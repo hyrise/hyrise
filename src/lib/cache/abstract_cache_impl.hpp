@@ -64,6 +64,8 @@ class AbstractCacheImpl {
   virtual ErasedIterator begin() = 0;
   virtual ErasedIterator end() = 0;
 
+  virtual size_t get_frequency(const Key& key) = 0;
+
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
 

@@ -97,7 +97,12 @@ void BenchmarkRunner::rerun() {
   run(true);
 }
 
+bool BenchmarkRunner::runs() {
+  return this->_is_running;
+}
+
 void BenchmarkRunner::run(bool rerun) {
+  _is_running = true;
   std::cout << "- Starting Benchmark..." << std::endl;
 
   const auto available_queries_count = _query_generator->available_query_count();
@@ -120,6 +125,8 @@ void BenchmarkRunner::run(bool rerun) {
 
   auto benchmark_end = std::chrono::steady_clock::now();
   _total_run_duration = benchmark_end - benchmark_start;
+
+  std::cout << "Took: " << std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(_total_run_duration).count()) << std::endl;
 
   // Create report
   if (_config.output_file_path) {
@@ -176,6 +183,8 @@ void BenchmarkRunner::run(bool rerun) {
 
     Assert(!any_verification_failed, "Verification failed");
   }
+
+  _is_running = false;
 }
 
 void BenchmarkRunner::_benchmark_permuted_query_set() {
@@ -245,6 +254,10 @@ void BenchmarkRunner::_benchmark_permuted_query_set() {
 
 std::unique_ptr<AbstractQueryGenerator>& BenchmarkRunner::query_generator() {
   return _query_generator;
+}
+
+void BenchmarkRunner::runs(size_t runs) {
+  _config.max_num_query_runs = runs;
 }
 
 void BenchmarkRunner::_benchmark_individual_queries() {

@@ -890,6 +890,10 @@ const char* const tpch_query_22 =
        GROUP BY cntrycode
        ORDER BY cntrycode;)";
 
+const char* const tpch_query_23 =
+    R"(SELECT l_linenumber FROM lineitem WHERE l_comment < 'special')";
+    // R"(SELECT o_custkey, o_orderstatus, l_linenumber FROM orders, lineitem WHERE o_custkey = ? and o_orderkey=l_orderkey and l_comment < 'special')";
+
 }  // namespace
 
 namespace opossum {
@@ -899,6 +903,6 @@ const std::map<size_t, const char*> tpch_queries = {
     {6, tpch_query_6},   {7, tpch_query_7},   {8, tpch_query_8},   {9, tpch_query_9},   {10, tpch_query_10},
     {11, tpch_query_11}, {12, tpch_query_12}, {13, tpch_query_13}, {14, tpch_query_14}, {15, tpch_query_15},
     {16, tpch_query_16}, {17, tpch_query_17}, {18, tpch_query_18}, {19, tpch_query_19}, {20, tpch_query_20},
-    {21, tpch_query_21}, {22, tpch_query_22}};
+    {21, tpch_query_21}, {22, tpch_query_22}, {23, tpch_query_23}};
 
 }  // namespace opossum

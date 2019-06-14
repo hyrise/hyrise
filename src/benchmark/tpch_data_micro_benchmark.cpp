@@ -177,13 +177,13 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanLoopSortOnly)(benchmar
   }
 }
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanCopyOnly)(benchmark::State& state) {
-  for (auto _ : state) {
-    const std::shared_ptr<IndexScanCopy> index_scan = std::make_shared<IndexScanCopy>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey2, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
-    index_scan->execute();
-    // std::cout << index_scan->get_output()->row_count() << std::endl;
-  }
-}
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanIndexScanCopyOnly)(benchmark::State& state) {
+//   for (auto _ : state) {
+//     const std::shared_ptr<IndexScanCopy> index_scan = std::make_shared<IndexScanCopy>(_table_wrapper_map.at("lineitem"), SegmentIndexType::GroupKey2, _index_column_ids, PredicateCondition::BetweenInclusive, _index_pred_a, _index_pred_b, nullptr);
+//     index_scan->execute();
+//     // std::cout << index_scan->get_output()->row_count() << std::endl;
+//   }
+// }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_JanTableScanTableScanOnly)(benchmark::State& state) {
   const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);

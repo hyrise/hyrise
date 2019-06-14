@@ -10,6 +10,7 @@
 #include "prepared_plan.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
+#include "../benchmarklib/benchmark_runner.hpp"
 
 namespace opossum {
 
@@ -66,6 +67,9 @@ class StorageManager : public Singleton<StorageManager> {
 
   StorageManager(StorageManager&&) = delete;
 
+  void add_benchmark_runner(std::shared_ptr<BenchmarkRunner> br);
+  std::shared_ptr<BenchmarkRunner> get_benchmark_runner();
+
  protected:
   StorageManager() {}
 
@@ -77,6 +81,8 @@ class StorageManager : public Singleton<StorageManager> {
   std::map<std::string, std::shared_ptr<Table>> _tables;
   std::map<std::string, std::shared_ptr<LQPView>> _views;
   std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
+
+  std::shared_ptr<BenchmarkRunner> _br;
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);

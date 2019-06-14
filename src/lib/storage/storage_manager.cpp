@@ -16,6 +16,14 @@
 
 namespace opossum {
 
+void StorageManager::add_benchmark_runner(std::shared_ptr<BenchmarkRunner> br) {
+  _br = br;
+}
+
+std::shared_ptr<BenchmarkRunner> StorageManager::get_benchmark_runner() {
+  return _br;
+}
+
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
