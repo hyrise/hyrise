@@ -1,6 +1,7 @@
 #include "calibration_feature_extractor.hpp"
 
 #include "constant_mappings.hpp"
+#include "cost_model/feature_extractor/column_feature_extractor.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -183,50 +184,9 @@ const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_opera
 const ColumnFeatures CalibrationFeatureExtractor::_extract_features_for_column_expression(
     const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<PQPColumnExpression>& column_expression,
     const std::string& prefix) {
-  auto chunk_count = left_input_table->chunk_count();
-  const auto& column_id = column_expression->column_id;
+  const auto column_id = column_expression->column_id;
 
-  if (chunk_count == ChunkID{0}) {
-    return ColumnFeatures{prefix};
-  }
-
-  size_t number_of_reference_segments = 0;
-  std::map<EncodingType, size_t> encoding_mapping{{EncodingType::Unencoded, 0},
-                                                  {EncodingType::Dictionary, 0},
-                                                  {EncodingType::FixedStringDictionary, 0},
-                                                  {EncodingType::FrameOfReference, 0},
-                                                  {EncodingType::RunLength, 0}};
-
-  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& chunk = left_input_table->get_chunk(chunk_id);
-    const auto segment = chunk->get_segment(column_id);
-    const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
-
-    encoding_mapping[encoding_reference_pair.first] += 1;
-    if (encoding_reference_pair.second) {
-      number_of_reference_segments++;
-    }
-  }
-
-  ColumnFeatures column_features{prefix};
-
-  column_features.column_segment_encoding_Unencoded_percentage =
-      encoding_mapping[EncodingType::Unencoded] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_Dictionary_percentage =
-      encoding_mapping[EncodingType::Dictionary] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_RunLength_percentage =
-      encoding_mapping[EncodingType::RunLength] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_FixedStringDictionary_percentage =
-      encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_FrameOfReference_percentage =
-      encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
-  column_features.column_is_reference_segment = number_of_reference_segments > 0;
-  column_features.column_data_type = column_expression->data_type();
-  column_features.column_memory_usage_bytes = _get_memory_usage_for_column(left_input_table, column_id);
-  // TODO(Sven): How to calculate from segment_distinct_value_count?
-  column_features.column_distinct_value_count = 0;
-
-  return column_features;
+  return ColumnFeatureExtractor::extract_features(left_input_table, column_id, column_expression->data_type(), prefix);
 }
 
 void CalibrationFeatureExtractor::_extract_table_scan_features_for_predicate_expression(
@@ -277,31 +237,6 @@ size_t CalibrationFeatureExtractor::_get_memory_usage_for_column(const std::shar
   }
 
   return memory_usage;
-}
-
-std::pair<EncodingType, bool> CalibrationFeatureExtractor::_get_encoding_type_for_segment(
-    const std::shared_ptr<BaseSegment>& segment) {
-  auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-
-  // Dereference ReferenceSegment for encoding feature
-  // TODO(Sven): add test for empty referenced table
-  // TODO(Sven): add test to check for encoded, referenced column
-  if (reference_segment && reference_segment->referenced_table()->chunk_count() > ChunkID{0}) {
-    auto underlying_segment = reference_segment->referenced_table()
-                                  ->get_chunk(ChunkID{0})
-                                  ->get_segment(reference_segment->referenced_column_id());
-    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(underlying_segment);
-    if (encoded_scan_segment) {
-      return std::make_pair(encoded_scan_segment->encoding_type(), true);
-    }
-    return std::make_pair(EncodingType::Unencoded, true);
-  } else {
-    auto encoded_scan_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-    if (encoded_scan_segment) {
-      return std::make_pair(encoded_scan_segment->encoding_type(), false);
-    }
-    return std::make_pair(EncodingType::Unencoded, false);
-  }
 }
 
 const ProjectionFeatures CalibrationFeatureExtractor::_extract_features_for_operator(

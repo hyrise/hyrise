@@ -25,6 +25,11 @@ class ColumnFeatureExtractor {
                                                const std::shared_ptr<LQPColumnExpression>& column_expression,
                                                const std::string& prefix);
 
+  static const ColumnFeatures extract_features(const std::shared_ptr<const Table>& table,
+                                               const ColumnID column_id,
+                                               const DataType data_type,
+                                               const std::string& prefix);
+
  private:
   static std::pair<SegmentEncodingSpec, bool> _get_encoding_type_for_segment(const std::shared_ptr<BaseSegment>& segment);
   static size_t _get_memory_usage_for_column(const std::shared_ptr<const Table>& table, ColumnID column_id);
