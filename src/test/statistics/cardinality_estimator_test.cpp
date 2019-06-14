@@ -418,6 +418,15 @@ TEST_F(CardinalityEstimatorTest, LimitWithValueExpression) {
   EXPECT_FALSE(column_statistics_b->histogram);
 }
 
+TEST_F(CardinalityEstimatorTest, LimitWithValueExpressionExeedingInputRowCount) {
+  const auto limit_lqp_a = LimitNode::make(value_(1000), node_a);
+  EXPECT_EQ(estimator.estimate_cardinality(limit_lqp_a), 100);
+
+  const auto limit_statistics_a = estimator.estimate_statistics(limit_lqp_a);
+
+  EXPECT_EQ(limit_statistics_a->row_count, 100);
+}
+
 TEST_F(CardinalityEstimatorTest, LimitWithComplexExpression) {
   const auto limit_lqp_a = LimitNode::make(add_(1, 2), node_a);
   // The "complex" expression `1+2` is evaluated and LimitNode is estimated to have a selectivity of 1
@@ -563,6 +572,17 @@ TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
   const auto lqp_e =
       PredicateNode::make(between_inclusive_(d_a, placeholder_(ParameterID{0}), placeholder_(ParameterID{1})), node_d);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_e), 25.0f);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateWithNull) {
+  const auto lqp_a = PredicateNode::make(equals_(a_a, NullValue{}), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_a), 0.0f);
+
+  const auto lqp_b = PredicateNode::make(like_(g_a, NullValue{}), node_g);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_b), 0.0f);
+
+  const auto lqp_c = PredicateNode::make(between_inclusive_(a_a, 5, NullValue{}), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_c), 0.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateEstimateColumnVsColumnEquiScan) {

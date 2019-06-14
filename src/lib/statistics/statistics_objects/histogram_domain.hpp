@@ -73,8 +73,8 @@ class HistogramDomain<pmr_string> {
   size_t character_range_width() const;
 
   /**
-   * @return a numerical representation of @param string_value. Note that only the first `prefix_length` are considered
-   *         and that each character of @param string_value is capped by [min_char, max_char]
+   * @return a numerical representation of @param string_value. Note that only the first `prefix_length` characters are
+   *         considered and that each character of @param string_value is capped by [min_char, max_char]
    */
   IntegralType string_to_number(const pmr_string& string_value) const;
 

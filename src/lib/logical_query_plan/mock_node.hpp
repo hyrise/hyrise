@@ -38,7 +38,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
    * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
    * @{
    */
-  void set_pruned_column_ids(const std::vector<ColumnID>& column_ids);
+  void set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids);
   const std::vector<ColumnID>& pruned_column_ids() const;
   /** @} */
 

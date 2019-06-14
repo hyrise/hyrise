@@ -34,7 +34,7 @@ void GenericHistogramBuilder<T>::add_sliced_bin(const AbstractHistogram<T>& sour
                                                 const T& slice_min, const T& slice_max) {
   DebugAssert(slice_max >= slice_min, "Invalid slice");
   DebugAssert(slice_min >= source.bin_minimum(bin_id), "Invalid slice minimum");
-  DebugAssert(slice_max <= source.bin_maximum(bin_id), "Invalid slice minimum");
+  DebugAssert(slice_max <= source.bin_maximum(bin_id), "Invalid slice maximum");
 
   const auto sliced_bin_ratio =
       source.bin_ratio_less_than_equals(bin_id, slice_max) - source.bin_ratio_less_than(bin_id, slice_min);

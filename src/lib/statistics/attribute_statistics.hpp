@@ -22,11 +22,7 @@ template <typename T>
 class CountingQuotientFilter;
 
 /**
- * Statistically represents
- * - a Column, when used in TableStatistics, i.e., for cardinality estimation
- * - a Segment, when used in ColumnPruningStatistics, i.e., for Chunk pruning
- *
- * Contains any number of AbstractStatisticsObjects (Histograms, Filters, etc.).
+ * For docs, see BaseAttributeStatistics
  */
 template <typename T>
 class AttributeStatistics : public BaseAttributeStatistics {

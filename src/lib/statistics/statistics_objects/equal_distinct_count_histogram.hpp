@@ -14,7 +14,8 @@ class Table;
 
 /**
  * Distinct-balanced histogram.
- * Bins contain roughly the same number of distinct values actually occurring in the data.
+ * The first `bin_count_with_extra_value` contain each contain `distinct_count_per_bin + 1` distinct values,
+ * all other bins contain `distinct_count_per_bin` distinct values.
  * There might be gaps between bins.
  */
 template <typename T>
@@ -28,8 +29,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
                               const HistogramDomain<T>& domain = {});
 
   /**
-   * Create a EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
-   * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must no be zero.
+   * Create an EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
+   * @param max_bin_count   Desired number of bins. Less might be created, but never more. Must not be zero.
    */
   static std::shared_ptr<EqualDistinctCountHistogram<T>> from_column(const Table& table, const ColumnID column_id,
                                                                      const BinID max_bin_count,

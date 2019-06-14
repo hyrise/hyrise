@@ -20,10 +20,10 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "lossy_cast.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
-#include "lossy_cast.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
@@ -37,6 +37,13 @@
 namespace {
 
 using namespace opossum;  // NOLINT
+
+// Magic constants used in places where a better estimation would be implementable (either with
+// statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
+constexpr auto PLACEHOLDER_SELECTIVITY_LOW = 0.1f;
+constexpr auto PLACEHOLDER_SELECTIVITY_MEDIUM = 0.5f;
+constexpr auto PLACEHOLDER_SELECTIVITY_HIGH = 0.9f;
+constexpr auto PLACEHOLDER_SELECTIVITY_ALL = 1.0f;
 
 template <typename T>
 std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& table_statistics,
@@ -225,8 +232,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
     const ProjectionNode& projection_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // For ProjectionNodes, reorder/remove AttributeStatistics from the input. They also perform calculations creating new
   // colums.
-  // TODO(anybody) For these, no meaningful statistics can be generated yet, hence an empty AttributeStatistics object
-  //               is created.
+  // TODO(anybody) For columns newly created by a Projection no meaningful statistics can be generated yet, hence an
+  //               empty AttributeStatistics object is created.
 
   auto column_statistics =
       std::vector<std::shared_ptr<BaseAttributeStatistics>>{projection_node.column_expressions().size()};
@@ -304,8 +311,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
-  // For inner-equi JoinNodes, an principle-of-inclusion algorithm is used, all other join modes and predicate
-  // conditions are treated as cross joins for now
+  // For inner-equi JoinNodes, an principle-of-inclusion algorithm is used.
+  // The same algorithm is used for outer-equi JoinNodes, lacking a better alternative at the moment.
+  // All other join modes and predicate conditions are treated as cross joins for now.
 
   if (join_node.join_mode == JoinMode::Cross) {
     return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
@@ -322,7 +330,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
           // TODO(anybody) Implement estimation of Semi/Anti joins
           return left_input_table_statistics;
 
-        // TODO(anybody) For now, handle outer joins just as inner joins
+        // For now, handle outer joins just as inner joins
+        // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches.
         case JoinMode::Left:
         case JoinMode::Right:
         case JoinMode::FullOuter:
@@ -365,7 +374,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     }
   }
 
-  Fail("Unreachable, but GCC doesn't realize...");
+  Fail("GCC thinks this is reachable");
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
@@ -376,7 +385,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
 
   DebugAssert(
       left_input_table_statistics->column_statistics.size() == right_input_table_statistics->column_statistics.size(),
-      "Input TableStatisitcs need the same column for Union");
+      "Input TableStatistics need to have the same number of columns to perform a union");
 
   auto column_statistics = left_input_table_statistics->column_statistics;
 
@@ -393,13 +402,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
   // Otherwise, forward the input statistics for now.
 
   if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit_node.num_rows_expression())) {
-    const auto num_rows = lossy_variant_cast<int64_t>(value_expression->value);
-    if (!num_rows) {
+    const auto row_count = lossy_variant_cast<float>(value_expression->value);
+    if (!row_count) {
       // `value_expression->value` being NULL does not make much sense, but that is not the concern of the
       // CardinalityEstimator
       return input_table_statistics;
     }
 
+    // Number of rows can never exceed number of input rows
+    const auto clamped_row_count = std::min(*row_count, input_table_statistics->row_count);
 
     auto column_statistics =
         std::vector<std::shared_ptr<BaseAttributeStatistics>>{limit_node.column_expressions().size()};
@@ -411,7 +422,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
       });
     }
 
-    return std::make_shared<TableStatistics>(std::move(column_statistics), *num_rows);
+    return std::make_shared<TableStatistics>(std::move(column_statistics), clamped_row_count);
   } else {
     return input_table_statistics;
   }
@@ -453,21 +464,22 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
       if (null_value_ratio) {
         selectivity = is_not_null ? 1 - *null_value_ratio : *null_value_ratio;
 
-        // All that remains of the column we scanned on are NULL values
+        // All that remains of the column we scanned on are exclusively NULL values or exclusively non-NULL values
         const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
         column_statistics->null_value_ratio = std::make_shared<NullValueRatioStatistics>(is_not_null ? 0.0f : 1.0f);
         output_column_statistics[left_column_id] = column_statistics;
       } else {
         // If there is no null-value ratio available, assume a selectivity of 1, for both IS NULL and IS NOT NULL, as no
         // magic number makes real sense here.
-        selectivity = 1.0f;
+        selectivity = PLACEHOLDER_SELECTIVITY_ALL;
+        return;
       }
     } else {
       const auto scan_statistics_object = left_input_column_statistics->histogram;
       // If there are no statistics available for this segment, assume a selectivity of 1, as no magic number makes real
       // sense here.
       if (!scan_statistics_object) {
-        selectivity = 1.0f;
+        selectivity = PLACEHOLDER_SELECTIVITY_ALL;
         return;
       }
 
@@ -481,13 +493,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
 
         if (left_data_type != right_data_type) {
           // TODO(anybody) Cannot estimate column-vs-column scan for differing data types, yet
-          selectivity = 1.0f;
+          selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
         }
 
         if (predicate.predicate_condition != PredicateCondition::Equals) {
           // TODO(anyone) CardinalityEstimator cannot handle non-equi column-to-column scans right now
-          selectivity = 1.0f;
+          selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
         }
 
@@ -497,8 +509,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         const auto left_histogram = left_input_column_statistics->histogram;
         const auto right_histogram = right_input_column_statistics->histogram;
         if (!left_histogram || !right_histogram) {
-          // TODO(anyone) Can only use histograms to estimate column-to-column scans right now
-          selectivity = 1.0f;
+          // Can only use histograms to estimate column-to-column scans right now
+          // TODO(anyone) extend to other statistics objects
+          selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
         }
 
@@ -556,7 +569,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           case PredicateCondition::NotLike:
             // Lacking better options, assume a "magic" selectivity for >, >=, <, <=, ... Any number would be equally
             // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
-            selectivity = 0.5f;
+            selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
             break;
 
           case PredicateCondition::IsNull:
@@ -568,37 +581,42 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         /**
          * Estimate ColumnVsValue
          */
-
         Assert(predicate.value.type() == typeid(AllTypeVariant), "Expected AllTypeVariant");
 
-        // TODO(anybody) For (NOT) LIKE predicates that start with a wildcard, Histograms won't yield reasonable
-        //               results. Assume a magic selectivity for now
+        const auto value_variant = boost::get<AllTypeVariant>(predicate.value);
+        if (variant_is_null(value_variant)) {
+          // A predicate `<column> <condition> NULL` always has a selectivity of 0
+          selectivity = 0.0f;
+          return;
+        }
+
         if (predicate.predicate_condition == PredicateCondition::Like) {
           // Lacking better options, assume a "magic" selectivity for LIKE. Any number would be equally
           // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
-          selectivity = 0.1f;
+          selectivity = PLACEHOLDER_SELECTIVITY_LOW;
           return;
         }
         if (predicate.predicate_condition == PredicateCondition::NotLike) {
           // Lacking better options, assume a "magic" selectivity for NOT LIKE. Any number would be equally
           // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
-          selectivity = 0.9f;
+          selectivity = PLACEHOLDER_SELECTIVITY_HIGH;
           return;
         }
 
         auto value2_variant = std::optional<AllTypeVariant>{};
         if (predicate.value2) {
           if (predicate.value2->type() != typeid(AllTypeVariant)) {
-            selectivity = 1.0f;
+            // Lacking better options, assume a "magic" selectivity for `BETWEEN ... AND ?`. Any number would be equally
+            // right and wrong here. In some examples, this seemed like a good guess ¯\_(ツ)_/¯
+            selectivity = PLACEHOLDER_SELECTIVITY_MEDIUM;
             return;
           }
 
           value2_variant = boost::get<AllTypeVariant>(*predicate.value2);
         }
 
-        const auto sliced_statistics_object = scan_statistics_object->sliced(
-            predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value), value2_variant);
-
+        const auto sliced_statistics_object =
+            scan_statistics_object->sliced(predicate.predicate_condition, value_variant, value2_variant);
         if (!sliced_statistics_object) {
           selectivity = 0.0f;
           return;
@@ -607,15 +625,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
         // TODO(anybody) Simplify this block if AbstractStatisticsObject ever supports total_count()
         const auto sliced_histogram =
             std::dynamic_pointer_cast<AbstractHistogram<ColumnDataType>>(sliced_statistics_object);
-        if (sliced_histogram) {
-          if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
-            selectivity = 0.0f;
-            return;
-          } else {
-            selectivity = sliced_histogram->total_count() / scan_statistics_object->total_count();
-          }
+        DebugAssert(sliced_histogram, "Expected slicing of a Histogram to return either nullptr or a Histogram");
+        if (input_table_statistics->row_count == 0 || sliced_histogram->total_count() == 0.0f) {
+          selectivity = 0.0f;
         } else {
-          selectivity = 1.0f;
+          selectivity = sliced_histogram->total_count() / scan_statistics_object->total_count();
         }
 
         const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
@@ -771,7 +785,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_cross_join(
     const TableStatistics& left_input_table_statistics, const TableStatistics& right_input_table_statistics) {
-  // Every tuple from the left side get's emitted once for each tuple on the right side - and vice versa
+  // Every tuple from the left side gets emitted once for each tuple on the right side - and vice versa
   const auto left_selectivity = Selectivity{right_input_table_statistics.row_count};
   const auto right_selectivity = Selectivity{left_input_table_statistics.row_count};
 

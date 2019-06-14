@@ -11,10 +11,11 @@ class AbstractStatisticsObject;
 enum class PredicateCondition;
 
 /**
- * Base class for AttributeStatistics<T>.
- * Statistically represents a Column (i.e. covers all Segments with the same ColumnID over all Chunks of a Table).
+ * Statistically represents
+ * - a Column, when used in TableStatistics, i.e., for cardinality estimation
+ * - a Segment, when used in ColumnPruningStatistics, i.e., for Chunk pruning
  *
- * Contains slots for AbstractStatisticsObjects (Histograms, Filters, etc.), see AttributeStatistics<T>.
+ * Contains any number of AbstractStatisticsObjects (Histograms, Filters, etc.).
  */
 class BaseAttributeStatistics {
  public:

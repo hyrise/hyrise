@@ -24,7 +24,7 @@ std::unordered_map<T, HistogramCountType> add_segment_to_value_distribution(
     if (iterator_value.is_null()) return;
 
     if constexpr (std::is_same_v<T, pmr_string>) {
-      // Do "contains()" check first to avoid the string copy incurred by string_to_domain() if we can
+      // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
       if (domain.contains(iterator_value.value())) {
         ++value_distribution[iterator_value.value()];
       } else {
@@ -42,6 +42,8 @@ template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
                                                                              const ColumnID column_id,
                                                                              const HistogramDomain<T>& domain) {
+  // TODO(anybody) If you want to look into performance, this would probably benefit greatly from monotonic buffer
+  //               resources.
   std::unordered_map<T, HistogramCountType> value_distribution_map;
 
   for (const auto& chunk : table.chunks()) {
@@ -89,7 +91,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero ");
 
-  auto value_distribution = value_distribution_from_column(table, column_id, domain);
+  const auto value_distribution = value_distribution_from_column(table, column_id, domain);
 
   if (value_distribution.empty()) {
     return nullptr;
@@ -107,28 +109,30 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   std::vector<T> bin_maxima(bin_count);
   std::vector<HistogramCountType> bin_heights(bin_count);
 
-  auto current_bin_begin_index = BinID{0};
+  // `bin_minimum_distinct_value_idx` and `bin_maximum_distinct_value_idx` are indices into `value_distribution`
+  // describing which range of distinct values goes into a bin
+  auto bin_minimum_distinct_value_idx = BinID{0};
   for (BinID bin_index = 0; bin_index < bin_count; bin_index++) {
-    auto current_bin_end_index = current_bin_begin_index + distinct_count_per_bin - 1;
+    auto bin_maximum_distinct_value_idx = bin_minimum_distinct_value_idx + distinct_count_per_bin - 1;
     if (bin_index < bin_count_with_extra_value) {
-      current_bin_end_index++;
+      bin_maximum_distinct_value_idx++;
     }
 
     // We'd like to move strings, but have to copy if we need the same string for the bin_maximum
-    if (std::is_same_v<T, std::string> && current_bin_begin_index != current_bin_end_index) {
-      bin_minima[bin_index] = std::move(value_distribution[current_bin_begin_index].first);
+    if (std::is_same_v<T, std::string> && bin_minimum_distinct_value_idx != bin_maximum_distinct_value_idx) {
+      bin_minima[bin_index] = std::move(value_distribution[bin_minimum_distinct_value_idx].first);
     } else {
-      bin_minima[bin_index] = value_distribution[current_bin_begin_index].first;
+      bin_minima[bin_index] = value_distribution[bin_minimum_distinct_value_idx].first;
     }
 
-    bin_maxima[bin_index] = std::move(value_distribution[current_bin_end_index].first);
+    bin_maxima[bin_index] = std::move(value_distribution[bin_maximum_distinct_value_idx].first);
 
     bin_heights[bin_index] =
-        std::accumulate(value_distribution.cbegin() + current_bin_begin_index,
-                        value_distribution.cbegin() + current_bin_end_index + 1, HistogramCountType{0},
+        std::accumulate(value_distribution.cbegin() + bin_minimum_distinct_value_idx,
+                        value_distribution.cbegin() + bin_maximum_distinct_value_idx + 1, HistogramCountType{0},
                         [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
 
-    current_bin_begin_index = current_bin_end_index + 1;
+    bin_minimum_distinct_value_idx = bin_maximum_distinct_value_idx + 1;
   }
 
   return std::make_shared<EqualDistinctCountHistogram<T>>(

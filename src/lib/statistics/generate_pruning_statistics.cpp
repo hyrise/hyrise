@@ -22,18 +22,19 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-void create_pruning_filter_for_segment(AttributeStatistics<T>& segment_statistics, const pmr_vector<T>& dictionary) {
-  std::shared_ptr<AbstractStatisticsObject> pruning_filter;
+void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
+                                           const pmr_vector<T>& dictionary) {
+  std::shared_ptr<AbstractStatisticsObject> pruning_statistics;
   if constexpr (std::is_arithmetic_v<T>) {
-    pruning_filter = RangeFilter<T>::build_filter(dictionary);
+    pruning_statistics = RangeFilter<T>::build_filter(dictionary);
   } else {
     if (!dictionary.empty()) {
-      pruning_filter = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+      pruning_statistics = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
     }
   }
 
-  if (pruning_filter) {
-    segment_statistics.set_statistics_object(pruning_filter);
+  if (pruning_statistics) {
+    segment_statistics.set_statistics_object(pruning_statistics);
   }
 }
 
@@ -56,7 +57,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
         // we can use the fact that dictionary segments have an accessor for the dictionary
         const auto& dictionary = *typed_segment.dictionary();
-        create_pruning_filter_for_segment(*segment_statistics, dictionary);
+        create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
         // if we have a generic segment we create the dictionary ourselves
         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
@@ -69,7 +70,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         });
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
         std::sort(dictionary.begin(), dictionary.end());
-        create_pruning_filter_for_segment(*segment_statistics, dictionary);
+        create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 
       chunk_statistics[column_id] = segment_statistics;

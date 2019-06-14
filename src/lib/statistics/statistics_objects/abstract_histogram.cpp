@@ -16,8 +16,8 @@
 #include "expression/evaluation/like_matcher.hpp"
 #include "generic_histogram.hpp"
 #include "generic_histogram_builder.hpp"
-#include "resolve_type.hpp"
 #include "lossy_cast.hpp"
+#include "resolve_type.hpp"
 #include "statistics/statistics_objects/abstract_statistics_object.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
@@ -65,8 +65,13 @@ template <typename T>
 typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
-  // The width of an integer bin [5, 5] is 1, same for a string bin ["aa", "aa"], whereas the width of a float bin
-  // [5.1, 5.2] is 0.1
+  // The width of an float bin [5.0, 7.0] is 2, as one would expect, but the width of an integer bin [5, 7] is 3.
+  // An integer (e.g. 3) is thought to have a width of 1, whereas the floating point number 3.0 is thought to have no
+  // width.
+  // This makes our math more correct in multiple places, e.g., for a bin [0, 3] with a width of 4, the ratio of
+  // values smaller than 2 is (2 - 0) / (width=4) -> 0.5: 0 and 1 are smaller, 2 and 3 are larger.
+  // For a float bin [0.0, 3.0] it is obvious that only two-thirds of the bin are smaller than 2:
+  // 2 - 0 / (width=3) -> 0.6666
 
   if constexpr (std::is_same_v<T, pmr_string>) {
     const auto repr_min = _domain.string_to_number(bin_minimum(index));
@@ -212,8 +217,7 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
     case PredicateCondition::GreaterThan:
       return value >= bin_maximum(bin_count() - 1);
 
-    // These are statistical estimations, currently there is no point in distinguishing between the different Between*
-    // types.
+    // For simplicity we do not distinguish between the different Between* types.
     case PredicateCondition::BetweenInclusive:
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:
@@ -380,7 +384,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
         return {Cardinality{0}, 0.0f};
       }
 
-      // Sanitize value (lower_bound) and value2 (lower_bin_id) so that both values are contained within a bin
+      // Adjust value (lower_bound) and value2 (lower_bin_id) so that both values are contained within a bin
       auto lower_bound = *value;
       auto lower_bin_id = _bin_for_value(*value);
       if (lower_bin_id == INVALID_BIN_ID) {
@@ -423,7 +427,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
       if constexpr (std::is_same_v<pmr_string, T>) {
-        // Generally, (NOT) LIKE is to hard to perform estimations on. Some special patterns could be estimated,
+        // Generally, (NOT) LIKE is too hard to perform estimations on. Some special patterns could be estimated,
         // e.g. `LIKE 'a'` is the same as `= 'a'` or `LIKE 'a%'` is the same as `>= a AND < b`, but we leave it to other
         // components (e.g., the optimizer) to perform these transformations.
         // Thus, (NOT) LIKE is not estimated and we return a selectivity of 1.
@@ -464,10 +468,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
   }
 
   const auto value = lossy_variant_cast<T>(variant_value);
-  if (!value) {
-    // variant_value is NULL and slicing with NULL is nothing we can do anything meaningful for.
-    return clone();
-  }
+  DebugAssert(value, "sliced() cannot be called with NULL");
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
@@ -527,16 +528,14 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
       auto last_included_bin_id = _bin_for_value(*value);
 
       if (last_included_bin_id == INVALID_BIN_ID) {
-        last_included_bin_id = _next_bin_for_value(*value);
+        const auto next_bin_id_after_value = _next_bin_for_value(*value);
 
-        if (last_included_bin_id == INVALID_BIN_ID) {
+        if (next_bin_id_after_value == INVALID_BIN_ID) {
           last_included_bin_id = bin_count() - 1;
         } else {
           last_included_bin_id = last_included_bin_id - 1;
         }
-      }
-
-      if (*value == bin_minimum(last_included_bin_id)) {
+      } else if (*value == bin_minimum(last_included_bin_id)) {
         --last_included_bin_id;
       }
 
@@ -631,7 +630,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
    * result histogram and pair.second is the lower bound of the (potential) subsequent bin.
    *
    * E.g. if the histogram has the bins {[0, 10], [15, 20]} and additional_bin_edges is {[-4, 5], [16, 18]})
-   * then candidate_split_set becomes {[-1, 0], [10, 11], [14, 15], [20, 21], [-5, -4], [5, 6], [15, 16], [18, 19]}
+   * then candidate_split_set becomes {[-5, -4], [-1, 0], [5, 6], [10, 11], [14, 15], [15, 16], [20, 21], [18, 19]}
    */
   auto candidate_split_set = std::unordered_set<std::pair<T, T>, boost::hash<std::pair<T, T>>>{};
 
@@ -642,9 +641,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     if constexpr (std::is_arithmetic_v<T>) {
       candidate_split_set.insert(std::make_pair(_domain.previous_value_clamped(bin_min), bin_min));
       candidate_split_set.insert(std::make_pair(bin_max, _domain.next_value_clamped(bin_max)));
-    } else {
-      // TODO(tim): turn into compile-time error
-      Fail("Not supported for strings.");
     }
   }
 
@@ -653,9 +649,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     if constexpr (std::is_arithmetic_v<T>) {
       candidate_split_set.insert(std::make_pair(_domain.previous_value_clamped(edge_pair.first), edge_pair.first));
       candidate_split_set.insert(std::make_pair(edge_pair.second, _domain.next_value_clamped(edge_pair.second)));
-    } else {
-      // TODO(tim): turn into compile-time error
-      Fail("Not supported for strings.");
     }
   }
 
@@ -688,11 +681,6 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   candidate_edges.erase(candidate_edges.begin());
   candidate_edges.pop_back();
 
-  // We do not resize the vectors because we might not need all the slots because bins can be empty.
-  const auto new_bin_count = candidate_edges.size() / 2;
-
-  GenericHistogramBuilder<T> builder{new_bin_count, _domain};
-
   /**
    * Create new bins.
    * Bin edges are defined by two consecutive values in candidate_edges in pairs of two.
@@ -701,7 +689,10 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
    * {[-4, -1], [0, 5], [6, 10], [11, 14], [15, 15], [16, 18], [19, 20]} but since some of these bins contain not data
    * in the original histogram, the resulting histogram is {[0, 5], [6, 10], [15, 15], [16, 18], [19, 20]}
    */
-  for (auto bin_id = BinID{0}; bin_id < new_bin_count; bin_id++) {
+  const auto result_bin_count = candidate_edges.size() / 2;
+  GenericHistogramBuilder<T> builder{result_bin_count, _domain};
+
+  for (auto bin_id = BinID{0}; bin_id < result_bin_count; bin_id++) {
     const auto bin_min = candidate_edges[bin_id * 2];
     const auto bin_max = candidate_edges[bin_id * 2 + 1];
 

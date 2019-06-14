@@ -84,7 +84,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   double pen_width;
 
   try {
-    row_count = CardinalityEstimator{}.estimate_cardinality(from);
+    row_count = _cardinality_estimator.estimate_cardinality(from);
     pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
   } catch (...) {
     // statistics don't exist for this edge
@@ -94,9 +94,9 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   if (from->left_input()) {
     try {
-      float input_count = CardinalityEstimator{}.estimate_cardinality(from->left_input());
+      float input_count = _cardinality_estimator.estimate_cardinality(from->left_input());
       if (from->right_input()) {
-        input_count *= CardinalityEstimator{}.estimate_cardinality(from->right_input());
+        input_count *= _cardinality_estimator.estimate_cardinality(from->right_input());
       }
       row_percentage = 100 * row_count / input_count;
     } catch (...) {

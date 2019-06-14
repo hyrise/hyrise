@@ -65,8 +65,8 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Se
     statistics->set_statistics_object(counting_quotient_filter->scaled(selectivity));
   }
 
-  if constexpr (std::is_arithmetic_v<
-                    T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       statistics->set_statistics_object(range_filter->scaled(selectivity));
     }
@@ -98,8 +98,8 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
         counting_quotient_filter->sliced(predicate_condition, variant_value, variant_value2));
   }
 
-  if constexpr (std::is_arithmetic_v<
-                    T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       statistics->set_statistics_object(range_filter->sliced(predicate_condition, variant_value, variant_value2));
     }

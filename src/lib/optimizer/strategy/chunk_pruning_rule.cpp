@@ -85,7 +85,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const Table& table, const AbstractExpression& predicate,
     const std::shared_ptr<StoredTableNode>& stored_table_node) const {
   // Hacky:
-  // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in 
+  // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in
   // `stored_table_node`.
   // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct AttributeStatistics
   // in `table->table_statistics()`, we create a clone of `stored_table_node` without the pruning info.

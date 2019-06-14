@@ -21,9 +21,8 @@ class Table;
 class TableStatistics {
  public:
   /**
-   * Currently, we generate EqualDistinctCountHistograms for all columns and determine their null value ratio.
-   * Histograms are used because they are currently our best option to estimate predicate and join cardinalities during
-   * optimization.
+   * Creates statistics objects for cardinality estimation for all Columns in @param table. See implementation for
+   * which statistics objects are created.
    */
   static std::shared_ptr<TableStatistics> from_table(const Table& table);
 
