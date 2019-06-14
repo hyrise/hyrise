@@ -61,6 +61,7 @@ class SQLTranslator final {
         const std::shared_ptr<AbstractLQPNode>& lqp,
         const std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>>& elements_by_table_name,
         const std::vector<std::shared_ptr<AbstractExpression>>& elements_in_order,
+        const std::vector<SQLIdentifier>& identifiers_in_order,
         const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
     void append(TableSourceState&& rhs);
@@ -72,6 +73,8 @@ class SQLTranslator final {
 
     // To establish the correct order of columns in SELECT *
     std::vector<std::shared_ptr<AbstractExpression>> elements_in_order;
+
+    std::vector<SQLIdentifier> identifiers_in_order; // todo(jj), use shared_ptr?, merge both data structures to ensure consistency
 
     std::shared_ptr<SQLIdentifierResolver> sql_identifier_resolver;
   };
