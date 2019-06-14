@@ -1084,7 +1084,7 @@ std::pair<bool, size_t> hashing(const size_t hash_table_size,
 #endif
 
 #if 1
-  auto hash_fn = [&](const auto& key) { return key.get_hash(); };
+  auto hash_fn = [&](const auto& key) { return key.hash; };
 
   auto compare_fn = typename GroupRun::HashTableCompare{run_source.layout};
 
