@@ -1535,6 +1535,7 @@ std::vector<SQLIdentifier> SQLTranslator::_filter_identifiers_by_expression(
     std::vector<std::shared_ptr<AbstractExpression>> select_list_elements) const {
   std::vector<SQLIdentifier> filtered_identifiers;
 
+  Assert(!select_list_elements.empty(), "jj: The list cannot be empty!");
   select_list_elements.erase(std::remove(select_list_elements.begin(), select_list_elements.end(), nullptr));
   Assert(select_list_elements.size() == _inflated_select_list_identifiers.size(), "todo(jj)");
 
