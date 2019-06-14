@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "table_generator.hpp"
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -107,6 +108,7 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
   }
 
   std::stringstream ss;
+  ss << "WARNING: Scans in the form `WHERE a = b` on columns a and b are currently not being calibrated.\n";
   ss << "WARNING: Scans in the form `WHERE a between b and c` on columns a, b, c are currently not being";
   ss << " calibrated as we consider them too rare to be of relevance here. In case they are of interest,";
   ss << " check out previous versions of calibration_query_generator_predicate.cpp.";
@@ -174,6 +176,42 @@ const std::vector<std::shared_ptr<PredicateNode>> CalibrationQueryGeneratorPredi
   }
 
   return permutated_predicate_nodes;
+}
+
+const std::shared_ptr<PredicateNode> CalibrationQueryGeneratorPredicate::generate_concreate_scan_predicate(
+    const std::shared_ptr<AbstractExpression>& predicate,
+    const ScanType scan_type) {
+
+  const auto predicate_node = PredicateNode::make(predicate);
+  predicate_node->scan_type = scan_type;
+
+  // Additional checks if IndexScan is applicable
+  if (scan_type == ScanType::IndexScan) {
+    auto column_expression_count = 0;
+    visit_expression(predicate, [&](const auto& sub_expression) {
+      if (sub_expression->type == ExpressionType::LQPColumn) {
+        column_expression_count += 1;
+      }
+
+      return ExpressionVisitation::VisitArguments;
+    });
+
+    // IndexScan do not handle multiple columns
+    if (column_expression_count > 1) {
+      Fail("Index scans on multiple columns are not supported.");
+    }
+
+    if (predicate->type == ExpressionType::Predicate) {
+      const auto abstract_predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
+      // IndexScans do not support Like or NotLike predicates
+      const auto predicate_condition = abstract_predicate_expression->predicate_condition;
+      if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) {
+        Fail("Index scans with like predicates are not supported.");
+      }
+    }
+  }
+
+  return predicate_node;
 }
 
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value(
@@ -262,6 +300,15 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   return less_than_equals_(filter_column, value);
 }
 
+const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
+    const std::shared_ptr<StoredTableNode> table_node, const CalibrationColumnSpecification column_specification,
+    const float selectivity, const StringPredicateType string_predicate_type) {
+  const auto lqp_column_reference = table_node->get_column(column_specification.column_name);
+
+  const auto value = _generate_value_expression(column_specification, selectivity, string_predicate_type);
+  return less_than_equals_(lqp_column_(lqp_column_reference), value);
+}
+
 const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::generate_predicate_column_column(
     const PredicateGeneratorFunctorConfiguration& generator_configuration) {
   const auto calibration_config = generator_configuration.configuration;
@@ -311,7 +358,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   }
 
   const auto filter_column = _generate_column_expression(table, *filter_column_configuration);
-  const auto value = _generate_value_expression(calibration_config.data_type, calibration_config.selectivity, true);
+  const auto value = _generate_value_expression(calibration_config.data_type, calibration_config.selectivity, 0, true);
 
   return like_(filter_column, value);
 }
@@ -397,32 +444,78 @@ const std::shared_ptr<LQPColumnExpression> CalibrationQueryGeneratorPredicate::_
 }
 
 const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_generate_value_expression(
-    const DataType& data_type, const float selectivity, const bool trailing_like) {
-  const auto int_value_upper_limit = 10000000;
-
-  const auto int_value = static_cast<int>(int_value_upper_limit * selectivity);
+    const DataType& data_type, const float selectivity, const size_t int_value_upper_limit, const bool trailing_like) {
+  const auto int_value = static_cast<int32_t>(int_value_upper_limit * selectivity);
+  const auto long_value = static_cast<int64_t>(int_value);
   const auto float_value = selectivity;
+  const auto double_value = static_cast<double>(selectivity);
   const auto string_value = static_cast<int>(25 * selectivity);
 
   switch (data_type) {
     case DataType::Int:
-    case DataType::Long:
       return value_(int_value);
+    case DataType::Long:
+      return value_(long_value);
     case DataType::String: {
-      const auto character = pmr_string(1, static_cast<char>('A' + string_value));
+      auto search_string = pmr_string(4, ' '); // strings are generated with 4 starting spaces
+      search_string += static_cast<char>('A' + string_value);
       if (trailing_like) {
-        return value_(character + '%');
+        return value_(search_string + '%');
       }
-      return value_(character);
+      return value_(search_string);
     }
     case DataType::Float:
-    case DataType::Double:
       return value_(float_value);
+    case DataType::Double:
+      return value_(double_value);
     case DataType::Bool:
     case DataType::Null:
     default:
-      Fail("Unsupported data type in CalibrationQueryGeneratorPredicates, found " +
+      Fail("Unsupported data type in CalibrationQueryGeneratorPredicates: " +
            data_type_to_string.left.at(data_type));
+  }
+}
+
+const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_generate_value_expression(
+    const CalibrationColumnSpecification& column_specification, const float selectivity, const StringPredicateType string_predicate_type) {
+  const auto distinct_value_count = column_specification.distinct_value_count;
+
+  const auto int_value = static_cast<int32_t>(selectivity * distinct_value_count);
+  const auto long_value = static_cast<int64_t>(selectivity * distinct_value_count);
+  const auto float_value = selectivity * distinct_value_count;
+  const auto double_value = static_cast<double>(selectivity);
+
+  switch (column_specification.data_type) {
+    case DataType::Int:
+      return value_(int_value);
+    case DataType::Long:
+      return value_(long_value);
+    case DataType::String: {
+      auto search_string = TableGenerator::convert_integer_value<pmr_string>(int_value);
+
+      // TODO: like-predicates do not care about the given selectivity, yet.
+      if (string_predicate_type ==  StringPredicateType::TrailingLike) {
+        search_string[search_string.size() - 1] = '%';
+        return value_(search_string);
+      } else if (string_predicate_type ==  StringPredicateType::PrecedingLike) {
+        const auto first_non_space = search_string.find_first_not_of(' ');
+        if (first_non_space == std::string::npos) {
+          // empty string
+          return value_(pmr_string{'%'});
+        }
+        return value_('%' + search_string.substr(first_non_space));
+      }
+      return value_(search_string);
+    }
+    case DataType::Float:
+      return value_(float_value);
+    case DataType::Double:
+      return value_(double_value);
+    case DataType::Bool:
+    case DataType::Null:
+    default:
+      Fail("Unsupported data type in CalibrationQueryGeneratorPredicates: " +
+           data_type_to_string.left.at(column_specification.data_type));
   }
 }
 
