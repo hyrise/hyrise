@@ -5,7 +5,7 @@
   },
   "tpch_output_path": "./resources/calibration_results/scan/tpch_results.csv",
   "output_path": "./resources/calibration_results/scan/calibration_results.csv",
-  "calibration_runs": 1,
+  "calibration_runs": 5,
   "encodings": ["Dictionary", "Unencoded", "FrameOfReference", "RunLength", "FixedStringDictionary", "LZ4"],
   "calibrate_vector_compression_types": true,
   "data_types": ["int", "long", "float", "double", "string"],
