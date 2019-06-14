@@ -686,8 +686,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
   // a) Find matching columns and create JoinPredicates from them
   // b) Add columns from right input to the output when they have no match in the left input
   for (const auto& right_expression : right_state.elements_in_order) {
-//    const auto right_identifiers = right_sql_identifier_resolver->get_expression_identifiers(right_expression);
-    const auto right_identifiers = _filter_identifiers_by_expression(right_expression, _inflated_select_list_expressions); //todo(jj)
+    const auto right_identifiers = right_sql_identifier_resolver->get_expression_identifiers(right_expression);
+//    const auto right_identifiers = _filter_identifiers_by_expression(right_expression, _inflated_select_list_expressions); //todo(jj)
 
     if (!right_identifiers.empty()) {
       // Ignore previous names if there is an alias
