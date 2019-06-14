@@ -533,7 +533,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
         if (next_bin_id_after_value == INVALID_BIN_ID) {
           last_included_bin_id = bin_count() - 1;
         } else {
-          last_included_bin_id = last_included_bin_id - 1;
+          last_included_bin_id = next_bin_id_after_value - 1;
         }
       } else if (*value == bin_minimum(last_included_bin_id)) {
         --last_included_bin_id;
