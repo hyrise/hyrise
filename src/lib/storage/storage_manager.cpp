@@ -8,6 +8,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
+#include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_table_statistics.hpp"
@@ -22,6 +23,34 @@ void StorageManager::add_benchmark_runner(std::shared_ptr<BenchmarkRunner> br) {
 
 std::shared_ptr<BenchmarkRunner> StorageManager::get_benchmark_runner() {
   return _br;
+}
+
+StorageManager::StorageManager() {
+  {
+    TableColumnDefinitions column_definitions;
+
+    const auto optimizer = Optimizer::create_default_optimizer();
+    for (const auto& rule : optimizer->_rules) {
+      const auto& r = *rule;
+      const auto rule_name = std::string(typeid(r).name() + 11, typeid(r).name() + strlen(typeid(r).name()) - 1);
+      std::cout << rule_name << " <- " << true << std::endl;
+      optimizer_rule_status[rule_name] = true;
+      column_definitions.emplace_back(rule_name, DataType::Int);
+    }
+
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    add_table("config", t);
+  }
+
+  // {
+  //   TableColumnDefinitions column_definitions;
+
+  //   column_definitions.emplace_back("CPU", DataType::Int);
+  //   column_definitions.emplace_back("RSS", DataType::Int);
+
+  //   auto t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  //   add_table("system", t);
+  // }
 }
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {

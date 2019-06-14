@@ -8,6 +8,8 @@
 #include "concurrency/transaction_context.hpp"
 #include "delete.hpp"
 #include "insert.hpp"
+#include "operators/print.hpp"
+#include "optimizer/optimizer.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/storage_manager.hpp"
 #include "table_wrapper.hpp"
@@ -23,6 +25,17 @@ Update::Update(const std::string& table_to_update_name, const std::shared_ptr<Ab
 const std::string Update::name() const { return "Update"; }
 
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
+  if (_table_to_update_name == "config") {
+    for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
+      const auto left = input_table_left()->column_name(column_id);
+      const auto right = input_table_right()->column_name(column_id);
+      if (left == right) continue;
+      std::cout << left << " <- " << right << std::endl;
+      optimizer_rule_status[left] = (right == "1");
+    }
+    return nullptr;
+  }
+
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
   // 0. Validate input

@@ -71,7 +71,7 @@ class StorageManager : public Singleton<StorageManager> {
   std::shared_ptr<BenchmarkRunner> get_benchmark_runner();
 
  protected:
-  StorageManager() {}
+  StorageManager();
 
   friend class Singleton;
 

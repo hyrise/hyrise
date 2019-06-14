@@ -115,7 +115,15 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   return optimizer;
 }
 
-void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) { _rules.emplace_back(std::move(rule)); }
+void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
+  const auto& r = *rule;
+  const auto rule_name = std::string(typeid(r).name() + 11, typeid(r).name() + strlen(typeid(r).name()) - 1);
+
+  const auto disabled = optimizer_rule_status.find(rule_name) != optimizer_rule_status.end() && !optimizer_rule_status.find(rule_name)->second;
+  // std::cout << rule_name << ": " << !disabled << std::endl;
+  if (disabled) return;
+  _rules.emplace_back(std::move(rule));
+}
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
@@ -151,5 +159,7 @@ void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
     }
   }
 }
+
+std::unordered_map<std::string, bool> optimizer_rule_status;
 
 }  // namespace opossum
