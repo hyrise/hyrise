@@ -79,6 +79,56 @@ class TableGenerator {
                                         const std::optional<std::vector<std::string>> column_names = std::nullopt,
                                         const UseMvcc use_mvcc = UseMvcc::No, const bool numa_distribute_chunks = false);
 
+
+  /**
+    * Function to cast an integer to the requested type.
+    *   - in case of long, the integer is simply casted
+    *   - in case of floating types, the integer slighlty modified
+    *     and casted to ensure a matissa that is not fully zero'd
+    *   - in case of strings, a 10 char string is created that has at least
+    *     four leading spaces to ensure that scans have to evaluate at least
+    *     the first four chars. The reason is that very often strings are
+    *     dates in ERP systems and we assume that at least the year has to be
+    *     read before a non-match can be determined. Randomized strings often
+    *     lead to unrealistically fast string scans.
+    */
+  template <typename T>
+  static T convert_integer_value(const int input) {
+    constexpr auto generated_string_length = size_t{10};
+
+    if constexpr (std::is_integral_v<T>) {
+      return static_cast<T>(input);
+    } else if constexpr (std::is_floating_point_v<T>) {
+      // floating points are slightly shifted to avoid a zero'd mantissa.
+      return static_cast<T>(input) * 0.999999f;
+    } else {
+      // TODO(anyone): generation of strings is not perfect yet (nonetheless, probably sufficient), as 
+      // values do not start with '         0' and the transition to the next used char is not perfect.
+      const std::vector<const char> chars = {
+          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
+          'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+          'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'};
+      const size_t chars_base = chars.size();
+      Assert(static_cast<double>(input) < std::pow(chars_base, 6),
+             "Integer too large. Cannot be represented in six chars.");
+
+      pmr_string result(generated_string_length, ' ');  // fill full length with spaces
+      if (input == 0) {
+        return result;
+      }
+
+      const size_t result_char_count =
+          std::max(1ul, static_cast<size_t>(std::ceil(std::log(input) / std::log(chars_base))));
+      size_t remainder = static_cast<size_t>(input);
+      for (auto i = size_t{0}; i < result_char_count; ++i) {
+        result[generated_string_length - 1 - i] = chars[remainder % chars_base];
+        remainder = static_cast<size_t>(remainder / chars_base);
+      }
+
+      return result;
+    }
+  }
+
  protected:
   const size_t _num_columns = 10;
   const size_t _num_rows = 40'000;
