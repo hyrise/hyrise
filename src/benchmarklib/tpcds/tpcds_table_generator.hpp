@@ -1,5 +1,10 @@
 #pragma once
 
+extern "C" {
+#include <../tpcds-dbgen/config.h>  // must be included before porting.h, otherwise HUGE_TYPE is not found
+#include <porting.h>
+}
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -23,14 +28,14 @@ namespace opossum {
 class TpcdsTableGenerator final : public AbstractTableGenerator {
  public:
   // Convenience constructor for creating a TpcdsTableGenerator out of a benchmarking context
-  explicit TpcdsTableGenerator(uint32_t scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+  explicit TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a TpcdsTableGenerator in a benchmark
   explicit TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
- private:
-  uint32_t _scale_factor;
+  static std::shared_ptr<Table> generate_call_center(ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
+                                                     ds_key_t max_rows = std::numeric_limits<ds_key_t>::max());
 };
 }  // namespace opossum

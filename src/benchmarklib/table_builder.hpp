@@ -107,8 +107,8 @@ class TableBuilder {
   // types is a list of equal length defining respective column types
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
-  TableBuilder(const size_t chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const size_t estimated_rows = 0)
+  TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
+               const ChunkOffset estimated_rows = 0)
       : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
@@ -190,7 +190,7 @@ class TableBuilder {
 
  private:
   std::shared_ptr<Table> _table;
-  size_t _estimated_rows_per_chunk;
+  ChunkOffset _estimated_rows_per_chunk;
 
   boost::hana::tuple<std::vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
   boost::hana::tuple<table_builder::OptionalConstexpr<std::vector<bool>, (table_builder::is_optional<DataTypes>())>...>

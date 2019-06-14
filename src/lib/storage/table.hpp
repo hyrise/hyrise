@@ -31,7 +31,7 @@ class Table : private Noncopyable {
   // segments (TableType::References). The attribute max_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        const std::optional<uint32_t> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+        const std::optional<ChunkOffset> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
         std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
@@ -64,7 +64,7 @@ class Table : private Noncopyable {
   UseMvcc has_mvcc() const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
-  uint32_t max_chunk_size() const;
+  ChunkOffset max_chunk_size() const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
@@ -177,7 +177,7 @@ class Table : private Noncopyable {
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;
-  const uint32_t _max_chunk_size;
+  const ChunkOffset _max_chunk_size;
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;

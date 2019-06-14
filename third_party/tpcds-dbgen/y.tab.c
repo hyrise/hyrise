@@ -78,9 +78,9 @@ static int yygrowstack();
 #include "scaling.h"
 
 
-#define DEBUG0(l, fmt) 				if (l <= verbose) printf(fmt)
-#define DEBUG1(l, fmt, arg)			if (l <= verbose) printf(fmt, arg)
-#define DEBUG2(l, fmt, arg, arg2)	if (l <= verbose) printf(fmt, arg, arg2)
+#define DEBUG0(l, fmt) 				if (l <= tpcds_verbose) printf(fmt)
+#define DEBUG1(l, fmt, arg)			if (l <= tpcds_verbose) printf(fmt, arg)
+#define DEBUG2(l, fmt, arg, arg2)	if (l <= tpcds_verbose) printf(fmt, arg, arg2)
 
 extern file_ref_t file_stack[];
 
@@ -91,7 +91,7 @@ int yyparse(void);
 #endif
 
 /* GLOBAL VARIABLES */
-int verbose = 0,
+int tpcds_verbose = 0,
 	j,
 	nRetCode;
 ds_key_t i;
