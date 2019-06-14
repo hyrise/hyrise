@@ -2,22 +2,19 @@
 
 #include <type_traits>
 
-#include "types.hpp"
-#include "storage/table.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
-enum class ColumnIteration {
-  Continue, Break
-};
+enum class ColumnIteration { Continue, Break };
 
 struct ColumnIterable {
   std::shared_ptr<const Table> table;
   const ColumnID column_id;
 
-  ColumnIterable(const std::shared_ptr<const Table>& table,
-                 const ColumnID column_id);
+  ColumnIterable(const std::shared_ptr<const Table>& table, const ColumnID column_id);
 
   template <typename T, typename F>
   RowID for_each(const F& f, const RowID begin_row_id = RowID{ChunkID{0}, ChunkOffset{0}}) const {

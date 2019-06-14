@@ -67,11 +67,12 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
 }
 
 template <typename GroupRun>
-std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run(const typename GroupRun::LayoutType& layout) {
+std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run(
+    const typename GroupRun::LayoutType& layout) {
   auto input_table = input_table_left();
 
-
-  auto run_source = std::make_unique<TableRunSource<GroupRun>>(input_table, &layout, _config, _aggregates, _groupby_column_ids);
+  auto run_source =
+      std::make_unique<TableRunSource<GroupRun>>(input_table, &layout, _config, _aggregates, _groupby_column_ids);
 
   auto output_runs = aggregate<GroupRun>(_config, std::move(run_source), 1u);
 
@@ -100,16 +101,19 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run(const
     }
 
     for (auto aggregate_idx = ColumnID{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
-      output_segments[_groupby_column_ids.size() + aggregate_idx] = run.aggregates[aggregate_idx]->materialize_output(run.size());
+      output_segments[_groupby_column_ids.size() + aggregate_idx] =
+          run.aggregates[aggregate_idx]->materialize_output(run.size());
     }
 
     output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);
   }
 
-  const auto output_table = std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
+  const auto output_table =
+      std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
 
 #if VERBOSE
-  std::cout << "Building output table with " << output_table->row_count() << " rows and " << output_table->chunk_count() << " chunks in " << t.lap_formatted() << std::endl;
+  std::cout << "Building output table with " << output_table->row_count() << " rows and " << output_table->chunk_count()
+            << " chunks in " << t.lap_formatted() << std::endl;
 #endif
 
   return output_table;

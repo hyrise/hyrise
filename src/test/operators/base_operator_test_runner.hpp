@@ -135,11 +135,12 @@ class BaseOperatorTestRunner : public BaseTestWithParam<TestConfiguration> {
   static inline std::map<TestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
 
   static inline const auto all_input_table_types =
-        std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
+      std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
   static inline const auto all_encoding_types =
-        std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::FrameOfReference,
-                    EncodingType::FixedStringDictionary, EncodingType::RunLength, EncodingType::LZ4};
+      std::vector{EncodingType::Unencoded,        EncodingType::Dictionary,
+                  EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
+                  EncodingType::RunLength,        EncodingType::LZ4};
 };
 
 }  // namespace opossum

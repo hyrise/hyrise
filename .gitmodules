@@ -40,3 +40,6 @@
 [submodule "third_party/sparsehash-c11"]
 	path = third_party/sparsehash-c11
 	url = git@github.com:sparsehash/sparsehash-c11.git
+[submodule "third_party/smhasher"]
+	path = third_party/murmur_hash/smhasher
+	url = git@github.com:aappleby/smhasher.git

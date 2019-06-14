@@ -1,22 +1,24 @@
 #include <memory>
-#include <vector>
 #include <random>
+#include <vector>
 
 #include "benchmark/benchmark.h"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_hashsort.hpp"
-#include "operators/table_wrapper.hpp"
 #include "operators/print.hpp"
-#include "storage/value_segment.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 using namespace opossum;
 
 namespace {
 
-template<typename T>
-std::shared_ptr<ValueSegment<std::enable_if_t<std::is_integral_v<T>, T>>> make_segment(const size_t row_count, const size_t distinct_count, const size_t seed) {
+template <typename T>
+std::shared_ptr<ValueSegment<std::enable_if_t<std::is_integral_v<T>, T>>> make_segment(const size_t row_count,
+                                                                                       const size_t distinct_count,
+                                                                                       const size_t seed) {
   std::uniform_int_distribution<T> dist{0, static_cast<T>(distinct_count - 1u)};
   std::bernoulli_distribution null_dist(0.2f);
   std::mt19937 gen(seed);
@@ -32,8 +34,9 @@ std::shared_ptr<ValueSegment<std::enable_if_t<std::is_integral_v<T>, T>>> make_s
   return std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values));
 }
 
-template<typename T>
-std::shared_ptr<ValueSegment<std::enable_if_t<std::is_floating_point_v<T>, T>>> make_segment(const size_t row_count, const size_t distinct_count, const size_t seed) {
+template <typename T>
+std::shared_ptr<ValueSegment<std::enable_if_t<std::is_floating_point_v<T>, T>>> make_segment(
+    const size_t row_count, const size_t distinct_count, const size_t seed) {
   std::uniform_int_distribution<int32_t> dist{0, static_cast<int32_t>(distinct_count - 1u)};
   std::bernoulli_distribution null_dist(0.2f);
   std::mt19937 gen(seed);
@@ -49,8 +52,9 @@ std::shared_ptr<ValueSegment<std::enable_if_t<std::is_floating_point_v<T>, T>>> 
   return std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values));
 }
 
-template<typename T>
-std::shared_ptr<ValueSegment<std::enable_if_t<std::is_same_v<T, pmr_string>, T>>> make_segment(const size_t row_count, const size_t distinct_count, const size_t seed) {
+template <typename T>
+std::shared_ptr<ValueSegment<std::enable_if_t<std::is_same_v<T, pmr_string>, T>>> make_segment(
+    const size_t row_count, const size_t distinct_count, const size_t seed) {
   std::uniform_int_distribution<int32_t> string_length_dist{1, 12};
   std::uniform_int_distribution<char> char_dist{'A', 'z'};
   std::mt19937 gen(seed);
@@ -81,7 +85,7 @@ std::shared_ptr<ValueSegment<std::enable_if_t<std::is_same_v<T, pmr_string>, T>>
   return std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values));
 }
 
-}
+}  // namespace
 
 namespace opossum {
 
@@ -91,8 +95,8 @@ struct GroupByColumnDesc {
 };
 
 struct AggregateBenchmarkConfig {
-  AggregateBenchmarkConfig(const size_t row_count, const std::vector<GroupByColumnDesc>& group_by_columns):
-    row_count(row_count), group_by_columns(group_by_columns) {}
+  AggregateBenchmarkConfig(const size_t row_count, const std::vector<GroupByColumnDesc>& group_by_columns)
+      : row_count(row_count), group_by_columns(group_by_columns) {}
 
   size_t row_count;
   std::vector<GroupByColumnDesc> group_by_columns;
@@ -108,7 +112,8 @@ void BM_Aggregate(benchmark::State& state, const AggregateBenchmarkConfig& confi
     column_definitions.emplace_back("column_" + std::to_string(column_id), group_by_column_desc.data_type, true);
     resolve_data_type(group_by_column_desc.data_type, [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
-      segments.emplace_back(make_segment<ColumnDataType>(config.row_count, group_by_column_desc.distinct_count, column_id));
+      segments.emplace_back(
+          make_segment<ColumnDataType>(config.row_count, group_by_column_desc.distinct_count, column_id));
     });
     group_by_column_ids.emplace_back(column_id);
     ++column_id;
@@ -131,8 +136,8 @@ void BM_Aggregate(benchmark::State& state, const AggregateBenchmarkConfig& confi
     chunk_count = aggregate_op->get_output()->chunk_count();
   }
 
-//  std::cout << "Chunk count: " << chunk_count << std::endl;
-//  std::cout << "Row count: " << row_count << std::endl;
+  //  std::cout << "Chunk count: " << chunk_count << std::endl;
+  //  std::cout << "Row count: " << row_count << std::endl;
 }
 
 // clang-format off

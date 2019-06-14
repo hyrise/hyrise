@@ -4,13 +4,13 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace opossum;                      // NOLINT
 using namespace opossum::aggregate_hashsort;  // NOLINT
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;         // NOLINT
 
 namespace {
 
-template<typename VectorType, typename... Args>
+template <typename VectorType, typename... Args>
 void add_group_data(VectorType& data, const Args&&... args) {
   auto offset = data.size() * sizeof(typename VectorType::value_type);
 
@@ -44,7 +44,7 @@ void add_group_data(VectorType& data, const Args&&... args) {
     } else if constexpr (std::is_same_v<VALUE_TYPE, std::string>) {
       memcpy(reinterpret_cast<char*>(data.data()) + offset, value.data(), value.size());
       offset += value.size();
-    } else if constexpr (std::is_arithmetic_v<VALUE_TYPE>){
+    } else if constexpr (std::is_arithmetic_v<VALUE_TYPE>) {
       constexpr auto VALUE_SIZE = sizeof(std::decay_t<decltype(value)>);
       memcpy(reinterpret_cast<char*>(data.data()) + offset, &value, VALUE_SIZE);
       offset += VALUE_SIZE;
@@ -71,12 +71,9 @@ namespace opossum {
 class AggregateHashSortTest : public ::testing::Test {
  public:
   void SetUp() override {
-    const auto column_definitions = TableColumnDefinitions{{"a", DataType::String, true},
-                                                           {"b", DataType::Int, true},
-                                                           {"c", DataType::String, false},
-                                                           {"d", DataType::String, true},
-                                                           {"e", DataType::Int, false},
-                                                           {"f", DataType::Long, false}};
+    const auto column_definitions = TableColumnDefinitions{
+        {"a", DataType::String, true}, {"b", DataType::Int, true},  {"c", DataType::String, false},
+        {"d", DataType::String, true}, {"e", DataType::Int, false}, {"f", DataType::Long, false}};
     table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
     // clang-format off
@@ -227,7 +224,8 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsLayoutVariablySized) {
   EXPECT_EQ(layout.column_mapping.at(3), VariablySizedGroupRunLayout::Column(false, size_t{1}, std::nullopt));
   EXPECT_EQ(layout.fixed_layout.group_size, 4u);
   EXPECT_EQ(layout.fixed_layout.column_base_offsets, std::vector<size_t>({0, 5}));
-  EXPECT_EQ(layout.fixed_layout.nullable_column_indices, std::vector<std::optional<ColumnID>>({ColumnID{}, std::nullopt}));
+  EXPECT_EQ(layout.fixed_layout.nullable_column_indices,
+            std::vector<std::optional<ColumnID>>({ColumnID{}, std::nullopt}));
 }
 
 TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited) {
@@ -237,7 +235,8 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited
 
   // Produce groups with data/row budget so that the data budget per column (12 * uint32_t) gets exhausted first, after
   // 4 rows
-  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 100, 12);
+  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(
+      table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 100, 12);
 
   EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
 
@@ -282,7 +281,8 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedRowBudgetLimited)
   const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
 
   // Produce groups with data/row budget so that the row budget gets exhausted before the group data budget
-  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 4, 50);
+  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(
+      table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 4, 50);
 
   EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
 
@@ -318,7 +318,8 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedTableSizeLimitted
   const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
 
   // Produce groups with data/row budget so that the row budget gets exhausted before the group data budget
-  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(table, &layout, group_by_column_ids, RowID{ChunkID{3}, ChunkOffset{1}}, 50, 100);
+  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(
+      table, &layout, group_by_column_ids, RowID{ChunkID{3}, ChunkOffset{1}}, 50, 100);
 
   EXPECT_EQ(end_row_id, RowID(ChunkID{3}, ChunkOffset{1}));
 
@@ -356,7 +357,8 @@ TEST_F(AggregateHashSortTest, ProduceInitialAggregates) {
       {ColumnID{2}, AggregateFunction::Avg},
   };
 
-  auto aggregates = produce_initial_aggregates(table, aggregate_column_definitions, false, RowID{ChunkID{0}, ChunkOffset{1}}, 3);
+  auto aggregates =
+      produce_initial_aggregates(table, aggregate_column_definitions, false, RowID{ChunkID{0}, ChunkOffset{1}}, 3);
 
   ASSERT_EQ(aggregates.size(), 4u);
 
@@ -408,7 +410,8 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
   aggregates.emplace_back(std::move(aggregate));
 
-  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>{std::move(groups), std::move(aggregates)};
+  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>{std::move(groups),
+                                                                                      std::move(aggregates)};
   auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
@@ -440,7 +443,8 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   ASSERT_EQ(partitions.at(2).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2, 5}));
   ASSERT_EQ(partitions.at(2).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b100, 0b101}));
   ASSERT_EQ(partitions.at(2).runs.at(0).aggregates.size(), 1u);
-  const auto* aggregate_2_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(0).aggregates.at(0).get());
+  const auto* aggregate_2_0 =
+      dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(0).aggregates.at(0).get());
   ASSERT_TRUE(aggregate_2_0);
   EXPECT_EQ(aggregate_2_0->values, std::vector<int64_t>({1, 2}));
   EXPECT_EQ(aggregate_2_0->null_values, std::vector<bool>({false, false}));
@@ -448,7 +452,8 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   ASSERT_EQ(partitions.at(2).runs.at(1).groups.data, uninitialized_vector<uint32_t>({8}));
   ASSERT_EQ(partitions.at(2).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b100}));
   ASSERT_EQ(partitions.at(2).runs.at(1).aggregates.size(), 1u);
-  const auto* aggregate_2_1 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(1).aggregates.at(0).get());
+  const auto* aggregate_2_1 =
+      dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(1).aggregates.at(0).get());
   ASSERT_TRUE(aggregate_2_1);
   EXPECT_EQ(aggregate_2_1->values, std::vector<int64_t>({5}));
   EXPECT_EQ(aggregate_2_1->null_values, std::vector<bool>({false}));
@@ -474,7 +479,8 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   // clang-format on
 
   auto fixed_layout = FixedSizeGroupRunLayout{0, {}, {}};
-  const auto layout = VariablySizedGroupRunLayout{{ColumnID{0}, ColumnID{1}, ColumnID{2}}, {}, column_mapping, fixed_layout};
+  const auto layout =
+      VariablySizedGroupRunLayout{{ColumnID{0}, ColumnID{1}, ColumnID{2}}, {}, column_mapping, fixed_layout};
   auto groups = VariablySizedGroupRun<GetDynamicGroupSize>{&layout, 4, 36};
   groups.fixed.end = 4;
 
@@ -502,7 +508,8 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
 
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
 
-  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>{std::move(groups), std::move(aggregates)};
+  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>{std::move(groups),
+                                                                                          std::move(aggregates)};
   auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
@@ -559,7 +566,8 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
   aggregates.emplace_back(std::move(aggregate));
 
-  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>{std::move(groups), std::move(aggregates)};
+  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>{std::move(groups),
+                                                                                      std::move(aggregates)};
   auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
@@ -570,7 +578,8 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   auto run_source = PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>{&groups_layout, std::move(runs)};
   auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
   // Config hashing() so that the entire input is hashed
-  const auto [continue_hashing, processed_row_count] = hashing(3, 1.0f, run_source, partitioning, run_idx, run_offset, partitions, 0);
+  const auto [continue_hashing, processed_row_count] =
+      hashing(3, 1.0f, run_source, partitioning, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
   EXPECT_EQ(processed_row_count, 4);
@@ -631,14 +640,16 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
 
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
 
-  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>{std::move(groups), std::move(aggregates)};
+  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>{std::move(groups),
+                                                                                          std::move(aggregates)};
   auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
   auto run_source = PartitionRunSource<VariablySizedGroupRun<GetDynamicGroupSize>>{&layout, std::move(runs)};
   auto partitions = std::vector<Partition<VariablySizedGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
   // Configure hashing() so that the entire input is aggregated
-  const auto [continue_hashing, processed_row_count] = hashing(3, 1.0f, run_source, partitioning, run_idx, run_offset, partitions, 0);
+  const auto [continue_hashing, processed_row_count] =
+      hashing(3, 1.0f, run_source, partitioning, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
   EXPECT_EQ(processed_row_count, 3);

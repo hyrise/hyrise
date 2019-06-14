@@ -30,8 +30,9 @@ enum class FloatComparisonMode { RelativeDifference, AbsoluteDifference };
  * creates temporary tables and uses the check_table_equals method.
  */
 std::optional<std::string> check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
-                         const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
-                         TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode);
+                                               const std::shared_ptr<BaseSegment>& expected_segment,
+                                               OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
+                                               FloatComparisonMode float_comparison_mode);
 
 // Compares two tables for equality
 // @return  A human-readable description of the table-mismatch, if any

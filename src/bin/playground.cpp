@@ -2,6 +2,7 @@
 
 #include <random>
 
+#include "murmur_hash.hpp"
 #include "sparsehash/dense_hash_map"
 
 #include "operators/aggregate_hash.hpp"
@@ -10,8 +11,8 @@
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/table.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
@@ -20,9 +21,9 @@
 using namespace opossum;  // NOLINT
 
 struct Hash {
-  int * x = nullptr;
+  int* x = nullptr;
 
-  template<typename T>
+  template <typename T>
   size_t operator()(const T& p) const {
     return p.first;
   }
@@ -37,6 +38,14 @@ int main() {
   m.insert(std::pair{std::pair<int, int>{1, 4}, "world"});
 
   std::cout << m[std::pair<int, int>{3, 4}] << " " << m[std::pair<int, int>{1, 4}] << std::endl;
+
+  int i;
+  i = 5;
+  std::cout << std::bitset<64>(MurmurHash64A(&i, sizeof(i), 0)) << std::endl;
+  i = 6;
+  std::cout << std::bitset<64>(MurmurHash64A(&i, sizeof(i), 0)) << std::endl;
+  i = 7;
+  std::cout << std::bitset<64>(MurmurHash64A(&i, sizeof(i), 0)) << std::endl;
 
   return 0;
 }

@@ -97,8 +97,9 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 namespace opossum {
 
 std::optional<std::string> check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
-                         const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
-                         TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
+                                               const std::shared_ptr<BaseSegment>& expected_segment,
+                                               OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
+                                               FloatComparisonMode float_comparison_mode) {
   if (actual_segment->data_type() != expected_segment->data_type()) {
     std::ostringstream stream;
     stream << "Data type mismatch: " << actual_segment->data_type() << " vs " << expected_segment->data_type();

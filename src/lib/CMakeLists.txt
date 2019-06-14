@@ -600,6 +600,7 @@ set(
 
 set(
     LIBRARIES
+    murmur_hash
     pthread
     sqlparser
     cqf
