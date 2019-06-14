@@ -158,10 +158,12 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_re
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
                              const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
-                             const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator)
+                             const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+                             const std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>>& with_descriptions)
     : _use_mvcc(use_mvcc),
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
-      _parameter_id_allocator(parameter_id_allocator) {}
+      _parameter_id_allocator(parameter_id_allocator),
+      _with_descriptions(with_descriptions) {}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
@@ -1525,6 +1527,19 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
 
   elements_in_order.insert(elements_in_order.end(), rhs.elements_in_order.begin(), rhs.elements_in_order.end());
   sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
+}
+
+void add_with_description(const std::string& alias, const std::shared_ptr<AbstractLQPNode>& lqp_node) {
+  AssertInput(!has_with_description(alias), "WITH query name " + alias + " specified more than once");
+  _with_descriptions.emplace(alias, lqp_node);
+}
+
+bool SQLTranslator::has_with_description(const std::string &alias) const {
+  return _with_descriptions.count(alias);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::get_with_description(const std::string &alias) const {
+  return std::shared_ptr<AbstractLQPNode>();
 }
 
 }  // namespace opossum

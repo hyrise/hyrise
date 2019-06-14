@@ -89,10 +89,12 @@ class SQLTranslator final {
    *                                                in correlated subqueries
    * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
    *                                                for each encountered parameter
+   * @param with_descriptions                       //TODO comment
    */
   SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
-                const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator);
+                const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+                const std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>>& with_descriptions);
 
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
   std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
@@ -147,6 +149,10 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
+  void add_with_description(const std::string& alias, const std::shared_ptr<AbstractLQPNode>& lqp_node);
+  bool has_with_description(const std::string& alias) const;
+  std::shared_ptr<AbstractLQPNode> get_with_description(const std::string& alias) const;
+
  private:
   const UseMvcc _use_mvcc;
 
@@ -155,6 +161,7 @@ class SQLTranslator final {
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
+  std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>> _with_descriptions;
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
