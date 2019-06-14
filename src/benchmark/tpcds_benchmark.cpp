@@ -31,8 +31,9 @@ using namespace opossum;  // NOLINT
 namespace {
 
 bool data_files_available(const std::string& table_path);
+const std::unordered_set<std::string> filename_blacklist();
 
-}
+}  // namespace
 
 int main(int argc, char* argv[]) {
   const std::string binary_path = argv[0];
@@ -78,13 +79,12 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- TPC-DS scale factor is " << scale_factor << std::endl;
 
-  // TPC-DS FileBasedQueryGenerator specification
-  std::string query_path = "resources/benchmark/tpcds/queries/supported";
+  std::string query_path = "third_party/tpcds-result-reproduction/query_qualification";
   std::string table_path = "resources/benchmark/tpcds/tables";
 
   Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
   Assert(std::filesystem::is_directory(table_path), "Table path (" + table_path + ") has to be a directory.");
-  Assert(std::filesystem::exists(std::filesystem::path{query_path + "/query_07.sql"}), "Queries have to be available.");
+  Assert(std::filesystem::exists(std::filesystem::path{query_path + "/01.sql"}), "Queries have to be available.");
   Assert(std::filesystem::exists(std::filesystem::path{table_path + "/call_center.csv.json"}),
          "Table schemes have to be available.");
 
@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
 
   Assert(data_files_available(table_path), "Generating table data files failed.");
 
-  auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path);
+  auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
   auto table_generator = std::make_unique<FileBasedTableGenerator>(config, table_path);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator), context};
 
@@ -151,6 +151,17 @@ bool data_files_available(const std::string& table_path) {
     }
   }
   return true;
+}
+
+const std::unordered_set<std::string> filename_blacklist() {
+  return std::unordered_set<std::string>{
+      "01.sql", "02.sql", "03.sql", "04.sql", "05.sql", "06.sql", "08.sql",  "11.sql",  "12.sql",  "14a.sql", "14b.sql",
+      "16.sql", "18.sql", "19.sql", "20.sql", "21.sql", "22.sql", "23a.sql", "23b.sql", "24a.sql", "24b.sql", "27.sql",
+      "30.sql", "31.sql", "32.sql", "33.sql", "36.sql", "37.sql", "38.sql",  "39a.sql", "39b.sql", "40.sql",  "44.sql",
+      "46.sql", "47.sql", "49.sql", "51.sql", "52.sql", "53.sql", "54.sql",  "55.sql",  "56.sql",  "57.sql",  "58.sql",
+      "59.sql", "60.sql", "61.sql", "63.sql", "64.sql", "66.sql", "67.sql",  "68.sql",  "70.sql",  "71.sql",  "72.sql",
+      "74.sql", "75.sql", "76.sql", "77.sql", "78.sql", "80.sql", "81.sql",  "82.sql",  "83.sql",  "84.sql",  "86.sql",
+      "87.sql", "89.sql", "90.sql", "91.sql", "92.sql", "94.sql", "95.sql",  "97.sql",  "98.sql"};
 }
 
 }  // namespace
