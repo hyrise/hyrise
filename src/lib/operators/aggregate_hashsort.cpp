@@ -74,7 +74,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute_with_group_run(
   auto run_source =
       std::make_unique<TableRunSource<GroupRun>>(input_table, &layout, _config, _aggregates, _groupby_column_ids);
 
-  auto output_runs = aggregate<GroupRun>(_config, std::move(run_source), 1u);
+  auto output_runs = aggregate<GroupRun>(_config, std::move(run_source), 0u);
 
   /**
    * Build output Table

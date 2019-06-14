@@ -107,6 +107,10 @@ TEST_F(AggregateHashSortTest, FixedSizeGroupRun) {
   run.hashes = {0u, 1u, 2u, 3u, 4u};
   run.end = 5u;
 
+  EXPECT_EQ(run.make_key(0).hash, 0u);
+  EXPECT_EQ(run.make_key(0).group, &run.data[0]);
+  EXPECT_EQ(run.make_key(1).group, &run.data[6]);
+
   auto compare = FixedSizeGroupKeyCompare{&layout};
 
   EXPECT_FALSE(compare(run.make_key(0), run.make_key(2)));
@@ -382,9 +386,19 @@ TEST_F(AggregateHashSortTest, ProduceInitialAggregates) {
   EXPECT_EQ(avg->pairs, expected_avg_aggregates);
 }
 
-TEST_F(AggregateHashSortTest, Partitioning) {
-  EXPECT_EQ(Partitioning(2, 0, 1).get_partition_index(1), 1);
-  EXPECT_EQ(Partitioning(2, 0, 1).get_partition_index(2), 0);
+TEST_F(AggregateHashSortTest, FanOut) {
+  EXPECT_EQ(FanOut::for_level(0, 2), FanOut(4, 62, 0b11));
+  EXPECT_EQ(FanOut::for_level(3, 2), FanOut(4, 56, 0b11));
+  EXPECT_EQ(FanOut::for_level(3, 8), FanOut(256, 32, 0b11111111));
+  EXPECT_EQ(FanOut::for_level(7, 8), FanOut(256, 0, 0b11111111));
+  EXPECT_EQ(FanOut::for_level(8, 7), FanOut(128, 1, 0b1111111));
+
+  EXPECT_ANY_THROW(FanOut::for_level(9, 7));
+  EXPECT_ANY_THROW(FanOut::for_level(8, 8));
+
+  EXPECT_EQ(FanOut(8, 1, 0b111).get_partition_for_hash(0b110101), 0b010);
+  EXPECT_EQ(FanOut(8, 1, 0b111).get_partition_for_hash(0b111010), 0b101);
+
 }
 
 TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
@@ -415,13 +429,13 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
-  auto partitioning = Partitioning{4, 1, 3};
+  auto fan_out = FanOut{4, 1, 3};
   auto run_idx = size_t{0};
   auto run_offset = size_t{0};
 
   auto run_source = PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>{&groups_layout, std::move(runs)};
-  auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
-  partition(6, run_source, partitioning, run_idx, run_offset, partitions, 0);
+  auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{fan_out.partition_count};
+  partition(6, run_source, fan_out, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 0);
   EXPECT_EQ(run_offset, 6);
 
@@ -502,7 +516,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   groups.fixed.end = 4;
   // clang-format on
 
-  auto partitioning = Partitioning{2, 0, 1};
+  auto fan_out = FanOut{2, 0, 1};
   auto run_idx = size_t{0};
   auto run_offset = size_t{0};
 
@@ -514,9 +528,9 @@ TEST_F(AggregateHashSortTest, PartitionVariablySizedAndFixed) {
   runs.emplace_back(std::move(run));
 
   auto run_source = PartitionRunSource<VariablySizedGroupRun<GetDynamicGroupSize>>(&layout, std::move(runs));
-  auto partitions = std::vector<Partition<VariablySizedGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
+  auto partitions = std::vector<Partition<VariablySizedGroupRun<GetDynamicGroupSize>>>{fan_out.partition_count};
   // Partition the entire run
-  partition(4, run_source, partitioning, run_idx, run_offset, partitions, 0);
+  partition(4, run_source, fan_out, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
 
@@ -571,15 +585,15 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
-  auto partitioning = Partitioning{2, 0, 1};
+  auto fan_out = FanOut{2, 0, 1};
   auto run_idx = size_t{0};
   auto run_offset = size_t{0};
 
   auto run_source = PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>{&groups_layout, std::move(runs)};
-  auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
+  auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{fan_out.partition_count};
   // Config hashing() so that the entire input is hashed
   const auto [continue_hashing, processed_row_count] =
-      hashing(3, 1.0f, run_source, partitioning, run_idx, run_offset, partitions, 0);
+      hashing(3, 1.0f, run_source, fan_out, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
   EXPECT_EQ(processed_row_count, 4);
@@ -634,7 +648,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   groups.fixed.hashes = {0b0, 0b1, 0b1};
   // clang-format on
 
-  auto partitioning = Partitioning{2, 0, 1};
+  auto fan_out = FanOut{2, 0, 1};
   auto run_idx = size_t{0};
   auto run_offset = size_t{0};
 
@@ -646,10 +660,10 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   runs.emplace_back(std::move(run));
 
   auto run_source = PartitionRunSource<VariablySizedGroupRun<GetDynamicGroupSize>>{&layout, std::move(runs)};
-  auto partitions = std::vector<Partition<VariablySizedGroupRun<GetDynamicGroupSize>>>{partitioning.partition_count};
+  auto partitions = std::vector<Partition<VariablySizedGroupRun<GetDynamicGroupSize>>>{fan_out.partition_count};
   // Configure hashing() so that the entire input is aggregated
   const auto [continue_hashing, processed_row_count] =
-      hashing(3, 1.0f, run_source, partitioning, run_idx, run_offset, partitions, 0);
+      hashing(3, 1.0f, run_source, fan_out, run_idx, run_offset, partitions, 0);
   EXPECT_EQ(run_idx, 1);
   EXPECT_EQ(run_offset, 0);
   EXPECT_EQ(processed_row_count, 3);
@@ -706,10 +720,10 @@ TEST_F(AggregateHashSortTest, AggregateAdaptive) {
   auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>>{};
   runs.emplace_back(std::move(run));
 
-  auto partitioning = Partitioning{2, 0, 1};
+  auto fan_out = FanOut{2, 0, 1};
 
   auto run_source = std::make_unique<PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>>(&groups_layout, std::move(runs));
-  const auto partitions = adaptive_hashing_and_partition<FixedSizeGroupRun<GetDynamicGroupSize>>(config, std::move(run_source), partitioning, 0);
+  const auto partitions = adaptive_hashing_and_partition<FixedSizeGroupRun<GetDynamicGroupSize>>(config, std::move(run_source), fan_out, 0);
 
   ASSERT_EQ(partitions.size(), 2u);
 

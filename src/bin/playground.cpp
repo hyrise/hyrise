@@ -42,10 +42,8 @@ int main() {
   int i;
   i = 5;
   std::cout << std::bitset<64>(MurmurHash64A(&i, sizeof(i), 0)) << std::endl;
-  i = 6;
-  std::cout << std::bitset<64>(MurmurHash64A(&i, sizeof(i), 0)) << std::endl;
-  i = 7;
-  std::cout << std::bitset<64>(MurmurHash64A(&i, sizeof(i), 0)) << std::endl;
+  std::cout << std::bitset<64>(MurmurHash64A(&i, sizeof(i), 1)) << std::endl;
+  std::cout << std::bitset<64>(MurmurHash64A(&i, sizeof(i), 2)) << std::endl;
 
   return 0;
 }

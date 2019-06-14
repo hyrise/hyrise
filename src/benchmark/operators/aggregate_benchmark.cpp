@@ -135,9 +135,9 @@ void BM_Aggregate(benchmark::State& state, const AggregateBenchmarkConfig& confi
     row_count = aggregate_op->get_output()->row_count();
     chunk_count = aggregate_op->get_output()->chunk_count();
   }
-
-  //  std::cout << "Chunk count: " << chunk_count << std::endl;
-  //  std::cout << "Row count: " << row_count << std::endl;
+//
+  std::cout << "Chunk count: " << chunk_count << std::endl;
+  std::cout << "Row count: " << row_count << std::endl;
 }
 
 // clang-format off
