@@ -40,12 +40,12 @@ class SQLIdentifierResolver final {
    */
   std::shared_ptr<AbstractExpression> resolve_identifier_relaxed(const SQLIdentifier& identifier) const;
 
-//  /**
-//   * Resolve the identifiers of an @param expression
-//   * @return    The SQLIdentifiers
-//   */
-//  const std::vector<SQLIdentifier> get_expression_identifiers(
-//      const std::shared_ptr<AbstractExpression>& expression) const;
+  /**
+   * Resolve the identifiers of an @param expression
+   * @return    The SQLIdentifiers
+   */
+  const std::vector<SQLIdentifier> get_expression_identifiers(
+      const std::shared_ptr<AbstractExpression>& expression) const;
 
   /**
    * @return   The column expressions of a table/subquery identified by @param table_name.

@@ -901,6 +901,7 @@ void SQLTranslator::_translate_select_groupby_having(
           // Select all GROUP BY columns with the specified table name
           for (const auto& group_by_expression : group_by_expressions) {
             const auto identifiers = _filter_identifiers_by_expression(group_by_expression, select_list_elements);
+//            const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(group_by_expression); // todo(jj): Can I get rid off this?
             for (const auto& identifier : identifiers) {
               if (identifier.table_name == hsql_expr->table) {
                 _inflated_select_list_expressions.emplace_back(group_by_expression);
@@ -1531,8 +1532,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
 
 std::vector<SQLIdentifier> SQLTranslator::_filter_identifiers_by_expression(
     const std::shared_ptr<AbstractExpression>& expression,
-    const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) const {
+    std::vector<std::shared_ptr<AbstractExpression>> select_list_elements) const {
   std::vector<SQLIdentifier> filtered_identifiers;
+
+  select_list_elements.erase(std::remove(select_list_elements.begin(), select_list_elements.end(), nullptr));
   Assert(select_list_elements.size() == _inflated_select_list_identifiers.size(), "todo(jj)");
 
   for (auto idx = size_t{0}; idx < select_list_elements.size(); ++idx) {

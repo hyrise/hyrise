@@ -151,7 +151,7 @@ class SQLTranslator final {
 
   std::vector<SQLIdentifier> _filter_identifiers_by_expression(
       const std::shared_ptr<AbstractExpression>& expression,
-      const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) const;
+      std::vector<std::shared_ptr<AbstractExpression>> select_list_elements) const;
 
  private:
   const UseMvcc _use_mvcc;
