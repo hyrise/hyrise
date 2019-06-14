@@ -16,12 +16,14 @@ bool is_row_visible(const CommitID our_tid, const TransactionID row_tid, const C
 
 }  // namespace
 
-JitValidate::JitValidate(const TableType input_table_type) : input_table_type(input_table_type) {}
+void JitValidate::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
+  _input_table_type = in_table.type();
+}
 
 std::string JitValidate::description() const { return "[Validate]"; }
 
 void JitValidate::_consume(JitRuntimeContext& context) const {
-  if (input_table_type == TableType::References) {
+  if (_input_table_type == TableType::References) {
     const auto row_id = (*context.pos_list)[context.chunk_offset];
     const auto& referenced_chunk = context.referenced_table->get_chunk(row_id.chunk_id);
     const auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
@@ -37,6 +39,8 @@ void JitValidate::_consume(JitRuntimeContext& context) const {
     }
   }
 }
+
+TableType JitValidate::input_table_type() const { return _input_table_type; }
 
 TransactionID JitValidate::_load_atomic_value(const copyable_atomic<TransactionID>& transaction_id) {
   return transaction_id.load();
