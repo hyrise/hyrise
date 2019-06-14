@@ -3,6 +3,8 @@
 #include <boost/algorithm/string/join.hpp>
 #include <fstream>
 #include <iostream>
+#include <mutex>
+#include <thread>
 
 #include "cost_model/feature/cost_model_features.hpp"
 #include "cost_model_calibration_query_runner.hpp"
@@ -17,7 +19,7 @@ namespace opossum {
 CostModelCalibration::CostModelCalibration(const CalibrationConfiguration configuration)
     : _configuration(configuration) {}
 
-void CostModelCalibration::run_tpch6_costing() const {
+void CostModelCalibration::run_tpch6_costing() {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
 
   _write_csv_header(_configuration.output_path);
@@ -36,7 +38,7 @@ void CostModelCalibration::run_tpch6_costing() const {
   }
 }
 
-void CostModelCalibration::run() const {
+void CostModelCalibration::run() {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100'000};
   tableGenerator.load_calibration_tables();
   tableGenerator.generate_calibration_tables();
@@ -51,7 +53,7 @@ void CostModelCalibration::run() const {
 
 }
 
-void CostModelCalibration::_run_tpch() const {
+void CostModelCalibration::_run_tpch() {
   CostModelCalibrationQueryRunner queryRunner{_configuration};
   const auto number_of_iterations = _configuration.calibration_runs;
   _write_csv_header(_configuration.tpch_output_path);
@@ -77,7 +79,7 @@ void CostModelCalibration::_run_tpch() const {
   }
 }
 
-void CostModelCalibration::_calibrate() const {
+void CostModelCalibration::_calibrate() {
   const auto number_of_iterations = _configuration.calibration_runs;
 
   _write_csv_header(_configuration.output_path);
@@ -88,29 +90,57 @@ void CostModelCalibration::_calibrate() const {
   for (const auto& table_specification : _configuration.table_specifications) {
     table_names.emplace_back(std::make_pair(table_specification.table_name, table_specification.table_size));
   }
-  for (const auto& table_name : StorageManager::get().table_names()) {
+  for (const auto& table_name : _configuration.generated_tables) {
     table_names.emplace_back(table_name, StorageManager::get().get_table(table_name)->row_count());
   }
 
   const auto& columns = _configuration.columns;
   DebugAssert(!columns.empty(), "failed to parse ColumnSpecification");
 
+  // Only use half of the available _physical_ cores to avoid bandwidth problems. We always
+  // cap at four threads to avoid node-spanning execution for large servers with multiple CPUs.
+  const size_t concurrent_thread_count = std::thread::hardware_concurrency();
+  const size_t threads_to_create = std::max(4ul, concurrent_thread_count / 4);
+
   CalibrationQueryGenerator generator(table_names, columns, _configuration);
+  const auto& queries = generator.generate_queries();
+  const size_t query_count = queries.size();
+  const size_t queries_per_thread = static_cast<size_t>(query_count / threads_to_create);
 
-  for (size_t i = 0; i < number_of_iterations; i++) {
-    // Regenerate Queries for each iteration...
+  for (size_t iteration = size_t{0}; iteration < number_of_iterations; ++iteration) {
+    std::vector<std::thread> threads;
 
-    const auto& queries = generator.generate_queries();
-    for (const auto& query : queries) {
-      const auto examples = queryRunner.calibrate_query_from_lqp(query);
-      _append_to_result_csv(_configuration.output_path, examples);
+
+    for(auto thread_id = size_t{0}; thread_id < threads_to_create; ++thread_id){
+      threads.push_back(std::thread([&, thread_id](){
+        std::vector<cost_model::CostModelFeatures> observations;
+        const auto first_query = queries.begin() + thread_id * queries_per_thread;
+        auto last_query = queries.begin() + (thread_id + 1) * queries_per_thread;
+        if ((thread_id + 1) * queries_per_thread > query_count) {
+          last_query = queries.end();
+        }
+
+        for (auto iter = first_query; iter != last_query; ++iter) {
+          const auto query = *iter;
+          const auto query_observations = queryRunner.calibrate_query_from_lqp(query);
+          observations.insert(observations.end(), query_observations.begin(), query_observations.end());
+          if (observations.size() > 1'000) {
+            _append_to_result_csv(_configuration.output_path, observations);
+            observations.clear();
+          }
+        }
+        _append_to_result_csv(_configuration.output_path, observations);
+      }));
     }
 
-    std::cout << "Finished iteration " << i << std::endl;
+    for(auto& thread : threads){
+      thread.join();
+    }
+    std::cout << "Finished iteration #" << iteration + 1 << std::endl;
   }
 }
 
-void CostModelCalibration::_write_csv_header(const std::string& output_path) const {
+void CostModelCalibration::_write_csv_header(const std::string& output_path) {
   const auto& columns = cost_model::CostModelFeatures{}.feature_names();
 
   std::ofstream stream;
@@ -123,9 +153,10 @@ void CostModelCalibration::_write_csv_header(const std::string& output_path) con
 }
 
 void CostModelCalibration::_append_to_result_csv(const std::string& output_path,
-                                                 const std::vector<cost_model::CostModelFeatures>& features) const {
-  CsvWriter writer(output_path);
+                                                 const std::vector<cost_model::CostModelFeatures>& features) {
+  std::lock_guard<std::mutex> csv_guard(_csv_write_mutex);
 
+  CsvWriter writer(output_path);
   for (const auto& feature : features) {
     const auto all_type_variants = feature.serialize();
 
