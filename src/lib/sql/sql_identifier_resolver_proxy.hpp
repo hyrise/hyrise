@@ -24,7 +24,7 @@ class ParameterIDAllocator;
  * Consider "SELECT (SELECT t1.a + b FROM t2) FROM t1". The SQLTranslator uses the SQLIdentifierResolverProxy to resolve
  *   "t1.a", since "t1.a" cannot be resolved using its own SQLIdentifierResolver.
  *
- * The ParameterIDAllocator is global to the entire statement translation and makes sure ParamterIDs are unique
+ * The ParameterIDAllocator is global to the entire statement translation and makes sure ParameterIDs are unique
  *   across sub queries
  *
  * To be able to access expressions from SELECT-statements above the direct parent statement, the outer_context_proxy

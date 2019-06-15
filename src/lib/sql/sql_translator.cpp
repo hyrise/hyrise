@@ -130,7 +130,8 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
 namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
-    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>()) {}
+    : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
+            std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>>()) {}
 
 std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
   const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
@@ -208,12 +209,21 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
   AssertInput(!select.unionSelect, "Set operations (UNION/INTERSECT/...) are not supported yet");
 
-  // Translate WITH, if set
+  // Translate WITH
   if(select.withDescriptions) {
+    auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
+    auto sql_identifier_resolver_proxy = std::make_shared<SQLIdentifierResolverProxy>(sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
+
     for(const auto& desc : *select.withDescriptions) {
-      auto& lqp = _translate_select_statement(desc->select);
-      SQLTranslator with_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator};
-      // lqp = with_translator._translate_select_statement(*hsql_table_ref.select);
+      SQLTranslator with_translator{_use_mvcc, sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
+      auto lqp = with_translator._translate_select_statement(*desc->select);
+      _store_with_query(desc->alias, lqp, with_translator._sql_identifier_resolver, sql_identifier_resolver);
+    }
+
+    if(!_external_sql_identifier_resolver_proxy) {
+      _external_sql_identifier_resolver_proxy = sql_identifier_resolver_proxy;
+    } else {
+      Fail("Nested WITH clauses are not supported.");
     }
   }
 
@@ -473,7 +483,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
   switch (hsql_table_ref.type) {
     case hsql::kTableName: {
-      if (StorageManager::get().has_table(hsql_table_ref.name)) {
+
+      if (_has_with_query(hsql_table_ref.name)) { // TODO implement comment WITH replaces FROM
+        lqp = _get_with_query(hsql_table_ref.name);
+      } else if (StorageManager::get().has_table(hsql_table_ref.name)) {
         lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_resolver);
 
       } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
@@ -505,7 +518,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       AssertInput(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every nested SELECT must have its own alias");
       table_name = hsql_table_ref.alias->name;
 
-      SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator};
+      SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
       for (const auto& subquery_expression : lqp->column_expressions()) {
@@ -1383,7 +1396,7 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
   const auto sql_identifier_proxy = std::make_shared<SQLIdentifierResolverProxy>(
       sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
 
-  auto subquery_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator};
+  auto subquery_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions};
   const auto subquery_lqp = subquery_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
 
@@ -1529,17 +1542,36 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
 }
 
-void add_with_description(const std::string& alias, const std::shared_ptr<AbstractLQPNode>& lqp_node) {
-  AssertInput(!has_with_description(alias), "WITH query name " + alias + " specified more than once");
-  _with_descriptions.emplace(alias, lqp_node);
+void SQLTranslator::_store_with_query(const std::string& table_alias,
+                                      const std::shared_ptr<AbstractLQPNode>& lqp_node,
+                                      const std::shared_ptr<SQLIdentifierResolver>& source_sql_identifier_resolver,
+                                      const std::shared_ptr<SQLIdentifierResolver>& destination_sql_identifier_resolver) {
+  AssertInput(!_has_with_query(table_alias), "WITH query name " + table_alias + " specified more than once");
+  _with_descriptions.emplace(table_alias, lqp_node);
+
+  // Add column expressions to destination SQLIdentifierResolver
+  for (const auto& expression : lqp_node->column_expressions()) {
+    const auto identifier =
+            source_sql_identifier_resolver->get_expression_identifier(expression);
+
+    if (identifier) {
+      destination_sql_identifier_resolver->set_column_name(expression, identifier->column_name);
+    } else {
+      destination_sql_identifier_resolver->set_column_name(expression, expression->as_column_name());
+    }
+    destination_sql_identifier_resolver->set_table_name(expression, table_alias);
+  }
 }
 
-bool SQLTranslator::has_with_description(const std::string &alias) const {
-  return _with_descriptions.count(alias);
+bool SQLTranslator::_has_with_query(const std::string &table_alias) const {
+  return _with_descriptions.count(table_alias);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::get_with_description(const std::string &alias) const {
-  return std::shared_ptr<AbstractLQPNode>();
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_get_with_query(const std::string &table_alias) const {
+  const auto iter = _with_descriptions.find(table_alias);
+  Assert(iter != _with_descriptions.end(), "No such WITH query named '" + table_alias + "'");
+
+  return iter->second->deep_copy();
 }
 
 }  // namespace opossum
