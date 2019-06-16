@@ -45,7 +45,7 @@ Subsequent calls to CMake, e.g., when adding files to the build will not be nece
 
 ### Compiler choice
 CMake will default to your system's default compiler.
-To use a different one, call like `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory.
+To use a different one, call `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory. See [dependencies](DEPENDENCIES.md) for supported compiler versions.
 
 ### ccache
 For development, we strongly suggest to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. To use ccache, simply add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call.
@@ -109,8 +109,10 @@ Contact: firstname.lastname@hpi.de
 -   Pedro     Flemming
 -   Mathias   Flüggen
 -   Johannes  Frohnhofen
+-   Pascal    Führlich
 -   Adrian    Holfter
 -   Sven      Ihde
+-   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
 -   Marvin    Keller
@@ -120,6 +122,7 @@ Contact: firstname.lastname@hpi.de
 -   Tom       Lichtenstein
 -   Alexander Löser
 -   Jan       Mattfeld
+-   Julian    Menzler
 -   Arne      Mayer
 -   Torben    Meyer
 -   Leander   Neiß

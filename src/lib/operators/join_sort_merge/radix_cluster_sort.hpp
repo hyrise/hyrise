@@ -329,9 +329,9 @@ class RadixClusterSort {
     // Sort the chunks of the input tables in the non-equi cases
     ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
     ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
-    auto [materialized_left_segments, null_rows_left, samples_left] =  // NOLINT
+    auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_input_table_left, _left_column_id);
-    auto [materialized_right_segments, null_rows_right, samples_right] =  // NOLINT
+    auto [materialized_right_segments, null_rows_right, samples_right] =
         right_column_materializer.materialize(_input_table_right, _right_column_id);
     output.null_rows_left = std::move(null_rows_left);
     output.null_rows_right = std::move(null_rows_right);

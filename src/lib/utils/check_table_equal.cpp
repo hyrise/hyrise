@@ -1,9 +1,10 @@
 #include "check_table_equal.hpp"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <iomanip>
 #include <iostream>
-
-#include "boost/lexical_cast.hpp"
 
 #include "lossless_cast.hpp"
 
@@ -95,6 +96,33 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 }  // namespace
 
 namespace opossum {
+
+bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
+                         const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
+                         TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
+  if (actual_segment->data_type() != expected_segment->data_type()) {
+    return false;
+  }
+
+  const auto definitions =
+      std::vector<TableColumnDefinition>{TableColumnDefinition("single_column", actual_segment->data_type(), true)};
+
+  auto table_type = [&](const std::shared_ptr<BaseSegment> segment) {
+    if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
+      return TableType::References;
+    }
+    return TableType::Data;
+  };
+
+  auto actual_table = std::make_shared<Table>(definitions, table_type(actual_segment));
+  actual_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{actual_segment});
+  auto expected_table = std::make_shared<Table>(definitions, table_type(expected_segment));
+  expected_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{expected_segment});
+
+  // If check_table_equal returns something other than std::nullopt, a difference has been found.
+  return !check_table_equal(actual_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode);
+}
+
 std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                                              const std::shared_ptr<const Table>& expected_table,
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
@@ -160,7 +188,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
       }
     }
 
-    if (opossum_table->column_name(column_id) != expected_table->column_name(column_id)) {
+    if (!boost::iequals(opossum_table->column_name(column_id), expected_table->column_name(column_id))) {
       const std::string error_type = "Column name mismatch (column " + std::to_string(column_id) + ")";
       const std::string error_msg = "Actual column name: " + opossum_table->column_name(column_id) + "\n" +
                                     "Expected column name: " + expected_table->column_name(column_id);
