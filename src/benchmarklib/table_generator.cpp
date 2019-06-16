@@ -120,8 +120,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
 
     // Obtain general (non-typed) allocators
-    auto allocator_ptr_base_segment = get_allocator_for_type<std::shared_ptr<BaseSegment>>(numa_distribute_chunks, node_id);
-    auto allocator_chunk = get_allocator_for_type<Chunk>(numa_distribute_chunks, node_id);
+    auto allocator_ptr_base_segment = get_allocator_for_type<std::shared_ptr<BaseSegment>>(node_id, numa_distribute_chunks);
+    auto allocator_chunk = get_allocator_for_type<Chunk>(node_id, numa_distribute_chunks);
 
     auto segments = Segments(allocator_ptr_base_segment);
 
@@ -132,8 +132,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
         using ColumnDataType = typename decltype(column_data_type)::type;
         
         // get typed allocators
-        auto allocator_value_segment = get_allocator_for_type<ValueSegment<ColumnDataType>>(numa_distribute_chunks, node_id);
-        auto allocator = get_allocator_for_type<ColumnDataType>(numa_distribute_chunks, node_id);
+        auto allocator_value_segment = get_allocator_for_type<ValueSegment<ColumnDataType>>(node_id, numa_distribute_chunks);
+        auto allocator = get_allocator_for_type<ColumnDataType>(node_id, numa_distribute_chunks);
 
         std::vector<int> values;
         values.reserve(chunk_size);
