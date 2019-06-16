@@ -100,8 +100,6 @@ void BenchmarkRunner::run() {
   if (_config.output_file_path) {
     if (!_config.verify && !_config.enable_visualization) {
       std::ofstream output_file(*_config.output_file_path);
-      _listener_reports = nlohmann::json{};
-      _notify_listeners(Event::CreateReport);
       _create_report(output_file);
     } else {
       std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
@@ -176,7 +174,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     _warmup(item_id);
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
-    const auto listener_payload = nlohmann::json{{"item_name", name}, {"item_id", static_cast<size_t>(item_id)}};
+    const auto listener_payload = std::make_any<nlohmann::json>(nlohmann::json{{"item_name", name}, {"item_id", static_cast<size_t>(item_id)}});
     std::cout << "- Benchmarking " << name << std::endl;
     _notify_listeners(Event::ItemRunStarted, listener_payload);
 
@@ -350,11 +348,14 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       {"table_size_in_bytes", table_size},
       {"total_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count()}};
 
+  nlohmann::json listener_reports{};
+  _notify_listeners(Event::CreateReport, std::make_any<nlohmann::json&>(listener_reports));
+
   nlohmann::json report{{"context", _context},
                         {"benchmarks", benchmarks},
                         {"summary", summary},
                         {"table_generation", _table_generator->metrics},
-                        {"listener_reports", _listener_reports}};
+                        {"listener_reports", listener_reports}};
 
   stream << std::setw(2) << report << std::endl;
 }
@@ -433,10 +434,6 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"verify", config.verify},
       {"time_unit", "ns"},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
-}
-
-void BenchmarkRunner::add_to_json_report(const std::string& listener_name, const nlohmann::json& report) {
-  _listener_reports.push_back(nlohmann::json{{"listener", listener_name}, {"report", report}});
 }
 
 }  // namespace opossum
