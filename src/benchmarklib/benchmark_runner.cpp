@@ -348,8 +348,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       {"table_size_in_bytes", table_size},
       {"total_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count()}};
 
-  nlohmann::json listener_reports{};
-  _notify_listeners(Event::CreateReport, std::make_any<nlohmann::json&>(listener_reports));
+  auto listener_reports = nlohmann::json::array();
+  _notify_listeners(Event::CreateReport, std::make_any<nlohmann::json*>(&listener_reports));
 
   nlohmann::json report{{"context", _context},
                         {"benchmarks", benchmarks},
