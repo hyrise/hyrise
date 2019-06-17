@@ -288,50 +288,39 @@ struct FixedSizeGroupRun {
   }
 };
 
-struct VariablySizedGroupRunLayout {
-  std::vector<ColumnID> variably_sized_column_ids;
-  std::vector<ColumnID> fixed_size_column_ids;
-
-  // Equal to variably_sized_column_ids.size()
-  size_t column_count;
-  size_t nullable_column_count;
-
-  // Mapping a ColumnID (the index of the vector) to whether the column's values is stored either in the
-  // VariablySizeGroupRun itself, or the FixedSizeGroupRun and the value index in the respective group run.
-  using Column =
-      std::tuple<bool /* is_variably_sized */, ColumnID /* index */, std::optional<size_t> /* nullable_index */
-                 >;
-  std::vector<Column> column_mapping;
-
-  FixedSizeGroupRunLayout fixed_layout;
-
-  VariablySizedGroupRunLayout(const std::vector<ColumnID>& variably_sized_column_ids,
-                              const std::vector<ColumnID>& fixed_size_column_ids,
-                              const std::vector<Column>& column_mapping, const FixedSizeGroupRunLayout& fixed_layout)
-      : variably_sized_column_ids(variably_sized_column_ids),
-        fixed_size_column_ids(fixed_size_column_ids),
-        column_count(variably_sized_column_ids.size()),
-        nullable_column_count(0u),  // Initialized below
-        column_mapping(column_mapping),
-        fixed_layout(fixed_layout) {
-    nullable_column_count = std::count_if(column_mapping.begin(), column_mapping.end(),
-                                          [&](const auto& tuple) { return std::get<2>(tuple).has_value(); });
-  }
-};
-
+/**
+ * Data type used for blob storage of group data in VariablySizedGroupRun and FixedSizeGroupRun
+ */
 using GroupRunElementType = uint32_t;
 
-struct VariablySizedRemoteGroupKey {
-  const GroupRunElementType* variably_sized_group;
-  size_t variably_sized_group_length;
-  const size_t* value_end_offsets;
-  const GroupRunElementType* fixed_sized_group;
+/**
+ * Hash table key used if the group is too large to be stored directly in the hash table
+ */
+struct RemoteKey {
+  const GroupRunElementType* group;
+  size_t size;
 };
 
-struct VariablySizedInPlaceGroupKey {
-  constexpr static auto CAPACITY = 1;  // sizeof(VariablySizedRemoteGroupKey) / sizeof(GroupRunElementType);
+/**
+ * @defgroup Data structures to represent a run of groups of unfixed group sizes
+ *
+ * Currently used if the group columns contain one or more string columns, though it can be used for any potential
+ * data type of unfixed size.
+ *
+ * @{
+ */
 
-  const size_t* value_end_offsets;
+struct VariablySizedGroupRunLayout {
+  // Number of columns in each group
+  size_t column_count;
+};
+
+/**
+ * Hash table key storing the group data in place for faster access. Only used for groups fitting into CAPACITY
+ */
+struct VariablySizedInPlaceGroupKey {
+  constexpr static auto CAPACITY = 1;
+
   size_t size;
   std::array<GroupRunElementType, CAPACITY> group;
 };
@@ -340,12 +329,11 @@ struct VariablySizedGroupKey {
   static VariablySizedGroupKey EMPTY_KEY;
 
   size_t hash{};
-  std::optional<boost::variant<VariablySizedInPlaceGroupKey, VariablySizedRemoteGroupKey>> variant;
+  std::optional<boost::variant<VariablySizedInPlaceGroupKey, RemoteKey>> variant;
 };
 
 inline VariablySizedGroupKey VariablySizedGroupKey::EMPTY_KEY{};
 
-template <typename GetFixedGroupSize>
 struct VariablySizedGroupKeyCompare {
   const VariablySizedGroupRunLayout* layout{};
 #if VERBOSE
