@@ -57,6 +57,14 @@ void PluginManager::unload_plugin(const PluginName& name) {
   _unload_erase_plugin(plugin);
 }
 
+void PluginManager::update_setting(const PluginName& name, const std::string& key, const AllTypeVariant& value) {
+  auto plugin = _plugins.find(name);
+  Assert(plugin != _plugins.cend(), "Updating setting failed: A plugin with name " + name + " does not exist.");
+
+  auto plugin_handle_wrapper = plugin->second;
+  plugin_handle_wrapper.plugin->update_setting(key, value);
+}
+
 const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(
     const std::unordered_map<PluginName, PluginHandleWrapper>::iterator it) {
   const PluginName name = it->first;

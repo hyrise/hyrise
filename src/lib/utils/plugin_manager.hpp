@@ -26,6 +26,8 @@ class PluginManager : public Singleton<PluginManager> {
   void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
 
+  void update_setting(const PluginName& name, const std::string& key, const AllTypeVariant& value);
+
   ~PluginManager();
 
   // Deletes the entire PluginManager and creates a new one, used especially in tests.

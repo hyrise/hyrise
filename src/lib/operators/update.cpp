@@ -58,6 +58,15 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     return nullptr;
   }
 
+  if (_table_to_update_name == "pluginConfigIndexSelection") {
+    const auto setting = input_table_left()->column_name(ColumnID{0});
+    const auto value = AllTypeVariant{static_cast<int64_t>(std::stoi(input_table_right()->column_name(ColumnID{0})))};
+
+    PluginManager::get().update_setting("Driver", setting, value);
+
+    return nullptr;
+  }
+
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
   // 0. Validate input

@@ -28,6 +28,11 @@ class AbstractPlugin {
   virtual void start() = 0;
 
   virtual void stop() = 0;
+
+  virtual void update_setting(const std::string& key, const AllTypeVariant& value) = 0;
+
+ protected:
+  std::unordered_map<std::string, AllTypeVariant> _settings;
 };
 
 }  // namespace opossum
