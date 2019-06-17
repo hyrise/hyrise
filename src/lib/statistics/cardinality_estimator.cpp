@@ -286,7 +286,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
-  // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns statistics' are
+  // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns' statistics are
   // scaled with the estimated selectivity of the predicate.
 
   const auto& predicate = *predicate_node.predicate();

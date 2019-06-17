@@ -109,30 +109,30 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
   std::vector<T> bin_maxima(bin_count);
   std::vector<HistogramCountType> bin_heights(bin_count);
 
-  // `bin_minimum_distinct_value_idx` and `bin_maximum_distinct_value_idx` are indices into `value_distribution`
+  // `min_value_idx` and `max_value_idx` are indices into the sorted vector `value_distribution`
   // describing which range of distinct values goes into a bin
-  auto bin_minimum_distinct_value_idx = BinID{0};
-  for (BinID bin_index = 0; bin_index < bin_count; bin_index++) {
-    auto bin_maximum_distinct_value_idx = bin_minimum_distinct_value_idx + distinct_count_per_bin - 1;
-    if (bin_index < bin_count_with_extra_value) {
-      bin_maximum_distinct_value_idx++;
+  auto min_value_idx = BinID{0};
+  for (BinID bin_idx = 0; bin_idx < bin_count; bin_idx++) {
+    auto max_value_idx = min_value_idx + distinct_count_per_bin - 1;
+    if (bin_idx < bin_count_with_extra_value) {
+      max_value_idx++;
     }
 
     // We'd like to move strings, but have to copy if we need the same string for the bin_maximum
-    if (std::is_same_v<T, std::string> && bin_minimum_distinct_value_idx != bin_maximum_distinct_value_idx) {
-      bin_minima[bin_index] = std::move(value_distribution[bin_minimum_distinct_value_idx].first);
+    if (std::is_same_v<T, std::string> && min_value_idx != max_value_idx) {
+      bin_minima[bin_idx] = std::move(value_distribution[min_value_idx].first);
     } else {
-      bin_minima[bin_index] = value_distribution[bin_minimum_distinct_value_idx].first;
+      bin_minima[bin_idx] = value_distribution[min_value_idx].first;
     }
 
-    bin_maxima[bin_index] = std::move(value_distribution[bin_maximum_distinct_value_idx].first);
+    bin_maxima[bin_idx] = std::move(value_distribution[max_value_idx].first);
 
-    bin_heights[bin_index] =
-        std::accumulate(value_distribution.cbegin() + bin_minimum_distinct_value_idx,
-                        value_distribution.cbegin() + bin_maximum_distinct_value_idx + 1, HistogramCountType{0},
+    bin_heights[bin_idx] =
+        std::accumulate(value_distribution.cbegin() + min_value_idx, value_distribution.cbegin() + max_value_idx + 1,
+                        HistogramCountType{0},
                         [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
 
-    bin_minimum_distinct_value_idx = bin_maximum_distinct_value_idx + 1;
+    min_value_idx = max_value_idx + 1;
   }
 
   return std::make_shared<EqualDistinctCountHistogram<T>>(
