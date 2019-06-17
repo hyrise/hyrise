@@ -41,7 +41,6 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     const auto plugin_name = input_table_left()->column_name(ColumnID{0});
     const bool enable = input_table_right()->column_name(ColumnID{0}) == "1";
     std::filesystem::path plugin_path;
-
     if (enable) {
       std::cout << "Loading plugin: " << plugin_name << std::endl;
       if (plugin_name == "IndexSelection") {
@@ -51,8 +50,30 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
       PluginManager::get().load_plugin(plugin_path);
     } else {
       std::cout << "Unloading plugin: " << plugin_name << std::endl;
-      if (plugin_name == "IndexSelection")
+      if (plugin_name == "IndexSelection") {
         PluginManager::get().unload_plugin("Driver");
+      }
+    }
+
+    return nullptr;
+  }
+
+  if (_table_to_update_name == "pluginsAdvanced") {
+    const auto plugin_name = input_table_left()->column_name(ColumnID{0});
+    const bool enable = input_table_right()->column_name(ColumnID{0}) == "1";
+    std::filesystem::path plugin_path;
+    if (enable) {
+      std::cout << "Loading plugin: " << plugin_name << std::endl;
+      if (plugin_name == "IndexSelectionAdvanced") {
+        plugin_path = "/home/Jan.Kossmann/example_plugin/cmake-build-release/libDriverAdvanced.so";
+      }
+
+      PluginManager::get().load_plugin(plugin_path);
+    } else {
+      std::cout << "Unloading plugin: " << plugin_name << std::endl;
+      if (plugin_name == "IndexSelectionAdvanced") {
+        PluginManager::get().unload_plugin("Driver");
+      }
     }
 
     return nullptr;
@@ -63,6 +84,15 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     const auto value = AllTypeVariant{static_cast<int64_t>(std::stoi(input_table_right()->column_name(ColumnID{0})))};
 
     PluginManager::get().update_setting("Driver", setting, value);
+
+    return nullptr;
+  }
+
+  if (_table_to_update_name == "pluginConfigIndexSelectionAdvanced") {
+    const auto setting = input_table_left()->column_name(ColumnID{0});
+    const auto value = AllTypeVariant{static_cast<int64_t>(std::stoi(input_table_right()->column_name(ColumnID{0})))};
+
+    PluginManager::get().update_setting("DriverAdvanced", setting, value);
 
     return nullptr;
   }

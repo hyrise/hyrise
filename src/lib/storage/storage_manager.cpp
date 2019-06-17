@@ -62,10 +62,28 @@ StorageManager::StorageManager() {
   {
     TableColumnDefinitions column_definitions;
 
+    column_definitions.emplace_back("IndexSelectionAdvanced", DataType::Int);
+
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 100);
+    add_table("pluginsAdvanced", t);
+  }
+
+  {
+    TableColumnDefinitions column_definitions;
+
     column_definitions.emplace_back("Budget", DataType::Int);
 
     auto t = std::make_shared<Table>(column_definitions, TableType::Data, 100);
     add_table("pluginConfigIndexSelection", t);
+  }
+
+  {
+    TableColumnDefinitions column_definitions;
+
+    column_definitions.emplace_back("Budget", DataType::Int);
+
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 100);
+    add_table("pluginConfigIndexSelectionAdvanced", t);
   }
 
   // {
