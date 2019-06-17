@@ -77,6 +77,8 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
       encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_FrameOfReference_percentage =
       encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
+  column_features.column_segment_encoding_LZ4_percentage =
+      encoding_mapping[EncodingType::LZ4] / static_cast<float>(chunk_count);
   column_features.column_segment_vector_compression_FSBA_percentage =
       vector_compression_mapping[VectorCompressionType::FixedSizeByteAligned] / static_cast<float>(chunk_count);
   column_features.column_segment_vector_compression_SimdBp128_percentage =
