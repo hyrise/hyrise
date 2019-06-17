@@ -15,7 +15,7 @@ set(
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
     concurrency/transaction_manager_test.cpp
-    cost_model/cost_estimator_test.cpp
+    cost_estimation/abstract_cost_estimator_test.cpp
     expression/expression_evaluator_to_pos_list_test.cpp
     expression/expression_evaluator_to_values_test.cpp
     expression/expression_result_test.cpp
@@ -49,6 +49,7 @@ set(
     logical_query_plan/logical_query_plan_test.cpp
     logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     logical_query_plan/lqp_utils_test.cpp
+    logical_query_plan/lqp_translator_test.cpp
     logical_query_plan/mock_node_test.cpp
     logical_query_plan/predicate_node_test.cpp
     logical_query_plan/projection_node_test.cpp
@@ -112,7 +113,6 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    logical_query_plan/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/between_composition_rule_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
@@ -139,19 +139,16 @@ set(
     sql/sql_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
-    statistics/chunk_statistics/histograms/abstract_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_distinct_count_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_height_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
-    statistics/chunk_statistics/histograms/histogram_utils_test.cpp
-    statistics/chunk_statistics/min_max_filter_test.cpp
-    statistics/chunk_statistics/counting_quotient_filter_test.cpp
-    statistics/chunk_statistics/range_filter_test.cpp
-    statistics/column_statistics_test.cpp
-    statistics/generate_table_statistics_test.cpp
-    statistics/statistics_import_export_test.cpp
-    statistics/statistics_test_utils.hpp
-    statistics/table_statistics_join_test.cpp
+    lossy_cast_test.cpp
+    statistics/cardinality_estimator_test.cpp
+    statistics/attribute_statistics_test.cpp
+    statistics/join_graph_statistics_cache_test.cpp
+    statistics/statistics_objects/equal_distinct_count_histogram_test.cpp
+    statistics/statistics_objects/generic_histogram_test.cpp
+    statistics/statistics_objects/string_histogram_domain_test.cpp
+    statistics/statistics_objects/min_max_filter_test.cpp
+    statistics/statistics_objects/counting_quotient_filter_test.cpp
+    statistics/statistics_objects/range_filter_test.cpp
     statistics/table_statistics_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/any_segment_iterable_test.cpp

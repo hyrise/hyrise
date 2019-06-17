@@ -10,7 +10,6 @@
 namespace opossum {
 
 class AbstractExpression;
-class TableStatistics;
 
 enum class LQPNodeType {
   Aggregate,
@@ -48,7 +47,7 @@ struct LQPOutputRelation {
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
-class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
+class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   AbstractLQPNode(const LQPNodeType node_type,
                   const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
@@ -139,24 +138,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
    * @return whether the output column at @param column_id is nullable
    */
   virtual bool is_column_nullable(const ColumnID column_id) const;
-
-  // @{
-  /**
-   * These functions provide access to statistics for this particular node.
-   *
-   * AbstractLQPNode::derive_statistics_from() calculates new statistics for this node as they would appear if
-   * left_input and right_input WERE its inputs. This works for the actual inputs of this node during the lazy
-   * initialization in get_statistics() as well as e.g. in an optimizer rule
-   * that tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes
-   * that shall be reordered with the same reference node.
-   *
-   * Inheriting nodes are free to override AbstractLQPNode::derive_statistics_from().
-   */
-  const std::shared_ptr<TableStatistics> get_statistics();
-  virtual std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const;
-  // @}
 
   /**
    * Perform a deep equality check

@@ -34,14 +34,15 @@ enum class SQLPipelineStatus {
  * The SQLPipelineStatement represents the flow from a *single* SQL statement to the result table with all intermediate
  * steps. Don't construct this class directly, use the SQLPipelineBuilder instead
  *
- * Note:
+ * NOTE:
  *  Calling get_result_table() will result in the following "call stack"
- *  get_result_table() -> get_tasks() -> get_pyhsical_plan_plan() -> get_optimized_logical_plan() ->
+ *  get_result_table() -> get_tasks() -> get_physical_plan() -> get_optimized_logical_plan() ->
  *  get_unoptimized_logical_plan() -> get_parsed_sql()
  *
  * NOTE:
- *  If a physical plan for an SQL statement is in the SQLPhysicalPlanCache, it will be used instead of translating the optimized
- *  LQP (get_optimized_logical_plans()) into a PQP. Thus, in this case, the optimized LQP and PQP could be different.
+ *  If a physical plan for an SQL statement is in the SQLPhysicalPlanCache, it will be used instead of translating the
+ *  optimized LQP (get_optimized_logical_plans()) into a PQP. Thus, in this case, the optimized LQP and PQP could be
+ *  different.
  */
 class SQLPipelineStatement : public Noncopyable {
  public:

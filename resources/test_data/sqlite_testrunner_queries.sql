@@ -10,6 +10,7 @@ SELECT 22 / 5 AS col;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
+SELECT * FROM mixed WHERE a > d AND b > 1;
 SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
@@ -23,6 +24,9 @@ SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
 SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b + c < c * b - 100;
+SELECT * FROM mixed WHERE id > b;
+SELECT * FROM mixed WHERE id = b;
+SELECT * FROM mixed WHERE id IN (SELECT 14) AND b > (SELECT 15) AND b < (SELECT 98);
 SELECT * FROM mixed WHERE id >= 5.5;
 SELECT * FROM mixed WHERE id BETWEEN 5.5 AND 8;
 SELECT * FROM mixed WHERE id < 5.5;
@@ -158,6 +162,13 @@ SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
+
+-- JOIN on string column
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a = m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a != m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a < m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 LEFT JOIN mixed AS m2 ON m1.a = m2.a WHERE m2.a NOT IN ('a', 'b')
+
 SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 

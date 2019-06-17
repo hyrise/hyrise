@@ -38,17 +38,14 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
    * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
    * @{
    */
-  void set_pruned_column_ids(const std::vector<ColumnID>& column_ids);
+  void set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids);
   const std::vector<ColumnID>& pruned_column_ids() const;
   /** @} */
 
   std::string description() const override;
 
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
-
-  void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
+  const std::shared_ptr<TableStatistics>& table_statistics() const;
+  void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
   std::optional<std::string> name;
 
