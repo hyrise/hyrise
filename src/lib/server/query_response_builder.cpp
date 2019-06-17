@@ -52,7 +52,7 @@ std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const
   return result;
 }
 
-std::string QueryResponseBuilder::build_command_complete_message(const AbstractOperator& root_op, uint64_t row_count) {
+std::string QueryResponseBuilder::build_command_complete_message(const AbstractOperator& root_op, uint64_t row_count, std::chrono::nanoseconds execution_time) {
   switch (root_op.type()) {
     case OperatorType::Insert: {
       // 0 is ignored OID and 1 inserted row
@@ -68,7 +68,7 @@ std::string QueryResponseBuilder::build_command_complete_message(const AbstractO
     }
     default:
       // Assuming normal query
-      return "SELECT " + std::to_string(row_count);
+      return "SELECT " + std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time).count());
   }
 }
 
@@ -109,7 +109,7 @@ boost::future<void> QueryResponseBuilder::_send_query_response_rows(const send_r
   }
 
   return send_row(row_strings) >> then >> std::bind(QueryResponseBuilder::_send_query_response_rows, send_row,
-                                                    std::ref(chunk), ChunkOffset{current_chunk_offset + 1});
+                                                  std::ref(chunk), ChunkOffset{current_chunk_offset + 1});
 }
 
 }  // namespace opossum

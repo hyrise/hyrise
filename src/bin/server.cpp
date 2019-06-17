@@ -31,7 +31,10 @@ int main(int argc, char* argv[]) {
   // The server registers itself to the boost io_service. The io_service is the main IO control unit here and it lives
   // until the server doesn't request any IO any more, i.e. is has terminated. The server requests IO in its
   // constructor and then runs forever.
-  opossum::Server server{io_service, port};
+  // opossum::Server server{io_service, port};
+  auto server = std::make_shared<opossum::Server>(io_service, port);
+
+  opossum::StorageManager::get().add_server(server);
 
   io_service.run();
 

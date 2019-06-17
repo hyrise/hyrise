@@ -163,7 +163,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
 
   auto send_command_complete = [=](uint64_t row_count) {
     auto root_op = sql_pipeline->get_physical_plans().front();
-    auto complete_message = QueryResponseBuilder::build_command_complete_message(*root_op, row_count);
+    auto execution_time = sql_pipeline->metrics().statement_metrics[0]->plan_execution_duration;
+    auto complete_message = QueryResponseBuilder::build_command_complete_message(*root_op, row_count, execution_time);
     return _connection->send_command_complete(complete_message);
   };
 
@@ -176,7 +177,11 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string& sql) {
   auto create_sql_pipeline = [=]() {
-    return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true));
+    if (sql[0] == 'S') {
+      return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true, false));
+    } else {
+      return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true));
+    }
   };
 
   auto load_table_file = [=](std::string& file_name, std::string& table_name) {
@@ -304,7 +309,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
            };
          } >>
          then >> [=](uint64_t row_count) {
-           auto complete_message = QueryResponseBuilder::build_command_complete_message(*physical_plan, row_count);
+           auto complete_message = QueryResponseBuilder::build_command_complete_message(*physical_plan, row_count, std::chrono::nanoseconds{0});
            return _connection->send_command_complete(complete_message);
          };
 }

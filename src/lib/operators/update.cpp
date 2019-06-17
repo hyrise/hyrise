@@ -14,6 +14,7 @@
 #include "storage/storage_manager.hpp"
 #include "table_wrapper.hpp"
 #include "utils/assert.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace opossum {
 
@@ -33,6 +34,27 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
       std::cout << left << " <- " << right << std::endl;
       optimizer_rule_status[left] = (right == "1");
     }
+    return nullptr;
+  }
+
+  if (_table_to_update_name == "plugins") {
+    const auto plugin_name = input_table_left()->column_name(ColumnID{0});
+    const bool enable = input_table_right()->column_name(ColumnID{0}) == "1";
+    std::filesystem::path plugin_path;
+
+    if (enable) {
+      std::cout << "Loading plugin: " << plugin_name << std::endl;
+      if (plugin_name == "IndexSelection") {
+        plugin_path = "/home/Jan.Kossmann/example_plugin/cmake-build-release/libDriver.so";
+      }
+
+      PluginManager::get().load_plugin(plugin_path);
+    } else {
+      std::cout << "Unloading plugin: " << plugin_name << std::endl;
+      if (plugin_name == "IndexSelection")
+        PluginManager::get().unload_plugin("Driver");
+    }
+
     return nullptr;
   }
 

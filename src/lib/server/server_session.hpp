@@ -22,6 +22,8 @@ class ServerSessionImpl : public std::enable_shared_from_this<ServerSessionImpl<
 
   boost::future<void> start();
 
+  bool _is_paused = false;
+
  protected:
   boost::future<void> _perform_session_startup();
 

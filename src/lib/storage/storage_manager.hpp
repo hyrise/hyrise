@@ -9,6 +9,7 @@
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"
 #include "types.hpp"
+#include "server/server.hpp"
 #include "utils/singleton.hpp"
 #include "../benchmarklib/benchmark_runner.hpp"
 
@@ -70,6 +71,9 @@ class StorageManager : public Singleton<StorageManager> {
   void add_benchmark_runner(std::shared_ptr<BenchmarkRunner> br);
   std::shared_ptr<BenchmarkRunner> get_benchmark_runner();
 
+  void add_server(std::shared_ptr<Server> s);
+  std::shared_ptr<Server> get_server();
+
  protected:
   StorageManager();
 
@@ -83,6 +87,7 @@ class StorageManager : public Singleton<StorageManager> {
   std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
 
   std::shared_ptr<BenchmarkRunner> _br;
+  std::shared_ptr<Server> _server;
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);

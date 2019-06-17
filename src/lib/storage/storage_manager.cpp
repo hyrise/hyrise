@@ -25,6 +25,14 @@ std::shared_ptr<BenchmarkRunner> StorageManager::get_benchmark_runner() {
   return _br;
 }
 
+void StorageManager::add_server(std::shared_ptr<Server> s) {
+  _server = s;
+}
+
+std::shared_ptr<Server> StorageManager::get_server() {
+  return _server;
+}
+
 StorageManager::StorageManager() {
   {
     TableColumnDefinitions column_definitions;
@@ -40,6 +48,15 @@ StorageManager::StorageManager() {
 
     auto t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
     add_table("config", t);
+  }
+
+  {
+    TableColumnDefinitions column_definitions;
+
+    column_definitions.emplace_back("IndexSelection", DataType::Int);
+
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 100);
+    add_table("plugins", t);
   }
 
   // {

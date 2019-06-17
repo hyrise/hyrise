@@ -1,5 +1,7 @@
 #include "server.hpp"
 
+#include <thread>
+
 #include <boost/asio/placeholders.hpp>
 #include <boost/bind.hpp>
 
@@ -19,8 +21,19 @@ Server::Server(boost::asio::io_service& io_service, uint16_t port)
   _accept_next_connection();
 }
 
+void Server::toggle_dont_accept_next_connection() {
+  _dont_accept_next_connection.store(!_dont_accept_next_connection.load());
+}
+
 void Server::_accept_next_connection() {
-  _acceptor.async_accept(_socket, boost::bind(&Server::_start_session, this, boost::asio::placeholders::error));
+  if (!_dont_accept_next_connection.load()) {
+    _acceptor.async_accept(_socket, boost::bind(&Server::_start_session, this, boost::asio::placeholders::error));
+  } else {
+    while(_dont_accept_next_connection.load()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    _acceptor.async_accept(_socket, boost::bind(&Server::_start_session, this, boost::asio::placeholders::error));
+  }
 }
 
 void Server::_start_session(boost::system::error_code error) {
@@ -31,7 +44,6 @@ void Server::_start_session(boost::system::error_code error) {
     // Start the session and release it once it has terminated
     session->start() >> then >> [=]() mutable { session.reset(); };
   }
-
   _accept_next_connection();
 }
 

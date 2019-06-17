@@ -18,8 +18,8 @@ struct CreatePipelineResult {
 // load on the main server thread to a miminum.
 class CreatePipelineTask : public AbstractServerTask<std::unique_ptr<CreatePipelineResult>> {
  public:
-  explicit CreatePipelineTask(std::string sql, bool allow_load_table = false)
-      : _sql(sql), _allow_load_table(allow_load_table) {}
+  explicit CreatePipelineTask(std::string sql, bool allow_load_table = false, bool mvcc = true)
+      : _sql(sql), _allow_load_table(allow_load_table), _mvcc(mvcc) {}
 
  protected:
   void _on_execute() override;
@@ -31,6 +31,7 @@ class CreatePipelineTask : public AbstractServerTask<std::unique_ptr<CreatePipel
 
   const std::string _sql;
   const bool _allow_load_table;
+  const bool _mvcc;
 
   std::string _file_name;
   std::string _table_name;

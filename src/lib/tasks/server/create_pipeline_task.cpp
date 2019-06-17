@@ -14,7 +14,11 @@ void CreatePipelineTask::_on_execute() {
       // Try LOAD file_name table_name
       result->load_table = std::make_pair(_file_name, _table_name);
     } else {
-      result->sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{_sql}.create_pipeline());
+      if (!_mvcc) {
+        result->sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{_sql}.with_mvcc(UseMvcc::No).create_pipeline());
+      } else {
+        result->sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{_sql}.create_pipeline());
+      }
     }
   } catch (...) {
     // Setting the exception this way ensures that the details are preserved in the futures
