@@ -311,7 +311,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     const JoinNode& join_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
-  // For inner-equi JoinNodes, an principle-of-inclusion algorithm is used.
+  // For inner-equi JoinNodes, a principle-of-inclusion algorithm is used.
   // The same algorithm is used for outer-equi JoinNodes, lacking a better alternative at the moment.
   // All other join modes and predicate conditions are treated as cross joins for now.
 
