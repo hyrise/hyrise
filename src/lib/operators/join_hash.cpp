@@ -280,7 +280,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     RadixContainer<ProbeColumnType> radix_probe_column;
 
     // HashTables for the build column, one for each partition
-    std::vector<std::optional<HashTable<HashedType>>> hashtables;
+    std::vector<std::optional<PosHashTable<HashedType>>> hashtables;
 
     // Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
     // ===============================================================================================
@@ -336,9 +336,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // case, we DO need all rows.
       if (_secondary_predicates.empty() &&
           (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-        hashtables = build<BuildColumnType, HashedType, JoinHashBuildMode::SinglePosition>(radix_build_column);
+        hashtables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition);
       } else {
-        hashtables = build<BuildColumnType, HashedType, JoinHashBuildMode::AllPositions>(radix_build_column);
+        hashtables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions);
       }
     }));
     jobs.back()->schedule();
