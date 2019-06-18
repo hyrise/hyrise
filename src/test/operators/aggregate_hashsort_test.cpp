@@ -14,7 +14,7 @@ template<typename T> struct IsOptional { static inline constexpr auto value = fa
 template<typename T> struct IsOptional<std::optional<T>> { static inline constexpr auto value = true; };
 template<typename T> constexpr auto is_optional_v = IsOptional<T>::value;
 
-template<typename T> constexpr auto is_variably_sized_v = std::is_same_v<std::string, T>;
+template<typename T> constexpr auto is_variably_sized_v = std::is_same_v<std::string, T> || std::is_same_v<std::optional<std::string>, T>;
 
 template<typename T>
 size_t get_value_size(const T& value) {
@@ -23,7 +23,7 @@ size_t get_value_size(const T& value) {
     if constexpr (is_optional_v<VALUE_TYPE>) {
       return 1 + get_value_size(value ? *value : typename VALUE_TYPE::value_type{});
     } else if constexpr (std::is_same_v<VALUE_TYPE, std::string>) {
-      return value.size() + sizeof(size_t);
+      return value.size();
     } else if constexpr (std::is_arithmetic_v<VALUE_TYPE>) {
       return sizeof(VALUE_TYPE);
     } else {
@@ -35,7 +35,9 @@ template <typename VectorType, typename... Args>
 void add_group(VectorType& data, const Args&&... args) {
   auto offset = data.size() * sizeof(typename VectorType::value_type);
 
-  const auto group_size = divide_and_ceil((get_value_size(args) + ...), sizeof(typename VectorType::value_type));
+  const auto group_data_byte_count = (get_value_size(args) + ...);
+  const auto group_meta_data_byte_count = ((is_variably_sized_v<Args> ? sizeof(size_t) : 0) + ...);
+  const auto group_size = divide_and_ceil(group_data_byte_count + group_meta_data_byte_count, sizeof(typename VectorType::value_type));
   const auto old_size = data.size();
 
   data.resize(data.size() + group_size);
@@ -75,7 +77,7 @@ void add_group(VectorType& data, const Args&&... args) {
     }
 
     if constexpr (is_optional_v<VALUE_TYPE>) {
-      auto bool_byte = static_cast<char>(value ? 1 : 0);
+      auto bool_byte = static_cast<char>(value ? 0 : 1);
       memcpy(reinterpret_cast<char*>(data.data()) + offset, &bool_byte, 1);
       offset += 1;
 
@@ -197,12 +199,16 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
   EXPECT_EQ(run.get_group_range(3), std::make_pair(size_t(27), size_t(9)));
   EXPECT_EQ(run.get_group_range(4), std::make_pair(size_t(36), size_t(10)));
 
-  EXPECT_EQ(run.get_variably_sized_value_range(0, 0), std::make_pair(size_t(0), size_t(10)));
-  EXPECT_EQ(run.get_variably_sized_value_range(0, 1), std::make_pair(size_t(0), size_t(10)));
-  EXPECT_EQ(run.get_variably_sized_value_range(1, 0), std::make_pair(size_t(0), size_t(10)));
-  EXPECT_EQ(run.get_variably_sized_value_range(1, 1), std::make_pair(size_t(0), size_t(10)));
-  EXPECT_EQ(run.get_variably_sized_value_range(2, 0), std::make_pair(size_t(0), size_t(10)));
-  EXPECT_EQ(run.get_variably_sized_value_range(2, 1), std::make_pair(size_t(0), size_t(10)));
+  EXPECT_EQ(run.get_variably_sized_value_range(0, 0), std::make_pair(size_t(13), size_t(3)));
+  EXPECT_EQ(run.get_variably_sized_value_range(0, 1), std::make_pair(size_t(16), size_t(5)));
+  EXPECT_EQ(run.get_variably_sized_value_range(1, 0), std::make_pair(size_t(53), size_t(3)));
+  EXPECT_EQ(run.get_variably_sized_value_range(1, 1), std::make_pair(size_t(56), size_t(1)));
+  EXPECT_EQ(run.get_variably_sized_value_range(2, 0), std::make_pair(size_t(89), size_t(0)));
+  EXPECT_EQ(run.get_variably_sized_value_range(2, 1), std::make_pair(size_t(89), size_t(1)));
+  EXPECT_EQ(run.get_variably_sized_value_range(3, 0), std::make_pair(size_t(121), size_t(1)));
+  EXPECT_EQ(run.get_variably_sized_value_range(3, 1), std::make_pair(size_t(122), size_t(5)));
+  EXPECT_EQ(run.get_variably_sized_value_range(4, 0), std::make_pair(size_t(157), size_t(3)));
+  EXPECT_EQ(run.get_variably_sized_value_range(4, 1), std::make_pair(size_t(160), size_t(5)));
 
   auto compare = VariablySizedGroupKeyCompare{&layout};
 
@@ -231,19 +237,19 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
   EXPECT_EQ(run.hashes.back(), 1);
 
   const auto actual_segment_a = run.materialize_output<int32_t>(ColumnID{0}, true);
-  const auto expected_segment_a = std::make_shared<ValueSegment<int32_t>>(std::vector<int32_t>{1, 2, 3, 0, 1}, std::vector<bool>{false, false, false, true, false});
+  const auto expected_segment_a = std::make_shared<ValueSegment<int32_t>>(std::vector<int32_t>{1, 2, 3, 0, 1, 1}, std::vector<bool>{false, false, false, true, false, false});
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_a, expected_segment_a);
 
-  const auto actual_segment_b = run.materialize_output<double>(ColumnID{1}, false);
-  const auto expected_segment_b = std::make_shared<ValueSegment<double>>(std::vector<double>{3.0, 14.0, 25.0, 36.0, 3.0});
+  const auto actual_segment_b = run.materialize_output<pmr_string>(ColumnID{1}, false);
+  const auto expected_segment_b = std::make_shared<ValueSegment<pmr_string>>(std::vector<pmr_string>{"abc", "hij", "", "z", "abc", "abc"});
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_b, expected_segment_b);
 
-  const auto actual_segment_c = run.materialize_output<pmr_string>(ColumnID{2}, false);
-  const auto expected_segment_c = std::make_shared<ValueSegment<pmr_string>>(std::vector<pmr_string>{"abc", "hij", "", "z", "abc"});
+  const auto actual_segment_c = run.materialize_output<double>(ColumnID{2}, false);
+  const auto expected_segment_c = std::make_shared<ValueSegment<double>>(std::vector<double>{3.0, 14.0, 25.0, 36.0, 3.0, 3.0});
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_c, expected_segment_c);
 
   const auto actual_segment_d = run.materialize_output<pmr_string>(ColumnID{3}, true);
-  const auto expected_segment_d = std::make_shared<ValueSegment<pmr_string>>(std::vector<pmr_string>{"defg", "", "", "supi", "defg"}, std::vector<bool>{false, false, true, true, false});
+  const auto expected_segment_d = std::make_shared<ValueSegment<pmr_string>>(std::vector<pmr_string>{"defg", "", "", "supi", "defg", "defg"}, std::vector<bool>{false, false, true, true, false, false});
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_d, expected_segment_d);
 
 }

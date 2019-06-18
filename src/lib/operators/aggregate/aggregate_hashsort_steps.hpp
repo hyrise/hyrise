@@ -564,47 +564,66 @@ struct VariablySizedGroupRun {
    */
   template <typename T>
   std::shared_ptr<BaseSegment> materialize_output(const ColumnID column_id, const bool column_is_nullable) const {
-    auto output_values = std::vector<pmr_string>(size);
+    auto output_values = std::vector<T>(size);
 
     auto output_null_values = std::vector<bool>();
     if (column_is_nullable) {
       output_null_values.resize(size);
     }
 
-    // if (layout->entries[column_id].is_variably_sized) {
-    //   const auto variably_sized_value_count = layout->variably_sized_column_ids.size();
+    auto output_values_iter = output_values.begin();
+    auto output_null_values_iter = output_null_values.begin();
 
-    //   for (auto group_idx = size_t{0}; group_idx < size; ++group_idx) {
-    //     const auto [group_begin_offset, group_length] = get_group_range(group_idx);
-    //     const auto variably_sized_value_idx = layout->entries[column_id].offset;
+    if constexpr (std::is_same_v<T, pmr_string>) {
+      const auto variably_sized_value_idx = layout->entries[column_id].offset;
 
-    //     const auto* group = &data[group_begin_offset];
-    //     const auto* group_end = reinterpret_cast<const char*>(group + group_length);
-    //     const auto* group_value_end_offsets = group_end - sizeof(size_t) * variably_sized_value_count;
+      for (auto group_idx = size_t{0}; group_idx < size; ++group_idx) {
+        const auto [value_begin_offset, value_length] = get_variably_sized_value_range(group_idx, variably_sized_value_idx);
 
-    //     auto value_end_offset = size_t{};
-    //     memcpy(&value_end_offset, group_value_end_offsets + sizeof(size_t) * variably_sized_value_idx, sizeof(size_t));
+        auto* source = &reinterpret_cast<const char*>(data.data())[value_begin_offset];
 
-    //     const auto* value_end_offset_pointer = group_end - ()
+        if (column_is_nullable) {
+          if (*source != 0) {
+            *output_null_values_iter = true;
+          } else {
+            *output_null_values_iter = false;
+            *output_values_iter = pmr_string{source + 1, value_length - 1};
+          }
+          ++output_null_values_iter;
+        } else {
+          *output_values_iter = pmr_string{source, value_length};
+        }
+        ++output_values_iter;
+      }
+    } else if constexpr (std::is_arithmetic_v<T>){
+      const auto offset_in_group = layout->entries[column_id].offset;
 
-    //     const auto value_offset = s
-    //     const auto value_length =
+      for (auto group_idx = size_t{0}; group_idx < size; ++group_idx) {
+        const auto [group_begin_offset, group_length] = get_group_range(group_idx);
 
-    //   }
+        auto *source = reinterpret_cast<const char *>(&data[group_begin_offset]) + offset_in_group;
 
-    // } else {
-
-    // }
-
-    // for (auto group_idx = size_t{0}; group_idx < size; ++group_idx) {
-    //   const auto [group_begin_offset, group_length] = get_group_range(group_idx);
-
-    // }
+        if (column_is_nullable) {
+          if (*source != 0) {
+            *output_null_values_iter = true;
+          } else {
+            *output_null_values_iter = false;
+            memcpy(&(*output_values_iter), source + 1, sizeof(T));
+          }
+          ++output_null_values_iter;
+        } else {
+          memcpy(&(*output_values_iter), source, sizeof(T));
+        }
+        ++output_values_iter;
+      }
+    } else {
+      Fail("Unsupported type");
+    }
 
     if (column_is_nullable) {
-      return std::make_shared<ValueSegment<pmr_string>>(std::move(output_values), std::move(output_null_values));
+      return std::make_shared<ValueSegment<T>>(std::move(output_values), std::move(output_null_values));
     } else {
-      return std::make_shared<ValueSegment<pmr_string>>(std::move(output_values));
+      return std::make_shared<ValueSegment<T>>(std::move(output_values));
     }
   }
 
