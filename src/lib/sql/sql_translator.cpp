@@ -193,17 +193,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(const hsql::SelectStatement& select) {
-  // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
-
-  // 0. WITH clauses / Temporary views
-  // 1. FROM clause (incl. JOINs and sub-SELECTs that are part of this)
-  // 2. WHERE clause
-  // 3. GROUP BY clause
-  // 4. HAVING clause
-  // 5. SELECT clause (incl. DISTINCT)
-  // 6. UNION clause
-  // 7. ORDER BY clause
-  // 8. LIMIT clause
+  // SQL Orders of Operations
+  // 1. WITH clause
+  // 2. FROM clause (incl. JOINs and sub-SELECTs that are part of this)
+  // 3. SELECT list (to retrieve aliases)
+  // 4. WHERE clause
+  // 5. GROUP BY clause
+  // 6. HAVING clause
+  // 7. SELECT clause (incl. DISTINCT)
+  // 8. UNION clause
+  // 9. ORDER BY clause
+  // 10. LIMIT clause
 
   AssertInput(select.selectList, "SELECT list needs to exist");
   AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
@@ -234,6 +234,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
     _sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   }
 
+  // Translate SELECT list (to retrieve aliases)
+  const auto select_list_elements = _translate_select_list(*select.selectList);
+
   // Translate WHERE
   if (select.whereClause) {
     const auto where_expression = _translate_hsql_expr(*select.whereClause, _sql_identifier_resolver);
@@ -241,7 +244,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   }
 
   // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent
-  _translate_select_list_groupby_having(select);
+  _translate_select_groupby_having(select, select_list_elements);
 
   // Translate ORDER BY and LIMIT
   if (select.order) _translate_order_by(*select.order);
@@ -259,16 +262,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // that is not its generated name.
   const auto need_alias_node = std::any_of(
       _inflated_select_list_expressions.begin(), _inflated_select_list_expressions.end(), [&](const auto& expression) {
-        const auto identifier = _sql_identifier_resolver->get_expression_identifier(expression);
-        return identifier && identifier->column_name != expression->as_column_name();
+        const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression);
+        return std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
+          return identifier.column_name != expression->as_column_name();
+        });
       });
 
   if (need_alias_node) {
     std::vector<std::string> aliases;
     for (const auto& output_column_expression : _inflated_select_list_expressions) {
-      const auto identifier = _sql_identifier_resolver->get_expression_identifier(output_column_expression);
-      if (identifier) {
-        aliases.emplace_back(identifier->column_name);
+      const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(output_column_expression);
+      if (!identifiers.empty()) {
+        aliases.emplace_back(identifiers.back().column_name);
       } else {
         aliases.emplace_back(output_column_expression->as_column_name());
       }
@@ -500,7 +505,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
           const auto column_name_iter = view->column_names.find(column_id);
           if (column_name_iter != view->column_names.end()) {
-            sql_identifier_resolver->set_column_name(column_expression, column_name_iter->second);
+            sql_identifier_resolver->add_column_name(column_expression, column_name_iter->second);
           }
           sql_identifier_resolver->set_table_name(column_expression, hsql_table_ref.name);
         }
@@ -521,14 +526,15 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
       for (const auto& subquery_expression : lqp->column_expressions()) {
-        const auto identifier =
-            subquery_translator._sql_identifier_resolver->get_expression_identifier(subquery_expression);
+        const auto identifiers =
+            subquery_translator._sql_identifier_resolver->get_expression_identifiers(subquery_expression);
 
         // Make sure each column from the Subquery has a name
-        if (identifier) {
-          sql_identifier_resolver->set_column_name(subquery_expression, identifier->column_name);
-        } else {
-          sql_identifier_resolver->set_column_name(subquery_expression, subquery_expression->as_column_name());
+        if (identifiers.empty()) {
+          sql_identifier_resolver->add_column_name(subquery_expression, subquery_expression->as_column_name());
+        }
+        for (const auto& identifier : identifiers) {
+          sql_identifier_resolver->add_column_name(subquery_expression, identifier.column_name);
         }
       }
 
@@ -547,8 +553,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
                 "Must specify a name for exactly each column");
 
     for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
-      sql_identifier_resolver->set_column_name(column_expressions[column_id],
-                                               (*hsql_table_ref.alias->columns)[column_id]);
+      const auto& expression = column_expressions[column_id];
+
+      // The original column names should not be accessible anymore because the table schema is renamed.
+      sql_identifier_resolver->reset_column_names(expression);
+      sql_identifier_resolver->add_column_name(expression, (*hsql_table_ref.alias->columns)[column_id]);
     }
   }
 
@@ -578,7 +587,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(
     const auto& column_definition = table->column_definitions()[column_id];
     const auto column_reference = LQPColumnReference{stored_table_node, column_id};
     const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
-    sql_identifier_resolver->set_column_name(column_expression, column_definition.name);
+    sql_identifier_resolver->add_column_name(column_expression, column_definition.name);
     sql_identifier_resolver->set_table_name(column_expression, name);
   }
 
@@ -698,11 +707,14 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
   // a) Find matching columns and create JoinPredicates from them
   // b) Add columns from right input to the output when they have no match in the left input
   for (const auto& right_expression : right_state.elements_in_order) {
-    const auto right_identifier = right_sql_identifier_resolver->get_expression_identifier(right_expression);
+    const auto right_identifiers = right_sql_identifier_resolver->get_expression_identifiers(right_expression);
 
-    if (right_identifier) {
+    if (!right_identifiers.empty()) {
+      // Ignore previous names if there is an alias
+      const auto right_identifier = right_identifiers.back();
+
       const auto left_expression =
-          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier->column_name});
+          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
 
       if (left_expression) {
         // Two columns match, let's join on them.
@@ -710,15 +722,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
             std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
         continue;
       }
-    }
 
-    // No matching column in the left input found, add the column from the right input to the output
-    result_state.elements_in_order.emplace_back(right_expression);
-    if (right_identifier) {
-      result_state.sql_identifier_resolver->set_column_name(right_expression, right_identifier->column_name);
-      if (right_identifier->table_name) {
-        result_state.elements_by_table_name[*right_identifier->table_name].emplace_back(right_expression);
-        result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier->table_name);
+      // No matching column in the left input found, add the column from the right input to the output
+      result_state.elements_in_order.emplace_back(right_expression);
+      result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
+      if (right_identifier.table_name) {
+        result_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_expression);
+        result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
       }
     }
   }
@@ -764,7 +774,31 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
   return result_table_source_state;
 }
 
-void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStatement& select) {
+std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_translate_select_list(
+    const std::vector<hsql::Expr*>& select_list) {
+  // Build the select_list_elements
+  // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
+  // Create an SQLIdentifierResolver that knows the aliases
+  std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
+  auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
+  for (const auto& hsql_select_expr : select_list) {
+    if (hsql_select_expr->type == hsql::kExprStar) {
+      select_list_elements.emplace_back(nullptr);
+    } else {
+      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
+      select_list_elements.emplace_back(expression);
+
+      if (hsql_select_expr->alias) {
+        post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
+      }
+    }
+  }
+  _sql_identifier_resolver = post_select_sql_identifier_resolver;
+  return select_list_elements;
+}
+
+void SQLTranslator::_translate_select_groupby_having(
+    const hsql::SelectStatement& select, const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements) {
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
@@ -795,24 +829,12 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
     return ExpressionVisitation::DoNotVisitArguments;
   };
 
-  // Identify all Aggregates and their arguments needed for SELECT and build the select_list_elements
-  // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
-  std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
-  auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
-  for (const auto& hsql_select_expr : *select.selectList) {
-    if (hsql_select_expr->type == hsql::kExprStar) {
-      select_list_elements.emplace_back(nullptr);
-    } else {
-      auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
+  // Identify all Aggregates and their arguments needed for SELECT
+  for (const auto& expression : select_list_elements) {
+    if (expression) {
       visit_expression(expression, find_aggregates_and_arguments);
-      select_list_elements.emplace_back(expression);
-
-      if (hsql_select_expr->alias) {
-        post_select_sql_identifier_resolver->set_column_name(expression, hsql_select_expr->alias);
-      }
     }
   }
-  _sql_identifier_resolver = post_select_sql_identifier_resolver;
 
   // Identify all GROUP BY expressions
   auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -874,8 +896,9 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
         for (const auto& pre_aggregate_expression : pre_aggregate_lqp->column_expressions()) {
           if (hsql_expr->table) {
             // Dealing with SELECT t.* here
-            if (auto identifier = _sql_identifier_resolver->get_expression_identifier(pre_aggregate_expression);
-                identifier && identifier->table_name != hsql_expr->table) {
+            auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression);
+            if (std::any_of(identifiers.begin(), identifiers.end(),
+                            [&](const auto& identifier) { return identifier.table_name != hsql_expr->table; })) {
               // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
               // different table, it is not included in the `SELECT t.*`.
               continue;
@@ -895,9 +918,11 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
         if (is_aggregate) {
           // Select all GROUP BY columns with the specified table name
           for (const auto& group_by_expression : group_by_expressions) {
-            const auto identifier = _sql_identifier_resolver->get_expression_identifier(group_by_expression);
-            if (identifier && identifier->table_name == hsql_expr->table) {
-              _inflated_select_list_expressions.emplace_back(group_by_expression);
+            const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(group_by_expression);
+            for (const auto& identifier : identifiers) {
+              if (identifier.table_name == hsql_expr->table) {
+                _inflated_select_list_expressions.emplace_back(group_by_expression);
+              }
             }
           }
         } else {
@@ -924,10 +949,6 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
     } else {
       auto output_expression = select_list_elements[select_list_idx];
       _inflated_select_list_expressions.emplace_back(output_expression);
-
-      if (hsql_expr->alias) {
-        _sql_identifier_resolver->set_column_name(output_expression, hsql_expr->alias);
-      }
     }
   }
 
@@ -1011,9 +1032,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
     }
   } else {
     for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
-      const auto identifier = _sql_identifier_resolver->get_expression_identifier(lqp->column_expressions()[column_id]);
-      if (identifier) {
-        column_names.emplace(column_id, identifier->column_name);
+      const auto identifiers =
+          _sql_identifier_resolver->get_expression_identifiers(lqp->column_expressions()[column_id]);
+      for (const auto& identifier : identifiers) {
+        column_names.emplace(column_id, identifier.column_name);
       }
     }
   }
@@ -1267,6 +1289,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::Max:
           case AggregateFunction::Sum:
           case AggregateFunction::Avg:
+          case AggregateFunction::StandardDeviationSample:
             return std::make_shared<AggregateExpression>(
                 aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
 
@@ -1550,13 +1573,9 @@ void SQLTranslator::_store_with_query(const std::string& table_alias,
 
   // Add column expressions to target SQLIdentifierResolver
   for (const auto& expression : lqp_node->column_expressions()) {
-    const auto identifier =
-            sql_identifier_resolver_source->get_expression_identifier(expression);
-
-    if (identifier) {
-      sql_identifier_resolver_target->set_column_name(expression, identifier->column_name);
-    } else {
-      sql_identifier_resolver_target->set_column_name(expression, expression->as_column_name());
+    const auto identifiers = sql_identifier_resolver_source->get_expression_identifiers(expression);
+    for (const SQLIdentifier& identifier : identifiers) {
+      sql_identifier_resolver_target->add_column_name(expression, identifier.column_name);
     }
     sql_identifier_resolver_target->set_table_name(expression, table_alias);
   }

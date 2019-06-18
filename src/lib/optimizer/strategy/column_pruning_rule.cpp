@@ -53,7 +53,7 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
     });
   };
 
-  // Search the entire LQP for columns used in the node expressions, i.e. search for columns that are necessary for
+  // Search the entire LQP for columns used in AbstractLQPNode::node_expressions, i.e. columns that are necessary for
   // the "functioning" of the LQP.
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {

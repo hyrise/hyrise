@@ -8,8 +8,7 @@
 #include "table.hpp"
 #include "types.hpp"
 
-#include "statistics/chunk_statistics/chunk_statistics.hpp"
-#include "statistics/chunk_statistics/segment_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
@@ -99,8 +98,6 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   Assert((chunk_encoding_spec.size() == chunk->column_count()),
          "Number of column encoding specs must match the chunk’s column count.");
 
-  const auto chunk_statistics = chunk->statistics();
-  std::vector<std::shared_ptr<SegmentStatistics>> column_statistics;
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
@@ -109,15 +106,12 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
     const auto encoded_segment = encode_segment(base_segment, data_type, spec);
     chunk->replace_segment(column_id, encoded_segment);
-
-    if (!chunk_statistics) {
-      column_statistics.push_back(SegmentStatistics::build_statistics(data_type, encoded_segment));
-    }
   }
 
   chunk->mark_immutable();
-  if (!chunk_statistics) {
-    chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
+
+  if (!chunk->pruning_statistics()) {
+    generate_chunk_pruning_statistics(chunk);
   }
 
   if (chunk->has_mvcc_data()) {

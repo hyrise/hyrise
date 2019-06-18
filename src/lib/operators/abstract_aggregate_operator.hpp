@@ -40,10 +40,11 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Min> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
-      if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {
+      if (!current_primary_aggregate || value_smaller(new_value, *current_primary_aggregate)) {
         // New minimum found
-        current_aggregate = new_value;
+        current_primary_aggregate = new_value;
       }
     };
   }
@@ -53,10 +54,11 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Max> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
-      if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {
+      if (!current_primary_aggregate || value_greater(new_value, *current_primary_aggregate)) {
         // New maximum found
-        current_aggregate = new_value;
+        current_primary_aggregate = new_value;
       }
     };
   }
@@ -66,12 +68,13 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_aggregate) {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {
       // add new value to sum
-      if (current_aggregate) {
-        *current_aggregate += new_value;
+      if (current_primary_aggregate) {
+        *current_primary_aggregate += new_value;
       } else {
-        current_aggregate = new_value;
+        current_primary_aggregate = new_value;
       }
     };
   }
@@ -91,10 +94,58 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::StandardDeviationSample> {
+ public:
+  auto get_aggregate_function() {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {
+      if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+        // Welford's online algorithm
+        // https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Welford's_online_algorithm
+        // For a new value, compute the new count, new mean and the new squared_distance_from_mean.
+        // mean accumulates the mean of the entire dataset.
+        // squared_distance_from_mean aggregates the squared distance from the mean.
+        // count aggregates the number of samples seen so far.
+        // The sample standard deviation is stored as current_primary_aggregate.
+        if (current_secondary_aggregates.empty()) {
+          current_secondary_aggregates.resize(3);
+          // current_secondary_aggregates[0]:   storage for count
+          // current_secondary_aggregates[1]:   storage for mean
+          // current_secondary_aggregates[2]:   storage for squared_distance_from_mean
+        }
+
+        // get values
+        auto& count = current_secondary_aggregates[0];
+        auto& mean = current_secondary_aggregates[1];
+        auto& squared_distance_from_mean = current_secondary_aggregates[2];
+
+        // update values
+        ++count;
+        const double delta = new_value - mean;
+        mean += delta / count;
+        const double delta2 = new_value - mean;
+        squared_distance_from_mean += delta * delta2;
+
+        if (count > 1) {
+          const auto variance = squared_distance_from_mean / (count - 1);
+          current_primary_aggregate = std::sqrt(variance);
+        } else {
+          current_primary_aggregate = std::nullopt;
+        }
+
+      } else {
+        Fail("StandardDeviationSample not available for non-arithmetic types.");
+      }
+    };
+  }
+};
+
+template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {};
   }
 };
 
@@ -102,7 +153,8 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountDistinct> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {};
   }
 };
 

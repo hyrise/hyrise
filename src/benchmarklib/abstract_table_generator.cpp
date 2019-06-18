@@ -90,4 +90,11 @@ void AbstractTableGenerator::generate_and_store() {
             << format_duration(metrics.store_duration) << ")" << std::endl;
 }
 
+std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config_with_chunk_size(
+    ChunkOffset chunk_size) {
+  auto config = BenchmarkConfig::get_default_config();
+  config.chunk_size = chunk_size;
+  return std::make_shared<BenchmarkConfig>(config);
+}
+
 }  // namespace opossum
