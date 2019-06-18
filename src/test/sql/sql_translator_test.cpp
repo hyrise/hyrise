@@ -1865,4 +1865,27 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1 WHERE a = 1"), InvalidInputException);
 }
 
+TEST_F(SQLTranslatorTest, WithClauseTestSingle) {
+
+  const auto actual_lqp = compile_query("WITH "
+                                        "with_query AS (SELECT a, b FROM int_float) "
+                                        "SELECT a FROM with_query;");
+
+  const auto expected_lqp = ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float);
+
+  EXPECT_NE(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WithClauseTestDouble) {
+
+  const auto actual_lqp = compile_query("WITH "
+                                        "with_query1 AS (SELECT a, b FROM int_float), "
+                                        "with_query2 AS (SELECT a, b FROM with_query1) "
+                                        "SELECT a, b FROM with_query2;");
+
+  const auto expected_lqp = ProjectionNode::make(expression_vector(int_float_a, int_float_b), stored_table_node_int_float);
+
+  EXPECT_NE(actual_lqp, nullptr);
+}
+
 }  // namespace opossum
