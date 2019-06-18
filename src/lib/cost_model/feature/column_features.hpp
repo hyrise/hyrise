@@ -19,6 +19,7 @@ struct ColumnFeatures : public AbstractFeatures {
   float column_segment_encoding_RunLength_percentage = 0.0;
   float column_segment_encoding_FixedStringDictionary_percentage = 0.0;
   float column_segment_encoding_FrameOfReference_percentage = 0.0;
+  float column_segment_encoding_LZ4_percentage = 0.0;
 
   float column_segment_vector_compression_FSBA_percentage = 0.0;
   float column_segment_vector_compression_SimdBp128_percentage = 0.0;

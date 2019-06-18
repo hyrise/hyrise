@@ -4,6 +4,7 @@
 #include "query/calibration_query_generator.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -71,13 +72,23 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
   for (const auto table_size : _configuration.table_generation_table_sizes) {
     auto const table_name = _configuration.table_generation_name_prefix + std::to_string(table_size);
 
-    std::cout << "Generating table " << table_name << ": " << std::flush;
+    std::cout << "Table >>" << table_name << "<<\tdata generation: " << std::flush;
     auto table = table_generator.generate_table(column_data_distributions, column_data_types, table_size, _chunk_size, column_encodings, column_names, UseMvcc::Yes, false);
 
-    std::cout << "done. Adding to storage manager: " << std::flush;
+    std::cout << "done -- adding to storage manager: " << std::flush;
 
     StorageManager::get().add_table(table_name, table);
-    std::cout << "done." << std::endl;
+    std::cout << "done -- creating indexes: " << std::flush;
+
+    for (const auto& column_spec : _configuration.columns) {
+      if (column_spec.encoding.encoding_type == EncodingType::Dictionary
+          && *column_spec.encoding.vector_compression_type == VectorCompressionType::FixedSizeByteAligned) {
+        // std::cout << column_spec.column_id << " is a dict fsba" << std::endl;
+        table->template create_index<GroupKeyIndex>({column_spec.column_id});
+      }
+    }
+    std::cout << " done." << std::endl;
+
   }
 }
 

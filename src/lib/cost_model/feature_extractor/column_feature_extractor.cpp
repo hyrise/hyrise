@@ -25,6 +25,13 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
   const auto& underlying_table_name = stored_table_node->table_name;
 
   const auto table = StorageManager::get().get_table(underlying_table_name);
+
+  return extract_features(table, column_id, column_expression->data_type(), prefix);
+}
+
+const ColumnFeatures ColumnFeatureExtractor::extract_features(
+    const std::shared_ptr<const Table>& table, const ColumnID column_id,
+    const DataType data_type, const std::string& prefix) {
   auto chunk_count = table->chunk_count();
 
   if (chunk_count == ChunkID{0}) {
@@ -70,16 +77,20 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
       encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
   column_features.column_segment_encoding_FrameOfReference_percentage =
       encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
+  column_features.column_segment_encoding_LZ4_percentage =
+      encoding_mapping[EncodingType::LZ4] / static_cast<float>(chunk_count);
   column_features.column_segment_vector_compression_FSBA_percentage =
       vector_compression_mapping[VectorCompressionType::FixedSizeByteAligned] / static_cast<float>(chunk_count);
   column_features.column_segment_vector_compression_SimdBp128_percentage =
       vector_compression_mapping[VectorCompressionType::SimdBp128] / static_cast<float>(chunk_count);
 
   column_features.column_is_reference_segment = number_of_reference_segments > 0;
-  column_features.column_data_type = column_expression->data_type();
+  column_features.column_data_type = data_type;
   // TODO(Sven): this returns the size of the original, stored, unfiltered column...
   column_features.column_memory_usage_bytes = _get_memory_usage_for_column(table, column_id);
-  // TODO(Sven): How to calculate from segment_distinct_value_count?
+
+  // TODO(Anyone): We might need to differentiate between calibration (where we can afford
+  //               calculating the distinct counts) and runtime (estimate via statistics)
   column_features.column_distinct_value_count = 0;
 
   return column_features;

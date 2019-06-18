@@ -19,6 +19,8 @@ struct CalibrationQueryGeneratorPredicateConfiguration {
   const size_t row_count;
 };
 
+enum class StringPredicateType : uint8_t { Equality, TrailingLike, PrecedingLike };
+
 inline bool operator==(const CalibrationQueryGeneratorPredicateConfiguration& lhs, const CalibrationQueryGeneratorPredicateConfiguration& rhs) {
   return std::tie(lhs.table_name, lhs.data_type, lhs.first_encoding,
                   lhs.second_encoding, lhs.third_encoding, lhs.selectivity,
@@ -68,6 +70,10 @@ class CalibrationQueryGeneratorPredicate {
       const std::shared_ptr<StoredTableNode>& table,
       const CalibrationQueryGeneratorPredicateConfiguration& configuration, bool generate_index_scan = false);
 
+  static const std::shared_ptr<PredicateNode> generate_concreate_scan_predicate(
+    const std::shared_ptr<AbstractExpression>& predicate,
+    const ScanType scan_type);
+
   /*
    * Functors to generate predicates.
    * They all implement 'PredicateGeneratorFunctor'
@@ -80,6 +86,10 @@ class CalibrationQueryGeneratorPredicate {
 
   static const std::shared_ptr<AbstractExpression> generate_predicate_column_value(
       const PredicateGeneratorFunctorConfiguration& generator_configuration);
+
+  static const std::shared_ptr<AbstractExpression> generate_concrete_predicate_column_value(
+      const std::shared_ptr<StoredTableNode> table_node, const CalibrationColumnSpecification column_specification,
+      const float selectivity, const StringPredicateType string_predicate_type = StringPredicateType::Equality);
 
   static const std::shared_ptr<AbstractExpression> generate_predicate_column_column(
       const PredicateGeneratorFunctorConfiguration& generator_configuration);
@@ -100,7 +110,14 @@ class CalibrationQueryGeneratorPredicate {
 
   static const std::shared_ptr<ValueExpression> _generate_value_expression(const DataType& data_type,
                                                                            const float selectivity,
+                                                                           const size_t int_value_upper_limit = 10'000'000,
                                                                            const bool trailing_like = false);
+
+
+
+  static const std::shared_ptr<ValueExpression> _generate_value_expression(const CalibrationColumnSpecification& column_specification,
+                                                                           const float selectivity,
+                                                                           const StringPredicateType string_predicate_type = StringPredicateType::Equality);
 
   static const std::shared_ptr<LQPColumnExpression> _generate_column_expression(
       const std::shared_ptr<StoredTableNode>& table, const CalibrationColumnSpecification& filter_column);

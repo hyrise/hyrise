@@ -25,59 +25,13 @@
 namespace {
 using namespace opossum;
 
-/**
-    * Function to cast an integer to the requested type.
-    *   - in case of long, the integer is simply casted
-    *   - in case of floating types, the integer slighlty modified
-    *     and casted to ensure a matissa that is not fully zero'd
-    *   - in case of strings, a 10 char string is created that has at least
-    *     four leading spaces to ensure that scans have to evaluate at least
-    *     the first four chars. The reason is that very often strings are
-    *     dates in ERP systems and we assume that at least the year has to be
-    *     read before a non-match can be determined. Randomized strings often
-    *     lead to unrealistically fast string scans.
-    */
-template <typename T>
-T convert_integer_value(const int input) {
-  if constexpr (std::is_integral_v<T>) {
-    return static_cast<T>(input);
-  } else if constexpr (std::is_floating_point_v<T>) {
-    // floating points are slightly shifted to avoid a zero'd mantissa.
-    return static_cast<T>(input) * 0.999999f;
-  } else {
-    // TODO(Bouncner): fix the generation of strings
-    const std::vector<char> chars {
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
-        'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-        'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'};
-    const size_t chars_base = chars.size();
-    Assert(static_cast<double>(input) < std::pow(chars_base, 6),
-           "Integer too large. Cannot be represented in six chars.");
-
-    pmr_string result{10, ' '};  // 10 spaces
-    if (input == 0) {
-      return result;
-    }
-
-    const size_t result_char_count =
-        std::max(1ul, static_cast<size_t>(std::ceil(std::log(input) / std::log(chars_base))));
-    size_t remainder = static_cast<size_t>(input);
-    for (auto i = size_t{0}; i < result_char_count; ++i) {
-      result[9 - i] = chars[remainder % chars_base];
-      remainder = static_cast<size_t>(remainder / chars_base);
-    }
-
-    return result;
-  }
-}
-
 template <typename T>
 pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& values) {
   pmr_concurrent_vector<T> result;
   result.reserve(values.size());
 
   for (const auto& value : values) {
-    result.push_back(convert_integer_value<T>(value));
+    result.push_back(TableGenerator::convert_integer_value<T>(value));
   }
 
   return result;
@@ -166,8 +120,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
 
     // Obtain general (non-typed) allocators
-    auto allocator_ptr_base_segment = get_allocator_for_type<std::shared_ptr<BaseSegment>>(numa_distribute_chunks, node_id);
-    auto allocator_chunk = get_allocator_for_type<Chunk>(numa_distribute_chunks, node_id);
+    auto allocator_ptr_base_segment = get_allocator_for_type<std::shared_ptr<BaseSegment>>(node_id, numa_distribute_chunks);
+    auto allocator_chunk = get_allocator_for_type<Chunk>(node_id, numa_distribute_chunks);
 
     auto segments = Segments(allocator_ptr_base_segment);
 
@@ -178,8 +132,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
         using ColumnDataType = typename decltype(column_data_type)::type;
         
         // get typed allocators
-        auto allocator_value_segment = get_allocator_for_type<ValueSegment<ColumnDataType>>(numa_distribute_chunks, node_id);
-        auto allocator = get_allocator_for_type<ColumnDataType>(numa_distribute_chunks, node_id);
+        auto allocator_value_segment = get_allocator_for_type<ValueSegment<ColumnDataType>>(node_id, numa_distribute_chunks);
+        auto allocator = get_allocator_for_type<ColumnDataType>(node_id, numa_distribute_chunks);
 
         std::vector<int> values;
         values.reserve(chunk_size);

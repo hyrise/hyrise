@@ -24,10 +24,13 @@ struct CalibrationConfiguration {
   bool calibrate_vector_compression_types;
   std::vector<DataType> data_types;
   std::vector<float> selectivities;
+  std::vector<size_t> distinct_value_counts = {10, 10'000, 1'000'000};
   bool calibrate_scans;
   bool calibrate_joins;
   bool run_tpch;
+
   std::vector<CalibrationColumnSpecification> columns;
+  std::vector<std::string> generated_tables;
 };
 
 inline void to_json(nlohmann::json& j, const CalibrationConfiguration& s) {
@@ -56,6 +59,7 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
     const auto table_sizes = table_generation_config.at("table_sizes").get<std::vector<size_t>>();
     for (const auto table_size : table_sizes) {
       configuration.table_generation_table_sizes.push_back(table_size);
+      configuration.generated_tables.push_back(configuration.table_generation_name_prefix + std::to_string(table_size));
     }
   } else {
     configuration.table_generation = false;
@@ -108,16 +112,17 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
     }
   }
 
-  auto column_id = size_t{0};
+  auto column_id = ColumnID{0};
   std::vector<CalibrationColumnSpecification> column_specs;
   for (const auto& data_type : configuration.data_types) {
     for (const auto& encoding_spec : segments_encodings) {
       if (encoding_supports_data_type(encoding_spec.encoding_type, data_type)) {
         // for every encoding, we create three columns that allow calibrating the query
         // `WHERE a between b and c` with a,b,c being columns encoded in the requested encoding type.
-       for (const size_t distinct_value_count : {10, 10'000, 1'000'000}) {
+       for (const size_t distinct_value_count : configuration.distinct_value_counts) {
           CalibrationColumnSpecification column_spec;
-          column_spec.column_name = "column_" + std::to_string(column_id++);
+          column_spec.column_id = column_id;
+          column_spec.column_name = "column_" + std::to_string(column_id);
           column_spec.data_type = data_type;
           column_spec.value_distribution = "uniform";
           column_spec.sorted = false;
@@ -125,6 +130,7 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
           column_spec.encoding = encoding_spec;
 
           column_specs.push_back(column_spec);
+          ++column_id;
         }
       }
     }

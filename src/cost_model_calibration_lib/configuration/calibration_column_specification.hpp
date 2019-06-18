@@ -14,6 +14,7 @@ namespace opossum {
 
 struct CalibrationColumnSpecification {
   std::string column_name;
+  ColumnID column_id;
   DataType data_type;
   std::string value_distribution;
   bool sorted;
