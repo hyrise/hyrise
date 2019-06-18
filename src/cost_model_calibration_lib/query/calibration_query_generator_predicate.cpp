@@ -346,7 +346,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   if (calibration_config.data_type != DataType::String) {
     std::cout << "Like: trying to generate for non-string column" << std::endl;
     return {};
-  };
+  }
 
   const auto table = generator_configuration.table;
   const auto filter_column_configuration = _find_column_for_configuration(
@@ -370,7 +370,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   if (calibration_config.data_type != DataType::String) {
     std::cout << "EquiString: trying to generate for non-string column" << std::endl;
     return {};
-  };
+  }
 
   const auto table = generator_configuration.table;
   const auto filter_column_configuration = _find_column_for_configuration(
