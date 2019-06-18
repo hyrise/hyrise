@@ -47,7 +47,6 @@ set(
     random_generator.hpp
     benchmark_item_result.cpp
     benchmark_item_result.hpp
-    listenable.cpp
     listenable.hpp
 )
 

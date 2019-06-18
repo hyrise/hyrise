@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
       *config, std::move(item_runner), std::make_unique<TpchTableGenerator>(scale_factor, config), context);
 
   if (use_pcm) {
-    PluginManager::get().load_plugin(pcm_path, benchmark_runner);
+    PluginManager::get().load_plugin(pcm_path);
   }
 
   benchmark_runner->run();

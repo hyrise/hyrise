@@ -176,7 +176,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto& name = _benchmark_item_runner->item_name(item_id);
     const auto listener_payload = std::make_any<nlohmann::json>(nlohmann::json{{"item_name", name}, {"item_id", static_cast<size_t>(item_id)}});
     std::cout << "- Benchmarking " << name << std::endl;
-    _notify_listeners(Event::ItemRunStarted, listener_payload);
+    _notify_listeners(BenchmarkRunnerEvent::ItemRunStarted, listener_payload);
 
     auto& result = _results[item_id];
 
@@ -207,7 +207,7 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
     CurrentScheduler::wait_for_all_tasks();
-    _notify_listeners(Event::ItemRunFinished, listener_payload);
+    _notify_listeners(BenchmarkRunnerEvent::ItemRunFinished, listener_payload);
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
 }
@@ -349,7 +349,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       {"total_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count()}};
 
   auto listener_reports = nlohmann::json::array();
-  _notify_listeners(Event::CreateReport, std::make_any<nlohmann::json*>(&listener_reports));
+  _notify_listeners(BenchmarkRunnerEvent::CreateReport, std::make_any<nlohmann::json*>(&listener_reports));
 
   nlohmann::json report{{"context", _context},
                         {"benchmarks", benchmarks},

@@ -8,8 +8,6 @@
 
 namespace opossum {
 
-class Listenable;
-
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
 // ugly mangled names. Use EXPORT in the implementation file of your plugin.
 #define EXPORT_PLUGIN(PluginName)                                     \
@@ -30,8 +28,6 @@ class AbstractPlugin {
   virtual void start() = 0;
 
   virtual void stop() = 0;
-
-  virtual void register_listenable(std::shared_ptr<Listenable> listenable) {}
 };
 
 }  // namespace opossum

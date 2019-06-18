@@ -20,7 +20,7 @@ bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
   return false;
 }
 
-void PluginManager::load_plugin(const std::filesystem::path& path, std::shared_ptr<Listenable> listenable) {
+void PluginManager::load_plugin(const std::filesystem::path& path) {
   const auto name = plugin_name_from_path(path);
 
   Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name " + name + " already exists.");
@@ -44,10 +44,6 @@ void PluginManager::load_plugin(const std::filesystem::path& path, std::shared_p
          "Loading plugin failed: There can only be one instance of every plugin.");
 
   _plugins[name] = plugin_handle_wrapper;
-
-  if (listenable) {
-    plugin->register_listenable(listenable);
-  }
 
   plugin->start();
 }

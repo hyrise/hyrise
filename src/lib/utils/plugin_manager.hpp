@@ -10,8 +10,6 @@
 
 namespace opossum {
 
-class Listenable;
-
 using PluginHandle = void*;
 using PluginName = std::string;
 
@@ -25,7 +23,7 @@ class PluginManager : public Singleton<PluginManager> {
   friend class SingletonTest;
 
  public:
-  void load_plugin(const std::filesystem::path& path, std::shared_ptr<Listenable> listenable = nullptr);
+  void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
 
   ~PluginManager();
