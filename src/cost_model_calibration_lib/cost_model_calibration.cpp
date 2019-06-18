@@ -97,10 +97,10 @@ void CostModelCalibration::_calibrate() {
   const auto& columns = _configuration.columns;
   DebugAssert(!columns.empty(), "failed to parse ColumnSpecification");
 
-  // Only use half of the available _physical_ cores to avoid bandwidth problems. We always
-  // cap at four threads to avoid node-spanning execution for large servers with multiple CPUs.
+  // Only use half of the available cores to avoid bandwidth problems. We always cap
+  // at eight threads to avoid node-spanning execution for large servers with many CPUs.
   const size_t concurrent_thread_count = std::thread::hardware_concurrency();
-  const size_t threads_to_create = std::max(4ul, concurrent_thread_count / 4);
+  const size_t threads_to_create = std::min(8ul, concurrent_thread_count / 2);
 
   CalibrationQueryGenerator generator(table_names, columns, _configuration);
   const auto& queries = generator.generate_queries();
@@ -109,7 +109,6 @@ void CostModelCalibration::_calibrate() {
 
   for (size_t iteration = size_t{0}; iteration < number_of_iterations; ++iteration) {
     std::vector<std::thread> threads;
-
 
     for(auto thread_id = size_t{0}; thread_id < threads_to_create; ++thread_id){
       threads.push_back(std::thread([&, thread_id](){
