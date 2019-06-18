@@ -7,12 +7,12 @@
 
 namespace opossum {
 
-BetweenExpression::BetweenExpression(const PredicateCondition predicate_condition,
+BetweenExpression::BetweenExpression(const PredicateCondition predicate_condition_between,
                                      const std::shared_ptr<AbstractExpression>& value,
                                      const std::shared_ptr<AbstractExpression>& lower_bound,
                                      const std::shared_ptr<AbstractExpression>& upper_bound)
-    : AbstractPredicateExpression(predicate_condition, {value, lower_bound, upper_bound}) {
-  Assert(is_between_predicate_condition(predicate_condition),
+    : AbstractPredicateExpression(predicate_condition_between, {value, lower_bound, upper_bound}) {
+  Assert(is_between_predicate_condition(predicate_condition_between),
          "Predicate Condition not supported by Between Expression");
 }
 

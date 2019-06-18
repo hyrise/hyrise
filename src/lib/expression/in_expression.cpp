@@ -7,11 +7,11 @@
 
 namespace opossum {
 
-InExpression::InExpression(const PredicateCondition predicate_condition,
+InExpression::InExpression(const PredicateCondition predicate_condition_in,
                            const std::shared_ptr<AbstractExpression>& value,
                            const std::shared_ptr<AbstractExpression>& set)
-    : AbstractPredicateExpression(predicate_condition, {value, set}) {
-  DebugAssert(predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn,
+    : AbstractPredicateExpression(predicate_condition_in, {value, set}) {
+  DebugAssert(predicate_condition_in == PredicateCondition::In || predicate_condition_in == PredicateCondition::NotIn,
               "Expected either IN or NOT IN as PredicateCondition");
 }
 

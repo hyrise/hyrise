@@ -60,7 +60,6 @@ class BaseIndex : private Noncopyable {
   BaseIndex() = delete;
   explicit BaseIndex(const SegmentIndexType type);
   BaseIndex(BaseIndex&&) = default;
-  BaseIndex& operator=(BaseIndex&&) = default;
   virtual ~BaseIndex() = default;
 
   /**

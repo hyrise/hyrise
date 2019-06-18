@@ -28,8 +28,6 @@ class BaseColumnStatistics {
   virtual ~BaseColumnStatistics() = default;
   BaseColumnStatistics(const BaseColumnStatistics&) = default;
   BaseColumnStatistics(BaseColumnStatistics&&) = default;
-  BaseColumnStatistics& operator=(const BaseColumnStatistics&) = default;
-  BaseColumnStatistics& operator=(BaseColumnStatistics&&) = default;
 
   /**
    * @defgroup Member access
