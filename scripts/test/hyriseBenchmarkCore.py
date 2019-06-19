@@ -12,7 +12,18 @@ def check_exit_status(benchmark):
   if benchmark.exitstatus == None:
     sys.exit(benchmark.signalstatus)
 
-def initialize(arguments, benchmark_name):
+def check_json(json, argument, error, return_error, difference=None):
+  if type(json) is not float:
+    if json != argument:
+      print("ERROR: " + error + " " + str(json) + " " + str(argument))
+      return True
+  else:
+    if abs(json - argument) < difference:
+      print("ERROR: " + error + " " + str(json) + " " + str(argument) + " " + str(difference))
+      return True
+  return return_error
+
+def initialize(arguments, benchmark_name, verbose):
   if len(sys.argv) == 1:
     print ("Usage: ./scripts/test/" + benchmark_name + "_test.py <build_dir>")
     sys.exit(1)
@@ -28,7 +39,9 @@ def initialize(arguments, benchmark_name):
   build_dir = sys.argv[1]
 
   concat_arguments = ' '.join(['='.join(map(str, x)) for x in arguments.items()])
+  print(concat_arguments)
 
   benchmark = pexpect.spawn(build_dir + "/" + benchmark_name + " " + concat_arguments, maxread=1000000, timeout=600, dimensions=(200, 64))
-  benchmark.logfile = sys.stdout
+  if verbose:
+    benchmark.logfile = sys.stdout
   return benchmark
