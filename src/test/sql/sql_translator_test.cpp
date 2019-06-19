@@ -2022,7 +2022,4 @@ TEST_F(SQLTranslatorTest, WithClauseTestDouble) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-  EXPECT_NE(actual_lqp, nullptr);
-}
-
 }  // namespace opossum
