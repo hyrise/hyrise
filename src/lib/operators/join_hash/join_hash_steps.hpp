@@ -64,7 +64,8 @@ class PosHashTable {
   using SmallPosList = boost::container::small_vector<RowID, 1>;
 
  public:
-  explicit PosHashTable(JoinHashBuildMode mode, size_t max_size) : _hash_table(max_size * 1.2), _pos_lists(max_size), _mode(mode) {
+  explicit PosHashTable(JoinHashBuildMode mode, size_t max_size)
+      : _hash_table(max_size * 1.2), _pos_lists(max_size), _mode(mode) {
     // slightly oversize (x 1.2) the hash table to avoid unnecessary rebuilds
     Assert(max_size < std::numeric_limits<uint32_t>::max(), "Hash table too big for 4-yte offset");
   }
@@ -93,13 +94,9 @@ class PosHashTable {
     return _pos_lists.begin() + it->second;
   }
 
-  const std::vector<SmallPosList>::const_iterator begin() const {
-    return _pos_lists.begin();
-  }
+  const std::vector<SmallPosList>::const_iterator begin() const { return _pos_lists.begin(); }
 
-  const std::vector<SmallPosList>::const_iterator end() const {
-    return _pos_lists.end();
-  }
+  const std::vector<SmallPosList>::const_iterator end() const { return _pos_lists.end(); }
 
  private:
   HashTable _hash_table;
@@ -248,7 +245,8 @@ Build all the hash tables for the partitions of the build column. One job per pa
 */
 
 template <typename BuildColumnType, typename HashedType>
-std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container, JoinHashBuildMode mode) {
+std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
+                                                           JoinHashBuildMode mode) {
   /*
   NUMA notes:
   The hashtables for each partition P should also reside on the same node as the two vectors buildP and probeP.
@@ -463,7 +461,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             continue;
           }
 
-          const auto& primary_predicate_matching_rows = hash_table.find(static_cast<HashedType>(probe_column_element.value));
+          const auto& primary_predicate_matching_rows =
+              hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
           if (primary_predicate_matching_rows != hash_table.end()) {
             // Key exists, thus we have at least one hit for the primary predicate
@@ -609,7 +608,8 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
 
           auto any_build_column_value_matches = false;
           const auto& hashtable = hash_tables[current_partition_id].value();
-          const auto& primary_predicate_matching_rows = hashtable.find(static_cast<HashedType>(probe_column_element.value));
+          const auto& primary_predicate_matching_rows =
+              hashtable.find(static_cast<HashedType>(probe_column_element.value));
 
           if (primary_predicate_matching_rows != hashtable.end()) {
             for (const auto& row_id : *primary_predicate_matching_rows) {
