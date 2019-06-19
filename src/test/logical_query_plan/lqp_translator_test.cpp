@@ -827,11 +827,16 @@ TEST_F(LQPTranslatorTest, StaticTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, true);
 
-  const auto lqp = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  const auto dummy_table = Table::create_dummy_table(column_definitions);
+
+  const auto lqp = StaticTableNode::make(dummy_table);
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   EXPECT_EQ(pqp->type(), OperatorType::TableWrapper);
+
+  const auto table_wrapper = std::dynamic_pointer_cast<TableWrapper>(pqp);
+  EXPECT_EQ(table_wrapper->table, dummy_table);
 }
 
 TEST_F(LQPTranslatorTest, DropTable) {

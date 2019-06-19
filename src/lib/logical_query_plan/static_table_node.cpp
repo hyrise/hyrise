@@ -16,13 +16,7 @@ std::string StaticTableNode::description() const {
          << " (";
   for (auto column_id = ColumnID{0}; column_id < table->column_definitions().size(); ++column_id) {
     const auto& column_definition = table->column_definitions()[column_id];
-
-    stream << "'" << column_definition.name << "' " << column_definition.data_type << " ";
-    if (column_definition.nullable) {
-      stream << "NULL";
-    } else {
-      stream << "NOT NULL";
-    }
+    stream << column_definition;
 
     if (column_id + 1u < table->column_definitions().size()) {
       stream << ", ";

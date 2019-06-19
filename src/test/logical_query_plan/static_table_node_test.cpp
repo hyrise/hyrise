@@ -20,7 +20,7 @@ class StaticTableNodeTest : public ::testing::Test {
 };
 
 TEST_F(StaticTableNodeTest, Description) {
-  EXPECT_EQ(static_table_node->description(), "[StaticTable]: ('a' int NOT NULL, 'b' float NULL)");
+  EXPECT_EQ(static_table_node->description(), "[StaticTable]: (a int not nullable, b float nullable)");
 }
 
 TEST_F(StaticTableNodeTest, NodeExpressions) { ASSERT_EQ(static_table_node->node_expressions.size(), 0u); }

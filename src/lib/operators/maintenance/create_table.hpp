@@ -29,7 +29,7 @@ class CreateTable : public AbstractReadWriteOperator {
 
   // Commit happens in Insert operator
   void _on_commit_records(const CommitID cid) override {}
-  // TODO(David): rollback -> delete table?
+
   // Rollback happens in Insert operator
   void _on_rollback_records() override {}
 

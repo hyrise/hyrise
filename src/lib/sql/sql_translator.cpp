@@ -1000,7 +1000,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
   std::shared_ptr<AbstractLQPNode> input_node;
 
-  if (create_statement.columns) {
+  if (create_statement.select) {
+    input_node = _translate_select_statement(*create_statement.select);
+  } else {
     auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.columns->size(); ++column_id) {
@@ -1035,8 +1037,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       column_definition.nullable = parser_column_definition->nullable;
     }
     input_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
-  } else {
-    input_node = _translate_select_statement(*create_statement.select);
   }
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
