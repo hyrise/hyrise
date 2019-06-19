@@ -36,9 +36,6 @@ const std::unordered_set<std::string> filename_blacklist();
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  const std::string binary_path = argv[0];
-  const std::string binary_directory = binary_path.substr(0, binary_path.find_last_of("/"));
-
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPC-DS Benchmark");
 
   // clang-format off
@@ -89,9 +86,13 @@ int main(int argc, char* argv[]) {
          "Table schemes have to be available.");
 
   if (!data_files_available(table_path)) {
-    const auto& setup_tpcds_data_command = "./scripts/setup_tpcds_data.sh " + std::to_string(scale_factor);
-    const auto files_setup_return = system(setup_tpcds_data_command.c_str());
-    Assert(files_setup_return == 0, "Generating table data files failed.");
+    if (std::filesystem::exists(std::filesystem::path{"./scripts/setup_tpcds_data.sh"})) {
+      const auto& setup_tpcds_data_command = "./scripts/setup_tpcds_data.sh " + std::to_string(scale_factor);
+      const auto files_setup_return = system(setup_tpcds_data_command.c_str());
+      Assert(files_setup_return == 0, "Generating table data files failed.");
+    } else {
+      Fail("Could not find './scripts/setup_tpcds_data.sh'.");
+    }
   }
 
   Assert(data_files_available(table_path), "Generating table data files failed.");
