@@ -640,16 +640,155 @@ struct VariablySizedGroupRun {
     Assert(row_count > 0, "");
     Assert(layout->variably_sized_column_ids.size() > 0, "");
 
-    auto end_row_id = RowID{};
-
     const auto variably_sized_column_count = layout->variably_sized_column_ids.size();
-    const auto fixed_size_column_count = layout->fixed_size_column_ids.size();
+
+    auto [data_per_column, value_end_offsets, end_row_id] = from_table_range_materialize_variably_sized_columns(table,
+    layout, group_by_column_ids, begin_row_id, row_count);
 
     /**
-     * Materialize values from each variable-width column into a continuous blob (one blob per column)
-     * While doing so
-     *    - determine the layout of the interleaved layout in the final VariablySizedGroupRun (`value_end_offsets`)
+     * From `value_end_offsets`, determine the group sizes, i.e., the `group_end_offsets`
      */
+    auto group_end_offsets2 = uninitialized_vector<size_t>(row_count);
+    {
+      const auto meta_data_size = variably_sized_column_count * sizeof(size_t);
+
+      auto previous_group_end_offset = size_t{0};
+      auto value_end_offset_iter = value_end_offsets.begin() + (variably_sized_column_count - 1);
+      for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
+        const auto group_size = *value_end_offset_iter + meta_data_size;
+
+        // Round up to a full DATA_ELEMENT_SIZE for each group
+        const auto group_element_count = divide_and_ceil(group_size, DATA_ELEMENT_SIZE);
+
+        previous_group_end_offset += group_element_count;
+
+        group_end_offsets2[row_idx] = previous_group_end_offset;
+        value_end_offset_iter += variably_sized_column_count;
+      }
+    }
+
+    /**
+     * Initialize the interleaved, opaque group data blob
+     */
+    auto group_data = uninitialized_vector<GroupRunElementType>(group_end_offsets2.back());
+    for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
+      if (group_end_offsets2[row_idx] > 0) {
+        group_data[group_end_offsets2[row_idx] - 1] = 0;
+      }
+    }
+
+    /**
+     * Materialize the fixed size values into the opaque blob
+     */
+    {
+      const auto fixed_size_column_count = layout->fixed_size_column_ids.size();
+
+      for (auto column_id = ColumnID{0}; column_id < fixed_size_column_count; ++column_id) {
+        const auto group_by_column_id = group_by_column_ids[column_id];
+
+        auto row_idx = size_t{0};
+        auto previous_group_end_offset = size_t{0};
+
+        const auto column_is_nullable = table->column_is_nullable(group_by_column_ids[column_id]);
+
+        auto column_iterable = ColumnIterable{table, group_by_column_id};
+        column_iterable.for_each<ResolveDataTypeTag>(
+        [&](const auto &segment_position, const RowID &row_id) {
+          using ColumnDataType = typename std::decay_t<decltype(segment_position)>::Type;
+
+          auto *target = reinterpret_cast<char*>(group_data.data()) + previous_group_end_offset + layout->fixed_size_value_offsets[column_id];
+
+          if (column_is_nullable) {
+            if (segment_position.is_null()) {
+              *target = 1;
+              memset(target + 1, 0, sizeof(ColumnDataType));
+            } else {
+              *target = 0;
+              memcpy(target + 1, &segment_position.value(), sizeof(ColumnDataType));
+            }
+          } else {
+            memcpy(target, &segment_position.value(), sizeof(ColumnDataType));
+          }
+
+          previous_group_end_offset = group_end_offsets2[row_idx];
+
+          ++row_idx;
+
+          return row_idx == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+        }, begin_row_id);
+
+        Assert(row_idx == row_count, "Illegal row_count parameter passed");
+      }
+    }
+
+    /**
+     * Copy `data_per_column` and `value_end_offsets` into the interleaved blob
+     */
+    for (auto column_id = ColumnID{0}; column_id < variably_sized_column_count; ++column_id) {
+      auto& column_data = data_per_column[column_id];
+
+      auto* source = reinterpret_cast<char*>(column_data.data());
+
+      for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
+        const auto group_begin_offset = row_idx == 0 ? 0 : group_end_offsets2[row_idx - 1];
+        const auto value_begin_offset = column_id == 0 ? layout->variably_sized_values_begin_offset : value_end_offsets[row_idx * variably_sized_column_count + column_id - 1];
+        auto* target = &reinterpret_cast<char*>(&group_data[group_begin_offset])[value_begin_offset];
+
+        const auto value_end_offset = value_end_offsets[row_idx * variably_sized_column_count + column_id];
+        const auto source_size = value_end_offset - value_begin_offset;
+
+        memcpy(target, source, source_size);
+        source += source_size;
+      }
+    }
+
+    auto group_run = VariablySizedGroupRun{layout};
+
+    /**
+     * Compute hashes
+     */
+    {
+      auto group_begin_offset = size_t{0};
+      for (auto run_offset = size_t{0}; run_offset < row_count; ++run_offset) {
+        const auto group_size = group_end_offsets2[run_offset] - group_begin_offset;
+        if (group_size == 0) {
+          continue;
+        }
+
+        group_run.hashes[run_offset] = hash(&group_data[group_begin_offset], group_size * sizeof(GroupRunElementType), 0);
+        group_begin_offset = group_end_offsets2[run_offset];
+      }
+    }
+
+    group_run.data = std::move(group_data);
+    group_run.group_end_offsets = std::move(group_end_offsets2);
+
+    return {std::move(group_run), end_row_id};
+  }
+
+  /**
+   * Subroutine of `from_table_range()`. Exposed for better testability.
+   *
+   * Materialize values from each variably-sized column into a one continuous blob per column (`data_per_column`).
+   * (For strings, exclude the `\0`-terminator)
+   *
+   * While doing so, build `value_end_offsets` which stores the offset (in bytes) from the beginning of the final
+   * group where each variably-sized value ends.
+   *
+   * @return {data_per_column, value_end_offsets, end_row_id}
+   */
+  static std::tuple<std::vector<uninitialized_vector<char>>, uninitialized_vector<size_t>, RowID>
+    from_table_range_materialize_variably_sized_columns(
+  const std::shared_ptr<const Table>& table,
+  const VariablySizedGroupRunLayout* layout,
+  const std::vector<ColumnID>& group_by_column_ids,
+  const RowID& begin_row_id,
+  const size_t row_count) {
+
+    const auto variably_sized_column_count = layout->variably_sized_column_ids.size();
+
+    // Return value
+    auto end_row_id = RowID{};
     auto value_end_offsets = uninitialized_vector<size_t>(row_count * variably_sized_column_count);
     auto data_per_column = std::vector<uninitialized_vector<char>>(variably_sized_column_count);
 
@@ -666,16 +805,14 @@ struct VariablySizedGroupRun {
         auto column_row_count = size_t{0};
 
         // If this is exhausted, we need to grow `column_data`
-        auto column_remaining_data_budget_bytes = column_data.size() * DATA_ELEMENT_SIZE;
+        auto column_remaining_data_budget_bytes = column_data.size();
 
         auto* target = reinterpret_cast<char*>(column_data.data());
 
-        auto value_end_offsets_iter = value_end_offsets.begin();
+        auto value_end_offsets_iter = value_end_offsets.begin() + column_id;
 
         const auto column_iterable = ColumnIterable{table, group_by_column_id};
-        column_iterable.for_each<pmr_string>([&](const auto& segment_position, const RowID& row_id) {
-          end_row_id = row_id;
-
+        end_row_id = column_iterable.for_each<pmr_string>([&](const auto& segment_position, const RowID& row_id) {
           const auto& value = segment_position.value();
 
           // Determine `value_size`
@@ -725,128 +862,15 @@ struct VariablySizedGroupRun {
           return column_row_count == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
         }, begin_row_id);
 
+        // Cut off unused trailing storage - not necessarily, but makes testing easier
+        column_data.resize(target - column_data.data());
+
         Assert(column_row_count == row_count, "Invalid row_count passed");
 
       }
     }
 
-    /**
-     * From `value_end_offsets`, determine the group sizes, i.e., the `group_end_offsets`
-     */
-    auto group_end_offsets2 = uninitialized_vector<size_t>(row_count);
-    {
-      const auto meta_data_size = variably_sized_column_count * sizeof(size_t);
-
-      auto previous_group_end_offset = size_t{0};
-      auto value_end_offset_iter = value_end_offsets.begin() + (variably_sized_column_count - 1);
-      for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
-        const auto group_size = *value_end_offset_iter + meta_data_size;
-
-        // Round up to a full DATA_ELEMENT_SIZE for each group
-        const auto group_element_count = divide_and_ceil(group_size, DATA_ELEMENT_SIZE);
-
-        previous_group_end_offset += group_element_count;
-
-        group_end_offsets2[row_idx] = previous_group_end_offset;
-        value_end_offset_iter += variably_sized_column_count;
-      }
-    }
-
-    /**
-     * Initialize the interleaved, opaque group data blob
-     */
-    auto group_data = uninitialized_vector<GroupRunElementType>(group_end_offsets2.back());
-    for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
-      if (group_end_offsets2[row_idx] > 0) {
-        group_data[group_end_offsets2[row_idx] - 1] = 0;
-      }
-    }
-
-    /**
-     * Materialize the fixed size values into the opaque blob
-     */
-    {
-      for (auto column_id = ColumnID{0}; column_id < fixed_size_column_count; ++column_id) {
-        const auto group_by_column_id = group_by_column_ids[column_id];
-
-        auto row_idx = size_t{0};
-        auto previous_group_end_offset = size_t{0};
-
-        const auto column_is_nullable = table->column_is_nullable(group_by_column_ids[column_id]);
-
-        auto column_iterable = ColumnIterable{table, group_by_column_id};
-        end_row_id = column_iterable.for_each<ResolveDataTypeTag>(
-        [&](const auto &segment_position, const RowID &row_id) {
-          using ColumnDataType = typename std::decay_t<decltype(segment_position)>::Type;
-
-          auto *target = reinterpret_cast<char*>(group_data.data()) + previous_group_end_offset + layout->fixed_size_value_offsets[column_id];
-
-          if (column_is_nullable) {
-            if (segment_position.is_null()) {
-              *target = 1;
-              memset(target + 1, 0, sizeof(ColumnDataType));
-            } else {
-              *target = 0;
-              memcpy(target + 1, &segment_position.value(), sizeof(ColumnDataType));
-            }
-          } else {
-            memcpy(target, &segment_position.value(), sizeof(ColumnDataType));
-          }
-
-          previous_group_end_offset = group_end_offsets2[row_idx];
-
-          ++row_idx;
-
-          return row_idx == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
-        }, begin_row_id);
-
-        Assert(row_idx == row_count, "Illegal row_count parameter passed");
-      }
-    }
-
-    /**
-     * Copy `data_per_column` into the interleaved blob
-     */
-    for (auto column_id = ColumnID{0}; column_id < variably_sized_column_count; ++column_id) {
-      auto& column_data = data_per_column[column_id];
-
-      auto* source = reinterpret_cast<char*>(column_data.data());
-
-      for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
-        const auto group_begin_offset = row_idx == 0 ? 0 : group_end_offsets2[row_idx - 1];
-        const auto value_begin_offset = column_id == 0 ? layout->variably_sized_values_begin_offset : value_end_offsets[row_idx * variably_sized_column_count + column_id - 1];
-        auto* target = &reinterpret_cast<char*>(&group_data[group_begin_offset])[value_begin_offset];
-
-        const auto value_end_offset = value_end_offsets[row_idx * variably_sized_column_count + column_id];
-        const auto source_size = value_end_offset - value_begin_offset;
-
-        memcpy(target, source, source_size);
-        source += source_size;
-      }
-    }
-
-    auto group_run = VariablySizedGroupRun{layout};
-
-    /**
-     * Compute hashes
-     */
-    {
-      auto group_begin_offset = size_t{0};
-      for (auto run_offset = size_t{0}; run_offset < row_count; ++run_offset) {
-        const auto group_size = group_end_offsets2[run_offset] - group_begin_offset;
-        if (group_size == 0) {
-          continue;
-        }
-
-        group_run.hashes[run_offset] = hash(&group_data[group_begin_offset], group_size * sizeof(GroupRunElementType), 0);
-        group_begin_offset = group_end_offsets2[run_offset];
-      }
-    }
-
-    group_run.data = std::move(group_data);
-    group_run.group_end_offsets = std::move(group_end_offsets2);
-
-    return {std::move(group_run), end_row_id};
+    return {std::move(data_per_column), std::move(value_end_offsets), end_row_id};
   }
 };
 

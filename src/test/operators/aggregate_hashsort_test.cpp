@@ -29,8 +29,11 @@ size_t get_value_size(const T& value) {
     } else {
       Fail("Unexpected type");
     }  
-}  
+}
 
+/**
+ * Utility function to build a group as a binary blob
+ */
 template <typename VectorType, typename... Args>
 void add_group(VectorType& data, const Args&&... args) {
   auto offset = data.size() * sizeof(typename VectorType::value_type);
@@ -101,7 +104,7 @@ void add_group(VectorType& data, const Args&&... args) {
   // Write data
   (for_each_value(args), ...);
 
-  // Optionally, write meta data about variably-sized values
+  // Optionally, write meta data about variably-sized values aligned to the *end* of the binary blob
   auto* value_end_offsets_target = reinterpret_cast<char*>(&data[data.size()]) - sizeof(size_t) * variably_sized_value_end_offsets.size();
   memcpy(value_end_offsets_target, variably_sized_value_end_offsets.data(), sizeof(size_t) * variably_sized_value_end_offsets.size());
 }
@@ -314,52 +317,53 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixed) {
   EXPECT_EQ(groups.data, expected_group_data);
 }
 
-//TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited) {
-//  auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5}};
-//
-//  const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
-//
-//  // Produce groups with data/row budget so that the data budget per column (12 * uint32_t) gets exhausted first, after
-//  // 4 rows
-//  const auto [groups, end_row_id] = produce_initial_groups<GetDynamicGroupSize>(
-//      table, &layout, group_by_column_ids, RowID{ChunkID{0}, ChunkOffset{1}}, 100, 12);
-//
-//  EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
-//
-//  // clang-format off
-//  auto expected_variably_sized_group_data = uninitialized_vector<GroupRunElementType>();
-//  add_group(expected_variably_sized_group_data, false, "y"s, "abcd"s, false, "bcdef"s);
-//  add_group(expected_variably_sized_group_data, false, "xy"s, "iiii"s, true, ""s);
-//  add_group(expected_variably_sized_group_data, true, ""s, ""s, true, ""s);
-//  add_group(expected_variably_sized_group_data, false, "jjj"s, "ccc"s, false, "oof"s);
-//  // clang-format on
-//
-//  EXPECT_EQ(groups.data, expected_variably_sized_group_data);
-//
-//  // clang-format off
-//  EXPECT_EQ(groups.group_end_offsets, uninitialized_vector<size_t>({3, 5, 6, 9}));
-//
-//  EXPECT_EQ(groups.value_end_offsets, uninitialized_vector<size_t>({
-//    2, 6, 12,
-//    3, 7, 8,
-//    1, 1, 2,
-//    4, 7, 11
-//  }));
-//  // clang-format on
-//
-//  EXPECT_EQ(groups.fixed.hashes.size(), 4u);
-//
-//  // clang-format off
-//  auto expected_fixed_group_data = uninitialized_vector<GroupRunElementType>{};
-//  add_group(expected_fixed_group_data, false, 13, int64_t{14});
-//  add_group(expected_fixed_group_data, true, 0, int64_t{15});
-//  add_group(expected_fixed_group_data, true, 0, int64_t{16});
-//  add_group(expected_fixed_group_data, true, 0, int64_t{17});
-//  // clang-format on
-//
-//  EXPECT_EQ(groups.fixed.data, expected_fixed_group_data);
-//  EXPECT_EQ(groups.fixed.end, 4);
-//}
+TEST_F(AggregateHashSortTest, VariablySizedGroupRunFromTableRangeMaterializeVariablySizedColumns) {
+  auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5}};
+  const auto layout = VariablySizedGroupRunLayout::build(*table, group_by_column_ids);
+
+  const auto begin_row_id = RowID{ChunkID{0}, ChunkOffset{1}};
+  const auto row_count = 4;
+  const auto [data_per_column, value_end_offsets, end_row_id] = VariablySizedGroupRun::from_table_range_materialize_variably_sized_columns(table,
+  &layout, group_by_column_ids, begin_row_id, row_count);
+
+  EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
+  EXPECT_EQ(data_per_column.size(), 3u);
+  EXPECT_EQ(value_end_offsets.size(), 3u * 4u);
+
+  EXPECT_EQ(value_end_offsets, uninitialized_vector<size_t>({15, 19, 25, 16, 20, 21, 14, 14, 15, 17, 20, 24}));
+
+  EXPECT_EQ(data_per_column.at(0), uninitialized_vector<char>({'\0', 'y', '\0', 'x', 'y', '\1', '\0', 'j', 'j', 'j'}));
+  EXPECT_EQ(data_per_column.at(1), uninitialized_vector<char>({'a', 'b', 'c', 'd', 'i', 'i', 'i', 'i', 'c', 'c', 'c'}));
+  EXPECT_EQ(data_per_column.at(2), uninitialized_vector<char>({'\0', 'b', 'c', 'd', 'e', 'f', '\1', '\1', '\0', 'o', 'o', 'f'}));
+}
+
+TEST_F(AggregateHashSortTest, VariablySizedGroupRunFromTableRange) {
+  auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5}};
+
+  const auto layout = VariablySizedGroupRunLayout::build(*table, group_by_column_ids);
+
+  const auto begin_row_id = RowID{ChunkID{0}, ChunkOffset{0}};
+  const auto row_count = 5;
+  const auto [run, end_row_id] = VariablySizedGroupRun::from_table_range(table, &layout, group_by_column_ids, begin_row_id, row_count);
+
+  EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
+
+  // clang-format off
+  auto expected_variably_sized_group_data = uninitialized_vector<GroupRunElementType>();
+  add_group(expected_variably_sized_group_data, std::optional<std::string>{"y"},   std::optional<int32_t>{13}, "abcd"s,  std::optional<std::string>{"bcdef"}, int64_t{14});  // NOLINT
+  add_group(expected_variably_sized_group_data, std::optional<std::string>{"y"},   std::optional<int32_t>{13}, "abcd"s,  std::optional<std::string>{"bcdef"}, int64_t{14});  // NOLINT
+  add_group(expected_variably_sized_group_data, std::optional<std::string>{"xy"},  std::optional<int32_t>{},   "iiii"s,  std::optional<std::string>{},        int64_t{15});  // NOLINT
+  add_group(expected_variably_sized_group_data, std::optional<std::string>{},      std::optional<int32_t>{},   ""s, ""s, std::optional<std::string>{""},      int64_t{16});  // NOLINT
+  add_group(expected_variably_sized_group_data, std::optional<std::string>{"jjj"}, std::optional<int32_t>{},   "ccc"s,   std::optional<std::string>{"oof"},   int64_t{17});  // NOLINT
+  // clang-format on
+
+  EXPECT_EQ(run.data, expected_variably_sized_group_data);
+  EXPECT_EQ(run.group_end_offsets, uninitialized_vector<size_t>({3, 5, 6, 9}));
+
+  EXPECT_EQ(run.hashes.size(), 5u);
+  EXPECT_EQ(run.hashes.at(0), run.hashes.at(1));
+  EXPECT_NE(run.hashes.at(0), run.hashes.at(2));
+}
 //
 //TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedRowBudgetLimited) {
 //  auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{2}, ColumnID{3}};
