@@ -13,25 +13,8 @@ CreateTableNode::CreateTableNode(const std::string& table_name, const bool if_no
 std::string CreateTableNode::description() const {
   std::ostringstream stream;
 
-  const auto column_definitions = std::dynamic_pointer_cast<StaticTableNode>(left_input())->table->column_definitions();
-
   stream << "[CreateTable] " << (if_not_exists ? "IfNotExists " : "");
-  stream << "Name: '" << table_name << "' (";
-  for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
-    const auto& column_definition = column_definitions[column_id];
-
-    stream << "'" << column_definition.name << "' " << column_definition.data_type << " ";
-    if (column_definition.nullable) {
-      stream << "NULL";
-    } else {
-      stream << "NOT NULL";
-    }
-
-    if (column_id + 1u < column_definitions.size()) {
-      stream << ", ";
-    }
-  }
-  stream << ")";
+  stream << "Name: '" << table_name << "'";
 
   return stream.str();
 }

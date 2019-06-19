@@ -8,7 +8,8 @@
 namespace opossum {
 
 /**
- * This node type wraps a table.
+ * This node type wraps a table and can be used as input for a CreateTableNode to represent a simple
+ * CREATE TABLE management command.
  */
 class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public BaseNonQueryNode {
  public:

@@ -57,6 +57,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     StorageManager::get().add_table(table_name, table);
   }
 
+  // Insert table data (if no data is present, insertion makes no difference)
   _insert = std::make_shared<Insert>(table_name, _input_left);
   _insert->set_transaction_context(context);
   _insert->execute();
