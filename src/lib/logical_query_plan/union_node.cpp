@@ -34,11 +34,6 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   }
 }
 
-std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  Fail("Statistics for UNION not yet implemented");
-}
-
 std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return UnionNode::make(union_mode);
 }

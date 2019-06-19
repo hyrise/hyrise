@@ -24,11 +24,10 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
-    cost_model/abstract_cost_estimator.cpp
-    cost_model/abstract_cost_estimator.hpp
-    cost_model/cost.hpp
-    cost_model/cost_model_logical.cpp
-    cost_model/cost_model_logical.hpp
+    cost_estimation/abstract_cost_estimator.cpp
+    cost_estimation/abstract_cost_estimator.hpp
+    cost_estimation/cost_estimator_logical.cpp
+    cost_estimation/cost_estimator_logical.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
@@ -121,6 +120,8 @@ set(
     logical_query_plan/enable_make_for_lqp_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
+    logical_query_plan/jit_aware_lqp_translator.cpp
+    logical_query_plan/jit_aware_lqp_translator.hpp
     logical_query_plan/join_node.cpp
     logical_query_plan/join_node.hpp
     logical_query_plan/limit_node.cpp
@@ -200,17 +201,17 @@ set(
     operators/join_hash/join_hash_traits.hpp
     operators/join_index.cpp
     operators/join_index.hpp
+    operators/join_mpsm/column_materializer_numa.hpp
     operators/join_mpsm.cpp
     operators/join_mpsm.hpp
-    operators/join_mpsm/column_materializer_numa.hpp
     operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
+    operators/join_sort_merge/column_materializer.hpp
     operators/join_verification.cpp
     operators/join_verification.hpp
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
-    operators/join_sort_merge/column_materializer.hpp
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
@@ -227,7 +228,6 @@ set(
     operators/maintenance/show_columns.cpp
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
-    operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.cpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.hpp
@@ -280,12 +280,12 @@ set(
     optimizer/join_ordering/enumerate_ccp.hpp
     optimizer/join_ordering/greedy_operator_ordering.cpp
     optimizer/join_ordering/greedy_operator_ordering.hpp
-    optimizer/join_ordering/join_graph.cpp
-    optimizer/join_ordering/join_graph.hpp
     optimizer/join_ordering/join_graph_builder.cpp
     optimizer/join_ordering/join_graph_builder.hpp
+    optimizer/join_ordering/join_graph.cpp
     optimizer/join_ordering/join_graph_edge.cpp
     optimizer/join_ordering/join_graph_edge.hpp
+    optimizer/join_ordering/join_graph.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -355,68 +355,70 @@ set(
     sql/sql_identifier_resolver.hpp
     sql/sql_identifier_resolver_proxy.cpp
     sql/sql_identifier_resolver_proxy.hpp
-    sql/sql_pipeline.cpp
-    sql/sql_pipeline.hpp
     sql/sql_pipeline_builder.cpp
     sql/sql_pipeline_builder.hpp
+    sql/sql_pipeline.cpp
+    sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
     sql/sql_plan_cache.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    statistics/base_column_statistics.cpp
-    statistics/base_column_statistics.hpp
-    statistics/chunk_statistics/abstract_filter.hpp
-    statistics/chunk_statistics/chunk_statistics.cpp
-    statistics/chunk_statistics/chunk_statistics.hpp
-    statistics/chunk_statistics/counting_quotient_filter.cpp
-    statistics/chunk_statistics/counting_quotient_filter.hpp
-    statistics/chunk_statistics/histograms/abstract_histogram.cpp
-    statistics/chunk_statistics/histograms/abstract_histogram.hpp
-    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.cpp
-    statistics/chunk_statistics/histograms/equal_distinct_count_histogram.hpp
-    statistics/chunk_statistics/histograms/equal_height_histogram.cpp
-    statistics/chunk_statistics/histograms/equal_height_histogram.hpp
-    statistics/chunk_statistics/histograms/equal_width_histogram.cpp
-    statistics/chunk_statistics/histograms/equal_width_histogram.hpp
-    statistics/chunk_statistics/histograms/histogram_utils.cpp
-    statistics/chunk_statistics/histograms/histogram_utils.hpp
-    statistics/chunk_statistics/min_max_filter.cpp
-    statistics/chunk_statistics/min_max_filter.hpp
-    statistics/chunk_statistics/range_filter.cpp
-    statistics/chunk_statistics/range_filter.hpp
-    statistics/chunk_statistics/segment_statistics.cpp
-    statistics/chunk_statistics/segment_statistics.hpp
-    statistics/column_statistics.cpp
-    statistics/column_statistics.cpp
-    statistics/generate_column_statistics.cpp
-    statistics/generate_column_statistics.hpp
-    statistics/generate_table_statistics.cpp
-    statistics/generate_table_statistics.hpp
-    statistics/statistics_import_export.cpp
-    statistics/statistics_import_export.hpp
+    lossy_cast.hpp
+    statistics/abstract_cardinality_estimator.cpp
+    statistics/abstract_cardinality_estimator.hpp
+    statistics/statistics_objects/abstract_statistics_object.cpp
+    statistics/statistics_objects/abstract_statistics_object.hpp
+    statistics/base_attribute_statistics.cpp
+    statistics/base_attribute_statistics.hpp
+    statistics/cardinality_estimation_cache.hpp
+    statistics/cardinality_estimator.cpp
+    statistics/cardinality_estimator.hpp
+    statistics/generate_pruning_statistics.cpp
+    statistics/generate_pruning_statistics.hpp
+    statistics/statistics_objects/abstract_histogram.cpp
+    statistics/statistics_objects/abstract_histogram.hpp
+    statistics/statistics_objects/equal_distinct_count_histogram.cpp
+    statistics/statistics_objects/equal_distinct_count_histogram.hpp
+    statistics/statistics_objects/generic_histogram_builder.cpp
+    statistics/statistics_objects/generic_histogram_builder.hpp
+    statistics/statistics_objects/generic_histogram.cpp
+    statistics/statistics_objects/generic_histogram.hpp
+    statistics/statistics_objects/histogram_domain.cpp
+    statistics/statistics_objects/histogram_domain.hpp
+    statistics/join_graph_statistics_cache.cpp
+    statistics/join_graph_statistics_cache.hpp
+    statistics/statistics_objects/counting_quotient_filter.cpp
+    statistics/statistics_objects/counting_quotient_filter.hpp
+    statistics/statistics_objects/min_max_filter.cpp
+    statistics/statistics_objects/min_max_filter.hpp
+    statistics/statistics_objects/null_value_ratio_statistics.cpp
+    statistics/statistics_objects/null_value_ratio_statistics.hpp
+    statistics/statistics_objects/range_filter.cpp
+    statistics/statistics_objects/range_filter.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
+    statistics/attribute_statistics.cpp
+    statistics/attribute_statistics.hpp
     storage/abstract_segment_visitor.hpp
     storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
-    storage/base_segment.cpp
-    storage/base_segment.hpp
     storage/base_segment_accessor.hpp
+    storage/base_segment.cpp
     storage/base_segment_encoder.hpp
+    storage/base_segment.hpp
     storage/base_value_segment.hpp
     storage/chunk.cpp
-    storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/chunk.hpp
     storage/create_iterable_from_segment.hpp
-    storage/create_iterable_from_segment.ipp
-    storage/dictionary_segment.cpp
-    storage/dictionary_segment.hpp
     storage/dictionary_segment/attribute_vector_iterable.hpp
+    storage/dictionary_segment.cpp
     storage/dictionary_segment/dictionary_encoder.hpp
     storage/dictionary_segment/dictionary_segment_iterable.hpp
+    storage/dictionary_segment.hpp
     storage/encoding_type.cpp
     storage/encoding_type.hpp
     storage/fixed_string_dictionary_segment.cpp
@@ -434,20 +436,20 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
+    storage/index/base_index.cpp
+    storage/index/base_index.hpp
     storage/index/b_tree/b_tree_index.cpp
     storage/index/b_tree/b_tree_index.hpp
     storage/index/b_tree/b_tree_index_impl.cpp
     storage/index/b_tree/b_tree_index_impl.hpp
-    storage/index/base_index.cpp
-    storage/index/base_index.hpp
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
     storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
-    storage/index/group_key/variable_length_key.cpp
-    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_base.cpp
     storage/index/group_key/variable_length_key_base.hpp
+    storage/index/group_key/variable_length_key.cpp
+    storage/index/group_key/variable_length_key.hpp
     storage/index/group_key/variable_length_key_proxy.cpp
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
@@ -478,12 +480,12 @@ set(
     storage/segment_accessor.hpp
     storage/segment_encoding_utils.cpp
     storage/segment_encoding_utils.hpp
-    storage/segment_iterables.hpp
     storage/segment_iterables/any_segment_iterable.cpp
     storage/segment_iterables/any_segment_iterable.hpp
     storage/segment_iterables/any_segment_iterator.hpp
     storage/segment_iterables/base_segment_iterators.hpp
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
+    storage/segment_iterables.hpp
     storage/segment_iterables/segment_positions.hpp
     storage/segment_iterate.hpp
     operators/table_scan/sorted_segment_search.hpp
@@ -491,10 +493,10 @@ set(
     storage/split_pos_list_by_chunk_id.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
-    storage/table.cpp
-    storage/table.hpp
     storage/table_column_definition.cpp
     storage/table_column_definition.hpp
+    storage/table.cpp
+    storage/table.hpp
     storage/value_segment.cpp
     storage/value_segment.hpp
     storage/value_segment/null_value_vector_iterable.hpp
