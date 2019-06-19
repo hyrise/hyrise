@@ -79,13 +79,13 @@ try {
             sh "./clang-debug/hyriseTest clang-debug"
             sh "./scripts/test/hyriseConsole_test.py clang-debug"
           }
-        // }, gccDebug: {
-        //   stage("gcc-debug") {
-        //     sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-        //     // Test that running the binary from the build folder works
-        //     sh "./scripts/test/hyriseConsole_test.py gcc-debug"
-        //     sh "cd gcc-debug && ./hyriseTest"
-        //   }
+        }, gccDebug: {
+          stage("gcc-debug") {
+            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            // Test that running the binary from the build folder works
+            sh "./scripts/test/hyriseConsole_test.py gcc-debug"
+            sh "cd gcc-debug && ./hyriseTest"
+          }
         }, lint: {
           stage("Linting") {
             sh '''
