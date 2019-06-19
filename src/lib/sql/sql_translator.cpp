@@ -131,7 +131,7 @@ namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
-            std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>>()) {}
+                    std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>>()) {}
 
 std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
   const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
@@ -210,12 +210,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   AssertInput(!select.unionSelect, "Set operations (UNION/INTERSECT/...) are not supported yet");
 
   // Translate WITH clause
-  if(select.withDescriptions) {
+  if (select.withDescriptions) {
     auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
-    auto sql_identifier_resolver_proxy = std::make_shared<SQLIdentifierResolverProxy>(sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
+    auto sql_identifier_resolver_proxy = std::make_shared<SQLIdentifierResolverProxy>(
+        sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
 
-    for(const auto& desc : *select.withDescriptions) {
-      SQLTranslator with_translator{_use_mvcc, sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
+    for (const auto& desc : *select.withDescriptions) {
+      SQLTranslator with_translator{_use_mvcc, sql_identifier_resolver_proxy, _parameter_id_allocator,
+                                    _with_descriptions};
       auto lqp = with_translator._translate_select_statement(*desc->select);
       _store_with_query(desc->alias, lqp, with_translator._sql_identifier_resolver, sql_identifier_resolver);
     }
@@ -522,7 +524,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       AssertInput(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every nested SELECT must have its own alias");
       table_name = hsql_table_ref.alias->name;
 
-      SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator, _with_descriptions};
+      SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
+                                        _with_descriptions};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
       for (const auto& subquery_expression : lqp->column_expressions()) {
@@ -1418,7 +1421,8 @@ std::shared_ptr<LQPSubqueryExpression> SQLTranslator::_translate_hsql_subquery(
   const auto sql_identifier_proxy = std::make_shared<SQLIdentifierResolverProxy>(
       sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
 
-  auto subquery_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions};
+  auto subquery_translator =
+      SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator, _with_descriptions};
   const auto subquery_lqp = subquery_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
 
@@ -1564,8 +1568,7 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
 }
 
-void SQLTranslator::_store_with_query(const std::string& table_alias,
-                                      const std::shared_ptr<AbstractLQPNode>& lqp_node,
+void SQLTranslator::_store_with_query(const std::string& table_alias, const std::shared_ptr<AbstractLQPNode>& lqp_node,
                                       const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver_source,
                                       const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver_target) {
   AssertInput(!_has_with_query(table_alias), "WITH query name " + table_alias + " specified more than once");

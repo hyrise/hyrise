@@ -151,8 +151,7 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
-  void _store_with_query(const std::string& table_alias,
-                         const std::shared_ptr<AbstractLQPNode>& lqp_node,
+  void _store_with_query(const std::string& table_alias, const std::shared_ptr<AbstractLQPNode>& lqp_node,
                          const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver_source,
                          const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver_target);
   bool _has_with_query(const std::string& table_alias) const;

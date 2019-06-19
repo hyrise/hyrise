@@ -1997,10 +1997,10 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseTestSingle) {
-
-  const auto actual_lqp = compile_query("WITH "
-                                        "with_query AS (SELECT a, b FROM int_float) "
-                                        "SELECT a FROM with_query;");
+  const auto actual_lqp = compile_query(
+      "WITH "
+      "with_query AS (SELECT a, b FROM int_float) "
+      "SELECT a FROM with_query;");
 
   const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);
   const auto expected_lqp = ProjectionNode::make(expression_vector(parameter_int_float_a), stored_table_node_int_float);
@@ -2009,15 +2009,16 @@ TEST_F(SQLTranslatorTest, WithClauseTestSingle) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseTestDouble) {
-
-  const auto actual_lqp = compile_query("WITH "
-                                        "with_query1 AS (SELECT a, b FROM int_float), "
-                                        "with_query2 AS (SELECT a, b FROM with_query1) "
-                                        "SELECT a, b FROM with_query2;");
+  const auto actual_lqp = compile_query(
+      "WITH "
+      "with_query1 AS (SELECT a, b FROM int_float), "
+      "with_query2 AS (SELECT a, b FROM with_query1) "
+      "SELECT a, b FROM with_query2;");
 
   const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);
   const auto parameter_int_float_b = correlated_parameter_(ParameterID{1}, int_float_b);
-  const auto expected_lqp = ProjectionNode::make(expression_vector(parameter_int_float_a, parameter_int_float_b), stored_table_node_int_float);
+  const auto expected_lqp = ProjectionNode::make(expression_vector(parameter_int_float_a, parameter_int_float_b),
+                                                 stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
