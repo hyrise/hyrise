@@ -907,8 +907,6 @@ namespace opossum {
       _current_lqp = _translate_predicate_expression(having_expression, _current_lqp);
     }
 
-//    std::vector<SQLIdentifier> new_select_list_identifiers;
-
     for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
       const auto *hsql_expr = (*select.selectList)[select_list_idx];
       const auto &select_list_element = select_list_elements[select_list_idx];
@@ -922,15 +920,9 @@ namespace opossum {
           for (const auto &pre_aggregate_expression : pre_aggregate_lqp->column_expressions()) {
             if (hsql_expr->table) {
               // Dealing with SELECT t.* here
-              const auto identifiers = _filter_identifiers_by_expression(pre_aggregate_expression,
-                                                                         select_list_elements);
-              if (std::any_of(_inflated_select_list_identifiers.begin(), _inflated_select_list_identifiers.end(),
-                              [&](const auto &identifiers_per_expression) {
-                                return std::any_of(identifiers_per_expression.begin(), identifiers_per_expression.end(),
-                                                   [&](const auto &identifier) {
-                                                     return identifier.table_name != hsql_expr->table;
-                                                   });
-                              })) {
+              auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression); // note(jj): todo There seems to be no alternative to get_expression_identifiers, because the expression might not be part of the select list, if it is in an aggregate (such as SUM(a))
+              if (std::any_of(identifiers.begin(), identifiers.end(),
+                              [&](const auto& identifier) { return identifier.table_name != hsql_expr->table; })) {
                 // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
                 // different table, it is not included in the `SELECT t.*`.
                 continue;

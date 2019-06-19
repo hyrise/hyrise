@@ -67,7 +67,7 @@ class SQLTranslator final {
         const std::shared_ptr<AbstractLQPNode>& lqp,
         const std::unordered_map<std::string, std::vector<NamedExpression>>& elements_by_table_name,
         const std::vector<std::shared_ptr<AbstractExpression>>& elements_in_order,
-        const std::vector<SQLIdentifier>& identifiers_in_order, // todo(jj): get rid off this?
+        const std::vector<SQLIdentifier>& identifiers_in_order,
         const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
     void append(TableSourceState&& rhs);
