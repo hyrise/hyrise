@@ -1,5 +1,6 @@
 #pragma once
 
+#include <experimental/functional>
 #include <regex>
 #include <string>
 #include <variant>
@@ -18,7 +19,11 @@ namespace opossum {
  */
 class LikeMatcher {
   // A faster search algorithm than the typical byte-wise search if we can reuse the searcher
+#ifdef __GLIBCXX__
   using Searcher = std::boyer_moore_searcher<pmr_string::const_iterator>;
+#else
+  using Searcher = std::experimental::boyer_moore_searcher<pmr_string::const_iterator>;
+#endif
 
  public:
   /**
