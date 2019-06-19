@@ -36,6 +36,9 @@ const std::unordered_set<std::string> filename_blacklist();
 }  // namespace
 
 int main(int argc, char* argv[]) {
+  const std::string binary_path = argv[0];
+  const std::string binary_directory = binary_path.substr(0, binary_path.find_last_of("/"));
+
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPC-DS Benchmark");
 
   // clang-format off
@@ -86,12 +89,17 @@ int main(int argc, char* argv[]) {
          "Table schemes have to be available.");
 
   if (!data_files_available(table_path)) {
-    if (std::filesystem::exists(std::filesystem::path{"./scripts/setup_tpcds_data.sh"})) {
-      const auto& setup_tpcds_data_command = "./scripts/setup_tpcds_data.sh " + std::to_string(scale_factor);
-      const auto files_setup_return = system(setup_tpcds_data_command.c_str());
+    if (std::filesystem::exists(std::filesystem::path{binary_directory + "/dsdgen"})) {
+      const auto files_setup_return =
+          system(("cd " + binary_directory + " && ./dsdgen -scale " + std::to_string(scale_factor) +
+                  " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -f &&"
+                  "cd ../resources/benchmark/tpcds/tables &&"
+                  "for x in *.dat; do mv $x ${x%.dat}.csv; done &&"
+                  "cd ../../../../")
+                     .c_str());
       Assert(files_setup_return == 0, "Generating table data files failed.");
     } else {
-      Fail("Could not find './scripts/setup_tpcds_data.sh'.");
+      Fail("Could not find 'dsdgen' in your build directory. Did you run the benchmark from the project root dir?");
     }
   }
 
