@@ -1,9 +1,20 @@
 #include "gtest/gtest.h"
 
+#include "import_export/csv_parser.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
+
+using namespace opossum;  // NOLINT
+
+namespace {
+  std::shared_ptr<Table> load_csv(const std::string& file_name) {
+    return CsvParser{}.parse("resources/test_data/tbl/tpcds/" + file_name,
+      process_csv_meta_file("resources/benchmark/tpcds/tables/" + file_name + CsvMeta::META_FILE_EXTENSION),
+      Chunk::DEFAULT_SIZE);
+  }
+}
 
 namespace opossum {
 
@@ -99,15 +110,17 @@ TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
 TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
   /**
    * Check whether the data that TpcdsTableGenerator generates is the exact same that dsdgen generates.
-   * Since dsdgen does not support very small scale factors only generate and check first 50 rows for each table.
+   * Since dsdgen does not support very small scale factors only generate and check first rows for each table.
    */
 
-  const auto dir_tpcds = std::string{"resources/test_data/tbl/tpcds/"};
+  const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE);
 
-  TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE);
+  const auto table_a = table_generator.generate_call_center(5);
+  const auto table_b = load_csv("call_center.csv");
 
-  EXPECT_TABLE_EQ_ORDERED(TpcdsTableGenerator::generate_call_center(Chunk::DEFAULT_SIZE, 5),
-                          load_table(dir_tpcds + "call_center.tbl", Chunk::DEFAULT_SIZE));
+  EXPECT_TABLE_EQ_ORDERED(table_a, table_b);
+
+
 
   // TODO: Run generation a second time to make sure no global state (of which tpcds_dbgen has plenty :( ) from the
   //  first generation process carried over into the second

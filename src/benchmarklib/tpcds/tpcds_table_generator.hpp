@@ -35,7 +35,6 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
-  static std::shared_ptr<Table> generate_call_center(ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
-                                                     ds_key_t max_rows = std::numeric_limits<ds_key_t>::max());
+  std::shared_ptr<Table> generate_call_center(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
 };
 }  // namespace opossum

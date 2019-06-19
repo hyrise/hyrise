@@ -258,7 +258,7 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, const std::share
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
 
-  table_info_by_name["call_center"].table = generate_call_center(_benchmark_config->chunk_size);
+  table_info_by_name["call_center"].table = generate_call_center();
   std::cout << "call_center table generated" << std::endl;
 
   // catalog page
@@ -899,11 +899,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   return table_info_by_name;
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ChunkOffset chunk_size, ds_key_t max_rows) {
+std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_rows) const {
   auto [call_center_first, call_center_count] = prepare_for_table(CALL_CENTER);
   call_center_count = std::min(call_center_count, max_rows);
 
-  auto call_center_builder = TableBuilder{chunk_size, call_center_column_types, call_center_column_names,
+  auto call_center_builder = TableBuilder{_benchmark_config->chunk_size, call_center_column_types, call_center_column_names,
                                           static_cast<ChunkOffset>(call_center_count)};
 
   auto call_center = CALL_CENTER_TBL{};
