@@ -49,7 +49,8 @@ using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninit
 
 // Stores the mapping from HashedType to positions. Conceptually, this is similar to an (unordered_)multimap, but it
 // has some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
-// hashmap (think map<HashedType, PosList>), we store a 
+// hashmap (think map<HashedType, PosList>), we store an offset. This keeps the hashmap small and makes it easier to
+// cache.
 template <typename HashedType>
 class PosHashTable {
   // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
@@ -68,7 +69,7 @@ class PosHashTable {
 
  public:
   explicit PosHashTable(JoinHashBuildMode mode, size_t max_size)
-      : _hash_table(max_size * 1.2), _pos_lists(max_size), _mode(mode) {
+      : _hash_table(static_cast<size_t>(max_size * 1.2)), _pos_lists(max_size), _mode(mode) {
     // slightly oversize (x 1.2) the hash table to avoid unnecessary rebuilds
   }
 
