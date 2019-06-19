@@ -159,6 +159,10 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
+              sh "./scripts/test/hyriseConsole_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py gcc-release"
             }
           } else {
               Utils.markStageSkippedForConditional("gccRelease")
