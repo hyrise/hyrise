@@ -15,36 +15,36 @@ class JoinHashTypesTest : public ::testing::Test {};
 
 template <typename T, typename HashType>
 void test_hash_map(const std::vector<T>& values) {
-  // Partition<T> elements;
-  // for (ChunkOffset i = ChunkOffset{0}; i < values.size(); ++i) {
-  //   RowID row_id{ChunkID{17}, i};
-  //   elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
-  // }
+  Partition<T> elements;
+  for (ChunkOffset i = ChunkOffset{0}; i < values.size(); ++i) {
+    RowID row_id{ChunkID{17}, i};
+    elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
+  }
 
-  // auto hash_map = build<T, HashType>(
-  //     RadixContainer<T>{std::make_shared<Partition<T>>(elements), std::vector<size_t>{elements.size()},
-  //                       std::make_shared<std::vector<bool>>()});
+  auto hash_maps = build<T, HashType>(
+      RadixContainer<T>{std::make_shared<Partition<T>>(elements), std::vector<size_t>{elements.size()},
+                        std::make_shared<std::vector<bool>>()}, JoinHashBuildMode::AllPositions);
 
-  // // With only one offset value passed, one hash map will be created
-  // EXPECT_EQ(hash_map.size(), 1);
+  // With only one offset value passed, one hash map will be created
+  EXPECT_EQ(hash_maps.size(), 1);
 
-  // size_t row_count = 0;
-  // for (const auto& pos_list_pair : hash_map.at(0).value()) {
-  //   row_count += pos_list_pair.second.size();
-  // }
-  // EXPECT_EQ(row_count, elements.size());
+  const auto& first_hash_map = hash_maps.at(0).value();
 
-  // ASSERT_FALSE(hash_map.at(0).value().empty());  // hash map for first (and only) chunk exists
+  size_t row_count = 0;
+  for (const auto& pos_list_pair : first_hash_map) {
+    row_count += pos_list_pair.size();
+  }
+  EXPECT_EQ(row_count, elements.size());
 
-  // ChunkOffset offset = ChunkOffset{0};
-  // for (const auto& element : elements) {
-  //   const auto probe_value = element.value;
+  ChunkOffset offset = ChunkOffset{0};
+  for (const auto& element : elements) {
+    const auto probe_value = element.value;
 
-  //   const auto result_list = hash_map.at(0).value().at(probe_value);
-  //   const RowID probe_row_id{ChunkID{17}, offset};
-  //   EXPECT_TRUE(std::find(result_list.begin(), result_list.end(), probe_row_id) != result_list.end());
-  //   ++offset;
-  // }
+    const auto result_list = *first_hash_map.find(probe_value);
+    const RowID probe_row_id{ChunkID{17}, offset};
+    EXPECT_TRUE(std::find(result_list.begin(), result_list.end(), probe_row_id) != result_list.end());
+    ++offset;
+  }
 }
 
 using DataTypes = ::testing::Types<int, float, double>;

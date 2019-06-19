@@ -1,7 +1,5 @@
 #pragma once
 
-// TODO re-add grow/resize vector
-
 #include <boost/container/small_vector.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -49,14 +47,19 @@ template <typename T>
 using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<PartitionedElement<T>>,
                                      std::vector<PartitionedElement<T>>>;
 
-// TODO Doc, move to file, test if hpp or cpp
+// Stores the mapping from HashedType to positions. Conceptually, this is similar to an (unordered_)multimap, but it
+// has some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
+// hashmap (think map<HashedType, PosList>), we store a 
 template <typename HashedType>
 class PosHashTable {
   // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
   // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
   //
-  // The hash table stores the relative offset of a SmallPosList (see below) in the vector of SmallPosLists.
-  using HashTable = ska::bytell_hash_map<HashedType, uint32_t>;
+  // The hash table stores the relative offset of a SmallPosList (see below) in the vector of SmallPosLists. The range
+  // of the offset does not limit the number of rows in the partition but the number of distinct values. If we end up
+  // with a partition that has more values, the partitioning algorithm is at fault.
+  using Offset = uint32_t;
+  using HashTable = ska::bytell_hash_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -67,9 +70,9 @@ class PosHashTable {
   explicit PosHashTable(JoinHashBuildMode mode, size_t max_size)
       : _hash_table(max_size * 1.2), _pos_lists(max_size), _mode(mode) {
     // slightly oversize (x 1.2) the hash table to avoid unnecessary rebuilds
-    Assert(max_size < std::numeric_limits<uint32_t>::max(), "Hash table too big for 4-yte offset");
   }
 
+  // For a value seen on the build side, add its row_id to the table
   template <typename InputType>
   void emplace(const InputType& value, RowID row_id) {
     const auto casted_value = static_cast<HashedType>(value);
@@ -83,9 +86,11 @@ class PosHashTable {
       auto& pos_list = _pos_lists[_hash_table.size()];
       pos_list.push_back(row_id);
       _hash_table.emplace(casted_value, _hash_table.size());
+      Assert(_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
     }
   }
 
+  // For a value seen on the probe side, return an iterator into the matching values
   template <typename InputType>
   const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
     const auto casted_value = static_cast<HashedType>(value);

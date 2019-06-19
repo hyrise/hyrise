@@ -24,8 +24,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
 
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
-  DebugAssert(ValueID{static_cast<uint32_t>(_dictionary->size())} == _null_value_id,
-              "Invalid NULL value id");  // NOLINT
+  DebugAssert(ValueID{static_cast<uint32_t>(_dictionary->size())} == _null_value_id, "Invalid NULL value id");  // NOLINT
 }
 
 template <typename T>
