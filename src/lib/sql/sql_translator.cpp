@@ -256,7 +256,7 @@ namespace opossum {
       const auto &expression = _inflated_select_list_expressions[idx];
       const auto &identifiers = _inflated_select_list_identifiers[idx];
       need_alias_node = std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
-        return identifier.column_name != "" && identifier.column_name != expression->as_column_name();
+        return identifier.column_name != expression->as_column_name();
       });
       if (need_alias_node) break;
     }
@@ -269,7 +269,7 @@ namespace opossum {
         aliases.emplace_back(output_column_expression->as_column_name());
 
         const auto &identifiers = _inflated_select_list_identifiers[idx];
-        if (!identifiers.empty() && identifiers.back().column_name != "") { //todo(jj): look for .back() (check if empty) and get rid off "" (use empty vectors instead)?
+        if (!identifiers.empty()) { //todo(jj): look for .back() (check if empty)
           aliases.back() = identifiers.back().column_name;
         }
       }
@@ -566,9 +566,7 @@ namespace opossum {
     for (const auto& expression : lqp->column_expressions()) {
       const auto identifiers = sql_identifier_resolver->get_expression_identifiers(expression);
       named_expressions.emplace_back(NamedExpression{expression, identifiers});
-      if (identifiers.empty()) {
-        identifiers_in_order.emplace_back(SQLIdentifier{"", table_name});
-      } else {
+      if (!identifiers.empty()) {
         identifiers_in_order.emplace_back(identifiers.back()); // todo(jj): use vector<vector<SQLIdentifier>> / merge data structure into SQLIdentifierResolver?
       }
     }
@@ -805,15 +803,12 @@ namespace opossum {
         auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression);
         select_list_elements.back().identifiers = identifiers;
 
-        auto identifier = SQLIdentifier{""};
-        if (hsql_select_expr->table) {
-          identifier.table_name = hsql_select_expr->table;
-        }
         if (hsql_select_expr->alias) {
-          identifier.column_name = hsql_select_expr->alias;
+          auto identifier = SQLIdentifier{hsql_select_expr->alias};
+          if (hsql_select_expr->table) {
+            identifier.table_name = hsql_select_expr->table;
+          }
           post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
-          select_list_elements.back().identifiers.emplace_back(identifier);
-        } else if (identifiers.empty()) {
           select_list_elements.back().identifiers.emplace_back(identifier);
         }
       }
@@ -1068,9 +1063,9 @@ namespace opossum {
     } else {
       for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
         const auto identifiers =
-          _filter_identifiers_by_expression(lqp->column_expressions()[column_id], _inflated_select_list_expressions);
-        for (const auto &identifiers_per_expression : identifiers) {
-          column_names.emplace(column_id, identifiers_per_expression.back().column_name);
+            _sql_identifier_resolver->get_expression_identifiers(lqp->column_expressions()[column_id]);
+        for (const auto& identifier : identifiers) {
+          column_names.emplace(column_id, identifier.column_name);
         }
       }
     }
