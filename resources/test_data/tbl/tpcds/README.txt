@@ -1,0 +1,1 @@
+See dbgen_version.tbl for the arguments given to the dsdgen executable to generate this dataset. Since dsdgen does not support scale factors < 1 only the first 50 rows are stored for each table.
