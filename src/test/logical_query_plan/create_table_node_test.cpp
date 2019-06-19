@@ -25,8 +25,7 @@ class CreateTableNodeTest : public ::testing::Test {
 TEST_F(CreateTableNodeTest, Description) {
   EXPECT_EQ(create_table_node->description(), "[CreateTable] Name: 'some_table'");
   auto create_table_node_2 = CreateTableNode::make("some_table", true, input_node);
-  EXPECT_EQ(create_table_node_2->description(),
-            "[CreateTable] IfNotExists Name: 'some_table'");
+  EXPECT_EQ(create_table_node_2->description(), "[CreateTable] IfNotExists Name: 'some_table'");
 }
 
 TEST_F(CreateTableNodeTest, NodeExpressions) { ASSERT_EQ(create_table_node->node_expressions.size(), 0u); }
