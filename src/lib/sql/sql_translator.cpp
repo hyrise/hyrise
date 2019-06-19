@@ -519,17 +519,14 @@ namespace opossum {
 
         for (const auto &subquery_expression : lqp->column_expressions()) {
           const auto identifiers =
-          subquery_translator._filter_identifiers_by_expression(subquery_expression,
-                                                                subquery_translator._inflated_select_list_expressions);
+              subquery_translator._sql_identifier_resolver->get_expression_identifiers(subquery_expression);
 
           // Make sure each column from the Subquery has a name
           if (identifiers.empty()) {
             sql_identifier_resolver->add_column_name(subquery_expression, subquery_expression->as_column_name());
           }
-          for (const auto &identifiers_per_expression : identifiers) {
-            for (const auto &identifier : identifiers_per_expression) {
-              sql_identifier_resolver->add_column_name(subquery_expression, identifier.column_name);
-            }
+          for (const auto& identifier : identifiers) {
+            sql_identifier_resolver->add_column_name(subquery_expression, identifier.column_name);
           }
         }
 
@@ -937,9 +934,8 @@ namespace opossum {
           if (is_aggregate) {
             // Select all GROUP BY columns with the specified table name
             for (const auto &group_by_expression : group_by_expressions) {
-//              const auto identifiers = _filter_identifiers_by_expression(group_by_expression, select_list_elements);
-              const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(
-              group_by_expression); // todo(jj): Can I get rid off this?
+              const auto identifiers =
+                  _sql_identifier_resolver->get_expression_identifiers(group_by_expression);
               for (const auto &identifier : identifiers) {
                 if (identifier.table_name == hsql_expr->table) {
                   _inflated_select_list_expressions.emplace_back(group_by_expression);
@@ -1571,44 +1567,6 @@ namespace opossum {
     }
 
     Fail("GCC thinks this is reachable");
-  }
-
-  std::vector<std::vector<SQLIdentifier>> SQLTranslator::_filter_identifiers_by_expression( // todo(jj): Do I need both of these functions?
-      const std::shared_ptr<AbstractExpression> &expression,
-      std::vector<NamedExpression> select_list_elements) const {
-    std::vector<std::vector<SQLIdentifier>> filtered_identifiers;
-
-    Assert(!select_list_elements.empty(), "jj: The list cannot be empty!");
-    select_list_elements.erase(std::remove_if(select_list_elements.begin(), select_list_elements.end(),
-                               [](const NamedExpression &element){ return element.expression == nullptr; }),
-                               select_list_elements.end());
-
-    for (auto idx = size_t{0}; idx < select_list_elements.size(); ++idx) {
-      if (select_list_elements[idx].expression == expression) {
-        filtered_identifiers.emplace_back(select_list_elements[idx].identifiers);
-      }
-    }
-
-    return filtered_identifiers;
-  }
-
-  std::vector<std::vector<SQLIdentifier>> SQLTranslator::_filter_identifiers_by_expression(
-      const std::shared_ptr<AbstractExpression> &expression,
-      std::vector<std::shared_ptr<AbstractExpression>> select_list_elements) const {
-    std::vector<std::vector<SQLIdentifier>> filtered_identifiers;
-
-    Assert(!select_list_elements.empty(), "jj: The list cannot be empty!");
-    select_list_elements.erase(std::remove(select_list_elements.begin(), select_list_elements.end(), nullptr),
-                               select_list_elements.end());
-    Assert(select_list_elements.size() == _inflated_select_list_identifiers.size(), "todo(jj) 3");
-
-    for (auto idx = size_t{0}; idx < select_list_elements.size(); ++idx) {
-      if (select_list_elements[idx] == expression) {
-        filtered_identifiers.emplace_back(_inflated_select_list_identifiers[idx]);
-      }
-    }
-
-    return filtered_identifiers;
   }
 
   SQLTranslator::TableSourceState::TableSourceState(
