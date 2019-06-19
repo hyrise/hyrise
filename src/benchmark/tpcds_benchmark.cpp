@@ -89,18 +89,9 @@ int main(int argc, char* argv[]) {
          "Table schemes have to be available.");
 
   if (!data_files_available(table_path)) {
-    if (std::filesystem::exists(std::filesystem::path{binary_directory + "/dsdgen"})) {
-      const auto files_setup_return =
-          system(("cd " + binary_directory + " && ./dsdgen -scale " + std::to_string(scale_factor) +
-                  " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -f &&"
-                  "cd ../resources/benchmark/tpcds/tables &&"
-                  "for x in *.dat; do mv $x ${x%.dat}.csv; done &&"
-                  "cd ../../../../")
-                     .c_str());
-      Assert(files_setup_return == 0, "Generating table data files failed.");
-    } else {
-      Fail("Could not find 'dsdgen' in your build directory. Did you run the benchmark from the project root dir?");
-    }
+    const auto& setup_tpcds_data_command = "./scripts/setup_tpcds_data.sh " + std::to_string(scale_factor);
+    const auto files_setup_return = system(setup_tpcds_data_command.c_str());
+    Assert(files_setup_return == 0, "Generating table data files failed.");
   }
 
   Assert(data_files_available(table_path), "Generating table data files failed.");
