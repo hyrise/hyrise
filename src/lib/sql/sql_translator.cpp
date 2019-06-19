@@ -266,11 +266,11 @@ namespace opossum {
       for (auto idx = size_t{0}; idx < _inflated_select_list_expressions.size(); ++idx) {
         Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj) 2");
         const auto &output_column_expression = _inflated_select_list_expressions[idx];
-        const auto &identifier = _inflated_select_list_identifiers[idx].back();
-        if (identifier.column_name != "") {
-          aliases.emplace_back(identifier.column_name);
-        } else {
-          aliases.emplace_back(output_column_expression->as_column_name());
+        aliases.emplace_back(output_column_expression->as_column_name());
+
+        const auto &identifiers = _inflated_select_list_identifiers[idx];
+        if (!identifiers.empty() && identifiers.back().column_name != "") { //todo(jj): look for .back() (check if empty) and get rid off "" (use empty vectors instead)?
+          aliases.back() = identifiers.back().column_name;
         }
       }
 
@@ -788,27 +788,32 @@ namespace opossum {
     return result_table_source_state;
   }
 
-  std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_translate_select_list(
+  std::vector<SQLTranslator::NamedExpression> SQLTranslator::_translate_select_list(
   const std::vector<hsql::Expr *> &select_list) {
     // Build the select_list_elements
-    // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
+    // Each expression of a select_list_element is either an Expression or nullptr if the element is a Wildcard
     // Create an SQLIdentifierResolver that knows the aliases
-    std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
+    std::vector<NamedExpression> select_list_elements;
     auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
     for (const auto &hsql_select_expr : select_list) {
       if (hsql_select_expr->type == hsql::kExprStar) {
-        select_list_elements.emplace_back(nullptr);
+        select_list_elements.emplace_back(SQLTranslator::NamedExpression{nullptr, std::vector<SQLIdentifier>{}}); // todo(jj): Implement default constructor
       } else {
         auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
-        select_list_elements.emplace_back(expression);
-
+        select_list_elements.emplace_back(SQLTranslator::NamedExpression{expression, std::vector<SQLIdentifier>{}});
         auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression);
-        _inflated_select_list_identifiers.emplace_back(identifiers);
+        select_list_elements.back().identifiers = identifiers;
+
+        auto identifier = SQLIdentifier{""};
+        if (hsql_select_expr->table) {
+          identifier.table_name = hsql_select_expr->table;
+        }
         if (hsql_select_expr->alias) {
+          identifier.column_name = hsql_select_expr->alias;
           post_select_sql_identifier_resolver->add_column_name(expression, hsql_select_expr->alias);
-          _inflated_select_list_identifiers.back().emplace_back(SQLIdentifier{hsql_select_expr->alias});
+          select_list_elements.back().identifiers.emplace_back(identifier);
         } else if (identifiers.empty()) {
-          _inflated_select_list_identifiers.back().emplace_back(SQLIdentifier{""});
+          select_list_elements.back().identifiers.emplace_back(identifier);
         }
       }
     }
@@ -817,7 +822,7 @@ namespace opossum {
   }
 
   void SQLTranslator::_translate_select_groupby_having(
-  const hsql::SelectStatement &select, const std::vector<std::shared_ptr<AbstractExpression>> &select_list_elements) {
+  const hsql::SelectStatement &select, const std::vector<SQLTranslator::NamedExpression> &select_list_elements) {
     auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
     auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
     auto aggregate_expression_set = ExpressionUnorderedSet{};
@@ -849,9 +854,9 @@ namespace opossum {
     };
 
     // Identify all Aggregates and their arguments needed for SELECT
-    for (const auto &expression : select_list_elements) {
-      if (expression) {
-        visit_expression(expression, find_aggregates_and_arguments);
+    for (const auto &element : select_list_elements) {
+      if (element.expression) {
+        visit_expression(element.expression, find_aggregates_and_arguments);
       }
     }
 
@@ -901,10 +906,11 @@ namespace opossum {
       _current_lqp = _translate_predicate_expression(having_expression, _current_lqp);
     }
 
-    std::vector<SQLIdentifier> new_select_list_identifiers;
+//    std::vector<SQLIdentifier> new_select_list_identifiers;
 
     for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
       const auto *hsql_expr = (*select.selectList)[select_list_idx];
+      const auto &select_list_element = select_list_elements[select_list_idx];
 
       if (hsql_expr->type == hsql::kExprStar) {
         AssertInput(_from_clause_result, "Can't SELECT with wildcards since there are no FROM tables specified");
@@ -948,7 +954,8 @@ namespace opossum {
               for (const auto &identifier : identifiers) {
                 if (identifier.table_name == hsql_expr->table) {
                   _inflated_select_list_expressions.emplace_back(group_by_expression);
-                  new_select_list_identifiers.emplace_back(SQLIdentifier{"", hsql_expr->table});
+//                  new_select_list_identifiers.emplace_back(SQLIdentifier{"", hsql_expr->table});
+                  _inflated_select_list_identifiers.emplace_back(select_list_element.identifiers);
                 }
               }
             }
@@ -961,43 +968,50 @@ namespace opossum {
             _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
                                                      from_element_iter->second.begin(),
                                                      from_element_iter->second.end());
-            new_select_list_identifiers.insert(new_select_list_identifiers.end(), from_element_iter->second.size(),
-                                               SQLIdentifier{"", hsql_expr->table});
+//            new_select_list_identifiers.insert(new_select_list_identifiers.end(), from_element_iter->second.size(),
+//                                               SQLIdentifier{"", hsql_expr->table});
+            _inflated_select_list_identifiers.insert(_inflated_select_list_identifiers.end(),
+                                                     from_element_iter->second.size(), select_list_element.identifiers);
           }
         } else {
           if (is_aggregate) {
             // Select all GROUP BY columns
             _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
                                                      group_by_expressions.begin(), group_by_expressions.end());
-            new_select_list_identifiers.insert(new_select_list_identifiers.end(), group_by_expressions.size(),
-                                               SQLIdentifier{""});
+//            new_select_list_identifiers.insert(new_select_list_identifiers.end(), group_by_expressions.size(),
+//                                               SQLIdentifier{""});
+            _inflated_select_list_identifiers.insert(_inflated_select_list_identifiers.end(),
+                                                     group_by_expressions.size(), select_list_element.identifiers);
           } else {
             // Select all columns from the FROM elements
             _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
                                                      _from_clause_result->elements_in_order.begin(),
                                                      _from_clause_result->elements_in_order.end());
-            new_select_list_identifiers.insert(new_select_list_identifiers.end(),
-                                               _from_clause_result->identifiers_in_order.begin(),
-                                               _from_clause_result->identifiers_in_order.end());
+//            new_select_list_identifiers.insert(new_select_list_identifiers.end(),
+//                                               _from_clause_result->identifiers_in_order.begin(),
+//                                               _from_clause_result->identifiers_in_order.end());
+            for (const auto& identifier : _from_clause_result->identifiers_in_order) {
+              _inflated_select_list_identifiers.emplace_back(std::vector<SQLIdentifier>{identifier});
+            }
           }
         }
       } else {
-        auto output_expression = select_list_elements[select_list_idx];
-        _inflated_select_list_expressions.emplace_back(output_expression);
+        _inflated_select_list_expressions.emplace_back(select_list_element.expression);
+        _inflated_select_list_identifiers.emplace_back(select_list_element.identifiers);
       }
     }
 
-    // Convert from std::vector<SQLIdentifier> to std::vector<std::vector<SQLIdentifier>>
-    std::vector<std::vector<SQLIdentifier>> new_identifiers_per_expression;
-    for (const auto& identifier : new_select_list_identifiers) {
-      new_identifiers_per_expression.emplace_back(std::vector<SQLIdentifier>{identifier});
-    }
-
-    // Put the new_select_list_identifiers at the front of _inflated_select_list_identifiers
-    new_identifiers_per_expression.insert(new_identifiers_per_expression.end(),
-                                          _inflated_select_list_identifiers.begin(),
-                                          _inflated_select_list_identifiers.end());
-    _inflated_select_list_identifiers = new_identifiers_per_expression;
+//    // Convert from std::vector<SQLIdentifier> to std::vector<std::vector<SQLIdentifier>>
+//    std::vector<std::vector<SQLIdentifier>> new_identifiers_per_expression;
+//    for (const auto& identifier : new_select_list_identifiers) {
+//      new_identifiers_per_expression.emplace_back(std::vector<SQLIdentifier>{identifier});
+//    }
+//
+//    // Put the new_select_list_identifiers at the front of _inflated_select_list_identifiers
+//    new_identifiers_per_expression.insert(new_identifiers_per_expression.end(),
+//                                          _inflated_select_list_identifiers.begin(),
+//                                          _inflated_select_list_identifiers.end());
+//    _inflated_select_list_identifiers = new_identifiers_per_expression;
 
     // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
     // functions, e.g.: `SELECT DISTINCT a, b ...` becomes  `SELECT a, b ... GROUP BY a, b`.
@@ -1589,6 +1603,25 @@ namespace opossum {
     }
 
     Fail("GCC thinks this is reachable");
+  }
+
+  std::vector<std::vector<SQLIdentifier>> SQLTranslator::_filter_identifiers_by_expression( // todo(jj): Do I need both of these functions?
+      const std::shared_ptr<AbstractExpression> &expression,
+      std::vector<NamedExpression> select_list_elements) const {
+    std::vector<std::vector<SQLIdentifier>> filtered_identifiers;
+
+    Assert(!select_list_elements.empty(), "jj: The list cannot be empty!");
+    select_list_elements.erase(std::remove_if(select_list_elements.begin(), select_list_elements.end(),
+                               [](const NamedExpression &element){ return element.expression == nullptr; }),
+                               select_list_elements.end());
+
+    for (auto idx = size_t{0}; idx < select_list_elements.size(); ++idx) {
+      if (select_list_elements[idx].expression == expression) {
+        filtered_identifiers.emplace_back(select_list_elements[idx].identifiers);
+      }
+    }
+
+    return filtered_identifiers;
   }
 
   std::vector<std::vector<SQLIdentifier>> SQLTranslator::_filter_identifiers_by_expression(

@@ -85,6 +85,12 @@ class SQLTranslator final {
     std::optional<std::string> table_name;
   };
 
+  // todo(jj): comment
+  struct NamedExpression {
+    std::shared_ptr<AbstractExpression> expression;
+    std::vector<SQLIdentifier> identifiers;
+  };
+
   /**
    * Internal constructor to create an SQLTranslator used for Subqueries
    * @param use_mvcc                                Whether ValidateNodes should be compiled into the plan
@@ -108,9 +114,9 @@ class SQLTranslator final {
   TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
-  std::vector<std::shared_ptr<AbstractExpression>> _translate_select_list(const std::vector<hsql::Expr*>& select_list);
+  std::vector<NamedExpression> _translate_select_list(const std::vector<hsql::Expr*>& select_list);
   void _translate_select_groupby_having(const hsql::SelectStatement& select,
-                                        const std::vector<std::shared_ptr<AbstractExpression>>& select_list_elements);
+                                        const std::vector<NamedExpression>& select_list_elements);
 
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
@@ -151,6 +157,10 @@ class SQLTranslator final {
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
+
+  std::vector<std::vector<SQLIdentifier>> _filter_identifiers_by_expression(
+      const std::shared_ptr<AbstractExpression>& expression,
+      std::vector<NamedExpression> select_list_elements) const;
 
   std::vector<std::vector<SQLIdentifier>> _filter_identifiers_by_expression(
       const std::shared_ptr<AbstractExpression>& expression,
