@@ -300,7 +300,7 @@ inline bool operator==(const RemoteKey& lhs, const RemoteKey& rhs) {
 }
 
 /**
- * @defgroup Data structures to represent a run of groups of unfixed group sizes
+ * @defgroup Data structures to represent a run of groups of unfixed/variable sizes
  *
  * Currently used if the group columns contain one or more string columns, though it can be used for any potential
  * data type of unfixed size.
@@ -329,16 +329,11 @@ struct VariablySizedGroupRunLayout {
    * [24] variably_sized_value_0_end_offset (size_t, in this case: 20)
    * [32] variably_sized_value_1_end_offset (size_t, in this case: 24)
    */
-  struct Entry {
-    bool is_variably_sized{};
-
-    // For fixed size values:     the offset in bytes in the group blob at which the value starts
-    // For variably sized values: n, for the n-th variably sized column among the group by columns.
-    size_t offset;
-  };
 
   // One entry for each group-by column
-  std::vector<Entry> entries;
+  // For fixed size values:     the offset in bytes in the group blob at which the value starts
+  // For variably sized values: n, for the n-th variably sized column among the group by columns.
+  std::vector<size_t> offsets;
 
   // One entry for each variably-sized group-by column
   std::vector<ColumnID> variably_sized_column_ids;
@@ -357,7 +352,7 @@ struct VariablySizedGroupRunLayout {
 
     auto layout = VariablySizedGroupRunLayout{};
 
-    layout.entries.resize(group_by_column_ids.size());
+    layout.offsets.resize(group_by_column_ids.size());
 
     for (auto output_group_by_column_id = ColumnID{0}; output_group_by_column_id < group_by_column_ids.size();
          ++output_group_by_column_id) {
@@ -365,10 +360,10 @@ struct VariablySizedGroupRunLayout {
       const auto data_type = table.column_data_type(group_by_column_id);
 
       if (data_type == DataType::String) {
-        layout.entries[output_group_by_column_id] = {true, layout.variably_sized_column_ids.size()};
+        layout.offsets[output_group_by_column_id] = layout.variably_sized_column_ids.size();
         layout.variably_sized_column_ids.emplace_back(group_by_column_id);
       } else {
-        layout.entries[output_group_by_column_id] = {false, layout.variably_sized_values_begin_offset};
+        layout.offsets[output_group_by_column_id] = layout.variably_sized_values_begin_offset;
         layout.fixed_size_column_ids.emplace_back(group_by_column_id);
         layout.fixed_size_value_offsets.emplace_back(layout.variably_sized_values_begin_offset);
 
@@ -476,6 +471,7 @@ struct VariablySizedGroupRun {
     const auto [group_begin_offset, group_length] = get_group_range(group_idx);
 
     const auto variably_sized_column_count = layout->variably_sized_column_ids.size();
+    DebugAssert(value_idx < variably_sized_column_count, "value_idx out of range");
 
     const auto* group = &data[group_begin_offset];
     const auto* group_end = reinterpret_cast<const char*>(group + group_length);
@@ -575,7 +571,7 @@ struct VariablySizedGroupRun {
     auto output_null_values_iter = output_null_values.begin();
 
     if constexpr (std::is_same_v<T, pmr_string>) {
-      const auto variably_sized_value_idx = layout->entries[column_id].offset;
+      const auto variably_sized_value_idx = layout->offsets[column_id];
 
       for (auto group_idx = size_t{0}; group_idx < size; ++group_idx) {
         const auto [value_begin_offset, value_length] = get_variably_sized_value_range(group_idx, variably_sized_value_idx);
@@ -596,7 +592,7 @@ struct VariablySizedGroupRun {
         ++output_values_iter;
       }
     } else if constexpr (std::is_arithmetic_v<T>){
-      const auto offset_in_group = layout->entries[column_id].offset;
+      const auto offset_in_group = layout->offsets[column_id];
 
       for (auto group_idx = size_t{0}; group_idx < size; ++group_idx) {
         const auto [group_begin_offset, group_length] = get_group_range(group_idx);

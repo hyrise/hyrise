@@ -46,7 +46,7 @@ void add_group(VectorType& data, const Args&&... args) {
   auto variably_sized_values_begin_offset = size_t{};
   auto variably_sized_value_end_offsets = std::vector<size_t>{};
 
-  const auto append_value = [&](const auto& value) {
+  const auto write_value = [&](const auto& value) {
     using VALUE_TYPE = std::decay_t<decltype(value)>;
 
     if constexpr (std::is_same_v<VALUE_TYPE, std::string>) {
@@ -63,9 +63,10 @@ void add_group(VectorType& data, const Args&&... args) {
     }    
   };
 
-  const auto append = [&](const auto& value) {
+  const auto for_each_value = [&](const auto& value) {
     using VALUE_TYPE = std::decay_t<decltype(value)>;
 
+    // Gather meta info about variably-sized value
     if constexpr (is_variably_sized_v<VALUE_TYPE>) {
       if (variably_sized_value_end_offsets.empty()) {
         variably_sized_value_end_offsets.emplace_back(variably_sized_values_begin_offset + get_value_size(value));
@@ -76,14 +77,13 @@ void add_group(VectorType& data, const Args&&... args) {
       variably_sized_values_begin_offset += get_value_size(value);
     }
 
+    // Write out values
     if constexpr (is_optional_v<VALUE_TYPE>) {
-      auto bool_byte = static_cast<char>(value ? 0 : 1);
-      memcpy(reinterpret_cast<char*>(data.data()) + offset, &bool_byte, 1);
+      // Write is_null
+      *(reinterpret_cast<char*>(data.data()) + offset) = value ? 0 : 1;
       offset += 1;
 
-      if (value) {
-        append_value(*value);
-      }
+      write_value(value.value_or(typename VALUE_TYPE::value_type{}));
 
     } else if constexpr (std::is_same_v<VALUE_TYPE, std::string>) {
       memcpy(reinterpret_cast<char*>(data.data()) + offset, value.data(), value.size());
@@ -98,8 +98,10 @@ void add_group(VectorType& data, const Args&&... args) {
     }    
   };
 
-  (append(args), ...);
+  // Write data
+  (for_each_value(args), ...);
 
+  // Optionally, write meta data about variably-sized values
   auto* value_end_offsets_target = reinterpret_cast<char*>(&data[data.size()]) - sizeof(size_t) * variably_sized_value_end_offsets.size();
   memcpy(value_end_offsets_target, variably_sized_value_end_offsets.data(), sizeof(size_t) * variably_sized_value_end_offsets.size());
 }
@@ -170,11 +172,36 @@ TEST_F(AggregateHashSortTest, FixedSizeGroupRun) {
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_c, expected_segment_c);
 }
 
+TEST_F(AggregateHashSortTest, VariablySizedGroupRunLayout) {
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, true},
+                                                         {"b", DataType::String, false},
+                                                         {"c", DataType::String, true},
+                                                         {"d", DataType::Int, false},
+                                                         {"e", DataType::Long, false}};
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
+
+  const auto layout = VariablySizedGroupRunLayout::build(*table, group_by_column_ids);
+
+  EXPECT_EQ(layout.offsets, std::vector<size_t>({0, 0, 1, 5}));
+  EXPECT_EQ(layout.variably_sized_column_ids, std::vector({ColumnID{1}, ColumnID{2}}));
+  EXPECT_EQ(layout.fixed_size_column_ids, std::vector({ColumnID{0}, ColumnID{4}}));
+  EXPECT_EQ(layout.fixed_size_value_offsets, std::vector<size_t>({0, 5}));
+  EXPECT_EQ(layout.variably_sized_values_begin_offset, 13);
+}
+
 TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
+  // Four group-by columns: nullable_int, string, double, nullable_string
+
   auto layout = VariablySizedGroupRunLayout{};
-  layout.entries = {{false, 0}, {true, 0}, {false, 5}, {true, 1}};
-  layout.variably_sized_column_ids = {ColumnID{2}, ColumnID{3}};
+  layout.offsets = {0, 0, 5, 1};
+
+  // Dummy values, all that matters for this test are the lengths of these vectors
   layout.fixed_size_column_ids = {ColumnID{0}, ColumnID{1}};
+  layout.variably_sized_column_ids = {ColumnID{2}, ColumnID{3}};
+
+  // nullable_int starts at 0, double at 5, variably-sized values start at 13
   layout.fixed_size_value_offsets = {0, 5};
   layout.variably_sized_values_begin_offset = 13;
 
@@ -249,9 +276,8 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_c, expected_segment_c);
 
   const auto actual_segment_d = run.materialize_output<pmr_string>(ColumnID{3}, true);
-  const auto expected_segment_d = std::make_shared<ValueSegment<pmr_string>>(std::vector<pmr_string>{"defg", "", "", "supi", "defg", "defg"}, std::vector<bool>{false, false, true, true, false, false});
+  const auto expected_segment_d = std::make_shared<ValueSegment<pmr_string>>(std::vector<pmr_string>{"defg", "", "", "supi", "defg", "defg"}, std::vector<bool>{false, true, true, false, false, false});
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_d, expected_segment_d);
-
 }
 
 TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixed) {
@@ -287,33 +313,6 @@ TEST_F(AggregateHashSortTest, ProduceInitialGroupsFixed) {
 
   EXPECT_EQ(groups.data, expected_group_data);
 }
-
-//TEST_F(AggregateHashSortTest, ProduceInitialGroupsLayoutVariablySized) {
-//  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, true},
-//                                                         {"b", DataType::String, false},
-//                                                         {"c", DataType::String, true},
-//                                                         {"d", DataType::Int, false},
-//                                                         {"e", DataType::Long, false}};
-//  const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-//
-//  const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
-//
-//  const auto layout = produce_initial_groups_layout<VariablySizedGroupRunLayout>(*table, group_by_column_ids);
-//
-//  ASSERT_EQ(layout.variably_sized_column_ids, std::vector<ColumnID>({ColumnID{1}, ColumnID{2}}));
-//  EXPECT_EQ(layout.fixed_size_column_ids, std::vector<ColumnID>({ColumnID{0}, ColumnID{4}}));
-//  EXPECT_EQ(layout.column_count, 2);
-//  EXPECT_EQ(layout.nullable_column_count, 1);
-//  ASSERT_EQ(layout.column_mapping.size(), 4u);
-//  EXPECT_EQ(layout.column_mapping.at(0), VariablySizedGroupRunLayout::Column(false, size_t{0}, std::nullopt));
-//  EXPECT_EQ(layout.column_mapping.at(1), VariablySizedGroupRunLayout::Column(true, size_t{0}, std::nullopt));
-//  EXPECT_EQ(layout.column_mapping.at(2), VariablySizedGroupRunLayout::Column(true, size_t{1}, size_t{0}));
-//  EXPECT_EQ(layout.column_mapping.at(3), VariablySizedGroupRunLayout::Column(false, size_t{1}, std::nullopt));
-//  EXPECT_EQ(layout.fixed_layout.group_size, 4u);
-//  EXPECT_EQ(layout.fixed_layout.column_base_offsets, std::vector<size_t>({0, 5}));
-//  EXPECT_EQ(layout.fixed_layout.nullable_column_indices,
-//            std::vector<std::optional<ColumnID>>({ColumnID{}, std::nullopt}));
-//}
 
 //TEST_F(AggregateHashSortTest, ProduceInitialGroupsVariablySizedDataBudgetLimited) {
 //  auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5}};

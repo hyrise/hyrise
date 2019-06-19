@@ -72,7 +72,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 {                                                                                                               \
     if (const auto segment_difference_message = check_segment_equal(segment_to_test, expected_segment, order_sensitivity, \
                                                                 type_cmp_mode, float_comparison_mode)) {          \
-      FAIL() << *segment_difference_message;                                                                        \
+      EXPECT_TRUE(false) << *segment_difference_message;                                                                        \
     }                                                                                                             \
   }                                                                                                               \
   static_assert(true, "End call of macro with a semicolon")
