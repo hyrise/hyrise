@@ -92,10 +92,7 @@ int main(int argc, char* argv[]) {
     if (std::filesystem::exists(std::filesystem::path{binary_directory + "/dsdgen"})) {
       const auto files_setup_return =
           system(("cd " + binary_directory + " && ./dsdgen -scale " + std::to_string(scale_factor) +
-                  " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -f &&"
-                  "cd ../resources/benchmark/tpcds/tables &&"
-                  "for x in *.dat; do mv $x ${x%.dat}.csv; done &&"
-                  "cd ../../../../")
+                  " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -suffix .csv -f")
                      .c_str());
       Assert(files_setup_return == 0, "Generating table data files failed.");
     } else {
