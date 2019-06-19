@@ -55,13 +55,12 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     // TODO(anybody) chunk size and mvcc not yet specifiable
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     StorageManager::get().add_table(table_name, table);
+
+    // Insert table data (if no data is present, insertion makes no difference)
+    _insert = std::make_shared<Insert>(table_name, _input_left);
+    _insert->set_transaction_context(context);
+    _insert->execute();
   }
-
-  // Insert table data (if no data is present, insertion makes no difference)
-  _insert = std::make_shared<Insert>(table_name, _input_left);
-  _insert->set_transaction_context(context);
-  _insert->execute();
-
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
 }
 

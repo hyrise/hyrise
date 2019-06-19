@@ -10,6 +10,7 @@
 #include "operators/maintenance/create_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/validate.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -111,7 +112,11 @@ TEST_F(CreateTableTest, CreateTableAsSelect) {
   get_table->set_transaction_context(context);
   get_table->execute();
 
-  const auto create_table_as = std::make_shared<CreateTable>("test_2", false, get_table);
+  const auto validate = std::make_shared<Validate>(get_table);
+  validate->set_transaction_context(context);
+  validate->execute();
+
+  const auto create_table_as = std::make_shared<CreateTable>("test_2", false, validate);
   create_table_as->set_transaction_context(context);
   EXPECT_NO_THROW(create_table_as->execute());
   context->commit();
@@ -133,8 +138,12 @@ TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
   get_table->set_transaction_context(context);
   get_table->execute();
 
+  const auto validate = std::make_shared<Validate>(get_table);
+  validate->set_transaction_context(context);
+  validate->execute();
+
   const std::shared_ptr<AbstractExpression> expr = PQPColumnExpression::from_table(*table, "a");
-  const auto projection = std::make_shared<Projection>(get_table, expression_vector(expr));
+  const auto projection = std::make_shared<Projection>(validate, expression_vector(expr));
   projection->set_transaction_context(context);
   projection->execute();
 
@@ -149,6 +158,59 @@ TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
   EXPECT_EQ(table_2->column_count(), 1);
   EXPECT_EQ(table_2->row_count(), table->row_count());
   EXPECT_EQ(table_2->column_name(ColumnID{0}), table->column_name(ColumnID{0}));
+}
+
+TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
+  const auto table = load_table("resources/test_data/tbl/10_ints.tbl");
+  StorageManager::get().add_table("test", table);
+
+  const auto context_1 = TransactionManager::get().new_transaction_context();
+  const auto context_2 = TransactionManager::get().new_transaction_context();
+  const auto context_3 = TransactionManager::get().new_transaction_context();
+
+  // Create table 1 with second context
+  const auto get_table_1 = std::make_shared<GetTable>("test");
+  get_table_1->set_transaction_context(context_2);
+  get_table_1->execute();
+
+  const auto validate_1 = std::make_shared<Validate>(get_table_1);
+  validate_1->set_transaction_context(context_2);
+  validate_1->execute();
+
+  const auto create_table_as_1 = std::make_shared<CreateTable>("test_2", false, validate_1);
+  create_table_as_1->set_transaction_context(context_2);
+  EXPECT_NO_THROW(create_table_as_1->execute());
+
+  // Create table 2 with first context, which should not see the rows of table 1
+  const auto get_table_2 = std::make_shared<GetTable>("test_2");
+  get_table_2->set_transaction_context(context_1);
+  get_table_2->execute();
+
+  const auto validate_2 = std::make_shared<Validate>(get_table_2);
+  validate_2->set_transaction_context(context_1);
+  validate_2->execute();
+
+  const auto create_table_as_2 = std::make_shared<CreateTable>("test_3", false, validate_2);
+  create_table_as_2->set_transaction_context(context_1);
+  EXPECT_NO_THROW(create_table_as_2->execute());
+
+  context_1->commit();
+
+  const auto table_3 = StorageManager::get().get_table("test_3");
+  EXPECT_EQ(table_3->row_count(), 0);
+
+  context_2->rollback();
+
+  const auto get_table_3 = std::make_shared<GetTable>("test_2");
+  get_table_3->set_transaction_context(context_3);
+  get_table_3->execute();
+
+  const auto validate_3 = std::make_shared<Validate>(get_table_3);
+  validate_3->set_transaction_context(context_3);
+  validate_3->execute();
+  context_3->commit();
+
+  EXPECT_EQ(validate_3->get_output()->row_count(), 0);
 }
 
 }  // namespace opossum
