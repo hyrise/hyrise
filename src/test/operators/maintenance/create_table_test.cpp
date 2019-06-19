@@ -5,6 +5,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/get_table.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -17,6 +18,8 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
+
+using namespace opossum::expression_functional;  // NOLINT
 
 class CreateTableTest : public BaseTest {
  public:
@@ -121,16 +124,16 @@ TEST_F(CreateTableTest, CreateTableAsSelect) {
   EXPECT_NO_THROW(create_table_as->execute());
   context->commit();
 
-  const auto table_2 = StorageManager::get().get_table("test_2");
-  EXPECT_EQ(table_2->row_count(), 10);
+  const auto created_table = StorageManager::get().get_table("test_2");
+  EXPECT_TABLE_EQ_ORDERED(created_table, table);
 
   StorageManager::get().drop_table("test");
 
-  EXPECT_EQ(table_2->row_count(), 10);
+  EXPECT_TABLE_EQ_ORDERED(created_table, table);
 }
 
 TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
-  const auto table = load_table("resources/test_data/tbl/int_float_with_null.tbl");
+  const auto table = load_table("resources/test_data/tbl/int_float.tbl");
   StorageManager::get().add_table("test", table);
   const auto context = TransactionManager::get().new_transaction_context();
 
@@ -142,7 +145,8 @@ TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
   validate->set_transaction_context(context);
   validate->execute();
 
-  const std::shared_ptr<AbstractExpression> expr = PQPColumnExpression::from_table(*table, "a");
+  const std::shared_ptr<AbstractExpression> expr =
+      add_(PQPColumnExpression::from_table(*table, "a"), PQPColumnExpression::from_table(*table, "b"));
   const auto projection = std::make_shared<Projection>(validate, expression_vector(expr));
   projection->set_transaction_context(context);
   projection->execute();
@@ -153,11 +157,9 @@ TEST_F(CreateTableTest, CreateTableAsSelectWithProjection) {
 
   context->commit();
 
-  const auto table_2 = StorageManager::get().get_table("test_2");
+  const auto created_table = StorageManager::get().get_table("test_2");
 
-  EXPECT_EQ(table_2->column_count(), 1);
-  EXPECT_EQ(table_2->row_count(), table->row_count());
-  EXPECT_EQ(table_2->column_name(ColumnID{0}), table->column_name(ColumnID{0}));
+  EXPECT_TABLE_EQ_ORDERED(created_table, load_table("resources/test_data/tbl/projection/int_float_add.tbl"));
 }
 
 TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
