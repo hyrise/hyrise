@@ -23,10 +23,10 @@ class CreateTableNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreateTableNodeTest, Description) {
-  EXPECT_EQ(create_table_node->description(), "[CreateTable] Name: 'some_table' ('a' int NOT NULL, 'b' float NULL)");
+  EXPECT_EQ(create_table_node->description(), "[CreateTable] Name: 'some_table'");
   auto create_table_node_2 = CreateTableNode::make("some_table", true, input_node);
   EXPECT_EQ(create_table_node_2->description(),
-            "[CreateTable] IfNotExists Name: 'some_table' ('a' int NOT NULL, 'b' float NULL)");
+            "[CreateTable] IfNotExists Name: 'some_table'");
 }
 
 TEST_F(CreateTableNodeTest, NodeExpressions) { ASSERT_EQ(create_table_node->node_expressions.size(), 0u); }
