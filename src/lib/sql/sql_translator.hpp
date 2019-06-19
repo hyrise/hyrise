@@ -51,6 +51,12 @@ class SQLTranslator final {
   static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
  private:
+  // todo(jj): comment
+  struct NamedExpression {
+    std::shared_ptr<AbstractExpression> expression;
+    std::vector<SQLIdentifier> identifiers;
+  };
+
   // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
   // used, e.g. "SELECT * FROM t1, t2 JOIN t3 ON t1.a = t2.a" is illegal since t1 is invisible to the seconds entry.
   // Also ensures the correct columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove
@@ -59,9 +65,9 @@ class SQLTranslator final {
     TableSourceState() = default;
     TableSourceState(
         const std::shared_ptr<AbstractLQPNode>& lqp,
-        const std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>>& elements_by_table_name,
+        const std::unordered_map<std::string, std::vector<NamedExpression>>& elements_by_table_name,
         const std::vector<std::shared_ptr<AbstractExpression>>& elements_in_order,
-        const std::vector<SQLIdentifier>& identifiers_in_order,
+        const std::vector<SQLIdentifier>& identifiers_in_order, // todo(jj): get rid off this?
         const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
     void append(TableSourceState&& rhs);
@@ -69,7 +75,7 @@ class SQLTranslator final {
     std::shared_ptr<AbstractLQPNode> lqp;
 
     // Collects the output of the FROM clause to expand wildcards (*; <t>.*) used in the SELECT list
-    std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>> elements_by_table_name;
+    std::unordered_map<std::string, std::vector<NamedExpression>> elements_by_table_name;
 
     // To establish the correct order of columns in SELECT *
     std::vector<std::shared_ptr<AbstractExpression>> elements_in_order;
@@ -83,12 +89,6 @@ class SQLTranslator final {
   // isn't one
   struct SQLWildcard final {
     std::optional<std::string> table_name;
-  };
-
-  // todo(jj): comment
-  struct NamedExpression {
-    std::shared_ptr<AbstractExpression> expression;
-    std::vector<SQLIdentifier> identifiers;
   };
 
   /**
