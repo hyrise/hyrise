@@ -7,6 +7,7 @@
 #include "SQLParser.h"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
+#include "operators/print.hpp"
 
 namespace opossum {
 
@@ -43,7 +44,10 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
 }
 
 void FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  sql_executor.execute(_queries[item_id].sql);
+  const auto& pipeline_status_and_table = sql_executor.execute(_queries[item_id].sql);
+  const auto& result_table = std::get<1>(pipeline_status_and_table);
+  Print::print(result_table);
+  // TODO(Marcel) we can get the metrics from the sql_executor and the metrics do contain
 }
 
 std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
