@@ -221,6 +221,22 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
   }
 }
 
+TYPED_TEST(OperatorsIndexScanTest, PosListGuarenteesSingleChunkReference) {
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
+  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
+
+  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
+                                          PredicateCondition::Equals, right_values, right_values2);
+  scan->execute();
+
+  for (const auto& chunk : scan->get_output()->chunks()) {
+    const auto segment = chunk->get_segment(this->_column_ids[0]);
+    const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+    const auto& pos_list = reference_segment->pos_list();
+    EXPECT_TRUE(pos_list->references_single_chunk());
+  }
+}
+
 TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 

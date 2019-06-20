@@ -17,7 +17,7 @@ inline constexpr size_t DefaultCacheCapacity = 1024;
 
 // Per-default, uses the GDFS cache as underlying storage.
 template <typename Value, typename Key = std::string>
-class Cache : public Singleton<Cache<Value, Key>> {
+class Cache {
  public:
   using Iterator = typename AbstractCacheImpl<Key, Value>::ErasedIterator;
 

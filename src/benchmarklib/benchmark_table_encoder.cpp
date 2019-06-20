@@ -6,6 +6,7 @@
 #include "constant_mappings.hpp"
 #include "encoding_config.hpp"
 #include "resolve_type.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -156,6 +157,8 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   }
 
   for (auto& thread : threads) thread.join();
+
+  generate_chunk_pruning_statistics(table);
 
   return encoding_performed;
 }
