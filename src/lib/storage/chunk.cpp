@@ -12,7 +12,6 @@
 #include "index/base_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
-#include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -200,13 +199,14 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
   return segments;
 }
 
-std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
+const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const { return _pruning_statistics; }
 
-void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics) {
-  Assert(!is_mutable(), "Cannot set statistics on mutable chunks.");
-  DebugAssert(chunk_statistics->statistics().size() == column_count(),
-              "ChunkStatistics must have same number of segments as Chunk");
-  _statistics = chunk_statistics;
+void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
+  Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
+  Assert(!pruning_statistics || pruning_statistics->size() == column_count(),
+         "Pruning statistics must have same number of segments as Chunk");
+
+  _pruning_statistics = pruning_statistics;
 }
 void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_row_count += count; }
 

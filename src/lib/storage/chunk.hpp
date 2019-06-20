@@ -25,9 +25,10 @@ namespace opossum {
 
 class BaseIndex;
 class BaseSegment;
-class ChunkStatistics;
+class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
+using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
  * A Chunk is a horizontal partition of a table.
@@ -135,9 +136,13 @@ class Chunk : private Noncopyable {
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
-  std::shared_ptr<ChunkStatistics> statistics() const;
-
-  void set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics);
+  /**
+   * To perform Chunk pruning, a Chunk can be associated with statistics.
+   * @{
+   */
+  const std::optional<ChunkPruningStatistics>& pruning_statistics() const;
+  void set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics);
+  /** @} */
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
@@ -182,7 +187,7 @@ class Chunk : private Noncopyable {
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
-  std::shared_ptr<ChunkStatistics> _statistics;
+  std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
   mutable std::atomic_uint64_t _invalid_row_count = 0;
