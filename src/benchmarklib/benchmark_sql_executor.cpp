@@ -81,15 +81,8 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) const {
   const auto& lqps = pipeline.get_optimized_logical_plans();
   const auto& pqps = pipeline.get_physical_plans();
 
-  for (auto lqp_idx = size_t{0}; lqp_idx < lqps.size(); ++lqp_idx) {
-    const auto file_prefix = *_visualize_prefix + "-LQP-" + std::to_string(lqp_idx);
-    LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, file_prefix + ".svg");
-  }
-
-  for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
-    const auto file_prefix = *_visualize_prefix + "-PQP-" + std::to_string(pqp_idx);
-    PQPVisualizer{graphviz_config, {}, {}, {}}.visualize({pqps[pqp_idx]}, file_prefix + ".svg");
-  }
+  LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, *_visualize_prefix + "-LQP.svg");
+  PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, *_visualize_prefix + "-PQP.svg");
 }
 
 }  // namespace opossum
