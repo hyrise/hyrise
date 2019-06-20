@@ -56,6 +56,7 @@ set(
     logical_query_plan/show_columns_node_test.cpp
     logical_query_plan/show_tables_node_test.cpp
     logical_query_plan/sort_node_test.cpp
+    logical_query_plan/static_table_node_test.cpp
     logical_query_plan/stored_table_node_test.cpp
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp

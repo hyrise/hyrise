@@ -1,24 +1,23 @@
 #pragma once
 
-#include <string>
-
 #include "base_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
+#include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 
 namespace opossum {
 
 /**
- * This node type represents the CREATE TABLE management command.
+ * This node type wraps a table and can be used as input for a CreateTableNode to represent a simple
+ * CREATE TABLE management command.
  */
-class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public BaseNonQueryNode {
+class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public BaseNonQueryNode {
  public:
-  CreateTableNode(const std::string& table_name, bool if_not_exists);
+  explicit StaticTableNode(const std::shared_ptr<Table>& table);
 
   std::string description() const override;
 
-  const std::string table_name;
-  const bool if_not_exists;
+  const std::shared_ptr<Table> table;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
