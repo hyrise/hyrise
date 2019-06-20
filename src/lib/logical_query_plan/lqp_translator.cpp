@@ -57,6 +57,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
@@ -429,6 +430,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   switch (union_node->union_mode) {
     case UnionMode::Positions:
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
+    case UnionMode::All:
+      return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
   }
   Fail("GCC thinks this is reachable");
 }
