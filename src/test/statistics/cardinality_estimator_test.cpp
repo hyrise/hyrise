@@ -23,6 +23,7 @@
 #include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
@@ -776,7 +777,11 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   // Test that, basically, the CardinalityEstimator doesn't crash when processing non-query nodes. There is not much
   // more to test here
 
-  const auto create_table_lqp = CreateTableNode::make("t", TableColumnDefinitions{{"a", DataType::Int, false}}, false);
+  const auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, false}};
+  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  EXPECT_EQ(estimator.estimate_cardinality(static_table_node), 0.0f);
+
+  const auto create_table_lqp = CreateTableNode::make("t", false, static_table_node);
   EXPECT_EQ(estimator.estimate_cardinality(create_table_lqp), 0.0f);
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(node_a, std::vector<ParameterID>{});
