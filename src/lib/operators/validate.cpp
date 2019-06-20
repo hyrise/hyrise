@@ -64,7 +64,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
-    const auto& chunk_in = in_table->get_chunk(chunk_id);
+    const auto chunk_in = in_table->get_chunk(chunk_id);
     if (!chunk_in) continue;
 
     Segments output_segments;
@@ -87,7 +87,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
         pos_list_out->guarantee_single_chunk();
 
-        const auto& referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
+        const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
         for (auto row_id : pos_list_in) {
@@ -100,7 +100,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
 
         for (auto row_id : pos_list_in) {
-          const auto& referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+          const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 

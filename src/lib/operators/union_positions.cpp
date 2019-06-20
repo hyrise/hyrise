@@ -225,7 +225,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    */
   const auto add = [&](const auto& table) {
     auto current_pos_list = std::shared_ptr<const PosList>();
-    const auto& first_chunk = table->get_chunk(ChunkID{0});
+    const auto first_chunk = table->get_chunk(ChunkID{0});
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       const auto segment = first_chunk->get_segment(column_id);
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
@@ -248,7 +248,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Identify the tables referenced in each ColumnCluster (verification that this is the same for all chunks happens
    * in the #if HYRISE_DEBUG block below)
    */
-  const auto& first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
+  const auto first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
   for (const auto& cluster_begin : _column_cluster_offsets) {
     const auto segment = first_chunk_left->get_segment(cluster_begin);
     const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(segment);
@@ -274,7 +274,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       auto current_pos_list = std::shared_ptr<const PosList>();
       size_t next_cluster_id = 0;
-      const auto& chunk = table->get_chunk(chunk_id);
+      const auto chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
         if (next_cluster_id < _column_cluster_offsets.size() && column_id == _column_cluster_offsets[next_cluster_id]) {
           next_cluster_id++;
@@ -319,7 +319,7 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
   }
 
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    const auto& chunk = input_table->get_chunk(ChunkID{chunk_id});
+    const auto chunk = input_table->get_chunk(ChunkID{chunk_id});
 
     for (size_t cluster_id = 0; cluster_id < _column_cluster_offsets.size(); ++cluster_id) {
       const auto column_id = _column_cluster_offsets[cluster_id];

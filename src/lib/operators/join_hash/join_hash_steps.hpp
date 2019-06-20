@@ -120,7 +120,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     if (!in_table->get_chunk(chunk_id)) continue;
 
     jobs.emplace_back(std::make_shared<JobTask>([&, in_table, chunk_id]() {
-      const auto& chunk_in = in_table->get_chunk(chunk_id);
+      const auto chunk_in = in_table->get_chunk(chunk_id);
       if (!chunk_in) return;
 
       // Get information from work queue
