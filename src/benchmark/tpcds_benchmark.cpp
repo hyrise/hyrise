@@ -90,15 +90,11 @@ int main(int argc, char* argv[]) {
 
   if (!data_files_available(table_path)) {
     if (std::filesystem::exists(std::filesystem::path{binary_directory + "/dsdgen"})) {
-      // const auto files_setup_return =
-      //     system(("cd " + binary_directory + " && "
-      //       ""
-      //       " ./dsdgen -scale " + std::to_string(scale_factor) +
-      //             " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -suffix .csv -f")
-      //                .c_str());
-
-      // Assert(files_setup_return == 0, "Generating table data files failed.");
-      Fail("IN PROGRESS");
+      const auto files_setup_return =
+          system(("cd " + binary_directory + " && ./dsdgen -scale " + std::to_string(scale_factor) +
+                  " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -suffix .csv -f")
+                     .c_str());
+      Assert(files_setup_return == 0, "Generating table data files failed.");
     } else {
       Fail("Could not find 'dsdgen' in your build directory. Did you run the benchmark from the project root dir?");
     }
