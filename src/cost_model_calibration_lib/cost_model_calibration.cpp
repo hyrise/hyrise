@@ -6,7 +6,7 @@
 #include <mutex>
 #include <thread>
 
-#include "cost_model/feature/cost_model_features.hpp"
+#include "cost_estimation/feature/cost_model_features.hpp"
 #include "cost_model_calibration_query_runner.hpp"
 #include "cost_model_calibration_table_generator.hpp"
 #include "import_export/csv_writer.hpp"
@@ -50,7 +50,6 @@ void CostModelCalibration::run() {
     tableGenerator.load_tpch_tables(1.0f);
     _run_tpch();
   }
-
 }
 
 void CostModelCalibration::_run_tpch() {
@@ -110,8 +109,8 @@ void CostModelCalibration::_calibrate() {
   for (size_t iteration = size_t{0}; iteration < number_of_iterations; ++iteration) {
     std::vector<std::thread> threads;
 
-    for(auto thread_id = size_t{0}; thread_id < threads_to_create; ++thread_id){
-      threads.push_back(std::thread([&, thread_id](){
+    for (auto thread_id = size_t{0}; thread_id < threads_to_create; ++thread_id) {
+      threads.push_back(std::thread([&, thread_id]() {
         std::vector<cost_model::CostModelFeatures> observations;
         const auto first_query = queries.begin() + thread_id * queries_per_thread;
         auto last_query = queries.begin() + (thread_id + 1) * queries_per_thread;
@@ -132,7 +131,7 @@ void CostModelCalibration::_calibrate() {
       }));
     }
 
-    for(auto& thread : threads){
+    for (auto& thread : threads) {
       thread.join();
     }
     std::cout << "Finished iteration #" << iteration + 1 << std::endl;

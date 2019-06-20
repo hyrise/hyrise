@@ -1,7 +1,7 @@
 #include "calibration_feature_extractor.hpp"
 
 #include "constant_mappings.hpp"
-#include "cost_model/feature_extractor/column_feature_extractor.hpp"
+#include "cost_estimation/feature_extractor/column_feature_extractor.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -77,7 +77,6 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
 
   operator_features.execution_time_ns = execution_time_ns;
   operator_features.operator_type = op->type();
-  // Mainly for debug purposes
   operator_features.operator_description = op->description(DescriptionMode::SingleLine);
 
   // Inputs

@@ -10,10 +10,10 @@
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
-#include "cost_model/cost_model_adaptive.hpp"
-#include "cost_model/cost_model_coefficient_reader.hpp"
-#include "cost_model/feature/cost_model_features.hpp"
-#include "cost_model/feature/join_features.hpp"
+#include "cost_estimation/cost_estimator_adaptive.hpp"
+#include "cost_estimation/cost_estimator_coefficient_reader.hpp"
+#include "cost_estimation/feature/cost_model_features.hpp"
+#include "cost_estimation/feature/join_features.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_mpsm.hpp"
@@ -37,7 +37,7 @@ namespace opossum {
  */
 
 bool JoinProxy::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                              DataType right_data_type, bool secondary_predicates) {
+                         DataType right_data_type, bool secondary_predicates) {
   return true;
 }
 
@@ -46,8 +46,11 @@ JoinProxy::JoinProxy(const std::shared_ptr<const AbstractOperator>& left,
                      const OperatorJoinPredicate& primary_predicate,
                      const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<JoinProxy::PerformanceData>()),
-      _cost_model(std::make_shared<CostModelAdaptive>(CostModelCoefficientReader::default_coefficients())) {}
+                           std::make_unique<JoinProxy::PerformanceData>()) {
+  _cost_model = std::make_shared<CostEstimatorAdaptive>(std::make_shared<CardinalityEstimator>());
+  auto cost_estimator_adaptive = std::dynamic_pointer_cast<CostEstimatorAdaptive>(_cost_model);
+  cost_estimator_adaptive->initialize(CostEstimatorCoefficientReader::default_coefficients());
+}
 
 const std::string JoinProxy::name() const {
   if (_operator_type) {
@@ -59,7 +62,8 @@ const std::string JoinProxy::name() const {
 std::shared_ptr<AbstractOperator> JoinProxy::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinProxy>(copied_input_left, copied_input_right, _mode, _primary_predicate, _secondary_predicates);
+  return std::make_shared<JoinProxy>(copied_input_left, copied_input_right, _mode, _primary_predicate,
+                                     _secondary_predicates);
 }
 
 void JoinProxy::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -129,11 +133,10 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   join_features.right_join_column.column_segment_encoding_RunLength_percentage = 0.0f;
   join_features.right_join_column.column_segment_encoding_Unencoded_percentage = 0.0f;
 
-
   cost_model_features.join_features = join_features;
 
   // Build Join Models
-  const auto join_coefficients = CostModelCoefficientReader::read_join_coefficients();
+  const auto join_coefficients = CostEstimatorCoefficientReader::read_join_coefficients();
   std::unordered_map<ModelGroup, std::shared_ptr<LinearRegressionModel>, ModelGroupHash> join_models;
   for (const auto& [group, coefficients] : join_coefficients) {
     join_models[group] = std::make_shared<LinearRegressionModel>(coefficients);
@@ -145,9 +148,9 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   const auto valid_join_types = _valid_join_types();
   for (const auto& join_type : valid_join_types) {
     cost_model_features.operator_type = join_type;
-    ModelGroup model_group {join_type, {}, is_referenced};
+    ModelGroup model_group{join_type, {}, is_referenced};
     const auto predicted_costs = join_models.at(model_group)->predict(cost_model_features.to_cost_model_features());
-//    const auto exp_predicted_costs = exp(predicted_costs);
+    //    const auto exp_predicted_costs = exp(predicted_costs);
     std::cout << "JoinProxy: " << operator_type_to_string.at(join_type) << " -> " << predicted_costs << std::endl;
     if (predicted_costs < minimal_costs) {
       minimal_costs_join_type = join_type;
@@ -168,9 +171,9 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
     cost_model_features.left_input_row_count = cost_model_features.right_input_row_count;
     cost_model_features.right_input_row_count = prev_left_input_size;
 
-    ModelGroup model_group {join_type, {}, is_referenced};
+    ModelGroup model_group{join_type, {}, is_referenced};
     const auto predicted_costs = join_models.at(model_group)->predict(cost_model_features.to_cost_model_features());
-//    const auto exp_predicted_costs = exp(predicted_costs);
+    //    const auto exp_predicted_costs = exp(predicted_costs);
     std::cout << "JoinProxy: " << operator_type_to_string.at(join_type) << " -> " << predicted_costs << std::endl;
     if (predicted_costs < minimal_costs) {
       minimal_costs_join_type = join_type;
@@ -184,7 +187,7 @@ std::shared_ptr<const Table> JoinProxy::_on_execute() {
   const auto execution_time = join_impl->performance_data().walltime;
   const auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(execution_time).count();
 
-//  const auto execution_time_ns_log = log(execution_time_ns);
+  //  const auto execution_time_ns_log = log(execution_time_ns);
 
   const auto mape = abs(execution_time_ns - minimal_costs) / static_cast<float>(execution_time_ns) * 100.0f;
   std::cout << "Error: " << execution_time_ns - minimal_costs << " [actual: " << execution_time_ns << ", " << mape
@@ -203,9 +206,11 @@ const std::shared_ptr<AbstractJoinOperator> JoinProxy::_instantiate_join(const O
     case OperatorType::JoinMPSM:
       return std::make_shared<JoinMPSM>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinNestedLoop:
-      return std::make_shared<JoinNestedLoop>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
+      return std::make_shared<JoinNestedLoop>(_input_left, _input_right, _mode, _primary_predicate,
+                                              _secondary_predicates);
     case OperatorType::JoinSortMerge:
-      return std::make_shared<JoinSortMerge>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
+      return std::make_shared<JoinSortMerge>(_input_left, _input_right, _mode, _primary_predicate,
+                                             _secondary_predicates);
     default:
       Fail("Unexpected operator type in JoinProxy. Can only handle Join operators");
   }

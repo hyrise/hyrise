@@ -1,11 +1,11 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <vector>
-#include <mutex>
 
 #include "configuration/calibration_configuration.hpp"
-#include "cost_model/feature/cost_model_features.hpp"
+#include "cost_estimation/feature/cost_model_features.hpp"
 
 namespace opossum {
 

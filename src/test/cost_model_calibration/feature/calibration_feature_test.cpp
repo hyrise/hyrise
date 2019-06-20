@@ -1,12 +1,12 @@
 #include "base_test.hpp"
 
-#include "cost_model/feature/aggregate_features.hpp"
-//#include "cost_model/feature/calibration_features.hpp"
-#include "cost_model/feature/constant_hardware_features.hpp"
-#include "cost_model/feature/join_features.hpp"
-#include "cost_model/feature/projection_features.hpp"
-#include "cost_model/feature/runtime_hardware_features.hpp"
-#include "cost_model/feature/table_scan_features.hpp"
+#include "cost_estimation/feature/aggregate_features.hpp"
+//#include "cost_estimation/feature/calibration_features.hpp"
+#include "cost_estimation/feature/constant_hardware_features.hpp"
+#include "cost_estimation/feature/join_features.hpp"
+#include "cost_estimation/feature/projection_features.hpp"
+#include "cost_estimation/feature/runtime_hardware_features.hpp"
+#include "cost_estimation/feature/table_scan_features.hpp"
 
 namespace opossum {
 

@@ -7,10 +7,13 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "cost_model/abstract_cost_estimator.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "optimizer/join_ordering/join_graph.hpp"
+#include "statistics/cardinality_estimation_cache.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
@@ -22,6 +25,8 @@ PredicateReorderingRule::PredicateReorderingRule(const std::shared_ptr<AbstractC
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
 void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
+
   // Validate can be seen as a Predicate on the MVCC column
   if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
     std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
@@ -44,58 +49,62 @@ void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
      * Continue rule in deepest input
      */
     if (predicate_nodes.size() > 1) {
+      const auto input = predicate_nodes.back()->left_input();
       _reorder_predicates(predicate_nodes);
-      _apply_to_inputs(predicate_nodes.back());
-      return;
+      apply_to(input);
     }
   }
 
   _apply_to_inputs(node);
 }
 
-void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
+void PredicateReorderingRule::_reorder_predicates(
+    const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
+  // Workaround for the now const'ed parameter
+  std::vector<std::shared_ptr<AbstractLQPNode>> non_const_predicates(predicates.begin(), predicates.end());
+
   // Store original input and output
-  auto input = predicates.back()->left_input();
-  const auto outputs = predicates.front()->outputs();
-  const auto input_sides = predicates.front()->get_input_sides();
+  auto input = non_const_predicates.back()->left_input();
+  const auto outputs = non_const_predicates.front()->outputs();
+  const auto input_sides = non_const_predicates.front()->get_input_sides();
 
   Cost minimal_cost{std::numeric_limits<float>::max()};
-  auto minimal_order = predicates;
+  auto minimal_order = non_const_predicates;
 
-    // std::cout << "Before" << std::endl;
-    // predicates.front()->print();
+  // std::cout << "Before" << std::endl;
+  // non_const_predicates.front()->print();
 
-    // Untie predicates from LQP, so we can freely retie them
-    for (auto& predicate : predicates) {
-        lqp_remove_node(predicate);
+  // Untie predicates from LQP, so we can freely retie them
+  for (auto& predicate : non_const_predicates) {
+    lqp_remove_node(predicate);
+  }
+
+  do {
+    // Ensure that nodes are chained correctly
+    non_const_predicates.back()->set_left_input(input);
+
+    for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+      outputs[output_idx]->set_input(input_sides[output_idx], non_const_predicates.front());
     }
 
-    do {
-        // Ensure that nodes are chained correctly
-        predicates.back()->set_left_input(input);
+    for (size_t predicate_index = 0; predicate_index < non_const_predicates.size() - 1; predicate_index++) {
+      predicates[predicate_index]->set_left_input(non_const_predicates[predicate_index + 1]);
+    }
 
-        for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-            outputs[output_idx]->set_input(input_sides[output_idx], predicates.front());
-        }
+    //        non_const_predicates.front()->print();
+    const auto estimated_cost = _cost_estimator->estimate_plan_cost(non_const_predicates.front());
+    //        std::cout << "Estimated cost: " << estimated_cost << std::endl;
 
-        for (size_t predicate_index = 0; predicate_index < predicates.size() - 1; predicate_index++) {
-            predicates[predicate_index]->set_left_input(predicates[predicate_index + 1]);
-        }
+    if (estimated_cost < minimal_cost) {
+      minimal_cost = estimated_cost;
+      minimal_order = non_const_predicates;
+    }
 
-//        predicates.front()->print();
-        const auto estimated_cost = _cost_estimator->estimate_plan_cost(predicates.front());
-//        std::cout << "Estimated cost: " << estimated_cost << std::endl;
-
-        if (estimated_cost < minimal_cost) {
-            minimal_cost = estimated_cost;
-            minimal_order = predicates;
-        }
-
-        // Untie predicates from LQP, so we can freely retie them
-        for (auto& predicate : predicates) {
-            lqp_remove_node(predicate);
-        }
-    } while ( std::prev_permutation(predicates.begin(), predicates.end()) );
+    // Untie non_const_predicates from LQP, so we can freely retie them
+    for (auto& predicate : non_const_predicates) {
+      lqp_remove_node(predicate);
+    }
+  } while (std::prev_permutation(non_const_predicates.begin(), non_const_predicates.end()));
 
   // Ensure that nodes are chained correctly
   minimal_order.back()->set_left_input(input);
@@ -105,12 +114,11 @@ void PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Ab
   }
 
   for (size_t predicate_index = 0; predicate_index < minimal_order.size() - 1; predicate_index++) {
-      minimal_order[predicate_index]->set_left_input(minimal_order[predicate_index + 1]);
+    minimal_order[predicate_index]->set_left_input(minimal_order[predicate_index + 1]);
   }
 
   // std::cout << "Foobar" << std::endl;
   // minimal_order.front()->print();
 }
-
 
 }  // namespace opossum

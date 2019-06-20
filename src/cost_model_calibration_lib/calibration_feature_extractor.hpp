@@ -5,14 +5,14 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 
-#include "cost_model/feature/aggregate_features.hpp"
-#include "cost_model/feature/column_features.hpp"
-#include "cost_model/feature/constant_hardware_features.hpp"
-#include "cost_model/feature/cost_model_features.hpp"
-#include "cost_model/feature/join_features.hpp"
-#include "cost_model/feature/projection_features.hpp"
-#include "cost_model/feature/runtime_hardware_features.hpp"
-#include "cost_model/feature/table_scan_features.hpp"
+#include "cost_estimation/feature/aggregate_features.hpp"
+#include "cost_estimation/feature/column_features.hpp"
+#include "cost_estimation/feature/constant_hardware_features.hpp"
+#include "cost_estimation/feature/cost_model_features.hpp"
+#include "cost_estimation/feature/join_features.hpp"
+#include "cost_estimation/feature/projection_features.hpp"
+#include "cost_estimation/feature/runtime_hardware_features.hpp"
+#include "cost_estimation/feature/table_scan_features.hpp"
 
 #include "operators/abstract_aggregate_operator.hpp"
 #include "operators/abstract_join_operator.hpp"
@@ -41,7 +41,8 @@ class CalibrationFeatureExtractor {
   static const TableScanFeatures _extract_features_for_operator(const std::shared_ptr<const IndexScan>& op);
   static const ProjectionFeatures _extract_features_for_operator(const std::shared_ptr<const Projection>& op);
   static const JoinFeatures _extract_features_for_operator(const std::shared_ptr<const AbstractJoinOperator>& op);
-  static const AggregateFeatures _extract_features_for_operator(const std::shared_ptr<const AbstractAggregateOperator>& op);
+  static const AggregateFeatures _extract_features_for_operator(
+      const std::shared_ptr<const AbstractAggregateOperator>& op);
 
   static void _extract_table_scan_features_for_predicate_expression(
       std::shared_ptr<const Table>& left_input_table, TableScanFeatures& features,

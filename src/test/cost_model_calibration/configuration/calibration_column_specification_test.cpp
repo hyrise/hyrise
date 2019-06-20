@@ -3,6 +3,7 @@
 #include "base_test.hpp"
 
 #include "configuration/calibration_column_specification.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace opossum {
 
@@ -16,8 +17,14 @@ TEST_F(CalibrationColumnSpecificationTest, ParseJson) {
       R"({"type": "int", "encoding": "Dictionary","distinct_values": 10000, "column_name": "someColumn"})");
   opossum::CalibrationColumnSpecification column_specification(input);
 
-  CalibrationColumnSpecification expected{"someColumn", DataType::Int, "uniform",
-                                          false,        10000,         EncodingType::Dictionary, 1};
+  CalibrationColumnSpecification expected{"someColumn",
+                                          ColumnID{17},
+                                          DataType::Int,
+                                          "uniform",
+                                          false,
+                                          10000,
+                                          SegmentEncodingSpec{EncodingType::Dictionary},
+                                          1};
   EXPECT_EQ(expected, column_specification);
 }
 

@@ -2,7 +2,7 @@
 
 #include "gtest/gtest.h"
 
-#include "cost_model/feature_extractor/column_feature_extractor.hpp"
+#include "cost_estimation/feature_extractor/column_feature_extractor.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
 

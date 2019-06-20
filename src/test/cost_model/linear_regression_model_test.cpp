@@ -2,7 +2,7 @@
 
 #include "base_test.hpp"
 
-#include "cost_model/linear_regression_model.hpp"
+#include "cost_estimation/linear_regression_model.hpp"
 #include "expression/expression_functional.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

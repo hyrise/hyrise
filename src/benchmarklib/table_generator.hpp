@@ -65,20 +65,20 @@ class TableGenerator {
                                         const SegmentEncodingSpec segment_encoding_spec = {EncodingType::Unencoded});
 
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
-                                        const std::vector<DataType>& column_data_types,
-                                        const size_t num_rows, const ChunkOffset chunk_size,
+                                        const std::vector<DataType>& column_data_types, const size_t num_rows,
+                                        const ChunkOffset chunk_size,
                                         const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
                                         const std::optional<std::vector<std::string>> column_names = std::nullopt,
-                                        const UseMvcc use_mvcc = UseMvcc::No, 
+                                        const UseMvcc use_mvcc = UseMvcc::No,
                                         const bool numa_distribute_chunks = false);
 
   // Base function that generates the actual data
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
-                                        const std::vector<DataType>& column_data_types,
-                                        const size_t num_rows, const ChunkOffset chunk_size,
+                                        const std::vector<DataType>& column_data_types, const size_t num_rows,
+                                        const ChunkOffset chunk_size,
                                         const std::optional<std::vector<std::string>> column_names = std::nullopt,
-                                        const UseMvcc use_mvcc = UseMvcc::No, const bool numa_distribute_chunks = false);
-
+                                        const UseMvcc use_mvcc = UseMvcc::No,
+                                        const bool numa_distribute_chunks = false);
 
   /**
     * Function to cast an integer to the requested type.
@@ -102,12 +102,12 @@ class TableGenerator {
       // floating points are slightly shifted to avoid a zero'd mantissa.
       return static_cast<T>(input) * 0.999999f;
     } else {
-      // TODO(anyone): generation of strings is not perfect yet (nonetheless, probably sufficient), as 
+      // TODO(anyone): generation of strings is not perfect yet (nonetheless, probably sufficient), as
       // values do not start with '         0' and the transition to the next used char is not perfect.
-      const std::vector<char> chars = {
-          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
-          'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-          'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'};
+      const std::vector<char> chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+                                       'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+                                       'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+                                       'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'};
       const size_t chars_base = chars.size();
       Assert(static_cast<double>(input) < std::pow(chars_base, 6),
              "Integer too large. Cannot be represented in six chars.");

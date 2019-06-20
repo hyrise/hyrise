@@ -9,7 +9,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "visualization/abstract_visualizer.hpp"
 
 namespace opossum {
@@ -29,6 +29,8 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
                       ExpressionUnorderedSet& visualized_sub_queries);
 
   void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from, const std::shared_ptr<AbstractLQPNode>& to);
+
+  CardinalityEstimator _cardinality_estimator;
 };
 
 }  // namespace opossum

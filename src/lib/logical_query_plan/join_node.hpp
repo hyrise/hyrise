@@ -24,20 +24,17 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   // Utility constructor that just calls the multi predicated constructor
   JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate,
-    const std::optional<JoinType> join_type = std::nullopt);
+           const std::optional<JoinType> join_type = std::nullopt);
 
   // Constructor for multi predicated joins
   JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates,
-    const std::optional<JoinType> join_type = std::nullopt);
+           const std::optional<JoinType> join_type = std::nullopt);
 
   std::string description() const override;
   OperatorType operator_type() const override;
   bool creates_reference_segments() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 

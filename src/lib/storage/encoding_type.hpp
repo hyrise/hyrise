@@ -71,8 +71,8 @@ struct SegmentEncodingSpec {
       return true;
     }
 
-    if ((!vector_compression_type && other.vector_compression_type) || 
-      (vector_compression_type && !other.vector_compression_type)) {
+    if ((!vector_compression_type && other.vector_compression_type) ||
+        (vector_compression_type && !other.vector_compression_type)) {
       // If one of the compression types is not explicitly set but the other is,
       // default types are not guessed: inequality is assumed.
       return false;

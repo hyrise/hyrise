@@ -9,11 +9,11 @@
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "lqp_column_reference.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
 class AbstractExpression;
-class TableStatistics;
 
 enum class ScanType : uint8_t { TableScan, IndexScan };
 
@@ -30,9 +30,6 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
 
   std::string description() const override;
   OperatorType operator_type() const override;
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
 
   bool creates_reference_segments() const override;
 

@@ -24,19 +24,19 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
   // Generating all combinations
   for (const auto& data_type : configuration.data_types) {
     for (const auto& left_encoding : configuration.encodings) {
-    for (const auto& right_encoding : configuration.encodings) {
-      for (const auto& left_table : tables) {
-        for (const auto& right_table : tables) {
-          const auto table_ratio = right_table.second / static_cast<double>(left_table.second);
-          for (const auto ratio : {0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0}) {
-            if (table_ratio == ratio) {
-              // With and without ReferenceSegments
-              output.push_back({left_table.first, right_table.first, left_table.second, right_table.second, left_encoding, right_encoding,
-                                data_type, false, ratio});
-              output.push_back({left_table.first, right_table.first, left_table.second, right_table.second, left_encoding, right_encoding,
-                                data_type, true, ratio});
+      for (const auto& right_encoding : configuration.encodings) {
+        for (const auto& left_table : tables) {
+          for (const auto& right_table : tables) {
+            const auto table_ratio = right_table.second / static_cast<double>(left_table.second);
+            for (const auto ratio : {0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0}) {
+              if (table_ratio == ratio) {
+                // With and without ReferenceSegments
+                output.push_back({left_table.first, right_table.first, left_table.second, right_table.second,
+                                  left_encoding, right_encoding, data_type, false, ratio});
+                output.push_back({left_table.first, right_table.first, left_table.second, right_table.second,
+                                  left_encoding, right_encoding, data_type, true, ratio});
+              }
             }
-          }
           }
         }
       }
@@ -110,7 +110,8 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorJoin::_genera
 
 const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoin::_find_primary_key() const {
   for (const auto& definition : _column_definitions) {
-    if (definition.data_type == _configuration.data_type && definition.encoding.encoding_type == _configuration.left_encoding_type &&
+    if (definition.data_type == _configuration.data_type &&
+        definition.encoding.encoding_type == _configuration.left_encoding_type &&
         boost::algorithm::starts_with(definition.column_name, "column_pk")) {
       return definition;
     }
@@ -123,8 +124,8 @@ const std::optional<CalibrationColumnSpecification> CalibrationQueryGeneratorJoi
     const double table_ratio) const {
   for (const auto& definition : _column_definitions) {
     // In case of _configuration.table_ratio == 1, this will select the primary key
-    if (definition.data_type == _configuration.data_type && definition.encoding.encoding_type == _configuration.right_encoding_type &&
-        definition.fraction == table_ratio) {
+    if (definition.data_type == _configuration.data_type &&
+        definition.encoding.encoding_type == _configuration.right_encoding_type && definition.fraction == table_ratio) {
       return definition;
     }
   }

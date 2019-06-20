@@ -61,9 +61,10 @@ const std::vector<JoinType> JoinAlgorithmRule::_valid_join_types(const std::shar
         * We do not require <column_a> to be in the left input though.
         */
 
-  const auto operator_join_predicate =
-      OperatorJoinPredicate::from_expression(*node->join_predicates().front(), *node->left_input(), *node->right_input());
-  Assert(operator_join_predicate, "Couldn't translate join predicate: "s + node->join_predicates().front()->as_column_name());
+  const auto operator_join_predicate = OperatorJoinPredicate::from_expression(
+      *node->join_predicates().front(), *node->left_input(), *node->right_input());
+  Assert(operator_join_predicate,
+         "Couldn't translate join predicate: "s + node->join_predicates().front()->as_column_name());
 
   const auto predicate_condition = operator_join_predicate->predicate_condition;
 

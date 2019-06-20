@@ -3,19 +3,21 @@
 #include <memory>
 #include <unordered_set>
 
-#include "cost_model/cost_model_adaptive.hpp"
-#include "cost_model/cost_model_logical.hpp"
+#include "cost_estimation/cost_estimator_adaptive.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
-#include "strategy/join_algorithm_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
+#include "strategy/join_algorithm_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
@@ -38,10 +40,10 @@
  * EACH UNIQUE SUB-LQP IS ONLY OPTIMIZED ONCE, EVEN IF IT OCCURS IN DIFFERENT NODES/EXPRESSIONS.
  * !!!
  *
- * -> collect_subquery_expressions_by_lqp()   identifies unique LQPs and the (multiple) SubqueryExpressions referencing
+ * -> collect_subquery_expressions_by_lqp() identifies unique LQPs and the (multiple) SubqueryExpressions referencing
  *                                          each of these unique LQPs.
  *
- * -> Optimizer::_apply_rule()              optimizes each unique LQP exactly once and assignes the optimized LQPs back
+ * -> Optimizer::_apply_rule()              optimizes each unique LQP exactly once and assigns the optimized LQPs back
  *                                          to the SubqueryExpressions referencing them.
  */
 
@@ -86,7 +88,7 @@ void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expr
 namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  auto optimizer = std::make_shared<Optimizer>();
+  const auto optimizer = std::make_shared<Optimizer>();
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
@@ -96,10 +98,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
-  optimizer->add_rule(std::make_unique<JoinOrderingRule>(CostModelAdaptive::create_default()));
+  // optimizer->add_rule(std::make_unique<JoinOrderingRule>(std::make_shared<CostEstimatorAdaptive>(std::make_shared<CardinalityEstimator>())));
 
   // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
-  optimizer->add_rule(std::make_unique<JoinOrderingRule>(std::make_unique<CostModelLogical>()));
+  optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
@@ -113,17 +115,24 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
-  optimizer->add_rule(std::make_unique<PredicateReorderingRule>(std::make_shared<CostModelLogical>()));
+  optimizer->add_rule(std::make_unique<PredicateReorderingRule>(
+      std::make_shared<CostEstimatorLogical>(std::make_shared<CardinalityEstimator>())));
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   //  TODO(Sven): Disable for now and use JoinProxy instead
-  optimizer->add_rule(std::make_unique<JoinAlgorithmRule>(CostModelAdaptive::create_default()));
+  optimizer->add_rule(std::make_unique<JoinAlgorithmRule>(
+      std::make_shared<CostEstimatorAdaptive>(std::make_shared<CardinalityEstimator>())));
 
   return optimizer;
 }
 
-void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) { _rules.emplace_back(std::move(rule)); }
+Optimizer::Optimizer(const std::shared_ptr<AbstractCostEstimator>& cost_estimator) : _cost_estimator(cost_estimator) {}
+
+void Optimizer::add_rule(std::unique_ptr<AbstractRule> rule) {
+  rule->cost_estimator = _cost_estimator;
+  _rules.emplace_back(std::move(rule));
+}
 
 std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node

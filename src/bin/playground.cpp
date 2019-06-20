@@ -43,9 +43,9 @@ int main() {
   left_gt->execute();
   auto right_gt = std::make_shared<GetTable>("right_table");
   right_gt->execute();
-  auto join =
-      std::make_shared<JoinIndex>(left_gt, right_gt, JoinMode::Inner,
-                                  std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+  auto join = std::make_shared<JoinIndex>(
+      left_gt, right_gt, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   // Will crash with GCC, but not with Clang
   join->execute();
 
