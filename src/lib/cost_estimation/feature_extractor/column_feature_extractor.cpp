@@ -43,7 +43,8 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
                                                   {EncodingType::Dictionary, 0},
                                                   {EncodingType::FixedStringDictionary, 0},
                                                   {EncodingType::FrameOfReference, 0},
-                                                  {EncodingType::RunLength, 0}};
+                                                  {EncodingType::RunLength, 0},
+                                                  {EncodingType::LZ4, 0}};
 
   std::map<VectorCompressionType, size_t> vector_compression_mapping{{VectorCompressionType::FixedSizeByteAligned, 0},
                                                                      {VectorCompressionType::SimdBp128, 0}};
