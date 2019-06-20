@@ -50,6 +50,28 @@ TEST_F(OperatorScanPredicateTest, FromExpression) {
   EXPECT_FALSE(OperatorScanPredicate::from_expression(*greater_than_(5, 3), *node));
 }
 
+TEST_F(OperatorScanPredicateTest, FromExpressionPlaceholder) {
+  // `a = <correlated_param>`
+  const auto operator_predicates_a =
+      OperatorScanPredicate::from_expression(*equals_(a, correlated_parameter_(ParameterID{1}, b)), *node);
+  ASSERT_TRUE(operator_predicates_a);
+  ASSERT_EQ(operator_predicates_a->size(), 1u);
+  const auto& operator_predicate_a = operator_predicates_a->at(0);
+  EXPECT_EQ(operator_predicate_a.column_id, ColumnID{0});
+  EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::Equals);
+  EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{ParameterID{1}});
+
+  // `a = ?`
+  const auto operator_predicates_b =
+      OperatorScanPredicate::from_expression(*equals_(a, placeholder_(ParameterID{2})), *node);
+  ASSERT_TRUE(operator_predicates_b);
+  ASSERT_EQ(operator_predicates_b->size(), 1u);
+  const auto& operator_predicate_b = operator_predicates_b->at(0);
+  EXPECT_EQ(operator_predicate_b.column_id, ColumnID{0});
+  EXPECT_EQ(operator_predicate_b.predicate_condition, PredicateCondition::Equals);
+  EXPECT_EQ(operator_predicate_b.value, AllParameterVariant{ParameterID{2}});
+}
+
 TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   // `5 > a` becomes `a < 5`
   const auto operator_predicates_a = OperatorScanPredicate::from_expression(*greater_than_(5, a), *node);

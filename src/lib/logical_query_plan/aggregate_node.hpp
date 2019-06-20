@@ -28,10 +28,6 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   bool is_column_nullable(const ColumnID column_id) const override;
   OperatorType operator_type() const override;
 
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input) const override;
-
   // node_expression contains both the group_by- and the aggregate_expressions in that order.
   const size_t aggregate_expressions_begin_idx;
 

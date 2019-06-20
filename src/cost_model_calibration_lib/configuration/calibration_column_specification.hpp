@@ -39,10 +39,10 @@ inline void to_json(nlohmann::json& j, const CalibrationColumnSpecification& s) 
 }
 
 inline bool operator==(const CalibrationColumnSpecification& lhs, const CalibrationColumnSpecification& rhs) {
-  return std::tie(lhs.column_name, lhs.data_type, lhs.value_distribution, lhs.sorted, lhs.distinct_value_count, lhs.encoding.encoding_type,
-                    lhs.encoding.vector_compression_type,
-                  lhs.fraction) == std::tie(rhs.column_name, rhs.data_type, rhs.value_distribution, rhs.sorted,
-                                            rhs.distinct_value_count, rhs.encoding.encoding_type, rhs.encoding.vector_compression_type, rhs.fraction);
+  return std::tie(lhs.column_name, lhs.data_type, lhs.value_distribution, lhs.sorted, lhs.distinct_value_count,
+                  lhs.encoding.encoding_type, lhs.encoding.vector_compression_type, lhs.fraction) ==
+         std::tie(rhs.column_name, rhs.data_type, rhs.value_distribution, rhs.sorted, rhs.distinct_value_count,
+                  rhs.encoding.encoding_type, rhs.encoding.vector_compression_type, rhs.fraction);
 }
 
 inline void from_json(const nlohmann::json& j, CalibrationColumnSpecification& s) {
@@ -63,12 +63,14 @@ inline void from_json(const nlohmann::json& j, CalibrationColumnSpecification& s
   if (encoding_type_to_string.right.find(encoding_string) == encoding_type_to_string.right.end()) {
     Fail("Unsupported encoding.");
   }
-  if (vector_compression_string != "None" && vector_compression_type_to_string.right.find(vector_compression_string) == vector_compression_type_to_string.right.end()) {
+  if (vector_compression_string != "None" && vector_compression_type_to_string.right.find(vector_compression_string) ==
+                                                 vector_compression_type_to_string.right.end()) {
     Fail("Unsupported vector compression.");
   }
 
   // Check if encoding and vector compression are specified, but encoding does not support vector compression.
-  if (encoding_type_to_string.right.at(encoding_string) != EncodingType::Unencoded && vector_compression_string != "None") {
+  if (encoding_type_to_string.right.at(encoding_string) != EncodingType::Unencoded &&
+      vector_compression_string != "None") {
     auto encoder = create_encoder(encoding_type_to_string.right.at(encoding_string));
     if (!encoder->uses_vector_compression()) {
       Fail("Encoding type does not support vector compression.");

@@ -2,13 +2,13 @@
 
 #include <random>
 
-#include "table_generator.hpp"
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/storage_manager.hpp"
+#include "table_generator.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -26,10 +26,10 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
     for (const auto& selectivity : configuration.selectivities) {
       for (const auto& [table_name, table_size] : tables) {
         // With and without ReferenceSegments
-        output.push_back({table_name, column.data_type, column.encoding, std::nullopt, std::nullopt, selectivity,
-                          false, table_size});
-        output.push_back({table_name, column.data_type, column.encoding, std::nullopt, std::nullopt, selectivity,
-                          true, table_size});
+        output.push_back({table_name, column.data_type, column.encoding, std::nullopt, std::nullopt, selectivity, false,
+                          table_size});
+        output.push_back(
+            {table_name, column.data_type, column.encoding, std::nullopt, std::nullopt, selectivity, true, table_size});
       }
     }
   }
@@ -50,21 +50,24 @@ CalibrationQueryGeneratorPredicate::generate_predicate_permutations(
   // Generating all combinations
   for (const auto& data_type : configuration.data_types) {
     for (const auto& first_encoding : configuration.encodings) {
-        // Illegal data type - encoding combinations
+      // Illegal data type - encoding combinations
       if (data_type != DataType::String && first_encoding == EncodingType::FixedStringDictionary) continue;
-      if (data_type != DataType::Int && data_type != DataType::Long && first_encoding == EncodingType::FrameOfReference) {
+      if (data_type != DataType::Int && data_type != DataType::Long &&
+          first_encoding == EncodingType::FrameOfReference) {
         continue;
       }
       for (const auto& second_encoding : all_encodings) {
-          // Illegal data type - encoding combination
-        if (second_encoding && data_type != DataType::String && second_encoding == EncodingType::FixedStringDictionary) {
+        // Illegal data type - encoding combination
+        if (second_encoding && data_type != DataType::String &&
+            second_encoding == EncodingType::FixedStringDictionary) {
           continue;
         }
-          // Illegal data type - encoding combination
-        if (second_encoding && data_type != DataType::Int && data_type != DataType::Long && second_encoding == EncodingType::FrameOfReference) {
+        // Illegal data type - encoding combination
+        if (second_encoding && data_type != DataType::Int && data_type != DataType::Long &&
+            second_encoding == EncodingType::FrameOfReference) {
           continue;
         }
-        
+
         // for (const auto& third_encoding : all_encodings) {
         //     // Cannot generate queries without second_encoding but with third_encoding
         //     if (!second_encoding && third_encoding) {
@@ -179,9 +182,7 @@ const std::vector<std::shared_ptr<PredicateNode>> CalibrationQueryGeneratorPredi
 }
 
 const std::shared_ptr<PredicateNode> CalibrationQueryGeneratorPredicate::generate_concreate_scan_predicate(
-    const std::shared_ptr<AbstractExpression>& predicate,
-    const ScanType scan_type) {
-
+    const std::shared_ptr<AbstractExpression>& predicate, const ScanType scan_type) {
   const auto predicate_node = PredicateNode::make(predicate);
   predicate_node->scan_type = scan_type;
 
@@ -219,8 +220,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto calibration_config = generator_configuration.configuration;
   const auto table = generator_configuration.table;
 
-  const auto scan_column_configuration = _find_column_for_configuration(
-      generator_configuration.column_definitions, calibration_config.data_type, calibration_config.first_encoding.encoding_type);
+  const auto scan_column_configuration =
+      _find_column_for_configuration(generator_configuration.column_definitions, calibration_config.data_type,
+                                     calibration_config.first_encoding.encoding_type);
 
   if (!scan_column_configuration) {
     std::cout << "BetweenValueValue: Did not find query for configuration " << calibration_config << std::endl;
@@ -249,8 +251,8 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto table = generator_configuration.table;
   auto remaining_columns = generator_configuration.column_definitions;
 
-  const auto scan_column_configuration = _find_column_for_configuration(remaining_columns, calibration_config.data_type,
-                                                                        calibration_config.first_encoding.encoding_type);
+  const auto scan_column_configuration = _find_column_for_configuration(
+      remaining_columns, calibration_config.data_type, calibration_config.first_encoding.encoding_type);
 
   DebugAssert(scan_column_configuration, "BetweenColumnColumn::Did not find scan_column_configuration");
 
@@ -287,8 +289,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto calibration_config = generator_configuration.configuration;
 
   const auto table = generator_configuration.table;
-  const auto filter_column_configuration = _find_column_for_configuration(
-      generator_configuration.column_definitions, calibration_config.data_type, calibration_config.first_encoding.encoding_type);
+  const auto filter_column_configuration =
+      _find_column_for_configuration(generator_configuration.column_definitions, calibration_config.data_type,
+                                     calibration_config.first_encoding.encoding_type);
 
   if (!filter_column_configuration) {
     std::cout << "ColumnValue: Did not find query for configuration " << calibration_config << std::endl;
@@ -349,8 +352,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   };
 
   const auto table = generator_configuration.table;
-  const auto filter_column_configuration = _find_column_for_configuration(
-      generator_configuration.column_definitions, calibration_config.data_type, calibration_config.first_encoding.encoding_type);
+  const auto filter_column_configuration =
+      _find_column_for_configuration(generator_configuration.column_definitions, calibration_config.data_type,
+                                     calibration_config.first_encoding.encoding_type);
 
   if (!filter_column_configuration) {
     std::cout << "Like: Did not find query for configuration " << calibration_config << std::endl;
@@ -373,8 +377,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   };
 
   const auto table = generator_configuration.table;
-  const auto filter_column_configuration = _find_column_for_configuration(
-      generator_configuration.column_definitions, calibration_config.data_type, calibration_config.first_encoding.encoding_type);
+  const auto filter_column_configuration =
+      _find_column_for_configuration(generator_configuration.column_definitions, calibration_config.data_type,
+                                     calibration_config.first_encoding.encoding_type);
 
   if (!filter_column_configuration) {
     std::cout << "EquiString: Did not find query for configuration " << calibration_config << std::endl;
@@ -399,10 +404,9 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto calibration_config = generator_configuration.configuration;
 
   const CalibrationQueryGeneratorPredicateConfiguration second_configuration{
-      calibration_config.table_name,          calibration_config.data_type,
-      calibration_config.first_encoding, calibration_config.second_encoding,
-      calibration_config.third_encoding, 0.5f,
-      calibration_config.reference_column,    calibration_config.row_count};
+      calibration_config.table_name,       calibration_config.data_type,      calibration_config.first_encoding,
+      calibration_config.second_encoding,  calibration_config.third_encoding, 0.5f,
+      calibration_config.reference_column, calibration_config.row_count};
 
   const auto lhs = generate_predicate_column_value(
       {generator_configuration.table, generator_configuration.column_definitions, calibration_config});
@@ -457,7 +461,7 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
     case DataType::Long:
       return value_(long_value);
     case DataType::String: {
-      auto search_string = pmr_string(4, ' '); // strings are generated with 4 starting spaces
+      auto search_string = pmr_string(4, ' ');  // strings are generated with 4 starting spaces
       search_string += static_cast<char>('A' + string_value);
       if (trailing_like) {
         return value_(search_string + '%');
@@ -471,13 +475,13 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
     case DataType::Bool:
     case DataType::Null:
     default:
-      Fail("Unsupported data type in CalibrationQueryGeneratorPredicates: " +
-           data_type_to_string.left.at(data_type));
+      Fail("Unsupported data type in CalibrationQueryGeneratorPredicates: " + data_type_to_string.left.at(data_type));
   }
 }
 
 const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_generate_value_expression(
-    const CalibrationColumnSpecification& column_specification, const float selectivity, const StringPredicateType string_predicate_type) {
+    const CalibrationColumnSpecification& column_specification, const float selectivity,
+    const StringPredicateType string_predicate_type) {
   const auto distinct_value_count = column_specification.distinct_value_count;
 
   const auto int_value = static_cast<int32_t>(selectivity * distinct_value_count);
@@ -494,10 +498,10 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
       auto search_string = TableGenerator::convert_integer_value<pmr_string>(int_value);
 
       // TODO: like-predicates do not care about the given selectivity, yet.
-      if (string_predicate_type ==  StringPredicateType::TrailingLike) {
+      if (string_predicate_type == StringPredicateType::TrailingLike) {
         search_string[search_string.size() - 1] = '%';
         return value_(search_string);
-      } else if (string_predicate_type ==  StringPredicateType::PrecedingLike) {
+      } else if (string_predicate_type == StringPredicateType::PrecedingLike) {
         const auto first_non_space = search_string.find_first_not_of(' ');
         if (first_non_space == std::string::npos) {
           // empty string

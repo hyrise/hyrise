@@ -9,11 +9,15 @@
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
+#include "logical_query_plan/mock_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/abstract_statistics_object.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
@@ -100,6 +104,35 @@ class BaseTestWithParam
     }
 
     return std::make_shared<TableScan>(in, predicate);
+  }
+
+  static std::shared_ptr<MockNode> create_mock_node_with_statistics(
+      const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
+      const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
+    Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
+
+    const auto mock_node = MockNode::make(column_definitions);
+
+    auto column_data_types = std::vector<DataType>{column_definitions.size()};
+    std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
+                   [&](const auto& column_definition) { return column_definition.first; });
+
+    auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{column_definitions.size()};
+
+    for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
+      resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+
+        const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+        column_statistics->set_statistics_object(statistics_objects[column_id]);
+        output_column_statistics[column_id] = column_statistics;
+      });
+    }
+
+    const auto table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+    mock_node->set_table_statistics(table_statistics);
+
+    return mock_node;
   }
 
   // Utility to create between table scans

@@ -17,9 +17,6 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   OperatorType operator_type() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
   const UnionMode union_mode;
 

@@ -4,18 +4,15 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "join_graph.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"
-#include "utils/format_duration.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
-GreedyOperatorOrdering::GreedyOperatorOrdering(const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
-    : AbstractJoinOrderingAlgorithm(cost_estimator) {}
-
-std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGraph& join_graph) {
+std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
+    const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   DebugAssert(!join_graph.vertices.empty(), "Code below relies on there being at least one vertex");
 
   /**
@@ -63,7 +60,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
    */
   auto plan_by_edge = std::vector<PlanCardinalityPair>{join_graph.edges.size()};
   for (const auto& edge_idx : remaining_edge_indices) {
-    plan_by_edge[edge_idx] = _build_plan_for_edge(join_graph.edges[edge_idx], vertex_clusters);
+    plan_by_edge[edge_idx] = _build_plan_for_edge(join_graph.edges[edge_idx], vertex_clusters, cost_estimator);
   }
 
   /**
@@ -71,6 +68,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
    *      During each iteration, we select the edge that has a minimum cardinality and join the vertex clusters that it
    *      connects
    */
+
   while (!remaining_edge_indices.empty()) {
     /**
      * 2.1 Find the edge with the lowest cardinality and remove it from "remaining_edge_indices"
@@ -110,7 +108,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
     for (const auto& remaining_edge_idx : remaining_edge_indices) {
       const auto& remaining_edge = join_graph.edges[remaining_edge_idx];
       if ((remaining_edge.vertex_set & joined_vertex_set).any()) {
-        plan_by_edge[remaining_edge_idx] = _build_plan_for_edge(remaining_edge, vertex_clusters);
+        plan_by_edge[remaining_edge_idx] = _build_plan_for_edge(remaining_edge, vertex_clusters, cost_estimator);
       }
     }
   }
@@ -121,12 +119,12 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(const JoinGr
   Assert(vertex_clusters.size() == 1 && vertex_clusters.begin()->first.all(),
          "No cluster for all vertices generated, is the JoinGraph connected?");
   const auto result_plan = vertex_clusters.begin()->second;
-  return _add_predicates_to_plan(result_plan, uncorrelated_predicates);
+  return _add_predicates_to_plan(result_plan, uncorrelated_predicates, cost_estimator);
 }
 
 GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_for_edge(
-    const JoinGraphEdge& edge,
-    const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters) const {
+    const JoinGraphEdge& edge, const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters,
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   auto joined_clusters = std::vector<JoinGraphVertexSet>{};
 
   for (auto& vertex_cluster : vertex_clusters) {
@@ -138,12 +136,14 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
   DebugAssert(!joined_clusters.empty(),
               "Edge appearing passed to this function should reference at least one vertex cluster");
 
+  const auto& cardinality_estimator = cost_estimator->cardinality_estimator;
+
   if (joined_clusters.size() == 2) {
     // Binary join edges
     const auto plan = _add_join_to_plan(vertex_clusters.at(joined_clusters[0]), vertex_clusters.at(joined_clusters[1]),
-                                        edge.predicates);
+                                        edge.predicates, cost_estimator);
 
-    return {plan, plan->get_statistics()->row_count()};
+    return {plan, cardinality_estimator->estimate_cardinality(plan)};
 
   } else {
     // Local edges and hyperedges
@@ -153,8 +153,8 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
       plan = JoinNode::make(JoinMode::Cross, plan, vertex_clusters.at(joined_clusters[joined_cluster_idx]));
     }
 
-    plan = _add_predicates_to_plan(plan, edge.predicates);
-    return {plan, plan->get_statistics()->row_count()};
+    plan = _add_predicates_to_plan(plan, edge.predicates, cost_estimator);
+    return {plan, cardinality_estimator->estimate_cardinality(plan)};
   }
 }
 

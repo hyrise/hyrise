@@ -29,10 +29,9 @@ class CalibrationQueryGenerator {
   static const std::vector<std::shared_ptr<AbstractLQPNode>> generate_tpch_12();
 
  private:
-  const std::shared_ptr<AbstractLQPNode> _generate_table_scan_for_predicate(const std::shared_ptr<StoredTableNode> table_node,
-                                                               const std::shared_ptr<AbstractExpression> predicate,
-                                                               const ScanType scan_type,
-                                                               const bool scan_on_reference_column) const;
+  const std::shared_ptr<AbstractLQPNode> _generate_table_scan_for_predicate(
+      const std::shared_ptr<StoredTableNode> table_node, const std::shared_ptr<AbstractExpression> predicate,
+      const ScanType scan_type, const bool scan_on_reference_column) const;
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_table_scan(
       const CalibrationQueryGeneratorPredicateConfiguration& configuration,
       const PredicateGeneratorFunctor& predicate_generator) const;

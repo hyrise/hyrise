@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cost_model/abstract_cost_estimator.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "types.hpp"
 

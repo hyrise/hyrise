@@ -37,7 +37,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   const auto shipdate_gte =
       PredicateNode::make(greater_than_equals_(lqp_column_(shipdate_column), value_("1994-01-01")));
   const auto shipdate_lt = PredicateNode::make(less_than_(lqp_column_(shipdate_column), value_("1995-01-01")));
-  const auto discount = PredicateNode::make(between_inclusive_(lqp_column_(discount_column), value_(0.05), value_(0.07001)));
+  const auto discount =
+      PredicateNode::make(between_inclusive_(lqp_column_(discount_column), value_(0.05), value_(0.07001)));
   const auto quantity = PredicateNode::make(less_than_(lqp_column_(quantity_column), value_(24)));
 
   std::vector<std::vector<std::shared_ptr<AbstractLQPNode>>> predicate_node_permutations = {
@@ -71,48 +72,49 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
 /**
  * This function generates all TableScan permutations for TPCH-12
  */
-    const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_tpch_12() {
-        std::vector<std::shared_ptr<AbstractLQPNode>> queries;
+const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_tpch_12() {
+  std::vector<std::shared_ptr<AbstractLQPNode>> queries;
 
-        const auto lineitem = StoredTableNode::make("lineitem");
+  const auto lineitem = StoredTableNode::make("lineitem");
 
-        const auto receiptdate_column = lineitem->get_column("l_receiptdate");
-        const auto commitdate_column = lineitem->get_column("l_commitdate");
-        const auto shipdate_column = lineitem->get_column("l_shipdate");
+  const auto receiptdate_column = lineitem->get_column("l_receiptdate");
+  const auto commitdate_column = lineitem->get_column("l_commitdate");
+  const auto shipdate_column = lineitem->get_column("l_shipdate");
 
-        const auto shipdate_gte =
-                PredicateNode::make(greater_than_equals_(lqp_column_(receiptdate_column), value_("1994-01-01")));
-        const auto shipdate_lt = PredicateNode::make(less_than_(lqp_column_(receiptdate_column), value_("1995-01-01")));
-        const auto discount = PredicateNode::make(less_than_(lqp_column_(commitdate_column), lqp_column_(receiptdate_column)));
-        const auto quantity = PredicateNode::make(less_than_(lqp_column_(shipdate_column), lqp_column_(commitdate_column)));
+  const auto shipdate_gte =
+      PredicateNode::make(greater_than_equals_(lqp_column_(receiptdate_column), value_("1994-01-01")));
+  const auto shipdate_lt = PredicateNode::make(less_than_(lqp_column_(receiptdate_column), value_("1995-01-01")));
+  const auto discount =
+      PredicateNode::make(less_than_(lqp_column_(commitdate_column), lqp_column_(receiptdate_column)));
+  const auto quantity = PredicateNode::make(less_than_(lqp_column_(shipdate_column), lqp_column_(commitdate_column)));
 
-        std::vector<std::vector<std::shared_ptr<AbstractLQPNode>>> predicate_node_permutations = {
-                {shipdate_gte, shipdate_lt, discount, quantity}, {shipdate_gte, shipdate_lt, quantity, discount},
-                {shipdate_gte, discount, shipdate_lt, quantity}, {shipdate_gte, discount, quantity, shipdate_lt},
-                {shipdate_gte, quantity, shipdate_lt, discount}, {shipdate_gte, quantity, discount, shipdate_lt},
-                {quantity, shipdate_gte, discount, shipdate_lt}, {quantity, shipdate_gte, shipdate_lt, discount},
-                {quantity, shipdate_lt, shipdate_gte, discount}, {quantity, shipdate_lt, discount, shipdate_gte},
-                {quantity, discount, shipdate_lt, shipdate_gte}, {quantity, discount, shipdate_gte, shipdate_lt},
-                {discount, quantity, shipdate_gte, shipdate_lt}, {discount, quantity, shipdate_lt, shipdate_gte},
-                {discount, shipdate_lt, quantity, shipdate_gte}, {discount, shipdate_lt, shipdate_gte, quantity},
-                {discount, shipdate_gte, shipdate_lt, quantity}, {discount, shipdate_gte, quantity, shipdate_lt},
-                {shipdate_lt, discount, shipdate_gte, quantity}, {shipdate_lt, discount, quantity, shipdate_gte},
-                {shipdate_lt, quantity, discount, shipdate_gte}, {shipdate_lt, quantity, shipdate_gte, discount},
-                {shipdate_lt, shipdate_gte, discount, quantity}, {shipdate_lt, shipdate_gte, quantity, discount}};
+  std::vector<std::vector<std::shared_ptr<AbstractLQPNode>>> predicate_node_permutations = {
+      {shipdate_gte, shipdate_lt, discount, quantity}, {shipdate_gte, shipdate_lt, quantity, discount},
+      {shipdate_gte, discount, shipdate_lt, quantity}, {shipdate_gte, discount, quantity, shipdate_lt},
+      {shipdate_gte, quantity, shipdate_lt, discount}, {shipdate_gte, quantity, discount, shipdate_lt},
+      {quantity, shipdate_gte, discount, shipdate_lt}, {quantity, shipdate_gte, shipdate_lt, discount},
+      {quantity, shipdate_lt, shipdate_gte, discount}, {quantity, shipdate_lt, discount, shipdate_gte},
+      {quantity, discount, shipdate_lt, shipdate_gte}, {quantity, discount, shipdate_gte, shipdate_lt},
+      {discount, quantity, shipdate_gte, shipdate_lt}, {discount, quantity, shipdate_lt, shipdate_gte},
+      {discount, shipdate_lt, quantity, shipdate_gte}, {discount, shipdate_lt, shipdate_gte, quantity},
+      {discount, shipdate_gte, shipdate_lt, quantity}, {discount, shipdate_gte, quantity, shipdate_lt},
+      {shipdate_lt, discount, shipdate_gte, quantity}, {shipdate_lt, discount, quantity, shipdate_gte},
+      {shipdate_lt, quantity, discount, shipdate_gte}, {shipdate_lt, quantity, shipdate_gte, discount},
+      {shipdate_lt, shipdate_gte, discount, quantity}, {shipdate_lt, shipdate_gte, quantity, discount}};
 
-        for (const auto& permutation : predicate_node_permutations) {
-            std::shared_ptr<AbstractLQPNode> previous_node = lineitem;
-            for (const auto& node : permutation) {
-                const auto copied_node = node->deep_copy({{lineitem, lineitem}});
-                copied_node->set_left_input(previous_node);
-                previous_node = copied_node;
-            }
-
-            queries.push_back(previous_node);
-        }
-
-        return queries;
+  for (const auto& permutation : predicate_node_permutations) {
+    std::shared_ptr<AbstractLQPNode> previous_node = lineitem;
+    for (const auto& node : permutation) {
+      const auto copied_node = node->deep_copy({{lineitem, lineitem}});
+      copied_node->set_left_input(previous_node);
+      previous_node = copied_node;
     }
+
+    queries.push_back(previous_node);
+  }
+
+  return queries;
+}
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::generate_queries() const {
   std::vector<std::shared_ptr<AbstractLQPNode>> queries;
@@ -137,26 +139,30 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
         for (const auto selectivity : _configuration.selectivities) {
           for (const auto on_reference_segment : {true, false}) {
             const auto table_node = StoredTableNode::make(table_name);
-            const auto predicate = CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(table_node, column_spec, selectivity);
-            queries.push_back(_generate_table_scan_for_predicate(table_node, predicate, ScanType::TableScan, on_reference_segment));
+            const auto predicate = CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
+                table_node, column_spec, selectivity);
+            queries.push_back(
+                _generate_table_scan_for_predicate(table_node, predicate, ScanType::TableScan, on_reference_segment));
 
             // IndexScans are currently not supported on reference segments and indexes are only created for
             // dictionary-encoded FSBA columns (not a Hyrise restriction, just considered sufficent for calibration).
-            if (!on_reference_segment && column_spec.encoding.encoding_type == EncodingType::Dictionary
-                && *column_spec.encoding.vector_compression_type == VectorCompressionType::FixedSizeByteAligned) {
-              queries.push_back(_generate_table_scan_for_predicate(table_node, predicate, ScanType::IndexScan, on_reference_segment));
+            if (!on_reference_segment && column_spec.encoding.encoding_type == EncodingType::Dictionary &&
+                *column_spec.encoding.vector_compression_type == VectorCompressionType::FixedSizeByteAligned) {
+              queries.push_back(
+                  _generate_table_scan_for_predicate(table_node, predicate, ScanType::IndexScan, on_reference_segment));
             }
 
             if (column_spec.data_type == DataType::String) {
               // StringPredicateType::Equality is called as the default
               for (const auto like_type : {StringPredicateType::TrailingLike, StringPredicateType::PrecedingLike}) {
-                const auto like_predicate = CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(table_node,
-                  column_spec, selectivity, like_type);
-                queries.push_back(_generate_table_scan_for_predicate(table_node, like_predicate, ScanType::TableScan, on_reference_segment));
-            }
+                const auto like_predicate =
+                    CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
+                        table_node, column_spec, selectivity, like_type);
+                queries.push_back(_generate_table_scan_for_predicate(table_node, like_predicate, ScanType::TableScan,
+                                                                     on_reference_segment));
+              }
             }
           }
-          
         }
       }
     }
@@ -169,22 +175,25 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
 
       // Expect one encoding
       if (!permutation.second_encoding) {
-        add_queries_if_present(queries, _generate_table_scan(permutation,
-                                CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
+        add_queries_if_present(
+            queries,
+            _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
 
-        add_queries_if_present(queries, _generate_table_scan(permutation,
-                               CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
+        add_queries_if_present(
+            queries, _generate_table_scan(permutation,
+                                          CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
 
         if (permutation.data_type == DataType::String) {
-          add_queries_if_present(queries, _generate_table_scan(permutation,
-                                 CalibrationQueryGeneratorPredicate::generate_predicate_like));
+          add_queries_if_present(
+              queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
 
-          add_queries_if_present(queries, _generate_table_scan(permutation,
-                                 CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+          add_queries_if_present(
+              queries, _generate_table_scan(permutation,
+                                            CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
         }
 
-        add_queries_if_present(queries, _generate_table_scan(permutation,
-                               CalibrationQueryGeneratorPredicate::generate_predicate_or));
+        add_queries_if_present(
+            queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
       }
 
       // // Expect two encodings
@@ -221,12 +230,10 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
 }
 
 const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_table_scan_for_predicate(
-    const std::shared_ptr<StoredTableNode> table_node,
-    const std::shared_ptr<AbstractExpression> predicate,
-    const ScanType scan_type,
-    const bool scan_on_reference_column) const {
-  const auto predicate_node = CalibrationQueryGeneratorPredicate::generate_concreate_scan_predicate(
-      predicate, scan_type);
+    const std::shared_ptr<StoredTableNode> table_node, const std::shared_ptr<AbstractExpression> predicate,
+    const ScanType scan_type, const bool scan_on_reference_column) const {
+  const auto predicate_node =
+      CalibrationQueryGeneratorPredicate::generate_concreate_scan_predicate(predicate, scan_type);
 
   // Use additional ValidateNode to force a reference-segment TableScan
   if (scan_on_reference_column) {

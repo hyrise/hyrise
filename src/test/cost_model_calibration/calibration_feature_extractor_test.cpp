@@ -59,26 +59,26 @@ TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractSimpleComparison) {
 
   const auto calibration_example = cost_model::CalibrationFeatureExtractor::extract_features(table_scan);
 
-//  EXPECT_TRUE(calibration_example.table_scan_features);
-//  EXPECT_EQ("Unencoded", calibration_example.table_scan_features.first_column.column_encoding);
-//  EXPECT_EQ("undefined", calibration_example.table_scan_features.second_column.column_encoding);
-//  EXPECT_EQ("undefined", calibration_example.table_scan_features.third_column.column_encoding);
+  //  EXPECT_TRUE(calibration_example.table_scan_features);
+  //  EXPECT_EQ("Unencoded", calibration_example.table_scan_features.first_column.column_encoding);
+  //  EXPECT_EQ("undefined", calibration_example.table_scan_features.second_column.column_encoding);
+  //  EXPECT_EQ("undefined", calibration_example.table_scan_features.third_column.column_encoding);
   EXPECT_EQ(calibration_example.table_scan_features.computable_or_column_expression_count, 2);
 }
 
 TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractBetween) {
   // set up some TableScanOperator
 
-  auto predicate = between_(a, 6, 10);
+  auto predicate = between_inclusive_(a, 6, 10);
 
   const auto table_scan = std::make_shared<TableScan>(_int_int, predicate);
   table_scan->execute();
 
   const auto calibration_example = cost_model::CalibrationFeatureExtractor::extract_features(table_scan);
 
-//  EXPECT_TRUE(calibration_example.table_scan_features);
-//  EXPECT_EQ(calibration_example.table_scan_features->first_column.column_encoding, "Unencoded");
-//  EXPECT_EQ(calibration_example.table_scan_features->second_column.column_encoding, "undefined");
+  //  EXPECT_TRUE(calibration_example.table_scan_features);
+  //  EXPECT_EQ(calibration_example.table_scan_features->first_column.column_encoding, "Unencoded");
+  //  EXPECT_EQ(calibration_example.table_scan_features->second_column.column_encoding, "undefined");
   EXPECT_EQ(calibration_example.table_scan_features.computable_or_column_expression_count, 2);
 }
 
@@ -92,10 +92,10 @@ TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractOr) {
 
   const auto calibration_example = cost_model::CalibrationFeatureExtractor::extract_features(table_scan);
 
-//  EXPECT_TRUE(calibration_example.table_scan_features);
-//  EXPECT_EQ(calibration_example.table_scan_features->first_column.column_encoding, "undefined");
-//  EXPECT_EQ(calibration_example.table_scan_features->second_column.column_encoding, "undefined");
-//  EXPECT_EQ(calibration_example.table_scan_features->third_column.column_encoding, "undefined");
+  //  EXPECT_TRUE(calibration_example.table_scan_features);
+  //  EXPECT_EQ(calibration_example.table_scan_features->first_column.column_encoding, "undefined");
+  //  EXPECT_EQ(calibration_example.table_scan_features->second_column.column_encoding, "undefined");
+  //  EXPECT_EQ(calibration_example.table_scan_features->third_column.column_encoding, "undefined");
   EXPECT_EQ(calibration_example.table_scan_features.computable_or_column_expression_count, 5);
 }
 
@@ -103,13 +103,14 @@ using JoinTypes = ::testing::Types<JoinHash, JoinIndex, JoinSortMerge, JoinNeste
 TYPED_TEST_CASE(DISABLED_CalibrationFeatureExtractorJoinTest, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DISABLED_CalibrationFeatureExtractorJoinTest, ExtractJoin) {
-  const auto join = std::make_shared<TypeParam>(this->_int_int, this->_int_string, JoinMode::Inner,
-                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  const auto join = std::make_shared<TypeParam>(
+      this->_int_int, this->_int_string, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
   const auto calibration_example = cost_model::CalibrationFeatureExtractor::extract_features(join);
 
-//  EXPECT_TRUE(calibration_example.join_features);
+  //  EXPECT_TRUE(calibration_example.join_features);
 }
 
 }  // namespace opossum

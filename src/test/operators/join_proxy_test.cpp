@@ -43,15 +43,17 @@ class DISABLED_JoinProxyTest : public BaseTest {
 };
 
 TEST_F(DISABLED_JoinProxyTest, OperatorName) {
-  auto join = std::make_shared<JoinProxy>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
-                                          OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  auto join = std::make_shared<JoinProxy>(
+      _table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
 
   EXPECT_EQ(join->name(), "JoinProxy");
 }
 
 TEST_F(DISABLED_JoinProxyTest, RadixClusteredLeftJoinWithZeroAndOnesAnd) {
-  auto join = std::make_shared<JoinProxy>(_table_with_nulls, _table_with_nulls, JoinMode::Left,
-                                          OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  auto join = std::make_shared<JoinProxy>(
+      _table_with_nulls, _table_with_nulls, JoinMode::Left,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
   std::shared_ptr<Table> expected_result =

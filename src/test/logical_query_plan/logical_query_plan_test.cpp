@@ -377,11 +377,11 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
   // [0] [Predicate] a = SUBQUERY (LQP, 0x4e2d160, Parameters: )
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
-  EXPECT_TRUE(
-      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] TableScan: a \> SUBQUERY \(LQP, 0x[a-z0-9]+\))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(),
+                                std::regex{R"(\[0\] \[Predicate\] TableScan: a \> SUBQUERY \(LQP, 0x[a-z0-9]+\))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subqueries"}));
-  EXPECT_TRUE(
-      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] TableScan: a = SUBQUERY \(LQP, 0x[a-z0-9]+\))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(),
+                                std::regex{R"(\[0\] \[Predicate\] TableScan: a = SUBQUERY \(LQP, 0x[a-z0-9]+\))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] TableScan: a = 5)"}));
 }
 

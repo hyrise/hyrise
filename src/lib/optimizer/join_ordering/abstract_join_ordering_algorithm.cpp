@@ -1,21 +1,19 @@
 #include "greedy_operator_ordering.hpp"
 
-#include "cost_model/abstract_cost_estimator.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "enumerate_ccp.hpp"
 #include "join_graph.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/cardinality_estimator.hpp"
+#include "utils/format_duration.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
-AbstractJoinOrderingAlgorithm::AbstractJoinOrderingAlgorithm(
-    const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
-    : _cost_estimator(cost_estimator) {}
-
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_to_plan(
-    const std::shared_ptr<AbstractLQPNode>& lqp,
-    const std::vector<std::shared_ptr<AbstractExpression>>& predicates) const {
+    const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates,
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   /**
    * Add a number of predicates on top of a plan; try to bring them into an efficient order
    *
@@ -32,7 +30,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
   predicate_nodes_and_cost.reserve(predicates.size());
   for (const auto& predicate : predicates) {
     const auto predicate_node = PredicateNode::make(predicate, lqp);
-    predicate_nodes_and_cost.emplace_back(predicate_node, _cost_estimator->estimate_plan_cost(predicate_node));
+    predicate_nodes_and_cost.emplace_back(predicate_node, cost_estimator->estimate_node_cost(predicate_node));
   }
 
   std::sort(predicate_nodes_and_cost.begin(), predicate_nodes_and_cost.end(),
@@ -51,7 +49,8 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
     const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
-    const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates) const {
+    std::vector<std::shared_ptr<AbstractExpression>> join_predicates,
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
   /**
    * Join two plans using a set of predicates; try to bring them into an efficient order
    *
@@ -72,14 +71,15 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   join_predicates_and_cost.reserve(join_predicates.size());
   for (const auto& join_predicate : join_predicates) {
     const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, left_lqp, right_lqp);
-    join_predicates_and_cost.emplace_back(join_predicate, _cost_estimator->estimate_plan_cost(join_node));
+    const auto cost = cost_estimator->estimate_node_cost(join_node);
+    join_predicates_and_cost.emplace_back(join_predicate, cost);
   }
 
   std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
   // Categorize join predicates into those that can be processed as part of a join operator and those that need to be
-  // processed as scans.
+  // processed as normal predicates.
   // NOTE: Since a multi-predicate join is currently slower than scanning the join output table, we do not emit multiple
   //       predicates for the JoinNode, but use subsequent scans instead.
   auto join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -102,7 +102,7 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
     lqp = JoinNode::make(JoinMode::Cross, left_lqp, right_lqp);
   }
 
-  // non operator join predicates have to be processed as scans.
+  // Post-JoinNode predicates are handled as normal predicates
   for (const auto& post_join_predicate : post_join_node_predicates) {
     lqp = PredicateNode::make(post_join_predicate, lqp);
   }

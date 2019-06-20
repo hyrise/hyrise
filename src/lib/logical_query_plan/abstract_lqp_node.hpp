@@ -6,12 +6,12 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 class AbstractExpression;
-class TableStatistics;
 
 enum class LQPNodeType {
   Aggregate,
@@ -49,7 +49,7 @@ struct LQPOutputRelation {
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
-class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
+class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   AbstractLQPNode(const LQPNodeType node_type,
                   const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
