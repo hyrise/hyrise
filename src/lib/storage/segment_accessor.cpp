@@ -26,11 +26,10 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
           // If only a single segment is referenced, we can resolve it right here and now so that we can avoid some
           // virtual method calls later.
           resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_referenced_segment) {
-            if constexpr (!std::is_same_v<std::decay_t<decltype(typed_referenced_segment)>, ReferenceSegment>) {
-              auto accessor_into_referenced =
-                  SegmentAccessor<T, decltype(typed_referenced_segment)>(typed_referenced_segment);
-              accessor = std::make_unique<SingleChunkReferenceSegmentAccessor<T, decltype(accessor_into_referenced)>>(
-                  pos_list, chunk_id, std::move(accessor_into_referenced));
+            using ReferencedSegment = std::decay_t<decltype(typed_referenced_segment)>;
+            if constexpr (!std::is_same_v<ReferencedSegment, ReferenceSegment>) {
+              accessor = std::make_unique<SingleChunkReferenceSegmentAccessor<T, ReferencedSegment>>(
+                  pos_list, chunk_id, typed_referenced_segment);
             } else {
               Fail("Encountered nested ReferenceSegments");
             }

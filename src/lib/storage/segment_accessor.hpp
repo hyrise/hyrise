@@ -92,22 +92,21 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above
-template <typename T, typename AccessorIntoReferenced>
+template <typename T, typename Segment>
 class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SingleChunkReferenceSegmentAccessor(const PosList& pos_list, const ChunkID chunk_id,
-                                               AccessorIntoReferenced accessor)
-      : _pos_list{pos_list}, _chunk_id(chunk_id), _accessor(std::move(accessor)) {}
+  explicit SingleChunkReferenceSegmentAccessor(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment)
+      : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
-    return _accessor.access(referenced_chunk_offset);
+    return _segment.get_typed_value(referenced_chunk_offset);
   }
 
  protected:
   const PosList& _pos_list;
   const ChunkID _chunk_id;
-  const AccessorIntoReferenced _accessor;
+  const Segment& _segment;
 };
 
 // Accessor for ReferenceSegments that reference only NULL values
