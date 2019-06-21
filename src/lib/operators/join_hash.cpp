@@ -202,12 +202,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       The number of bits is used to create probe partitions with a size that can
       be expected to fit into the L2 cache.
       This should incorporate hardware knowledge, once available in Hyrise.
-      As of now, we assume a L2 cache size of 256 KB.
+      As of now, we assume a L2 cache size of 1024 KB (L2 cache size of recent
+      Intel Xeon CPUs), of which we use 50%.
       We estimate the size the following way:
         - we assume each key appears once (that is an overestimation space-wise, but we
         aim rather for a hash map that is slightly smaller than L2 than slightly larger)
-        - each entry in the hash map is a data structure holding the actual value
-        and the RowID
+        - each entry in the hash map is a uint32_t offset (see hash_join_steps.hpp)
     */
     const auto build_relation_size = _build_input_table->row_count();
     const auto probe_relation_size = _probe_input_table->row_count();
@@ -221,22 +221,25 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       PerformanceWarning("Build relation larger than probe relation in hash join");
     }
 
-    const auto l2_cache_size = 256'000;  // bytes
+    const auto l2_cache_size = 1'024'000;  // bytes 
+    const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size  
 
-    // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
-    // that each value maps to a PosList with a single RowID. For the used small_vector's, we assume a
-    // size of 2*RowID per PosList. For sizing, see comments:
+    // For sizing, see comments:
     // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
+    // We aim for a fill factor of 80%, a bit less of bytell hash map's maximum fill factor of 0.9375.
     const auto complete_hash_map_size =
         // number of items in map
-        (build_relation_size *
+        build_relation_size *
          // key + value (and one byte overhead, see link above)
-         (sizeof(BuildColumnType) + 2 * sizeof(RowID) + 1))
-        // fill factor
-        / 0.8;
+        sizeof(uint32_t) / 0.8;
 
-    const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
-    const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
+    auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
+
+    // We limit the max size of partitions to mitigate the chances of overflowing offsets
+    const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
+    if (build_relation_size / cluster_count > max_partition_size) {
+      cluster_count = build_relation_size / max_partition_size;
+    }
 
     return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
   }
