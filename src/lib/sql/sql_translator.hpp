@@ -51,7 +51,8 @@ class SQLTranslator final {
   static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
  private:
-  // todo(jj): comment
+  // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows similar
+  // expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
   struct NamedExpression {
     NamedExpression(const std::shared_ptr<AbstractExpression>& expression);
     NamedExpression(
@@ -173,7 +174,7 @@ class SQLTranslator final {
   std::optional<TableSourceState> _from_clause_result;
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
-  std::vector<NamedExpression> _inflated_select_list_elements; //last_todo
+  std::vector<NamedExpression> _inflated_select_list_elements;
 };
 
 }  // namespace opossum

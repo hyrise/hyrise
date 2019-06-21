@@ -889,7 +889,6 @@ namespace opossum {
       const auto &select_list_element = select_list_elements[select_list_idx];
 
       if (hsql_expr->type == hsql::kExprStar) {
-        Assert(select_list_element.identifiers.empty(), "todo(jj) 7");
         AssertInput(_from_clause_result, "Can't SELECT with wildcards since there are no FROM tables specified");
 
         if (is_aggregate) {
@@ -897,7 +896,7 @@ namespace opossum {
           for (const auto &pre_aggregate_expression : pre_aggregate_lqp->column_expressions()) {
             if (hsql_expr->table) {
               // Dealing with SELECT t.* here
-              auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression); // note(jj): todo There seems to be no alternative to get_expression_identifiers, because the expression might not be part of the select list, if it is in an aggregate (such as SUM(a))
+              auto identifiers = _sql_identifier_resolver->get_expression_identifiers(pre_aggregate_expression);
               if (std::any_of(identifiers.begin(), identifiers.end(),
                               [&](const auto& identifier) { return identifier.table_name != hsql_expr->table; })) {
                 // The pre_aggregate_expression may or may not be part of the GROUP BY clause, but since it comes from a
