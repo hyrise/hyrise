@@ -151,9 +151,15 @@ class Table : private Noncopyable {
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
-  void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
+  /**
+   * Tables, typically those stored in the StorageManager, can be associated with statistics to perform Cardinality
+   * estimation during optimization.
+   * @{
+   */
+  std::shared_ptr<TableStatistics> table_statistics() const;
 
-  std::shared_ptr<TableStatistics> table_statistics() const { return _table_statistics; }
+  void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
+  /** @} */
 
   std::vector<IndexInfo> get_indexes() const;
 
@@ -179,8 +185,8 @@ class Table : private Noncopyable {
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
-  std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
+  std::shared_ptr<TableStatistics> _table_statistics;
 };
 }  // namespace opossum

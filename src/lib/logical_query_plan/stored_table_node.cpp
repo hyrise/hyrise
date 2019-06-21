@@ -89,41 +89,6 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  DebugAssert(!left_input && !right_input, "StoredTableNode must be leaf");
-
-  const auto stored_statistics = StorageManager::get().get_table(table_name)->table_statistics();
-
-  if (_pruned_column_ids.empty()) {
-    return stored_statistics;
-  }
-
-  /**
-   * Prune `_pruned_column_ids` from the statistics
-   */
-
-  auto output_column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{
-      stored_statistics->column_statistics().size() - _pruned_column_ids.size()};
-
-  auto pruned_column_ids_iter = _pruned_column_ids.begin();
-
-  for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
-       stored_column_id < stored_statistics->column_statistics().size(); ++stored_column_id) {
-    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
-    if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
-      ++pruned_column_ids_iter;
-      continue;
-    }
-
-    output_column_statistics[output_column_id] = stored_statistics->column_statistics()[stored_column_id];
-    ++output_column_id;
-  }
-
-  return std::make_shared<TableStatistics>(stored_statistics->table_type(), stored_statistics->row_count(),
-                                           output_column_statistics);
-}
-
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto copy = make(table_name);
   copy->set_pruned_chunk_ids(_pruned_chunk_ids);

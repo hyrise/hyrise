@@ -13,7 +13,6 @@
 namespace opossum {
 
 class AbstractExpression;
-class TableStatistics;
 
 enum class ScanType : uint8_t { TableScan, IndexScan };
 
@@ -29,9 +28,6 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
   explicit PredicateNode(const std::shared_ptr<AbstractExpression>& predicate);
 
   std::string description() const override;
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
 
   std::shared_ptr<AbstractExpression> predicate() const;
 
