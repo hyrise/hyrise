@@ -159,26 +159,26 @@ namespace opossum {
 // }
 
 // TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
-//   /**
-//      * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
-//      * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
-//      * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
-//      * correct input.
-//      *
-//      *             _______Cross________
-//      *            /                    \
-//      *  Predicate_0(a > 80)     Predicate_2(a > 90)
-//      *           |                     |
-//      *  Predicate_1(a > 60)     Predicate_3(a > 50)
-//      *           |                     |
-//      *        Table_0           Predicate_4(a > 30)
-//      *                                 |
-//      *                               Table_1
-//      */
+    /**
+      * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
+      * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
+      * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
+      * correct input.
+      *
+      *             _______Cross________
+      *            /                    \
+      *  Predicate_0(a > 80)     Predicate_2(a > 90)
+      *           |                     |
+      *  Predicate_1(a > 60)     Predicate_3(a > 50)
+      *           |                     |
+      *        Table_0           Predicate_4(a > 30)
+      *                                 |
+      *                               Table_1
+      */
 
-//   /**
-//      * The mocked table has one column of int32_ts with the value range 0..100
-//      */
+    /**
+      * The mocked table has one column of int32_ts with the value range 0..100
+      */
 //   auto table_0 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
 //                                                   {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
 //   auto table_1 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
