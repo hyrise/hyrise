@@ -29,6 +29,9 @@ struct CostModelFeatures : public AbstractFeatures {
   float logical_cost_hash = 0;
 
   size_t left_input_row_count = 0;
+  // `left_input_data_table_row_count` is used only for scans right now. Purpose is to
+  // gather the ratio of tuples of the data table relative to the positions in the PosList.
+  size_t left_input_data_table_row_count = 0;
   size_t left_input_chunk_count = 0;
   size_t left_input_memory_usage_bytes = 0;
   size_t left_input_chunk_size = 0;
@@ -50,8 +53,8 @@ struct CostModelFeatures : public AbstractFeatures {
   bool is_selectivity_below_50_percent = true;
   float selectivity_distance_to_50_percent = 0.5f;
 
-  // Just for debugging
   pmr_string operator_description;
+  pmr_string previous_operator = "Unknown";
 
   ConstantHardwareFeatures constant_hardware_features;
   RuntimeHardwareFeatures runtime_hardware_features;
