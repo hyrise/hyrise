@@ -1,6 +1,7 @@
 #include "abstract_benchmark_item_runner.hpp"
 
 #include <boost/algorithm/string/replace.hpp>
+#include <memory>
 
 #include "benchmark_sql_executor.hpp"
 #include "concurrency/transaction_manager.hpp"
@@ -20,7 +21,12 @@ std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::ex
     visualize_prefix = std::move(name);
   }
 
-  BenchmarkSQLExecutor sql_executor(_config->enable_jit, _sqlite_wrapper, visualize_prefix);
+  std::shared_ptr<const Table> expected_result_table = nullptr;
+  if (item_id < _expected_results.size()) {
+    expected_result_table = _expected_results[item_id];
+  }
+
+  BenchmarkSQLExecutor sql_executor(_config->enable_jit, _sqlite_wrapper, visualize_prefix, expected_result_table);
   _on_execute_item(item_id, sql_executor);
   return {std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }
@@ -28,5 +34,7 @@ std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::ex
 void AbstractBenchmarkItemRunner::set_sqlite_wrapper(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper) {
   _sqlite_wrapper = sqlite_wrapper;
 }
+
+// TODO(Marcel) set expected_results as trigger for the table comparison
 
 }  // namespace opossum

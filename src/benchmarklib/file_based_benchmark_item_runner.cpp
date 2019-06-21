@@ -5,20 +5,23 @@
 #include <fstream>
 
 #include "SQLParser.h"
+#include "operators/print.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
-#include "operators/print.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
 FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
     const std::unordered_set<std::string>& filename_blacklist,
-    const std::optional<std::unordered_set<std::string>>& query_subset)
+    const std::optional<std::unordered_set<std::string>>& query_subset,
+    const std::optional<const std::string>& expected_results_directory_path)
     : AbstractBenchmarkItemRunner(config) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   std::filesystem::path path{query_path};
+
   Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
 
   if (std::filesystem::is_regular_file(path)) {
@@ -41,13 +44,16 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
 
   // Sort queries by name
   std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
+
+  if (expected_results_directory_path) {
+    Assert(std::filesystem::is_directory(*expected_results_directory_path),
+           "Expected results path (" + *expected_results_directory_path + ") has to be a directory.");
+    _load_expected_results(*expected_results_directory_path);
+  }
 }
 
 void FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  const auto& pipeline_status_and_table = sql_executor.execute(_queries[item_id].sql);
-  const auto& result_table = std::get<1>(pipeline_status_and_table);
-  Print::print(result_table);
-  // TODO(Marcel)
+  sql_executor.execute(_queries[item_id].sql);
 }
 
 std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
@@ -96,6 +102,26 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
   for (const auto& query : queries_in_file) {
     if (!query_subset || query_subset->count(query.name)) {
       _queries.emplace_back(query);
+    }
+  }
+}
+
+void FileBasedBenchmarkItemRunner::_load_expected_results(const std::filesystem::path& results_directory_path) {
+  const auto is_tbl_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".tbl"); };
+  _expected_results.resize(_queries.size());
+
+  std::cout << "- Loading expected result tables" << "\n";
+
+  for (const auto& entry : std::filesystem::recursive_directory_iterator(results_directory_path)) {
+    if (std::filesystem::is_regular_file(entry) && is_tbl_file(entry.path())) {
+      const auto query_name = entry.path().stem().string();
+      const auto iter = std::find_if(_queries.cbegin(), _queries.cend(),
+                                     [&query_name](const auto& query) { return query.name == query_name; });
+      if (iter != _queries.cend()) {
+        const auto item_id = std::distance(_queries.cbegin(), iter);
+        std::cout << "-  Loading result table " + entry.path().string() << "\n";
+        _expected_results[item_id] = load_table(entry.path().string());
+      }
     }
   }
 }

@@ -35,11 +35,13 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 
   metrics.emplace_back(std::move(pipeline.metrics()));
 
-  if (_expected_result_table){
-  
-  }
-  else if (_sqlite_wrapper) {
-    _verify_with_sqlite(pipeline);
+  if (_sqlite_wrapper) {
+    if (_expected_result_table) {
+      _compare_tables(_expected_result_table, std::get<1>(pipeline.get_result_table()),
+                      "Using dedicated expected result table");
+    } else {
+      _verify_with_sqlite(pipeline);
+    }
   }
 
   if (_visualize_prefix) {
@@ -55,32 +57,43 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline.get_sql());
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
   DebugAssert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
-
-  std::cout << "Using SQLite's result table as expected result table" << "\n";
-  _compare_tables(sqlite_result, result_table);
+  _compare_tables(sqlite_result, result_table, "Using SQLite's result table as expected result table");
 }
 
 void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& expected_result_table,
-  const std::shared_ptr<const Table>& actual_result_table){
+                                           const std::shared_ptr<const Table>& actual_result_table,
+                                           const std::optional<const std::string> description) {
   Timer timer;
 
   if (actual_result_table->row_count() > 0) {
     if (expected_result_table->row_count() == 0) {
       any_verification_failed = true;
-      std::cout << "- Verification failed: Hyrise's actual result is not empty, but the expected result is (" << timer.lap_formatted()
-                << ")" << std::endl;
+      if (description) {
+        std::cout << "- " + *description << "\n";
+      }
+      std::cout << "- Verification failed: Hyrise's actual result is not empty, but the expected result is ("
+                << timer.lap_formatted() << ")"
+                << "\n";
     } else if (const auto table_difference_message =
-                   check_table_equal(actual_result_table, expected_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
-                                     FloatComparisonMode::RelativeDifference)) {
+                   check_table_equal(actual_result_table, expected_result_table, OrderSensitivity::No,
+                                     TypeCmpMode::Lenient, FloatComparisonMode::RelativeDifference)) {
       any_verification_failed = true;
-      std::cout << "- Verification failed (" << timer.lap_formatted() << ")" << std::endl
-                << *table_difference_message << std::endl;
+      if (description) {
+        std::cout << *description << "\n";
+      }
+      std::cout << "- Verification failed (" << timer.lap_formatted() << ")"
+                << "\n"
+                << *table_difference_message << "\n";
     }
   } else {
     if (expected_result_table && expected_result_table->row_count() > 0) {
       any_verification_failed = true;
-      std::cout << "- Verification failed: Expected result table is not empty, but the Hyrise's actual result is (" << timer.lap_formatted()
-                << ")" << std::endl;
+      if (description) {
+        std::cout << *description << "\n";
+      }
+      std::cout << "- Verification failed: Expected result table is not empty, but Hyrise's actual result is ("
+                << timer.lap_formatted() << ")"
+                << "\n";
     }
   }
 }

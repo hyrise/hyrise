@@ -42,6 +42,7 @@ class AbstractBenchmarkItemRunner {
   virtual void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) = 0;
 
   std::shared_ptr<BenchmarkConfig> _config;
+  std::vector<std::shared_ptr<const Table>> _expected_results;
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 };
 

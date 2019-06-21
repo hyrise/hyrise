@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <unordered_set>
 
 #include "abstract_benchmark_item_runner.hpp"
@@ -16,7 +17,8 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   //                              it contains multiple queries, they are called "q7.0", "q7.1", ...
   FileBasedBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
                                const std::unordered_set<std::string>& filename_blacklist = {},
-                               const std::optional<std::unordered_set<std::string>>& query_subset = {});
+                               const std::optional<std::unordered_set<std::string>>& query_subset = {},
+                               const std::optional<const std::string>& expected_results_directory_path = std::nullopt);
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
@@ -32,6 +34,7 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   // Get all queries from a given file
   void _parse_query_file(const std::filesystem::path& query_file_path,
                          const std::optional<std::unordered_set<std::string>>& query_subset);
+  void _load_expected_results(const std::filesystem::path& results_directory_path);
 
   std::vector<Query> _queries;
   std::vector<BenchmarkItemID> _items;
