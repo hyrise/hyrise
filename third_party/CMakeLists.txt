@@ -241,29 +241,6 @@ set_target_properties(custom_jemalloc PROPERTIES IMPORTED_LOCATION ${JEMALLOC_LI
 # Build TPCDS-KIT
 set(TPCDS_KIT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tpcds-kit/tools)
 
-add_executable(mkheader ${TPCDS_KIT_DIR}/mkheader.c)
-
-target_compile_definitions(mkheader PUBLIC -DLINUX)
-
-add_custom_command(TARGET mkheader POST_BUILD
-  COMMAND mkheader ARGS ${TPCDS_KIT_DIR}/column_list.txt
-  WORKING_DIRECTORY ${TPCDS_KIT_DIR})
-
-add_executable(distcomp
-  ${TPCDS_KIT_DIR}/dcgram.c
-  ${TPCDS_KIT_DIR}/dcomp.c
-  ${TPCDS_KIT_DIR}/grammar.c
-  ${TPCDS_KIT_DIR}/error_msg.c
-  ${TPCDS_KIT_DIR}/StringBuffer.c
-  ${TPCDS_KIT_DIR}/r_params.c)
-
-target_compile_definitions(distcomp PUBLIC -DLINUX)
-add_dependencies(distcomp mkheader)
-
-add_custom_command(TARGET distcomp POST_BUILD
-  COMMAND distcomp ARGS -i ${TPCDS_KIT_DIR}/tpcds.dst -o ${TPCDS_KIT_DIR}/tpcds.idx
-  WORKING_DIRECTORY ${TPCDS_KIT_DIR})
-
 add_executable(dsdgen
   ${TPCDS_KIT_DIR}/address.c
   ${TPCDS_KIT_DIR}/build_support.c
@@ -358,8 +335,10 @@ add_executable(dsdgen
   ${TPCDS_KIT_DIR}/w_web_site.c)
 
 add_custom_command(TARGET dsdgen PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${TPCDS_KIT_DIR}/tpcds.idx.h ${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${TPCDS_KIT_DIR})
+add_custom_command(TARGET dsdgen PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy ${TPCDS_KIT_DIR}/tpcds.idx ${CMAKE_BINARY_DIR}
         WORKING_DIRECTORY ${TPCDS_KIT_DIR})
-add_dependencies(dsdgen mkheader distcomp)
 target_compile_definitions(dsdgen PUBLIC -DLINUX)
 target_link_libraries(dsdgen m)
