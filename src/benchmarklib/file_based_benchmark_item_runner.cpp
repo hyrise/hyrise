@@ -47,7 +47,7 @@ void FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_i
   const auto& pipeline_status_and_table = sql_executor.execute(_queries[item_id].sql);
   const auto& result_table = std::get<1>(pipeline_status_and_table);
   Print::print(result_table);
-  // TODO(Marcel) we can get the metrics from the sql_executor and the metrics do contain
+  // TODO(Marcel)
 }
 
 std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
