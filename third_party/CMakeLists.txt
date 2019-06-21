@@ -260,6 +260,10 @@ add_executable(distcomp
 target_compile_definitions(distcomp PUBLIC -DLINUX)
 add_dependencies(distcomp mkheader)
 
+add_custom_command(TARGET distcomp POST_BUILD
+  COMMAND distcomp ARGS -i ${TPCDS_KIT_DIR}/tpcds.dst -o ${TPCDS_KIT_DIR}/tpcds.idx
+  WORKING_DIRECTORY ${TPCDS_KIT_DIR})
+
 add_executable(dsdgen
   ${TPCDS_KIT_DIR}/address.c
   ${TPCDS_KIT_DIR}/build_support.c
@@ -353,6 +357,9 @@ add_executable(dsdgen
   ${TPCDS_KIT_DIR}/w_web_sales.c
   ${TPCDS_KIT_DIR}/w_web_site.c)
 
+add_custom_command(TARGET dsdgen PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${TPCDS_KIT_DIR}/tpcds.idx ${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${TPCDS_KIT_DIR})
 add_dependencies(dsdgen mkheader distcomp)
 target_compile_definitions(dsdgen PUBLIC -DLINUX)
 target_link_libraries(dsdgen m)

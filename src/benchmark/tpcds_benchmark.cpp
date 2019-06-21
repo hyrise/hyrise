@@ -39,8 +39,6 @@ int main(int argc, char* argv[]) {
   const std::string binary_path = argv[0];
   const std::string binary_directory = binary_path.substr(0, binary_path.find_last_of("/"));
 
-  std::cout << "Bin dir: " << binary_directory << "\n";
-
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPC-DS Benchmark");
 
   // clang-format off
@@ -90,23 +88,8 @@ int main(int argc, char* argv[]) {
   Assert(std::filesystem::exists(std::filesystem::path{table_path + "/call_center.csv.json"}),
          "Table schemes have to be available.");
 
-  // add_custom_command(TARGET distcomp POST_BUILD
-  //   COMMAND distcomp ARGS -i ${TPCDS_KIT_DIR}/tpcds.dst -o ${TPCDS_KIT_DIR}/tpcds.idx
-  //   WORKING_DIRECTORY ${TPCDS_KIT_DIR})
-
-  // add_custom_command(TARGET dsdgen PRE_BUILD
-  //         COMMAND ${CMAKE_COMMAND} -E copy ${TPCDS_KIT_DIR}/tpcds.idx ${CMAKE_BINARY_DIR}
-  //         WORKING_DIRECTORY ${TPCDS_KIT_DIR})
-
   if (!data_files_available(table_path)) {
     if (std::filesystem::exists(std::filesystem::path{binary_directory + "/dsdgen"})) {
-      if (!std::filesystem::exists(std::filesystem::path{binary_directory + "/tpcds.idx"})) {
-        const auto tpcds_idx_return = system(
-            ("cd third_party/tpcds-kit/tools && ./distcomp -i tpcds.dst -o tpcds.idx && "
-              "cp tpcds.idx ../../../" + binary_path + "/tpcds.idx")
-                .c_str());
-        Assert(tpcds_idx_return == 0, "Generating tpcds.idx file failed.");
-      }
       const auto files_setup_return =
           system(("cd " + binary_directory + " && ./dsdgen -scale " + std::to_string(scale_factor) +
                   " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -suffix .csv -f")
