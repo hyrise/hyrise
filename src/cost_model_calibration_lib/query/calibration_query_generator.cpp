@@ -135,31 +135,41 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
     for (const auto& [table_name, table_size] : _tables) {
       auto& sm = StorageManager::get();
       const auto table = sm.get_table(table_name);
-      for (const auto& column_spec : _configuration.columns) {
-        for (const auto selectivity : _configuration.selectivities) {
-          for (const auto on_reference_segment : {true, false}) {
-            const auto table_node = StoredTableNode::make(table_name);
-            const auto predicate = CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
-                table_node, column_spec, selectivity);
-            queries.push_back(
-                _generate_table_scan_for_predicate(table_node, predicate, ScanType::TableScan, on_reference_segment));
 
+      for (const auto& column_spec : _configuration.columns) {
+        // Calibrate validate on data tables
+        const auto validdate_table_node = StoredTableNode::make(table_name);
+        queries.push_back(_generate_validate_on_data_table(validdate_table_node));
+        for (const auto selectivity : _configuration.selectivities) {
+          for (const auto scan_type : {ScanType::TableScan, ScanType::IndexScan}) {
             // IndexScans are currently not supported on reference segments and indexes are only created for
             // dictionary-encoded FSBA columns (not a Hyrise restriction, just considered sufficent for calibration).
-            if (!on_reference_segment && column_spec.encoding.encoding_type == EncodingType::Dictionary &&
-                *column_spec.encoding.vector_compression_type == VectorCompressionType::FixedSizeByteAligned) {
-              queries.push_back(
-                  _generate_table_scan_for_predicate(table_node, predicate, ScanType::IndexScan, on_reference_segment));
+            // Consequently, we skip queries where the data table scan would be an index scan on other segment encodings.
+            if (scan_type == ScanType::IndexScan && !(column_spec.encoding.encoding_type == EncodingType::Dictionary &&
+                *column_spec.encoding.vector_compression_type == VectorCompressionType::FixedSizeByteAligned)) {
+              continue;
             }
 
-            if (column_spec.data_type == DataType::String) {
-              // StringPredicateType::Equality is called as the default
-              for (const auto like_type : {StringPredicateType::TrailingLike, StringPredicateType::PrecedingLike}) {
-                const auto like_predicate =
-                    CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
-                        table_node, column_spec, selectivity, like_type);
-                queries.push_back(_generate_table_scan_for_predicate(table_node, like_predicate, ScanType::TableScan,
-                                                                     on_reference_segment));
+            const auto table_node = StoredTableNode::make(table_name);
+
+            const auto data_table_predicate = CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
+                table_node, column_spec, selectivity);
+
+            for (const auto reference_segment_predicate_selectivity : _configuration.selectivities) {
+              const auto reference_table_predicate = CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
+                table_node, column_spec, reference_segment_predicate_selectivity);
+              queries.push_back(
+                _generate_table_scans_for_predicate_chain(table_node, data_table_predicate, reference_table_predicate, scan_type));
+
+              if (column_spec.data_type == DataType::String && scan_type == ScanType::TableScan) {
+                // StringPredicateType::Equality is called as the default
+                for (const auto like_type : {StringPredicateType::TrailingLike, StringPredicateType::PrecedingLike}) {
+                  const auto like_predicate =
+                      CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
+                          table_node, column_spec, selectivity, like_type);
+                  queries.push_back(_generate_table_scans_for_predicate_chain(table_node, like_predicate, reference_table_predicate, scan_type));
+                  queries.push_back(_generate_table_scans_for_predicate_chain(table_node, data_table_predicate, like_predicate, scan_type));
+                }
               }
             }
           }
@@ -229,22 +239,30 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   return queries;
 }
 
-const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_table_scan_for_predicate(
-    const std::shared_ptr<StoredTableNode> table_node, const std::shared_ptr<AbstractExpression> predicate,
-    const ScanType scan_type, const bool scan_on_reference_column) const {
-  const auto predicate_node =
-      CalibrationQueryGeneratorPredicate::generate_concreate_scan_predicate(predicate, scan_type);
+const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_table_scans_for_predicate_chain(
+    const std::shared_ptr<StoredTableNode> table_node, const std::shared_ptr<AbstractExpression> data_table_predicate,
+    const std::shared_ptr<AbstractExpression> reference_table_predicate, const ScanType scan_type) const {
+  const auto data_table_predicate_node =
+      CalibrationQueryGeneratorPredicate::generate_concreate_scan_predicate(data_table_predicate, scan_type);
 
-  // Use additional ValidateNode to force a reference-segment TableScan
-  if (scan_on_reference_column) {
-    const auto validate_node = ValidateNode::make();
-    validate_node->set_left_input(table_node);
-    predicate_node->set_left_input(validate_node);
-  } else {
-    predicate_node->set_left_input(table_node);
-  }
+  // For scans on reference segements, we never create IndexScans.
+  const auto reference_table_predicate_node =
+      CalibrationQueryGeneratorPredicate::generate_concreate_scan_predicate(reference_table_predicate, ScanType::TableScan);
 
-  return predicate_node;
+  const auto validate_node = ValidateNode::make();
+
+  data_table_predicate_node->set_left_input(table_node);
+  reference_table_predicate_node->set_left_input(data_table_predicate_node);
+  validate_node->set_left_input(reference_table_predicate_node);
+
+  return validate_node;
+}
+
+const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_validate_on_data_table(
+      const std::shared_ptr<StoredTableNode> table_node) const {
+  const auto validate_node = ValidateNode::make();
+  validate_node->set_left_input(table_node);
+  return validate_node;
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_table_scan(
