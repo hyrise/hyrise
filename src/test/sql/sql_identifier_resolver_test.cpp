@@ -189,9 +189,9 @@ TEST_F(SQLIdentifierResolverTest, DeepEqualsIsUsed) {
   context.add_column_name(expression_a2, "a2");
   context.set_table_name(expression_a2, "T2");
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T2"}), expression_a);
-//  EXPECT_EQ(context.get_expression_identifiers(expression_a), expressions);
+  //  EXPECT_EQ(context.get_expression_identifiers(expression_a), expressions);
   EXPECT_EQ(context.resolve_identifier_relaxed({"a2"s, "T2"}), expression_a);
-//  EXPECT_EQ(context.get_expression_identifiers(expression_a2), expressions);
+  //  EXPECT_EQ(context.get_expression_identifiers(expression_a2), expressions);
 }
 
 TEST_F(SQLIdentifierResolverTest, ResolveTableName) {

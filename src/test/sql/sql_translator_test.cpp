@@ -379,13 +379,12 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInJoin) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
-
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumns) {
   const auto actual_lqp = compile_query("SELECT a AS a1, a AS a2, a AS a3, b AS b1, b AS b2, b AS b3 FROM int_float");
 
   const auto aliases = std::vector<std::string>({"a1", "a2", "a3", "b1", "b2", "b3"});
   const auto expressions =
-  expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
+      expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
 
   // clang-format off
   const auto expected_lqp =

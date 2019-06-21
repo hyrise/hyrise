@@ -54,10 +54,9 @@ class SQLTranslator final {
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows similar
   // expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
   struct NamedExpression {
-    NamedExpression(const std::shared_ptr<AbstractExpression>& expression);
-    NamedExpression(
-        const std::shared_ptr<AbstractExpression>& expression,
-        const std::vector<SQLIdentifier> identifiers);
+    explicit NamedExpression(const std::shared_ptr<AbstractExpression>& expression);
+    NamedExpression(const std::shared_ptr<AbstractExpression>& expression,
+                    const std::vector<SQLIdentifier> identifiers);
 
     std::shared_ptr<AbstractExpression> expression;
     std::vector<SQLIdentifier> identifiers;
@@ -69,11 +68,10 @@ class SQLTranslator final {
   // columns from input tables
   struct TableSourceState final {
     TableSourceState() = default;
-    TableSourceState(
-        const std::shared_ptr<AbstractLQPNode>& lqp,
-        const std::unordered_map<std::string, std::vector<NamedExpression>>& elements_by_table_name,
-        const std::vector<NamedExpression>& elements_in_order,
-        const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
+    TableSourceState(const std::shared_ptr<AbstractLQPNode>& lqp,
+                     const std::unordered_map<std::string, std::vector<NamedExpression>>& elements_by_table_name,
+                     const std::vector<NamedExpression>& elements_in_order,
+                     const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
     void append(TableSourceState&& rhs);
 
@@ -162,7 +160,7 @@ class SQLTranslator final {
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
   std::vector<std::shared_ptr<AbstractExpression>> _retrieve_expressions(
-      const std::vector<NamedExpression> &named_expressions) const;
+      const std::vector<NamedExpression>& named_expressions) const;
 
  private:
   const UseMvcc _use_mvcc;
