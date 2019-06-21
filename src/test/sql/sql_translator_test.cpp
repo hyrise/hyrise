@@ -1596,7 +1596,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
 }
 
 TEST_F(SQLTranslatorTest, CreateAliasView) {
-  const auto actual_lqp = compile_query("WITH my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
+  const auto actual_lqp = compile_query("CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
 
   // clang-format off
   const auto view_columns = std::unordered_map<ColumnID, std::string>({
