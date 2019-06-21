@@ -874,7 +874,6 @@ void SQLTranslator::_translate_select_groupby_having(
 
   for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
-    const auto& select_list_element = select_list_elements[select_list_idx];
 
     if (hsql_expr->type == hsql::kExprStar) {
       AssertInput(_from_clause_result, "Can't SELECT with wildcards since there are no FROM tables specified");
@@ -937,7 +936,7 @@ void SQLTranslator::_translate_select_groupby_having(
         }
       }
     } else {
-      _inflated_select_list_elements.emplace_back(select_list_element);
+      _inflated_select_list_elements.emplace_back(select_list_elements[select_list_idx]);
     }
   }
 
