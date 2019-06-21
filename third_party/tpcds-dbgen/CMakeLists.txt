@@ -1,8 +1,5 @@
 set(MACHINE LINUX)
 
-# tpcds.idx file must be in the same folder as the executable
-configure_file(tpcds.idx ${CMAKE_BINARY_DIR} COPYONLY)
-
 add_library(tpcds_dbgen
     STATIC
     address.c

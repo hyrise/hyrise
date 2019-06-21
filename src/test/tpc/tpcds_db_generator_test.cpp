@@ -10,7 +10,7 @@ using namespace opossum;  // NOLINT
 
 namespace {
   std::shared_ptr<Table> load_csv(const std::string& file_name) {
-    return CsvParser{}.parse("resources/test_data/tbl/tpcds/" + file_name,
+    return CsvParser{}.parse("resources/test_data/csv/tpcds/" + file_name,
       process_csv_meta_file("resources/benchmark/tpcds/tables/" + file_name + CsvMeta::META_FILE_EXTENSION),
       Chunk::DEFAULT_SIZE);
   }
@@ -113,14 +113,12 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
    * Since dsdgen does not support very small scale factors only generate and check first rows for each table.
    */
 
-  const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE);
+  const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0);
 
-  const auto table_a = table_generator.generate_call_center(5);
+  const auto table_a = table_generator.generate_call_center(50);
   const auto table_b = load_csv("call_center.csv");
 
   EXPECT_TABLE_EQ_ORDERED(table_a, table_b);
-
-
 
   // TODO: Run generation a second time to make sure no global state (of which tpcds_dbgen has plenty :( ) from the
   //  first generation process carried over into the second
