@@ -69,17 +69,21 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
   }
 
   void resize(const size_t size) override {
+    DebugAssert(size >= values.size(), "Cannot shrink aggregate runs");
+
     values.resize(size);
     null_values.resize(size, true);
   }
 
-  void flush_append_buffer(size_t target_offset, const std::vector<size_t>& buffer,
+  void flush_append_buffer(size_t target_offset, const std::vector<size_t>& append_buffer,
                            const BaseAggregateRun& base_aggregate_run) override {
+    DebugAssert(target_offset + append_buffer.size() <= values.size(), "Invalid append buffer length");
+
     const auto& source_run =
         static_cast<const BaseDistributiveAggregateRun<SourceColumnDataType, aggregate_function, Derived>&>(
             base_aggregate_run);
 
-    for (const auto& source_offset : buffer) {
+    for (const auto& source_offset : append_buffer) {
       values[target_offset] = source_run.values[source_offset];
       null_values[target_offset] = source_run.null_values[source_offset];
       ++target_offset;
@@ -93,6 +97,9 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
             base_source_run);
 
     for (const auto& entry : buffer) {
+      DebugAssert(entry.source_offset < source_run.values.size(), "Invalid aggregation buffer entry");
+      DebugAssert(entry.target_offset < values.size(), "Invalid aggregation buffer entry");
+
       const auto& source_value = source_run.values[entry.source_offset];
       auto& target_value = values[entry.target_offset];
 
