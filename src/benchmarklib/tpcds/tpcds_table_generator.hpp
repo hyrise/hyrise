@@ -36,5 +36,29 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
   std::shared_ptr<Table> generate_call_center(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_catalog_page(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_catalog_sales_and_returns(
+      ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_customer_address(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_customer(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_customer_demographics(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_date(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_household_demographics(
+      ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_income_band(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_inventory(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_item(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_promotion(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_reason(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_ship_mode(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_store(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_store_sales_and_returns(
+      ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_time(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_warehouse(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_web_page(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_web_sales_and_returns(
+      ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
 };
 }  // namespace opossum

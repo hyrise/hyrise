@@ -188,6 +188,8 @@ class TableBuilder {
     }
   }
 
+  size_t row_count() const { return _table->row_count() + _current_chunk_row_count(); }
+
  private:
   std::shared_ptr<Table> _table;
   ChunkOffset _estimated_rows_per_chunk;
