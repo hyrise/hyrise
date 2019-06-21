@@ -54,7 +54,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   init_rand();
 
   auto distributions_string = std::string{"DISTRIBUTIONS"};
-  // PATH_TO_TPCDS_IDX is set to "${CMAKE_BINARY_DIR}/tpcds.idx"
+  // PATH_TO_TPCDS_IDX is set to "${CMAKE_BINARY_DIR}/tpcds.idx" in CMakeLists.txt
   auto distributions_value = std::string{PATH_TO_TPCDS_IDX};
   set_str(distributions_string.data(), distributions_value.data());
 }
@@ -256,7 +256,8 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chun
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
-TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config, int rng_seed)
+TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
+                                         const std::shared_ptr<BenchmarkConfig>& benchmark_config, int rng_seed)
     : AbstractTableGenerator(benchmark_config) {
   init_tpcds_tools(scale_factor, rng_seed);
 }
@@ -909,8 +910,8 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_ro
   auto [call_center_first, call_center_count] = prepare_for_table(CALL_CENTER);
   call_center_count = std::min(call_center_count, max_rows);
 
-  auto call_center_builder = TableBuilder{_benchmark_config->chunk_size, call_center_column_types, call_center_column_names,
-                                          static_cast<ChunkOffset>(call_center_count)};
+  auto call_center_builder = TableBuilder{_benchmark_config->chunk_size, call_center_column_types,
+                                          call_center_column_names, static_cast<ChunkOffset>(call_center_count)};
 
   auto call_center = CALL_CENTER_TBL{};
   for (auto i = ds_key_t{0}; i < call_center_count; i++) {
@@ -920,37 +921,17 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_ro
     tpcds_row_stop(CALL_CENTER);
 
     call_center_builder.append_row(
-        resolve_key(call_center.cc_call_center_sk),
-        call_center.cc_call_center_id,
-        resolve_date_id(call_center.cc_rec_start_date_id),
-        resolve_date_id(call_center.cc_rec_end_date_id),
-        resolve_key(call_center.cc_closed_date_id),
-        resolve_key(call_center.cc_open_date_id),
-        call_center.cc_name,
-        call_center.cc_class,
-        call_center.cc_employees,
-        call_center.cc_sq_ft,
-        call_center.cc_hours,
-        call_center.cc_manager,
-        call_center.cc_market_id,
-        call_center.cc_market_class,
-        call_center.cc_market_desc,
-        call_center.cc_market_manager,
-        call_center.cc_division_id,
-        call_center.cc_division_name,
-        call_center.cc_company,
-        call_center.cc_company_name,
-        pmr_string{std::to_string(call_center.cc_address.street_num)},
-        resolve_street_name(call_center.cc_address),
-        call_center.cc_address.street_type,
-        call_center.cc_address.suite_num,
-        call_center.cc_address.city,
-        call_center.cc_address.county,
-        call_center.cc_address.state,
-        resolve_zip(call_center.cc_address.zip),
-        call_center.cc_address.country,
-        static_cast<float>(call_center.cc_address.gmt_offset),
-        decimal_to_float(call_center.cc_tax_percentage));
+        resolve_key(call_center.cc_call_center_sk), call_center.cc_call_center_id,
+        resolve_date_id(call_center.cc_rec_start_date_id), resolve_date_id(call_center.cc_rec_end_date_id),
+        resolve_key(call_center.cc_closed_date_id), resolve_key(call_center.cc_open_date_id), call_center.cc_name,
+        call_center.cc_class, call_center.cc_employees, call_center.cc_sq_ft, call_center.cc_hours,
+        call_center.cc_manager, call_center.cc_market_id, call_center.cc_market_class, call_center.cc_market_desc,
+        call_center.cc_market_manager, call_center.cc_division_id, call_center.cc_division_name, call_center.cc_company,
+        call_center.cc_company_name, pmr_string{std::to_string(call_center.cc_address.street_num)},
+        resolve_street_name(call_center.cc_address), call_center.cc_address.street_type,
+        call_center.cc_address.suite_num, call_center.cc_address.city, call_center.cc_address.county,
+        call_center.cc_address.state, resolve_zip(call_center.cc_address.zip), call_center.cc_address.country,
+        static_cast<float>(call_center.cc_address.gmt_offset), decimal_to_float(call_center.cc_tax_percentage));
   }
 
   return call_center_builder.finish_table();

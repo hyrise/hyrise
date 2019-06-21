@@ -9,12 +9,13 @@
 using namespace opossum;  // NOLINT
 
 namespace {
-  std::shared_ptr<Table> load_csv(const std::string& file_name) {
-    return CsvParser{}.parse("resources/test_data/csv/tpcds/" + file_name,
+std::shared_ptr<Table> load_csv(const std::string& file_name) {
+  return CsvParser{}.parse(
+      "resources/test_data/csv/tpcds/" + file_name,
       process_csv_meta_file("resources/benchmark/tpcds/tables/" + file_name + CsvMeta::META_FILE_EXTENSION),
       Chunk::DEFAULT_SIZE);
-  }
 }
+}  // namespace
 
 namespace opossum {
 

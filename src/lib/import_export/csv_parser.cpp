@@ -41,10 +41,6 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::ifstream csvfile{filename};
 
   // return empty table if input file is empty
-  auto a = !csvfile;
-  auto b = csvfile.peek();
-  auto eof = EOF;
-  std::cout << a << b << eof;
   if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') return table;
 
   /**
