@@ -244,37 +244,32 @@ namespace opossum {
      * Name, select and arrange the Columns as specified in the SELECT clause
      */
     // Only add a ProjectionNode if necessary
-    if (!expressions_equal(_current_lqp->column_expressions(), _inflated_select_list_expressions)) {
-      _current_lqp = ProjectionNode::make(_inflated_select_list_expressions, _current_lqp);
+    const auto &inflated_select_list_expressions = _retrieve_expressions(_inflated_select_list_elements);
+    if (!expressions_equal(_current_lqp->column_expressions(), inflated_select_list_expressions)) {
+      _current_lqp = ProjectionNode::make(inflated_select_list_expressions, _current_lqp);
     }
 
     // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
     // that is not its generated name.
     auto need_alias_node = false;
-    for (auto idx = size_t{0}; idx < _inflated_select_list_expressions.size(); ++idx) {
-      Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj) 1");
-      const auto &expression = _inflated_select_list_expressions[idx];
-      const auto &identifiers = _inflated_select_list_identifiers[idx];
-      need_alias_node = std::any_of(identifiers.begin(), identifiers.end(), [&](const auto& identifier) {
-        return identifier.column_name != expression->as_column_name();
+    for (const auto& element : _inflated_select_list_elements) {
+      need_alias_node = std::any_of(element.identifiers.begin(), element.identifiers.end(), [&](const auto& identifier) {
+        return identifier.column_name != element.expression->as_column_name();
       });
       if (need_alias_node) break;
     }
 
     if (need_alias_node) {
       std::vector<std::string> aliases;
-      for (auto idx = size_t{0}; idx < _inflated_select_list_expressions.size(); ++idx) {
-        Assert(_inflated_select_list_expressions.size() == _inflated_select_list_identifiers.size(), "todo(jj) 2");
-        const auto &output_column_expression = _inflated_select_list_expressions[idx];
-        aliases.emplace_back(output_column_expression->as_column_name());
+      for (const auto& element : _inflated_select_list_elements) {
+        aliases.emplace_back(element.expression->as_column_name());
 
-        const auto &identifiers = _inflated_select_list_identifiers[idx];
-        if (!identifiers.empty()) { //todo(jj): look for .back() (check if empty)
-          aliases.back() = identifiers.back().column_name;
+        if (!element.identifiers.empty()) {
+          aliases.back() = element.identifiers.back().column_name;
         }
       }
 
-      _current_lqp = AliasNode::make(_inflated_select_list_expressions, aliases, _current_lqp);
+      _current_lqp = AliasNode::make(_retrieve_expressions(_inflated_select_list_elements), aliases, _current_lqp);
     }
 
     return _current_lqp;
@@ -559,21 +554,16 @@ namespace opossum {
     }
 
     std::vector<NamedExpression> named_expressions;
-    std::vector<SQLIdentifier> identifiers_in_order;
     for (const auto& expression : lqp->column_expressions()) {
       const auto identifiers = sql_identifier_resolver->get_expression_identifiers(expression);
       named_expressions.emplace_back(NamedExpression{expression, identifiers});
-      if (!identifiers.empty()) {
-        identifiers_in_order.emplace_back(identifiers.back()); // todo(jj): use vector<vector<SQLIdentifier>> / merge data structure into SQLIdentifierResolver?
-      }
     }
 
     return {lqp,
             {{
              {table_name, named_expressions},
              }},
-            {lqp->column_expressions()},
-            identifiers_in_order,
+            {named_expressions},
             sql_identifier_resolver};
   }
 
@@ -710,20 +700,16 @@ namespace opossum {
 
     // a) Find matching columns and create JoinPredicates from them
     // b) Add columns from right input to the output when they have no match in the left input
-    Assert(right_state.elements_in_order.size() == right_state.identifiers_in_order.size(), "todo(jj) 4");
-    for (auto expression_idx = size_t{0}; expression_idx < right_state.elements_in_order.size(); ++expression_idx) {
-//    for (const auto &right_expression : right_state.elements_in_order) {
-      const auto& right_expression = right_state.elements_in_order[expression_idx];
-//      const auto& right_identifier_final = right_state.identifiers_in_order[expression_idx];
-      const auto right_identifiers = right_sql_identifier_resolver->get_expression_identifiers(right_expression);
-//    const auto right_identifiers = right_state.identifiers_in_order; //todo(jj)
+    for (const auto& right_element : right_state.elements_in_order) {
+      const auto& right_expression = right_element.expression;
+      const auto& right_identifiers = right_element.identifiers;
 
       if (!right_identifiers.empty()) {
         // Ignore previous names if there is an alias
         const auto right_identifier = right_identifiers.back();
 
         const auto left_expression =
-        left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
+            left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier.column_name});
 
         if (left_expression) {
           // Two columns match, let's join on them.
@@ -733,11 +719,10 @@ namespace opossum {
         }
 
         // No matching column in the left input found, add the column from the right input to the output
-        result_state.elements_in_order.emplace_back(right_expression);
-        result_state.identifiers_in_order.emplace_back(right_identifier);
+        result_state.elements_in_order.emplace_back(right_element);
         result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
         if (right_identifier.table_name) {
-          result_state.elements_by_table_name[*right_identifier.table_name].emplace_back(SQLTranslator::NamedExpression{right_expression, right_identifiers});
+          result_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_element);
           result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
         }
       }
@@ -760,7 +745,7 @@ namespace opossum {
 
     if (!join_predicates.empty()) {
       // Projection Node to remove duplicate columns
-      lqp = ProjectionNode::make(result_state.elements_in_order, lqp);
+      lqp = ProjectionNode::make(_retrieve_expressions(result_state.elements_in_order), lqp);
     }
 
     // Create output TableSourceState
@@ -793,10 +778,10 @@ namespace opossum {
     auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
     for (const auto &hsql_select_expr : select_list) {
       if (hsql_select_expr->type == hsql::kExprStar) {
-        select_list_elements.emplace_back(SQLTranslator::NamedExpression{nullptr, std::vector<SQLIdentifier>{}}); // todo(jj): Implement default constructor
+        select_list_elements.emplace_back(SQLTranslator::NamedExpression{nullptr});
       } else {
         auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
-        select_list_elements.emplace_back(SQLTranslator::NamedExpression{expression, std::vector<SQLIdentifier>{}});
+        select_list_elements.emplace_back(SQLTranslator::NamedExpression{expression});
         auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression);
         select_list_elements.back().identifiers = identifiers;
 
@@ -938,8 +923,7 @@ namespace opossum {
                   _sql_identifier_resolver->get_expression_identifiers(group_by_expression);
               for (const auto &identifier : identifiers) {
                 if (identifier.table_name == hsql_expr->table) {
-                  _inflated_select_list_expressions.emplace_back(group_by_expression);
-                  _inflated_select_list_identifiers.emplace_back(std::vector<SQLIdentifier>{});
+                  _inflated_select_list_elements.emplace_back(NamedExpression{group_by_expression});
                 }
               }
             }
@@ -950,30 +934,24 @@ namespace opossum {
                         std::string("No such element in FROM with table name '") + hsql_expr->table + "'");
 
             for (const auto& element : from_element_iter->second) {
-              _inflated_select_list_expressions.emplace_back(element.expression);
-              _inflated_select_list_identifiers.emplace_back(element.identifiers);
+              _inflated_select_list_elements.emplace_back(element);
             }
           }
         } else {
           if (is_aggregate) {
             // Select all GROUP BY columns
-            _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
-                                                     group_by_expressions.begin(), group_by_expressions.end());
-            _inflated_select_list_identifiers.insert(_inflated_select_list_identifiers.end(),
-                                                     group_by_expressions.size(), std::vector<SQLIdentifier>{});
+            for (const auto& expression : group_by_expressions) {
+              _inflated_select_list_elements.emplace_back(NamedExpression{expression});
+            }
           } else {
             // Select all columns from the FROM elements
-            _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
-                                                     _from_clause_result->elements_in_order.begin(),
-                                                     _from_clause_result->elements_in_order.end());
-            for (const auto& identifier : _from_clause_result->identifiers_in_order) {
-              _inflated_select_list_identifiers.emplace_back(std::vector<SQLIdentifier>{identifier});
-            }
+            _inflated_select_list_elements.insert(_inflated_select_list_elements.end(),
+                                                  _from_clause_result->elements_in_order.begin(),
+                                                   _from_clause_result->elements_in_order.end());
           }
         }
       } else {
-        _inflated_select_list_expressions.emplace_back(select_list_element.expression);
-        _inflated_select_list_identifiers.emplace_back(select_list_element.identifiers);
+        _inflated_select_list_elements.emplace_back(select_list_element);
       }
     }
 
@@ -985,7 +963,7 @@ namespace opossum {
     // one that groups by both a and MIN(b) without calculating anything. Fixing this should be done by an optimizer rule
     // that checks for each GROUP BY whether it guarantees the results to be unique or not. Doable, but no priority.
     if (select.selectDistinct) {
-      _current_lqp = AggregateNode::make(_inflated_select_list_expressions,
+      _current_lqp = AggregateNode::make(_retrieve_expressions(_inflated_select_list_elements),
                                          std::vector<std::shared_ptr<AbstractExpression>>{}, _current_lqp);
     }
   }
@@ -1569,16 +1547,32 @@ namespace opossum {
     Fail("GCC thinks this is reachable");
   }
 
+  std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_retrieve_expressions(
+      const std::vector<NamedExpression> &named_expressions) const {
+    std::vector<std::shared_ptr<AbstractExpression>> expressions;
+    for (const auto& element : named_expressions) {
+      expressions.emplace_back(element.expression);
+    }
+    return expressions;
+  }
+
+  SQLTranslator::NamedExpression::NamedExpression(const std::shared_ptr<AbstractExpression>& expression)
+  : expression(expression) {}
+
+  SQLTranslator::NamedExpression::NamedExpression(
+      const std::shared_ptr<AbstractExpression>& expression,
+      const std::vector<SQLIdentifier> identifiers)
+  : expression(expression),
+    identifiers(identifiers) {}
+
   SQLTranslator::TableSourceState::TableSourceState(
   const std::shared_ptr<AbstractLQPNode> &lqp,
   const std::unordered_map<std::string, std::vector<SQLTranslator::NamedExpression>> &elements_by_table_name,
-  const std::vector<std::shared_ptr<AbstractExpression>> &elements_in_order,
-  const std::vector<SQLIdentifier> &identifiers_in_order,
+  const std::vector<NamedExpression> &elements_in_order,
   const std::shared_ptr<SQLIdentifierResolver> &sql_identifier_resolver)
   : lqp(lqp),
     elements_by_table_name(elements_by_table_name),
     elements_in_order(elements_in_order),
-    identifiers_in_order(identifiers_in_order),
     sql_identifier_resolver(sql_identifier_resolver) {}
 
   void SQLTranslator::TableSourceState::append(TableSourceState &&rhs) {
@@ -1594,8 +1588,6 @@ namespace opossum {
     }
 
     elements_in_order.insert(elements_in_order.end(), rhs.elements_in_order.begin(), rhs.elements_in_order.end());
-    identifiers_in_order.insert(identifiers_in_order.end(), rhs.identifiers_in_order.begin(),
-                                rhs.identifiers_in_order.end());
     sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
   }
 

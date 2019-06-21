@@ -53,6 +53,11 @@ class SQLTranslator final {
  private:
   // todo(jj): comment
   struct NamedExpression {
+    NamedExpression(const std::shared_ptr<AbstractExpression>& expression);
+    NamedExpression(
+        const std::shared_ptr<AbstractExpression>& expression,
+        const std::vector<SQLIdentifier> identifiers);
+
     std::shared_ptr<AbstractExpression> expression;
     std::vector<SQLIdentifier> identifiers;
   };
@@ -66,8 +71,7 @@ class SQLTranslator final {
     TableSourceState(
         const std::shared_ptr<AbstractLQPNode>& lqp,
         const std::unordered_map<std::string, std::vector<NamedExpression>>& elements_by_table_name,
-        const std::vector<std::shared_ptr<AbstractExpression>>& elements_in_order,
-        const std::vector<SQLIdentifier>& identifiers_in_order,
+        const std::vector<NamedExpression>& elements_in_order,
         const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
     void append(TableSourceState&& rhs);
@@ -78,9 +82,7 @@ class SQLTranslator final {
     std::unordered_map<std::string, std::vector<NamedExpression>> elements_by_table_name;
 
     // To establish the correct order of columns in SELECT *
-    std::vector<std::shared_ptr<AbstractExpression>> elements_in_order;
-
-    std::vector<SQLIdentifier> identifiers_in_order; // todo(jj), use shared_ptr?, merge both data structures to ensure consistency
+    std::vector<NamedExpression> elements_in_order;
 
     std::shared_ptr<SQLIdentifierResolver> sql_identifier_resolver;
   };
@@ -158,6 +160,9 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
+  std::vector<std::shared_ptr<AbstractExpression>> _retrieve_expressions(
+      const std::vector<NamedExpression> &named_expressions) const;
+
  private:
   const UseMvcc _use_mvcc;
 
@@ -168,8 +173,7 @@ class SQLTranslator final {
   std::optional<TableSourceState> _from_clause_result;
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
-  std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
-  std::vector<std::vector<SQLIdentifier>> _inflated_select_list_identifiers; // todo(jj) merge both data structures to ensure consistency
+  std::vector<NamedExpression> _inflated_select_list_elements; //last_todo
 };
 
 }  // namespace opossum
