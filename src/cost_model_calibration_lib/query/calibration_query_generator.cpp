@@ -156,6 +156,12 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
                 table_node, column_spec, selectivity);
 
             for (const auto reference_segment_predicate_selectivity : _configuration.selectivities) {
+              if (selectivity <= reference_segment_predicate_selectivity) {
+                // A second predicate selectivity >= the first predicate's selectivy would not throw away any rows
+                // (since we execute both predicates on the same column as of now), but blows up the query count.
+                continue;  
+              }
+
               const auto reference_table_predicate = CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
                 table_node, column_spec, reference_segment_predicate_selectivity);
               queries.push_back(
