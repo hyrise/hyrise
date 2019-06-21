@@ -35,8 +35,8 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 
   metrics.emplace_back(std::move(pipeline.metrics()));
 
-  if (){
-    _
+  if (_expected_result_table){
+  
   }
   else if (_sqlite_wrapper) {
     _verify_with_sqlite(pipeline);
@@ -56,12 +56,12 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
   DebugAssert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
 
-  std::cout << "Using SQLite's result table as expected result table..."
-  _verify_with_expected_result_table();
+  std::cout << "Using SQLite's result table as expected result table" << "\n";
+  _compare_tables(sqlite_result, result_table);
 }
 
-void _verify_with_expected_result_table(std::shared_ptr<const Table>& actual_result_table,
-  std::shared_ptr<const Table>& expected_result_table){
+void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& expected_result_table,
+  const std::shared_ptr<const Table>& actual_result_table){
   Timer timer;
 
   if (actual_result_table->row_count() > 0) {
