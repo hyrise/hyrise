@@ -160,7 +160,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
 
     return _connection->send_row_description(row_description) >> then >> [this, result_table]() {
       return QueryResponseBuilder::send_query_response(
-          [this, result_table](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
+          [this, result_table](const std::vector<std::string>& row) { return _connection->send_data_row(row); },
+          *result_table);
     };
   };
 
@@ -197,7 +198,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
   if (StorageManager::get().has_prepared_plan("")) StorageManager::get().drop_prepared_plan("");
   _portals.erase("");
 
-  return create_sql_pipeline() >> then >> [this, load_table_file, execute_sql_pipeline](std::unique_ptr<CreatePipelineResult> result) {
+  return create_sql_pipeline() >> then >> [this, load_table_file,
+                                           execute_sql_pipeline](std::unique_ptr<CreatePipelineResult> result) {
     if (result->load_table) {
       return load_table_file(result->load_table->first, result->load_table->second);
     } else {
@@ -250,7 +252,9 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
 
   auto task = std::make_shared<BindServerPreparedStatementTask>(prepared_plan, packet.params);
   return _task_runner->dispatch_server_task(task) >> then >>
-         [this, portal_name](std::shared_ptr<AbstractOperator> physical_plan) { _portals.emplace(portal_name, physical_plan); } >>
+         [this, portal_name](std::shared_ptr<AbstractOperator> physical_plan) {
+           _portals.emplace(portal_name, physical_plan);
+         } >>
          then >> [this]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };
 }
 
@@ -303,7 +307,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
            const auto row_description = QueryResponseBuilder::build_row_description(result_table);
            return _connection->send_row_description(row_description) >> then >> [this, result_table]() {
              return QueryResponseBuilder::send_query_response(
-                 [this](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
+                 [this](const std::vector<std::string>& row) { return _connection->send_data_row(row); },
+                 *result_table);
            };
          } >>
          then >> [this, physical_plan](uint64_t row_count) {
