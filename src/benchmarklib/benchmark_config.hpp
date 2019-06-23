@@ -24,7 +24,7 @@ class BenchmarkConfig {
                   const Duration& warmup_duration, const std::optional<std::string>& output_file_path,
                   const bool enable_scheduler, const uint32_t cores, const uint32_t clients,
                   const bool enable_visualization, const bool verify, const bool cache_binary_tables,
-                  const bool enable_jit);
+                  const std::vector<std::string> plugins, const bool enable_jit);
 
   static BenchmarkConfig get_default_config();
 
@@ -41,6 +41,7 @@ class BenchmarkConfig {
   bool enable_visualization = false;
   bool verify = false;
   bool cache_binary_tables = false;
+  std::vector<std::string> plugins = std::vector<std::string>();
   bool enable_jit = false;
 
   static const char* description;

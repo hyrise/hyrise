@@ -133,6 +133,16 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     std::cout << "- Not caching tables as binary files" << std::endl;
   }
 
+  const auto plugins = json_config.value("plugins", default_config.plugins);
+  if (plugins.size() > 0) {
+    std::cout << "- Loading the following plugins:" << std::endl;
+    for (auto plugin : plugins) {
+      std::cout << "  - " << plugin << std::endl;
+    }
+  } else {
+    std::cout << "- No plugin is loaded for this run" << std::endl;
+  }
+
   auto enable_jit = false;
   if constexpr (HYRISE_JIT_SUPPORT) {
     enable_jit = json_config.value("jit", default_config.enable_jit);
@@ -141,7 +151,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   return BenchmarkConfig{benchmark_mode,       chunk_size,       *encoding_config,    max_runs,  timeout_duration,
                          warmup_duration,      output_file_path, enable_scheduler,    cores,     clients,
-                         enable_visualization, verify,           cache_binary_tables, enable_jit};
+                         enable_visualization, verify,           cache_binary_tables, plugins,   enable_jit};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -165,6 +175,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("output", parse_result["output"].as<std::string>());
   json_config.emplace("verify", parse_result["verify"].as<bool>());
   json_config.emplace("cache_binary_tables", parse_result["cache_binary_tables"].as<bool>());
+  json_config.emplace("plugins", parse_result["plugins"].as<std::vector<std::string>>());
   if constexpr (HYRISE_JIT_SUPPORT) {
     json_config.emplace("jit", parse_result["jit"].as<bool>());
   }

@@ -20,6 +20,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/plugin_manager.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
@@ -69,6 +70,12 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     }
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
+  }
+
+  if (_config.plugins.size() > 0) {
+    for (auto plugin : _config.plugins) {
+      PluginManager::get().load_plugin(plugin);
+    }
   }
 }
 
@@ -388,6 +395,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("p,plugins", "Path(s) to Hyrise plugin(s)", cxxopts::value<std::vector<std::string>>()->default_value({})) // NOLINT
     ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")); // NOLINT
 
   if constexpr (HYRISE_JIT_SUPPORT) {

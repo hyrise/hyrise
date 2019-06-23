@@ -24,7 +24,6 @@
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
-#include "utils/plugin_manager.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -50,16 +49,13 @@ int main(int argc, char* argv[]) {
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("1"))
     ("q,queries", "Specify queries to run (comma-separated query ids, e.g. \"--queries 1,3,19\"), default is all", cxxopts::value<std::string>()) // NOLINT
-    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("pcm", "Path to PcmPlugin.so", cxxopts::value<std::string>()->default_value("")); // NOLINT
+    ("use_prepared_statements", "Use prepared statements instead of random SQL strings", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;
   std::string comma_separated_queries;
   float scale_factor;
   bool use_prepared_statements;
-  bool use_pcm = false;
-  std::string pcm_path;
 
   if (CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
@@ -70,7 +66,6 @@ int main(int argc, char* argv[]) {
     config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
 
     use_prepared_statements = json_config.value("use_prepared_statements", false);
-    pcm_path = json_config.value("pcm", "");
   } else {
     // Parse regular command line args
     const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -86,10 +81,6 @@ int main(int argc, char* argv[]) {
     config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
 
     use_prepared_statements = cli_parse_result["use_prepared_statements"].as<bool>();
-    pcm_path = cli_parse_result["pcm"].as<std::string>();
-  }
-  if (pcm_path.size() > 0) {
-    use_pcm = true;
   }
 
   std::vector<BenchmarkItemID> item_ids;
@@ -142,16 +133,6 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
-  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
-      *config, std::move(item_runner), std::make_unique<TpchTableGenerator>(scale_factor, config), context);
-
-  if (use_pcm) {
-    PluginManager::get().load_plugin(pcm_path);
-  }
-
-  benchmark_runner->run();
-
-  if (use_pcm) {
-    PluginManager::get().unload_plugin("PcmPlugin");
-  }
+  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+      .run();
 }
