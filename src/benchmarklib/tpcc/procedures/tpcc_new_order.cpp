@@ -9,48 +9,51 @@ namespace opossum {
 TpccNewOrder::TpccNewOrder(const int num_warehouses, BenchmarkSQLExecutor sql_executor)
     : AbstractTpccProcedure(sql_executor) {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
-  _w_id = warehouse_dist(_random_engine);
+  w_id = warehouse_dist(_random_engine);
 
   // There are always exactly 10 districts per warehouse
   std::uniform_int_distribution<> district_dist{1, 10};
-  _d_id = district_dist(_random_engine);
+  d_id = district_dist(_random_engine);
 
   // Customer IDs are unique only per warehouse and district
-  _c_id = static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000));
+  c_id = static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000));
 
   std::uniform_int_distribution<> num_items_dist{5, 15};
-  _ol_cnt = num_items_dist(_random_engine);
+  ol_cnt = num_items_dist(_random_engine);
 
-  std::uniform_int_distribution<> is_erroneous_dist{1, 100};
-  // 1% chance of erroneous procedures. 17 is a random, but very good number.
-  _is_erroneous = is_erroneous_dist(_random_engine) == 17;
-
-  _order_lines.resize(_ol_cnt);
-  for (auto& order_line : _order_lines) {
-    order_line.ol_i_id = static_cast<int32_t>(_tpcc_random_generator.nurand(8191, 1, 100000));
+  order_lines.resize(ol_cnt);
+  for (auto& order_line : order_lines) {
+    order_line.ol_i_id = static_cast<int32_t>(_tpcc_random_generator.nurand(8191, 1, 100'000));
 
     std::uniform_int_distribution<> home_warehouse_dist{1, 100};
+    // 1% chance of remote warehouses (if more than one). 17 is a random, but very good number.
     auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) != 17;
     if (is_home_warehouse) {
-      order_line.ol_supply_w_id = _w_id;
+      order_line.ol_supply_w_id = w_id;
     } else {
-      // Choose a warehouse that is different from _w_id
+      // Choose a warehouse that is different from w_id
       do {
         order_line.ol_supply_w_id = warehouse_dist(_random_engine);
-      } while (order_line.ol_supply_w_id == _w_id);
+      } while (order_line.ol_supply_w_id == w_id);
     }
 
     std::uniform_int_distribution<> quantity_dist{1, 10};
     order_line.ol_quantity = quantity_dist(_random_engine);
   }
 
-  _o_entry_d = std::time(nullptr);
+  std::uniform_int_distribution<> is_erroneous_dist{1, 100};
+  // 1% chance of erroneous procedures. 17 is a random, but very good number.
+  if (is_erroneous_dist(_random_engine) == 17) {
+    order_lines.back().ol_i_id = INVALID_ITEM_ID;  // A non-existing item ID
+  }
+
+  o_entry_d = std::time(nullptr);
 }
 
 bool TpccNewOrder::execute() {
   // Retrieve W_TAX, the warehouse tax rate
   const auto warehouse_select_pair =
-      _sql_executor.execute(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(_w_id));
+      _sql_executor.execute(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
   const auto w_tax = warehouse_table->get_value<float>(ColumnID{0}, 0);
@@ -59,7 +62,7 @@ bool TpccNewOrder::execute() {
   // Find the district tax rate and the next order ID
   const auto district_select_pair =
       _sql_executor.execute(std::string{"SELECT D_TAX, D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} +
-                            std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
+                            std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   const auto& district_table = district_select_pair.second;
   Assert(district_table->row_count() == 1, "Did not find district (or found more than one)");
   const auto d_tax = district_table->get_value<float>(ColumnID{0}, 0);
@@ -71,7 +74,7 @@ bool TpccNewOrder::execute() {
   // MVCC conflicts.
   const auto district_update_pair =
       _sql_executor.execute(std::string{"UPDATE \"DISTRICT\" SET D_NEXT_O_ID = "} + std::to_string(d_next_o_id + 1) +
-                            " WHERE D_W_ID = " + std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
+                            " WHERE D_W_ID = " + std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   if (district_update_pair.first != SQLPipelineStatus::Success) {
     _sql_executor.rollback();
     return false;
@@ -79,8 +82,8 @@ bool TpccNewOrder::execute() {
 
   // Find the customer with their discount rate, last name, and credit status
   const auto customer_select_pair = _sql_executor.execute(
-      std::string{"SELECT C_DISCOUNT, C_LAST, C_CREDIT FROM CUSTOMER WHERE C_W_ID = "} + std::to_string(_w_id) +
-      " AND C_D_ID = " + std::to_string(_d_id) + " AND C_ID = " + std::to_string(_c_id));
+      std::string{"SELECT C_DISCOUNT, C_LAST, C_CREDIT FROM CUSTOMER WHERE C_W_ID = "} + std::to_string(w_id) +
+      " AND C_D_ID = " + std::to_string(d_id) + " AND C_ID = " + std::to_string(c_id));
   const auto& customer_table = customer_select_pair.second;
   Assert(customer_table->row_count() == 1, "Did not find customer (or found more than one)");
   const auto c_discount = customer_table->get_value<float>(ColumnID{0}, 0);
@@ -91,30 +94,29 @@ bool TpccNewOrder::execute() {
 
   // Check if all order lines are local
   auto o_all_local = true;
-  for (const auto& order_line : _order_lines) {
+  for (const auto& order_line : order_lines) {
     // This is technically known when we create the procedure, but TPC-C wants us to calculate it live.
-    if (order_line.ol_supply_w_id != _w_id) o_all_local = false;
+    if (order_line.ol_supply_w_id != w_id) o_all_local = false;
   }
 
   // Insert row into NEW_ORDER
   const auto new_order_insert_pair =
       _sql_executor.execute(std::string{"INSERT INTO NEW_ORDER (NO_O_ID, NO_D_ID, NO_W_ID) VALUES ("} +
-                            std::to_string(o_id) + ", " + std::to_string(_d_id) + ", " + std::to_string(_w_id) + ")");
+                            std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ")");
   Assert(new_order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Insert row into ORDER
   // TODO(anyone): add NULL support to O_CARRIER_ID
-  const auto order_insert_pair =
-      _sql_executor.execute(std::string{"INSERT INTO \"ORDER\" (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, "
-                                        "O_OL_CNT, O_ALL_LOCAL) VALUES ("} +
-                            std::to_string(o_id) + ", " + std::to_string(_d_id) + ", " + std::to_string(_w_id) + ", " +
-                            std::to_string(_c_id) + ", " + std::to_string(_o_entry_d) + ", -1, " +
-                            std::to_string(_ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
+  const auto order_insert_pair = _sql_executor.execute(
+      std::string{"INSERT INTO \"ORDER\" (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, "
+                  "O_OL_CNT, O_ALL_LOCAL) VALUES ("} +
+      std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ", " + std::to_string(c_id) +
+      ", " + std::to_string(o_entry_d) + ", -1, " + std::to_string(ol_cnt) + ", " + (o_all_local ? "1" : "0") + ")");
   Assert(order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Iterate over order lines
   auto order_line_idx = size_t{0};
-  for (const auto& order_line : _order_lines) {
+  for (const auto& order_line : order_lines) {
     const auto item_select_pair =
         _sql_executor.execute(std::string{"SELECT I_ID, I_PRICE, I_NAME, I_DATA FROM ITEM WHERE I_ID = "} +
                               std::to_string(order_line.ol_i_id));
@@ -130,7 +132,7 @@ bool TpccNewOrder::execute() {
 
     // Retrieve the STOCK entry. Currently, this is done in the loop and it should be more performant to do a similar `IN (...)` optimization. Not sure how legal that is though.
     const auto stock_select_pair = _sql_executor.execute(
-        std::string{"SELECT S_QUANTITY, S_DIST_"} + (_d_id < 10 ? "0" : "") + std::to_string(_d_id) +
+        std::string{"SELECT S_QUANTITY, S_DIST_"} + (d_id < 10 ? "0" : "") + std::to_string(d_id) +
         ", S_DATA, S_YTD, S_ORDER_CNT, S_REMOTE_CNT FROM STOCK WHERE S_I_ID = " + std::to_string(order_line.ol_i_id) +
         " AND S_W_ID = " + std::to_string(order_line.ol_supply_w_id));
     const auto& stock_table = stock_select_pair.second;
@@ -152,7 +154,7 @@ bool TpccNewOrder::execute() {
     }
     const auto new_s_ytd = s_ytd + order_line.ol_quantity;
     const auto new_s_order_cnt = s_order_cnt + 1;
-    const auto new_s_remote_cnt = s_remote_cnt + (order_line.ol_supply_w_id == _w_id ? 0 : 1);
+    const auto new_s_remote_cnt = s_remote_cnt + (order_line.ol_supply_w_id == w_id ? 0 : 1);
 
     // Update the STOCK entry
     const auto stock_update_pair = _sql_executor.execute(
@@ -174,7 +176,7 @@ bool TpccNewOrder::execute() {
     const auto order_line_insert_pair = _sql_executor.execute(
         std::string{"INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, "
                     "OL_DELIVERY_D, OL_QUANTITY, OL_AMOUNT, OL_DIST_INFO) VALUES ("} +
-        std::to_string(o_id) + ", " + std::to_string(_d_id) + ", " + std::to_string(_w_id) + ", " +
+        std::to_string(o_id) + ", " + std::to_string(d_id) + ", " + std::to_string(w_id) + ", " +
         std::to_string(order_line_idx) + ", " + std::to_string(order_line.ol_i_id) + ", " +
         std::to_string(order_line.ol_supply_w_id) + ", -1, " + std::to_string(order_line.ol_quantity) + ", " +
         std::to_string(ol_amount) + ", '" + std::string{s_dist} + "')");

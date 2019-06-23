@@ -281,6 +281,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
     auto durations_json = nlohmann::json::array();
     for (const auto& duration : result.durations) {
+      // TODO Add start timestamp
       durations_json.push_back(duration.count());
     }
 

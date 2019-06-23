@@ -52,7 +52,8 @@ bool TpccDelivery::execute() {
         _sql_executor.execute(std::string{"UPDATE \"ORDER\" SET O_CARRIER_ID = "} + std::to_string(o_carrier_id) +
                               " WHERE O_W_ID = " + std::to_string(w_id) + " AND O_D_ID = " + std::to_string(d_id) +
                               " AND O_ID = " + std::to_string(no_o_id));
-    Assert(order_update_pair.first == SQLPipelineStatus::Success, "We have already 'locked' the order ID when we deleted it from NEW_ORDER. No conflict should be possible.");
+    Assert(order_update_pair.first == SQLPipelineStatus::Success,
+           "We have already 'locked' the order ID when we deleted it from NEW_ORDER. No conflict should be possible.");
 
     // Retrieve amount from ORDER_LINE
     const auto order_line_select_pair = _sql_executor.execute(
@@ -67,7 +68,8 @@ bool TpccDelivery::execute() {
         _sql_executor.execute(std::string{"UPDATE ORDER_LINE SET OL_DELIVERY_D = "} + std::to_string(ol_delivery_d) +
                               " WHERE OL_W_ID = " + std::to_string(w_id) + " AND OL_D_ID = " + std::to_string(d_id) +
                               " AND OL_O_ID = " + std::to_string(no_o_id));
-    Assert(order_update_pair.first == SQLPipelineStatus::Success, "We have already 'locked' the order ID when we deleted it from NEW_ORDER. No conflict should be possible.");
+    Assert(order_update_pair.first == SQLPipelineStatus::Success,
+           "We have already 'locked' the order ID when we deleted it from NEW_ORDER. No conflict should be possible.");
 
     // Update balance and delivery count for customer
     const auto customer_update_pair =
