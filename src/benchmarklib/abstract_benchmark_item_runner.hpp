@@ -32,6 +32,9 @@ class AbstractBenchmarkItemRunner {
   // Returns the BenchmarkItemIDs of all selected items
   virtual const std::vector<BenchmarkItemID>& items() const = 0;
 
+  // Loads the decidated expected restuls as tables into _dedicated_expected_results
+  virtual void load_dedicated_expected_results() = 0;
+
   // Set the SQLite wrapper used for query verification. `nullptr` disables verification. Default is disabled.
   void set_sqlite_wrapper(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper);
 
@@ -42,7 +45,7 @@ class AbstractBenchmarkItemRunner {
   virtual void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) = 0;
 
   std::shared_ptr<BenchmarkConfig> _config;
-  std::vector<std::shared_ptr<const Table>> _expected_results;
+  std::vector<std::shared_ptr<const Table>> _dedicated_expected_results;
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 };
 

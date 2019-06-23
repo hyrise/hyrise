@@ -493,4 +493,8 @@ std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkIte
   }
 }
 
+void TPCHBenchmarkItemRunner::load_dedicated_expected_results() {
+  // do nothing; dedicated expected result verification is not supported for the TPCHBenchmarkItemRunner
+}
+
 }  // namespace opossum

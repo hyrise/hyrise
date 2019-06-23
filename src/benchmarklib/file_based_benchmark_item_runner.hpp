@@ -15,13 +15,15 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   // @param query_subset          if set, only the queries with the specified names (derived from the filename) will be
   //                              generated. If "q7.sql" contains a single query, the query has the name "q7". If
   //                              it contains multiple queries, they are called "q7.0", "q7.1", ...
-  FileBasedBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
-                               const std::unordered_set<std::string>& filename_blacklist = {},
-                               const std::optional<std::unordered_set<std::string>>& query_subset = {},
-                               const std::optional<const std::string>& expected_results_directory_path = std::nullopt);
+  FileBasedBenchmarkItemRunner(
+      const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
+      const std::unordered_set<std::string>& filename_blacklist = {},
+      const std::optional<std::unordered_set<std::string>>& query_subset = {},
+      const std::optional<std::filesystem::path>& expected_results_directory_path = std::nullopt);
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
+  void load_dedicated_expected_results() override;
 
  protected:
   void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
@@ -34,10 +36,10 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   // Get all queries from a given file
   void _parse_query_file(const std::filesystem::path& query_file_path,
                          const std::optional<std::unordered_set<std::string>>& query_subset);
-  void _load_expected_results(const std::filesystem::path& results_directory_path);
 
   std::vector<Query> _queries;
   std::vector<BenchmarkItemID> _items;
+  const std::optional<std::filesystem::path> _expected_results_directory_path;
 };
 
 }  // namespace opossum
