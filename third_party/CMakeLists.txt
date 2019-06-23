@@ -254,3 +254,6 @@ target_include_directories(
     PUBLIC
     murmur_hash
 )
+
+# Add dbg-macro
+add_subdirectory(dbg-macro)

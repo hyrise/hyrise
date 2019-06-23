@@ -268,7 +268,7 @@ TEST_P(AggregateTestRunner, TestAggregate) {
 // clang-format off
 INSTANTIATE_TEST_CASE_P(AggregateHash, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateHash>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(AggregateSort, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateSort>()), );  // NOLINT
-INSTANTIATE_TEST_CASE_P(AggregateHashSort, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateHashSort>()), );  // NOLINT
+// INSTANTIATE_TEST_CASE_P(AggregateHashSort, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateHashSort>()), );  // NOLINT
 // clang-format on
 
 }  // namespace opossum
