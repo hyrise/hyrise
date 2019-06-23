@@ -81,7 +81,9 @@ BenchmarkRunner& BenchmarkRunner::operator=(BenchmarkRunner&& other) {
   return *this;
 }
 
-void BenchmarkRunner::reset(std::shared_ptr<BenchmarkConfig> config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner, std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context) {
+void BenchmarkRunner::reset(std::shared_ptr<BenchmarkConfig> config,
+                            std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
+                            std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context) {
   get() = BenchmarkRunner(config, std::move(benchmark_item_runner), std::move(table_generator), context);
 }
 

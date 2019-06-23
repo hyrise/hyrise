@@ -38,7 +38,9 @@ class SQLiteWrapper;
 // calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
 class BenchmarkRunner : public Singleton<BenchmarkRunner> {
  public:
-  static void reset(std::shared_ptr<BenchmarkConfig> config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner, std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
+  static void reset(std::shared_ptr<BenchmarkConfig> config,
+                    std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
+                    std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
 
   void run();
 
@@ -55,7 +57,9 @@ class BenchmarkRunner : public Singleton<BenchmarkRunner> {
   const BenchmarkRunner& operator=(const BenchmarkRunner&) = delete;
   BenchmarkRunner& operator=(BenchmarkRunner&& other);
 
-  BenchmarkRunner(std::shared_ptr<BenchmarkConfig> config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner, std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
+  BenchmarkRunner(std::shared_ptr<BenchmarkConfig> config,
+                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
+                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
 
   // Run benchmark in BenchmarkMode::Shuffled mode
   void _benchmark_shuffled();
