@@ -26,6 +26,21 @@
 
 namespace opossum {
 
+void BenchmarkRunner::reset(std::shared_ptr<BenchmarkConfig> config,
+                            std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
+                            std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context) {
+  get() = BenchmarkRunner(config, std::move(benchmark_item_runner), std::move(table_generator), context);
+}
+
+BenchmarkRunner& BenchmarkRunner::operator=(BenchmarkRunner&& other) {
+  _config = std::move(other._config);
+  _benchmark_item_runner = std::move(other._benchmark_item_runner);
+  _table_generator = std::move(other._table_generator);
+  _results = std::move(other._results);
+  _context = std::move(other._context);
+  return *this;
+}
+
 BenchmarkRunner::BenchmarkRunner(std::shared_ptr<BenchmarkConfig> config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
@@ -70,21 +85,6 @@ BenchmarkRunner::BenchmarkRunner(std::shared_ptr<BenchmarkConfig> config,
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
   }
-}
-
-BenchmarkRunner& BenchmarkRunner::operator=(BenchmarkRunner&& other) {
-  _config = other._config;
-  _benchmark_item_runner = std::move(other._benchmark_item_runner);
-  _table_generator = std::move(other._table_generator);
-  _results = std::move(other._results);
-  _context = std::move(other._context);
-  return *this;
-}
-
-void BenchmarkRunner::reset(std::shared_ptr<BenchmarkConfig> config,
-                            std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
-                            std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context) {
-  get() = BenchmarkRunner(config, std::move(benchmark_item_runner), std::move(table_generator), context);
 }
 
 void BenchmarkRunner::run() {
