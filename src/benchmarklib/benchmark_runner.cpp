@@ -181,7 +181,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     _warmup(item_id);
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
-    const auto listener_payload = std::make_any<nlohmann::json>(nlohmann::json{{"item_name", name}, {"item_id", static_cast<size_t>(item_id)}});
+    const auto listener_payload =
+        std::make_any<nlohmann::json>(nlohmann::json{{"item_name", name}, {"item_id", static_cast<size_t>(item_id)}});
     std::cout << "- Benchmarking " << name << std::endl;
     _notify_listeners(BenchmarkRunnerEvent::ItemRunStarted, listener_payload);
 

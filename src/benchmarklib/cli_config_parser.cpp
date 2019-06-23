@@ -149,9 +149,9 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   }
   std::cout << "- JIT is " << (enable_jit ? "enabled" : "disabled") << std::endl;
 
-  return BenchmarkConfig{benchmark_mode,       chunk_size,       *encoding_config,    max_runs,  timeout_duration,
-                         warmup_duration,      output_file_path, enable_scheduler,    cores,     clients,
-                         enable_visualization, verify,           cache_binary_tables, plugins,   enable_jit};
+  return BenchmarkConfig{benchmark_mode,       chunk_size,       *encoding_config,    max_runs, timeout_duration,
+                         warmup_duration,      output_file_path, enable_scheduler,    cores,    clients,
+                         enable_visualization, verify,           cache_binary_tables, plugins,  enable_jit};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
