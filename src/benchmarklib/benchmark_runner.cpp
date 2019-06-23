@@ -26,7 +26,7 @@
 
 namespace opossum {
 
-BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
+BenchmarkRunner::BenchmarkRunner(std::shared_ptr<BenchmarkConfig> config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
     : _config(config),
@@ -37,8 +37,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   SQLPipelineBuilder::default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
-  if (config.enable_scheduler) {
-    Topology::use_default_topology(config.cores);
+  if (_config->enable_scheduler) {
+    Topology::use_default_topology(_config->cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
     std::cout << Topology::get();
 
@@ -55,7 +55,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   _table_generator->generate_and_store();
 
-  if (_config.verify) {
+  if (_config->verify) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
     Timer timer;
 
@@ -72,6 +72,19 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   }
 }
 
+BenchmarkRunner& BenchmarkRunner::operator=(BenchmarkRunner&& other) {
+  _config = other._config;
+  _benchmark_item_runner = std::move(other._benchmark_item_runner);
+  _table_generator = std::move(other._table_generator);
+  _results = std::move(other._results);
+  _context = std::move(other._context);
+  return *this;
+}
+
+void BenchmarkRunner::reset(std::shared_ptr<BenchmarkConfig> config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner, std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context) {
+  get() = BenchmarkRunner(config, std::move(benchmark_item_runner), std::move(table_generator), context);
+}
+
 void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
@@ -82,7 +95,7 @@ void BenchmarkRunner::run() {
     _results.resize(*std::max_element(items.begin(), items.end()) + 1u);
   }
 
-  switch (_config.benchmark_mode) {
+  switch (_config->benchmark_mode) {
     case BenchmarkMode::Ordered: {
       _benchmark_ordered();
       break;
@@ -97,9 +110,9 @@ void BenchmarkRunner::run() {
   _total_run_duration = benchmark_end - benchmark_start;
 
   // Create report
-  if (_config.output_file_path) {
-    if (!_config.verify && !_config.enable_visualization) {
-      std::ofstream output_file(*_config.output_file_path);
+  if (_config->output_file_path) {
+    if (!_config->verify && !_config->enable_visualization) {
+      std::ofstream output_file(*_config->output_file_path);
       _create_report(output_file);
     } else {
       std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
@@ -108,7 +121,7 @@ void BenchmarkRunner::run() {
   }
 
   // For the Ordered mode, results have already been printed to the console
-  if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
+  if (_config->benchmark_mode == BenchmarkMode::Shuffled && !_config->verify && !_config->enable_visualization) {
     for (const auto& item_id : items) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
       std::cout << "  -> Executed " << _results[item_id].num_iterations.load() << " times" << std::endl;
@@ -116,7 +129,7 @@ void BenchmarkRunner::run() {
   }
 
   // Fail if verification against SQLite was requested and failed
-  if (_config.verify) {
+  if (_config->verify) {
     auto any_verification_failed = false;
 
     for (const auto& item_id : items) {
@@ -144,11 +157,11 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
-  _state = BenchmarkState{_config.max_duration};
+  _state = BenchmarkState{_config->max_duration};
 
-  while (_state.keep_running() && _total_finished_runs.load(std::memory_order_relaxed) < _config.max_runs) {
+  while (_state.keep_running() && _total_finished_runs.load(std::memory_order_relaxed) < _config->max_runs) {
     // We want to only schedule as many items simultaneously as we have simulated clients
-    if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
+    if (_currently_running_clients.load(std::memory_order_relaxed) < _config->clients) {
       if (item_ids_shuffled.empty()) {
         item_ids_shuffled = item_ids;
         std::shuffle(item_ids_shuffled.begin(), item_ids_shuffled.end(), random_generator);
@@ -180,11 +193,11 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
-    _state = BenchmarkState{_config.max_duration};
+    _state = BenchmarkState{_config->max_duration};
 
-    while (_state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config.max_runs) {
+    while (_state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config->max_runs) {
       // We want to only schedule as many items simultaneously as we have simulated clients
-      if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
+      if (_currently_running_clients.load(std::memory_order_relaxed) < _config->clients) {
         _schedule_item_run(item_id);
       } else {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -198,7 +211,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.num_iterations) / duration_seconds;
 
-    if (!_config.verify && !_config.enable_visualization) {
+    if (!_config->verify && !_config->enable_visualization) {
       std::cout << "  -> Executed " << result.num_iterations.load() << " times in " << duration_seconds << " seconds ("
                 << items_per_second << " iter/s)" << std::endl;
     }
@@ -240,7 +253,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
-  if (_config.warmup_duration == Duration{0}) return;
+  if (_config->warmup_duration == Duration{0}) return;
 
   const auto& name = _benchmark_item_runner->item_name(item_id);
   BenchmarkItemResult& result = _results[item_id];
@@ -248,11 +261,11 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
-  _state = BenchmarkState{_config.warmup_duration};
+  _state = BenchmarkState{_config->warmup_duration};
 
-  while (_state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config.max_runs) {
+  while (_state.keep_running() && result.num_iterations.load(std::memory_order_relaxed) < _config->max_runs) {
     // We want to only schedule as many items simultaneously as we have simulated clients
-    if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
+    if (_currently_running_clients.load(std::memory_order_relaxed) < _config->clients) {
       _schedule_item_run(item_id);
     } else {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -320,7 +333,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                              {"metrics", item_metrics_json},
                              {"iterations", result.num_iterations.load()}};
 
-    if (_config.benchmark_mode == BenchmarkMode::Ordered) {
+    if (_config->benchmark_mode == BenchmarkMode::Ordered) {
       // These metrics are not meaningful for permuted / shuffled execution
       const auto duration_of_all_runs_ns =
           static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration_of_all_runs).count());

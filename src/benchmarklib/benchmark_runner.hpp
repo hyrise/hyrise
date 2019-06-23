@@ -25,6 +25,7 @@
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -35,10 +36,9 @@ class SQLiteWrapper;
 // The BenchmarkRunner is the main class for the benchmark framework. It gets initialized by the benchmark binaries
 // (e.g., tpch_benchmark.cpp). They then hand over the control to the BenchmarkRunner (inversion of control), which
 // calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
-class BenchmarkRunner {
+class BenchmarkRunner : public Singleton<BenchmarkRunner> {
  public:
-  BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
-                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
+  static void reset(std::shared_ptr<BenchmarkConfig> config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner, std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
 
   void run();
 
@@ -50,6 +50,13 @@ class BenchmarkRunner {
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
  private:
+  friend class Singleton;
+  BenchmarkRunner() {}
+  const BenchmarkRunner& operator=(const BenchmarkRunner&) = delete;
+  BenchmarkRunner& operator=(BenchmarkRunner&& other);
+
+  BenchmarkRunner(std::shared_ptr<BenchmarkConfig> config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner, std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
+
   // Run benchmark in BenchmarkMode::Shuffled mode
   void _benchmark_shuffled();
 
@@ -66,7 +73,7 @@ class BenchmarkRunner {
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
 
-  const BenchmarkConfig _config;
+  std::shared_ptr<BenchmarkConfig> _config;
 
   std::unique_ptr<AbstractBenchmarkItemRunner> _benchmark_item_runner;
   std::unique_ptr<AbstractTableGenerator> _table_generator;
