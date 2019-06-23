@@ -151,14 +151,22 @@ bool data_files_available(const std::string& table_path) {
 }
 
 const std::unordered_set<std::string> filename_blacklist() {
-  return std::unordered_set<std::string>{
-      "01.sql", "02.sql", "03.sql", "04.sql", "05.sql", "06.sql", "08.sql",  "11.sql",  "12.sql",  "14a.sql", "14b.sql",
-      "16.sql", "18.sql", "19.sql", "20.sql", "21.sql", "22.sql", "23a.sql", "23b.sql", "24a.sql", "24b.sql", "27.sql",
-      "30.sql", "31.sql", "32.sql", "33.sql", "36.sql", "37.sql", "38.sql",  "39a.sql", "39b.sql", "40.sql",  "44.sql",
-      "46.sql", "47.sql", "49.sql", "51.sql", "52.sql", "53.sql", "54.sql",  "55.sql",  "56.sql",  "57.sql",  "58.sql",
-      "59.sql", "60.sql", "61.sql", "63.sql", "64.sql", "66.sql", "67.sql",  "68.sql",  "70.sql",  "71.sql",  "72.sql",
-      "74.sql", "75.sql", "76.sql", "77.sql", "78.sql", "80.sql", "81.sql",  "82.sql",  "83.sql",  "84.sql",  "86.sql",
-      "87.sql", "89.sql", "90.sql", "91.sql", "92.sql", "94.sql", "95.sql",  "97.sql",  "98.sql"};
+  auto filename_blacklist = std::unordered_set<std::string>{};
+  const auto blacklist_file_path = "resources/benchmark/tpcds/query_blacklist.cfg";
+  std::ifstream blacklist_file(blacklist_file_path);
+
+  if (!blacklist_file) {
+    std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
+  } else{
+    std::string filename;
+    while (std::getline(blacklist_file, filename)) {
+      if (filename.size() > 0 && filename.at(0) != '#') {
+        filename_blacklist.emplace(filename);
+      }
+    }
+    blacklist_file.close();
+  }
+  return filename_blacklist;
 }
 
 }  // namespace
