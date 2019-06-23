@@ -27,6 +27,7 @@
 #include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
@@ -34,6 +35,7 @@
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
@@ -378,7 +380,6 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInJoin) {
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
-
 
 TEST_F(SQLTranslatorTest, WhereSimple) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a < 200;");
@@ -1788,13 +1789,14 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       "CREATE TABLE a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string VARCHAR(10) NOT "
       "NULL)");
 
-  auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
-                                                   {"a_long", DataType::Long, false},
-                                                   {"a_float", DataType::Float, false},
-                                                   {"a_double", DataType::Double, true},
-                                                   {"a_string", DataType::String, false}};
+  const auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                         {"a_long", DataType::Long, false},
+                                                         {"a_float", DataType::Float, false},
+                                                         {"a_double", DataType::Double, true},
+                                                         {"a_string", DataType::String, false}};
 
-  const auto expected_lqp = CreateTableNode::make("a_table", column_definitions, false);
+  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1804,13 +1806,23 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
       "CREATE TABLE IF NOT EXISTS a_table (a_int INTEGER, a_long LONG, a_float FLOAT, a_double DOUBLE NULL, a_string "
       "VARCHAR(10) NOT NULL)");
 
-  auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
-                                                   {"a_long", DataType::Long, false},
-                                                   {"a_float", DataType::Float, false},
-                                                   {"a_double", DataType::Double, true},
-                                                   {"a_string", DataType::String, false}};
+  const auto column_definitions = TableColumnDefinitions{{"a_int", DataType::Int, false},
+                                                         {"a_long", DataType::Long, false},
+                                                         {"a_float", DataType::Float, false},
+                                                         {"a_double", DataType::Double, true},
+                                                         {"a_string", DataType::String, false}};
 
-  const auto expected_lqp = CreateTableNode::make("a_table", column_definitions, true);
+  const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  const auto expected_lqp = CreateTableNode::make("a_table", true, static_table_node);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
+  const auto actual_lqp = compile_query("CREATE TABLE a_table AS SELECT * FROM int_float");
+
+  const auto stored_table_node = StoredTableNode::make("int_float");
+  const auto expected_lqp = CreateTableNode::make("a_table", false, stored_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

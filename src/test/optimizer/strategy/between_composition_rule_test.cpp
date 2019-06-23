@@ -18,7 +18,7 @@
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
