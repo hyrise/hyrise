@@ -41,7 +41,10 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   _chunks = {chunks.begin(), chunks.end()};
 
 #if HYRISE_DEBUG
-  for (const auto& chunk : _chunks) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+    auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    if (!chunk) continue;
+
     DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
                 "Supply MvccData for Chunks iff Table uses MVCC");
     DebugAssert(chunk->column_count() == column_count(), "Invalid Chunk column count");
@@ -51,8 +54,8 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
                   "Invalid Segment DataType");
     }
   }
-#endif
 }
+#endif
 
 const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
 
@@ -111,11 +114,11 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
 }
 
 void Table::append(const std::vector<AllTypeVariant>& values) {
-  if (_chunks.empty() || _chunks.back()->size() >= _max_chunk_size) {
+  if (_chunks.empty() || std::atomic_load(&_chunks.back())->size() >= _max_chunk_size) {
     append_mutable_chunk();
   }
 
-  _chunks.back()->append(values);
+  std::atomic_load(&_chunks.back())->append(values);
 }
 
 void Table::append_mutable_chunk() {
@@ -137,7 +140,8 @@ void Table::append_mutable_chunk() {
 
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
-  for (const auto& chunk : _chunks) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+    auto chunk = std::atomic_load(&_chunks[chunk_id]);
     if (chunk) ret += chunk->size();
   }
   return ret;
@@ -153,19 +157,23 @@ uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return _chunks[chunk_id];
+  return std::atomic_load(&_chunks[chunk_id]);
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return _chunks[chunk_id];
+  return std::atomic_load(&_chunks[chunk_id]);
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  DebugAssert(_chunks[chunk_id]->invalid_row_count() == _chunks[chunk_id]->size(),
+  DebugAssert(([this, chunk_id]() {
+                auto chunk = std::atomic_load(&_chunks[chunk_id]);
+                return (chunk->invalid_row_count() == chunk->size());
+              }()),
               "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
-  _chunks[chunk_id] = nullptr;
+
+  std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
 }
 
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,
@@ -186,7 +194,10 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   PerformanceWarning("get_row() used");
 
-  for (const auto& chunk : _chunks) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+    auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    if (!chunk) continue;
+
     if (row_idx < chunk->size()) {
       auto row = std::vector<AllTypeVariant>(column_count());
 
@@ -215,7 +226,10 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
 
   // Materialize the Chunks
   auto chunk_begin_row_idx = size_t{0};
-  for (const auto& chunk : _chunks) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+    auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    if (!chunk) continue;
+
     for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
       segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
         if (!segment_position.is_null()) {
@@ -243,7 +257,10 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};
 
-  for (const auto& chunk : _chunks) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+    auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    if (!chunk) continue;
+
     bytes += chunk->estimate_memory_usage();
   }
 

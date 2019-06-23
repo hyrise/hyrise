@@ -131,7 +131,10 @@ class Table : private Noncopyable {
     Assert(column_id < column_count(), "column_id invalid");
 
     size_t row_counter = 0u;
-    for (auto& chunk : _chunks) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+      auto chunk = std::atomic_load(&_chunks[chunk_id]);
+      if (!chunk) continue;
+
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
@@ -167,7 +170,10 @@ class Table : private Noncopyable {
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
     SegmentIndexType index_type = get_index_type_of<Index>();
 
-    for (auto& chunk : _chunks) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+      auto chunk = std::atomic_load(&_chunks[chunk_id]);
+      if (!chunk) continue;
+
       chunk->create_index<Index>(column_ids);
     }
     IndexInfo i = {column_ids, name, index_type};
