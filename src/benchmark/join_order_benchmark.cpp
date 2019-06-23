@@ -115,8 +115,8 @@ int main(int argc, char* argv[]) {
   auto benchmark_item_runner =
       std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, non_query_file_names, query_subset);
 
-  auto benchmark_runner =
-      BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};
+  auto& benchmark_runner = BenchmarkRunner::get();
+  benchmark_runner.reset(benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context);
 
   if (benchmark_config->verify) {
     // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.

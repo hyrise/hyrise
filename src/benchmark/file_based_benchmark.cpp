@@ -92,5 +92,6 @@ int main(int argc, char* argv[]) {
   auto benchmark_item_runner = std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path,
                                                                               query_filename_blacklist, query_subset);
 
-  BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context}.run();
+  BenchmarkRunner::get().reset(benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context);
+  BenchmarkRunner::get().run();
 }
