@@ -35,19 +35,16 @@ struct CostModelFeatures : public AbstractFeatures {
   size_t left_input_chunk_count = 0;
   size_t left_input_memory_usage_bytes = 0;
   size_t left_input_chunk_size = 0;
-  bool left_input_is_small_table = false;
 
   size_t right_input_row_count = 0;
   size_t right_input_chunk_count = 0;
   size_t right_input_memory_usage_bytes = 0;
   size_t right_input_chunk_size = 0;
-  bool right_input_is_small_table = false;
 
   size_t output_row_count = 0;
   size_t output_chunk_count = 0;
   size_t output_memory_usage_bytes = 0;
   size_t output_chunk_size = 0;
-  bool output_is_small_table = false;
 
   float selectivity = 0.0f;
 
