@@ -113,10 +113,12 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
   EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 10);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 0u), 10.5f);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 9.5f);
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices({ColumnID{0}}).size(), 2u);
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices({ColumnID{1}}).size(), 0u);
-  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices({ColumnID{0}}).size(), 2u);
-  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices({ColumnID{1}}).size(), 0u);
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_0).size(), 2u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_0).size(), 2u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_1).size(), 0u);
 }
 
 TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
