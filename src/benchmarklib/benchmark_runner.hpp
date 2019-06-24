@@ -55,7 +55,7 @@ class BenchmarkRunner : public Singleton<BenchmarkRunner> {
   friend class Singleton;
   BenchmarkRunner() {}
   const BenchmarkRunner& operator=(const BenchmarkRunner&) = delete;
-  BenchmarkRunner& operator=(BenchmarkRunner&& other);
+  BenchmarkRunner& operator=(BenchmarkRunner&& other) noexcept;
 
   BenchmarkRunner(std::shared_ptr<BenchmarkConfig> config,
                   std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,

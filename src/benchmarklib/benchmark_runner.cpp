@@ -29,10 +29,10 @@ namespace opossum {
 void BenchmarkRunner::reset(std::shared_ptr<BenchmarkConfig> config,
                             std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                             std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context) {
-  get() = BenchmarkRunner(config, std::move(benchmark_item_runner), std::move(table_generator), context);
+  get() = BenchmarkRunner(std::move(config), std::move(benchmark_item_runner), std::move(table_generator), context);
 }
 
-BenchmarkRunner& BenchmarkRunner::operator=(BenchmarkRunner&& other) {
+BenchmarkRunner& BenchmarkRunner::operator=(BenchmarkRunner&& other) noexcept {
   _config = std::move(other._config);
   _benchmark_item_runner = std::move(other._benchmark_item_runner);
   _table_generator = std::move(other._table_generator);
@@ -44,7 +44,7 @@ BenchmarkRunner& BenchmarkRunner::operator=(BenchmarkRunner&& other) {
 BenchmarkRunner::BenchmarkRunner(std::shared_ptr<BenchmarkConfig> config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                                  std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context)
-    : _config(config),
+    : _config(std::move(config)),
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
