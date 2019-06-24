@@ -111,7 +111,7 @@ std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
   auto date = date_t{};
   jtodt(&date, static_cast<int>(date_id));
 
-  auto result = pmr_string(10, ' ');
+  auto result = pmr_string(10, '?');
   std::snprintf(result.data(), result.size() + 1, "%4d-%02d-%02d", date.year, date.month, date.day);
 
   return result;
@@ -124,7 +124,7 @@ std::optional<tpcds_key_t> resolve_key(ds_key_t key) {
 
 template <int column_id>
 std::optional<pmr_string> resolve_string(pmr_string string) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{std::move(string)};
+  return nullCheck(column_id) || string.empty() ? std::nullopt : std::optional{std::move(string)};
 }
 
 template <int column_id>
@@ -150,10 +150,16 @@ std::optional<pmr_string> resolve_street_name(const ds_addr_t& address) {
                                     : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
 }
 
-pmr_string resolve_zip(int32_t zip) {
-  auto result = pmr_string{std::to_string(zip)};
-  DebugAssert(result.size() == 5, "zip codes must be 5 digits");
+pmr_string zip_to_string(int32_t zip) {
+  auto result = pmr_string(5, '?');
+  std::snprintf(result.data(), result.size() + 1, "%05d", zip);
   return result;
+}
+
+decimal_t gmt_offset_to_decimal(int32_t gmt_offset) {
+  auto gmt_offset_decimal = decimal_t{};
+  itodec(&gmt_offset_decimal, gmt_offset * 10);
+  return gmt_offset_decimal;
 }
 
 // TODO: resolve time
@@ -214,7 +220,7 @@ const auto reason_column_names = boost::hana::make_tuple("r_reason_sk", "r_reaso
 const auto ship_mode_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string>(); // NOLINT
 const auto ship_mode_column_names = boost::hana::make_tuple("sm_ship_mode_sk", "sm_ship_mode_id", "sm_type", "sm_code", "sm_carrier", "sm_contract"); // NOLINT
 
-const auto store_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string, pmr_string, std::optional<tpcds_key_t>, pmr_string, int32_t, int32_t, pmr_string, pmr_string, int32_t, pmr_string, pmr_string, pmr_string, std::optional<tpcds_key_t>, pmr_string, std::optional<tpcds_key_t>, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, float, float>(); // NOLINT
+const auto store_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT
 const auto store_column_names = boost::hana::make_tuple("s_store_sk", "s_store_id", "s_rec_start_date", "s_rec_end_date", "s_closed_date_sk", "s_store_name", "s_number_employees", "s_floor_space", "s_hours", "s_manager", "s_market_id", "s_geography_class", "s_market_desc", "s_market_manager", "s_division_id", "s_division_name", "s_company_id", "s_company_name", "s_street_number", "s_street_name", "s_street_type", "s_suite_number", "s_city", "s_county", "s_state", "s_zip", "s_country", "s_gmt_offset", "s_tax_precentage"); // NOLINT
 
 const auto store_returns_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, int32_t, float, float, float, float, float, float, float, float, float>(); // NOLINT
@@ -223,7 +229,7 @@ const auto store_returns_column_names = boost::hana::make_tuple("sr_returned_dat
 const auto store_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, int32_t, float, float, float, float, float, float, float, float, float, float, float, float>(); // NOLINT
 const auto store_sales_column_names = boost::hana::make_tuple("ss_sold_date_sk", "ss_sold_time_sk", "ss_item_sk", "ss_customer_sk", "ss_cdemo_sk", "ss_hdemo_sk", "ss_addr_sk", "ss_store_sk", "ss_promo_sk", "ss_ticket_number", "ss_quantity", "ss_wholesale_cost", "ss_list_price", "ss_sales_price", "ss_ext_discount_amt", "ss_ext_sales_price", "ss_ext_wholesale_cost", "ss_ext_list_price", "ss_ext_tax", "ss_coupon_amt", "ss_net_paid", "ss_net_paid_inc_tax", "ss_net_profit"); // NOLINT
 
-const auto time_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, int32_t, int32_t, int32_t, int32_t, pmr_string, pmr_string, pmr_string, pmr_string>(); // NOLINT
+const auto time_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
 const auto time_column_names = boost::hana::make_tuple("t_time_sk", "t_time_id", "t_time", "t_hour", "t_minute", "t_second", "t_am_pm", "t_shift", "t_sub_shift", "t_meal_time"); // NOLINT
 
 const auto warehouse_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string, int32_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, float>(); // NOLINT
@@ -238,7 +244,7 @@ const auto web_returns_column_names = boost::hana::make_tuple("wr_returned_date_
 const auto web_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, int32_t, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float>(); // NOLINT
 const auto web_sales_column_names = boost::hana::make_tuple("ws_sold_date_sk", "ws_sold_time_sk", "ws_ship_date_sk", "ws_item_sk", "ws_bill_customer_sk", "ws_bill_cdemo_sk", "ws_bill_hdemo_sk", "ws_bill_addr_sk", "ws_ship_customer_sk", "ws_ship_cdemo_sk", "ws_ship_hdemo_sk", "ws_ship_addr_sk", "ws_web_page_sk", "ws_web_site_sk", "ws_ship_mode_sk", "ws_warehouse_sk", "ws_promo_sk", "ws_order_number", "ws_quantity", "ws_wholesale_cost", "ws_list_price", "ws_sales_price", "ws_ext_discount_amt", "ws_ext_sales_price", "ws_ext_wholesale_cost", "ws_ext_list_price", "ws_ext_tax", "ws_coupon_amt", "ws_ext_ship_cost", "ws_net_paid", "ws_net_paid_inc_tax", "ws_net_paid_inc_ship", "ws_net_paid_inc_ship_tax", "ws_net_profit"); // NOLINT
 
-const auto web_site_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string, pmr_string, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, pmr_string, pmr_string, int32_t, pmr_string, pmr_string, pmr_string, int32_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, float, float>(); // NOLINT
+const auto web_site_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT
 const auto web_site_column_names = boost::hana::make_tuple("web_site_sk", "web_site_id", "web_rec_start_date", "web_rec_end_date", "web_name", "web_open_date_sk", "web_close_date_sk", "web_class", "web_manager", "web_mkt_id", "web_mkt_class", "web_mkt_desc", "web_market_manager", "web_company_id", "web_company_name", "web_street_number", "web_street_name", "web_street_type", "web_suite_number", "web_city", "web_county", "web_state", "web_zip", "web_country", "web_gmt_offset", "web_tax_percentage"); // NOLINT
 // clang-format on
 }  // namespace
@@ -360,7 +366,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_ro
         call_center.cc_company_name, pmr_string{std::to_string(call_center.cc_address.street_num)},
         resolve_street_name(call_center.cc_address), call_center.cc_address.street_type,
         call_center.cc_address.suite_num, call_center.cc_address.city, call_center.cc_address.county,
-        call_center.cc_address.state, resolve_zip(call_center.cc_address.zip), call_center.cc_address.country,
+        call_center.cc_address.state, zip_to_string(call_center.cc_address.zip), call_center.cc_address.country,
         static_cast<float>(call_center.cc_address.gmt_offset), decimal_to_float(call_center.cc_tax_percentage));
   }
 
@@ -380,14 +386,14 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_catalog_page(ds_key_t max_r
     mk_w_catalog_page(&catalog_page, catalog_page_first + i);
     tpcds_row_stop(CATALOG_PAGE);
 
-    catalog_page_builder.append_row(
-        catalog_page.cp_catalog_page_sk, catalog_page.cp_catalog_page_id,
-        resolve_key<CP_START_DATE_ID>(catalog_page.cp_start_date_id),
-        resolve_key<CP_END_DATE_ID>(catalog_page.cp_end_date_id),
-        resolve_string<CP_DEPARTMENT>(catalog_page.cp_department),
-        resolve_integer<CP_CATALOG_NUMBER>(catalog_page.cp_catalog_number),
-        resolve_integer<CP_CATALOG_PAGE_NUMBER>(catalog_page.cp_catalog_page_number),
-        resolve_string<CP_DESCRIPTION>(catalog_page.cp_description), resolve_string<CP_TYPE>(catalog_page.cp_type));
+    catalog_page_builder.append_row(catalog_page.cp_catalog_page_sk, catalog_page.cp_catalog_page_id,
+                                    resolve_key<CP_START_DATE_ID>(catalog_page.cp_start_date_id),
+                                    resolve_key<CP_END_DATE_ID>(catalog_page.cp_end_date_id),
+                                    resolve_string<CP_DEPARTMENT>(catalog_page.cp_department),
+                                    resolve_integer<CP_CATALOG_NUMBER>(catalog_page.cp_catalog_number),
+                                    resolve_integer<CP_CATALOG_PAGE_NUMBER>(catalog_page.cp_catalog_page_number),
+                                    resolve_string<CP_DESCRIPTION>(catalog_page.cp_description),
+                                    resolve_string<CP_TYPE>(catalog_page.cp_type));
   }
 
   return catalog_page_builder.finish_table();
@@ -505,22 +511,19 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_address(ds_key_t m
     const auto customer_address =
         call_dbgen_mk<W_CUSTOMER_ADDRESS_TBL, &mk_w_customer_address, CUSTOMER_ADDRESS>(customer_address_first + i);
 
-    auto gmt_offset = decimal_t{};
-    itodec(&gmt_offset, customer_address.ca_address.gmt_offset * 10);
-
-    customer_address_builder.append_row(customer_address.ca_addr_sk,
-                                        customer_address.ca_addr_id,
-                                        resolve_string<CA_ADDRESS_STREET_NUM>(pmr_string{std::to_string(customer_address.ca_address.street_num)}),
-                                        resolve_street_name<CA_ADDRESS_STREET_NAME1>(customer_address.ca_address),
-                                        resolve_string<CA_ADDRESS_STREET_TYPE>(customer_address.ca_address.street_type),
-                                        resolve_string<CA_ADDRESS_SUITE_NUM>(customer_address.ca_address.suite_num),
-                                        resolve_string<CA_ADDRESS_CITY>(customer_address.ca_address.city),
-                                        resolve_string<CA_ADDRESS_COUNTY>(customer_address.ca_address.county),
-                                        resolve_string<CA_ADDRESS_STATE>(customer_address.ca_address.state),
-                                        resolve_string<CA_ADDRESS_ZIP>(resolve_zip(customer_address.ca_address.zip)),
-                                        resolve_string<CA_ADDRESS_COUNTRY>(customer_address.ca_address.country),
-                                        resolve_decimal<CA_ADDRESS_GMT_OFFSET>(gmt_offset),
-                                        resolve_string<CA_LOCATION_TYPE>(customer_address.ca_location_type));
+    customer_address_builder.append_row(
+        customer_address.ca_addr_sk, customer_address.ca_addr_id,
+        resolve_string<CA_ADDRESS_STREET_NUM>(pmr_string{std::to_string(customer_address.ca_address.street_num)}),
+        resolve_street_name<CA_ADDRESS_STREET_NAME1>(customer_address.ca_address),
+        resolve_string<CA_ADDRESS_STREET_TYPE>(customer_address.ca_address.street_type),
+        resolve_string<CA_ADDRESS_SUITE_NUM>(customer_address.ca_address.suite_num),
+        resolve_string<CA_ADDRESS_CITY>(customer_address.ca_address.city),
+        resolve_string<CA_ADDRESS_COUNTY>(customer_address.ca_address.county),
+        resolve_string<CA_ADDRESS_STATE>(customer_address.ca_address.state),
+        resolve_string<CA_ADDRESS_ZIP>(zip_to_string(customer_address.ca_address.zip)),
+        resolve_string<CA_ADDRESS_COUNTRY>(customer_address.ca_address.country),
+        resolve_decimal<CA_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(customer_address.ca_address.gmt_offset)),
+        resolve_string<CA_LOCATION_TYPE>(customer_address.ca_location_type));
   }
 
   return customer_address_builder.finish_table();
@@ -537,8 +540,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer(ds_key_t max_rows)
     const auto customer = call_dbgen_mk<W_CUSTOMER_TBL, &mk_w_customer, CUSTOMER>(customer_first + i);
 
     customer_builder.append_row(
-        customer.c_customer_sk, customer.c_customer_id,
-        resolve_key<C_CURRENT_CDEMO_SK>(customer.c_current_cdemo_sk),
+        customer.c_customer_sk, customer.c_customer_id, resolve_key<C_CURRENT_CDEMO_SK>(customer.c_current_cdemo_sk),
         resolve_key<C_CURRENT_HDEMO_SK>(customer.c_current_hdemo_sk),
         resolve_key<C_CURRENT_ADDR_SK>(customer.c_current_addr_sk),
         resolve_integer<C_FIRST_SHIPTO_DATE_ID>(customer.c_first_shipto_date_id),
@@ -671,8 +673,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_item(ds_key_t max_rows) con
     const auto item = call_dbgen_mk<W_ITEM_TBL, &mk_w_item, ITEM>(item_first + i);
 
     item_builder.append_row(
-        item.i_item_sk, item.i_item_id,
-        resolve_date_id<I_REC_START_DATE_ID>(item.i_rec_start_date_id),
+        item.i_item_sk, item.i_item_id, resolve_date_id<I_REC_START_DATE_ID>(item.i_rec_start_date_id),
         resolve_date_id<I_REC_END_DATE_ID>(item.i_rec_end_date_id), resolve_string<I_ITEM_DESC>(item.i_item_desc),
         resolve_decimal<I_CURRENT_PRICE>(item.i_current_price),
         resolve_decimal<I_WHOLESALE_COST>(item.i_wholesale_cost), resolve_key<I_BRAND_ID>(item.i_brand_id),
@@ -699,13 +700,9 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_promotion(ds_key_t max_rows
     const auto promotion = call_dbgen_mk<W_PROMOTION_TBL, &mk_w_promotion, PROMOTION>(promotion_first + i);
 
     promotion_builder.append_row(
-        promotion.p_promo_sk,
-        promotion.p_promo_id,
-        resolve_key<P_START_DATE_ID>(promotion.p_start_date_id),
-        resolve_key<P_END_DATE_ID>(promotion.p_end_date_id),
-        resolve_key<P_ITEM_SK>(promotion.p_item_sk),
-        resolve_decimal<P_COST>(promotion.p_cost),
-        resolve_integer<P_RESPONSE_TARGET>(promotion.p_response_target),
+        promotion.p_promo_sk, promotion.p_promo_id, resolve_key<P_START_DATE_ID>(promotion.p_start_date_id),
+        resolve_key<P_END_DATE_ID>(promotion.p_end_date_id), resolve_key<P_ITEM_SK>(promotion.p_item_sk),
+        resolve_decimal<P_COST>(promotion.p_cost), resolve_integer<P_RESPONSE_TARGET>(promotion.p_response_target),
         resolve_string<P_PROMO_NAME>(promotion.p_promo_name),
         resolve_boolean<P_CHANNEL_DMAIL>(promotion.p_channel_dmail),
         resolve_boolean<P_CHANNEL_EMAIL>(promotion.p_channel_email),
@@ -715,8 +712,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_promotion(ds_key_t max_rows
         resolve_boolean<P_CHANNEL_PRESS>(promotion.p_channel_press),
         resolve_boolean<P_CHANNEL_EVENT>(promotion.p_channel_event),
         resolve_boolean<P_CHANNEL_DEMO>(promotion.p_channel_demo),
-        resolve_string<P_CHANNEL_DETAILS>(promotion.p_channel_details),
-        resolve_string<P_PURPOSE>(promotion.p_purpose),
+        resolve_string<P_CHANNEL_DETAILS>(promotion.p_channel_details), resolve_string<P_PURPOSE>(promotion.p_purpose),
         resolve_boolean<P_DISCOUNT_ACTIVE>(promotion.p_discount_active));
   }
 
@@ -767,13 +763,14 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) co
     const auto store = call_dbgen_mk<W_STORE_TBL, &mk_w_store, STORE>(store_first + i);
 
     store_builder.append_row(
-        resolve_key(store.store_sk), store.store_id, resolve_date_id(store.rec_start_date_id),
+        store.store_sk, store.store_id, resolve_date_id(store.rec_start_date_id),
         resolve_date_id(store.rec_end_date_id), resolve_key(store.closed_date_id), store.store_name, store.employees,
         store.floor_space, store.hours, store.store_manager, store.market_id, store.geography_class, store.market_desc,
         store.market_manager, resolve_key(store.division_id), store.division_name, resolve_key(store.company_id),
-        store.company_name, pmr_string{std::to_string(store.address.street_num)}, resolve_street_name(store.address), store.address.street_type,
-        store.address.suite_num, store.address.city, store.address.county, store.address.state, resolve_zip(store.address.zip),
-        store.address.country, static_cast<float>(store.address.gmt_offset), decimal_to_float(store.dTaxPercentage));
+        store.company_name, pmr_string{std::to_string(store.address.street_num)}, resolve_street_name(store.address),
+        store.address.street_type, store.address.suite_num, store.address.city, store.address.county,
+        store.address.state, zip_to_string(store.address.zip), store.address.country,
+        static_cast<float>(store.address.gmt_offset), decimal_to_float(store.dTaxPercentage));
   }
 
   return store_builder.finish_table();
@@ -871,8 +868,11 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_time(ds_key_t max_rows) con
   for (auto i = ds_key_t{0}; i < time_count; i++) {
     const auto time = call_dbgen_mk<W_TIME_TBL, &mk_w_time, TIME>(time_first + i);
 
-    time_builder.append_row(resolve_key(time.t_time_sk), time.t_time_id, time.t_time, time.t_hour, time.t_minute,
-                            time.t_second, time.t_am_pm, time.t_shift, time.t_sub_shift, time.t_meal_time);
+    time_builder.append_row(time.t_time_sk, time.t_time_id, resolve_integer<T_TIME>(time.t_time),
+                            resolve_integer<T_HOUR>(time.t_hour), resolve_integer<T_MINUTE>(time.t_minute),
+                            resolve_integer<T_SECOND>(time.t_second), resolve_string<T_AM_PM>(time.t_am_pm),
+                            resolve_string<T_SHIFT>(time.t_shift), resolve_string<T_SUB_SHIFT>(time.t_sub_shift),
+                            resolve_string<T_MEAL_TIME>(time.t_meal_time));
   }
 
   return time_builder.finish_table();
@@ -890,10 +890,11 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_warehouse(ds_key_t max_rows
 
     warehouse_builder.append_row(resolve_key(warehouse.w_warehouse_sk), warehouse.w_warehouse_id,
                                  warehouse.w_warehouse_name, warehouse.w_warehouse_sq_ft,
-                                 pmr_string{std::to_string(warehouse.w_address.street_num)}, resolve_street_name(warehouse.w_address),
-                                 warehouse.w_address.street_type, warehouse.w_address.suite_num,
-                                 warehouse.w_address.city, warehouse.w_address.county, warehouse.w_address.state,
-                                 resolve_zip(warehouse.w_address.zip), warehouse.w_address.country, static_cast<float>(warehouse.w_address.gmt_offset));
+                                 pmr_string{std::to_string(warehouse.w_address.street_num)},
+                                 resolve_street_name(warehouse.w_address), warehouse.w_address.street_type,
+                                 warehouse.w_address.suite_num, warehouse.w_address.city, warehouse.w_address.county,
+                                 warehouse.w_address.state, zip_to_string(warehouse.w_address.zip),
+                                 warehouse.w_address.country, static_cast<float>(warehouse.w_address.gmt_offset));
   }
 
   return warehouse_builder.finish_table();
@@ -909,18 +910,17 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_page(ds_key_t max_rows)
   for (auto i = ds_key_t{0}; i < web_page_count; i++) {
     const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + i);
 
-    web_page_builder.append_row(web_page.wp_page_sk, web_page.wp_page_id,
-                                resolve_date_id<WP_REC_START_DATE_ID>(web_page.wp_rec_start_date_id),
-                                resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
-                                resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
-                                resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
-                                resolve_boolean<WP_AUTOGEN_FLAG>(web_page.wp_autogen_flag),
-                                resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk),
-                                resolve_string<WP_URL>(web_page.wp_url), resolve_string<WP_TYPE>(web_page.wp_type),
-                                resolve_integer<WP_CHAR_COUNT>(web_page.wp_char_count),
-                                resolve_integer<WP_LINK_COUNT>(web_page.wp_link_count),
-                                resolve_integer<WP_IMAGE_COUNT>(web_page.wp_image_count),
-                                resolve_integer<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count));
+    web_page_builder.append_row(
+        web_page.wp_page_sk, web_page.wp_page_id, resolve_date_id<WP_REC_START_DATE_ID>(web_page.wp_rec_start_date_id),
+        resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
+        resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
+        resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
+        resolve_boolean<WP_AUTOGEN_FLAG>(web_page.wp_autogen_flag),
+        resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk), resolve_string<WP_URL>(web_page.wp_url),
+        resolve_string<WP_TYPE>(web_page.wp_type), resolve_integer<WP_CHAR_COUNT>(web_page.wp_char_count),
+        resolve_integer<WP_LINK_COUNT>(web_page.wp_link_count),
+        resolve_integer<WP_IMAGE_COUNT>(web_page.wp_image_count),
+        resolve_integer<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count));
   }
 
   return web_page_builder.finish_table();
@@ -1023,18 +1023,37 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_site(ds_key_t max_rows)
   auto web_site_builder = TableBuilder{_benchmark_config->chunk_size, web_site_column_types, web_site_column_names,
                                        static_cast<ChunkOffset>(web_site_count)};
 
+  auto web_site = W_WEB_SITE_TBL{};
+  static_assert(sizeof(web_site.web_class) == 51);
+  std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
   for (auto i = ds_key_t{0}; i < web_site_count; i++) {
-    const auto web_site = call_dbgen_mk<W_WEB_SITE_TBL, &mk_w_web_site, WEB_SITE>(web_site_first + i);
+    // mk_w_web_site needs a pointer to the previous result because it expects values set previously to still be there
+    mk_w_web_site(&web_site, web_site_first + i);
+    tpcds_row_stop(WEB_SITE);
 
     web_site_builder.append_row(
-        resolve_key(web_site.web_site_sk), web_site.web_site_id, resolve_date_id(web_site.web_rec_start_date_id),
-        resolve_date_id(web_site.web_rec_end_date_id), web_site.web_name, resolve_key(web_site.web_open_date),
-        resolve_key(web_site.web_close_date), web_site.web_class, web_site.web_manager, web_site.web_market_id,
-        web_site.web_market_class, web_site.web_market_desc, web_site.web_market_manager, web_site.web_company_id,
-        web_site.web_company_name, pmr_string{std::to_string(web_site.web_address.street_num)}, resolve_street_name(web_site.web_address),
-        web_site.web_address.street_type, web_site.web_address.suite_num, web_site.web_address.city,
-        web_site.web_address.county, web_site.web_address.state, resolve_zip(web_site.web_address.zip), web_site.web_address.country,
-        static_cast<float>(web_site.web_address.gmt_offset), decimal_to_float(web_site.web_tax_percentage));
+        web_site.web_site_sk, web_site.web_site_id,
+        resolve_date_id<WEB_REC_START_DATE_ID>(web_site.web_rec_start_date_id),
+        resolve_date_id<WEB_REC_END_DATE_ID>(web_site.web_rec_end_date_id), resolve_string<WEB_NAME>(web_site.web_name),
+        resolve_key<WEB_OPEN_DATE>(web_site.web_open_date), resolve_key<WEB_CLOSE_DATE>(web_site.web_close_date),
+        resolve_string<WEB_CLASS>(web_site.web_class), resolve_string<WEB_MANAGER>(web_site.web_manager),
+        resolve_integer<WEB_MARKET_ID>(web_site.web_market_id),
+        resolve_string<WEB_MARKET_CLASS>(web_site.web_market_class),
+        resolve_string<WEB_MARKET_DESC>(web_site.web_market_desc),
+        resolve_string<WEB_MARKET_MANAGER>(web_site.web_market_manager),
+        resolve_integer<WEB_COMPANY_ID>(web_site.web_company_id),
+        resolve_string<WEB_COMPANY_NAME>(web_site.web_company_name),
+        resolve_string<WEB_ADDRESS_STREET_NUM>(pmr_string{std::to_string(web_site.web_address.street_num)}),
+        resolve_street_name<WEB_ADDRESS_STREET_NAME1>(web_site.web_address),
+        resolve_string<WEB_ADDRESS_STREET_TYPE>(web_site.web_address.street_type),
+        resolve_string<WEB_ADDRESS_SUITE_NUM>(web_site.web_address.suite_num),
+        resolve_string<WEB_ADDRESS_CITY>(web_site.web_address.city),
+        resolve_string<WEB_ADDRESS_COUNTY>(web_site.web_address.county),
+        resolve_string<WEB_ADDRESS_STATE>(web_site.web_address.state),
+        resolve_string<WEB_ADDRESS_ZIP>(zip_to_string(web_site.web_address.zip)),
+        resolve_string<WEB_ADDRESS_COUNTRY>(web_site.web_address.country),
+        resolve_decimal<WEB_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(web_site.web_address.gmt_offset)),
+        resolve_decimal<WEB_TAX_PERCENTAGE>(web_site.web_tax_percentage));
   }
 
   return web_site_builder.finish_table();

@@ -160,17 +160,17 @@ class TableBuilder {
     boost::hana::for_each(value_vectors_and_null_value_vectors_and_values, [](auto& values_and_null_values_and_value) {
       auto& values = values_and_null_values_and_value[boost::hana::llong_c<0>].get();
       auto& null_values = values_and_null_values_and_value[boost::hana::llong_c<1>].get();
-      auto& optional_or_value_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
+      auto& optional_or_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
 
       constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
-      auto value_is_null = table_builder::is_null(optional_or_value_value);
+      auto value_is_null = table_builder::is_null(optional_or_value);
 
       DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
 
       if (value_is_null) {
         values.emplace_back();
       } else {
-        values.emplace_back(std::move(table_builder::get_value(optional_or_value_value)));
+        values.emplace_back(std::move(table_builder::get_value(optional_or_value)));
       }
 
       if constexpr (column_is_nullable) {

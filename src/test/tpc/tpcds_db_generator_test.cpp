@@ -117,12 +117,11 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
   const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0);
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_call_center(50), load_csv("call_center.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_catalog_page(50), load_csv("catalog_page.csv"));
-
   //  const auto [catalog_sales_table, catalog_returns_table] = table_generator.generate_catalog_sales_and_returns(50);
   //  EXPECT_TABLE_EQ_ORDERED(catalog_sales_table, load_csv("catalog_sales.csv"));
   //  EXPECT_TABLE_EQ_ORDERED(catalog_returns_table, load_csv("catalog_returns.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_customer_address(50), load_csv("customer_address.csv"));
-//  EXPECT_TABLE_EQ_ORDERED(table_generator.generate_customer(50), load_csv("customer.csv"));
+  EXPECT_TABLE_EQ_ORDERED(table_generator.generate_customer(50), load_csv("customer.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_customer_demographics(50), load_csv("customer_demographics.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_date(50), load_csv("date_dim.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_household_demographics(50), load_csv("household_demographics.csv"));
@@ -133,11 +132,15 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_reason(50), load_csv("reason.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_ship_mode(50), load_csv("ship_mode.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_store(50), load_csv("store.csv"));
-  // TODO store sales returns
+  //  const auto [store_sales_table, store_returns_table] = table_generator.generate_store_sales_and_returns(50);
+  //  EXPECT_TABLE_EQ_ORDERED(store_sales_table, load_csv("store_sales.csv"));
+  //  EXPECT_TABLE_EQ_ORDERED(store_returns_table, load_csv("store_returns.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_time(50), load_csv("time_dim.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_warehouse(50), load_csv("warehouse.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_page(50), load_csv("web_page.csv"));
-  // TODO web sales returns
+  //  const auto [web_sales_table, web_returns_table] = table_generator.generate_web_sales_and_returns(50);
+  //  EXPECT_TABLE_EQ_ORDERED(web_sales_table, load_csv("web_sales.csv"));
+  //  EXPECT_TABLE_EQ_ORDERED(web_returns_table, load_csv("web_returns.csv"));
   EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_site(50), load_csv("web_site.csv"));
 
   // TODO: Run generation a second time to make sure no global state (of which tpcds_dbgen has plenty :( ) from the
