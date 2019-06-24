@@ -49,9 +49,10 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
 const std::string JoinHash::name() const { return "JoinHash"; }
 
 const std::string JoinHash::description(DescriptionMode description_mode) const {
+  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
   std::ostringstream stream;
   stream << AbstractJoinOperator::description(description_mode);
-  stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
+  stream << separator << "Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
   return stream.str();
 }
 
@@ -144,10 +145,10 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, _radix_bits,
             std::move(adjusted_secondary_predicates));
-	_impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(join_impl);
-	if (!_radix_bits) {
-	  _radix_bits = join_impl._calculate_radix_bits();
-	}
+        _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(join_impl);
+        if (!_radix_bits) {
+          _radix_bits = join_impl._radix_bits;
+        }
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -227,6 +228,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
   }
 
+  size_t _radix_bits;
+
  protected:
   const JoinHash& _join_hash;
   const std::shared_ptr<const Table> _build_input_table, _probe_input_table;
@@ -239,8 +242,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const std::vector<OperatorJoinPredicate> _secondary_predicates;
 
   std::shared_ptr<Table> _output_table;
-
-  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
