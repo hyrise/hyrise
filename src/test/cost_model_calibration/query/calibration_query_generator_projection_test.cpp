@@ -16,7 +16,7 @@ class CalibrationQueryGeneratorProjectionTest : public BaseTest {
 
 TEST_F(CalibrationQueryGeneratorProjectionTest, CheckColumns) {
   std::vector<std::pair<DataType, std::string>> column_definitions{};
-  const auto columns = {LQPColumnReference(MockNode::make(column_definitions), ColumnID{0}),
+  const std::vector<opossum::LQPColumnReference> columns = {LQPColumnReference(MockNode::make(column_definitions), ColumnID{0}),
                         LQPColumnReference(MockNode::make(column_definitions), ColumnID{1}),
                         LQPColumnReference(MockNode::make(column_definitions), ColumnID{2})};
   auto projection = CalibrationQueryGeneratorProjection::generate_projection(columns);
