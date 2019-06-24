@@ -145,10 +145,10 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, _radix_bits,
             std::move(adjusted_secondary_predicates));
-        _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(join_impl);
         if (!_radix_bits) {
           _radix_bits = join_impl._radix_bits;
         }
+        _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(std::move(join_impl));
       } else {
         Fail("Cannot join String with non-String column");
       }
