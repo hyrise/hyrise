@@ -91,14 +91,6 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
   const auto left_input_row_count = operator_features.left_input_row_count;
   const auto right_input_row_count = operator_features.right_input_row_count;
 
-  if (left_input_row_count > 0 && right_input_row_count > 0) {
-    if (left_input_row_count > right_input_row_count) {
-      operator_features.input_table_size_ratio = left_input_row_count / static_cast<float>(right_input_row_count);
-    } else {
-      operator_features.input_table_size_ratio = right_input_row_count / static_cast<float>(left_input_row_count);
-    }
-  }
-
   // Output
   if (const auto& output = op->get_output()) {
     // Output selectivity seems to be off

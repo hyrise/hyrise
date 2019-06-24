@@ -10,7 +10,7 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
   std::map<std::string, AllTypeVariant> features = {
     {"operator_type", pmr_string(operator_type_to_string.at(operator_type))},
     {"execution_time_ns", static_cast<int64_t>(execution_time_ns)},
-    {"input_table_size_ratio", input_table_size_ratio},
+    // DISABLED UNTIL NECESSARY FOR JOIN {"input_table_size_ratio", input_table_size_ratio},
     {"left_input_row_count", static_cast<int64_t>(left_input_row_count)},
     {"left_input_data_table_row_count", static_cast<int64_t>(left_input_data_table_row_count)},
     {"left_input_chunk_count", static_cast<int64_t>(left_input_chunk_count)},
@@ -59,7 +59,7 @@ const std::unordered_map<std::string, float> CostModelFeatures::to_cost_model_fe
   std::unordered_map<std::string, float> features = {
 //          {"operator_type", operator_type_to_string.at(operator_type)},
           {"execution_time_ns", static_cast<float>(execution_time_ns)},
-          {"input_table_size_ratio", input_table_size_ratio},
+          // DISABLED UNTIL NECESSARY FOR JOIN {"input_table_size_ratio", input_table_size_ratio},
           {"left_input_row_count", static_cast<float>(left_input_row_count)},
           {"left_input_data_table_row_count", static_cast<float>(left_input_data_table_row_count)},
           {"left_input_chunk_count", static_cast<float>(left_input_chunk_count)},
