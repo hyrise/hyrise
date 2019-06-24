@@ -26,7 +26,7 @@ struct CostModelFeatures : public AbstractFeatures {
   float input_table_size_ratio = 0.0;
   size_t total_row_count = 0;
   float logical_cost_sort_merge = 0;
-  float logical_cost_hash = 0;
+  // DISABLED UNTIL NECESSARY FOR JOIN float logical_cost_hash = 0;
 
   size_t left_input_row_count = 0;
   // `left_input_data_table_row_count` is used only for scans right now. Purpose is to

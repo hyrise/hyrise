@@ -77,7 +77,7 @@ const CostModelFeatures CostEstimatorFeatureExtractor::_extract_general_features
   }
 
   operator_features.logical_cost_sort_merge = left_input_row_count * static_cast<float>(std::log(left_input_row_count));
-  operator_features.logical_cost_hash = left_input_row_count + left_input_row_count;
+  // DISABLED UNTIL NECESSARY FOR JOIN operator_features.logical_cost_hash = left_input_row_count + left_input_row_count;
 
   // Calculate cross-join cardinality.
   // Use 1 for cases, in which one side is empty to avoid divisions by zero in the next step
