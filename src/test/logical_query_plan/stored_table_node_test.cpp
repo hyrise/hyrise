@@ -101,15 +101,11 @@ TEST_F(StoredTableNodeTest, Copy) {
 TEST_F(StoredTableNodeTest, NodeExpressions) { ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u); }
 
 TEST_F(StoredTableNodeTest, GetStatistics) {
-  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().size(), 2u);
   EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 3u);
 
-  const auto column_statistics_b = _stored_table_node->get_statistics()->column_statistics().at(1u);
   const auto index_statistics_b = _stored_table_node->indexes_statistics().at(2u);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
-  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().at(0u), column_statistics_b);
   EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 1u);
   EXPECT_EQ(_stored_table_node->indexes_statistics().at(0u), index_statistics_b);
 }

@@ -12,7 +12,6 @@
 #include "index/base_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
-#include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
