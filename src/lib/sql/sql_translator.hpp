@@ -90,7 +90,8 @@ class SQLTranslator final {
    *                                                in correlated subqueries
    * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
    *                                                for each encountered parameter
-   * @param with_descriptions                       //TODO comment
+   * @param with_descriptions                       Contains a mapping of LQPs and associated WITH aliases, which
+   *                                                already got evaluated
    */
   SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
