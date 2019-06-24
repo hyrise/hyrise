@@ -56,6 +56,23 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
 
   // Inputs
   if (op->input_left()) {
+    auto left_parent_op = op->input_left();
+
+    const auto max_iterations = size_t{1'000};
+    auto iterations = size_t{0};
+    operator_features.previous_operator = left_parent_op->name();
+    while (left_parent_op->type() != OperatorType::GetTable && iterations < max_iterations) {
+      // Get left inputs until we find a GetTable operator.
+      // TODO(anyone): ensure we will always end up at a GetTable have covered all corner cases.
+      left_parent_op = left_parent_op->input_left();
+      ++iterations;
+    } 
+    if (left_parent_op->type() == OperatorType::GetTable) {
+      // If we found a GetTable node, get the size of the table.
+      const auto get_table_op = std::static_pointer_cast<const GetTable>(left_parent_op);
+      operator_features.left_input_data_table_row_count = get_table_op->get_output()->row_count();
+    }
+
     const auto left_input = op->input_left()->get_output();
     operator_features.left_input_row_count = left_input->row_count();
     operator_features.left_input_chunk_count = left_input->chunk_count();

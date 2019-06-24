@@ -2,7 +2,11 @@
 
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "resolve_type.hpp"
+#include "statistics/base_attribute_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/reference_segment.hpp"
@@ -84,9 +88,22 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
   // TODO(Sven): this returns the size of the original, stored, unfiltered column...
   column_features.column_memory_usage_bytes = _get_memory_usage_for_column(table, column_id);
 
-  // TODO(Anyone): We might need to differentiate between calibration (where we can afford
-  //               calculating the distinct counts) and runtime (estimate via statistics)
-  column_features.column_distinct_value_count = 0;
+  // We assume that each column has a histogram, which is (as of now) the
+  // case since we add all calibration tables to the storage manager.
+  if (table->table_statistics() && column_id < table->table_statistics()->column_statistics.size()) {
+    const auto base_attribute_statistics = table->table_statistics()->column_statistics[column_id];
+    resolve_data_type(data_type, [&](const auto column_data_type) {
+      using ColumnDataType = typename decltype(column_data_type)::type;
+
+      const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
+      if (attribute_statistics) {
+        const auto equal_distinct_count_histogram = std::dynamic_pointer_cast<EqualDistinctCountHistogram<ColumnDataType>>(attribute_statistics->histogram);
+        if (equal_distinct_count_histogram) {
+          column_features.column_distinct_value_count = static_cast<size_t>(equal_distinct_count_histogram->total_distinct_count());
+        }
+      }
+    });
+  }
 
   return column_features;
 }
