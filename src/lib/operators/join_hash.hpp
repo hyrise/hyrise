@@ -32,6 +32,9 @@ class JoinHash : public AbstractJoinOperator {
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
 
+  template <typename T>
+  static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size);
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
@@ -39,10 +42,6 @@ class JoinHash : public AbstractJoinOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   void _on_cleanup() override;
-
-  template <typename T>
-  static size_t _calculate_radix_bits(const std::shared_ptr<const Table> build_table,
-                                      const std::shared_ptr<const Table> probe_table);
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
   std::optional<size_t> _radix_bits;

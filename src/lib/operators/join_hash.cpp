@@ -65,8 +65,7 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 template <typename T>
-size_t JoinHash::_calculate_radix_bits(const std::shared_ptr<const Table> build_table,
-                                       const std::shared_ptr<const Table> probe_table) {
+size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
   /*
     Setting number of bits for radix clustering:
     The number of bits is used to create probe partitions with a size that can
@@ -79,9 +78,6 @@ size_t JoinHash::_calculate_radix_bits(const std::shared_ptr<const Table> build_
       - each entry in the hash map is a data structure holding the actual value
       and the RowID
   */
-  const auto build_relation_size = build_table->row_count();
-  const auto probe_relation_size = probe_table->row_count();
-
   if (build_relation_size > probe_relation_size) {
     /*
       Hash joins perform best when the build relation is small. In case the
@@ -188,7 +184,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
-          _radix_bits = _calculate_radix_bits<BuildColumnDataType>(build_input_table, probe_input_table);
+          _radix_bits = calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(),
+                                                                   probe_input_table->row_count());
         }
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
