@@ -234,6 +234,10 @@ std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_
 
 std::shared_ptr<TableStatistics> Table::table_statistics() const { return _table_statistics; }
 
+void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
+  _table_statistics = table_statistics;
+}
+
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
 size_t Table::estimate_memory_usage() const {

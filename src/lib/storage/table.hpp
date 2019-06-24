@@ -151,14 +151,14 @@ class Table : private Noncopyable {
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
-  void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics);
-
   /**
    * Tables, typically those stored in the StorageManager, can be associated with statistics to perform Cardinality
    * estimation during optimization.
    * @{
    */
   std::shared_ptr<TableStatistics> table_statistics() const;
+
+  void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
   /** @} */
 
   std::vector<IndexStatistics> indexes_statistics() const;
