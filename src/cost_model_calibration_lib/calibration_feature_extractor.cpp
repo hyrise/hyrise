@@ -195,13 +195,13 @@ void CalibrationFeatureExtractor::_extract_table_scan_features_for_predicate_exp
       features.second_column = _extract_features_for_column_expression(left_input_table, column_expression, "second");
     }
 
-    if (predicate_arguments.size() == 3) {
-      const auto& third_argument = predicate_arguments[2];
-      if (third_argument->type == ExpressionType::PQPColumn) {
-        const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(third_argument);
-        features.third_column = _extract_features_for_column_expression(left_input_table, column_expression, "third");
-      }
-    }
+    // if (predicate_arguments.size() == 3) {
+    //   const auto& third_argument = predicate_arguments[2];
+    //   if (third_argument->type == ExpressionType::PQPColumn) {
+    //     const auto& column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(third_argument);
+    //     features.third_column = _extract_features_for_column_expression(left_input_table, column_expression, "third");
+    //   }
+    // }
 
   } else {
     std::cout << "facing unexpected table scan with 1 or more than 3 predicates: " << *expression << std::endl;

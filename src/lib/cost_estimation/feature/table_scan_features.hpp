@@ -13,7 +13,7 @@ namespace cost_model {
 struct TableScanFeatures : public AbstractFeatures {
   ColumnFeatures first_column{"first"};
   ColumnFeatures second_column{"second"};
-  ColumnFeatures third_column{"third"};
+  // DISBALED UNTIL A BETWEEN B AND C is necessary ColumnFeatures third_column{"third"};
 
   bool is_column_comparison = false;
   pmr_string scan_operator_type;

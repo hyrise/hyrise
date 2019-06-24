@@ -151,13 +151,14 @@ void CostEstimatorFeatureExtractor::_extract_table_scan_features_for_predicate_e
       features.second_column = ColumnFeatureExtractor::extract_features(input, column_expression, "second");
     }
 
-    if (predicate_arguments.size() == 3) {
-      const auto& third_argument = predicate_arguments[2];
-      if (third_argument->type == ExpressionType::LQPColumn) {
-        const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(third_argument);
-        features.third_column = ColumnFeatureExtractor::extract_features(input, column_expression, "third");
-      }
-    }
+    // DISBALED UNTIL A BETWEEN B AND C is necessary
+    // if (predicate_arguments.size() == 3) {
+    //   const auto& third_argument = predicate_arguments[2];
+    //   if (third_argument->type == ExpressionType::LQPColumn) {
+    //     const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(third_argument);
+    //     features.third_column = ColumnFeatureExtractor::extract_features(input, column_expression, "third");
+    //   }
+    // }
 
   } else {
     std::cout << "facing unexpected table scan with 1 or more than 3 predicates: " << *expression << std::endl;
