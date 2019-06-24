@@ -221,8 +221,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       PerformanceWarning("Build relation larger than probe relation in hash join");
     }
 
-    const auto l2_cache_size = 1'024'000;  // bytes 
-    const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size  
+    const auto l2_cache_size = 1'024'000;  // bytes
+    const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
 
     // For sizing, see comments:
     // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
