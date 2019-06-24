@@ -41,7 +41,7 @@ class JoinHash : public AbstractJoinOperator {
   void _on_cleanup() override;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-  const std::optional<size_t> _radix_bits;
+  std::optional<size_t> _radix_bits;
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;

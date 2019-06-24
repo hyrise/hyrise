@@ -140,10 +140,14 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
-        _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
+        auto join_impl = JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, _radix_bits,
             std::move(adjusted_secondary_predicates));
+	_impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(join_impl);
+	if (!_radix_bits) {
+	  _radix_bits = join_impl._calculate_radix_bits();
+	}
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -177,24 +181,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       _radix_bits = _calculate_radix_bits();
     }
   }
-
- protected:
-  const JoinHash& _join_hash;
-  const std::shared_ptr<const Table> _build_input_table, _probe_input_table;
-  const JoinMode _mode;
-  const ColumnIDPair _column_ids;
-  const PredicateCondition _predicate_condition;
-
-  OutputColumnOrder _output_column_order;
-
-  const std::vector<OperatorJoinPredicate> _secondary_predicates;
-
-  std::shared_ptr<Table> _output_table;
-
-  size_t _radix_bits;
-
-  // Determine correct type for hashing
-  using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
 
   size_t _calculate_radix_bits() const {
     /*
@@ -240,6 +226,24 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
   }
+
+ protected:
+  const JoinHash& _join_hash;
+  const std::shared_ptr<const Table> _build_input_table, _probe_input_table;
+  const JoinMode _mode;
+  const ColumnIDPair _column_ids;
+  const PredicateCondition _predicate_condition;
+
+  OutputColumnOrder _output_column_order;
+
+  const std::vector<OperatorJoinPredicate> _secondary_predicates;
+
+  std::shared_ptr<Table> _output_table;
+
+  size_t _radix_bits;
+
+  // Determine correct type for hashing
+  using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
 
   std::shared_ptr<const Table> _on_execute() override {
     /**
