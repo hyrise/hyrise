@@ -57,7 +57,7 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
-    // not in cpp for performance reasons
+    // performance critical - not in cpp to help with inlining
     if (_null_values[chunk_offset]) {
       return std::nullopt;
     }

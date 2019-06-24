@@ -41,7 +41,7 @@ class ValueSegment : public BaseValueSegment {
 
   // return the value at a certain position.
   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
-    // not in cpp for performance reasons
+    // performance critical - not in cpp to help with inlining
     // Column supports null values and value is null
     if (is_nullable() && (*_null_values)[chunk_offset]) {
       return std::nullopt;
