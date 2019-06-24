@@ -25,10 +25,10 @@ namespace opossum {
 
 class BaseIndex;
 class BaseSegment;
-class BaseAttributeStatistics;
+class ChunkStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
-using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
+using Indices = pmr_vector<std::shared_ptr<BaseIndex>>;
 
 /**
  * A Chunk is a horizontal partition of a table.
@@ -48,7 +48,7 @@ class Chunk : private Noncopyable {
   static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indices indices = {});
 
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
@@ -136,13 +136,9 @@ class Chunk : private Noncopyable {
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
-  /**
-   * To perform Chunk pruning, a Chunk can be associated with statistics.
-   * @{
-   */
-  const std::optional<ChunkPruningStatistics>& pruning_statistics() const;
-  void set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics);
-  /** @} */
+  std::shared_ptr<ChunkStatistics> statistics() const;
+
+  void set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics);
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
@@ -186,8 +182,8 @@ class Chunk : private Noncopyable {
   PolymorphicAllocator<Chunk> _alloc;
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
-  pmr_vector<std::shared_ptr<BaseIndex>> _indices;
-  std::optional<ChunkPruningStatistics> _pruning_statistics;
+  Indices _indices;
+  std::shared_ptr<ChunkStatistics> _statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
   mutable std::atomic_uint64_t _invalid_row_count = 0;

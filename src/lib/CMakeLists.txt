@@ -456,7 +456,8 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
-    storage/index/index_info.hpp
+    storage/index/index_statistics.cpp
+    storage/index/index_statistics.hpp
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp

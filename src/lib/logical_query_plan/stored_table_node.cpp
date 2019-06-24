@@ -2,6 +2,7 @@
 
 #include "expression/lqp_column_expression.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/index/index_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -87,6 +88,91 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   const auto table = StorageManager::get().get_table(table_name);
   return table->column_is_nullable(column_id);
+}
+
+std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  DebugAssert(!left_input && !right_input, "StoredTableNode must be a leaf");
+
+  const auto stored_statistics = StorageManager::get().get_table(table_name)->table_statistics();
+
+  if (_pruned_column_ids.empty()) {
+    return stored_statistics;
+  }
+
+  /**
+   * Prune `_pruned_column_ids` from the statistics
+   */
+
+  auto output_column_statistics = std::vector<std::shared_ptr<const BaseColumnStatistics>>{
+      stored_statistics->column_statistics().size() - _pruned_column_ids.size()};
+
+  auto pruned_column_ids_iter = _pruned_column_ids.begin();
+
+  for (auto stored_column_id = ColumnID{0}, output_column_id = ColumnID{0};
+       stored_column_id < stored_statistics->column_statistics().size(); ++stored_column_id) {
+    // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
+    if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
+      ++pruned_column_ids_iter;
+      continue;
+    }
+
+    output_column_statistics[output_column_id] = stored_statistics->column_statistics()[stored_column_id];
+    ++output_column_id;
+  }
+
+  return std::make_shared<TableStatistics>(stored_statistics->table_type(), stored_statistics->row_count(),
+                                           output_column_statistics);
+}
+
+std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
+  DebugAssert(!left_input && !right_input, "StoredTableNode must be a leaf");
+
+  const auto table = StorageManager::get().get_table(table_name);
+  auto stored_indexes_statistics = table->indexes_statistics();
+
+  if (_pruned_column_ids.empty()) {
+    return stored_indexes_statistics;
+  }
+
+  auto column_pruned_bitvector = std::vector<bool>();
+  auto column_left_shifts = std::vector<ColumnID>();
+
+  column_pruned_bitvector.resize(table->column_count());
+  column_left_shifts.resize(table->column_count());
+
+  // Fill the bitvector
+  for (const auto& pruned_column_id : _pruned_column_ids) {
+    column_pruned_bitvector[pruned_column_id] = true;
+  }
+
+  // Calculate left_shifts
+  auto number_of_shifts = ColumnID{0};
+  for (auto column_index = ColumnID{0}; column_index < column_pruned_bitvector.size(); ++column_index) {
+    if (column_pruned_bitvector[column_index]) {
+      ++number_of_shifts;
+    }
+    column_left_shifts[column_index] = number_of_shifts;
+  }
+
+  // update index statistics
+  for (auto stored_index_stats_iter = stored_indexes_statistics.begin();
+       stored_index_stats_iter != stored_indexes_statistics.end();) {
+    auto update_index_statistics = [&]() {
+      for (auto& index_column_id : (*stored_index_stats_iter).column_ids) {
+        if (column_pruned_bitvector[index_column_id]) {
+          // column was pruned, we cannot use the index anymore.
+          stored_indexes_statistics.erase(stored_index_stats_iter);
+          return;
+        } else {
+          index_column_id -= column_left_shifts[index_column_id];
+          ++stored_index_stats_iter;
+        }
+      }
+    };
+    update_index_statistics();
+  }
+  return stored_indexes_statistics;
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

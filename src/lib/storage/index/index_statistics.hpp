@@ -7,10 +7,13 @@
 
 namespace opossum {
 
-struct IndexInfo {
+struct IndexStatistics {
   std::vector<ColumnID> column_ids;
   std::string name;
   SegmentIndexType type;
 };
+
+// For googletest
+bool operator==(const IndexStatistics& left, const IndexStatistics& right);
 
 }  // namespace opossum
