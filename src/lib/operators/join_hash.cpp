@@ -66,7 +66,7 @@ void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 
 template <typename T>
 size_t JoinHash::_calculate_radix_bits(const std::shared_ptr<const Table> build_table,
-    const std::shared_ptr<const Table> probe_table) {
+                                       const std::shared_ptr<const Table> probe_table) {
   /*
     Setting number of bits for radix clustering:
     The number of bits is used to create probe partitions with a size that can

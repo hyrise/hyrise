@@ -41,7 +41,8 @@ class JoinHash : public AbstractJoinOperator {
   void _on_cleanup() override;
 
   template <typename T>
-  static size_t _calculate_radix_bits(const std::shared_ptr<const Table> build_table, const std::shared_ptr<const Table> probe_table);
+  static size_t _calculate_radix_bits(const std::shared_ptr<const Table> build_table,
+                                      const std::shared_ptr<const Table> probe_table);
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
   std::optional<size_t> _radix_bits;
