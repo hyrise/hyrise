@@ -106,7 +106,7 @@ TEST_F(StoredTableNodeTest, GetStatistics) {
   auto expected_statistics = _stored_table_node->indexes_statistics().at(2u);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
-  
+
   // column with ColumnID{0} was pruned, therefore the column has to be left shifted
   expected_statistics.column_ids[0] -= 1;
 
