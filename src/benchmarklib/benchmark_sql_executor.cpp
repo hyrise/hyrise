@@ -60,7 +60,7 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
 
 void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& expected_result_table,
                                            const std::shared_ptr<const Table>& actual_result_table,
-                                           const std::optional<const std::string> description) {
+                                           const std::optional<const std::string>& description) {
   Timer timer;
 
   if (actual_result_table->row_count() > 0) {

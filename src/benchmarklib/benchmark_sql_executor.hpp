@@ -32,7 +32,7 @@ class BenchmarkSQLExecutor {
  private:
   void _compare_tables(const std::shared_ptr<const Table>& expected_result_table,
                        const std::shared_ptr<const Table>& actual_result_table,
-                       const std::optional<const std::string> description = std::nullopt);
+                       const std::optional<const std::string>& description = std::nullopt);
   void _verify_with_sqlite(SQLPipeline& pipeline);
   void _visualize(SQLPipeline& pipeline) const;
 
