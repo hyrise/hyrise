@@ -11,7 +11,7 @@
 namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix,
-                                           std::shared_ptr<const Table> expected_result_table)
+                                           const std::shared_ptr<const Table>& expected_result_table)
     : _enable_jit(enable_jit),
       _expected_result_table(expected_result_table),
       _sqlite_wrapper(sqlite_wrapper),

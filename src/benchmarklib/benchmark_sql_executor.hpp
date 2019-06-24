@@ -17,7 +17,7 @@ class BenchmarkSQLExecutor {
   //                            The suffix will be "LQP/PQP-<statement_idx>.<extension>"
   BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                        const std::optional<std::string>& visualize_prefix,
-                       std::shared_ptr<const Table> expected_result_table = nullptr);
+                       const std::shared_ptr<const Table>& expected_result_table = nullptr);
 
   // This executes the given SQL query, records its metrics and returns a single table (the same as
   // SQLPipeline::get_result_table() would).
