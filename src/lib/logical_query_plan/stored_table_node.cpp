@@ -91,7 +91,7 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
-  DebugAssert(!left_input && !right_input, "StoredTableNode must be a leaf");
+  DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 
   const auto table = StorageManager::get().get_table(table_name);
   auto stored_indexes_statistics = table->indexes_statistics();
