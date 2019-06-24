@@ -27,7 +27,7 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
     {"selectivity", selectivity},
     {"operator_description", operator_description},
     {"previous_operator", previous_operator},
-    {"total_row_count", static_cast<int64_t>(total_row_count)},
+    // DISABLED UNTIL NECESSARY FOR ColVsCol Scan or JOIN {"total_row_count", static_cast<int64_t>(total_row_count)},
     // DISABLED UNTIL NECESSARY FOR JOIN {"logical_cost_sort_merge", logical_cost_sort_merge},
     // DISABLED UNTIL NECESSARY FOR JOIN {"logical_cost_hash", logical_cost_hash}
   };
@@ -69,7 +69,7 @@ const std::unordered_map<std::string, float> CostModelFeatures::to_cost_model_fe
           {"output_memory_usage_bytes", static_cast<float>(output_memory_usage_bytes)},
           {"output_chunk_size", static_cast<float>(output_chunk_size)},
           {"selectivity", selectivity},
-          {"total_row_count", static_cast<float>(total_row_count)},
+          // DISABLED UNTIL NECESSARY FOR ColVsCol Scan or JOIN {"total_row_count", static_cast<float>(total_row_count)},
           // DISABLED UNTIL NECESSARY FOR JOIN {"logical_cost_sort_merge", logical_cost_sort_merge},
           // DISABLED UNTIL NECESSARY FOR JOIN {"logical_cost_hash", logical_cost_hash}
   };
