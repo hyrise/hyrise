@@ -72,8 +72,8 @@ TEST_F(OperatorsGetTableTest, PrunedChunks) {
   EXPECT_EQ(table->chunk_count(), ChunkID(2));
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 0u), original_table->get_value<int>(ColumnID(0), 1u));
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 1u), original_table->get_value<int>(ColumnID(0), 3u));
-  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}}
-  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}}
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_0).size(), 1u);
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_1).size(), 2u);
   EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_0).size(), 1u);
@@ -90,8 +90,8 @@ TEST_F(OperatorsGetTableTest, PrunedColumns) {
   EXPECT_EQ(table->column_count(), 2u);
   EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 9);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 10.5f);
-  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}}
-  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}}
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_0).size(), 1u);
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_1).size(), 0u);
   EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_0).size(), 1u);
