@@ -49,10 +49,9 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
 const std::string JoinHash::name() const { return "JoinHash"; }
 
 const std::string JoinHash::description(DescriptionMode description_mode) const {
-  const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
   std::ostringstream stream;
   stream << AbstractJoinOperator::description(description_mode);
-  stream << separator << "Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
+  stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
   return stream.str();
 }
 
