@@ -8,8 +8,6 @@
 namespace opossum {
 
 CsvWriter::CsvWriter(const std::string& file, const ParseConfig& config) : _config(config) {
-  // TODO: reset this file
-  _config.separator = '|';
   _stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   _stream.open(file);
 }
@@ -49,9 +47,9 @@ void CsvWriter::_write_string_value(const pmr_string& value) {
    * this behaviour to either general quoting or checking for "illegal"
    * characters.
    */
-  //  _stream << _config.quote;
+  _stream << _config.quote;
   _stream << _escape(value);
-  //  _stream << _config.quote;
+  _stream << _config.quote;
 }
 
 /*
