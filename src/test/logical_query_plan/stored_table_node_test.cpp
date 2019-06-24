@@ -103,11 +103,15 @@ TEST_F(StoredTableNodeTest, NodeExpressions) { ASSERT_EQ(_stored_table_node->nod
 TEST_F(StoredTableNodeTest, GetStatistics) {
   EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 3u);
 
-  const auto index_statistics_b = _stored_table_node->indexes_statistics().at(2u);
+  auto expected_statistics = _stored_table_node->indexes_statistics().at(2u);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+  
+  // column with ColumnID{0} was pruned, therefore the column has to be left shifted
+  expected_statistics.column_ids[0] -= 1;
+
   EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->indexes_statistics().at(0u), index_statistics_b);
+  EXPECT_EQ(_stored_table_node->indexes_statistics().at(0u), expected_statistics);
 }
 
 }  // namespace opossum
