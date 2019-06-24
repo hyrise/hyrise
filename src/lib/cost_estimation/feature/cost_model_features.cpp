@@ -37,18 +37,8 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
   // clang-format on
 
   // std::map::merge() not supported yet by Clang - C++17
-  const auto serialized_constant_hardware_features = constant_hardware_features.serialize();
-  const auto serialized_runtime_hardware_features = runtime_hardware_features.serialize();
-  const auto serialized_aggregate_features = aggregate_features.serialize();
-  const auto serialized_join_features = join_features.serialize();
-  const auto serialized_projection_features = projection_features.serialize();
   const auto serialized_table_scan_features = table_scan_features.serialize();
 
-  features.insert(serialized_constant_hardware_features.begin(), serialized_constant_hardware_features.end());
-  features.insert(serialized_runtime_hardware_features.begin(), serialized_runtime_hardware_features.end());
-  features.insert(serialized_aggregate_features.begin(), serialized_aggregate_features.end());
-  features.insert(serialized_join_features.begin(), serialized_join_features.end());
-  features.insert(serialized_projection_features.begin(), serialized_projection_features.end());
   features.insert(serialized_table_scan_features.begin(), serialized_table_scan_features.end());
 
   return features;
@@ -94,19 +84,9 @@ const std::unordered_map<std::string, float> CostModelFeatures::to_cost_model_fe
   // clang-format on
 
   // std::map::merge() not supported yet by Clang - C++17
-  const auto serialized_constant_hardware_features = constant_hardware_features.to_cost_model_features();
-  const auto serialized_runtime_hardware_features = runtime_hardware_features.to_cost_model_features();
-  const auto serialized_aggregate_features = aggregate_features.to_cost_model_features();
-  const auto serialized_join_features = join_features.to_cost_model_features();
-  const auto serialized_projection_features = projection_features.to_cost_model_features();
   const auto serialized_table_scan_features = table_scan_features.to_cost_model_features();
 
   features.insert(one_hot_encoded_operator_types.begin(), one_hot_encoded_operator_types.end());
-  features.insert(serialized_constant_hardware_features.begin(), serialized_constant_hardware_features.end());
-  features.insert(serialized_runtime_hardware_features.begin(), serialized_runtime_hardware_features.end());
-  features.insert(serialized_aggregate_features.begin(), serialized_aggregate_features.end());
-  features.insert(serialized_join_features.begin(), serialized_join_features.end());
-  features.insert(serialized_projection_features.begin(), serialized_projection_features.end());
   features.insert(serialized_table_scan_features.begin(), serialized_table_scan_features.end());
 
   return features;

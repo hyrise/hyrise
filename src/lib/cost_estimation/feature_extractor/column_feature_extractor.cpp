@@ -49,6 +49,8 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
   std::map<VectorCompressionType, size_t> vector_compression_mapping{{VectorCompressionType::FixedSizeByteAligned, 0},
                                                                      {VectorCompressionType::SimdBp128, 0}};
 
+  EncodingType table_encoding_type = EncodingType::Unencoded;
+  std::optional<VectorCompressionType> vector_compression_type;
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
     const auto segment = chunk->get_segment(column_id);
@@ -58,7 +60,10 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
     const auto is_reference_segment = encoding_reference_pair.second;
 
     encoding_mapping[segment_encoding_spec.encoding_type] += 1;
+    table_encoding_type = segment_encoding_spec.encoding_type;
+
     if (segment_encoding_spec.vector_compression_type) {
+      vector_compression_type = *segment_encoding_spec.vector_compression_type;
       vector_compression_mapping[*segment_encoding_spec.vector_compression_type] += 1;
     }
     if (is_reference_segment) {
@@ -66,25 +71,14 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
     }
   }
 
+  Assert(encoding_mapping[table_encoding_type] == static_cast<size_t>(chunk_count), "Tables should not have mixed encodings!");
+  if (vector_compression_type)
+    Assert(vector_compression_mapping[*vector_compression_type] == static_cast<size_t>(chunk_count), "Tables should not have mixed compression types!");
+
   ColumnFeatures column_features{prefix};
 
-  column_features.column_segment_encoding_Unencoded_percentage =
-      encoding_mapping[EncodingType::Unencoded] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_Dictionary_percentage =
-      encoding_mapping[EncodingType::Dictionary] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_RunLength_percentage =
-      encoding_mapping[EncodingType::RunLength] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_FixedStringDictionary_percentage =
-      encoding_mapping[EncodingType::FixedStringDictionary] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_FrameOfReference_percentage =
-      encoding_mapping[EncodingType::FrameOfReference] / static_cast<float>(chunk_count);
-  column_features.column_segment_encoding_LZ4_percentage =
-      encoding_mapping[EncodingType::LZ4] / static_cast<float>(chunk_count);
-  column_features.column_segment_vector_compression_FSBA_percentage =
-      vector_compression_mapping[VectorCompressionType::FixedSizeByteAligned] / static_cast<float>(chunk_count);
-  column_features.column_segment_vector_compression_SimdBp128_percentage =
-      vector_compression_mapping[VectorCompressionType::SimdBp128] / static_cast<float>(chunk_count);
-
+  column_features.column_segment_encoding = table_encoding_type;
+  column_features.column_segment_vector_compression = vector_compression_type;
   column_features.column_is_reference_segment = number_of_reference_segments > 0;
   column_features.column_data_type = data_type;
   // TODO(Sven): this returns the size of the original, stored, unfiltered column...

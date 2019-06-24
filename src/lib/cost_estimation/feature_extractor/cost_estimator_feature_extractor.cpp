@@ -13,8 +13,6 @@ namespace cost_model {
 const CostModelFeatures CostEstimatorFeatureExtractor::extract_features(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   auto calibration_result = _extract_general_features(node);
-  calibration_result.constant_hardware_features = _extract_constant_hardware_features();
-  calibration_result.runtime_hardware_features = _extract_runtime_hardware_features();
 
   auto node_type = node->type;
   //
@@ -23,21 +21,6 @@ const CostModelFeatures CostEstimatorFeatureExtractor::extract_features(
     case LQPNodeType::Predicate: {
       const auto table_scan_node = std::static_pointer_cast<const PredicateNode>(node);
       calibration_result.table_scan_features = _extract_features(table_scan_node);
-      break;
-    }
-    case LQPNodeType::Projection: {
-      const auto projection_node = std::static_pointer_cast<const ProjectionNode>(node);
-      calibration_result.projection_features = _extract_features(projection_node);
-      break;
-    }
-    case LQPNodeType::Join: {
-      const auto join_node = std::static_pointer_cast<const JoinNode>(node);
-      calibration_result.join_features = _extract_features(join_node);
-      break;
-    }
-    case LQPNodeType::Aggregate: {
-      const auto aggregate_node = std::static_pointer_cast<const AggregateNode>(node);
-      calibration_result.aggregate_features = _extract_features(aggregate_node);
       break;
     }
     case LQPNodeType::StoredTable:

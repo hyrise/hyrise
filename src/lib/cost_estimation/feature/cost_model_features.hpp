@@ -53,12 +53,7 @@ struct CostModelFeatures : public AbstractFeatures {
   // Just for debugging
   pmr_string operator_description;
 
-  ConstantHardwareFeatures constant_hardware_features;
-  RuntimeHardwareFeatures runtime_hardware_features;
 
-  AggregateFeatures aggregate_features{};
-  JoinFeatures join_features{};
-  ProjectionFeatures projection_features{};
   TableScanFeatures table_scan_features{};
 };
 

@@ -17,8 +17,6 @@ namespace cost_model {
 const CostModelFeatures CalibrationFeatureExtractor::extract_features(
     const std::shared_ptr<const AbstractOperator>& op) {
   auto calibration_result = _extract_general_features(op);
-  calibration_result.constant_hardware_features = _extract_constant_hardware_features();
-  calibration_result.runtime_hardware_features = _extract_runtime_hardware_features();
 
   auto operator_type = op->type();
 
@@ -32,29 +30,6 @@ const CostModelFeatures CalibrationFeatureExtractor::extract_features(
     case OperatorType::IndexScan: {
       const auto index_scan_op = std::static_pointer_cast<const IndexScan>(op);
       calibration_result.table_scan_features = _extract_features_for_operator(index_scan_op);
-      break;
-    }
-    case OperatorType::Validate: {
-      // No need to extract extra features
-      break;
-    }
-    case OperatorType::Projection: {
-      const auto projection_op = std::static_pointer_cast<const Projection>(op);
-      calibration_result.projection_features = _extract_features_for_operator(projection_op);
-      break;
-    }
-    case OperatorType::JoinHash:
-    case OperatorType::JoinIndex:
-    case OperatorType::JoinMPSM:
-    case OperatorType::JoinNestedLoop:
-    case OperatorType::JoinSortMerge: {
-      const auto join_op = std::static_pointer_cast<const AbstractJoinOperator>(op);
-      calibration_result.join_features = _extract_features_for_operator(join_op);
-      break;
-    }
-    case OperatorType::Aggregate: {
-      const auto aggregate_op = std::static_pointer_cast<const AbstractAggregateOperator>(op);
-      calibration_result.aggregate_features = _extract_features_for_operator(aggregate_op);
       break;
     }
     case OperatorType::GetTable:
