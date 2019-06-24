@@ -145,7 +145,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
             _primary_predicate.predicate_condition, output_column_order, _radix_bits,
             std::move(adjusted_secondary_predicates));
         if (!_radix_bits) {
-          _radix_bits = join_impl->_radix_bits;
+          _radix_bits = join_impl->radix_bits;
         }
         _impl = std::move(join_impl);
       } else {
@@ -176,11 +176,29 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _output_column_order(output_column_order),
         _secondary_predicates(std::move(secondary_predicates)) {
     if (radix_bits) {
-      _radix_bits = radix_bits.value();
+      radix_bits = radix_bits.value();
     } else {
-      _radix_bits = _calculate_radix_bits();
+      radix_bits = _calculate_radix_bits();
     }
   }
+
+  size_t radix_bits;
+
+ protected:
+  const JoinHash& _join_hash;
+  const std::shared_ptr<const Table> _build_input_table, _probe_input_table;
+  const JoinMode _mode;
+  const ColumnIDPair _column_ids;
+  const PredicateCondition _predicate_condition;
+
+  OutputColumnOrder _output_column_order;
+
+  const std::vector<OperatorJoinPredicate> _secondary_predicates;
+
+  std::shared_ptr<Table> _output_table;
+
+  // Determine correct type for hashing
+  using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
 
   size_t _calculate_radix_bits() const {
     /*
@@ -226,24 +244,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
   }
-
-  size_t _radix_bits;
-
- protected:
-  const JoinHash& _join_hash;
-  const std::shared_ptr<const Table> _build_input_table, _probe_input_table;
-  const JoinMode _mode;
-  const ColumnIDPair _column_ids;
-  const PredicateCondition _predicate_condition;
-
-  OutputColumnOrder _output_column_order;
-
-  const std::vector<OperatorJoinPredicate> _secondary_predicates;
-
-  std::shared_ptr<Table> _output_table;
-
-  // Determine correct type for hashing
-  using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
 
   std::shared_ptr<const Table> _on_execute() override {
     /**
