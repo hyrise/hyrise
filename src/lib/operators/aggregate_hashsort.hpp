@@ -19,6 +19,12 @@
 
 namespace opossum {
 
+namespace aggregate_hashsort {
+
+template<typename> struct AbstractRunSource;
+
+}  // namespace aggregate_hashsort
+
 class AggregateHashSort : public AbstractAggregateOperator {
  public:
   AggregateHashSort(const std::shared_ptr<AbstractOperator>& in,
@@ -26,6 +32,15 @@ class AggregateHashSort : public AbstractAggregateOperator {
                     const std::vector<ColumnID>& groupby_column_ids, const AggregateHashSortConfig& config = {});
 
   const std::string name() const override;
+
+  /**
+   * Subroutines exposed for tests
+   */
+  template<typename Run>
+  static std::vector<Run> aggregate(const AggregateHashSortConfig& config,
+                                                const std::shared_ptr<AbstractRunSource<Run>>& run_source, const size_t level);
+
+
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -39,9 +54,6 @@ class AggregateHashSort : public AbstractAggregateOperator {
   void _on_cleanup() override;
 
  private:
-  template <typename GroupRun>
-  std::shared_ptr<const Table> _on_execute_with_group_run(const typename GroupRun::LayoutType& layout);
-
   AggregateHashSortConfig _config;
 };
 

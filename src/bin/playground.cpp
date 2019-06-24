@@ -22,6 +22,4 @@
 
 using namespace opossum;  // NOLINT
 
-int main() {
-  return 0;
-}
+int main() { return 0; }

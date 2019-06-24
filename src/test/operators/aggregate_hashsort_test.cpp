@@ -10,25 +10,33 @@ using namespace std::string_literals;         // NOLINT
 
 namespace {
 
-template<typename T> struct IsOptional { static inline constexpr auto value = false; };
-template<typename T> struct IsOptional<std::optional<T>> { static inline constexpr auto value = true; };
-template<typename T> constexpr auto is_optional_v = IsOptional<T>::value;
+template <typename T>
+struct IsOptional {
+  static inline constexpr auto value = false;
+};
+template <typename T>
+struct IsOptional<std::optional<T>> {
+  static inline constexpr auto value = true;
+};
+template <typename T>
+constexpr auto is_optional_v = IsOptional<T>::value;
 
-template<typename T> constexpr auto is_variably_sized_v = std::is_same_v<std::string, T> || std::is_same_v<std::optional<std::string>, T>;
+template <typename T>
+constexpr auto is_variably_sized_v = std::is_same_v<std::string, T> || std::is_same_v<std::optional<std::string>, T>;
 
-template<typename T>
+template <typename T>
 size_t get_value_size(const T& value) {
-    using VALUE_TYPE = std::decay_t<decltype(value)>;
+  using VALUE_TYPE = std::decay_t<decltype(value)>;
 
-    if constexpr (is_optional_v<VALUE_TYPE>) {
-      return 1 + get_value_size(value ? *value : typename VALUE_TYPE::value_type{});
-    } else if constexpr (std::is_same_v<VALUE_TYPE, std::string>) {
-      return value.size();
-    } else if constexpr (std::is_arithmetic_v<VALUE_TYPE>) {
-      return sizeof(VALUE_TYPE);
-    } else {
-      Fail("Unexpected type");
-    }
+  if constexpr (is_optional_v<VALUE_TYPE>) {
+    return 1 + get_value_size(value ? *value : typename VALUE_TYPE::value_type{});
+  } else if constexpr (std::is_same_v<VALUE_TYPE, std::string>) {
+    return value.size();
+  } else if constexpr (std::is_arithmetic_v<VALUE_TYPE>) {
+    return sizeof(VALUE_TYPE);
+  } else {
+    Fail("Unexpected type");
+  }
 }
 
 /**
@@ -42,7 +50,8 @@ void add_group(Run& run, const Args&&... args) {
 
   const auto group_data_byte_count = (get_value_size(args) + ...);
   const auto group_meta_data_byte_count = ((is_variably_sized_v<Args> ? sizeof(size_t) : 0) + ...);
-  const auto group_size = divide_and_ceil(group_data_byte_count + group_meta_data_byte_count, sizeof(GroupRunElementType));
+  const auto group_size =
+      divide_and_ceil(group_data_byte_count + group_meta_data_byte_count, sizeof(GroupRunElementType));
   const auto old_size = data.size();
 
   data.resize(data.size() + group_size);
@@ -107,8 +116,10 @@ void add_group(Run& run, const Args&&... args) {
   (for_each_value(args), ...);
 
   // Optionally, write meta data about variably-sized values aligned to the *end* of the binary blob
-  auto* value_end_offsets_target = reinterpret_cast<char*>(&data[data.size()]) - sizeof(size_t) * variably_sized_value_end_offsets.size();
-  memcpy(value_end_offsets_target, variably_sized_value_end_offsets.data(), sizeof(size_t) * variably_sized_value_end_offsets.size());
+  auto* value_end_offsets_target =
+      reinterpret_cast<char*>(&data[data.size()]) - sizeof(size_t) * variably_sized_value_end_offsets.size();
+  memcpy(value_end_offsets_target, variably_sized_value_end_offsets.data(),
+         sizeof(size_t) * variably_sized_value_end_offsets.size());
 
   // Add run metadata
   ++run.size;
@@ -175,8 +186,18 @@ TEST_F(AggregateHashSortTest, Definition) {
   EXPECT_EQ(definition.aggregate_definitions.size(), 2);
   EXPECT_EQ(definition.aggregate_definitions.at(0), AggregateHashSortAggregateDefinition(AggregateFunction::CountRows));
   EXPECT_EQ(definition.aggregate_definitions.at(1), AggregateHashSortAggregateDefinition(AggregateFunction::CountDistinct, DataType::String, ColumnID{1}));
+}
 
-  const auto variable_group_size_run = definition.create_run<VariableGroupSizePolicy>(size_t{3}, size_t{50});
+TEST_F(AggregateHashSortTest, CreateRun) {
+  const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{4}};
+  const auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{
+  {std::nullopt, AggregateFunction::CountRows},
+  {ColumnID{1}, AggregateFunction::CountDistinct},
+  };
+
+  const auto definition = AggregateHashSortDefinition::create(table, aggregate_column_definitions, group_by_column_ids);
+
+  const auto variable_group_size_run = create_run<VariableGroupSizePolicy>(definition, size_t{3}, size_t{50});
   EXPECT_EQ(variable_group_size_run.group_data.size(), 50u);
   EXPECT_EQ(variable_group_size_run.hashes.size(), 3u);
   EXPECT_EQ(variable_group_size_run.group_end_offsets.size(), 3u);
@@ -187,8 +208,7 @@ TEST_F(AggregateHashSortTest, RunWithFixedGroupSize) {
   definition.fixed_group_size = 6u;
   definition.offsets = {0, 9, 17};
 
-  const auto group_count = size_t{3};
-  auto run = BasicRun<DynamicFixedGroupSizePolicy>{{definition, group_count}, {}, group_count, group_count * definition.fixed_group_size};
+  auto run = create_run<DynamicFixedGroupSizePolicy>(definition);
 
   add_group(run, false, int64_t{1}, int64_t{2}, false, int32_t{3});
   add_group(run, false, int64_t{4}, int64_t{5}, true, int32_t{0});
@@ -199,24 +219,24 @@ TEST_F(AggregateHashSortTest, RunWithFixedGroupSize) {
   run.hashes = {0u, 1u, 2u, 3u, 4u};
 
   EXPECT_EQ(run.make_key(0).hash, 0u);
-  EXPECT_EQ(run.make_key(0).group, &run.data[0]);
-  EXPECT_EQ(run.make_key(1).group, &run.data[6]);
+  EXPECT_EQ(run.make_key(0).group, &run.group_data[0]);
+  EXPECT_EQ(run.make_key(1).group, &run.group_data[6]);
 
-  auto compare = FixedSizeGroupKeyCompare{&layout};
+  auto compare = DynamicFixedGroupSizePolicy::HashTableCompare{definition.fixed_group_size};
 
   EXPECT_FALSE(compare(run.make_key(0), run.make_key(2)));
   EXPECT_FALSE(compare(run.make_key(0), run.make_key(3)));
   EXPECT_TRUE(compare(run.make_key(0), run.make_key(4)));
 
-  const auto actual_segment_a = run.materialize_output<int64_t>(ColumnID{0}, true);
+  const auto actual_segment_a = run.materialize_group_column<int64_t>(definition, ColumnID{0}, true);
   const auto expected_segment_a = std::make_shared<ValueSegment<int64_t>>(std::vector<int64_t>{1, 4, 1, 0, 1}, std::vector<bool>{false, false, true, true, false});
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_a, expected_segment_a);
 
-  const auto actual_segment_b = run.materialize_output<int64_t>(ColumnID{1}, false);
+  const auto actual_segment_b = run.materialize_group_column<int64_t>(definition, ColumnID{1}, false);
   const auto expected_segment_b = std::make_shared<ValueSegment<int64_t>>(std::vector<int64_t>{2, 5, 2, 8, 2});
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_b, expected_segment_b);
 
-  const auto actual_segment_c = run.materialize_output<int32_t>(ColumnID{2}, true);
+  const auto actual_segment_c = run.materialize_group_column<int32_t>(definition, ColumnID{2}, true);
   const auto expected_segment_c = std::make_shared<ValueSegment<int32_t>>(std::vector<int32_t>{3, 0, 3, 0, 3}, std::vector<bool>{false, true, false, true, false});
   EXPECT_SEGMENT_EQ_ORDERED(actual_segment_c, expected_segment_c);
 }
