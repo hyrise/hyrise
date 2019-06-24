@@ -131,7 +131,7 @@ namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
-                    std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>>()) {}
+                    std::unordered_map<std::string, std::shared_ptr<LQPView>>()) {}
 
 std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
   const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
@@ -295,7 +295,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
   // Save resolved WithDescription / temporary view
   auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
   //   A WITH description masks a preceding WITH description if their aliases are identical
-  _with_descriptions.insert_or_assign(*desc.alias, lqp_view);
+  _with_descriptions.insert_or_assign(desc.alias, lqp_view);
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr,
