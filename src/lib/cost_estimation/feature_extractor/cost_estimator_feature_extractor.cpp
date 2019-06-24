@@ -87,8 +87,6 @@ const CostModelFeatures CostEstimatorFeatureExtractor::_extract_general_features
 
   operator_features.total_row_count = total_input_row_count;
   operator_features.selectivity = selectivity;
-  operator_features.is_selectivity_below_50_percent = selectivity < 0.5f;
-  operator_features.selectivity_distance_to_50_percent = abs(selectivity - 0.5f);
   operator_features.output_row_count = output_row_count;
   //            operator_features.output_chunk_count = output->chunk_count();
   //            operator_features.output_memory_usage_bytes = output->estimate_memory_usage();

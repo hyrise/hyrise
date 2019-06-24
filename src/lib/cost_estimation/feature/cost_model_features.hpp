@@ -50,8 +50,6 @@ struct CostModelFeatures : public AbstractFeatures {
   bool output_is_small_table = false;
 
   float selectivity = 0.0f;
-  bool is_selectivity_below_50_percent = true;
-  float selectivity_distance_to_50_percent = 0.5f;
 
   pmr_string operator_description;
   pmr_string previous_operator = "Unknown";

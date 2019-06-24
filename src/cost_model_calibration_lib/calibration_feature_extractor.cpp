@@ -102,8 +102,6 @@ const CostModelFeatures CalibrationFeatureExtractor::_extract_general_features(
     const auto output_selectivity = std::min<float>(1.0, output_row_count / static_cast<float>(total_input_row_count));
 
     operator_features.selectivity = output_selectivity;
-    operator_features.is_selectivity_below_50_percent = output_selectivity < 0.5f;
-    operator_features.selectivity_distance_to_50_percent = abs(output_selectivity - 0.5f);
     operator_features.output_row_count = output_row_count;
     operator_features.output_chunk_count = output->chunk_count();
     operator_features.output_memory_usage_bytes = output->estimate_memory_usage();

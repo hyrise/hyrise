@@ -28,8 +28,6 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
     {"output_chunk_size", static_cast<int64_t>(output_chunk_size)},
     {"output_is_small_table", output_is_small_table},
     {"selectivity", selectivity},
-    {"is_selectivity_below_50_percent", is_selectivity_below_50_percent},
-    {"selectivity_distance_to_50_percent", selectivity_distance_to_50_percent},
     {"operator_description", operator_description},
     {"previous_operator", previous_operator},
     {"total_row_count", static_cast<int64_t>(total_row_count)},
@@ -77,8 +75,6 @@ const std::unordered_map<std::string, float> CostModelFeatures::to_cost_model_fe
           {"output_chunk_size", static_cast<float>(output_chunk_size)},
           {"output_is_small_table", static_cast<float>(output_is_small_table)},
           {"selectivity", selectivity},
-          {"is_selectivity_below_50_percent", static_cast<float>(is_selectivity_below_50_percent)},
-          {"selectivity_distance_to_50_percent", selectivity_distance_to_50_percent},
           {"total_row_count", static_cast<float>(total_row_count)},
           {"logical_cost_sort_merge", logical_cost_sort_merge},
           {"logical_cost_hash", logical_cost_hash}
