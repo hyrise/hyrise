@@ -100,7 +100,7 @@ float decimal_to_float(decimal_t decimal) {
   return static_cast<float>(result / 10);
 }
 
-pmr_string convert_boolean(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
+pmr_string boolean_to_string(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
 
 template <int column_id = 0>  // TODO remove " = 0"
 std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
@@ -130,11 +130,6 @@ std::optional<pmr_string> resolve_string(pmr_string string) {
 template <int column_id>
 std::optional<int32_t> resolve_integer(int value) {
   return nullCheck(column_id) ? std::nullopt : std::optional{int32_t{value}};
-}
-
-template <int column_id>
-std::optional<pmr_string> resolve_boolean(bool boolean) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{pmr_string(1, boolean ? 'Y' : 'N')};
 }
 
 template <int column_id>
@@ -547,7 +542,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer(ds_key_t max_rows)
         resolve_integer<C_FIRST_SALES_DATE_ID>(customer.c_first_sales_date_id),
         resolve_string<C_SALUTATION>(customer.c_salutation), resolve_string<C_FIRST_NAME>(customer.c_first_name),
         resolve_string<C_LAST_NAME>(customer.c_last_name),
-        resolve_boolean<C_PREFERRED_CUST_FLAG>(customer.c_preferred_cust_flag),
+        resolve_string<C_PREFERRED_CUST_FLAG>(boolean_to_string(customer.c_preferred_cust_flag)),
         resolve_integer<C_BIRTH_DAY>(customer.c_birth_day), resolve_integer<C_BIRTH_MONTH>(customer.c_birth_month),
         resolve_integer<C_BIRTH_YEAR>(customer.c_birth_year), resolve_string<C_BIRTH_COUNTRY>(customer.c_birth_country),
         resolve_string<C_LOGIN>(customer.c_login), resolve_string<C_EMAIL_ADDRESS>(customer.c_email_address),
@@ -593,14 +588,15 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_date(ds_key_t max_rows) con
 
     auto quarter_name = pmr_string{std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy)};
 
-    date_builder.append_row(
-        resolve_key(date.d_date_sk), date.d_date_id, resolve_date_id(date.d_date_sk), date.d_month_seq, date.d_week_seq,
-        date.d_quarter_seq, date.d_year, date.d_dow, date.d_moy, date.d_dom, date.d_qoy, date.d_fy_year,
-        date.d_fy_quarter_seq, date.d_fy_week_seq, date.d_day_name, std::move(quarter_name),
-        convert_boolean(date.d_holiday), convert_boolean(date.d_weekend), convert_boolean(date.d_following_holiday),
-        date.d_first_dom, date.d_last_dom, date.d_same_day_ly, date.d_same_day_lq, convert_boolean(date.d_current_day),
-        convert_boolean(date.d_current_week), convert_boolean(date.d_current_month),
-        convert_boolean(date.d_current_quarter), convert_boolean(date.d_current_year));
+    date_builder.append_row(resolve_key(date.d_date_sk), date.d_date_id, resolve_date_id(date.d_date_sk),
+                            date.d_month_seq, date.d_week_seq, date.d_quarter_seq, date.d_year, date.d_dow, date.d_moy,
+                            date.d_dom, date.d_qoy, date.d_fy_year, date.d_fy_quarter_seq, date.d_fy_week_seq,
+                            date.d_day_name, std::move(quarter_name), boolean_to_string(date.d_holiday),
+                            boolean_to_string(date.d_weekend), boolean_to_string(date.d_following_holiday),
+                            date.d_first_dom, date.d_last_dom, date.d_same_day_ly, date.d_same_day_lq,
+                            boolean_to_string(date.d_current_day), boolean_to_string(date.d_current_week),
+                            boolean_to_string(date.d_current_month), boolean_to_string(date.d_current_quarter),
+                            boolean_to_string(date.d_current_year));
   }
 
   return date_builder.finish_table();
@@ -704,16 +700,16 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_promotion(ds_key_t max_rows
         resolve_key<P_END_DATE_ID>(promotion.p_end_date_id), resolve_key<P_ITEM_SK>(promotion.p_item_sk),
         resolve_decimal<P_COST>(promotion.p_cost), resolve_integer<P_RESPONSE_TARGET>(promotion.p_response_target),
         resolve_string<P_PROMO_NAME>(promotion.p_promo_name),
-        resolve_boolean<P_CHANNEL_DMAIL>(promotion.p_channel_dmail),
-        resolve_boolean<P_CHANNEL_EMAIL>(promotion.p_channel_email),
-        resolve_boolean<P_CHANNEL_CATALOG>(promotion.p_channel_catalog),
-        resolve_boolean<P_CHANNEL_TV>(promotion.p_channel_tv),
-        resolve_boolean<P_CHANNEL_RADIO>(promotion.p_channel_radio),
-        resolve_boolean<P_CHANNEL_PRESS>(promotion.p_channel_press),
-        resolve_boolean<P_CHANNEL_EVENT>(promotion.p_channel_event),
-        resolve_boolean<P_CHANNEL_DEMO>(promotion.p_channel_demo),
+        resolve_string<P_CHANNEL_DMAIL>(boolean_to_string(promotion.p_channel_dmail)),
+        resolve_string<P_CHANNEL_EMAIL>(boolean_to_string(promotion.p_channel_email)),
+        resolve_string<P_CHANNEL_CATALOG>(boolean_to_string(promotion.p_channel_catalog)),
+        resolve_string<P_CHANNEL_TV>(boolean_to_string(promotion.p_channel_tv)),
+        resolve_string<P_CHANNEL_RADIO>(boolean_to_string(promotion.p_channel_radio)),
+        resolve_string<P_CHANNEL_PRESS>(boolean_to_string(promotion.p_channel_press)),
+        resolve_string<P_CHANNEL_EVENT>(boolean_to_string(promotion.p_channel_event)),
+        resolve_string<P_CHANNEL_DEMO>(boolean_to_string(promotion.p_channel_demo)),
         resolve_string<P_CHANNEL_DETAILS>(promotion.p_channel_details), resolve_string<P_PURPOSE>(promotion.p_purpose),
-        resolve_boolean<P_DISCOUNT_ACTIVE>(promotion.p_discount_active));
+        resolve_string<P_DISCOUNT_ACTIVE>(boolean_to_string(promotion.p_discount_active)));
   }
 
   return promotion_builder.finish_table();
@@ -915,7 +911,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_page(ds_key_t max_rows)
         resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
         resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
         resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
-        resolve_boolean<WP_AUTOGEN_FLAG>(web_page.wp_autogen_flag),
+        resolve_string<WP_AUTOGEN_FLAG>(boolean_to_string(web_page.wp_autogen_flag)),
         resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk), resolve_string<WP_URL>(web_page.wp_url),
         resolve_string<WP_TYPE>(web_page.wp_type), resolve_integer<WP_CHAR_COUNT>(web_page.wp_char_count),
         resolve_integer<WP_LINK_COUNT>(web_page.wp_link_count),
