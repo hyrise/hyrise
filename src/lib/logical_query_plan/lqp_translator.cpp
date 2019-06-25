@@ -388,7 +388,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   if (group_by_column_ids.empty()) {
     return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
   } else {
-    return std::make_shared<AggregateHashSort>(input_operator, aggregate_column_definitions, group_by_column_ids);
+    return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
   }
 }
 

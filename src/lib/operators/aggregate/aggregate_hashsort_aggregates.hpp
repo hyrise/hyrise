@@ -16,20 +16,12 @@ struct AggregationBufferEntry {
   size_t source_offset;
 };
 
-struct BaseColumnMaterialization {
-  virtual ~BaseColumnMaterialization() = default;
-};
-
-template <typename T>
-struct ColumnMaterialization : public BaseColumnMaterialization {
-  std::vector<T> values;
-  std::vector<bool> null_values;
-};
-
 struct BaseAggregateRun {
   virtual ~BaseAggregateRun() = default;
 
   virtual void resize(const size_t size) = 0;
+
+  virtual void initialize(ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) = 0;
 
   virtual std::unique_ptr<BaseAggregateRun> new_instance(const size_t size) const = 0;
 
@@ -48,24 +40,21 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
 
   explicit BaseDistributiveAggregateRun(const size_t size) { resize(size); }
 
-  explicit BaseDistributiveAggregateRun(const ColumnIterable& column_iterable, const RowID& begin_row_id,
-                                        const size_t row_count) {
-    resize(row_count);
-
+  void initialize(ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) override {
     auto offset = size_t{0};
     column_iterable.for_each<SourceColumnDataType>(
-        [&](const auto& segment_position, const RowID& row_id) {
-          if (segment_position.is_null()) {
-            null_values[offset] = true;
-          } else {
-            values[offset] = segment_position.value();
-            null_values[offset] = false;
-          }
-          ++offset;
+    [&](const auto& segment_position, const RowID& row_id) {
+      if (segment_position.is_null()) {
+        null_values[offset] = true;
+      } else {
+        values[offset] = segment_position.value();
+        null_values[offset] = false;
+      }
+      ++offset;
 
-          return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
-        },
-        begin_row_id);
+      return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+    },
+    begin_row_id);
   }
 
   void resize(const size_t size) override {
@@ -173,6 +162,10 @@ struct CountRowsAggregateRun : public BaseAggregateRun {
 
   explicit CountRowsAggregateRun(const size_t row_count) { values.resize(row_count, 1); }
 
+  void initialize(ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) override {
+    Fail("Should not be called, CountRowsAggregateRun is already initialized in constructor");
+  }
+
   void resize(const size_t size) override { values.resize(size, 0); }
 
   void flush_append_buffer(size_t target_offset, const std::vector<size_t>& buffer,
@@ -212,20 +205,17 @@ struct CountNonNullAggregateRun : public BaseAggregateRun {
 
   explicit CountNonNullAggregateRun(const size_t size) { resize(size); }
 
-  explicit CountNonNullAggregateRun(const ColumnIterable& column_iterable, const RowID& begin_row_id,
-                                    const size_t row_count) {
-    resize(row_count);
-
+  void initialize(ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) override {
     auto offset = size_t{0};
     column_iterable.for_each<SourceColumnDataType>(
-        [&](const auto& segment_position, const RowID& row_id) {
-          if (!segment_position.is_null()) {
-            values[offset] = 1;
-          }
-          ++offset;
-          return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
-        },
-        begin_row_id);
+    [&](const auto& segment_position, const RowID& row_id) {
+      if (!segment_position.is_null()) {
+        values[offset] = 1;
+      }
+      ++offset;
+      return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+    },
+    begin_row_id);
   }
 
   void resize(const size_t size) override { values.resize(size, 0); }
@@ -267,21 +257,18 @@ struct CountDistinctAggregateRun : public BaseAggregateRun {
 
   explicit CountDistinctAggregateRun(const size_t size) { resize(size); }
 
-  explicit CountDistinctAggregateRun(const ColumnIterable& column_iterable, const RowID& begin_row_id,
-                                     const size_t row_count) {
-    resize(row_count);
-
+  void initialize(ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) override {
     auto offset = size_t{0};
     column_iterable.for_each<SourceColumnDataType>(
-        [&](const auto& segment_position, const RowID& row_id) {
-          if (!segment_position.is_null()) {
-            sets[offset].insert(segment_position.value());
-          }
-          ++offset;
+    [&](const auto& segment_position, const RowID& row_id) {
+      if (!segment_position.is_null()) {
+        sets[offset].insert(segment_position.value());
+      }
+      ++offset;
 
-          return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
-        },
-        begin_row_id);
+      return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+    },
+    begin_row_id);
   }
 
   void resize(const size_t size) override { sets.resize(size); }
@@ -328,21 +315,19 @@ struct AvgAggregateRun : public BaseAggregateRun {
 
   explicit AvgAggregateRun(const size_t size) { resize(size); }
 
-  explicit AvgAggregateRun(const ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) {
-    resize(row_count);
-
+  void initialize(ColumnIterable& column_iterable, const RowID& begin_row_id, const size_t row_count) override {
     auto offset = size_t{0};
     column_iterable.for_each<SourceColumnDataType>(
-        [&](const auto& segment_position, const RowID& row_id) {
-          if (!segment_position.is_null()) {
-            pairs[offset].first += segment_position.value();
-            ++pairs[offset].second;
-          }
-          ++offset;
+    [&](const auto& segment_position, const RowID& row_id) {
+      if (!segment_position.is_null()) {
+        pairs[offset].first += segment_position.value();
+        ++pairs[offset].second;
+      }
+      ++offset;
 
-          return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
-        },
-        begin_row_id);
+      return offset == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+    },
+    begin_row_id);
   }
 
   void resize(const size_t size) override { pairs.resize(size); }

@@ -3,7 +3,8 @@
 #include "boost/functional/hash.hpp"
 #include "boost/hana.hpp"
 
-#include "operators/aggregate/aggregate_hashsort_steps.hpp"
+#include "operators/aggregate/aggregate_hashsort_algorithm.hpp"
+#include "operators/aggregate/aggregate_hashsort_utils.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -15,7 +16,7 @@ namespace hana = boost::hana;
 namespace {
 
 template <typename Functor>
-void resolve_group_size_policy(const AggregateHashSortDefinition& definition, const Functor& functor) {
+void resolve_group_size_policy(const AggregateHashSortSetup& definition, const Functor& functor) {
   constexpr auto MAX_STATIC_GROUP_SIZE = 4;
 
   if (definition.variably_sized_column_ids.empty()) {
@@ -62,17 +63,18 @@ void AggregateHashSort::_on_cleanup() {}
 std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
   const auto input_table = input_table_left();
 
-  const auto definition = AggregateHashSortDefinition::create(input_table, _aggregates, _groupby_column_ids);
+  const auto setup = AggregateHashSortSetup::create(_config, input_table, _aggregates, _groupby_column_ids);
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>();
   const auto output_column_definitions = _get_output_column_defintions();
 
-  resolve_group_size_policy(definition, [&](const auto group_size_policy_t) {
+  resolve_group_size_policy(setup, [&](const auto group_size_policy_t) {
     using GroupSizePolicy = typename decltype(group_size_policy_t)::type;
 
-    const auto run_source = std::make_shared<TableRunSource<GroupSizePolicy>>(definition, input_table);
+    const auto run_source = std::make_shared<TableRunSource<BasicRun<GroupSizePolicy>>>(setup, input_table);
+    const auto abstract_run_source = std::static_pointer_cast<AbstractRunSource<BasicRun<GroupSizePolicy>>>(run_source);
 
-    const auto output_runs = aggregate(_config, run_source, 0u);
+    const auto output_runs = aggregate(setup, abstract_run_source, 0u);
 
     /**
      * Materialize aggregate/group runs into segments
@@ -91,7 +93,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
         const auto& output_column_definition = output_column_definitions[column_id];
         resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
           using ColumnDataType = typename decltype(data_type_t)::type;
-          output_segments[column_id] = run.template materialize_group_column<ColumnDataType>(definition,
+          output_segments[column_id] = run.template materialize_group_column<ColumnDataType>(setup,
               column_id, output_column_definition.nullable);
         });
       }
@@ -99,7 +101,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
       // Materialize the aggregate columns
       for (auto aggregate_idx = ColumnID{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
         output_segments[_groupby_column_ids.size() + aggregate_idx] =
-            run.aggregates[aggregate_idx]->materialize_output(run.size());
+            run.aggregates[aggregate_idx]->materialize_output(run.size);
       }
 
       output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);

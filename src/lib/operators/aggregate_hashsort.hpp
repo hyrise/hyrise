@@ -33,15 +33,6 @@ class AggregateHashSort : public AbstractAggregateOperator {
 
   const std::string name() const override;
 
-  /**
-   * Subroutines exposed for tests
-   */
-  template<typename Run>
-  static std::vector<Run> aggregate(const AggregateHashSortConfig& config,
-                                                const std::shared_ptr<AbstractRunSource<Run>>& run_source, const size_t level);
-
-
-
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 

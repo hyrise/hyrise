@@ -180,7 +180,7 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/aggregate/aggregate_hashsort_aggregates.hpp
     operators/aggregate/aggregate_hashsort_algorithm.hpp
-    operators/aggregate/aggregate_hashsort_steps.hpp
+    operators/aggregate/aggregate_hashsort_utils.hpp
     operators/aggregate/aggregate_hashsort_config.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
