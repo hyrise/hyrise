@@ -60,7 +60,7 @@ TEST_F(OperatorsJoinHashTest, DISABLED_ChunkCount /* #698 */) {
                                          std::vector<OperatorJoinPredicate>{}, 10);
   join->execute();
 
-  // While radix clustering is well-suited for very large tables, it also yield many output tables.
+  // While radix clustering is well-suited for very large tables, it also yields many output tables.
   // This test checks whether we create more chunks that existing in the input (which should not be the case).
   EXPECT_TRUE(join->get_output()->chunk_count() <=
               std::max(_table_tpch_orders_scanned->get_output()->chunk_count(),
@@ -105,6 +105,21 @@ TEST_F(OperatorsJoinHashTest, DeepCopy) {
   EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
   EXPECT_NE(join_operator_copy->input_left(), nullptr);
   EXPECT_NE(join_operator_copy->input_right(), nullptr);
+}
+
+// TODO(Bouncner): enable with merge of #1714
+TEST(OperatorsJoinHashTestStatic, DISABLED_RadixBitCalculation /* #1714 */) {
+  // simple cases
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 1), 0ul);
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(0, 1), 0ul);
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 0), 0ul);
+  EXPECT_TRUE(JoinHash::calculate_radix_bits<int>(std::numeric_limits<size_t>::max(),
+                                                  std::numeric_limits<size_t>::max()) > 0ul);
+
+  // Check that clusters are not larger than uint32_t (potential overflow in hash map offsets).
+  // Such large inputs should be clustered into multiple partitions, even when the build side is small.
+  EXPECT_TRUE(JoinHash::calculate_radix_bits<int>(1, static_cast<size_t>(std::numeric_limits<uint32_t>::max() * 1.1)) >
+              1ul);
 }
 
 }  // namespace opossum
