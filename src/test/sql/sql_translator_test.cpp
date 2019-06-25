@@ -415,6 +415,52 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregates) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubquery) {
+  const auto actual_lqp = compile_query("SELECT a1, b2, a3 FROM (SELECT a AS a1, a AS a2, a AS a3, b AS b1, b AS b2, b AS b3 FROM int_float) AS R");
+
+  const auto outer_aliases = std::vector<std::string>({"a1", "b2", "a3"});
+  const auto inner_aliases = std::vector<std::string>({"a1", "a2", "a3", "b1", "b2", "b3"});
+  const auto outer_expressions = expression_vector(int_float_a, int_float_b, int_float_a);
+  const auto inner_expressions = expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(outer_expressions, outer_aliases,
+    ProjectionNode::make(outer_expressions,
+      AliasNode::make(inner_expressions, inner_aliases,
+        ProjectionNode::make(inner_expressions,
+          stored_table_node_int_float))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSuquery) {
+  const auto actual_lqp = compile_query("SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
+
+  const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
+  const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
+
+  // clang-format off
+//  const auto subquery_lqp =
+//  AliasNode::make(aggregates, aliases,
+//    ProjectionNode::make(aggregates,
+//      AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+//        stored_table_node_int_float)));
+//  const auto subquery = lqp_subquery_(subquery_lqp);
+
+  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+  const auto expected_lqp =
+  AliasNode::make(aggregates, aliases,
+    AliasNode::make(aggregates, aliases,
+      ProjectionNode::make(aggregates,
+        AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+          stored_table_node_int_float))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, WhereSimple) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a < 200;");
 
