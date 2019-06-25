@@ -152,7 +152,6 @@ class SQLTranslator final {
   std::shared_ptr<AbstractExpression> _translate_hsql_case(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
 
-
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
  private:

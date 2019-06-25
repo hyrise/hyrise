@@ -1996,21 +1996,21 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1 WHERE a = 1"), InvalidInputException);
 }
 
-TEST_F(SQLTranslatorTest, WithClauseSingle) {
+TEST_F(SQLTranslatorTest, WithClauseSingleQuerySimple) {
   const auto actual_lqp = compile_query(
       "WITH "
-      "with_query AS (SELECT a FROM int_int_int) "
+      "with_query AS (SELECT a, b FROM int_int_int) "
       "SELECT * FROM with_query WHERE a > 123;");
   // clang-format off
   const auto expected_lqp =
-  PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
-      ProjectionNode::make(expression_vector(int_int_int_a),
-          stored_table_node_int_int_int));
+      PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
+          ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+              stored_table_node_int_int_int));
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, WithClauseSingleAlias) {
+TEST_F(SQLTranslatorTest, WithClauseSingleQueryAlias) {
   const auto actual_lqp_alias = compile_query(
       "WITH "
       "with_query AS (SELECT a AS x FROM int_int_int) "
@@ -2020,16 +2020,16 @@ TEST_F(SQLTranslatorTest, WithClauseSingleAlias) {
 
   // clang-format off
   const auto expected_lqp_alias =
-  AliasNode::make(expressions, aliases,
-      PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
-          AliasNode::make(expressions, aliases,
-              ProjectionNode::make(expression_vector(int_int_int_a),
-                  stored_table_node_int_int_int))));
+      AliasNode::make(expressions, aliases,
+          PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
+              AliasNode::make(expressions, aliases,
+                  ProjectionNode::make(expression_vector(int_int_int_a),
+                      stored_table_node_int_int_int))));
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_alias, expected_lqp_alias);
 }
 
-TEST_F(SQLTranslatorTest, WithClauseSingleAliasWhere) {
+TEST_F(SQLTranslatorTest, WithClauseSingleQueryAliasWhere) {
   const auto actual_lqp_alias = compile_query(
       "WITH "
       "with_query AS (SELECT a AS x FROM int_int_int WHERE a > 123) "
@@ -2049,7 +2049,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleAliasWhere) {
   EXPECT_LQP_EQ(actual_lqp_alias, expected_lqp_alias);
 }
 
-TEST_F(SQLTranslatorTest, WithClauseDouble) {
+TEST_F(SQLTranslatorTest, WithClauseDoubleQuery) {
   // WITH queries build on top of each other
   const auto actual_lqp = compile_query(
       "WITH "
@@ -2059,9 +2059,9 @@ TEST_F(SQLTranslatorTest, WithClauseDouble) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_int_int_b),
-      ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
-          stored_table_node_int_int_int));
+      ProjectionNode::make(expression_vector(int_int_int_b),
+          ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+              stored_table_node_int_int_int));
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

@@ -278,7 +278,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 }
 
 void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc) {
-  //AssertInput(_with_descriptions.count(*desc.alias) == 0, "WITH query name " + table_alias + " specified more than once");
   SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions};
   auto lqp = with_translator._translate_select_statement(*desc.select);
 
@@ -292,7 +291,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
     }
   }
 
-  // Save resolved WithDescription / temporary view
+  // Store resolved WithDescription / temporary view
   auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
   //   A WITH description masks a preceding WITH description if their aliases are identical
   _with_descriptions.insert_or_assign(desc.alias, lqp_view);
