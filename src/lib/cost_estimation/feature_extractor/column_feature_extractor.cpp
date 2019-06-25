@@ -37,12 +37,6 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
                                                               const ColumnID column_id, const DataType data_type,
                                                               const std::string& prefix) {
   auto chunk_count = table->chunk_count();
-
-  if (chunk_count == ChunkID{0}) {
-    return ColumnFeatures{prefix};
-  }
-
-  size_t number_of_reference_segments = 0;
   std::map<EncodingType, size_t> encoding_mapping{{EncodingType::Unencoded, 0},
                                                   {EncodingType::Dictionary, 0},
                                                   {EncodingType::FixedStringDictionary, 0},
@@ -61,7 +55,6 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
     const auto encoding_reference_pair = _get_encoding_type_for_segment(segment);
 
     const auto segment_encoding_spec = encoding_reference_pair.first;
-    const auto is_reference_segment = encoding_reference_pair.second;
 
     encoding_mapping[segment_encoding_spec.encoding_type] += 1;
     table_encoding_type = segment_encoding_spec.encoding_type;
@@ -69,9 +62,6 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
     if (segment_encoding_spec.vector_compression_type) {
       vector_compression_type = *segment_encoding_spec.vector_compression_type;
       vector_compression_mapping[*segment_encoding_spec.vector_compression_type] += 1;
-    }
-    if (is_reference_segment) {
-      number_of_reference_segments++;
     }
   }
 
@@ -83,7 +73,7 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
 
   column_features.column_segment_encoding = table_encoding_type;
   column_features.column_segment_vector_compression = vector_compression_type;
-  column_features.column_is_reference_segment = number_of_reference_segments > 0;
+  column_features.column_is_reference_segment = table->type() == TableType::References;
   column_features.column_data_type = data_type;
   // TODO(Sven): this returns the size of the original, stored, unfiltered column...
   column_features.column_memory_usage_bytes = _get_memory_usage_for_column(table, column_id);
