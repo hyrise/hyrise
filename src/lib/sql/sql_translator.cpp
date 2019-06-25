@@ -288,7 +288,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
     const auto identifiers =
         with_translator._sql_identifier_resolver->get_expression_identifiers(lqp->column_expressions()[column_id]);
     for (const auto& identifier : identifiers) {
-      column_names.emplace(column_id, identifier.column_name);
+      column_names.insert_or_assign(column_id, identifier.column_name);
     }
   }
 
