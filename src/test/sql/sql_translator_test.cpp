@@ -368,17 +368,20 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInJoin) {
   const auto aliases = std::vector<std::string>({"c", "d"});
 
   // clang-format off
-  const auto expected_lqp =
+  const auto expected_lqp_a =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
+      AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
+        stored_table_node_int_float),
+      stored_table_node_int_float2));
+
+  const auto expected_lqp_b =
   AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
-    ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-      JoinNode::make(JoinMode::Inner, equals_(int_float_b, int_float2_b),
-        AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
-          stored_table_node_int_float),
-        stored_table_node_int_float2)));
+    expected_lqp_a);
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
-  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumns) {

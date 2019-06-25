@@ -771,7 +771,9 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
       auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
       select_list_elements.emplace_back(SelectListElement{expression});
 //      auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression); // auto identifiers = _from_clause_result->elements_in_order[idx].identifiers;
-      select_list_elements.back().identifiers.emplace_back(hsql_select_expr->name);
+      if (hsql_select_expr->name && hsql_select_expr->type != hsql::kExprFunctionRef) {
+        select_list_elements.back().identifiers.emplace_back(hsql_select_expr->name);
+      }
 
       if (hsql_select_expr->alias) {
         auto identifier = SQLIdentifier{hsql_select_expr->alias};
