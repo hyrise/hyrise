@@ -17,6 +17,7 @@
 
 namespace opossum {
 
+class WithView;
 class AggregateNode;
 class LQPSubqueryExpression;
 
@@ -96,7 +97,7 @@ class SQLTranslator final {
   SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                 const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions);
+                const std::unordered_map<std::string, std::shared_ptr<WithView>>& with_descriptions);
 
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
   std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
@@ -152,7 +153,6 @@ class SQLTranslator final {
   std::shared_ptr<AbstractExpression> _translate_hsql_case(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
 
-
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
  private:
@@ -163,7 +163,7 @@ class SQLTranslator final {
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
-  std::unordered_map<std::string, std::shared_ptr<LQPView>> _with_descriptions;
+  std::unordered_map<std::string, std::shared_ptr<WithView>> _with_descriptions;
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;

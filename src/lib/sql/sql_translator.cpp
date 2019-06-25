@@ -54,6 +54,7 @@
 #include "storage/lqp_view.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/with_view.hpp"
 
 #include "SQLParser.h"
 
@@ -131,7 +132,7 @@ namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
-                    std::unordered_map<std::string, std::shared_ptr<LQPView>>()) {}
+                    std::unordered_map<std::string, std::shared_ptr<WithView>>()) {}
 
 std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
   const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
@@ -160,7 +161,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_re
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
                              const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
                              const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                             const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions)
+                             const std::unordered_map<std::string, std::shared_ptr<WithView>>& with_descriptions)
     : _use_mvcc(use_mvcc),
       _external_sql_identifier_resolver_proxy(external_sql_identifier_resolver_proxy),
       _parameter_id_allocator(parameter_id_allocator),
@@ -283,7 +284,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
   auto lqp = with_translator._translate_select_statement(*desc.select);
 
   // Save mappings: ColumnID -> ColumnName
-  std::unordered_map<ColumnID, std::string> column_names;
+  std::unordered_multimap<ColumnID, std::string> column_names;
   for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
     const auto identifiers =
         with_translator._sql_identifier_resolver->get_expression_identifiers(lqp->column_expressions()[column_id]);
@@ -293,9 +294,9 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
   }
 
   // Save resolved WithDescription / temporary view
-  auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
+  auto with_view = std::make_shared<WithView>(lqp, column_names);
   //   A WITH description masks a preceding WITH description if their aliases are identical
-  _with_descriptions.insert_or_assign(desc.alias, lqp_view);
+  _with_descriptions.insert_or_assign(desc.alias, with_view);
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr,
@@ -504,15 +505,15 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         const auto iter = _with_descriptions.find(hsql_table_ref.name);
         AssertInput(iter != _with_descriptions.end(), "No such WITH query named '" + hsql_table_ref.name + "'");
 
-        const auto lqp_view = iter->second->deep_copy();
-        lqp = lqp_view->lqp;
+        const auto with_view = iter->second->deep_copy();
+        lqp = with_view->lqp;
 
         // Add all named columns to the IdentifierContext
-        for (auto column_id = ColumnID{0}; column_id < lqp_view->lqp->column_expressions().size(); ++column_id) {
-          const auto column_expression = lqp_view->lqp->column_expressions()[column_id];
+        for (auto column_id = ColumnID{0}; column_id < with_view->lqp->column_expressions().size(); ++column_id) {
+          const auto column_expression = with_view->lqp->column_expressions()[column_id];
 
-          const auto column_name_iter = lqp_view->column_names.find(column_id);
-          if (column_name_iter != lqp_view->column_names.end()) {
+          const auto column_name_iter = with_view->column_names.find(column_id);
+          if (column_name_iter != with_view->column_names.end()) {
             sql_identifier_resolver->add_column_name(column_expression, column_name_iter->second);
           }
           sql_identifier_resolver->set_table_name(column_expression, hsql_table_ref.name);

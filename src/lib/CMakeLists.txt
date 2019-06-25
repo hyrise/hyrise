@@ -499,6 +499,8 @@ set(
     storage/table.hpp
     storage/value_segment.cpp
     storage/value_segment.hpp
+    storage/with_view.cpp
+    storage/with_view.hpp
     storage/value_segment/null_value_vector_iterable.hpp
     storage/value_segment/value_segment_iterable.hpp
     storage/vector_compression/base_compressed_vector.hpp
