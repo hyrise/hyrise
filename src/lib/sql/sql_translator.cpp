@@ -463,6 +463,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
   // Each element in the FROM list needs to have a unique table name (i.e. Subqueries are required to have an ALIAS)
   auto table_name = std::string{};
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
+  std::vector<SelectListElement> select_list_elements;
 
   switch (hsql_table_ref.type) {
     case hsql::kTableName: {
@@ -501,17 +502,24 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
-      for (const auto& subquery_expression : lqp->column_expressions()) {
-        const auto identifiers =
-            subquery_translator._sql_identifier_resolver->get_expression_identifiers(subquery_expression);
+      std::vector<std::vector<SQLIdentifier>> identifiers;
+      for (const auto& element : subquery_translator._inflated_select_list_elements) {
+        identifiers.emplace_back(element.identifiers);
+      }
+      Assert(identifiers.size() == lqp->column_expressions().size(),
+             "There have to be as many identifier lists as column expressions");
+      for (auto idx = size_t{0}; idx < lqp->column_expressions().size(); ++idx) {
+        const auto& subquery_expression = lqp->column_expressions()[idx];
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
           sql_identifier_resolver->add_column_name(subquery_expression, subquery_expression->as_column_name());
         }
-        for (const auto& identifier : identifiers) {
+        for (const auto& identifier : identifiers[idx]) {
           sql_identifier_resolver->add_column_name(subquery_expression, identifier.column_name);
         }
+
+        select_list_elements.emplace_back(SelectListElement{subquery_expression, identifiers[idx]});
       }
 
       table_name = hsql_table_ref.alias->name;
@@ -541,10 +549,12 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
     sql_identifier_resolver->set_table_name(expression, table_name);
   }
 
-  std::vector<SelectListElement> select_list_elements;
-  for (const auto& expression : lqp->column_expressions()) {
-    const auto identifiers = sql_identifier_resolver->get_expression_identifiers(expression);
-    select_list_elements.emplace_back(SelectListElement{expression, identifiers});
+  // Add select_list_elements if this did not already happen (for hsql::kTableSelect)
+  if (hsql_table_ref.type != hsql::kTableSelect) {
+    for (const auto& expression : lqp->column_expressions()) {
+      const auto identifiers = sql_identifier_resolver->get_expression_identifiers(expression);
+      select_list_elements.emplace_back(SelectListElement{expression, identifiers});
+    }
   }
 
   return {lqp,
@@ -770,7 +780,6 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
     } else {
       auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
       select_list_elements.emplace_back(SelectListElement{expression});
-//      auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression); // auto identifiers = _from_clause_result->elements_in_order[idx].identifiers;
       if (hsql_select_expr->name && hsql_select_expr->type != hsql::kExprFunctionRef) {
         select_list_elements.back().identifiers.emplace_back(hsql_select_expr->name);
       }
