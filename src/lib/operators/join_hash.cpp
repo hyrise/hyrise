@@ -224,9 +224,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     const auto l2_cache_size = 1'024'000;  // bytes
     const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
 
-    // For sizing, see comments:
+    // For information about the sizing of the bytell hash map, see the comments:
     // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
-    // We aim for a fill factor of 80%, a bit less of bytell hash map's maximum fill factor of 0.9375.
+    // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the actual size of
+    // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
+    // slightly skewed data distributions and aim for a fill level of 80%.
     const auto complete_hash_map_size =
         // number of items in map
         build_relation_size *
