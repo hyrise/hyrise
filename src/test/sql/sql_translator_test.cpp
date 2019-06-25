@@ -2066,4 +2066,21 @@ TEST_F(SQLTranslatorTest, WithClauseDoubleQuery) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, WithClauseDoubleQueryMasking) {
+  // Second WITH query masks first one
+  const auto actual_lqp = compile_query(
+      "WITH "
+      "with_query AS (SELECT a, b FROM int_int_int), "
+      "with_query AS (SELECT b FROM with_query) "
+      "SELECT * FROM with_query;");
+
+  // clang-format off
+  const auto expected_lqp =
+      ProjectionNode::make(expression_vector(int_int_int_b),
+           ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+               stored_table_node_int_int_int));
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
