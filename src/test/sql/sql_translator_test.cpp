@@ -435,7 +435,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubquery)
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSuquery) {
+TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubquery) {
   const auto actual_lqp = compile_query("SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
