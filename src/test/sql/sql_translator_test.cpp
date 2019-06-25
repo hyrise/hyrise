@@ -1996,31 +1996,48 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1 WHERE a = 1"), InvalidInputException);
 }
 
-TEST_F(SQLTranslatorTest, WithClauseTestSingle) {
+
+TEST_F(SQLTranslatorTest, WithClauseSingle) {
   const auto actual_lqp = compile_query(
       "WITH "
-      "with_query AS (SELECT a, b FROM int_float) "
-      "SELECT a FROM with_query;");
-
-  const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);
-  const auto expected_lqp = ProjectionNode::make(expression_vector(parameter_int_float_a), stored_table_node_int_float);
+      "with_query AS (SELECT a FROM int_int_int) "
+      "SELECT * FROM with_query WHERE a > 123;");
+  const auto expected_lqp = PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
+                                                ProjectionNode::make(expression_vector(int_int_int_a),
+                                                                     stored_table_node_int_int_int));
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, WithClauseTestDouble) {
+TEST_F(SQLTranslatorTest, WithClauseSingleAlias) {
+
+  const auto actual_lqp_alias = compile_query(
+      "WITH "
+      "with_query AS (SELECT a AS x FROM int_float) "
+      "SELECT * FROM with_query WHERE with_query.x > 123;");
+  const auto aliases = std::vector<std::string>{{"x"}};
+  const auto expressions = expression_vector(int_int_int_a);
+
+  const auto expected_lqp_alias = AliasNode::make(expressions, aliases,
+                                                  PredicateNode::make(greater_than_(int_int_int_a, value_(123))),
+                                                  ProjectionNode::make(expression_vector(int_int_int_a),
+                                                                       stored_table_node_int_int_int));
+  EXPECT_LQP_EQ(actual_lqp_alias, nullptr);
+}
+
+TEST_F(SQLTranslatorTest, WithClauseDouble) {
   const auto actual_lqp = compile_query(
       "WITH "
-      "with_query1 AS (SELECT a, b FROM int_float), "
-      "with_query2 AS (SELECT a, b FROM with_query1) "
-      "SELECT a, b FROM with_query2;");
+      "with_query1 AS (SELECT a, b FROM int_int_int), "
+      "with_query2 AS (SELECT b FROM with_query1) "
+      "SELECT * FROM with_query2;");
 
-  const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);
-  const auto parameter_int_float_b = correlated_parameter_(ParameterID{1}, int_float_b);
-  const auto expected_lqp = ProjectionNode::make(expression_vector(parameter_int_float_a, parameter_int_float_b),
-                                                 stored_table_node_int_float);
+  const auto expected_lqp = ProjectionNode::make(expression_vector(int_int_int_b),
+                                ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+                                                                         stored_table_node_int_int_int));
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
+
 
 }  // namespace opossum
