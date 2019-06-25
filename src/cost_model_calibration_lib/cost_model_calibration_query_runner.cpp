@@ -64,8 +64,10 @@ void CostModelCalibrationQueryRunner::_traverse(const std::shared_ptr<const Abst
     _traverse(op->input_right(), features);
   }
 
-  auto operator_result = cost_model::CalibrationFeatureExtractor::extract_features(op);
-  features.push_back(operator_result);
+
+  const auto operator_result = cost_model::CalibrationFeatureExtractor::extract_features(op);
+  if (operator_result)
+    features.push_back(*operator_result);
 }
 
 }  // namespace opossum

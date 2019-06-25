@@ -14,7 +14,7 @@
 namespace opossum {
 namespace cost_model {
 
-const CostModelFeatures CalibrationFeatureExtractor::extract_features(
+const std::optional<CostModelFeatures> CalibrationFeatureExtractor::extract_features(
     const std::shared_ptr<const AbstractOperator>& op) {
   auto calibration_result = _extract_general_features(op);
 
@@ -24,7 +24,12 @@ const CostModelFeatures CalibrationFeatureExtractor::extract_features(
   switch (operator_type) {
     case OperatorType::TableScan: {
       const auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
-      calibration_result.table_scan_features = _extract_features_for_operator(table_scan_op);
+
+      const auto table_scan_features = _extract_features_for_operator(table_scan_op);
+      if (table_scan_features)
+        calibration_result.table_scan_features = *table_scan_features;
+      else
+        return std::nullopt;
       break;
     }
     case OperatorType::IndexScan: {
@@ -117,7 +122,7 @@ const ConstantHardwareFeatures CalibrationFeatureExtractor::_extract_constant_ha
 
 const RuntimeHardwareFeatures CalibrationFeatureExtractor::_extract_runtime_hardware_features() { return {}; }
 
-const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
+const std::optional<TableScanFeatures> CalibrationFeatureExtractor::_extract_features_for_operator(
     const std::shared_ptr<const TableScan>& op) {
   TableScanFeatures features{};
 
@@ -127,6 +132,9 @@ const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_opera
   const auto& table_condition = op->predicate();
   features.computable_or_column_expression_count = count_expensive_child_expressions(table_condition);
   features.effective_chunk_count = chunk_count - op->get_number_of_excluded_chunks();
+
+  if (features.effective_chunk_count == 0)
+    return std::nullopt;
 
   if (table_condition->type == ExpressionType::Predicate) {
     const auto& casted_predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(table_condition);

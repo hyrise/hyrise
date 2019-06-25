@@ -30,14 +30,14 @@ namespace cost_model {
 
 class CalibrationFeatureExtractor {
  public:
-  static const CostModelFeatures extract_features(const std::shared_ptr<const AbstractOperator>& op);
+  static const std::optional<CostModelFeatures> extract_features(const std::shared_ptr<const AbstractOperator>& op);
 
  private:
   static const CostModelFeatures _extract_general_features(const std::shared_ptr<const AbstractOperator>& op);
   static const ConstantHardwareFeatures _extract_constant_hardware_features();
   static const RuntimeHardwareFeatures _extract_runtime_hardware_features();
 
-  static const TableScanFeatures _extract_features_for_operator(const std::shared_ptr<const TableScan>& op);
+  static const std::optional<TableScanFeatures> _extract_features_for_operator(const std::shared_ptr<const TableScan>& op);
   static const TableScanFeatures _extract_features_for_operator(const std::shared_ptr<const IndexScan>& op);
   static const ProjectionFeatures _extract_features_for_operator(const std::shared_ptr<const Projection>& op);
   static const JoinFeatures _extract_features_for_operator(const std::shared_ptr<const AbstractJoinOperator>& op);
