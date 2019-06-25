@@ -236,18 +236,19 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
    * Name, select and arrange the Columns as specified in the SELECT clause
    */
   // Only add a ProjectionNode if necessary
-  const auto& inflated_select_list_expressions = _retrieve_expressions(_inflated_select_list_elements);
+  const auto& inflated_select_list_expressions = _unwrap_elements(_inflated_select_list_elements);
   if (!expressions_equal(_current_lqp->column_expressions(), inflated_select_list_expressions)) {
     _current_lqp = ProjectionNode::make(inflated_select_list_expressions, _current_lqp);
   }
 
   // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
   // that is not its generated name.
-  auto need_alias_node = std::any_of(_inflated_select_list_elements.begin(), _inflated_select_list_elements.end(),
-    [](const auto& element) { return std::any_of(element.identifiers.begin(), element.identifiers.end(),
-      [&](const auto& identifier) { return identifier.column_name != element.expression->as_column_name();
-    });
-  });
+  auto need_alias_node = std::any_of(
+      _inflated_select_list_elements.begin(), _inflated_select_list_elements.end(), [](const auto& element) {
+        return std::any_of(element.identifiers.begin(), element.identifiers.end(), [&](const auto& identifier) {
+          return identifier.column_name != element.expression->as_column_name();
+        });
+      });
 
   if (need_alias_node) {
     std::vector<std::string> aliases;
@@ -259,7 +260,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
       }
     }
 
-    _current_lqp = AliasNode::make(_retrieve_expressions(_inflated_select_list_elements), aliases, _current_lqp);
+    _current_lqp = AliasNode::make(_unwrap_elements(_inflated_select_list_elements), aliases, _current_lqp);
   }
 
   return _current_lqp;
@@ -732,7 +733,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
 
   if (!join_predicates.empty()) {
     // Projection Node to remove duplicate columns
-    lqp = ProjectionNode::make(_retrieve_expressions(result_state.elements_in_order), lqp);
+    lqp = ProjectionNode::make(_unwrap_elements(result_state.elements_in_order), lqp);
   }
 
   // Create output TableSourceState
@@ -786,8 +787,8 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
   return select_list_elements;
 }
 
-void SQLTranslator::_translate_select_groupby_having(
-    const hsql::SelectStatement& select, const std::vector<SelectListElement>& select_list_elements) {
+void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement& select,
+                                                     const std::vector<SelectListElement>& select_list_elements) {
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
@@ -947,7 +948,7 @@ void SQLTranslator::_translate_select_groupby_having(
   // one that groups by both a and MIN(b) without calculating anything. Fixing this should be done by an optimizer rule
   // that checks for each GROUP BY whether it guarantees the results to be unique or not. Doable, but no priority.
   if (select.selectDistinct) {
-    _current_lqp = AggregateNode::make(_retrieve_expressions(_inflated_select_list_elements),
+    _current_lqp = AggregateNode::make(_unwrap_elements(_inflated_select_list_elements),
                                        std::vector<std::shared_ptr<AbstractExpression>>{}, _current_lqp);
   }
 }
@@ -1530,7 +1531,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
   Fail("GCC thinks this is reachable");
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_retrieve_expressions(
+std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements(
     const std::vector<SelectListElement>& select_list_elements) const {
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
   for (const auto& element : select_list_elements) {
@@ -1543,7 +1544,7 @@ SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<Abstra
     : expression(expression) {}
 
 SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
-                                                const std::vector<SQLIdentifier> identifiers)
+                                                    const std::vector<SQLIdentifier> identifiers)
     : expression(expression), identifiers(identifiers) {}
 
 SQLTranslator::TableSourceState::TableSourceState(

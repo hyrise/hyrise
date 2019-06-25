@@ -159,7 +159,7 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
-  std::vector<std::shared_ptr<AbstractExpression>> _retrieve_expressions(
+  std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
       const std::vector<SelectListElement>& select_list_elements) const;
 
  private:
