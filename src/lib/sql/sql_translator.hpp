@@ -53,10 +53,10 @@ class SQLTranslator final {
  private:
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows similar
   // expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
-  struct NamedExpression {
-    explicit NamedExpression(const std::shared_ptr<AbstractExpression>& expression);
-    NamedExpression(const std::shared_ptr<AbstractExpression>& expression,
-                    const std::vector<SQLIdentifier> identifiers);
+  struct SelectListElement {
+    explicit SelectListElement(const std::shared_ptr<AbstractExpression>& expression);
+    SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
+                      const std::vector<SQLIdentifier> identifiers);
 
     std::shared_ptr<AbstractExpression> expression;
     std::vector<SQLIdentifier> identifiers;
@@ -69,8 +69,8 @@ class SQLTranslator final {
   struct TableSourceState final {
     TableSourceState() = default;
     TableSourceState(const std::shared_ptr<AbstractLQPNode>& lqp,
-                     const std::unordered_map<std::string, std::vector<NamedExpression>>& elements_by_table_name,
-                     const std::vector<NamedExpression>& elements_in_order,
+                     const std::unordered_map<std::string, std::vector<SelectListElement>>& elements_by_table_name,
+                     const std::vector<SelectListElement>& elements_in_order,
                      const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
     void append(TableSourceState&& rhs);
@@ -78,10 +78,10 @@ class SQLTranslator final {
     std::shared_ptr<AbstractLQPNode> lqp;
 
     // Collects the output of the FROM clause to expand wildcards (*; <t>.*) used in the SELECT list
-    std::unordered_map<std::string, std::vector<NamedExpression>> elements_by_table_name;
+    std::unordered_map<std::string, std::vector<SelectListElement>> elements_by_table_name;
 
     // To establish the correct order of columns in SELECT *
-    std::vector<NamedExpression> elements_in_order;
+    std::vector<SelectListElement> elements_in_order;
 
     std::shared_ptr<SQLIdentifierResolver> sql_identifier_resolver;
   };
@@ -115,9 +115,9 @@ class SQLTranslator final {
   TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
-  std::vector<NamedExpression> _translate_select_list(const std::vector<hsql::Expr*>& select_list);
+  std::vector<SelectListElement> _translate_select_list(const std::vector<hsql::Expr*>& select_list);
   void _translate_select_groupby_having(const hsql::SelectStatement& select,
-                                        const std::vector<NamedExpression>& select_list_elements);
+                                        const std::vector<SelectListElement>& select_list_elements);
 
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
@@ -160,7 +160,7 @@ class SQLTranslator final {
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
   std::vector<std::shared_ptr<AbstractExpression>> _retrieve_expressions(
-      const std::vector<NamedExpression>& named_expressions) const;
+      const std::vector<SelectListElement>& select_list_elements) const;
 
  private:
   const UseMvcc _use_mvcc;
@@ -172,7 +172,7 @@ class SQLTranslator final {
   std::optional<TableSourceState> _from_clause_result;
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
-  std::vector<NamedExpression> _inflated_select_list_elements;
+  std::vector<SelectListElement> _inflated_select_list_elements;
 };
 
 }  // namespace opossum

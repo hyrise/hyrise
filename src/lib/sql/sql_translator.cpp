@@ -540,17 +540,17 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
     sql_identifier_resolver->set_table_name(expression, table_name);
   }
 
-  std::vector<NamedExpression> named_expressions;
+  std::vector<SelectListElement> select_list_elements;
   for (const auto& expression : lqp->column_expressions()) {
     const auto identifiers = sql_identifier_resolver->get_expression_identifiers(expression);
-    named_expressions.emplace_back(NamedExpression{expression, identifiers});
+    select_list_elements.emplace_back(SelectListElement{expression, identifiers});
   }
 
   return {lqp,
           {{
-              {table_name, named_expressions},
+              {table_name, select_list_elements},
           }},
-          {named_expressions},
+          {select_list_elements},
           sql_identifier_resolver};
 }
 
@@ -756,19 +756,19 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
   return result_table_source_state;
 }
 
-std::vector<SQLTranslator::NamedExpression> SQLTranslator::_translate_select_list(
+std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_list(
     const std::vector<hsql::Expr*>& select_list) {
   // Build the select_list_elements
   // Each expression of a select_list_element is either an Expression or nullptr if the element is a Wildcard
   // Create an SQLIdentifierResolver that knows the aliases
-  std::vector<NamedExpression> select_list_elements;
+  std::vector<SelectListElement> select_list_elements;
   auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
   for (const auto& hsql_select_expr : select_list) {
     if (hsql_select_expr->type == hsql::kExprStar) {
-      select_list_elements.emplace_back(NamedExpression{nullptr});
+      select_list_elements.emplace_back(SelectListElement{nullptr});
     } else {
       auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
-      select_list_elements.emplace_back(NamedExpression{expression});
+      select_list_elements.emplace_back(SelectListElement{expression});
       auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression);
       select_list_elements.back().identifiers = identifiers;
 
@@ -787,7 +787,7 @@ std::vector<SQLTranslator::NamedExpression> SQLTranslator::_translate_select_lis
 }
 
 void SQLTranslator::_translate_select_groupby_having(
-    const hsql::SelectStatement& select, const std::vector<NamedExpression>& select_list_elements) {
+    const hsql::SelectStatement& select, const std::vector<SelectListElement>& select_list_elements) {
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
@@ -907,7 +907,7 @@ void SQLTranslator::_translate_select_groupby_having(
             const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(group_by_expression);
             for (const auto& identifier : identifiers) {
               if (identifier.table_name == hsql_expr->table) {
-                _inflated_select_list_elements.emplace_back(NamedExpression{group_by_expression});
+                _inflated_select_list_elements.emplace_back(SelectListElement{group_by_expression});
               }
             }
           }
@@ -925,7 +925,7 @@ void SQLTranslator::_translate_select_groupby_having(
         if (is_aggregate) {
           // Select all GROUP BY columns
           for (const auto& expression : group_by_expressions) {
-            _inflated_select_list_elements.emplace_back(NamedExpression{expression});
+            _inflated_select_list_elements.emplace_back(SelectListElement{expression});
           }
         } else {
           // Select all columns from the FROM elements
@@ -1531,25 +1531,25 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_retrieve_expressions(
-    const std::vector<NamedExpression>& named_expressions) const {
+    const std::vector<SelectListElement>& select_list_elements) const {
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
-  for (const auto& element : named_expressions) {
+  for (const auto& element : select_list_elements) {
     expressions.emplace_back(element.expression);
   }
   return expressions;
 }
 
-SQLTranslator::NamedExpression::NamedExpression(const std::shared_ptr<AbstractExpression>& expression)
+SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression)
     : expression(expression) {}
 
-SQLTranslator::NamedExpression::NamedExpression(const std::shared_ptr<AbstractExpression>& expression,
+SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
                                                 const std::vector<SQLIdentifier> identifiers)
     : expression(expression), identifiers(identifiers) {}
 
 SQLTranslator::TableSourceState::TableSourceState(
     const std::shared_ptr<AbstractLQPNode>& lqp,
-    const std::unordered_map<std::string, std::vector<NamedExpression>>& elements_by_table_name,
-    const std::vector<NamedExpression>& elements_in_order,
+    const std::unordered_map<std::string, std::vector<SelectListElement>>& elements_by_table_name,
+    const std::vector<SelectListElement>& elements_in_order,
     const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver)
     : lqp(lqp),
       elements_by_table_name(elements_by_table_name),
