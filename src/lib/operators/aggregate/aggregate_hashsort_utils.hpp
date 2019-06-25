@@ -17,7 +17,7 @@
 #include "types.hpp"
 #include "utils/timer.hpp"
 
-#define VERBOSE 0
+#define VERBOSE 1
 
 // #define USE_UNORDERED_MAP
 #define USE_DENSE_HASH_MAP
@@ -239,13 +239,17 @@ struct BasicRun : public GroupSizePolicy {
     /**
      * Flush append_buffer
      */
-    const auto new_group_data_size = GroupSizePolicy::get_required_group_data_size(*this);
-    const auto new_group_count = size + append_buffer.size();
+    const auto new_group_data_size = std::max(group_data.size(), GroupSizePolicy::get_required_group_data_size(*this));
+    const auto new_group_count = std::max(hashes.size(), size + append_buffer.size());
     if (new_group_data_size > group_data.size() || new_group_count >= hashes.size()) {
       // Growing group_data should happen infrequently and is a safeguard against data skew
       group_data.resize(new_group_data_size);
       hashes.resize(new_group_count);
       GroupSizePolicy::resize(new_group_count, new_group_data_size);
+
+      for (auto& aggregate : aggregates) {
+        aggregate->resize(new_group_count);
+      }
     } 
     
     auto target_data_iter = GroupSizePolicy::get_append_iterator(*this);
@@ -278,6 +282,11 @@ struct BasicRun : public GroupSizePolicy {
     append_buffer.clear();
   }
 
+  /**
+   * Utility for tests, not functionally necessary, but allows for `EXPECT_EQ(run.hashes, expected_hashes)`-like tests
+   * without having to account for the possibility that `run.hashes` may contain unused/uninitialized elements at the
+   * end.
+   */
   void shrink_to_size() {
     DebugAssert(append_buffer.empty() && aggregation_buffer.empty(),
                 "Cannot shrink_to_size run when operations are pending");
@@ -290,8 +299,11 @@ struct BasicRun : public GroupSizePolicy {
     }
 
     hashes.resize(size);
-
     GroupSizePolicy::shrink_to_size(size);
+
+    for (auto& aggregate : aggregates) {
+      aggregate->resize(size);
+    }
   }
 
   /**
@@ -392,10 +404,10 @@ struct BasicRun : public GroupSizePolicy {
   }
 };
 
-template <typename GroupSizePolicy>
-BasicRun<GroupSizePolicy> create_run(const AggregateHashSortSetup& setup, const size_t group_capacity = {},
+template <typename Run>
+Run create_run(const AggregateHashSortSetup& setup, const size_t group_capacity = {},
                                      const size_t group_data_capacity = {}) {
-  auto group_size_policy = GroupSizePolicy{setup, group_capacity};
+  auto group_size_policy = typename Run::GroupSizePolicyType{setup, group_capacity};
 
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(setup.aggregate_definitions.size());
 
@@ -458,6 +470,16 @@ struct FixedSizeInPlaceKey {
 
 template <size_t group_size>
 FixedSizeInPlaceKey<group_size> FixedSizeInPlaceKey<group_size>::EMPTY_KEY{true, {}, {}};
+
+#if VERBOSE
+template <size_t group_size>
+inline std::ostream& operator<<(std::ostream& stream, const FixedSizeInPlaceKey<group_size>& key) {
+  stream << "{" << key.empty << " " << key.hash << " ";
+  for (auto v : key.group) stream << v << " ";
+  stream << "}";
+  return stream;
+}
+#endif
 
 struct FixedSizeInPlaceCompare {
 #if VERBOSE
@@ -532,6 +554,12 @@ struct FixedSizeRemoteKey {
 
 inline FixedSizeRemoteKey FixedSizeRemoteKey::EMPTY_KEY{0, nullptr};
 
+#if VERBOSE
+inline std::ostream& operator<<(std::ostream& stream, const FixedSizeRemoteKey& key) {
+  return stream;
+}
+#endif
+
 struct FixedSizeRemoteCompare {
   size_t group_size{};
 
@@ -605,6 +633,12 @@ struct VariablySizedKey {
 };
 
 inline VariablySizedKey VariablySizedKey::EMPTY_KEY{{}, nullptr, {}};
+
+#if VERBOSE
+inline std::ostream& operator<<(std::ostream& stream, const VariablySizedKey& key) {
+  return stream;
+}
+#endif
 
 struct VariablySizedCompare {
 #if VERBOSE
@@ -940,9 +974,9 @@ struct TableRunSource : public AbstractRunSource<Run> {
    * @returns   The VariablySizedGroupRun and the end RowID, i.e., the RowID the next run starts at
    */
   static std::pair<Run, RowID> from_table_range(const AggregateHashSortSetup& setup,
-                                                                      const std::shared_ptr<const Table>& table,
-                                                                      const RowID& begin_row_id,
-                                                                      const size_t row_count) {
+                                                const std::shared_ptr<const Table>& table,
+                                                const RowID& begin_row_id,
+                                                const size_t row_count) {
     using GroupSizePolicy = typename Run::GroupSizePolicyType;
 
     Assert(row_count > 0, "Cannot materialize zero rows");
@@ -958,7 +992,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
     const auto [data_per_column, value_end_offsets, variably_sized_end_row_id] =
     materialize_variably_sized_columns(setup, table, begin_row_id, row_count);
 
-    auto run = create_run<GroupSizePolicy>(setup);
+    auto run = create_run<Run>(setup, row_count, 0);
 
     if constexpr (std::is_same_v<GroupSizePolicy, VariableGroupSizePolicy>) {
       run.group_end_offsets =

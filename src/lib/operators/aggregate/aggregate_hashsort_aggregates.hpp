@@ -58,8 +58,6 @@ struct BaseDistributiveAggregateRun : public BaseAggregateRun {
   }
 
   void resize(const size_t size) override {
-    DebugAssert(size >= values.size(), "Cannot shrink aggregate runs");
-
     values.resize(size);
     null_values.resize(size, true);
   }

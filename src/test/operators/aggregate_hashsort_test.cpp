@@ -1,5 +1,6 @@
 #include "base_test.hpp"
 #include "operators/abstract_aggregate_operator.hpp"
+#include "operators/aggregate/aggregate_hashsort_algorithm.hpp"
 #include "operators/aggregate/aggregate_hashsort_utils.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
@@ -198,7 +199,7 @@ TEST_F(AggregateHashSortTest, CreateRun) {
 
   const auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
 
-  const auto variable_group_size_run = create_run<VariableGroupSizePolicy>(setup, size_t{3}, size_t{50});
+  const auto variable_group_size_run = create_run<BasicRun<VariableGroupSizePolicy>>(setup, size_t{3}, size_t{50});
   EXPECT_EQ(variable_group_size_run.group_data.size(), 50u);
   EXPECT_EQ(variable_group_size_run.hashes.size(), 3u);
   EXPECT_EQ(variable_group_size_run.group_end_offsets.size(), 3u);
@@ -209,7 +210,7 @@ TEST_F(AggregateHashSortTest, RunWithFixedGroupSize) {
   setup.fixed_group_size = 6u;
   setup.offsets = {0, 9, 17};
 
-  auto run = create_run<DynamicFixedGroupSizePolicy>(setup);
+  auto run = create_run<BasicRun<DynamicFixedGroupSizePolicy>>(setup);
 
   add_group(run, std::optional<int64_t>{1}, int64_t{2}, std::optional<int32_t>{3});
   add_group(run, std::optional<int64_t>{4}, int64_t{5}, std::optional<int32_t>{});
@@ -248,7 +249,7 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
   const auto group_by_column_ids = std::vector{ColumnID{1}, ColumnID{2}, ColumnID{6}, ColumnID{0}};
   const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
 
-  auto run = create_run<VariableGroupSizePolicy>(setup);
+  auto run = create_run<BasicRun<VariableGroupSizePolicy>>(setup);
 
   // clang-format off
   add_group(run, std::optional<int32_t>{1}, 3.0,  "abc"s, std::optional<std::string>{"defg"}); run.hashes.back() = 1; // NOLINT
@@ -340,7 +341,7 @@ TEST_F(AggregateHashSortTest, TableRunSourceFixedOnly) {
   EXPECT_EQ(run_source.current_run().size, 3u);
 
   // clang-format off
-  auto expected_group_run_a = create_run<DynamicFixedGroupSizePolicy>(setup);
+  auto expected_group_run_a = create_run<BasicRun<DynamicFixedGroupSizePolicy>>(setup);
   add_group(expected_group_run_a, int32_t{13}, std::optional<float>{4.5f}, std::optional<double>{1.0});
   add_group(expected_group_run_a, int32_t{12}, std::optional<float>{},     std::optional<double>{-2.0});
   add_group(expected_group_run_a, int32_t{14}, std::optional<float>{1.5f}, std::optional<double>{});
@@ -365,7 +366,7 @@ TEST_F(AggregateHashSortTest, TableRunSourceFixedOnly) {
   // clang-format off
 
   // clang-format off
-  auto expected_group_run_b = create_run<DynamicFixedGroupSizePolicy>(setup);
+  auto expected_group_run_b = create_run<BasicRun<DynamicFixedGroupSizePolicy>>(setup);
   add_group(expected_group_run_b, int32_t{15}, std::optional<float>{1.5f}, std::optional<double>{});
   add_group(expected_group_run_b, int32_t{13}, std::optional<float>{},     std::optional<double>{-2.0});
   // clang-format on
@@ -407,7 +408,7 @@ TEST_F(AggregateHashSortTest,TableRunSourceMaterializeFixedSizeColumn) {
   const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{4}};
   const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
 
-  auto run = create_run<VariableGroupSizePolicy>(setup);
+  auto run = create_run<BasicRun<VariableGroupSizePolicy>>(setup);
 
   // clang-format off
   add_group(run, std::optional<int32_t>{}, int64_t{0}, "abcd"s);  // NOLINT
@@ -426,7 +427,7 @@ TEST_F(AggregateHashSortTest,TableRunSourceMaterializeFixedSizeColumn) {
   TableRunSource<BasicRun<VariableGroupSizePolicy>>::materialize_fixed_size_column(run, table, 0, ColumnID{1}, begin_row_id, row_count);
 
   // clang-format off
-  auto expected_group_run_a = create_run<VariableGroupSizePolicy>(setup);
+  auto expected_group_run_a = create_run<BasicRun<VariableGroupSizePolicy>>(setup);
   add_group(expected_group_run_a, std::optional<int32_t>{13}, int64_t{0}, "abcd"s);  // NOLINT
   add_group(expected_group_run_a, std::optional<int32_t>{},   int64_t{0}, "iiii"s);  // NOLINT
   add_group(expected_group_run_a, std::optional<int32_t>{},   int64_t{0},  ""s);  // NOLINT
@@ -439,7 +440,7 @@ TEST_F(AggregateHashSortTest,TableRunSourceMaterializeFixedSizeColumn) {
   TableRunSource<BasicRun<VariableGroupSizePolicy>>::materialize_fixed_size_column(run, table, 5, ColumnID{5}, begin_row_id, row_count);
 
   // clang-format off
-  auto expected_group_run_b = create_run<VariableGroupSizePolicy>(setup);
+  auto expected_group_run_b = create_run<BasicRun<VariableGroupSizePolicy>>(setup);
   add_group(expected_group_run_b, std::optional<int32_t>{13}, int64_t{14}, "abcd"s);  // NOLINT
   add_group(expected_group_run_b, std::optional<int32_t>{},   int64_t{15}, "iiii"s);  // NOLINT
   add_group(expected_group_run_b, std::optional<int32_t>{},   int64_t{16}, ""s);  // NOLINT
@@ -460,7 +461,7 @@ TEST_F(AggregateHashSortTest, TableRunSourceFromTableRange) {
   EXPECT_EQ(end_row_id, RowID(ChunkID{2}, ChunkOffset{1}));
 
   // clang-format off
-  auto expected_group_run = create_run<VariableGroupSizePolicy>(setup);
+  auto expected_group_run = create_run<BasicRun<VariableGroupSizePolicy>>(setup);
   add_group(expected_group_run, std::optional<int32_t>{11}, int64_t{12}, std::optional<std::string>{"x"},  "abcd"s,  std::optional<std::string>{"bcdef"});  // NOLINT
   add_group(expected_group_run, std::optional<int32_t>{13}, int64_t{14}, std::optional<std::string>{"y"},  "abcd"s,  std::optional<std::string>{"bcdef"});  // NOLINT
   add_group(expected_group_run, std::optional<int32_t>{},   int64_t{15}, std::optional<std::string>{"xy"}, "iiii"s,  std::optional<std::string>{});  // NOLINT
@@ -486,7 +487,6 @@ TEST_F(AggregateHashSortTest, ProduceInitialAggregates) {
   table->append({NullValue{}, 12, -2.0});
   table->append({1.5f, 14, NullValue{}});
   table->append({1.5f, 14, NullValue{}});
-
 
   const auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{
   {std::nullopt, AggregateFunction::CountRows},
@@ -521,314 +521,316 @@ TEST_F(AggregateHashSortTest, ProduceInitialAggregates) {
   EXPECT_EQ(avg->pairs, expected_avg_aggregates);
 }
 
-//TEST_F(AggregateHashSortTest, RadixFanOut) {
-//  EXPECT_EQ(RadixFanOut::for_level(0, 2), RadixFanOut(4, 62, 0b11));
-//  EXPECT_EQ(RadixFanOut::for_level(3, 2), RadixFanOut(4, 56, 0b11));
-//  EXPECT_EQ(RadixFanOut::for_level(3, 8), RadixFanOut(256, 32, 0b11111111));
-//  EXPECT_EQ(RadixFanOut::for_level(7, 8), RadixFanOut(256, 0, 0b11111111));
-//  EXPECT_EQ(RadixFanOut::for_level(8, 7), RadixFanOut(128, 1, 0b1111111));
-//
-//  EXPECT_ANY_THROW(RadixFanOut::for_level(9, 7));
-//  EXPECT_ANY_THROW(RadixFanOut::for_level(8, 8));
-//
-//  EXPECT_EQ(RadixFanOut(8, 1, 0b111).get_partition_for_hash(0b110101), 0b010);
-//  EXPECT_EQ(RadixFanOut(8, 1, 0b111).get_partition_for_hash(0b111010), 0b101);
-//
-//}
-//
-//TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
-//  auto groups_layout = FixedSizeGroupRunLayout{1, {std::nullopt}, {0}};
-//  auto groups = FixedSizeGroupRun<GetDynamicGroupSize>{&groups_layout, 7};
-//
-//  // clang-format off
-//  groups.hashes[0] = size_t{0b001}; groups.data[0] = int32_t{5};
-//  groups.hashes[1] = size_t{0b100}; groups.data[1] = int32_t{2};
-//  groups.hashes[2] = size_t{0b101}; groups.data[2] = int32_t{5};
-//  groups.hashes[3] = size_t{0b110}; groups.data[3] = int32_t{6};
-//  groups.hashes[4] = size_t{0b000}; groups.data[4] = int32_t{7};
-//  groups.hashes[5] = size_t{0b100}; groups.data[5] = int32_t{8};
-//  groups.hashes[6] = size_t{0b100}; groups.data[6] = int32_t{8};
-//  groups.size = 7;
-//  // clang-format off
-//
-//  auto aggregate = std::make_unique<SumAggregateRun<int32_t>>(7);
-//  // clang-format off
-//  aggregate->values =      {0,     1,     2,     3,     0,    5,     6};
-//  aggregate->null_values = {false, false, false, false, true, false, false};
-//  // clang-format on
-//  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
-//  aggregates.emplace_back(std::move(aggregate));
-//
-//  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>{std::move(groups),
-//                                                                                      std::move(aggregates)};
-//  auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>>{};
-//  runs.emplace_back(std::move(run));
-//
-//  auto fan_out = RadixFanOut{4, 1, 3};
-//  auto run_idx = size_t{0};
-//  auto run_offset = size_t{0};
-//
-//  auto run_source = std::static_pointer_cast<AbstractRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>>(std::make_shared<PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>>(&groups_layout, std::move(runs)));
-//  auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{fan_out.partition_count};
-//  partition(6, run_source, fan_out, run_idx, run_offset, partitions, 0);
-//  EXPECT_EQ(run_idx, 0);
-//  EXPECT_EQ(run_offset, 6);
-//
-//  ASSERT_EQ(partitions.size(), 4u);
-//
-//  ASSERT_EQ(partitions.at(0).runs.size(), 1u);
-//  ASSERT_EQ(partitions.at(1).runs.size(), 0u);
-//  ASSERT_EQ(partitions.at(2).runs.size(), 2u);
-//  ASSERT_EQ(partitions.at(3).runs.size(), 1u);
-//
-//  ASSERT_EQ(partitions.at(0).runs.at(0).groups.data, uninitialized_vector<uint32_t>({5, 7}));
-//  ASSERT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b001, 0b000}));
-//  ASSERT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
-//  const auto* aggregate_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(0).runs.at(0).aggregates.at(0).get());
-//  ASSERT_TRUE(aggregate_0);
-//  EXPECT_EQ(aggregate_0->values, std::vector<int64_t>({0, 0}));
-//  EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
-//
-//  ASSERT_EQ(partitions.at(2).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2, 5}));
-//  ASSERT_EQ(partitions.at(2).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b100, 0b101}));
-//  ASSERT_EQ(partitions.at(2).runs.at(0).aggregates.size(), 1u);
-//  const auto* aggregate_2_0 =
-//      dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(0).aggregates.at(0).get());
-//  ASSERT_TRUE(aggregate_2_0);
-//  EXPECT_EQ(aggregate_2_0->values, std::vector<int64_t>({1, 2}));
-//  EXPECT_EQ(aggregate_2_0->null_values, std::vector<bool>({false, false}));
-//
-//  ASSERT_EQ(partitions.at(2).runs.at(1).groups.data, uninitialized_vector<uint32_t>({8}));
-//  ASSERT_EQ(partitions.at(2).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b100}));
-//  ASSERT_EQ(partitions.at(2).runs.at(1).aggregates.size(), 1u);
-//  const auto* aggregate_2_1 =
-//      dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(1).aggregates.at(0).get());
-//  ASSERT_TRUE(aggregate_2_1);
-//  EXPECT_EQ(aggregate_2_1->values, std::vector<int64_t>({5}));
-//  EXPECT_EQ(aggregate_2_1->null_values, std::vector<bool>({false}));
-//
-//  ASSERT_EQ(partitions.at(3).runs.at(0).groups.data, uninitialized_vector<uint32_t>({6}));
-//  ASSERT_EQ(partitions.at(3).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b110}));
-//  ASSERT_EQ(partitions.at(3).runs.at(0).aggregates.size(), 1u);
-//  const auto* aggregate_3 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(3).runs.at(0).aggregates.at(0).get());
-//  ASSERT_TRUE(aggregate_3);
-//  EXPECT_EQ(aggregate_3->values, std::vector<int64_t>({3}));
-//  EXPECT_EQ(aggregate_3->null_values, std::vector<bool>({false}));
-//}
-//
-//TEST_F(AggregateHashSortTest, PartitionVariablySized) {
-//  const auto layout = VariablySizedGroupRunLayout::build(*table, {ColumnID{0}, ColumnID{1}});
-//  auto group_run = VariablySizedGroupRun{&layout};
-//
-//  // clang-format off
-//  add_group(group_run, std::optional<int32_t>{1}, std::optional<std::string>{"a"});   group_run.hashes.back() = 0b1;
-//  add_group(group_run, std::optional<int32_t>{2}, std::optional<std::string>{});      group_run.hashes.back() = 0b0;
-//  add_group(group_run, std::optional<int32_t>{},  std::optional<std::string>{"bc"});  group_run.hashes.back() = 0b0;
-//  add_group(group_run, std::optional<int32_t>{3}, std::optional<std::string>{"def"}); group_run.hashes.back() = 0b1;
-//  // clang-format on
-//
-//  auto fan_out = RadixFanOut{2, 0, 1};
-//  auto run_idx = size_t{0};
-//  auto run_offset = size_t{0};
-//
-//  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
-//
-//  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun>{std::move(group_run),
-//                                                                                          std::move(aggregates)};
-//  auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun>>{};
-//  runs.emplace_back(std::move(run));
-//
-//  auto run_source = std::static_pointer_cast<AbstractRunSource<VariablySizedGroupRun>>(std::make_shared<PartitionRunSource<VariablySizedGroupRun>>(&layout, std::move(runs)));
-//  auto partitions = std::vector<Partition<VariablySizedGroupRun>>{fan_out.partition_count};
-//  // Partition the entire run
-//  partition(4, run_source, fan_out, run_idx, run_offset, partitions, 0);
-//  EXPECT_EQ(run_idx, 1);
-//  EXPECT_EQ(run_offset, 0);
-//
-//  ASSERT_EQ(partitions.size(), 2);
-//
-//  ASSERT_EQ(partitions.at(0).runs.size(), 1u);
-//  ASSERT_EQ(partitions.at(1).runs.size(), 1u);
-//
-//  auto group_run_partition_a = VariablySizedGroupRun{&layout};
-//  auto group_run_partition_b = VariablySizedGroupRun{&layout};
-//
-//  // clang-format off
-//  add_group(group_run_partition_b, std::optional<int32_t>{1}, std::optional<std::string>{"a"});
-//  add_group(group_run_partition_a, std::optional<int32_t>{2}, std::optional<std::string>{});
-//  add_group(group_run_partition_a, std::optional<int32_t>{},  std::optional<std::string>{"bc"});
-//  add_group(group_run_partition_b, std::optional<int32_t>{3}, std::optional<std::string>{"def"});
-//  // clang-format on
-//
-//  // clang-format on
-//  EXPECT_EQ(partitions.at(0).runs.at(0).groups.data, group_run_partition_a.data);
-//  EXPECT_EQ(partitions.at(1).runs.at(0).groups.data, group_run_partition_b.data);
-//}
-//
-//TEST_F(AggregateHashSortTest, HashingFixed) {
-//  auto groups_layout = FixedSizeGroupRunLayout{2, {}, {0, 2}};
-//  auto groups = FixedSizeGroupRun<GetDynamicGroupSize>{&groups_layout, 4};
-//
-//  // clang-format off
-//  groups.hashes[0] = size_t{12}; groups.data[0] = int32_t{5}; groups.data[1] = int32_t{3};
-//  groups.hashes[1] = size_t{13}; groups.data[2] = int32_t{2}; groups.data[3] = int32_t{2};
-//  groups.hashes[2] = size_t{12}; groups.data[4] = int32_t{5}; groups.data[5] = int32_t{3};
-//  groups.hashes[3] = size_t{12}; groups.data[6] = int32_t{5}; groups.data[7] = int32_t{4};
-//  groups.size = 4;
-//  // clang-format on
-//
-//  auto aggregate = std::make_unique<SumAggregateRun<int32_t>>(4);
-//  // clang-format off
-//  aggregate->values =      {5,     6,     7,     0};
-//  aggregate->null_values = {false, false, false, true};
-//  // clang-format on
-//  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
-//  aggregates.emplace_back(std::move(aggregate));
-//
-//  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>{std::move(groups),
-//                                                                                      std::move(aggregates)};
-//  auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>>{};
-//  runs.emplace_back(std::move(run));
-//
-//  auto fan_out = RadixFanOut{2, 0, 1};
-//  auto run_idx = size_t{0};
-//  auto run_offset = size_t{0};
-//
-//  auto run_source = std::static_pointer_cast<AbstractRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>>(std::make_shared<PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>>(&groups_layout, std::move(runs)));
-//  auto partitions = std::vector<Partition<FixedSizeGroupRun<GetDynamicGroupSize>>>{fan_out.partition_count};
-//  // Config hashing() so that the entire input is hashed
-//  const auto [continue_hashing, processed_row_count] =
-//      hashing(3, 1.0f, run_source, fan_out, run_idx, run_offset, partitions, 0);
-//  EXPECT_EQ(run_idx, 1);
-//  EXPECT_EQ(run_offset, 0);
-//  EXPECT_EQ(processed_row_count, 4);
-//  EXPECT_TRUE(continue_hashing);
-//
-//  ASSERT_EQ(partitions.size(), 2u);
-//
-//  ASSERT_EQ(partitions.at(0).size(), 2u);
-//  ASSERT_EQ(partitions.at(1).size(), 1u);
-//
-//  ASSERT_EQ(partitions.at(0).runs.at(0).groups.data, uninitialized_vector<uint32_t>({5, 3, 5, 4}));
-//  ASSERT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({12, 12}));
-//  ASSERT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
-//  const auto* aggregate_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(0).runs.at(0).aggregates.at(0).get());
-//  ASSERT_TRUE(aggregate_0);
-//  EXPECT_EQ(aggregate_0->values, std::vector<int64_t>({12, 0}));
-//  EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
-//
-//  ASSERT_EQ(partitions.at(1).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2, 2}));
-//  ASSERT_EQ(partitions.at(1).runs.at(0).groups.hashes, uninitialized_vector<size_t>({13}));
-//  ASSERT_EQ(partitions.at(1).runs.at(0).aggregates.size(), 1u);
-//  const auto* aggregate_1 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(1).runs.at(0).aggregates.at(0).get());
-//  ASSERT_TRUE(aggregate_1);
-//  EXPECT_EQ(aggregate_1->values, std::vector<int64_t>({6}));
-//  EXPECT_EQ(aggregate_1->null_values, std::vector<bool>({false}));
-//}
-//
-//TEST_F(AggregateHashSortTest, HashingVariablySized) {
-//  const auto layout = VariablySizedGroupRunLayout::build(*table, {ColumnID{0}, ColumnID{1}});
-//  auto group_run = VariablySizedGroupRun{&layout};
-//
-//  // clang-format off
-//  add_group(group_run, std::optional<int32_t>{1}, std::optional<std::string>{"a"});     group_run.hashes.back() = 0b0;
-//  add_group(group_run, std::optional<int32_t>{2}, std::optional<std::string>{"hell"});  group_run.hashes.back() = 0b1;
-//  add_group(group_run, std::optional<int32_t>{2}, std::optional<std::string>{"hello"}); group_run.hashes.back() = 0b1;
-//  add_group(group_run, std::optional<int32_t>{2}, std::optional<std::string>{"hell"});  group_run.hashes.back() = 0b1;
-//  // clang-format on
-//
-//  auto fan_out = RadixFanOut{2, 0, 1};
-//  auto run_idx = size_t{0};
-//  auto run_offset = size_t{0};
-//
-//  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
-//
-//  auto run = opossum::aggregate_hashsort::Run<VariablySizedGroupRun>{std::move(group_run),
-//                                                                                          std::move(aggregates)};
-//  auto runs = std::vector<opossum::aggregate_hashsort::Run<VariablySizedGroupRun>>{};
-//  runs.emplace_back(std::move(run));
-//
-//  auto run_source = std::static_pointer_cast<AbstractRunSource<VariablySizedGroupRun>>(std::make_shared<PartitionRunSource<VariablySizedGroupRun>>(&layout, std::move(runs)));
-//  auto partitions = std::vector<Partition<VariablySizedGroupRun>>{fan_out.partition_count};
-//
-//  // Configure hashing() so that the entire input is aggregated
-//  const auto [continue_hashing, processed_row_count] =
-//      hashing(3, 1.0f, run_source, fan_out, run_idx, run_offset, partitions, 0);
-//  EXPECT_EQ(run_idx, 1);
-//  EXPECT_EQ(run_offset, 0);
-//  EXPECT_EQ(processed_row_count, 4);
-//  EXPECT_TRUE(continue_hashing);
-//
-//  ASSERT_EQ(partitions.size(), 2u);
-//  ASSERT_EQ(partitions.at(0).runs.size(), 1u);
-//  ASSERT_EQ(partitions.at(1).runs.size(), 1u);
-//
-//  auto group_run_partition_a = VariablySizedGroupRun{&layout};
-//  auto group_run_partition_b = VariablySizedGroupRun{&layout};
-//
-//  // clang-format off
-//  add_group(group_run_partition_a, std::optional<int32_t>{1}, std::optional<std::string>{"a"});
-//  add_group(group_run_partition_b, std::optional<int32_t>{2}, std::optional<std::string>{"hell"});
-//  add_group(group_run_partition_b, std::optional<int32_t>{2}, std::optional<std::string>{"hello"});
-//  // clang-format on
-//
-//  EXPECT_EQ(partitions.at(0).runs.at(0).groups.data, group_run_partition_a.data);
-//  EXPECT_EQ(partitions.at(1).runs.at(0).groups.data, group_run_partition_b.data);
-//}
-//
-//TEST_F(AggregateHashSortTest, AggregateAdaptive) {
-//  auto groups_layout = FixedSizeGroupRunLayout{1, {std::nullopt}, {0}};
-//  auto groups = FixedSizeGroupRun<GetDynamicGroupSize>{&groups_layout, 8};
-//
-//  // clang-format off
-//  groups.hashes[0] = size_t{0b1}; groups.data[0] = int32_t{5};
-//  groups.hashes[1] = size_t{0b1}; groups.data[1] = int32_t{3};
-//  groups.hashes[2] = size_t{0b1}; groups.data[2] = int32_t{5};
-//  groups.hashes[3] = size_t{0b0}; groups.data[3] = int32_t{2};
-//  groups.hashes[4] = size_t{0b1}; groups.data[4] = int32_t{3};
-//  groups.hashes[5] = size_t{0b1}; groups.data[5] = int32_t{5};
-//  groups.hashes[6] = size_t{0b0}; groups.data[6] = int32_t{2};
-//  groups.hashes[7] = size_t{0b0}; groups.data[7] = int32_t{2};
-//  groups.size = 8;
-//  // clang-format off
-//
-//  // Config so that [0,3] are hashed, [4,5] are partitioned and [6,7] are hashed again
-//  AggregateHashSortConfig config;
-//  config.hash_table_size = 4;
-//  config.hash_table_max_load_factor = 0.5f;
-//  config.max_partitioning_counter = 2;
-//
-//  auto run = opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>{std::move(groups), {}};
-//  auto runs = std::vector<opossum::aggregate_hashsort::Run<FixedSizeGroupRun<GetDynamicGroupSize>>>{};
-//  runs.emplace_back(std::move(run));
-//
-//  auto fan_out = RadixFanOut{2, 0, 1};
-//
-//  auto run_source = std::static_pointer_cast<AbstractRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>>(std::make_shared<PartitionRunSource<FixedSizeGroupRun<GetDynamicGroupSize>>>(&groups_layout, std::move(runs)));
-//  const auto partitions = adaptive_hashing_and_partition<FixedSizeGroupRun<GetDynamicGroupSize>>(config, std::move(run_source), fan_out, 0);
-//
-//  ASSERT_EQ(partitions.size(), 2u);
-//
-//  ASSERT_EQ(partitions.at(0).size(), 2u);
-//  ASSERT_EQ(partitions.at(1).size(), 4u);
-//
-//  ASSERT_EQ(partitions.at(0).runs.size(), 2u);
-//  ASSERT_EQ(partitions.at(1).runs.size(), 2u);
-//
-//  EXPECT_EQ(partitions.at(0).runs.at(0).is_aggregated, RunIsAggregated::No);
-//  EXPECT_EQ(partitions.at(0).runs.at(1).is_aggregated, RunIsAggregated::Yes);
-//  EXPECT_EQ(partitions.at(1).runs.at(0).is_aggregated, RunIsAggregated::No);
-//  EXPECT_EQ(partitions.at(1).runs.at(1).is_aggregated, RunIsAggregated::No);
-//
-//  EXPECT_EQ(partitions.at(0).runs.at(0).groups.data, uninitialized_vector<uint32_t>({2}));
-//  EXPECT_EQ(partitions.at(0).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b0}));
-//  EXPECT_EQ(partitions.at(0).runs.at(1).groups.data, uninitialized_vector<uint32_t>({2}));
-//  EXPECT_EQ(partitions.at(0).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b0}));
-//
-//  EXPECT_EQ(partitions.at(1).runs.at(0).groups.data, uninitialized_vector<uint32_t>({5, 3}));
-//  EXPECT_EQ(partitions.at(1).runs.at(0).groups.hashes, uninitialized_vector<size_t>({0b1, 0b1}));
-//  EXPECT_EQ(partitions.at(1).runs.at(1).groups.data, uninitialized_vector<uint32_t>({3, 5}));
-//  EXPECT_EQ(partitions.at(1).runs.at(1).groups.hashes, uninitialized_vector<size_t>({0b1, 0b1}));
-//}
+TEST_F(AggregateHashSortTest, RadixFanOut) {
+  EXPECT_EQ(RadixFanOut::for_level(0, 2), RadixFanOut(4, 62, 0b11));
+  EXPECT_EQ(RadixFanOut::for_level(3, 2), RadixFanOut(4, 56, 0b11));
+  EXPECT_EQ(RadixFanOut::for_level(3, 8), RadixFanOut(256, 32, 0b11111111));
+  EXPECT_EQ(RadixFanOut::for_level(7, 8), RadixFanOut(256, 0, 0b11111111));
+  EXPECT_EQ(RadixFanOut::for_level(8, 7), RadixFanOut(128, 1, 0b1111111));
+
+  EXPECT_ANY_THROW(RadixFanOut::for_level(9, 7));
+  EXPECT_ANY_THROW(RadixFanOut::for_level(8, 8));
+
+  EXPECT_EQ(RadixFanOut(8, 1, 0b111).get_partition_for_hash(0b110101), 0b010);
+  EXPECT_EQ(RadixFanOut(8, 1, 0b111).get_partition_for_hash(0b111010), 0b101);
+}
+
+TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
+  using Run = BasicRun<DynamicFixedGroupSizePolicy>;
+
+  const auto group_by_column_ids = std::vector{ColumnID{4}};
+  const auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Sum}};
+
+  const auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
+
+  auto run = create_run<Run>(setup);
+
+  // clang-format off
+  add_group(run, int32_t{5}); run.hashes[0] = size_t{0b001};
+  add_group(run, int32_t{2}); run.hashes[1] = size_t{0b100};
+  add_group(run, int32_t{5}); run.hashes[2] = size_t{0b101};
+  add_group(run, int32_t{6}); run.hashes[3] = size_t{0b110};
+  add_group(run, int32_t{7}); run.hashes[4] = size_t{0b000};
+  add_group(run, int32_t{8}); run.hashes[5] = size_t{0b100};
+  add_group(run, int32_t{8}); run.hashes[6] = size_t{0b100};
+  // clang-format off
+
+  auto* sum_aggregate = dynamic_cast<SumAggregateRun<int32_t>*>(run.aggregates.at(0).get());
+  // clang-format off
+  sum_aggregate->values =      {0,     1,     2,     3,     0,    5,     6};
+  sum_aggregate->null_values = {false, false, false, false, true, false, false};
+  // clang-format on
+
+  auto runs = std::vector<BasicRun<DynamicFixedGroupSizePolicy>>{};
+  runs.emplace_back(std::move(run));
+
+  auto fan_out = RadixFanOut{4, 1, 3};
+
+  const auto run_source = std::make_shared<PartitionRunSource<Run>>(std::move(runs));
+  const auto abstract_run_source = std::static_pointer_cast<AbstractRunSource<Run>>(run_source);
+
+  auto partitions = std::vector<Partition<Run>>{fan_out.partition_count};
+  partition<Run>(setup, 6, run_source, fan_out, partitions, 0);
+  EXPECT_EQ(run_source->run_idx, 0);
+  EXPECT_EQ(run_source->run_offset, 6);
+
+  ASSERT_EQ(partitions.size(), 4u);
+
+  ASSERT_EQ(partitions.at(0).runs.size(), 1u);
+  ASSERT_EQ(partitions.at(1).runs.size(), 0u);
+  ASSERT_EQ(partitions.at(2).runs.size(), 1u);
+  ASSERT_EQ(partitions.at(3).runs.size(), 1u);
+
+  ASSERT_EQ(partitions.at(0).runs.at(0).group_data, uninitialized_vector<uint32_t>({5, 7}));
+  ASSERT_EQ(partitions.at(0).runs.at(0).hashes, uninitialized_vector<size_t>({0b001, 0b000}));
+  ASSERT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(0).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_0);
+  EXPECT_EQ(aggregate_0->values, std::vector<int64_t>({0, 0}));
+  EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
+
+  ASSERT_EQ(partitions.at(2).runs.at(0).group_data, uninitialized_vector<uint32_t>({2, 5, 8}));
+  ASSERT_EQ(partitions.at(2).runs.at(0).hashes, uninitialized_vector<size_t>({0b100, 0b101, 0b100}));
+  ASSERT_EQ(partitions.at(2).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_2 =
+      dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(2).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_2);
+  EXPECT_EQ(aggregate_2->values, std::vector<int64_t>({1, 2, 5}));
+  EXPECT_EQ(aggregate_2->null_values, std::vector<bool>({false, false, false}));
+
+  ASSERT_EQ(partitions.at(3).runs.at(0).group_data, uninitialized_vector<uint32_t>({6}));
+  ASSERT_EQ(partitions.at(3).runs.at(0).hashes, uninitialized_vector<size_t>({0b110}));
+  ASSERT_EQ(partitions.at(3).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_3 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(3).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_3);
+  EXPECT_EQ(aggregate_3->values, std::vector<int64_t>({3}));
+  EXPECT_EQ(aggregate_3->null_values, std::vector<bool>({false}));
+}
+
+TEST_F(AggregateHashSortTest, PartitionVariablySized) {
+  using Run = BasicRun<VariableGroupSizePolicy>;
+
+  const auto group_by_column_ids = std::vector{ColumnID{0}, ColumnID{1}};
+  const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+
+  auto run = create_run<Run>(setup);
+
+  // clang-format off
+  add_group(run, std::optional<int32_t>{1}, std::optional<std::string>{"a"});   run.hashes.back() = 0b1;
+  add_group(run, std::optional<int32_t>{2}, std::optional<std::string>{});      run.hashes.back() = 0b0;
+  add_group(run, std::optional<int32_t>{},  std::optional<std::string>{"bc"});  run.hashes.back() = 0b0;
+  add_group(run, std::optional<int32_t>{3}, std::optional<std::string>{"def"}); run.hashes.back() = 0b1;
+  // clang-format on
+
+  auto fan_out = RadixFanOut{2, 0, 1};
+
+  auto runs = std::vector<Run>{};
+  runs.emplace_back(std::move(run));
+
+  const auto run_source = std::make_shared<PartitionRunSource<Run>>(std::move(runs));
+  const auto abstract_run_source = std::static_pointer_cast<AbstractRunSource<Run>>(run_source);
+
+  auto partitions = std::vector<Partition<Run>>{fan_out.partition_count};
+  // Partition the entire run
+  partition<Run>(setup, 4, run_source, fan_out, partitions, 0);
+  EXPECT_EQ(run_source->run_idx, 0);
+  EXPECT_EQ(run_source->run_offset, 4);
+
+  ASSERT_EQ(partitions.size(), 2);
+
+  ASSERT_EQ(partitions.at(0).runs.size(), 1u);
+  ASSERT_EQ(partitions.at(1).runs.size(), 1u);
+
+  auto run_partition_a = create_run<Run>(setup);
+  auto run_partition_b = create_run<Run>(setup);
+
+  // clang-format off
+  add_group(run_partition_b, std::optional<int32_t>{1}, std::optional<std::string>{"a"});
+  add_group(run_partition_a, std::optional<int32_t>{2}, std::optional<std::string>{});
+  add_group(run_partition_a, std::optional<int32_t>{},  std::optional<std::string>{"bc"});
+  add_group(run_partition_b, std::optional<int32_t>{3}, std::optional<std::string>{"def"});
+  // clang-format on
+
+  // clang-format on
+  EXPECT_FALSE(partitions.at(0).runs.at(0).is_aggregated);
+  EXPECT_EQ(partitions.at(0).runs.at(0).group_data, run_partition_a.group_data);
+  EXPECT_FALSE(partitions.at(0).runs.at(0).is_aggregated);
+  EXPECT_EQ(partitions.at(1).runs.at(0).group_data, run_partition_b.group_data);
+}
+
+TEST_F(AggregateHashSortTest, HashingFixed) {
+  using Run = BasicRun<DynamicFixedGroupSizePolicy>;
+
+  const auto group_by_column_ids = std::vector{ColumnID{4}, ColumnID{4}};
+  const auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Sum}};
+  const auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
+
+  auto run = create_run<Run>(setup);
+
+  // clang-format off
+  add_group(run, int32_t{5}, int32_t{3}); run.hashes.back() = 12;
+  add_group(run, int32_t{2}, int32_t{2}); run.hashes.back() = 13;
+  add_group(run, int32_t{5}, int32_t{3}); run.hashes.back() = 12;
+  add_group(run, int32_t{5}, int32_t{4}); run.hashes.back() = 12;
+  // clang-format on
+
+  auto* aggregate = dynamic_cast<SumAggregateRun<int32_t>*>(run.aggregates.at(0).get());
+  // clang-format off
+  aggregate->values =      {5,     6,     7,     0};
+  aggregate->null_values = {false, false, false, true};
+  // clang-format on
+
+  auto runs = std::vector<Run>{};
+  runs.emplace_back(std::move(run));
+
+  auto fan_out = RadixFanOut{2, 0, 1};
+
+  const auto run_source = std::make_shared<PartitionRunSource<Run>>(std::move(runs));
+  const auto abstract_run_source =std::static_pointer_cast<AbstractRunSource<Run>>(run_source);
+  
+  auto partitions = std::vector<Partition<Run>>{fan_out.partition_count};
+  
+  // Config hashing() so that the entire input is hashed
+  const auto [continue_hashing, processed_row_count] =
+      hashing<Run>(setup, 3, 1.0f, run_source, fan_out, partitions, 0);
+  
+  EXPECT_EQ(run_source->run_idx, 0);
+  EXPECT_EQ(run_source->run_offset, 4);
+  EXPECT_EQ(processed_row_count, 4);
+  EXPECT_TRUE(continue_hashing);
+
+  ASSERT_EQ(partitions.size(), 2u);
+
+  ASSERT_EQ(partitions.at(0).size(), 2u);
+  ASSERT_EQ(partitions.at(1).size(), 1u);
+
+  ASSERT_EQ(partitions.at(0).runs.at(0).group_data, uninitialized_vector<uint32_t>({5, 3, 5, 4}));
+  ASSERT_EQ(partitions.at(0).runs.at(0).hashes, uninitialized_vector<size_t>({12, 12}));
+  ASSERT_EQ(partitions.at(0).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_0 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(0).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_0);
+  EXPECT_EQ(aggregate_0->values, std::vector<int64_t>({12, 0}));
+  EXPECT_EQ(aggregate_0->null_values, std::vector<bool>({false, true}));
+
+  ASSERT_EQ(partitions.at(1).runs.at(0).group_data, uninitialized_vector<uint32_t>({2, 2}));
+  ASSERT_EQ(partitions.at(1).runs.at(0).hashes, uninitialized_vector<size_t>({13}));
+  ASSERT_EQ(partitions.at(1).runs.at(0).aggregates.size(), 1u);
+  const auto* aggregate_1 = dynamic_cast<SumAggregateRun<int32_t>*>(partitions.at(1).runs.at(0).aggregates.at(0).get());
+  ASSERT_TRUE(aggregate_1);
+  EXPECT_EQ(aggregate_1->values, std::vector<int64_t>({6}));
+  EXPECT_EQ(aggregate_1->null_values, std::vector<bool>({false}));
+}
+
+TEST_F(AggregateHashSortTest, HashingVariablySized) {
+  using Run = BasicRun<VariableGroupSizePolicy>;
+
+  const auto group_by_column_ids = std::vector{ColumnID{0}, ColumnID{1}};
+  const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+
+  auto run = create_run<Run>(setup);
+
+  // clang-format off
+  add_group(run, std::optional<int32_t>{1}, std::optional<std::string>{"a"});     run.hashes.back() = 0b0;
+  add_group(run, std::optional<int32_t>{2}, std::optional<std::string>{"hell"});  run.hashes.back() = 0b1;
+  add_group(run, std::optional<int32_t>{2}, std::optional<std::string>{"hello"}); run.hashes.back() = 0b1;
+  add_group(run, std::optional<int32_t>{2}, std::optional<std::string>{"hell"});  run.hashes.back() = 0b1;
+  // clang-format on
+
+  auto fan_out = RadixFanOut{2, 0, 1};
+
+  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>();
+
+  auto runs = std::vector<Run>{};
+  runs.emplace_back(std::move(run));
+
+  const auto run_source = std::make_shared<PartitionRunSource<Run>>(std::move(runs));
+  const auto abstract_run_source = std::static_pointer_cast<AbstractRunSource<Run>>(run_source);
+  auto partitions = std::vector<Partition<Run>>{fan_out.partition_count};
+
+  // Configure hashing() so that the entire input is aggregated
+  const auto [continue_hashing, processed_row_count] =
+      hashing<Run>(setup, 3, 1.0f, run_source, fan_out, partitions, 0);
+  EXPECT_EQ(run_source->run_idx, 0);
+  EXPECT_EQ(run_source->run_offset, 4);
+  EXPECT_EQ(processed_row_count, 4);
+  EXPECT_TRUE(continue_hashing);
+
+  ASSERT_EQ(partitions.size(), 2u);
+  ASSERT_EQ(partitions.at(0).runs.size(), 1u);
+  ASSERT_EQ(partitions.at(1).runs.size(), 1u);
+
+  auto group_run_partition_a = create_run<Run>(setup);
+  auto group_run_partition_b = create_run<Run>(setup);
+
+  // clang-format off
+  add_group(group_run_partition_a, std::optional<int32_t>{1}, std::optional<std::string>{"a"});
+  add_group(group_run_partition_b, std::optional<int32_t>{2}, std::optional<std::string>{"hell"});
+  add_group(group_run_partition_b, std::optional<int32_t>{2}, std::optional<std::string>{"hello"});
+  // clang-format on
+
+  EXPECT_TRUE(partitions.at(0).runs.at(0).is_aggregated);
+  EXPECT_EQ(partitions.at(0).runs.at(0).group_data, group_run_partition_a.group_data);
+  EXPECT_TRUE(partitions.at(1).runs.at(0).is_aggregated);
+  EXPECT_EQ(partitions.at(1).runs.at(0).group_data, group_run_partition_b.group_data);
+}
+
+TEST_F(AggregateHashSortTest, AggregateAdaptive) {
+  using Run = BasicRun<StaticFixedGroupSizePolicy<1>>;
+
+  const auto group_by_column_ids = std::vector{ColumnID{4}};
+
+  // Config so that [0,3] are hashed, [4,5] are partitioned and [6,7] are hashed again
+  AggregateHashSortConfig config;
+  config.hash_table_size = 4;
+  config.hash_table_max_load_factor = 0.5f;
+  config.max_partitioning_counter = 2;
+
+  const auto setup = AggregateHashSortSetup::create(config, table, {}, group_by_column_ids);
+
+  auto run = create_run<Run>(setup);
+
+  // clang-format off
+  add_group(run, int32_t{5}); run.hashes.back() = size_t{0b1};
+  add_group(run, int32_t{3}); run.hashes.back() = size_t{0b1};
+  add_group(run, int32_t{5}); run.hashes.back() = size_t{0b1};
+  add_group(run, int32_t{2}); run.hashes.back() = size_t{0b0};
+  add_group(run, int32_t{3}); run.hashes.back() = size_t{0b1};
+  add_group(run, int32_t{5}); run.hashes.back() = size_t{0b1};
+  add_group(run, int32_t{2}); run.hashes.back() = size_t{0b0};
+  add_group(run, int32_t{2}); run.hashes.back() = size_t{0b0};
+  // clang-format off
+
+  auto runs = std::vector<Run>{};
+  runs.emplace_back(std::move(run));
+
+  auto fan_out = RadixFanOut{2, 0, 1};
+
+  const auto run_source = std::make_shared<PartitionRunSource<Run>>(std::move(runs));
+  const auto abstract_run_source = std::static_pointer_cast<AbstractRunSource<Run>>(run_source);
+  const auto partitions = adaptive_hashing_and_partition<Run>(setup, abstract_run_source, fan_out, 0);
+
+  ASSERT_EQ(partitions.size(), 2u);
+
+  ASSERT_EQ(partitions.at(0).size(), 2u);
+  ASSERT_EQ(partitions.at(1).size(), 4u);
+
+  ASSERT_EQ(partitions.at(0).runs.size(), 2u);
+  ASSERT_EQ(partitions.at(1).runs.size(), 2u);
+
+  EXPECT_EQ(partitions.at(0).runs.at(0).is_aggregated, false);
+  EXPECT_EQ(partitions.at(0).runs.at(1).is_aggregated, true);
+  EXPECT_EQ(partitions.at(1).runs.at(0).is_aggregated, false);
+  EXPECT_EQ(partitions.at(1).runs.at(1).is_aggregated, false);
+
+  EXPECT_EQ(partitions.at(0).runs.at(0).group_data, uninitialized_vector<uint32_t>({2}));
+  EXPECT_EQ(partitions.at(0).runs.at(0).hashes, uninitialized_vector<size_t>({0b0}));
+  EXPECT_EQ(partitions.at(0).runs.at(1).group_data, uninitialized_vector<uint32_t>({2}));
+  EXPECT_EQ(partitions.at(0).runs.at(1).hashes, uninitialized_vector<size_t>({0b0}));
+
+  EXPECT_EQ(partitions.at(1).runs.at(0).group_data, uninitialized_vector<uint32_t>({5, 3}));
+  EXPECT_EQ(partitions.at(1).runs.at(0).hashes, uninitialized_vector<size_t>({0b1, 0b1}));
+  EXPECT_EQ(partitions.at(1).runs.at(1).group_data, uninitialized_vector<uint32_t>({3, 5}));
+  EXPECT_EQ(partitions.at(1).runs.at(1).hashes, uninitialized_vector<size_t>({0b1, 0b1}));
+}
 
 }  // namespace opossum

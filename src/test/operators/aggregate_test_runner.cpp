@@ -168,6 +168,10 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
     // Test that - even if non-sensical - aggregating a group-by column works.
     for (const auto data_type : all_data_types) {
       for (const auto aggregate_function : all_aggregate_functions) {
+        if (aggregate_function == AggregateFunction::CountRows) {
+          continue;
+        }
+
         for (const auto nullable : {false, true}) {
           auto configuration = default_configuration;
 
@@ -175,8 +179,9 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
           configuration.group_by_column_ids = {
               column_id,
           };
+
           configuration.aggregate_column_definitions = {
-              {column_id, aggregate_function},
+          {column_id, aggregate_function},
           };
 
           add_configuration_if_supported(configuration);
@@ -268,7 +273,7 @@ TEST_P(AggregateTestRunner, TestAggregate) {
 // clang-format off
 INSTANTIATE_TEST_CASE_P(AggregateHash, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateHash>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(AggregateSort, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateSort>()), );  // NOLINT
-// INSTANTIATE_TEST_CASE_P(AggregateHashSort, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateHashSort>()), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(AggregateHashSort, AggregateTestRunner, testing::ValuesIn(AggregateTestRunner::create_configurations<AggregateHashSort>()), );  // NOLINT
 // clang-format on
 
 }  // namespace opossum

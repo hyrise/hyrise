@@ -8,6 +8,9 @@
 #include "operators/aggregate/aggregate_traits.hpp"
 #include "storage/segment_iterate.hpp"
 
+#if !VERBOSE
+#define DBG_MACRO_DISABLE
+#endif
 #include "dbg.h"
 
 using namespace opossum::aggregate_hashsort;  // NOLINT
@@ -68,6 +71,10 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>();
   const auto output_column_definitions = _get_output_column_defintions();
 
+#if VERBOSE
+  Timer t;
+#endif
+
   resolve_group_size_policy(setup, [&](const auto group_size_policy_t) {
     using GroupSizePolicy = typename decltype(group_size_policy_t)::type;
 
@@ -79,9 +86,6 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     /**
      * Materialize aggregate/group runs into segments
      */
-#if VERBOSE
-    Timer t;
-#endif
     output_chunks.resize(output_runs.size());
 
     for (auto run_idx = size_t{0}; run_idx < output_runs.size(); ++run_idx) {
@@ -106,14 +110,14 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
 
       output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);
     }
-#if VERBOSE
-    std::cout << "Building output table with " << output_table->row_count() << " rows and " << output_table->chunk_count()
-              << " chunks in " << t.lap_formatted() << std::endl;
-#endif
   });
 
   const auto output_table =
       std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
+#if VERBOSE
+  std::cout << "Building output table with " << output_table->row_count() << " rows and " << output_table->chunk_count()
+            << " chunks in " << t.lap_formatted() << std::endl;
+#endif
 
   return output_table;
 }
