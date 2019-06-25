@@ -765,10 +765,10 @@ std::vector<SQLTranslator::NamedExpression> SQLTranslator::_translate_select_lis
   auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
   for (const auto& hsql_select_expr : select_list) {
     if (hsql_select_expr->type == hsql::kExprStar) {
-      select_list_elements.emplace_back(SQLTranslator::NamedExpression{nullptr});
+      select_list_elements.emplace_back(NamedExpression{nullptr});
     } else {
       auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
-      select_list_elements.emplace_back(SQLTranslator::NamedExpression{expression});
+      select_list_elements.emplace_back(NamedExpression{expression});
       auto identifiers = _sql_identifier_resolver->get_expression_identifiers(expression);
       select_list_elements.back().identifiers = identifiers;
 
@@ -787,7 +787,7 @@ std::vector<SQLTranslator::NamedExpression> SQLTranslator::_translate_select_lis
 }
 
 void SQLTranslator::_translate_select_groupby_having(
-    const hsql::SelectStatement& select, const std::vector<SQLTranslator::NamedExpression>& select_list_elements) {
+    const hsql::SelectStatement& select, const std::vector<NamedExpression>& select_list_elements) {
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
@@ -1548,7 +1548,7 @@ SQLTranslator::NamedExpression::NamedExpression(const std::shared_ptr<AbstractEx
 
 SQLTranslator::TableSourceState::TableSourceState(
     const std::shared_ptr<AbstractLQPNode>& lqp,
-    const std::unordered_map<std::string, std::vector<SQLTranslator::NamedExpression>>& elements_by_table_name,
+    const std::unordered_map<std::string, std::vector<NamedExpression>>& elements_by_table_name,
     const std::vector<NamedExpression>& elements_in_order,
     const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver)
     : lqp(lqp),
