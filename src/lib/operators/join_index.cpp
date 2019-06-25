@@ -9,13 +9,11 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "index_scan.hpp"
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/segment_iterate.hpp"
-#include "table_wrapper.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
