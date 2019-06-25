@@ -572,6 +572,8 @@ set(
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
+    utils/pruning_column_id_mapping.cpp
+    utils/pruning_column_id_mapping.hpp
     utils/scoped_locking_ptr.hpp
     utils/singleton.hpp
     utils/sqlite_wrapper.cpp
