@@ -309,6 +309,10 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
   const auto lqp_column_reference = table_node->get_column(column_specification.column_name);
 
   const auto value = _generate_value_expression(column_specification, selectivity, string_predicate_type);
+
+  if (string_predicate_type != StringPredicateType::Equality)
+    return like_(lqp_column_(lqp_column_reference), value);
+
   return less_than_equals_(lqp_column_(lqp_column_reference), value);
 }
 
