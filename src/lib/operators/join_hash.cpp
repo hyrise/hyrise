@@ -64,6 +64,49 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
+template <typename T>
+size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
+  /*
+    Setting number of bits for radix clustering:
+    The number of bits is used to create probe partitions with a size that can
+    be expected to fit into the L2 cache.
+    This should incorporate hardware knowledge, once available in Hyrise.
+    As of now, we assume a L2 cache size of 256 KB.
+    We estimate the size the following way:
+      - we assume each key appears once (that is an overestimation space-wise, but we
+      aim rather for a hash map that is slightly smaller than L2 than slightly larger)
+      - each entry in the hash map is a data structure holding the actual value
+      and the RowID
+  */
+  if (build_relation_size > probe_relation_size) {
+    /*
+      Hash joins perform best when the build relation is small. In case the
+      optimizer selects the hash join due to such a situation, but neglects that the
+      input will be switched (e.g., due to the join mode), the user will be warned.
+    */
+    PerformanceWarning("Build relation larger than probe relation in hash join");
+  }
+
+  const auto l2_cache_size = 256'000;  // bytes
+
+  // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
+  // that each value maps to a PosList with a single RowID. For the used small_vector's, we assume a
+  // size of 2*RowID per PosList. For sizing, see comments:
+  // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
+  const auto complete_hash_map_size =
+      // number of items in map
+      (build_relation_size *
+       // key + value (and one byte overhead, see link above)
+       (sizeof(T) + 2 * sizeof(RowID) + 1))
+      // fill factor
+      / 0.8;
+
+  const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
+  const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
+
+  return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
+}
+
 std::shared_ptr<const Table> JoinHash::_on_execute() {
   Assert(supports(_mode, _primary_predicate.predicate_condition,
                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
@@ -140,9 +183,14 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
+        if (!_radix_bits) {
+          _radix_bits =
+              calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count());
+        }
+
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, _radix_bits,
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
             std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
@@ -161,7 +209,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   JoinHashImpl(const JoinHash& join_hash, const std::shared_ptr<const Table>& build_input_table,
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-               const OutputColumnOrder output_column_order, const std::optional<size_t>& radix_bits = std::nullopt,
+               const OutputColumnOrder output_column_order, const size_t radix_bits,
                std::vector<OperatorJoinPredicate> secondary_predicates = {})
       : _join_hash(join_hash),
         _build_input_table(build_input_table),
@@ -170,13 +218,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _output_column_order(output_column_order),
-        _secondary_predicates(std::move(secondary_predicates)) {
-    if (radix_bits) {
-      _radix_bits = radix_bits.value();
-    } else {
-      _radix_bits = _calculate_radix_bits();
-    }
-  }
+        _secondary_predicates(std::move(secondary_predicates)),
+        _radix_bits(radix_bits) {}
 
  protected:
   const JoinHash& _join_hash;
@@ -191,55 +234,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  size_t _radix_bits;
+  const size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
-
-  size_t _calculate_radix_bits() const {
-    /*
-      Setting number of bits for radix clustering:
-      The number of bits is used to create probe partitions with a size that can
-      be expected to fit into the L2 cache.
-      This should incorporate hardware knowledge, once available in Hyrise.
-      As of now, we assume a L2 cache size of 256 KB.
-      We estimate the size the following way:
-        - we assume each key appears once (that is an overestimation space-wise, but we
-        aim rather for a hash map that is slightly smaller than L2 than slightly larger)
-        - each entry in the hash map is a data structure holding the actual value
-        and the RowID
-    */
-    const auto build_relation_size = _build_input_table->row_count();
-    const auto probe_relation_size = _probe_input_table->row_count();
-
-    if (build_relation_size > probe_relation_size) {
-      /*
-        Hash joins perform best when the build relation is small. In case the
-        optimizer selects the hash join due to such a situation, but neglects that the
-        input will be switched (e.g., due to the join mode), the user will be warned.
-      */
-      PerformanceWarning("Build relation larger than probe relation in hash join");
-    }
-
-    const auto l2_cache_size = 256'000;  // bytes
-
-    // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
-    // that each value maps to a PosList with a single RowID. For the used small_vector's, we assume a
-    // size of 2*RowID per PosList. For sizing, see comments:
-    // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
-    const auto complete_hash_map_size =
-        // number of items in map
-        (build_relation_size *
-         // key + value (and one byte overhead, see link above)
-         (sizeof(BuildColumnType) + 2 * sizeof(RowID) + 1))
-        // fill factor
-        / 0.8;
-
-    const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
-    const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
-
-    return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
-  }
 
   std::shared_ptr<const Table> _on_execute() override {
     /**
