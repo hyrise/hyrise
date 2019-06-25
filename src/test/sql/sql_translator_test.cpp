@@ -1996,48 +1996,74 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1 WHERE a = 1"), InvalidInputException);
 }
 
-
 TEST_F(SQLTranslatorTest, WithClauseSingle) {
   const auto actual_lqp = compile_query(
       "WITH "
       "with_query AS (SELECT a FROM int_int_int) "
       "SELECT * FROM with_query WHERE a > 123;");
-  const auto expected_lqp = PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
-                                                ProjectionNode::make(expression_vector(int_int_int_a),
-                                                                     stored_table_node_int_int_int));
-
+  // clang-format off
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
+      ProjectionNode::make(expression_vector(int_int_int_a),
+          stored_table_node_int_int_int));
+  // clang-format on
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleAlias) {
-
   const auto actual_lqp_alias = compile_query(
       "WITH "
-      "with_query AS (SELECT a AS x FROM int_float) "
-      "SELECT * FROM with_query WHERE with_query.x > 123;");
-  const auto aliases = std::vector<std::string>{{"x"}};
+      "with_query AS (SELECT a AS x FROM int_int_int) "
+      "SELECT * FROM with_query WHERE x > 123;");
+  const auto aliases = std::vector<std::string>({"x"});
   const auto expressions = expression_vector(int_int_int_a);
 
-  const auto expected_lqp_alias = AliasNode::make(expressions, aliases,
-                                                  PredicateNode::make(greater_than_(int_int_int_a, value_(123))),
-                                                  ProjectionNode::make(expression_vector(int_int_int_a),
-                                                                       stored_table_node_int_int_int));
-  EXPECT_LQP_EQ(actual_lqp_alias, nullptr);
+  // clang-format off
+  const auto expected_lqp_alias =
+  AliasNode::make(expressions, aliases,
+      PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
+          AliasNode::make(expressions, aliases,
+              ProjectionNode::make(expression_vector(int_int_int_a),
+                  stored_table_node_int_int_int))));
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_alias, expected_lqp_alias);
+}
+
+TEST_F(SQLTranslatorTest, WithClauseSingleAliasWhere) {
+  const auto actual_lqp_alias = compile_query(
+      "WITH "
+      "with_query AS (SELECT a AS x FROM int_int_int WHERE a > 123) "
+      "SELECT x AS z FROM with_query;");
+  const auto aliases_inner = std::vector<std::string>({"x"});
+  const auto aliases_outer = std::vector<std::string>({"z"});
+  const auto expressions = expression_vector(int_int_int_a);
+
+  // clang-format off
+  const auto expected_lqp_alias =
+      AliasNode::make(expressions, aliases_outer,
+          AliasNode::make(expressions, aliases_inner,
+              ProjectionNode::make(expression_vector(int_int_int_a),
+                  PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
+                      stored_table_node_int_int_int))));
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_alias, expected_lqp_alias);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseDouble) {
+  // WITH queries build on top of each other
   const auto actual_lqp = compile_query(
       "WITH "
       "with_query1 AS (SELECT a, b FROM int_int_int), "
       "with_query2 AS (SELECT b FROM with_query1) "
       "SELECT * FROM with_query2;");
 
-  const auto expected_lqp = ProjectionNode::make(expression_vector(int_int_int_b),
-                                ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
-                                                                         stored_table_node_int_int_int));
-
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_int_int_b),
+      ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+          stored_table_node_int_int_int));
+  // clang-format on
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
-
 
 }  // namespace opossum
