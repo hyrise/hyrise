@@ -17,6 +17,7 @@ const std::map<std::string, AllTypeVariant> ColumnFeatures::serialize() const {
       {_prefix + "_column_is_reference_segment", column_is_reference_segment},
       {_prefix + "_column_data_type", pmr_string(data_type_string)},
       {_prefix + "_column_memory_usage_bytes", static_cast<int64_t>(column_memory_usage_bytes)},
+      {_prefix + "_column_distinct_value_count", static_cast<int64_t>(column_distinct_value_count)},
   };
 }
 
@@ -35,6 +36,7 @@ const std::unordered_map<std::string, float> ColumnFeatures::to_cost_model_featu
       {_prefix + "_column_segment_vector_compression", (column_segment_vector_compression) ? static_cast<float>(*column_segment_vector_compression) : static_cast<float>(255)},
       {_prefix + "_column_is_reference_segment", static_cast<float>(column_is_reference_segment)},
       {_prefix + "_column_memory_usage_bytes", static_cast<float>(column_memory_usage_bytes)},
+      {_prefix + "_column_distinct_value_count", static_cast<float>(column_distinct_value_count)},
   };
 
   features.insert(one_hot_encoded_data_types.begin(), one_hot_encoded_data_types.end());
