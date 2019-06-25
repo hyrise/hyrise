@@ -124,7 +124,6 @@ std::shared_ptr<Table> JoinIndex::_perform_join() {
 
     // Scan all chunks from left input
     if (index) {
-      std::cout << "DATA" << "\n";
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_input_table->chunk_count(); ++chunk_id_left) {
         const auto segment_left =
             left_input_table->get_chunk(chunk_id_left)->get_segment(primary_predicate.column_ids.first);
@@ -135,8 +134,6 @@ std::shared_ptr<Table> JoinIndex::_perform_join() {
       performance_data.chunks_scanned_with_index++;
     } else {
       // Fall back to NestedLoopJoin
-      std::cout << "FALLBACK"
-                << "\n";
       const auto segment_right =
           right_input_table->get_chunk(chunk_id_right)->get_segment(primary_predicate.column_ids.second);
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_input_table->chunk_count(); ++chunk_id_left) {
