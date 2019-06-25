@@ -464,6 +464,46 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsAndFromColumnAliasing) {
+  const auto actual_lqp =
+  compile_query("SELECT x AS x1, x AS x2, x AS x3, y AS y1, y AS y2, y AS y3 FROM int_float AS R (x, y)");
+
+  const auto aliases = std::vector<std::string>({"x1", "x2", "x3", "y1", "y2", "y3"});
+  const auto expressions =
+  expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expressions, aliases,
+    ProjectionNode::make(expressions,
+      stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubqueryAndFromColumnAliasing) {
+  const auto actual_lqp = compile_query(
+      "SELECT u, z, w FROM (SELECT a AS a1, a AS a2, a AS a3, b AS b1, b AS b2, b AS b3 FROM int_float)"
+      "AS R (u, v, w, x, y, z)");
+
+  const auto outer_aliases = std::vector<std::string>({"u", "z", "w"});
+  const auto inner_aliases = std::vector<std::string>({"a1", "a2", "a3", "b1", "b2", "b3"});
+  const auto outer_expressions = expression_vector(int_float_a, int_float_b, int_float_a);
+  const auto inner_expressions = expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(outer_expressions, outer_aliases,
+    ProjectionNode::make(outer_expressions,
+      AliasNode::make(inner_expressions, inner_aliases,
+        ProjectionNode::make(inner_expressions,
+          stored_table_node_int_float))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, WhereSimple) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a < 200;");
 
@@ -1266,7 +1306,7 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingColumnsSwitchNames) {
   // Tricky: Columns "switch names". a becomes b and b becomes a
 
   const auto actual_lqp_a = compile_query("SELECT * FROM int_float AS t (b, a) WHERE b = t.a");
-//  const auto actual_lqp_b = compile_query("SELECT * FROM (SELECT * FROM int_float) AS t (b, a) WHERE b = t.a");
+  const auto actual_lqp_b = compile_query("SELECT * FROM (SELECT * FROM int_float) AS t (b, a) WHERE b = t.a");
 
   // clang-format off
   const auto expected_lqp =
@@ -1276,7 +1316,7 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingColumnsSwitchNames) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
-//  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {

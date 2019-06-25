@@ -493,6 +493,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         FailInput(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
       }
       table_name = hsql_table_ref.alias ? hsql_table_ref.alias->name : hsql_table_ref.name;
+
+      for (const auto& expression : lqp->column_expressions()) {
+        const auto identifiers = sql_identifier_resolver->get_expression_identifiers(expression);
+        select_list_elements.emplace_back(SelectListElement{expression, identifiers});
+      }
     } break;
 
     case hsql::kTableSelect: {
@@ -531,31 +536,33 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
   // Rename columns as in "SELECT * FROM t AS x (y,z)"
   if (hsql_table_ref.alias && hsql_table_ref.alias->columns) {
-    const auto& column_expressions = lqp->column_expressions();
+      const auto& column_expressions = lqp->column_expressions();
 
     AssertInput(hsql_table_ref.alias->columns->size() == column_expressions.size(),
                 "Must specify a name for exactly each column");
+    Assert(hsql_table_ref.alias->columns->size() == select_list_elements.size(),
+           "There have to be as many aliases as column expressions");
 
+    std::set<std::shared_ptr<AbstractExpression>> renamed_expressions;
     for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
       const auto& expression = column_expressions[column_id];
 
-      // The original column names should not be accessible anymore because the table schema is renamed.
-      sql_identifier_resolver->reset_column_names(expression);
-      sql_identifier_resolver->add_column_name(expression, (*hsql_table_ref.alias->columns)[column_id]);
+      if (renamed_expressions.find(expression) == renamed_expressions.end()) {
+        // The original column names should not be accessible anymore because the table schema is renamed.
+        sql_identifier_resolver->reset_column_names(expression);
+        renamed_expressions.insert(expression);
+      }
+
+      const auto& column_name = (*hsql_table_ref.alias->columns)[column_id];
+      sql_identifier_resolver->add_column_name(expression, column_name);
+      select_list_elements[column_id].identifiers.clear();
+      select_list_elements[column_id].identifiers.emplace_back(column_name);
     }
   }
 
   for (const auto& expression : lqp->column_expressions()) {
     sql_identifier_resolver->set_table_name(expression, table_name);
-  }
-
-  // Add select_list_elements if this did not already happen (for hsql::kTableSelect)
-  if (hsql_table_ref.type != hsql::kTableSelect) {
-    for (const auto& expression : lqp->column_expressions()) {
-      const auto identifiers = sql_identifier_resolver->get_expression_identifiers(expression);
-      select_list_elements.emplace_back(SelectListElement{expression, identifiers});
-    }
-  }
+  } 
 
   return {lqp,
           {{
