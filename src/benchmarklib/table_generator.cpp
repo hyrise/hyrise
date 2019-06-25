@@ -170,13 +170,15 @@ std::shared_ptr<Table> TableGenerator::generate_table(
           }
         }
 
-        // generate values according to distribution
-        for (auto row_offset = size_t{0}; row_offset < chunk_size; ++row_offset) {
+        // Generate values according to distribution. We first add min and max values to avoid hard-to-control
+        // pruning via dictionaries. In the main loop, we then run (num_rows/chunk_size)-2 times.
+        values.push_back(static_cast<int>(column_data_distribution.min_value));
+        values.push_back(static_cast<int>(column_data_distribution.max_value));
+        for (auto row_offset = size_t{0}; row_offset < chunk_size - 2; ++row_offset) {
           // bounds check
-          if (chunk_index * chunk_size + (row_offset + 1) > num_rows) {
+          if (chunk_index * chunk_size + (row_offset + 1) > num_rows - 2) {
             break;
           }
-
           values.push_back(generate_value_by_distribution_type());
         }
 
