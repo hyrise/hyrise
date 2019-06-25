@@ -124,6 +124,7 @@ std::shared_ptr<Table> JoinIndex::_perform_join() {
 
     // Scan all chunks from left input
     if (index) {
+      std::cout << "DATA" << "\n";
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_input_table->chunk_count(); ++chunk_id_left) {
         const auto segment_left =
             left_input_table->get_chunk(chunk_id_left)->get_segment(primary_predicate.column_ids.first);
