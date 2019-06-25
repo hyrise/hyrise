@@ -96,8 +96,8 @@ class JoinIndexTest : public BaseTest {
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
-    auto join = std::make_shared<JoinIndex>(left, right, mode, primary_predicate,
-      std::vector<OperatorJoinPredicate>{}, index_side);
+    auto join = std::make_shared<JoinIndex>(left, right, mode, primary_predicate, std::vector<OperatorJoinPredicate>{},
+                                            index_side);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 

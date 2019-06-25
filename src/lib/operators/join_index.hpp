@@ -46,11 +46,8 @@ class JoinIndex : public AbstractJoinOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  std::shared_ptr<Table> _perform_join();
-  std::shared_ptr<Table> _perform_join_right_reference_table();
   void _append_matches(const ChunkID& left_chunk_id, const ChunkOffset& left_chunk_offset,
                        const PosList& right_table_matches);
-  std::shared_ptr<PosList> _matches_of_reference_table(const std::shared_ptr<const Table>& table);
 
   template <typename LeftIterator>
   void _join_two_segments_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,

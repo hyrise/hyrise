@@ -57,10 +57,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                   !_secondary_predicates.empty()),
          "JoinHash doesn't support these parameters");
 
-  return _perform_join();
-}
-
-std::shared_ptr<Table> JoinIndex::_perform_join() {
   std::shared_ptr<const Table> left_input_table;
   std::shared_ptr<const Table> right_input_table;
   auto primary_predicate = _primary_predicate;
@@ -221,21 +217,6 @@ std::shared_ptr<Table> JoinIndex::_perform_join() {
   }
 
   return _build_output_table({std::make_shared<Chunk>(output_segments)});
-}
-
-std::shared_ptr<PosList> JoinIndex::_matches_of_reference_table(const std::shared_ptr<const Table>& table) {
-  auto matches = std::make_shared<PosList>();
-  matches->reserve(table->row_count());
-
-  if (!table->chunks().empty() && !table->get_chunk(ChunkID{0})->segments().empty()) {
-    for (const auto& chunk : table->chunks()) {
-      const auto& reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(chunk->get_segment(ColumnID{0}));
-      Assert(reference_segment != nullptr, "Segment is not a ReferenceSegment");
-      const auto& segment_matches = reference_segment->pos_list();
-      matches->insert(matches->end(), segment_matches->begin(), segment_matches->end());
-    }
-  }
-  return matches;
 }
 
 void JoinIndex::_append_matches(const ChunkID& left_chunk_id, const ChunkOffset& left_chunk_offset,
