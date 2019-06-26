@@ -562,7 +562,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
   for (const auto& expression : lqp->column_expressions()) {
     sql_identifier_resolver->set_table_name(expression, table_name);
-  } 
+  }
 
   return {lqp,
           {{

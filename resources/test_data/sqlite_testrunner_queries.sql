@@ -129,6 +129,7 @@ SELECT * FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".d;
 
 -- JOIN
 SELECT "left".a, "left".b, "right".a, "right".b FROM mixed AS "left" JOIN mixed_null AS "right" ON "left".b = "right".b;
+SELECT "left".a1, "left".a2, "right".a1 FROM (SELECT a AS a1, a AS a2 FROM mixed) AS "left" JOIN (SELECT a AS a1, a AS a2 FROM mixed_null) AS "right" ON "left".a1 = "right".a2;
 SELECT "left".e, "left".f, "right".a, "right".b FROM (SELECT a AS e, b as f FROM mixed) AS "left" JOIN mixed_null AS "right" ON "left".f = "right".b;
 SELECT * FROM mixed AS "left" LEFT JOIN mixed_null AS "right" ON "left".b = "right".b;
 SELECT b.*, a.* FROM mixed AS a JOIN mixed AS b ON a.id = b.id WHERE a.id > 50;
@@ -302,6 +303,8 @@ INSERT INTO mixed_null (b, c, a, d) SELECT b, c, a, d FROM mixed WHERE id < 13; 
 CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view1;
 CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view2 WHERE a > 10;
 CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view3 WHERE foo > 10;
+-- CREATE VIEW alias_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';
+-- CREATE VIEW alias_view AS SELECT a AS c, b AS D FROM int_float WHERE a = 'b';
 
 -- NULL Semantics
 SELECT * FROM mixed WHERE b IS NOT NULL;
@@ -325,11 +328,12 @@ SELECT * FROM id_int_int_int_100 WHERE a * 10 IN (SELECT b FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a * 10 NOT IN (SELECT b FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
-SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15); -- fails because cost estimators crashes when used on an LQP containing a DummyTableNode (#1500)
-SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11); -- fails because cost estimators crashes when used on an LQP containing a DummyTableNode (#1500)
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
 
 -- Correlated parameter in WHERE statement
 SELECT * FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > id_int_int_int_100.b)
+-- SELECT max1, max2 FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) AS max_1, MAX(b) AS max_2 FROM mixed WHERE mixed.b > id_int_int_int_100.b)
 
 -- Subqueries in FROM statement
 SELECT * FROM (SELECT t1.id FROM id_int_int_int_100 t1 JOIN id_int_int_int_100 t2 ON t1.id + 1 = t2.id) AS s1, id_int_int_int_100 t3 WHERE s1.id + 5 = t3.id;

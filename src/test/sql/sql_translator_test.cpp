@@ -504,6 +504,34 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubqueryA
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInJoin) {
+  const auto actual_lqp = compile_query(
+      "SELECT l.a1, l.a2, r.a1 FROM ("
+      "  SELECT a AS a1, a AS a2 FROM int_float"
+      ") AS l JOIN ("
+      "  SELECT a AS a1, a AS a2 FROM int_float2"
+      ") AS r ON l.a1 = r.a2;");
+
+  const auto outer_aliases = std::vector<std::string>({"a1", "a2", "a1"});
+  const auto inner_aliases = std::vector<std::string>({"a1", "a2"});
+  const auto expressions = expression_vector(int_float_a, int_float_a, int_float2_a);
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expressions, outer_aliases,
+    ProjectionNode::make(expressions,
+      JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
+        AliasNode::make(expression_vector(int_float_a, int_float_a), inner_aliases,
+          ProjectionNode::make(expression_vector(int_float_a, int_float_a),
+            stored_table_node_int_float)),
+        AliasNode::make(expression_vector(int_float2_a, int_float2_a), inner_aliases,
+          ProjectionNode::make(expression_vector(int_float2_a, int_float2_a),
+            stored_table_node_int_float2)))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, WhereSimple) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a < 200;");
 
