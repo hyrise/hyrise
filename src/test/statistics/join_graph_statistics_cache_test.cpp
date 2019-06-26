@@ -157,29 +157,31 @@ TEST_F(JoinGraphStatisticsCacheTest, BitmaskNotFound) {
 }
 
 TEST_F(JoinGraphStatisticsCacheTest, Caching) {
-  EXPECT_EQ(cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b)),
+  EXPECT_EQ(cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b, a_a)),
             nullptr);
 
-  cache->set(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b),
+  cache->set(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b, a_a),
              table_statistics_a_b);
 
   const auto cached_a_b =
-      cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b));
+      cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(a_a, a_b, b_a, b_b, a_a));
   ASSERT_NE(cached_a_b, nullptr);
-  EXPECT_EQ(cached_a_b->column_statistics.size(), 4u);
+  EXPECT_EQ(cached_a_b->column_statistics.size(), 5u);
   EXPECT_EQ(cached_a_b->column_statistics[0], statistics_a_a);
   EXPECT_EQ(cached_a_b->column_statistics[1], statistics_a_b);
   EXPECT_EQ(cached_a_b->column_statistics[2], statistics_b_a);
   EXPECT_EQ(cached_a_b->column_statistics[3], statistics_b_b);
+  EXPECT_EQ(cached_a_b->column_statistics[4], statistics_a_a);
 
   const auto cached_b_a =
-      cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(b_a, b_b, a_a, a_b));
+      cache->get(JoinGraphStatisticsCache::Bitmask{8, 0b00001011}, expression_vector(b_a, b_b, a_a, a_b, a_a));
   ASSERT_NE(cached_b_a, nullptr);
-  EXPECT_EQ(cached_b_a->column_statistics.size(), 4u);
+  EXPECT_EQ(cached_b_a->column_statistics.size(), 5u);
   EXPECT_EQ(cached_b_a->column_statistics[0], statistics_b_a);
   EXPECT_EQ(cached_b_a->column_statistics[1], statistics_b_b);
   EXPECT_EQ(cached_b_a->column_statistics[2], statistics_a_a);
   EXPECT_EQ(cached_b_a->column_statistics[3], statistics_a_b);
+  EXPECT_EQ(cached_b_a->column_statistics[4], statistics_a_a);
 }
 
 }  // namespace opossum
