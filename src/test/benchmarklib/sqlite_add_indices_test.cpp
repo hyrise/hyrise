@@ -32,8 +32,6 @@ class SQLiteAddIndicesTest : public BaseTest {
 };
 
 TEST_F(SQLiteAddIndicesTest, AddIndexTest) {
-  // DROP INDEX index_1 throws an exception if index_1 does not exist.
-  EXPECT_THROW(sqlite_wrapper->raw_execute_query("DROP INDEX index_1;", true), std::logic_error);
   auto sqlite_table = sqlite_wrapper->execute_query("SELECT * FROM table_1");
   EXPECT_TABLE_EQ_ORDERED(stored_table, sqlite_table);
   const auto schema_file_path = "resources/test_data/sqlite_add_index_schema.sql";
@@ -41,6 +39,7 @@ TEST_F(SQLiteAddIndicesTest, AddIndexTest) {
   add_indices_to_sqlite(schema_file_path, create_index_file_path, sqlite_wrapper);
   sqlite_table = sqlite_wrapper->execute_query("SELECT * FROM table_1");
   EXPECT_TABLE_EQ_ORDERED(stored_table, sqlite_table);
+  // DROP INDEX index_1 throws an exception if index_1 does not exist.
   sqlite_wrapper->raw_execute_query("DROP INDEX index_1;");
 }
 
