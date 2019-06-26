@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -17,7 +18,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"

@@ -4,15 +4,14 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
-#include "hyrise.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"

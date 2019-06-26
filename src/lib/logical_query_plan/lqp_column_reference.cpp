@@ -3,8 +3,8 @@
 #include "boost/functional/hash.hpp"
 
 #include "abstract_lqp_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 

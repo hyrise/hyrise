@@ -1,7 +1,7 @@
 #include "create_prepared_plan.hpp"
 
-#include "storage/prepared_plan.hpp"
 #include "hyrise.hpp"
+#include "storage/prepared_plan.hpp"
 
 namespace opossum {
 

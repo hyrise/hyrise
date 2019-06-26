@@ -6,9 +6,9 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

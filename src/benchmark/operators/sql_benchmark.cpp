@@ -4,12 +4,12 @@
 #include "../micro_benchmark_basic_fixture.hpp"
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"
+#include "hyrise.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
-#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {

@@ -7,8 +7,8 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "storage/chunk.hpp"
 #include "hyrise.hpp"
+#include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 

@@ -6,13 +6,13 @@
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
 #include "scheduler/operator_task.hpp"
-#include "hyrise.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

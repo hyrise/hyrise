@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "storage/lqp_view.hpp"
 #include "hyrise.hpp"
+#include "storage/lqp_view.hpp"
 
 namespace opossum {
 

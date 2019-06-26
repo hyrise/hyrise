@@ -8,13 +8,13 @@
 
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

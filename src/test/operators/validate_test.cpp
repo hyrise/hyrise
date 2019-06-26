@@ -8,12 +8,12 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

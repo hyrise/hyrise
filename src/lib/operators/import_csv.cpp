@@ -5,8 +5,8 @@
 #include <optional>
 #include <string>
 
-#include "import_export/csv_parser.hpp"
 #include "hyrise.hpp"
+#include "import_export/csv_parser.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

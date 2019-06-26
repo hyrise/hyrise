@@ -4,8 +4,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/import_csv.hpp"
 #include "hyrise.hpp"
+#include "operators/import_csv.hpp"
 #include "storage/table.hpp"
 
 #include "scheduler/current_scheduler.hpp"

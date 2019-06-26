@@ -9,13 +9,13 @@
 #include "gtest/gtest.h"
 
 #include "expression/evaluation/like_matcher.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_scan/column_like_table_scan_impl.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

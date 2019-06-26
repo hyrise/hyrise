@@ -4,11 +4,11 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "hyrise.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "server/server.hpp"
-#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 int main(int argc, char* argv[]) {

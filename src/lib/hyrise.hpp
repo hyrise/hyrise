@@ -18,7 +18,7 @@ class Hyrise : public Singleton<Hyrise> {
  private:
   Hyrise();
 
-  friend class Singleton; //TODO needed?
+  friend class Singleton;  // TODO(david) needed?
 };
 
-}
+}  // namespace opossum

@@ -3,12 +3,12 @@
 #include "strategy_base_test.hpp"
 #include "testing_assert.hpp"
 
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/insert_limit_in_exists_rule.hpp"
-#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

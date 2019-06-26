@@ -4,11 +4,11 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -16,7 +16,8 @@ namespace opossum {
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("int_int_float", load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+    Hyrise::get().storage_manager.add_table("int_int_float",
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
   }
 };
 

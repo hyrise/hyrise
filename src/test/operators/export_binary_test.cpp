@@ -8,12 +8,12 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "import_export/binary.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 

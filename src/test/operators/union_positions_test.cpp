@@ -3,6 +3,7 @@
 
 #include "base_test.hpp"
 
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/operator_join_predicate.hpp"
@@ -11,7 +12,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/reference_segment.hpp"
-#include "hyrise.hpp"
 
 namespace opossum {
 

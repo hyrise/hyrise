@@ -11,7 +11,6 @@
 
 #include "SQLParserResult.h"
 
-#include "hyrise.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp"

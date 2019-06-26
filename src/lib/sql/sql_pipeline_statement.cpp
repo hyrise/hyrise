@@ -6,9 +6,9 @@
 #include <utility>
 
 #include "SQLParser.h"
-#include "hyrise.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
@@ -20,7 +20,6 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
-#include "hyrise.hpp"
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 

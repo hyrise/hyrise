@@ -6,11 +6,11 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 #include "tasks/chunk_compression_task.hpp"
 
 namespace opossum {

@@ -12,6 +12,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
@@ -49,7 +50,6 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
@@ -71,7 +71,8 @@ class LQPTranslatorTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("table_int_float2", table_int_float2);
     Hyrise::get().storage_manager.add_table("table_int_float5", table_int_float5);
     Hyrise::get().storage_manager.add_table("table_alias_name", table_alias_name);
-    Hyrise::get().storage_manager.add_table("int_float_chunked", load_table("resources/test_data/tbl/int_float.tbl", 1));
+    Hyrise::get().storage_manager.add_table("int_float_chunked",
+                                            load_table("resources/test_data/tbl/int_float.tbl", 1));
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");

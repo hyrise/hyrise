@@ -5,16 +5,15 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "hyrise.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

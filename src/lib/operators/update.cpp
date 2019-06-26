@@ -7,9 +7,9 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "delete.hpp"
+#include "hyrise.hpp"
 #include "insert.hpp"
 #include "storage/reference_segment.hpp"
-#include "hyrise.hpp"
 #include "table_wrapper.hpp"
 #include "utils/assert.hpp"
 

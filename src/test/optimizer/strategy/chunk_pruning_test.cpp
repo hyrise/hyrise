@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -21,7 +22,6 @@
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"

@@ -2,7 +2,6 @@
 #include "gtest/gtest.h"
 
 #include "hyrise.hpp"
-#include "hyrise.hpp"
 #include "utils/singleton.hpp"
 
 #include "../../plugins/test_plugin.hpp"

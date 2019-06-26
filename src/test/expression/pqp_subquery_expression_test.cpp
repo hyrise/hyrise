@@ -6,12 +6,12 @@
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
-#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT

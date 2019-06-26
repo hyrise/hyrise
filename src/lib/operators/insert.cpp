@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "hyrise.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 

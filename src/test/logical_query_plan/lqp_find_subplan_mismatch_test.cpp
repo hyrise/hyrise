@@ -1,5 +1,6 @@
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -21,7 +22,6 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 #include "testing_assert.hpp"

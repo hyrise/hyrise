@@ -2,7 +2,6 @@
 #include "gtest/gtest.h"
 
 #include "hyrise.hpp"
-#include "hyrise.hpp"
 
 #include "./plugin_test_utils.hpp"
 

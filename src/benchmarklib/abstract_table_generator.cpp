@@ -2,8 +2,8 @@
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
-#include "operators/export_binary.hpp"
 #include "hyrise.hpp"
+#include "operators/export_binary.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 

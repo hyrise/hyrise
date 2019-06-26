@@ -6,15 +6,14 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
-#include "hyrise.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

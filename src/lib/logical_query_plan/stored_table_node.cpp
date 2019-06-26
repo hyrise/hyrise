@@ -1,8 +1,8 @@
 #include "stored_table_node.hpp"
 
 #include "expression/lqp_column_expression.hpp"
-#include "statistics/table_statistics.hpp"
 #include "hyrise.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 

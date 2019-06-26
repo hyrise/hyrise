@@ -4,9 +4,9 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "hyrise.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
-#include "hyrise.hpp"
 #include "table_generator.hpp"
 #include "types.hpp"
 

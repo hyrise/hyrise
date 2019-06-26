@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 #include "types.hpp"

@@ -2,10 +2,9 @@
 
 #include <sstream>
 
-#include "hyrise.hpp"
 #include "constant_mappings.hpp"
-#include "operators/insert.hpp"
 #include "hyrise.hpp"
+#include "operators/insert.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

@@ -5,11 +5,11 @@
 
 #include "base_test.hpp"
 
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {

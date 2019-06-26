@@ -5,6 +5,7 @@
 
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
@@ -33,7 +34,6 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "hyrise.hpp"
 #include "storage/table_column_definition.hpp"
 #include "utils/load_table.hpp"
 

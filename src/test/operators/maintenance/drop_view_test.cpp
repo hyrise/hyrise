@@ -3,10 +3,10 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/maintenance/drop_view.hpp"
 #include "storage/lqp_view.hpp"
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"

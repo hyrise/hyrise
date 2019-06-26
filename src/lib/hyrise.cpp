@@ -2,9 +2,10 @@
 
 namespace opossum {
 
-Hyrise::Hyrise() : plugin_manager{PluginManager::get()},
-                   storage_manager{StorageManager::get()},
-                   transaction_manager{TransactionManager::get()} {}
+Hyrise::Hyrise()
+    : plugin_manager{PluginManager::get()},
+      storage_manager{StorageManager::get()},
+      transaction_manager{TransactionManager::get()} {}
 
 void Hyrise::reset() {
   auto& hyrise = get();
@@ -13,4 +14,4 @@ void Hyrise::reset() {
   hyrise.transaction_manager.reset();
 }
 
-}
+}  // namespace opossum

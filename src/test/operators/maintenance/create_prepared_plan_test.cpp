@@ -3,12 +3,12 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "storage/prepared_plan.hpp"
-#include "hyrise.hpp"
 
 namespace opossum {
 

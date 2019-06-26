@@ -5,9 +5,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/import_binary.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "hyrise.hpp"
 
 namespace opossum {
 

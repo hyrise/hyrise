@@ -3,8 +3,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "operators/maintenance/show_columns.hpp"
 #include "hyrise.hpp"
+#include "operators/maintenance/show_columns.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -55,7 +55,8 @@ TEST_F(ShowColumnsTest, CanShowColumnsWithNull) {
 }
 
 TEST_F(ShowColumnsTest, NoColumns) {
-  Hyrise::get().storage_manager.add_table("no_columns", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
+  Hyrise::get().storage_manager.add_table("no_columns",
+                                          std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
 
   auto sc = std::make_shared<ShowColumns>("no_columns");
   sc->execute();
