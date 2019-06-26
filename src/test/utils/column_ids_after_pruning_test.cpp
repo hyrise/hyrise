@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "utils/pruning_column_id_mapping.hpp"
+#include "utils/column_ids_after_pruning.hpp"
 
 namespace opossum {
 
