@@ -18,7 +18,8 @@ namespace opossum {
  */
 class Validate : public AbstractReadOnlyOperator {
  public:
-  explicit Validate(const std::shared_ptr<AbstractOperator>& in);
+  explicit Validate(const std::shared_ptr<AbstractOperator>& in,
+                    const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr);
 
   const std::string name() const override;
 

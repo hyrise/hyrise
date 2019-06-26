@@ -410,7 +410,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     group_by_column_ids.emplace_back(*column_id);
   }
 
-  return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
+  return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids, node->deep_copy());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
@@ -462,7 +462,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
-  return std::make_shared<Validate>(input_operator);
+  return std::make_shared<Validate>(input_operator, node->deep_copy());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
