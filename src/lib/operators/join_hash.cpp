@@ -64,6 +64,48 @@ std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
+template <typename T>
+size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size) {
+  /*
+    Setting number of bits for radix clustering:
+    The number of bits is used to create probe partitions with a size that can
+    be expected to fit into the L2 cache.
+    This should incorporate hardware knowledge, once available in Hyrise.
+    As of now, we assume a L2 cache size of 1024 KB (L2 cache size of recent
+    Intel Xeon CPUs), of which we use 50%.
+    We estimate the size the following way:
+      - we assume each key appears once (that is an overestimation space-wise, but we
+      aim rather for a hash map that is slightly smaller than L2 than slightly larger)
+      - each entry in the hash map is a uint32_t offset (see hash_join_steps.hpp)
+  */
+  if (build_relation_size > probe_relation_size) {
+    /*
+      Hash joins perform best when the build relation is small. In case the
+      optimizer selects the hash join due to such a situation, but neglects that the
+      input will be switched (e.g., due to the join mode), the user will be warned.
+    */
+    PerformanceWarning("Build relation larger than probe relation in hash join");
+  }
+
+  const auto l2_cache_size = 1'024'000;  // bytes
+  const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
+
+  // For information about the sizing of the bytell hash map, see the comments:
+  // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
+  // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the actual size of
+  // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
+  // slightly skewed data distributions and aim for a fill level of 80%.
+  const auto complete_hash_map_size =
+      // number of items in map
+      build_relation_size *
+       // key + value (and one byte overhead, see link above)
+      sizeof(uint32_t) / 0.8;
+
+  auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
+
+  return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
+}
+
 std::shared_ptr<const Table> JoinHash::_on_execute() {
   Assert(supports(_mode, _primary_predicate.predicate_condition,
                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
@@ -140,9 +182,21 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           !std::is_same_v<pmr_string, BuildColumnDataType> && !std::is_same_v<pmr_string, ProbeColumnDataType>;
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
+        if (!_radix_bits) {
+          _radix_bits =
+              calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count());
+        }
+
+        // It needs to be ensured that the build partition does not get too large, because the
+        // used offsets in the hash map might otherwise overflow. Since radix partitioning aims
+        // to avoid large build partitions, this should never happen. Nonetheless, we better
+        // assert since the effects of overflows will probably hard to debug.
+        const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
+        Assert(build_input_table->row_count() / 2**_radix_bits < max_partition_size, "Partition count too small (potential overflows in hash map offsetting).");
+
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
-            _primary_predicate.predicate_condition, output_column_order, _radix_bits,
+            _primary_predicate.predicate_condition, output_column_order, *_radix_bits,
             std::move(adjusted_secondary_predicates));
       } else {
         Fail("Cannot join String with non-String column");
@@ -161,7 +215,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   JoinHashImpl(const JoinHash& join_hash, const std::shared_ptr<const Table>& build_input_table,
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-               const OutputColumnOrder output_column_order, const std::optional<size_t>& radix_bits = std::nullopt,
+               const OutputColumnOrder output_column_order, const size_t radix_bits,
                std::vector<OperatorJoinPredicate> secondary_predicates = {})
       : _join_hash(join_hash),
         _build_input_table(build_input_table),
@@ -170,13 +224,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _output_column_order(output_column_order),
-        _secondary_predicates(std::move(secondary_predicates)) {
-    if (radix_bits) {
-      _radix_bits = radix_bits.value();
-    } else {
-      _radix_bits = _calculate_radix_bits();
-    }
-  }
+        _secondary_predicates(std::move(secondary_predicates)),
+        _radix_bits(radix_bits) {}
 
  protected:
   const JoinHash& _join_hash;
@@ -191,60 +240,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  size_t _radix_bits;
+  const size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
-
-  size_t _calculate_radix_bits() const {
-    /*
-      Setting number of bits for radix clustering:
-      The number of bits is used to create probe partitions with a size that can
-      be expected to fit into the L2 cache.
-      This should incorporate hardware knowledge, once available in Hyrise.
-      As of now, we assume a L2 cache size of 1024 KB (L2 cache size of recent
-      Intel Xeon CPUs), of which we use 50%.
-      We estimate the size the following way:
-        - we assume each key appears once (that is an overestimation space-wise, but we
-        aim rather for a hash map that is slightly smaller than L2 than slightly larger)
-        - each entry in the hash map is a uint32_t offset (see hash_join_steps.hpp)
-    */
-    const auto build_relation_size = _build_input_table->row_count();
-    const auto probe_relation_size = _probe_input_table->row_count();
-
-    if (build_relation_size > probe_relation_size) {
-      /*
-        Hash joins perform best when the build relation is small. In case the
-        optimizer selects the hash join due to such a situation, but neglects that the
-        input will be switched (e.g., due to the join mode), the user will be warned.
-      */
-      PerformanceWarning("Build relation larger than probe relation in hash join");
-    }
-
-    const auto l2_cache_size = 1'024'000;  // bytes
-    const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
-
-    // For information about the sizing of the bytell hash map, see the comments:
-    // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
-    // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the actual size of
-    // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
-    // slightly skewed data distributions and aim for a fill level of 80%.
-    const auto complete_hash_map_size =
-        // number of items in map
-        build_relation_size *
-         // key + value (and one byte overhead, see link above)
-        sizeof(uint32_t) / 0.8;
-
-    auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
-
-    // We limit the max size of partitions to mitigate the chances of overflowing offsets
-    const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
-    if (build_relation_size / cluster_count > max_partition_size) {
-      cluster_count = build_relation_size / max_partition_size;
-    }
-
-    return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
-  }
 
   std::shared_ptr<const Table> _on_execute() override {
     /**

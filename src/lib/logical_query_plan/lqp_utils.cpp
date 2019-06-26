@@ -220,6 +220,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::ShowColumns:
       case LQPNodeType::ShowTables:
       case LQPNodeType::Sort:
+      case LQPNodeType::StaticTable:
       case LQPNodeType::StoredTable:
       case LQPNodeType::Union:
       case LQPNodeType::Mock:
