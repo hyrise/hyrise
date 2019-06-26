@@ -6,7 +6,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/pruning_column_id_mapping.hpp"
+#include "utils/column_ids_after_pruning.hpp"
 
 namespace opossum {
 
