@@ -6,6 +6,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/pruning_column_id_mapping.hpp"
 
 namespace opossum {
 
@@ -100,37 +101,20 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
     return stored_indexes_statistics;
   }
 
-  auto column_pruned_bitvector = std::vector<bool>();
-  auto column_left_shifts = std::vector<ColumnID>();
-
-  column_pruned_bitvector.resize(table->column_count());
-  column_left_shifts.resize(table->column_count());
-
-  // Fill the bitvector
-  for (const auto& pruned_column_id : _pruned_column_ids) {
-    column_pruned_bitvector[pruned_column_id] = true;
-  }
-
-  // Calculate left_shifts
-  auto number_of_shifts = ColumnID{0};
-  for (auto column_index = ColumnID{0}; column_index < column_pruned_bitvector.size(); ++column_index) {
-    if (column_pruned_bitvector[column_index]) {
-      ++number_of_shifts;
-    }
-    column_left_shifts[column_index] = number_of_shifts;
-  }
+  const auto column_id_mapping = column_ids_after_pruning(table->column_count(), _pruned_column_ids);
 
   // update index statistics
   for (auto stored_index_stats_iter = stored_indexes_statistics.begin();
        stored_index_stats_iter != stored_indexes_statistics.end();) {
     auto update_index_statistics = [&]() {
-      for (auto& index_column_id : (*stored_index_stats_iter).column_ids) {
-        if (column_pruned_bitvector[index_column_id]) {
+      for (auto& original_column_id : (*stored_index_stats_iter).column_ids) {
+        const auto& updated_column_id = column_id_mapping[original_column_id];
+        if (!updated_column_id) {
           // column was pruned, we cannot use the index anymore.
           stored_indexes_statistics.erase(stored_index_stats_iter);
           return;
         } else {
-          index_column_id -= column_left_shifts[index_column_id];
+          original_column_id = *updated_column_id;
           ++stored_index_stats_iter;
         }
       }
