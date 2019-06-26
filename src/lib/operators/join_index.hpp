@@ -70,13 +70,13 @@ class JoinIndex : public AbstractJoinOperator {
   OperatorJoinPredicate _adjusted_primary_predicate;
   std::shared_ptr<Table> _output_table;
 
-  std::shared_ptr<PosList> _pos_list_left;
-  std::shared_ptr<PosList> _pos_list_right;
+  std::shared_ptr<PosList> _probe_pos_list;
+  std::shared_ptr<PosList> _index_pos_list;
 
   // for left/right/outer joins
   // The outer vector enumerates chunks, the inner enumerates chunk_offsets
-  std::vector<std::vector<bool>> _left_matches;
-  std::vector<std::vector<bool>> _right_matches;
+  std::vector<std::vector<bool>> _probe_matches;
+  std::vector<std::vector<bool>> _index_matches;
 };
 
 }  // namespace opossum
