@@ -1,6 +1,6 @@
 #include "pruning_column_id_mapping.hpp"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <optional>
 #include <vector>
 
