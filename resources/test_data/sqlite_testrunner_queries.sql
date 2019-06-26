@@ -107,6 +107,7 @@ SELECT a AS a1, a AS a2, a AS a3, b AS b1, b AS b2, b AS b3 FROM mixed;
 SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed;
 SELECT a1, b2, a3 FROM (SELECT a AS a1, a AS a2, a AS a3, b AS b1, b AS b2, b AS b3 FROM mixed) AS R;
 SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed) AS R;
+SELECT b AS b1, b AS b2 FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > b1)
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
@@ -333,14 +334,11 @@ SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
 
 -- Correlated parameter in WHERE statement
 SELECT * FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > id_int_int_int_100.b)
--- SELECT max1, max2 FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) AS max_1, MAX(b) AS max_2 FROM mixed WHERE mixed.b > id_int_int_int_100.b)
+SELECT * FROM id_int_int_int_100 t1 WHERE (SELECT MIN(t2.id + 10) FROM id_int_int_int_100 t2 WHERE t2.id = t1.id) > 20;
 
 -- Subqueries in FROM statement
 SELECT * FROM (SELECT t1.id FROM id_int_int_int_100 t1 JOIN id_int_int_int_100 t2 ON t1.id + 1 = t2.id) AS s1, id_int_int_int_100 t3 WHERE s1.id + 5 = t3.id;
 SELECT * FROM id_int_int_int_100 t1 WHERE id < 9 AND (SELECT MIN(t2.id + 10) FROM (SELECT * FROM id_int_int_int_100 t3 WHERE t3.id > t1.id + 90) AS s1, id_int_int_int_100 t2 WHERE t2.id = t1.id + 90) > 5;
-
--- Correlated parameter (t2.id) in FROM clause of subselect
-SELECT * FROM id_int_int_int_100 t1 WHERE (SELECT MIN(t2.id + 10) FROM id_int_int_int_100 t2 WHERE t2.id = t1.id) > 20;
 
 -- cannot test these because we cannot handle empty query results here
 ---- SELECT * FROM mixed WHERE b IS NULL;

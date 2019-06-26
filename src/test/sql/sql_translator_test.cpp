@@ -445,13 +445,6 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
 
   // clang-format off
-//  const auto subquery_lqp =
-//  AliasNode::make(aggregates, aliases,
-//    ProjectionNode::make(aggregates,
-//      AggregateNode::make(expression_vector(), expression_vector(count_star_()),
-//        stored_table_node_int_float)));
-//  const auto subquery = lqp_subquery_(subquery_lqp);
-
   // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
   const auto expected_lqp =
   AliasNode::make(aggregates, aliases,
@@ -527,6 +520,30 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInJoin)
         AliasNode::make(expression_vector(int_float2_a, int_float2_a), inner_aliases,
           ProjectionNode::make(expression_vector(int_float2_a, int_float2_a),
             stored_table_node_int_float2)))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInCorrelatedSubquery) {
+  const auto actual_lqp = compile_query(
+      "SELECT b AS b1, b AS b2 FROM int_float WHERE a < (SELECT MAX(b) FROM int_float2 WHERE int_float2.b > b1)");
+
+  const auto aliases = std::vector<std::string>({"b1", "b2"});
+  const auto expressions = expression_vector(int_float_a, int_float_a, int_float2_a);
+
+  // clang-format off
+  const auto parameter_int_float_b = correlated_parameter_(ParameterID{0}, int_float_b);
+  const auto subquery_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(max_(int_float2_b)),
+    PredicateNode::make(greater_than_(int_float2_b, parameter_int_float_b),
+      stored_table_node_int_float2));
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, int_float_b));
+
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_b, int_float_b), aliases,
+    ProjectionNode::make(expression_vector(int_float_b, int_float_b),
+      PredicateNode::make(less_than_(int_float_a, subquery))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
