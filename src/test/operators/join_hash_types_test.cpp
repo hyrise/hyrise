@@ -21,9 +21,10 @@ void test_hash_map(const std::vector<T>& values) {
     elements.emplace_back(PartitionedElement<T>{row_id, static_cast<T>(values.at(i))});
   }
 
-  auto hash_maps = build<T, HashType>(
-      RadixContainer<T>{std::make_shared<Partition<T>>(elements), std::vector<size_t>{elements.size()},
-                        std::make_shared<std::vector<bool>>()}, JoinHashBuildMode::AllPositions);
+  auto hash_maps =
+      build<T, HashType>(RadixContainer<T>{std::make_shared<Partition<T>>(elements),
+                                           std::vector<size_t>{elements.size()}, std::make_shared<std::vector<bool>>()},
+                         JoinHashBuildMode::AllPositions);
 
   // With only one offset value passed, one hash map will be created
   EXPECT_EQ(hash_maps.size(), 1);
