@@ -1,10 +1,11 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 namespace opossum {
 
-class BenchmarkRunner;
+class SQLiteWrapper;
 
 /**
  * Add indices to SQLite for existing data tables. This is used for the SQLite verification.
@@ -18,9 +19,9 @@ class BenchmarkRunner;
  *
  * @param schema_file_path              the path to an SQL file which creates the data schema
  * @param create_indices_file_path			the path to an SQL file which creates indices
- * @param benchmark_runner							the used benchmark runner
+ * @param sqlite_wrapper								the used sqlite_wrapper
  */
 void add_indices_to_sqlite(const std::string& schema_file_path, const std::string& create_indices_file_path,
-                           BenchmarkRunner& benchmark_runner);
+                           std::shared_ptr<SQLiteWrapper>& sqlite_wrapper);
 
 }  // namespace opossum

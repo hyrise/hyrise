@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
       BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};
 
   if (benchmark_config->verify) {
-    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner);
+    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner.sqlite_wrapper);
   }
 
   std::cout << "done." << std::endl;

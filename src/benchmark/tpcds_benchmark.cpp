@@ -30,14 +30,62 @@ using namespace opossum;  // NOLINT
 
 namespace {
 
-bool data_files_available(const std::string& table_path);
-const std::unordered_set<std::string> filename_blacklist();
+bool data_files_available(const std::string& table_path) {
+  for (const auto& table : {"call_center",
+                            "catalog_page",
+                            "catalog_returns",
+                            "catalog_sales",
+                            "customer_address",
+                            "customer",
+                            "customer_demographics",
+                            "date_dim",
+                            "household_demographics",
+                            "income_band",
+                            "inventory",
+                            "item",
+                            "promotion",
+                            "reason",
+                            "ship_mode",
+                            "store",
+                            "store_returns",
+                            "store_sales",
+                            "time_dim",
+                            "warehouse",
+                            "web_page",
+                            "web_returns",
+                            "web_sales",
+                            "web_site"}) {
+    if (!std::filesystem::exists(table_path + "/" + table + ".csv")) {
+      return false;
+    }
+  }
+  return true;
+}
+
+const std::unordered_set<std::string> filename_blacklist() {
+  auto filename_blacklist = std::unordered_set<std::string>{};
+  const auto blacklist_file_path = "resources/benchmark/tpcds/query_blacklist.cfg";
+  std::ifstream blacklist_file(blacklist_file_path);
+
+  if (!blacklist_file) {
+    std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
+  } else {
+    std::string filename;
+    while (std::getline(blacklist_file, filename)) {
+      if (filename.size() > 0 && filename.at(0) != '#') {
+        filename_blacklist.emplace(filename);
+      }
+    }
+    blacklist_file.close();
+  }
+  return filename_blacklist;
+}
 
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  const std::string binary_path = argv[0];
-  const std::string binary_directory = binary_path.substr(0, binary_path.find_last_of("/"));
+  const auto binary_path = std::filesystem::path(argv[0]);
+  const auto binary_directory_path = binary_path.parent_path();
 
   auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPC-DS Benchmark");
 
@@ -89,15 +137,13 @@ int main(int argc, char* argv[]) {
          "Table schemes have to be available.");
 
   if (!data_files_available(table_path)) {
-    if (std::filesystem::exists(std::filesystem::path{binary_directory + "/dsdgen"})) {
-      const auto files_setup_return =
-          system(("cd " + binary_directory + " && ./dsdgen -scale " + std::to_string(scale_factor) +
-                  " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -suffix .csv -f")
-                     .c_str());
-      Assert(files_setup_return == 0, "Generating table data files failed.");
-    } else {
-      Fail("Could not find 'dsdgen' in your build directory. Did you run the benchmark from the project root dir?");
-    }
+    Assert(std::filesystem::exists(std::filesystem::path{binary_directory_path.string() + "/dsdgen"}),
+           "Could not find 'dsdgen' in your build directory. Did you run the benchmark from the project root dir?");
+    const auto files_setup_return =
+        system(("cd " + binary_directory_path.string() + " && ./dsdgen -scale " + std::to_string(scale_factor) +
+                " -dir ../resources/benchmark/tpcds/tables -terminate n -verbose -suffix .csv -f")
+                   .c_str());
+    Assert(files_setup_return == 0, "Generating table data files failed.");
   }
 
   Assert(data_files_available(table_path), "Generating table data files failed.");
@@ -108,65 +154,10 @@ int main(int argc, char* argv[]) {
 
   if (config->verify) {
     add_indices_to_sqlite("resources/benchmark/tpcds/schema.sql", "resources/benchmark/tpcds/create_indices.sql",
-                          benchmark_runner);
+                          benchmark_runner.sqlite_wrapper);
   }
 
   std::cout << "done." << std::endl;
 
   benchmark_runner.run();
 }
-
-namespace {
-
-bool data_files_available(const std::string& table_path) {
-  for (const auto& table : {"call_center",
-                            "catalog_page",
-                            "catalog_returns",
-                            "catalog_sales",
-                            "customer_address",
-                            "customer",
-                            "customer_demographics",
-                            "date_dim",
-                            "household_demographics",
-                            "income_band",
-                            "inventory",
-                            "item",
-                            "promotion",
-                            "reason",
-                            "ship_mode",
-                            "store",
-                            "store_returns",
-                            "store_sales",
-                            "time_dim",
-                            "warehouse",
-                            "web_page",
-                            "web_returns",
-                            "web_sales",
-                            "web_site"}) {
-    if (!std::filesystem::exists(table_path + "/" + table + ".csv")) {
-      return false;
-    }
-  }
-  return true;
-}
-
-const std::unordered_set<std::string> filename_blacklist() {
-  auto filename_blacklist = std::unordered_set<std::string>{};
-  const auto blacklist_file_path = "resources/benchmark/tpcds/query_blacklist.cfg";
-  std::ifstream blacklist_file(blacklist_file_path);
-
-  if (!blacklist_file) {
-    std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
-  } else{
-    std::string filename;
-    while (std::getline(blacklist_file, filename)) {
-      if (filename.size() > 0 && filename.at(0) != '#') {
-        filename_blacklist.emplace(filename);
-      }
-    }
-    blacklist_file.close();
-  }
-  return filename_blacklist;
-}
-
-}  // namespace
