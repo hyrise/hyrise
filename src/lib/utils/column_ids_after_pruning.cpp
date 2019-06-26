@@ -1,4 +1,4 @@
-#include "pruning_column_id_mapping.hpp"
+#include "column_ids_after_pruning.hpp"
 
 #include <cstdlib>
 #include <optional>
@@ -8,7 +8,7 @@ namespace opossum {
 
 const std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t& original_table_column_count,
                                                                     const std::vector<ColumnID>& pruned_column_ids) {
-  // Stored the updated ColumnID at the index of the original ID if the original column was not pruned.
+  // Stores the updated ColumnID at the index of the original ID if the original column was not pruned.
   // If the original column with ColumnID c was pruned, the id_mapping vector contains nullopt at index c.
   std::vector<std::optional<ColumnID>> column_id_mapping;
 
@@ -22,7 +22,7 @@ const std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t
     column_pruned_bitvector[pruned_column_id] = true;
   }
 
-  // Calculate new colummn ids
+  // Calculate new column ids
   auto next_updated_column_id = ColumnID{0};
   for (auto column_index = ColumnID{0}; column_index < column_pruned_bitvector.size(); ++column_index) {
     if (!column_pruned_bitvector[column_index]) {

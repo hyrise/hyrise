@@ -552,6 +552,8 @@ set(
     utils/assert.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
+    utils/column_ids_after_pruning.cpp
+    utils/column_ids_after_pruning.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp
@@ -572,8 +574,6 @@ set(
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
-    utils/pruning_column_id_mapping.cpp
-    utils/pruning_column_id_mapping.hpp
     utils/scoped_locking_ptr.hpp
     utils/singleton.hpp
     utils/sqlite_wrapper.cpp

@@ -191,7 +191,7 @@ set(
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
-    utils/pruning_column_id_mapping_test.cpp
+    utils/column_ids_after_pruning_test.cpp
     utils/singleton_test.cpp
     utils/string_utils_test.cpp
 )
