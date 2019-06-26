@@ -68,9 +68,8 @@ class PosHashTable {
   using SmallPosList = boost::container::small_vector<RowID, 1>;
 
  public:
-  explicit PosHashTable(JoinHashBuildMode mode, size_t max_size)
-      : _hash_table(static_cast<size_t>(max_size * 1.2)), _pos_lists(max_size), _mode(mode) {
-    // slightly oversize (x 1.2) the hash table to avoid unnecessary rebuilds
+  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
+      : _hash_table(max_size), _pos_lists(max_size), _mode(mode) {
   }
 
   // For a value seen on the build side, add its row_id to the table
@@ -255,10 +254,10 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
                                                            JoinHashBuildMode mode) {
   /*
   NUMA notes:
-  The hashtables for each partition P should also reside on the same node as the two vectors buildP and probeP.
+  The hash tables for each partition P should also reside on the same node as the two vectors buildP and probeP.
   */
-  std::vector<std::optional<PosHashTable<HashedType>>> hashtables;
-  hashtables.resize(radix_container.partition_offsets.size());
+  std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+  hash_tables.resize(radix_container.partition_offsets.size());
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
@@ -279,7 +278,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
         [&, build_partition_begin, build_partition_end, current_partition_id, build_partition_size]() {
           auto& build_partition = static_cast<Partition<BuildColumnType>&>(*radix_container.elements);
 
-          auto hashtable = PosHashTable<HashedType>(mode, static_cast<size_t>(build_partition_size));
+          auto hash_table = PosHashTable<HashedType>(mode, static_cast<size_t>(build_partition_size));
 
           for (size_t partition_offset = build_partition_begin; partition_offset < build_partition_end;
                ++partition_offset) {
@@ -290,17 +289,17 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
               continue;
             }
 
-            hashtable.emplace(element.value, element.row_id);
+            hash_table.emplace(element.value, element.row_id);
           }
 
-          hashtables[current_partition_id] = std::move(hashtable);
+          hash_tables[current_partition_id] = std::move(hash_table);
         }));
     jobs.back()->schedule();
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return hashtables;
+  return hash_tables;
 }
 
 template <typename T, typename HashedType, bool retain_null_values>
@@ -583,7 +582,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
       PosList pos_list_local;
 
       if (hash_tables[current_partition_id]) {
-        // Valid hashtable found, so there is at least one match in this partition
+        // Valid hash table found, so there is at least one match in this partition
 
         // Accessors are not thread-safe, so we create one evaluator per job
         MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode,
@@ -613,11 +612,11 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           }
 
           auto any_build_column_value_matches = false;
-          const auto& hashtable = hash_tables[current_partition_id].value();
+          const auto& hash_table = hash_tables[current_partition_id].value();
           const auto& primary_predicate_matching_rows =
-              hashtable.find(static_cast<HashedType>(probe_column_element.value));
+              hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-          if (primary_predicate_matching_rows != hashtable.end()) {
+          if (primary_predicate_matching_rows != hash_table.end()) {
             for (const auto& row_id : *primary_predicate_matching_rows) {
               if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
                 any_build_column_value_matches = true;
@@ -633,7 +632,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           }
         }
       } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
-        // no hashtable on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
+        // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -641,7 +640,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
       } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
-        // no hashtable on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
+        // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {

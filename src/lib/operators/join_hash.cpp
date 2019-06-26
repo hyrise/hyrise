@@ -284,7 +284,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     RadixContainer<ProbeColumnType> radix_probe_column;
 
     // HashTables for the build column, one for each partition
-    std::vector<std::optional<PosHashTable<HashedType>>> hashtables;
+    std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
 
     // Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
     // ===============================================================================================
@@ -310,7 +310,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
     /**
-     * 1.1 Schedule a JobTask for materialization, optional radix partitioning and hashtable building for the build side
+     * 1.1 Schedule a JobTask for materialization, optional radix partitioning and hash table building for the build side
      */
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       if (keep_nulls_build_column) {
@@ -340,9 +340,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // case, we DO need all rows.
       if (_secondary_predicates.empty() &&
           (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-        hashtables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition);
+        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition);
       } else {
-        hashtables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions);
+        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions);
       }
     }));
     jobs.back()->schedule();
@@ -412,37 +412,37 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:
-    buildP, probeP and hashtableP.
+    buildP, probeP and hash tableP.
     */
     switch (_mode) {
       case JoinMode::Inner:
-        probe<ProbeColumnType, HashedType, false>(radix_probe_column, hashtables, build_side_pos_lists,
+        probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                   probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
                                                   _secondary_predicates);
         break;
 
       case JoinMode::Left:
       case JoinMode::Right:
-        probe<ProbeColumnType, HashedType, true>(radix_probe_column, hashtables, build_side_pos_lists,
+        probe<ProbeColumnType, HashedType, true>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                  probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
                                                  _secondary_predicates);
         break;
 
       case JoinMode::Semi:
-        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hashtables,
+        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
                                                                      probe_side_pos_lists, *_build_input_table,
                                                                      *_probe_input_table, _secondary_predicates);
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
-            radix_probe_column, hashtables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
+            radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
-            radix_probe_column, hashtables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
+            radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates);
         break;
 
