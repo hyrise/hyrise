@@ -63,6 +63,8 @@ struct W_CATALOG_SALES_TBL {
 	ds_pricing_t	cs_pricing;
 };
 
+void mk_w_catalog_sales_master (void *row, ds_key_t index);
+void mk_w_catalog_sales_detail(void *row, int bPrint, void* catalog_returns, int* was_returned);
 int mk_w_catalog_sales(void *row, ds_key_t index, void* catalog_return, int* was_returned);
 int pr_w_catalog_sales(void *r);
 int ld_w_catalog_sales(void *r);

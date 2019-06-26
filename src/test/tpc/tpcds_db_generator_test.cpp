@@ -50,7 +50,7 @@ TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
   EXPECT_FALSE(StorageManager::get().has_table("web_sales"));
   EXPECT_FALSE(StorageManager::get().has_table("web_site"));
 
-  TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE).generate_and_store();
+  TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
 
   EXPECT_TRUE(StorageManager::get().has_table("call_center"));
   EXPECT_TRUE(StorageManager::get().has_table("catalog_page"));
@@ -80,7 +80,7 @@ TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
   EXPECT_EQ(StorageManager::get().get_table("call_center")->row_count(), 6);
   EXPECT_EQ(StorageManager::get().get_table("catalog_page")->row_count(), 11718);
 //  EXPECT_EQ(StorageManager::get().get_table("catalog_returns")->row_count(), 144201);
-//  EXPECT_EQ(StorageManager::get().get_table("catalog_sales")->row_count(), 1440060);
+  EXPECT_EQ(StorageManager::get().get_table("catalog_sales")->row_count(), 1440060);
   EXPECT_EQ(StorageManager::get().get_table("customer")->row_count(), 100000);
   EXPECT_EQ(StorageManager::get().get_table("customer_address")->row_count(), 50000);
   EXPECT_EQ(StorageManager::get().get_table("customer_demographics")->row_count(), 1920800);

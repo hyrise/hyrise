@@ -448,65 +448,39 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     auto catalog_returns = W_CATALOG_RETURNS_TBL{};
     int was_returned = 0;
 
-    mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
-    tpcds_row_stop(CATALOG_SALES);
+    // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
+    {
+      mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + i);
+      int nLineitems;
+      genrand_integer(&nLineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
+      for (auto j = 1; j <= nLineitems; j++) {
+        mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
-    catalog_sales_builder.append_row(
-        resolve_key(catalog_sales.cs_sold_date_sk), resolve_key(catalog_sales.cs_sold_time_sk),
-        resolve_key(catalog_sales.cs_ship_date_sk), resolve_key(catalog_sales.cs_bill_customer_sk),
-        resolve_key(catalog_sales.cs_bill_cdemo_sk), resolve_key(catalog_sales.cs_bill_hdemo_sk),
-        resolve_key(catalog_sales.cs_bill_addr_sk), resolve_key(catalog_sales.cs_ship_customer_sk),
-        resolve_key(catalog_sales.cs_ship_cdemo_sk), resolve_key(catalog_sales.cs_ship_hdemo_sk),
-        resolve_key(catalog_sales.cs_ship_addr_sk), resolve_key(catalog_sales.cs_call_center_sk),
-        resolve_key(catalog_sales.cs_catalog_page_sk), resolve_key(catalog_sales.cs_ship_mode_sk),
-        resolve_key(catalog_sales.cs_warehouse_sk), resolve_key(catalog_sales.cs_sold_item_sk),
-        resolve_key(catalog_sales.cs_promo_sk), resolve_key(catalog_sales.cs_order_number),
-        catalog_sales.cs_pricing.quantity, decimal_to_float(catalog_sales.cs_pricing.wholesale_cost),
-        decimal_to_float(catalog_sales.cs_pricing.list_price), decimal_to_float(catalog_sales.cs_pricing.sales_price),
-        decimal_to_float(catalog_sales.cs_pricing.ext_discount_amt),
-        decimal_to_float(catalog_sales.cs_pricing.ext_sales_price),
-        decimal_to_float(catalog_sales.cs_pricing.ext_wholesale_cost),
-        decimal_to_float(catalog_sales.cs_pricing.ext_list_price), decimal_to_float(catalog_sales.cs_pricing.ext_tax),
-        decimal_to_float(catalog_sales.cs_pricing.coupon_amt), decimal_to_float(catalog_sales.cs_pricing.ext_ship_cost),
-        decimal_to_float(catalog_sales.cs_pricing.net_paid),
-        decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_tax),
-        decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_ship),
-        decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_ship_tax),
-        decimal_to_float(catalog_sales.cs_pricing.net_profit));
+        catalog_sales_builder.append_row(
+          resolve_key(catalog_sales.cs_sold_date_sk), resolve_key(catalog_sales.cs_sold_time_sk),
+          resolve_key(catalog_sales.cs_ship_date_sk), resolve_key(catalog_sales.cs_bill_customer_sk),
+          resolve_key(catalog_sales.cs_bill_cdemo_sk), resolve_key(catalog_sales.cs_bill_hdemo_sk),
+          resolve_key(catalog_sales.cs_bill_addr_sk), resolve_key(catalog_sales.cs_ship_customer_sk),
+          resolve_key(catalog_sales.cs_ship_cdemo_sk), resolve_key(catalog_sales.cs_ship_hdemo_sk),
+          resolve_key(catalog_sales.cs_ship_addr_sk), resolve_key(catalog_sales.cs_call_center_sk),
+          resolve_key(catalog_sales.cs_catalog_page_sk), resolve_key(catalog_sales.cs_ship_mode_sk),
+          resolve_key(catalog_sales.cs_warehouse_sk), resolve_key(catalog_sales.cs_sold_item_sk),
+          resolve_key(catalog_sales.cs_promo_sk), resolve_key(catalog_sales.cs_order_number),
+          catalog_sales.cs_pricing.quantity, decimal_to_float(catalog_sales.cs_pricing.wholesale_cost),
+          decimal_to_float(catalog_sales.cs_pricing.list_price), decimal_to_float(catalog_sales.cs_pricing.sales_price),
+          decimal_to_float(catalog_sales.cs_pricing.ext_discount_amt),
+          decimal_to_float(catalog_sales.cs_pricing.ext_sales_price),
+          decimal_to_float(catalog_sales.cs_pricing.ext_wholesale_cost),
+          decimal_to_float(catalog_sales.cs_pricing.ext_list_price), decimal_to_float(catalog_sales.cs_pricing.ext_tax),
+          decimal_to_float(catalog_sales.cs_pricing.coupon_amt), decimal_to_float(catalog_sales.cs_pricing.ext_ship_cost),
+          decimal_to_float(catalog_sales.cs_pricing.net_paid),
+          decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_tax),
+          decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_ship),
+          decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_ship_tax),
+          decimal_to_float(catalog_sales.cs_pricing.net_profit));
 
-    if (was_returned != 0) {
-      catalog_returns_builder.append_row(
-          resolve_key(catalog_returns.cr_returned_date_sk), resolve_key(catalog_returns.cr_returned_time_sk),
-          resolve_key(catalog_returns.cr_item_sk), resolve_key(catalog_returns.cr_refunded_customer_sk),
-          resolve_key(catalog_returns.cr_refunded_cdemo_sk), resolve_key(catalog_returns.cr_refunded_hdemo_sk),
-          resolve_key(catalog_returns.cr_refunded_addr_sk), resolve_key(catalog_returns.cr_returning_customer_sk),
-          resolve_key(catalog_returns.cr_returning_cdemo_sk), resolve_key(catalog_returns.cr_returning_hdemo_sk),
-          resolve_key(catalog_returns.cr_returning_addr_sk), resolve_key(catalog_returns.cr_call_center_sk),
-          resolve_key(catalog_returns.cr_catalog_page_sk), resolve_key(catalog_returns.cr_ship_mode_sk),
-          resolve_key(catalog_returns.cr_warehouse_sk), resolve_key(catalog_returns.cr_reason_sk),
-          resolve_key(catalog_returns.cr_order_number), catalog_returns.cr_pricing.quantity,
-          decimal_to_float(catalog_returns.cr_pricing.net_paid), decimal_to_float(catalog_returns.cr_pricing.ext_tax),
-          decimal_to_float(catalog_returns.cr_pricing.net_paid_inc_tax),
-          decimal_to_float(catalog_returns.cr_pricing.fee), decimal_to_float(catalog_returns.cr_pricing.ext_ship_cost),
-          decimal_to_float(catalog_returns.cr_pricing.refunded_cash),
-          decimal_to_float(catalog_returns.cr_pricing.reversed_charge),
-          decimal_to_float(catalog_returns.cr_pricing.store_credit),
-          decimal_to_float(catalog_returns.cr_pricing.net_loss));
-    }
-  }
-
-  // only used for testing; generate more catalog_returns until number of catalog returns == max_rows
-  if (max_rows != std::numeric_limits<ds_key_t>::max()) {
-    for (; catalog_returns_builder.row_count() < static_cast<size_t>(max_rows); i++) {
-      auto catalog_sales = W_CATALOG_SALES_TBL{};
-      auto catalog_returns = W_CATALOG_RETURNS_TBL{};
-      int was_returned = 0;
-
-      mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
-      tpcds_row_stop(CATALOG_SALES);
-
-      if (was_returned != 0) {
-        catalog_returns_builder.append_row(
+        if (was_returned != 0) {
+          catalog_returns_builder.append_row(
             resolve_key(catalog_returns.cr_returned_date_sk), resolve_key(catalog_returns.cr_returned_time_sk),
             resolve_key(catalog_returns.cr_item_sk), resolve_key(catalog_returns.cr_refunded_customer_sk),
             resolve_key(catalog_returns.cr_refunded_cdemo_sk), resolve_key(catalog_returns.cr_refunded_hdemo_sk),
@@ -518,15 +492,50 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
             resolve_key(catalog_returns.cr_order_number), catalog_returns.cr_pricing.quantity,
             decimal_to_float(catalog_returns.cr_pricing.net_paid), decimal_to_float(catalog_returns.cr_pricing.ext_tax),
             decimal_to_float(catalog_returns.cr_pricing.net_paid_inc_tax),
-            decimal_to_float(catalog_returns.cr_pricing.fee),
-            decimal_to_float(catalog_returns.cr_pricing.ext_ship_cost),
+            decimal_to_float(catalog_returns.cr_pricing.fee), decimal_to_float(catalog_returns.cr_pricing.ext_ship_cost),
             decimal_to_float(catalog_returns.cr_pricing.refunded_cash),
             decimal_to_float(catalog_returns.cr_pricing.reversed_charge),
             decimal_to_float(catalog_returns.cr_pricing.store_credit),
             decimal_to_float(catalog_returns.cr_pricing.net_loss));
+        }
       }
     }
+//    tpcds_row_stop(CATALOG_SALES); // TODO: remove
   }
+
+  // only used for testing; generate more catalog_returns until number of catalog returns == max_rows
+  // TODO what to do with this?
+//  if (max_rows != std::numeric_limits<ds_key_t>::max()) {
+//    for (; catalog_returns_builder.row_count() < static_cast<size_t>(max_rows); i++) {
+//      auto catalog_sales = W_CATALOG_SALES_TBL{};
+//      auto catalog_returns = W_CATALOG_RETURNS_TBL{};
+//      int was_returned = 0;
+//
+//      mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
+//      tpcds_row_stop(CATALOG_SALES);
+//
+//      if (was_returned != 0) {
+//        catalog_returns_builder.append_row(
+//            resolve_key(catalog_returns.cr_returned_date_sk), resolve_key(catalog_returns.cr_returned_time_sk),
+//            resolve_key(catalog_returns.cr_item_sk), resolve_key(catalog_returns.cr_refunded_customer_sk),
+//            resolve_key(catalog_returns.cr_refunded_cdemo_sk), resolve_key(catalog_returns.cr_refunded_hdemo_sk),
+//            resolve_key(catalog_returns.cr_refunded_addr_sk), resolve_key(catalog_returns.cr_returning_customer_sk),
+//            resolve_key(catalog_returns.cr_returning_cdemo_sk), resolve_key(catalog_returns.cr_returning_hdemo_sk),
+//            resolve_key(catalog_returns.cr_returning_addr_sk), resolve_key(catalog_returns.cr_call_center_sk),
+//            resolve_key(catalog_returns.cr_catalog_page_sk), resolve_key(catalog_returns.cr_ship_mode_sk),
+//            resolve_key(catalog_returns.cr_warehouse_sk), resolve_key(catalog_returns.cr_reason_sk),
+//            resolve_key(catalog_returns.cr_order_number), catalog_returns.cr_pricing.quantity,
+//            decimal_to_float(catalog_returns.cr_pricing.net_paid), decimal_to_float(catalog_returns.cr_pricing.ext_tax),
+//            decimal_to_float(catalog_returns.cr_pricing.net_paid_inc_tax),
+//            decimal_to_float(catalog_returns.cr_pricing.fee),
+//            decimal_to_float(catalog_returns.cr_pricing.ext_ship_cost),
+//            decimal_to_float(catalog_returns.cr_pricing.refunded_cash),
+//            decimal_to_float(catalog_returns.cr_pricing.reversed_charge),
+//            decimal_to_float(catalog_returns.cr_pricing.store_credit),
+//            decimal_to_float(catalog_returns.cr_pricing.net_loss));
+//      }
+//    }
+//  }
 
   return {catalog_sales_builder.finish_table(), catalog_returns_builder.finish_table()};
 }
