@@ -419,12 +419,14 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregates) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubquery) {
-  const auto actual_lqp = compile_query("SELECT a1, b2, a3 FROM (SELECT a AS a1, a AS a2, a AS a3, b AS b1, b AS b2, b AS b3 FROM int_float) AS R");
+  const auto actual_lqp = compile_query(
+      "SELECT a1, b2, a3 FROM (SELECT a AS a1, a AS a2, a AS a3, b AS b1, b AS b2, b AS b3 FROM int_float) AS R");
 
   const auto outer_aliases = std::vector<std::string>({"a1", "b2", "a3"});
   const auto inner_aliases = std::vector<std::string>({"a1", "a2", "a3", "b1", "b2", "b3"});
   const auto outer_expressions = expression_vector(int_float_a, int_float_b, int_float_a);
-  const auto inner_expressions = expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
+  const auto inner_expressions =
+      expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
 
   // clang-format off
   const auto expected_lqp =
@@ -439,7 +441,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubquery)
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubquery) {
-  const auto actual_lqp = compile_query("SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
+  const auto actual_lqp =
+      compile_query("SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
   const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
@@ -459,11 +462,11 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsAndFromColumnAliasing) {
   const auto actual_lqp =
-  compile_query("SELECT x AS x1, x AS x2, x AS x3, y AS y1, y AS y2, y AS y3 FROM int_float AS R (x, y)");
+      compile_query("SELECT x AS x1, x AS x2, x AS x3, y AS y1, y AS y2, y AS y3 FROM int_float AS R (x, y)");
 
   const auto aliases = std::vector<std::string>({"x1", "x2", "x3", "y1", "y2", "y3"});
   const auto expressions =
-  expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
+      expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
 
   // clang-format off
   const auto expected_lqp =
@@ -483,7 +486,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubqueryA
   const auto outer_aliases = std::vector<std::string>({"u", "z", "w"});
   const auto inner_aliases = std::vector<std::string>({"a1", "a2", "a3", "b1", "b2", "b3"});
   const auto outer_expressions = expression_vector(int_float_a, int_float_b, int_float_a);
-  const auto inner_expressions = expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
+  const auto inner_expressions =
+      expression_vector(int_float_a, int_float_a, int_float_a, int_float_b, int_float_b, int_float_b);
 
   // clang-format off
   const auto expected_lqp =
@@ -543,7 +547,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInCorre
   const auto expected_lqp =
   AliasNode::make(expression_vector(int_float_b, int_float_b), aliases,
     ProjectionNode::make(expression_vector(int_float_b, int_float_b),
-      PredicateNode::make(less_than_(int_float_a, subquery))));
+      PredicateNode::make(less_than_(int_float_a, subquery),
+        stored_table_node_int_float)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
