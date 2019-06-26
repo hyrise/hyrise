@@ -52,14 +52,23 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   auto rng_seed_string = std::string{"RNGSEED"};
   auto rng_seed_value_string = std::to_string(rng_seed);
   set_int(rng_seed_string.data(), rng_seed_value_string.data());
-  init_rand();
+
+  // init_rand from genrand.c, adapted
+  {
+    auto nSeed = get_int(rng_seed_string.data());
+    auto skip = MAXINT / MAX_COLUMN;
+    for (auto i = 0; i < MAX_COLUMN; i++) {
+      Streams[i].nInitialSeed = nSeed + skip * i;
+      Streams[i].nSeed = nSeed + skip * i;
+      Streams[i].nUsed = 0;
+    }
+  }
 
   auto distributions_string = std::string{"DISTRIBUTIONS"};
   // PATH_TO_TPCDS_IDX is set to "${CMAKE_BINARY_DIR}/tpcds.idx" in CMakeLists.txt
   auto distributions_value = std::string{PATH_TO_TPCDS_IDX};
   set_str(distributions_string.data(), distributions_value.data());
 
-  // TODO: doesnt work, tests succeed when run in isolation, but fail if run in sequence
   for (auto table_id = 0; table_id <= MAX_TABLE; table_id++) {
     resetSeeds(table_id);
     RNGReset(table_id);
