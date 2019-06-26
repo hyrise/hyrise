@@ -56,7 +56,15 @@ class FrameOfReferenceSegment : public BaseEncodedSegment {
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+    // performance critical - not in cpp to help with inlining
+    if (_null_values[chunk_offset]) {
+      return std::nullopt;
+    }
+    const auto minimum = _block_minima[chunk_offset / block_size];
+    const auto value = static_cast<T>(_decompressor->get(chunk_offset)) + minimum;
+    return value;
+  }
 
   size_t size() const final;
 

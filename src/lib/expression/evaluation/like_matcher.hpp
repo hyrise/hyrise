@@ -1,5 +1,6 @@
 #pragma once
 
+#include <experimental/functional>
 #include <regex>
 #include <string>
 #include <variant>
@@ -17,6 +18,13 @@ namespace opossum {
  * check.
  */
 class LikeMatcher {
+  // A faster search algorithm than the typical byte-wise search if we can reuse the searcher
+#ifdef __GLIBCXX__
+  using Searcher = std::boyer_moore_searcher<pmr_string::const_iterator>;
+#else
+  using Searcher = std::experimental::boyer_moore_searcher<pmr_string::const_iterator>;
+#endif
+
  public:
   /**
    * Turn SQL LIKE-pattern into a C++ regex.
@@ -93,19 +101,27 @@ class LikeMatcher {
 
     } else if (std::holds_alternative<ContainsPattern>(_pattern_variant)) {
       const auto& contains_str = std::get<ContainsPattern>(_pattern_variant).string;
+      // It's really hard to store the searcher in the pattern as it only holds iterators into the string that easily
+      // get invalidated when the pattern is passed around.
+      const auto searcher = Searcher{contains_str.begin(), contains_str.end()};
       functor([&](const pmr_string& string) -> bool {
-        return (string.find(contains_str) != pmr_string::npos) ^ invert_results;
+        return (std::search(string.begin(), string.end(), searcher) != string.end()) ^ invert_results;
       });
 
     } else if (std::holds_alternative<MultipleContainsPattern>(_pattern_variant)) {
       const auto& contains_strs = std::get<MultipleContainsPattern>(_pattern_variant).strings;
+      std::vector<Searcher> searchers;
+      searchers.reserve(contains_strs.size());
+      for (const auto& contains_str : contains_strs) {
+        searchers.emplace_back(Searcher(contains_str.begin(), contains_str.end()));
+      }
 
       functor([&](const pmr_string& string) -> bool {
-        auto current_position = size_t{0};
-        for (const auto& contains_str : contains_strs) {
-          current_position = string.find(contains_str, current_position);
-          if (current_position == pmr_string::npos) return invert_results;
-          current_position += contains_str.size();
+        auto current_position = string.begin();
+        for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
+          current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
+          if (current_position == string.end()) return invert_results;
+          current_position += contains_strs[searcher_idx].size();
         }
         return !invert_results;
       });

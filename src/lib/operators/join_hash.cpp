@@ -71,12 +71,12 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
     The number of bits is used to create probe partitions with a size that can
     be expected to fit into the L2 cache.
     This should incorporate hardware knowledge, once available in Hyrise.
-    As of now, we assume a L2 cache size of 256 KB.
+    As of now, we assume a L2 cache size of 1024 KB (L2 cache size of recent
+    Intel Xeon CPUs), of which we use 50%.
     We estimate the size the following way:
       - we assume each key appears once (that is an overestimation space-wise, but we
       aim rather for a hash map that is slightly smaller than L2 than slightly larger)
-      - each entry in the hash map is a data structure holding the actual value
-      and the RowID
+      - each entry in the hash map is a uint32_t offset (see hash_join_steps.hpp)
   */
   if (build_relation_size > probe_relation_size) {
     /*
@@ -87,22 +87,21 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
     PerformanceWarning("Build relation larger than probe relation in hash join");
   }
 
-  const auto l2_cache_size = 256'000;  // bytes
+  const auto l2_cache_size = 1'024'000;                  // bytes
+  const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
 
-  // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
-  // that each value maps to a PosList with a single RowID. For the used small_vector's, we assume a
-  // size of 2*RowID per PosList. For sizing, see comments:
+  // For information about the sizing of the bytell hash map, see the comments:
   // https://probablydance.com/2018/05/28/a-new-fast-hash-table-in-response-to-googles-new-fast-hash-table/
+  // Bytell hash map has a maximum fill factor of 0.9375. Since it's hard to estimate the actual size of
+  // a radix partition (and thus the size of each hash table), we accomodate a little bit extra space for
+  // slightly skewed data distributions and aim for a fill level of 80%.
   const auto complete_hash_map_size =
       // number of items in map
-      (build_relation_size *
-       // key + value (and one byte overhead, see link above)
-       (sizeof(T) + 2 * sizeof(RowID) + 1))
-      // fill factor
-      / 0.8;
+      build_relation_size *
+      // key + value (and one byte overhead, see link above)
+      sizeof(uint32_t) / 0.8;
 
-  const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
-  const auto cluster_count = std::max(1.0, (adaption_factor * complete_hash_map_size) / l2_cache_size);
+  auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 
   return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
 }
@@ -187,6 +186,14 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
           _radix_bits =
               calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(), probe_input_table->row_count());
         }
+
+        // It needs to be ensured that the build partition does not get too large, because the
+        // used offsets in the hash map might otherwise overflow. Since radix partitioning aims
+        // to avoid large build partitions, this should never happen. Nonetheless, we better
+        // assert since the effects of overflows will probably hard to debug.
+        const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
+        Assert(static_cast<size_t>(build_input_table->row_count() / std::pow(2, *_radix_bits)) < max_partition_size,
+               "Partition count too small (potential overflows in hash map offsetting).");
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
@@ -278,7 +285,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     RadixContainer<ProbeColumnType> radix_probe_column;
 
     // HashTables for the build column, one for each partition
-    std::vector<std::optional<HashTable<HashedType>>> hashtables;
+    std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
 
     // Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
     // ===============================================================================================
@@ -304,7 +311,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
     /**
-     * 1.1 Schedule a JobTask for materialization, optional radix partitioning and hashtable building for the build side
+     * 1.1 Schedule a JobTask for materialization, optional radix partitioning and hash table building for the build side
      */
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       if (keep_nulls_build_column) {
@@ -334,9 +341,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       // case, we DO need all rows.
       if (_secondary_predicates.empty() &&
           (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
-        hashtables = build<BuildColumnType, HashedType, JoinHashBuildMode::SinglePosition>(radix_build_column);
+        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::SinglePosition);
       } else {
-        hashtables = build<BuildColumnType, HashedType, JoinHashBuildMode::AllPositions>(radix_build_column);
+        hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions);
       }
     }));
     jobs.back()->schedule();
@@ -406,37 +413,37 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:
-    buildP, probeP and hashtableP.
+    buildP, probeP and hash tableP.
     */
     switch (_mode) {
       case JoinMode::Inner:
-        probe<ProbeColumnType, HashedType, false>(radix_probe_column, hashtables, build_side_pos_lists,
+        probe<ProbeColumnType, HashedType, false>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                   probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
                                                   _secondary_predicates);
         break;
 
       case JoinMode::Left:
       case JoinMode::Right:
-        probe<ProbeColumnType, HashedType, true>(radix_probe_column, hashtables, build_side_pos_lists,
+        probe<ProbeColumnType, HashedType, true>(radix_probe_column, hash_tables, build_side_pos_lists,
                                                  probe_side_pos_lists, _mode, *_build_input_table, *_probe_input_table,
                                                  _secondary_predicates);
         break;
 
       case JoinMode::Semi:
-        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hashtables,
+        probe_semi_anti<ProbeColumnType, HashedType, JoinMode::Semi>(radix_probe_column, hash_tables,
                                                                      probe_side_pos_lists, *_build_input_table,
                                                                      *_probe_input_table, _secondary_predicates);
         break;
 
       case JoinMode::AntiNullAsTrue:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsTrue>(
-            radix_probe_column, hashtables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
+            radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates);
         break;
 
       case JoinMode::AntiNullAsFalse:
         probe_semi_anti<ProbeColumnType, HashedType, JoinMode::AntiNullAsFalse>(
-            radix_probe_column, hashtables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
+            radix_probe_column, hash_tables, probe_side_pos_lists, *_build_input_table, *_probe_input_table,
             _secondary_predicates);
         break;
 

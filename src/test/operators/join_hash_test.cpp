@@ -107,19 +107,13 @@ TEST_F(OperatorsJoinHashTest, DeepCopy) {
   EXPECT_NE(join_operator_copy->input_right(), nullptr);
 }
 
-// TODO(Bouncner): enable with merge of #1714
-TEST(OperatorsJoinHashTestStatic, DISABLED_RadixBitCalculation /* #1714 */) {
-  // simple cases
+TEST(OperatorsJoinHashTestStatic, RadixBitCalculation) {
+  // Simple cases: handle minimal inputs and very large inputs
   EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 1), 0ul);
   EXPECT_EQ(JoinHash::calculate_radix_bits<int>(0, 1), 0ul);
   EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 0), 0ul);
   EXPECT_TRUE(JoinHash::calculate_radix_bits<int>(std::numeric_limits<size_t>::max(),
                                                   std::numeric_limits<size_t>::max()) > 0ul);
-
-  // Check that clusters are not larger than uint32_t (potential overflow in hash map offsets).
-  // Such large inputs should be clustered into multiple partitions, even when the build side is small.
-  EXPECT_TRUE(JoinHash::calculate_radix_bits<int>(1, static_cast<size_t>(std::numeric_limits<uint32_t>::max() * 1.1)) >
-              1ul);
 }
 
 }  // namespace opossum

@@ -43,19 +43,6 @@ const AllTypeVariant RunLengthSegment<T>::operator[](const ChunkOffset chunk_off
 }
 
 template <typename T>
-const std::optional<T> RunLengthSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
-  const auto index = std::distance(_end_positions->cbegin(), end_position_it);
-
-  const auto is_null = (*_null_values)[index];
-  if (is_null) {
-    return std::nullopt;
-  }
-
-  return (*_values)[index];
-}
-
-template <typename T>
 size_t RunLengthSegment<T>::size() const {
   if (_end_positions->empty()) return 0u;
   return _end_positions->back() + 1u;

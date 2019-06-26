@@ -127,6 +127,8 @@ void BenchmarkRunner::run() {
 
     Assert(!any_verification_failed, "Verification failed");
   }
+
+  if (CurrentScheduler::is_set()) CurrentScheduler::get()->finish();
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {

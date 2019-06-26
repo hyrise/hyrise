@@ -24,7 +24,8 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
   // For a DictionarySegment of the max size Chunk::MAX_SIZE, those two values overlap.
 
   Assert(_dictionary->size() < std::numeric_limits<ValueID::base_type>::max(), "Input segment too big");
-  DebugAssert(ValueID{static_cast<uint32_t>(_dictionary->size())} == _null_value_id, "Invalid NULL value id");  // NOLINT
+  DebugAssert(ValueID{static_cast<uint32_t>(_dictionary->size())} == _null_value_id,
+              "Invalid NULL value id");  // NOLINT
 }
 
 template <typename T>
@@ -37,15 +38,6 @@ const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_of
     return NULL_VALUE;
   }
   return *typed_value;
-}
-
-template <typename T>
-const std::optional<T> DictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  const auto value_id = _decompressor->get(chunk_offset);
-  if (value_id == _null_value_id) {
-    return std::nullopt;
-  }
-  return (*_dictionary)[value_id];
 }
 
 template <typename T>
