@@ -232,8 +232,8 @@ void JoinIndex::_append_matches(const ChunkID& probe_chunk_id, const ChunkOffset
 
 // join loop that joins two segments of two columns using an iterator for the probe side,
 // and an index for the index side
-template <typename LeftIterator>
-void JoinIndex::_join_two_segments_using_index(LeftIterator probe_iter, LeftIterator probe_end,
+template <typename ProbeIterator>
+void JoinIndex::_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
                                                const std::shared_ptr<BaseIndex>& index) {
   for (; probe_iter != probe_end; ++probe_iter) {

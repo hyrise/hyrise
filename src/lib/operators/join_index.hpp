@@ -18,9 +18,9 @@ enum class IndexSide { Left, Right };
 /**
    * This operator joins two tables using one column of each table.
    * A speedup compared to the Nested Loop Join is achieved by avoiding the inner loop, and instead
-   * finding the right values utilizing the index.
+   * finding the index side values utilizing the index.
    *
-   * Note: An index needs to be present on the right table in order to execute an index join.
+   * Note: An index needs to be present on the index side table in order to execute an index join.
    */
 class JoinIndex : public AbstractJoinOperator {
  public:
@@ -49,20 +49,16 @@ class JoinIndex : public AbstractJoinOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  void _append_matches(const ChunkID& left_chunk_id, const ChunkOffset& left_chunk_offset,
-                       const PosList& right_table_matches);
+  void _append_matches(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
+                       const PosList& index_table_matches);
 
-  template <typename LeftIterator>
-  void _join_two_segments_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
-                                      const ChunkID chunk_id_right, const std::shared_ptr<BaseIndex>& index);
-
-  template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  void _join_two_segments_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                      RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                                      const ChunkID chunk_id_right);
+  template <typename ProbeIterator>
+  void _join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id,
+                                      const ChunkID index_chunk_id, const std::shared_ptr<BaseIndex>& index);
 
   void _append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
-                       const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left, const ChunkID chunk_id_right);
+                       const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
+                       const ChunkID index_chunk_id);
 
   void _write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                               std::shared_ptr<PosList> pos_list);
