@@ -249,8 +249,6 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
   Timer t;
 #endif
 
-  auto remaining_row_count = run_source->size();
-
   // Start with a single partition and expand to `radix_fan_out.partition_count` partitions if `hashing()` detects a too
   // low density of groups and determines the switch to HashSortMode::RadixFanOut
   auto partitions = std::vector<Partition<Run>>{radix_fan_out.partition_count};
@@ -261,16 +259,14 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
    */
   {
 #if VERBOSE
-    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << remaining_row_count << " in source: " << run_source->remaining_fetched_group_count << " | " << run_source->remaining_fetched_group_data_size << "\n";
+    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << run_source->total_remaining_group_count << " in source: " << run_source->remaining_fetched_group_count << " | " << run_source->remaining_fetched_group_data_size << "\n";
 #endif
-    const auto hash_table_size = configure_hash_table(setup, remaining_row_count);
+    const auto hash_table_size = configure_hash_table(setup, run_source->total_remaining_group_count);
     const auto[continue_hashing, hashing_row_count] =
     hashing(setup, hash_table_size, run_source, RadixFanOut{1, 0, 0}, partitions, level);
     if (!continue_hashing) {
       mode = HashSortMode::Partition;
     }
-
-    remaining_row_count -= hashing_row_count;
 
     // The initial hashing() pass didn't process all data, so in order to progress with the main loop below we need to
     // partition its output
@@ -292,26 +288,25 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
    */
   while (!run_source->end_of_source()) {
 #if VERBOSE
-    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << remaining_row_count << " in source: " << run_source->remaining_fetched_group_count << " | " << run_source->remaining_fetched_group_data_size << "\n";
+    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << run_source->total_remaining_group_count << " in source: " << run_source->remaining_fetched_group_count << " | " << run_source->remaining_fetched_group_data_size << "\n";
 #endif
 
-    DebugAssert(remaining_row_count >= run_source->remaining_fetched_group_count, "Bug detected");
+    DebugAssert(run_source->remaining_row_count >= run_source->remaining_fetched_group_count, "Bug detected");
 
 
     if (mode == HashSortMode::Hashing) {
-      const auto hash_table_size = configure_hash_table(setup, remaining_row_count);
+      const auto hash_table_size = configure_hash_table(setup, run_source->total_remaining_group_count);
       const auto [continue_hashing, hashing_row_count] =
       hashing(setup, hash_table_size, run_source, radix_fan_out, partitions, level);
       if (!continue_hashing) {
         mode = HashSortMode::Partition;
       }
-      remaining_row_count -= hashing_row_count;
+      run_source->total_remaining_group_count -= hashing_row_count;
 
     } else {
-      const auto partition_row_count = std::min(setup.config.max_partitioning_counter, remaining_row_count);
+      const auto partition_row_count = std::min(setup.config.max_partitioning_counter, run_source->total_remaining_group_count);
       partition(setup, partition_row_count, run_source, radix_fan_out, partitions, level);
       mode = HashSortMode::Hashing;
-      remaining_row_count -= partition_row_count;
     }
   }
 

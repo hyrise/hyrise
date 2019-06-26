@@ -805,6 +805,9 @@ struct AbstractRunSource {
   size_t run_idx{};
   size_t run_offset{};
 
+  // Number of groups, fetched and unfetched, remaining from the read cursor onward
+  size_t total_remaining_group_count{};
+
   // Amount of data not yet processed (i.e., partitioned/hashed) by the reader. Provides hint for run sizes
   // during partitioning
   size_t remaining_fetched_group_count{};
@@ -813,6 +816,7 @@ struct AbstractRunSource {
   AbstractRunSource(std::vector<Run>&& runs)
   : runs(std::move(runs)) {
     for (const auto& run : this->runs) {
+      total_remaining_group_count += run.size;
       remaining_fetched_group_count += run.size;
       remaining_fetched_group_data_size += run.group_data.size();
     }
@@ -845,8 +849,13 @@ struct AbstractRunSource {
    *          groups are available)
    */
   void next_group_in_run() {
+    DebugAssert(this->total_remaining_group_count > 0, "No next group");
+    DebugAssert(this->remaining_fetched_group_count > 0, "No next group");
+    DebugAssert(this->remaining_fetched_group_data_size >= current_run().get_group_size(run_offset), "Bug detected");
+
+    --this->total_remaining_group_count;
     --this->remaining_fetched_group_count;
-    this->remaining_fetched_group_data_size += current_run().get_group_size(run_offset);
+    this->remaining_fetched_group_data_size -= current_run().get_group_size(run_offset);
     ++run_offset;
   }
 };
@@ -927,6 +936,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
 
   TableRunSource(const AggregateHashSortSetup& setup, const std::shared_ptr<const Table>& table)
       : AbstractRunSource<Run>({}), table(table), unfetched_row_count(table->row_count()) {
+    this->total_remaining_group_count = table->row_count();
   }
 
   bool end_of_source() const override { return this->end_of_run() && unfetched_row_count == 0; }
@@ -953,6 +963,9 @@ struct TableRunSource : public AbstractRunSource<Run> {
     DebugAssert(!end_of_source(), "fetch_run() should not have been called");
 
     const auto row_count = std::min(unfetched_row_count, setup.config.initial_run_size);
+#if VERBOSE
+    std::cout << "fetch_run(): " << row_count << " of " << unfetched_row_count << " remaining" << std::endl;
+#endif
 
     auto [run, end_row_id] = from_table_range(setup, table, begin_row_id, row_count);
 

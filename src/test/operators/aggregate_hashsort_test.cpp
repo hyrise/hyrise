@@ -337,6 +337,8 @@ TEST_F(AggregateHashSortTest, TableRunSourceFixedOnly) {
 
   EXPECT_EQ(run_source.begin_row_id, RowID(ChunkID{0}, ChunkOffset{3}));
 
+  EXPECT_EQ(run_source.remaining_fetched_group_count, 3u);
+  EXPECT_EQ(run_source.remaining_fetched_group_data_size, 15u);
   EXPECT_EQ(run_source.current_run().hashes.size(), 3u);
   EXPECT_EQ(run_source.current_run().size, 3u);
 
@@ -350,7 +352,13 @@ TEST_F(AggregateHashSortTest, TableRunSourceFixedOnly) {
 
   EXPECT_EQ(run_source.run_idx, 0u);
   EXPECT_EQ(run_source.run_offset, 0u);
+
   run_source.next_group_in_run();
+  EXPECT_EQ(run_source.run_idx, 0u);
+  EXPECT_EQ(run_source.run_offset, 1u);
+  EXPECT_EQ(run_source.remaining_fetched_group_count, 2u);
+  EXPECT_EQ(run_source.remaining_fetched_group_data_size, 10u);
+
   run_source.next_group_in_run();
   run_source.next_group_in_run();
   EXPECT_EQ(run_source.run_idx, 0u);
@@ -361,6 +369,8 @@ TEST_F(AggregateHashSortTest, TableRunSourceFixedOnly) {
   run_source.next_run(setup);
   EXPECT_EQ(run_source.run_idx, 1u);
   EXPECT_EQ(run_source.run_offset, 0u);
+  EXPECT_EQ(run_source.remaining_fetched_group_count, 2u);
+  EXPECT_EQ(run_source.remaining_fetched_group_data_size, 10u);
   EXPECT_FALSE(run_source.end_of_run());
   EXPECT_FALSE(run_source.end_of_source());
   // clang-format off
@@ -573,6 +583,8 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   partition<Run>(setup, 6, run_source, fan_out, partitions, 0);
   EXPECT_EQ(run_source->run_idx, 0);
   EXPECT_EQ(run_source->run_offset, 6);
+  EXPECT_EQ(run_source->remaining_fetched_group_count, 0);
+  EXPECT_EQ(run_source->remaining_fetched_group_data_size, 0);
 
   ASSERT_EQ(partitions.size(), 4u);
 
