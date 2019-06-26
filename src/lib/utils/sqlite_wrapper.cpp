@@ -302,17 +302,15 @@ void SQLiteWrapper::_copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>
   table->append(row);
 }
 
-void SQLiteWrapper::raw_execute_query(const std::string& sql, const bool allow_failure) const {
+void SQLiteWrapper::raw_execute_query(const std::string& sql) const {
   char* err_msg;
   auto rc = sqlite3_exec(_db, sql.c_str(), nullptr, nullptr, &err_msg);
 
   if (rc != SQLITE_OK) {
     auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
-    if (!allow_failure) {
-      sqlite3_close(_db);
-    }
-    Fail("Failed to execute query (" + sql + "). SQL error: " + msg + "\n");
+    sqlite3_close(_db);
+    Fail("Failed to create table. SQL error: " + msg + "\n");
   }
 }
 
