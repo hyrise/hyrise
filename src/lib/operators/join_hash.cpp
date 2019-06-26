@@ -87,7 +87,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
     PerformanceWarning("Build relation larger than probe relation in hash join");
   }
 
-  const auto l2_cache_size = 1'024'000;  // bytes
+  const auto l2_cache_size = 1'024'000;                  // bytes
   const auto l2_cache_max_usable = l2_cache_size * 0.5;  // use 50% of the L2 cache size
 
   // For information about the sizing of the bytell hash map, see the comments:
@@ -98,7 +98,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   const auto complete_hash_map_size =
       // number of items in map
       build_relation_size *
-       // key + value (and one byte overhead, see link above)
+      // key + value (and one byte overhead, see link above)
       sizeof(uint32_t) / 0.8;
 
   auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
@@ -192,7 +192,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         // to avoid large build partitions, this should never happen. Nonetheless, we better
         // assert since the effects of overflows will probably hard to debug.
         const auto max_partition_size = std::numeric_limits<uint32_t>::max() * 0.5;
-        Assert(build_input_table->row_count() / 2**_radix_bits < max_partition_size, "Partition count too small (potential overflows in hash map offsetting).");
+        Assert(build_input_table->row_count() / 2 * *_radix_bits < max_partition_size,
+               "Partition count too small (potential overflows in hash map offsetting).");
 
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
