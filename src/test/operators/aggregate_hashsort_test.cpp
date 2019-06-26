@@ -583,8 +583,8 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   partition<Run>(setup, 6, run_source, fan_out, partitions, 0);
   EXPECT_EQ(run_source->run_idx, 0);
   EXPECT_EQ(run_source->run_offset, 6);
-  EXPECT_EQ(run_source->remaining_fetched_group_count, 0);
-  EXPECT_EQ(run_source->remaining_fetched_group_data_size, 0);
+  EXPECT_EQ(run_source->remaining_fetched_group_count, 1);
+  EXPECT_EQ(run_source->remaining_fetched_group_data_size, 1);
 
   ASSERT_EQ(partitions.size(), 4u);
 

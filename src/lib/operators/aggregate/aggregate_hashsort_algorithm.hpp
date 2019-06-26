@@ -150,9 +150,6 @@ std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_
   Timer timer_set_empty_key;
 #endif
   hash_table.set_empty_key(HashTableKey::EMPTY_KEY);
-#if VERBOSE
-  std::cout << indent(level) << "hashing(): set_empty_key() on hash table of size " << hash_table.bucket_count() << " took " << timer_set_empty_key.lap_formatted() << "\n";
-#endif
   hash_table.min_load_factor(0.0f);
 #endif
 
@@ -179,8 +176,8 @@ std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_
       auto &target_run = run_per_partition[partition_idx];
 
       const auto key = source_run.make_key(run_source->run_offset);
-#if VERBOSE
-      //std::cout << "Key: " << key << ": " << std::flush;
+#if VERBOSE >= 2
+      std::cout << indent(level) << "hashing() Key: " << key << ": " << std::flush;
 #endif
 
       auto hash_table_iter = hash_table.find(key);
@@ -188,8 +185,8 @@ std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_
       if (hash_table_iter == hash_table.end()) {
 
         auto &group_key_counter = group_key_counter_per_partition[partition_idx];
-#if VERBOSE
-        //std::cout << "Append " << (group_key_counter) << std::endl;
+#if VERBOSE >= 2
+        std::cout << indent(level) << "hashing() Append " << group_key_counter << std::endl;
 #endif
         hash_table.insert({key, group_key_counter});
         target_run.append(source_run, run_source->run_offset, setup.config.buffer_flush_threshold);
@@ -198,11 +195,10 @@ std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_
 
         if (hash_table.load_factor() >= setup.config.hash_table_max_load_factor) {
           hash_table_full = true;
-          break;
         }
       } else {
-#if VERBOSE
-       // std::cout << "Aggregate " <<hash_table_iter->second << std::endl;
+#if VERBOSE >= 2
+       std::cout << indent(level) << "hashing() Aggregate " <<hash_table_iter->second << std::endl;
 #endif
         target_run.aggregate(hash_table_iter->second, source_run, run_source->run_offset, setup.config.buffer_flush_threshold);
         ++group_counter;
@@ -244,8 +240,6 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
                                                            const RadixFanOut& radix_fan_out, const size_t level) {
 
 #if VERBOSE
-  std::cout << indent(level) << "adaptive_hashing_and_partition() {"
-            << "\n";
   Timer t;
 #endif
 
@@ -259,7 +253,7 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
    */
   {
 #if VERBOSE
-    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << run_source->total_remaining_group_count << " in source: " << run_source->remaining_fetched_group_count << " | " << run_source->remaining_fetched_group_data_size << "\n";
+    std::cout << indent(level) << "adaptive_hashing_and_partition() Rows: " << run_source->total_remaining_group_count << ", Fetched: " << run_source->remaining_fetched_group_count << " rows, " << run_source->remaining_fetched_group_data_size << " elements" << "\n";
 #endif
     const auto hash_table_size = configure_hash_table(setup, run_source->total_remaining_group_count);
     const auto[continue_hashing, hashing_row_count] =
@@ -271,9 +265,6 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
     // The initial hashing() pass didn't process all data, so in order to progress with the main loop below we need to
     // partition its output
     if (!run_source->end_of_source()) {
-#if VERBOSE
-      std::cout << indent(level) << "adaptive_hashing_and_partition() partitioning initial hash table\n";
-#endif
       const auto initial_fan_out_row_count = partitions.front().size();
       auto initial_fan_out_source =
       std::static_pointer_cast<AbstractRunSource<Run>>(std::make_shared<PartitionRunSource<Run>>
@@ -283,15 +274,19 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
     }
   }
 
+#if VERBOSE
+  std::cout << indent(level) << "adaptive_hashing_and_partition() Main Loop\n";
+#endif
+
   /**
    * Main loop of alternating hashing (with simultaneous partitioning) and partitioning steps
    */
   while (!run_source->end_of_source()) {
 #if VERBOSE
-    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << run_source->total_remaining_group_count << " in source: " << run_source->remaining_fetched_group_count << " | " << run_source->remaining_fetched_group_data_size << "\n";
+    std::cout << indent(level) << "adaptive_hashing_and_partition() Rows: " << run_source->total_remaining_group_count << ", Fetched: " << run_source->remaining_fetched_group_count << " rows, " << run_source->remaining_fetched_group_data_size << " elements" << "\n";
 #endif
 
-    DebugAssert(run_source->remaining_row_count >= run_source->remaining_fetched_group_count, "Bug detected");
+    DebugAssert(run_source->total_remaining_group_count >= run_source->remaining_fetched_group_count, "Bug detected");
 
 
     if (mode == HashSortMode::Hashing) {
@@ -301,7 +296,6 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
       if (!continue_hashing) {
         mode = HashSortMode::Partition;
       }
-      run_source->total_remaining_group_count -= hashing_row_count;
 
     } else {
       const auto partition_row_count = std::min(setup.config.max_partitioning_counter, run_source->total_remaining_group_count);
@@ -311,7 +305,7 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
   }
 
 #if VERBOSE
-  std::cout << indent(level) << "} // adaptive_hashing_and_partition() took " << t.lap_formatted() << "\n";
+  std::cout << indent(level) << "adaptive_hashing_and_partition() took " << t.lap_formatted() << "\n";
 #endif
 
   return partitions;
@@ -328,14 +322,14 @@ std::vector<Run> aggregate(const AggregateHashSortSetup& setup,
   std::cout << indent(level) << "aggregate() at level " << level << " - ";
 
   if (const auto* table_run_source = dynamic_cast<TableRunSource<Run>*>(run_source.get())) {
-    std::cout << "groups from Table with " << table_run_source->table->row_count() << " rows";
+    std::cout << "Table: " << table_run_source->table->row_count() << " rows";
   } else if (const auto* partition_run_source = dynamic_cast<PartitionRunSource<Run>*>(run_source.get())) {
     auto rows = size_t{0};
     for (const auto& run : partition_run_source->runs) {
       rows += run.size;
     }
 
-    std::cout << "groups from Partition with " << partition_run_source->runs.size() << " runs and " << rows << " rows";
+    std::cout << partition_run_source->runs.size() << " runs; " << rows << " rows";
   } else {
     Fail("");
   }

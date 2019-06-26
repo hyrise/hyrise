@@ -17,7 +17,7 @@
 #include "types.hpp"
 #include "utils/timer.hpp"
 
-#define VERBOSE 1
+#define VERBOSE 0
 
 // #define USE_UNORDERED_MAP
 #define USE_DENSE_HASH_MAP
@@ -939,7 +939,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
     this->total_remaining_group_count = table->row_count();
   }
 
-  bool end_of_source() const override { return this->end_of_run() && unfetched_row_count == 0; }
+  bool end_of_source() const override { return this->run_idx + 1 >= this->runs.size() && this->end_of_run() && unfetched_row_count == 0; }
 
   void prefetch(const AggregateHashSortSetup& setup) override {
     while (this->remaining_fetched_group_count < setup.config.group_prefetch_threshold && unfetched_row_count > 0) {
