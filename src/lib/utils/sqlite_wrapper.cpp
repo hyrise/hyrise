@@ -307,8 +307,6 @@ void SQLiteWrapper::raw_execute_query(const std::string& sql, const bool allow_f
   auto rc = sqlite3_exec(_db, sql.c_str(), nullptr, nullptr, &err_msg);
 
   if (rc != SQLITE_OK) {
-    std::cout << "NOT OK!"
-              << "\n";
     auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
     if (!allow_failure) {
