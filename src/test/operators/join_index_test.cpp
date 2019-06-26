@@ -90,7 +90,7 @@ class JoinIndexTest : public BaseTest {
                                const std::shared_ptr<const AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
                                const std::string& file_name, size_t chunk_size, bool using_index = true,
-                               const JoinInputSide index_side = JoinInputSide::Right) {
+                               const IndexSide index_side = IndexSide::Right) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -202,7 +202,7 @@ TYPED_TEST(JoinIndexTest, InnerDictJoin) {
 TYPED_TEST(JoinIndexTest, InnerDictJoinSwapTables) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b_no_index,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
-                         "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1, true, JoinInputSide::Left);
+                         "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1, true, IndexSide::Left);
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {

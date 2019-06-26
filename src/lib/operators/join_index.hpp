@@ -12,6 +12,9 @@
 #include "types.hpp"
 
 namespace opossum {
+
+enum class IndexSide { Left, Right };
+
 /**
    * This operator joins two tables using one column of each table.
    * A speedup compared to the Nested Loop Join is achieved by avoiding the inner loop, and instead
@@ -27,7 +30,7 @@ class JoinIndex : public AbstractJoinOperator {
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
             const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
             const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
-            const JoinInputSide index_side = JoinInputSide::Right);
+            const IndexSide index_side = IndexSide::Right);
 
   const std::string name() const override;
 
@@ -66,7 +69,7 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _on_cleanup() override;
 
-  const JoinInputSide _index_side;
+  const IndexSide _index_side;
   OperatorJoinPredicate _adjusted_primary_predicate;
   std::shared_ptr<Table> _output_table;
 
