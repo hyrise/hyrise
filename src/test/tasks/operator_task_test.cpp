@@ -12,7 +12,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
 #include "scheduler/operator_task.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -22,10 +22,10 @@ class OperatorTaskTest : public BaseTest {
  protected:
   void SetUp() override {
     _test_table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", _test_table_a);
+    Hyrise::get().storage_manager.add_table("table_a", _test_table_a);
 
     _test_table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
-    StorageManager::get().add_table("table_b", _test_table_b);
+    Hyrise::get().storage_manager.add_table("table_b", _test_table_b);
   }
 
   std::shared_ptr<Table> _test_table_a, _test_table_b;

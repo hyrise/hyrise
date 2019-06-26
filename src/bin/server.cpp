@@ -8,7 +8,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "server/server.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 int main(int argc, char* argv[]) {

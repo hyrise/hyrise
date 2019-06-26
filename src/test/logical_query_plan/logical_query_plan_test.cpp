@@ -11,7 +11,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
@@ -22,8 +22,8 @@ namespace opossum {
 class LogicalQueryPlanTest : public BaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl"));
-    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
+    Hyrise::get().storage_manager.add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl"));
+    Hyrise::get().storage_manager.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     node_int_int = StoredTableNode::make("int_int");
     a1 = node_int_int->get_column("a");

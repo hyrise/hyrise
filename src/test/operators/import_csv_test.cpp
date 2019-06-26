@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/import_csv.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 #include "scheduler/current_scheduler.hpp"
@@ -90,7 +90,7 @@ TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
@@ -102,7 +102,7 @@ TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), retriever->get_output());
 }
 
 TEST_F(OperatorsImportCsvTest, EmptyStrings) {

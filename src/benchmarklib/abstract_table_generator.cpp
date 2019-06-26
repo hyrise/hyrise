@@ -3,7 +3,7 @@
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "operators/export_binary.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
@@ -75,7 +75,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Add the Tables to the StorageManager
    */
   std::cout << "- Adding tables to StorageManager and generating statistics " << std::endl;
-  auto& storage_manager = StorageManager::get();
+  auto& storage_manager = Hyrise::get().storage_manager;
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Adding '" << table_name << "' " << std::flush;
     Timer per_table_timer;

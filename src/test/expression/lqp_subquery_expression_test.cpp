@@ -11,7 +11,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
@@ -22,7 +22,7 @@ namespace opossum {
 class LQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() {
-    StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
 
     int_float_node_a = StoredTableNode::make("int_float");
     a = {int_float_node_a, ColumnID{0}};

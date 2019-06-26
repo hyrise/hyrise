@@ -4,8 +4,8 @@
 #include <operators/import_binary.hpp>
 #include <operators/import_csv.hpp>
 
+#include "hyrise.hpp"
 #include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -21,7 +21,7 @@ void LoadServerFileTask::_on_execute() {
       importer->execute();
     } else if (extension == "tbl") {
       const auto table = load_table(_file_name, Chunk::MAX_SIZE);
-      StorageManager::get().add_table(_table_name, table);
+      Hyrise::get().storage_manager.add_table(_table_name, table);
     } else if (extension == "bin") {
       auto importer = std::make_shared<ImportBinary>(_file_name, _table_name);
       importer->execute();

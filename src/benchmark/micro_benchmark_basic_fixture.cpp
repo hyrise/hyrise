@@ -6,7 +6,7 @@
 #include "benchmark/benchmark.h"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "table_generator.hpp"
 #include "types.hpp"
 
@@ -32,7 +32,7 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& state) {
   _table_dict_wrapper->execute();
 }
 
-void MicroBenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }
+void MicroBenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::Hyrise::get().storage_manager.reset(); }
 
 void MicroBenchmarkBasicFixture::_clear_cache() { micro_benchmark_clear_cache(); }
 

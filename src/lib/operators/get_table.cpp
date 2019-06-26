@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -35,7 +35,7 @@ GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_c
 const std::string GetTable::name() const { return "GetTable"; }
 
 const std::string GetTable::description(DescriptionMode description_mode) const {
-  const auto stored_table = StorageManager::get().get_table(_name);
+  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
@@ -66,7 +66,7 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
-  const auto stored_table = StorageManager::get().get_table(_name);
+  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
   /**
    * Build a sorted vector (`excluded_chunk_ids`) of physically/logically deleted and pruned ChunkIDs

@@ -21,7 +21,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 #include "testing_assert.hpp"
@@ -53,7 +53,7 @@ class LQPFindSubplanMismatchTest : public BaseTest {
   };
 
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    Hyrise::get().storage_manager.add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _init_query_nodes(_query_nodes_lhs);
     _init_query_nodes(_query_nodes_rhs);

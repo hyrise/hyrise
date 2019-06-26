@@ -32,7 +32,7 @@
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "types.hpp"
 
 using namespace std::string_literals;  // NOLINT

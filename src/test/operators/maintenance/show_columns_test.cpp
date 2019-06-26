@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 
 #include "operators/maintenance/show_columns.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -17,8 +17,8 @@ class ShowColumnsTest : public BaseTest {
     auto t1 = load_table("resources/test_data/tbl/int_float_double_string.tbl", 2);
     auto t2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 2);
 
-    StorageManager::get().add_table("int_float_double_string", t1);
-    StorageManager::get().add_table("int_float_with_null", t2);
+    Hyrise::get().storage_manager.add_table("int_float_double_string", t1);
+    Hyrise::get().storage_manager.add_table("int_float_with_null", t2);
   }
 };
 
@@ -55,7 +55,7 @@ TEST_F(ShowColumnsTest, CanShowColumnsWithNull) {
 }
 
 TEST_F(ShowColumnsTest, NoColumns) {
-  StorageManager::get().add_table("no_columns", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
+  Hyrise::get().storage_manager.add_table("no_columns", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
 
   auto sc = std::make_shared<ShowColumns>("no_columns");
   sc->execute();

@@ -1,6 +1,6 @@
 #include "bind_server_prepared_statement_task.hpp"
 
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"

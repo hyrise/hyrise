@@ -8,7 +8,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

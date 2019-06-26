@@ -12,7 +12,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
@@ -127,7 +127,7 @@ int main(int argc, char* argv[]) {
 
     // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
     // schema and copy the data.
-    for (const auto& table_name : StorageManager::get().table_names()) {
+    for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
       benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
                                                          " RENAME TO " + table_name + "_unindexed");
     }
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
     benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_sql);
 
     // Copy over data
-    for (const auto& table_name : StorageManager::get().table_names()) {
+    for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
       Timer per_table_time;
       std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 

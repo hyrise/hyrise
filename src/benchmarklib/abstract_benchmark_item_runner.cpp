@@ -3,7 +3,7 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include "benchmark_sql_executor.hpp"
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {

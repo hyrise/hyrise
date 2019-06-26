@@ -11,7 +11,7 @@
 #include "operators/limit.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
@@ -23,7 +23,7 @@ class PQPSubqueryExpressionTest : public BaseTest {
  public:
   void SetUp() {
     table_a = load_table("resources/test_data/tbl/int_float.tbl");
-    StorageManager::get().add_table("int_float", table_a);
+    Hyrise::get().storage_manager.add_table("int_float", table_a);
     a_a = PQPColumnExpression::from_table(*table_a, "a");
     a_b = PQPColumnExpression::from_table(*table_a, "b");
 

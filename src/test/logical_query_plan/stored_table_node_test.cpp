@@ -9,7 +9,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -18,8 +18,8 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl", 1));
-    StorageManager::get().add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl", 1));
+    Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl", 1));
+    Hyrise::get().storage_manager.add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl", 1));
 
     _stored_table_node = StoredTableNode::make("t_a");
     _a = LQPColumnReference(_stored_table_node, ColumnID{0});

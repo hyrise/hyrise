@@ -49,7 +49,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
@@ -66,13 +66,13 @@ class LQPTranslatorTest : public BaseTest {
     table_int_float5 = load_table("resources/test_data/tbl/int_float5.tbl");
     table_alias_name = load_table("resources/test_data/tbl/table_alias_name.tbl");
 
-    StorageManager::get().add_table("table_int_float", table_int_float);
-    StorageManager::get().add_table("table_int_string", table_int_string);
-    StorageManager::get().add_table("table_int_float2", table_int_float2);
-    StorageManager::get().add_table("table_int_float5", table_int_float5);
-    StorageManager::get().add_table("table_alias_name", table_alias_name);
-    StorageManager::get().add_table("int_float_chunked", load_table("resources/test_data/tbl/int_float.tbl", 1));
-    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("int_float_chunked"));
+    Hyrise::get().storage_manager.add_table("table_int_float", table_int_float);
+    Hyrise::get().storage_manager.add_table("table_int_string", table_int_string);
+    Hyrise::get().storage_manager.add_table("table_int_float2", table_int_float2);
+    Hyrise::get().storage_manager.add_table("table_int_float5", table_int_float5);
+    Hyrise::get().storage_manager.add_table("table_alias_name", table_alias_name);
+    Hyrise::get().storage_manager.add_table("int_float_chunked", load_table("resources/test_data/tbl/int_float.tbl", 1));
+    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");
     int_float_a = int_float_node->get_column("a");
@@ -415,7 +415,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -449,7 +449,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -486,7 +486,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);

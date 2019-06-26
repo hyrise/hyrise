@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
 

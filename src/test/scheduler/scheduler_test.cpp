@@ -13,7 +13,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -194,7 +194,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   auto test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
-  StorageManager::get().add_table("table", test_table);
+  Hyrise::get().storage_manager.add_table("table", test_table);
 
   auto gt = std::make_shared<GetTable>("table");
   auto a = PQPColumnExpression::from_table(*test_table, ColumnID{0});

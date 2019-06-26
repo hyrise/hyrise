@@ -9,7 +9,7 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "table_generator.hpp"
 
 namespace {
@@ -71,7 +71,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
     join->execute();
   }
 
-  opossum::StorageManager::get().reset();
+  opossum::Hyrise::get().storage_manager.reset();
 }
 
 template <class C>

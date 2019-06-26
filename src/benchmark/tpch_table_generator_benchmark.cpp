@@ -1,6 +1,6 @@
 #include "benchmark/benchmark.h"
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {

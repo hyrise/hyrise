@@ -5,7 +5,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/get_table.hpp"
@@ -14,7 +14,7 @@
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -31,7 +31,7 @@ class OperatorsUpdateTest : public BaseTest {
   void SetUp() override {
     const auto table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     // Update operator works on the StorageManager
-    StorageManager::get().add_table(table_to_update_name, table);
+    Hyrise::get().storage_manager.add_table(table_to_update_name, table);
   }
 
   void helper(const std::shared_ptr<AbstractExpression>& where_predicate,
@@ -45,14 +45,14 @@ class OperatorsUpdateTest : public BaseTest {
     where_scan->execute();
     updated_values_projection->execute();
 
-    const auto transaction_context = TransactionManager::get().new_transaction_context();
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
     const auto update = std::make_shared<Update>(table_to_update_name, where_scan, updated_values_projection);
     update->set_transaction_context(transaction_context);
     update->execute();
     transaction_context->commit();
 
     // Get validated table which should have the same row twice.
-    const auto post_update_transaction_context = TransactionManager::get().new_transaction_context();
+    const auto post_update_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
     const auto validate = std::make_shared<Validate>(get_table);
     validate->set_transaction_context(post_update_transaction_context);
     validate->execute();

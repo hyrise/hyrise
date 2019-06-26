@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "cache/cache.hpp"
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
 #include "logical_query_plan/mock_node.hpp"
@@ -21,13 +21,13 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
-#include "utils/plugin_manager.hpp"
+#include "hyrise.hpp"
 
 namespace opossum {
 

@@ -33,7 +33,7 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table_column_definition.hpp"
 #include "utils/load_table.hpp"
 
@@ -733,7 +733,7 @@ TEST_F(CardinalityEstimatorTest, Sort) {
 }
 
 TEST_F(CardinalityEstimatorTest, StoredTable) {
-  StorageManager::get().add_table("t", load_table("resources/test_data/tbl/int.tbl"));
+  Hyrise::get().storage_manager.add_table("t", load_table("resources/test_data/tbl/int.tbl"));
   EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make("t")), 3);
 }
 

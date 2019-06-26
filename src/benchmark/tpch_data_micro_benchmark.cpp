@@ -17,7 +17,7 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -30,7 +30,7 @@ class TableWrapper;
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
-    auto& sm = StorageManager::get();
+    auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 0.001f;
     const auto default_encoding = EncodingType::Dictionary;
 

@@ -1,6 +1,6 @@
 #include "benchmark_sql_executor.hpp"
 
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/check_table_equal.hpp"
@@ -14,7 +14,7 @@ BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_pt
     : _enable_jit(enable_jit),
       _sqlite_wrapper(sqlite_wrapper),
       _visualize_prefix(visualize_prefix),
-      _transaction_context(TransactionManager::get().new_transaction_context()) {}
+      _transaction_context(Hyrise::get().transaction_manager.new_transaction_context()) {}
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(const std::string& sql) {
   auto pipeline_builder = SQLPipelineBuilder{sql};

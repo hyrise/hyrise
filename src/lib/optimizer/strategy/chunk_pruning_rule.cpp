@@ -16,7 +16,7 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -61,7 +61,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   /**
    * A chain of predicates followed by a stored table node was found.
    */
-  auto table = StorageManager::get().get_table(stored_table->table_name);
+  auto table = Hyrise::get().storage_manager.get_table(stored_table->table_name);
 
   std::set<ChunkID> pruned_chunk_ids;
   for (auto& predicate : predicate_nodes) {

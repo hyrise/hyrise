@@ -29,7 +29,7 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 #include "utils/assert.hpp"
@@ -159,7 +159,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
-      const auto stored_table = StorageManager::get().get_table(stored_table_node->table_name);
+      const auto stored_table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
       output_table_statistics =
           prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());

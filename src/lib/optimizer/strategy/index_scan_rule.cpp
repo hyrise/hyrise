@@ -14,7 +14,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -40,7 +40,7 @@ void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const
     if (child->type == LQPNodeType::StoredTable) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
-      const auto table = StorageManager::get().get_table(stored_table_node->table_name);
+      const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
 
       const auto index_infos = table->get_indexes();
       for (const auto& index_info : index_infos) {

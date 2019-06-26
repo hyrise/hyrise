@@ -21,7 +21,7 @@
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "utils/assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -32,8 +32,8 @@ class IndexScanRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     table = load_table("resources/test_data/tbl/int_int_int.tbl");
-    StorageManager::get().add_table("a", table);
-    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("a"));
+    Hyrise::get().storage_manager.add_table("a", table);
+    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("a"));
 
     rule = std::make_shared<IndexScanRule>();
 

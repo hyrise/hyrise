@@ -2,7 +2,7 @@
 
 #include <shared_mutex>
 
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

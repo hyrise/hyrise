@@ -11,7 +11,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 
 namespace opossum {
 
@@ -19,11 +19,11 @@ class UnionPositionsTest : public BaseTest {
  public:
   void SetUp() override {
     _table_10_ints = load_table("resources/test_data/tbl/10_ints.tbl", 3);
-    StorageManager::get().add_table("10_ints", _table_10_ints);
+    Hyrise::get().storage_manager.add_table("10_ints", _table_10_ints);
 
     _table_int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 3);
-    StorageManager::get().add_table("int_float4", _table_int_float4);
-    StorageManager::get().add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    Hyrise::get().storage_manager.add_table("int_float4", _table_int_float4);
+    Hyrise::get().storage_manager.add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, false, "");
     _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, false, "");

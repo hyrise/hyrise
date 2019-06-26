@@ -87,7 +87,7 @@ class ServerSessionTest : public BaseTest {
   std::shared_ptr<SQLPipeline> _create_working_sql_pipeline() {
     // We don't mock the SQL Pipeline, so we have to provide a query that executes successfully
     auto t = load_table("resources/test_data/tbl/int.tbl", 10);
-    StorageManager::get().add_table("foo", t);
+    Hyrise::get().storage_manager.add_table("foo", t);
     return std::make_shared<SQLPipeline>(SQLPipelineBuilder{"SELECT * FROM foo;"}.create_pipeline());
   }
 
