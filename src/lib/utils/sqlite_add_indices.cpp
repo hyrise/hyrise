@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include "operators/print.hpp"
+
 #include "storage/storage_manager.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"

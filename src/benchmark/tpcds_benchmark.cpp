@@ -20,9 +20,9 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "sqlite_add_indices.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "utils/assert.hpp"
+#include "utils/sqlite_add_indices.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 

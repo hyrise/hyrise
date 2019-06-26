@@ -12,12 +12,12 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sqlite_add_indices.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/sqlite_add_indices.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 

@@ -44,8 +44,6 @@ set(
     file_based_table_generator.cpp
     file_based_table_generator.hpp
     random_generator.hpp
-    sqlite_add_indices.cpp
-    sqlite_add_indices.hpp
     table_builder.hpp
     table_generator.cpp
     table_generator.hpp
