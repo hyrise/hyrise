@@ -67,6 +67,7 @@ class JoinIndex : public AbstractJoinOperator {
   void _on_cleanup() override;
 
   const JoinInputSide _index_side;
+  OperatorJoinPredicate _adjusted_primary_predicate;
   std::shared_ptr<Table> _output_table;
 
   std::shared_ptr<PosList> _pos_list_left;
