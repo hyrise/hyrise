@@ -663,7 +663,11 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
 
   const auto group_by_column_ids = std::vector{ColumnID{4}, ColumnID{4}};
   const auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Sum}};
-  const auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
+
+  auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
+  setup.config.hash_table_max_load_factor = 1.0f;
+  // Provoke `continue_hashing` to be true
+  setup.config.continue_hashing_density_threshold = 1.3f;
 
   auto run = create_run<Run>(setup);
 
@@ -692,7 +696,7 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   
   // Config hashing() so that the entire input is hashed
   const auto [continue_hashing, processed_row_count] =
-      hashing<Run>(setup, 3, 1.0f, run_source, fan_out, partitions, 0);
+      hashing<Run>(setup, 3, run_source, fan_out, partitions, 0);
   
   EXPECT_EQ(run_source->run_idx, 0);
   EXPECT_EQ(run_source->run_offset, 4);
@@ -725,7 +729,11 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
   using Run = BasicRun<VariableGroupSizePolicy>;
 
   const auto group_by_column_ids = std::vector{ColumnID{0}, ColumnID{1}};
-  const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+
+  auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+  setup.config.hash_table_max_load_factor = 1.0f;
+  // Provoke `continue_hashing` to be false
+  setup.config.continue_hashing_density_threshold = 1.5f;
 
   auto run = create_run<Run>(setup);
 
@@ -749,11 +757,11 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
 
   // Configure hashing() so that the entire input is aggregated
   const auto [continue_hashing, processed_row_count] =
-      hashing<Run>(setup, 3, 1.0f, run_source, fan_out, partitions, 0);
+      hashing<Run>(setup, 3, run_source, fan_out, partitions, 0);
   EXPECT_EQ(run_source->run_idx, 0);
   EXPECT_EQ(run_source->run_offset, 4);
   EXPECT_EQ(processed_row_count, 4);
-  EXPECT_TRUE(continue_hashing);
+  EXPECT_FALSE(continue_hashing);
 
   ASSERT_EQ(partitions.size(), 2u);
   ASSERT_EQ(partitions.at(0).runs.size(), 1u);
@@ -781,7 +789,7 @@ TEST_F(AggregateHashSortTest, AggregateAdaptive) {
 
   // Config so that [0,3] are hashed, [4,5] are partitioned and [6,7] are hashed again
   AggregateHashSortConfig config;
-  config.hash_table_size = 4;
+  config.hash_table_size = 2;
   config.hash_table_max_load_factor = 0.5f;
   config.max_partitioning_counter = 2;
 

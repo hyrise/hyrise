@@ -90,7 +90,6 @@ void partition(const AggregateHashSortSetup& setup, size_t remaining_row_count,
  */
 template <typename Run>
 std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_t hash_table_size,
-                                const float hash_table_max_load_factor,
                                 const std::shared_ptr<AbstractRunSource<Run>>& run_source,
                                 const RadixFanOut& radix_fan_out,
                                 std::vector<Partition<Run>>& partitions,
@@ -99,7 +98,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_
 
   auto run_per_partition = std::vector<Run>{};
   for (auto partition_idx = size_t{0}; partition_idx < partitions.size(); ++partition_idx) {
-    const auto estimated_group_count = static_cast<size_t>(std::ceil(hash_table_size * hash_table_max_load_factor));
+    const auto estimated_group_count = static_cast<size_t>(std::ceil(hash_table_size * setup.config.hash_table_max_load_factor));
     const auto[group_capacity, group_data_capacity] = next_run_size(*run_source, estimated_group_count, radix_fan_out);
     auto run = create_run<Run>(setup, group_capacity, std::max(group_data_capacity, group_data_capacity));
     run.is_aggregated = true;
@@ -197,7 +196,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_
         ++group_key_counter;
         ++group_counter;
 
-        if (hash_table.load_factor() >= hash_table_max_load_factor) {
+        if (hash_table.load_factor() >= setup.config.hash_table_max_load_factor) {
           hash_table_full = true;
           break;
         }
@@ -229,7 +228,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_
     partitions[partition_idx].runs.emplace_back(std::move(run));
   }
 
-  const auto continue_hashing = static_cast<float>(group_counter) / hash_table.size() >= 3;
+  const auto continue_hashing = static_cast<float>(group_counter) / hash_table.size() >= setup.config.continue_hashing_density_threshold;
 #if VERBOSE
   std::cout << indent(level) << "hashing(): processed " << group_counter << " elements into " << hash_table.size() <<
   " groups in " << t.lap_formatted() << "; hash_counter: "<<hash_table.hash_function().hash_counter << "; compare_counter: " << hash_table.key_eq().counter <<
@@ -262,11 +261,11 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
    */
   {
 #if VERBOSE
-    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << remaining_row_count << "\n";
+    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << remaining_row_count << " in source: " << run_source->remaining_fetched_group_count << " | " << run_source->remaining_fetched_group_data_size << "\n";
 #endif
     const auto hash_table_size = configure_hash_table(setup, remaining_row_count);
     const auto[continue_hashing, hashing_row_count] =
-    hashing(setup, hash_table_size, setup.config.hash_table_max_load_factor, run_source, RadixFanOut{1, 0, 0}, partitions, level);
+    hashing(setup, hash_table_size, run_source, RadixFanOut{1, 0, 0}, partitions, level);
     if (!continue_hashing) {
       mode = HashSortMode::Partition;
     }
@@ -293,13 +292,16 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
    */
   while (!run_source->end_of_source()) {
 #if VERBOSE
-    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << remaining_row_count << "\n";
+    std::cout << indent(level) << "adaptive_hashing_and_partition() remaining_rows: " << remaining_row_count << " in source: " << run_source->remaining_fetched_group_count << " | " << run_source->remaining_fetched_group_data_size << "\n";
 #endif
+
+    DebugAssert(remaining_row_count >= run_source->remaining_fetched_group_count, "Bug detected");
+
 
     if (mode == HashSortMode::Hashing) {
       const auto hash_table_size = configure_hash_table(setup, remaining_row_count);
       const auto [continue_hashing, hashing_row_count] =
-      hashing(setup, hash_table_size, setup.config.hash_table_max_load_factor, run_source, radix_fan_out, partitions, level);
+      hashing(setup, hash_table_size, run_source, radix_fan_out, partitions, level);
       if (!continue_hashing) {
         mode = HashSortMode::Partition;
       }

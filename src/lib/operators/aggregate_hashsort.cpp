@@ -45,11 +45,15 @@ void resolve_group_size_policy(const AggregateHashSortSetup& definition, const F
 
 namespace opossum {
 
+AggregateHashSortConfig AggregateHashSort::create_config() {
+  return {};
+}
+
 AggregateHashSort::AggregateHashSort(const std::shared_ptr<AbstractOperator>& in,
                                      const std::vector<AggregateColumnDefinition>& aggregates,
                                      const std::vector<ColumnID>& groupby_column_ids,
-                                     const AggregateHashSortConfig& config)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids), _config(config) {}
+                                     const std::optional<AggregateHashSortConfig>& config)
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids), _config(config ? *config : create_config()) {}
 
 const std::string AggregateHashSort::name() const { return "AggregateHashSort"; }
 

@@ -12,6 +12,10 @@ struct AggregateHashSortConfig {
 
   // Number of rows to fetch from a table to fill an initial run
   size_t initial_run_size{300'000};
+
+  // Once a hashtable is full, AggregateHashSort can either build a next one (if the local density of groups is
+  // determined to be high enough) or switch to partitioning
+  float continue_hashing_density_threshold{3};
 };
 
 }  // namespace opossum

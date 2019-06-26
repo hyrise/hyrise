@@ -28,6 +28,9 @@ struct AggregateTestConfiguration {
   std::vector<ColumnID> group_by_column_ids;
   std::shared_ptr<BaseAggregateOperatorFactory> aggregate_operator_factory;
 
+  // Only relevant for AggregateHashSort
+  std::optional<AggregateHashSortConfig> aggregate_hashsort_config;
+
   auto to_tuple() const { return std::tie(input, aggregate_column_definitions, group_by_column_ids); }
 };
 
@@ -52,6 +55,15 @@ class AggregateOperatorFactory : public BaseAggregateOperatorFactory {
                                                              const AggregateTestConfiguration& configuration) override {
     return std::make_shared<AggregateOperator>(in, configuration.aggregate_column_definitions,
                                                configuration.group_by_column_ids);
+  }
+};
+
+template <>
+class AggregateOperatorFactory<AggregateHashSort> : public BaseAggregateOperatorFactory {
+  std::shared_ptr<AbstractAggregateOperator> create_operator(const std::shared_ptr<AbstractOperator>& in,
+                                                             const AggregateTestConfiguration& configuration) override {
+    return std::make_shared<AggregateHashSort>(in, configuration.aggregate_column_definitions,
+                                               configuration.group_by_column_ids, configuration.aggregate_hashsort_config);
   }
 };
 
@@ -101,7 +113,7 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
         AggregateTestConfiguration{{InputSide::Left, 3, 10, all_input_table_types.front(), all_encoding_types.front()},
                                    {},
                                    {},
-                                   std::make_shared<AggregateOperatorFactory<AggregateOperator>>()};
+                                   std::make_shared<AggregateOperatorFactory<AggregateOperator>>(), {}};
 
     const auto add_configuration_if_supported = [&](const auto& configuration) {
       const auto supported = std::all_of(
@@ -153,6 +165,17 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
 
         for (const auto& [data_type, nullable] : group_by_column_set) {
           configuration.group_by_column_ids.emplace_back(group_by_column_ids.at(data_type) + (nullable ? 1 : 0));
+        }
+
+        if constexpr (std::is_same_v<AggregateOperator, AggregateHashSort>) {
+          auto aggregate_hashsort_config = AggregateHashSortConfig{};
+          aggregate_hashsort_config.hash_table_size = 4;
+          aggregate_hashsort_config.hash_table_max_load_factor = 0.25f;
+          aggregate_hashsort_config.max_partitioning_counter = 2;
+          aggregate_hashsort_config.buffer_flush_threshold = 2;
+          aggregate_hashsort_config.group_prefetch_threshold = 4;
+          aggregate_hashsort_config.initial_run_size = 3;
+          configuration.aggregate_hashsort_config = aggregate_hashsort_config;
         }
 
         if (with_aggregate_column) {
