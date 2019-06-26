@@ -127,6 +127,10 @@ const std::optional<TableScanFeatures> CalibrationFeatureExtractor::_extract_fea
   TableScanFeatures features{};
 
   auto left_input_table = op->input_table_left();
+
+  if (left_input_table->row_count() == 0)
+    return std::nullopt;
+
   auto chunk_count = left_input_table->chunk_count();
 
   const auto& table_condition = op->predicate();
