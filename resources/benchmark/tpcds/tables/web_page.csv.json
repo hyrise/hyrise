@@ -1,0 +1,83 @@
+{
+  "columns": [
+    {
+      "name": "wp_web_page_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "wp_web_page_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "wp_rec_start_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "wp_rec_end_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "wp_creation_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wp_access_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wp_autogen_flag",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "wp_customer_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wp_url",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "wp_type",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "wp_char_count",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wp_link_count",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wp_image_count",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wp_max_ad_count",
+      "type": "int",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}

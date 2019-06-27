@@ -1,0 +1,123 @@
+{
+  "columns": [
+    {
+      "name": "i_item_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "i_item_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "i_rec_start_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_rec_end_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_item_desc",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_current_price",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "i_wholesale_cost",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "i_brand_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "i_brand",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_class_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "i_class",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_category_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "i_category",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_manufact_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "i_manufact",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_size",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_formulation",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_color",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_units",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_container",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "i_manager_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "i_product_name",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}
