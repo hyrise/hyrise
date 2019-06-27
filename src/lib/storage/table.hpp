@@ -1,16 +1,15 @@
 #pragma once
 
-#include <gtest/gtest_prod.h>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "boost/variant.hpp"
-
 #include "base_segment.hpp"
+#include "boost/variant.hpp"
 #include "chunk.hpp"
+#include "gtest/gtest_prod.h"
 #include "storage/index/index_info.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
