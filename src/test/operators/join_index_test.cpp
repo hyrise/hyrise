@@ -89,13 +89,15 @@ class JoinIndexTest : public BaseTest {
   static void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
-                               const std::string& file_name, size_t chunk_size, bool using_index = true) {
+                               const std::string& file_name, size_t chunk_size, bool using_index = true,
+                               const IndexSide index_side = IndexSide::Right) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
-    auto join = std::make_shared<JoinIndex>(left, right, mode, primary_predicate);
+    auto join = std::make_shared<JoinIndex>(left, right, mode, primary_predicate, std::vector<OperatorJoinPredicate>{},
+                                            index_side);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
 
@@ -195,6 +197,12 @@ TYPED_TEST(JoinIndexTest, InnerDictJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, InnerDictJoinSwapTables) {
+  this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b_no_index,
+                         {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
+                         "resources/test_data/tbl/join_operators/int_inner_join.tbl", 1, true, IndexSide::Left);
 }
 
 TYPED_TEST(JoinIndexTest, InnerRefDictJoin) {
