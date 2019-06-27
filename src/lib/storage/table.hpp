@@ -9,7 +9,6 @@
 #include "base_segment.hpp"
 #include "boost/variant.hpp"
 #include "chunk.hpp"
-#include "gtest/gtest_prod.h"
 #include "storage/index/index_info.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
@@ -24,6 +23,7 @@ class TableStatistics;
  * A Table is partitioned horizontally into a number of chunks.
  */
 class Table : private Noncopyable {
+  friend class StorageTableTest;
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
@@ -186,6 +186,5 @@ class Table : private Noncopyable {
   std::vector<IndexInfo> _indexes;
   std::shared_ptr<TableStatistics> _table_statistics;
 
-  FRIEND_TEST(StorageTableTest, StableChunks);
 };
 }  // namespace opossum
