@@ -8,6 +8,7 @@
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -17,6 +18,12 @@ class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().add_table("int_int_float", load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+
+    const auto& table = StorageManager::get().get_table("int_int_float");
+    ChunkEncoder::encode_all_chunks(table);
+    table->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a");
+    table->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b1");
+    table->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b2");
   }
 };
 
@@ -65,6 +72,12 @@ TEST_F(OperatorsGetTableTest, PrunedChunks) {
   EXPECT_EQ(table->chunk_count(), ChunkID(2));
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 0u), original_table->get_value<int>(ColumnID(0), 1u));
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 1u), original_table->get_value<int>(ColumnID(0), 3u));
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_1).size(), 2u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_1).size(), 2u);
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumns) {
@@ -77,6 +90,16 @@ TEST_F(OperatorsGetTableTest, PrunedColumns) {
   EXPECT_EQ(table->column_count(), 2u);
   EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 9);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 10.5f);
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{2})->get_indices(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{2})->get_indices(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{3})->get_indices(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{3})->get_indices(column_ids_1).size(), 0u);
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
@@ -90,6 +113,12 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
   EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 10);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 0u), 10.5f);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 9.5f);
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_0).size(), 2u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indices(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_0).size(), 2u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indices(column_ids_1).size(), 0u);
 }
 
 TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {

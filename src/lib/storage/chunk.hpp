@@ -28,6 +28,7 @@ class BaseSegment;
 class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
+using Indices = pmr_vector<std::shared_ptr<BaseIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
@@ -48,7 +49,7 @@ class Chunk : private Noncopyable {
   static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indices indices = {});
 
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
@@ -186,7 +187,7 @@ class Chunk : private Noncopyable {
   PolymorphicAllocator<Chunk> _alloc;
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
-  pmr_vector<std::shared_ptr<BaseIndex>> _indices;
+  Indices _indices;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
