@@ -136,6 +136,13 @@ struct RadixContainer {
 
   // bit vector to store NULL flags
   std::shared_ptr<std::vector<bool>> null_value_bitvector;
+
+  void clear() {
+    elements = nullptr;
+    partition_offsets.clear();
+    partition_offsets.shrink_to_fit();
+    null_value_bitvector = nullptr;
+  }
 };
 
 inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const Table>& table) {
