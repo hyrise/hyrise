@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <gtest/gtest_prod.h>
 
 #include "boost/variant.hpp"
 
@@ -82,9 +83,6 @@ class Table : private Noncopyable {
    */
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
-
-  // Returns all Chunks
-  const tbb::concurrent_vector<std::shared_ptr<Chunk>>& chunks() const;
 
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
@@ -188,5 +186,7 @@ class Table : private Noncopyable {
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
   std::shared_ptr<TableStatistics> _table_statistics;
+
+  FRIEND_TEST(StorageTableTest, StableChunks);
 };
 }  // namespace opossum

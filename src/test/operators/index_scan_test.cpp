@@ -229,7 +229,10 @@ TYPED_TEST(OperatorsIndexScanTest, PosListGuarenteesSingleChunkReference) {
                                           PredicateCondition::Equals, right_values, right_values2);
   scan->execute();
 
-  for (const auto& chunk : scan->get_output()->chunks()) {
+  const auto chunk_count = scan->get_output()->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = scan->get_output()->get_chunk(chunk_id);
+
     const auto segment = chunk->get_segment(this->_column_ids[0]);
     const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
     const auto& pos_list = reference_segment->pos_list();

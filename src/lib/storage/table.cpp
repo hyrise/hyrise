@@ -147,8 +147,6 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
-const tbb::concurrent_vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
-
 uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {

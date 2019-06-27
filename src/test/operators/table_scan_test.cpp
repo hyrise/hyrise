@@ -69,7 +69,11 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
 
     if (ordered_by) {
-      for (const auto& chunk : table->chunks()) {
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
+        if(!chunk) continue;
+
         chunk->set_ordered_by(ordered_by.value());
       }
     }

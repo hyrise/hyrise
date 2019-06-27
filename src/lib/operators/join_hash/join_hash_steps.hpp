@@ -678,17 +678,21 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
   PosListsByChunk pos_lists_by_segment(input_table->column_count());
   auto pos_lists_by_segment_it = pos_lists_by_segment.begin();
 
-  const auto& input_chunks = input_table->chunks();
+  const auto input_chunks_count = input_table->chunk_count();
+  const auto input_columns_count = input_table->column_count();
 
   // For every column, for every chunk
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < input_columns_count; ++column_id) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
     auto pos_list_ptrs = std::make_shared<PosLists>(input_table->chunk_count());
     auto pos_lists_iter = pos_list_ptrs->begin();
 
     // Iterate over every chunk and add the chunks segment with column_id to pos_list_ptrs
-    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      const auto& ref_segment_uncasted = input_chunks[chunk_id]->segments()[column_id];
+    for (ChunkID chunk_id{0}; chunk_id < input_chunks_count; ++chunk_id) {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      if(!chunk) continue;
+
+      const auto& ref_segment_uncasted = chunk->segments()[column_id];
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
       *pos_lists_iter = ref_segment->pos_list();
       ++pos_lists_iter;
