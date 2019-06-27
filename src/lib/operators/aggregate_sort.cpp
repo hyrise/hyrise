@@ -80,8 +80,10 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
       } else {
         // Group is spread over multiple chunks
         uint64_t count = 0;
-        count += sorted_table->get_chunk(current_group_begin_pointer.chunk_id)->size() - current_group_begin_pointer.chunk_offset;
-        for (auto chunk_id = ChunkID{current_group_begin_pointer.chunk_id + 1}; chunk_id < group_boundary.chunk_id; chunk_id++) {
+        count += sorted_table->get_chunk(current_group_begin_pointer.chunk_id)->size() -
+                 current_group_begin_pointer.chunk_offset;
+        for (auto chunk_id = ChunkID{current_group_begin_pointer.chunk_id + 1}; chunk_id < group_boundary.chunk_id;
+             chunk_id++) {
           count += sorted_table->get_chunk(chunk_id)->size();
         }
         count += group_boundary.chunk_offset + 1;
@@ -94,8 +96,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
       aggregate_group_index++;
     }
     // Compute value count with null values for the last iteration
-    value_count_with_null =
-        sorted_table->get_chunk(current_group_begin_pointer.chunk_id)->size() - current_group_begin_pointer.chunk_offset;
+    value_count_with_null = sorted_table->get_chunk(current_group_begin_pointer.chunk_id)->size() -
+                            current_group_begin_pointer.chunk_offset;
     for (auto chunk_id = ChunkID{current_group_begin_pointer.chunk_id + 1}; chunk_id < chunk_count; chunk_id++) {
       value_count_with_null += sorted_table->get_chunk(chunk_id)->size();
     }

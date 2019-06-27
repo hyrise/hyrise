@@ -1,11 +1,11 @@
 #pragma once
 
+#include <gtest/gtest_prod.h>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
-#include <gtest/gtest_prod.h>
 
 #include "boost/variant.hpp"
 
