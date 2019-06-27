@@ -25,6 +25,7 @@
 #include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/aggregate_hash.hpp"
@@ -44,11 +45,13 @@
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -841,16 +844,36 @@ TEST_F(LQPTranslatorTest, CreateTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, true);
 
-  const auto lqp = CreateTableNode::make("t", column_definitions, false);
+  const auto lqp =
+      CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
-  EXPECT_EQ(pqp->input_left(), nullptr);
 
   const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
   EXPECT_EQ(create_table->table_name, "t");
-  EXPECT_EQ(create_table->column_definitions, column_definitions);
+
+  // CreateTable input must be executed to enable access to column definitions
+  create_table->mutable_input_left()->execute();
+  EXPECT_EQ(create_table->column_definitions(), column_definitions);
+}
+
+TEST_F(LQPTranslatorTest, StaticTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto dummy_table = Table::create_dummy_table(column_definitions);
+
+  const auto lqp = StaticTableNode::make(dummy_table);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::TableWrapper);
+
+  const auto table_wrapper = std::dynamic_pointer_cast<TableWrapper>(pqp);
+  EXPECT_EQ(table_wrapper->table, dummy_table);
 }
 
 TEST_F(LQPTranslatorTest, DropTable) {

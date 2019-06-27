@@ -1,0 +1,78 @@
+{
+  "columns": [
+    {
+      "name": "ca_address_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "ca_address_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "ca_street_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_street_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_street_type",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_suite_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_city",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_county",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_state",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_zip",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_country",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "ca_gmt_offset",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "ca_location_type",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}
