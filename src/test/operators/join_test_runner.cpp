@@ -453,7 +453,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         const auto reference_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
         for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-          const auto& input_chunk = table->get_chunk(chunk_id);
+          const auto input_chunk = table->get_chunk(chunk_id);
 
           Segments reference_segments;
 

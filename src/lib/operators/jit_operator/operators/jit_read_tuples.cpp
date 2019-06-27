@@ -41,7 +41,7 @@ AttributeIterableData get_attribute_iterable_data(const std::shared_ptr<const Ba
   const auto pos_list = reference_segment->pos_list();
   if (!pos_list->references_single_chunk() || pos_list->empty()) return {};
 
-  const auto& referenced_chunk = reference_segment->referenced_table()->get_chunk(pos_list->common_chunk_id());
+  const auto referenced_chunk = reference_segment->referenced_table()->get_chunk(pos_list->common_chunk_id());
   const auto referenced_segment = referenced_chunk->get_segment(reference_segment->referenced_column_id());
   const auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(referenced_segment);
   return {dict_segment, pos_list};
@@ -107,7 +107,7 @@ void JitReadTuples::before_specialization(const Table& in_table, std::vector<boo
 
   if (in_table.chunk_count() == 0) return;
 
-  const auto& chunk = *in_table.get_chunk(ChunkID{0});
+  const auto chunk = *in_table.get_chunk(ChunkID{0});
   // Remove expressions that use a column where the first segment is not dictionary-encoded
   _value_id_expressions.erase(
       std::remove_if(_value_id_expressions.begin(), _value_id_expressions.end(),
@@ -189,7 +189,7 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
 
 bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
                                  const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context) {
-  const auto& in_chunk = *in_table.get_chunk(chunk_id);
+  const auto in_chunk = *in_table.get_chunk(chunk_id);
 
   context.inputs.clear();
   context.chunk_offset = 0;

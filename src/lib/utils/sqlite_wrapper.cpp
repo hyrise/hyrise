@@ -88,7 +88,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
 
   // Insert
   for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    const auto& chunk = table.get_chunk(chunk_id);
+    const auto chunk = table.get_chunk(chunk_id);
     if (!chunk) continue;
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {

@@ -49,7 +49,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
                 "All segments of a Chunk in _referencing_table must have the same PosList");
 
     for (auto row_id : *pos_list) {
-      const auto& referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
+      const auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
       Assert(referenced_chunk, "Referenced chunks are not allowed to be null pointers");
 
       // Scope for the lock on the MVCC data
