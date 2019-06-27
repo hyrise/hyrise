@@ -251,7 +251,7 @@ size_t Table::estimate_memory_usage() const {
     bytes += column_definition.name.size();
   }
 
-  // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
+  // TODO(anybody) Statistics and Indexes missing from Memory Usage Estimation
   // TODO(anybody) TableLayout missing
 
   return bytes;

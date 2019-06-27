@@ -134,48 +134,48 @@ TEST_F(StorageChunkTest, GetIndexBySegmentPointer) {
       nullptr);
 }
 
-TEST_F(StorageChunkTest, GetIndicesByColumnIDs) {
+TEST_F(StorageChunkTest, GetIndexesByColumnIDs) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
   auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
   auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
   auto index_int_str =
       chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
 
-  auto indices_for_segment_0 = chunk->get_indices(std::vector<ColumnID>{ColumnID{0}});
+  auto indexes_for_segment_0 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{0}});
   // Make sure it finds both the single-column index as well as the multi-column index
-  EXPECT_NE(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_int),
-            indices_for_segment_0.cend());
-  EXPECT_NE(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_int_str),
-            indices_for_segment_0.cend());
+  EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int),
+            indexes_for_segment_0.cend());
+  EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int_str),
+            indexes_for_segment_0.cend());
 
-  auto indices_for_segment_1 = chunk->get_indices(std::vector<ColumnID>{ColumnID{1}});
+  auto indexes_for_segment_1 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{1}});
   // Make sure it only finds the single-column index
-  EXPECT_NE(std::find(indices_for_segment_1.cbegin(), indices_for_segment_1.cend(), index_str),
-            indices_for_segment_1.cend());
-  EXPECT_EQ(std::find(indices_for_segment_1.cbegin(), indices_for_segment_1.cend(), index_int_str),
-            indices_for_segment_1.cend());
+  EXPECT_NE(std::find(indexes_for_segment_1.cbegin(), indexes_for_segment_1.cend(), index_str),
+            indexes_for_segment_1.cend());
+  EXPECT_EQ(std::find(indexes_for_segment_1.cbegin(), indexes_for_segment_1.cend(), index_int_str),
+            indexes_for_segment_1.cend());
 }
 
-TEST_F(StorageChunkTest, GetIndicesBySegmentPointers) {
+TEST_F(StorageChunkTest, GetIndexesBySegmentPointers) {
   chunk = std::make_shared<Chunk>(Segments({ds_int, ds_str}));
   auto index_int = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
   auto index_str = chunk->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
   auto index_int_str =
       chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
 
-  auto indices_for_segment_0 = chunk->get_indices(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
+  auto indexes_for_segment_0 = chunk->get_indexes(std::vector<std::shared_ptr<const BaseSegment>>{ds_int});
   // Make sure it finds both the single-column index as well as the multi-column index
-  EXPECT_NE(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_int),
-            indices_for_segment_0.cend());
-  EXPECT_NE(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_int_str),
-            indices_for_segment_0.cend());
+  EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int),
+            indexes_for_segment_0.cend());
+  EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int_str),
+            indexes_for_segment_0.cend());
 
-  auto indices_for_segment_1 = chunk->get_indices(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
+  auto indexes_for_segment_1 = chunk->get_indexes(std::vector<std::shared_ptr<const BaseSegment>>{ds_str});
   // Make sure it only finds the single-column index
-  EXPECT_NE(std::find(indices_for_segment_1.cbegin(), indices_for_segment_1.cend(), index_str),
-            indices_for_segment_1.cend());
-  EXPECT_EQ(std::find(indices_for_segment_1.cbegin(), indices_for_segment_1.cend(), index_int_str),
-            indices_for_segment_1.cend());
+  EXPECT_NE(std::find(indexes_for_segment_1.cbegin(), indexes_for_segment_1.cend(), index_str),
+            indexes_for_segment_1.cend());
+  EXPECT_EQ(std::find(indexes_for_segment_1.cbegin(), indexes_for_segment_1.cend(), index_int_str),
+            indexes_for_segment_1.cend());
 }
 
 TEST_F(StorageChunkTest, RemoveIndex) {
@@ -186,21 +186,21 @@ TEST_F(StorageChunkTest, RemoveIndex) {
       chunk->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{ds_int, ds_str});
 
   chunk->remove_index(index_int);
-  auto indices_for_segment_0 = chunk->get_indices(std::vector<ColumnID>{ColumnID{0}});
-  EXPECT_EQ(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_int),
-            indices_for_segment_0.cend());
-  EXPECT_NE(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_int_str),
-            indices_for_segment_0.cend());
+  auto indexes_for_segment_0 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{0}});
+  EXPECT_EQ(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int),
+            indexes_for_segment_0.cend());
+  EXPECT_NE(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int_str),
+            indexes_for_segment_0.cend());
 
   chunk->remove_index(index_int_str);
-  indices_for_segment_0 = chunk->get_indices(std::vector<ColumnID>{ColumnID{0}});
-  EXPECT_EQ(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_int_str),
-            indices_for_segment_0.cend());
+  indexes_for_segment_0 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{0}});
+  EXPECT_EQ(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_int_str),
+            indexes_for_segment_0.cend());
 
   chunk->remove_index(index_str);
-  auto indices_for_segment_1 = chunk->get_indices(std::vector<ColumnID>{ColumnID{1}});
-  EXPECT_EQ(std::find(indices_for_segment_0.cbegin(), indices_for_segment_0.cend(), index_str),
-            indices_for_segment_0.cend());
+  auto indexes_for_segment_1 = chunk->get_indexes(std::vector<ColumnID>{ColumnID{1}});
+  EXPECT_EQ(std::find(indexes_for_segment_0.cbegin(), indexes_for_segment_0.cend(), index_str),
+            indexes_for_segment_0.cend());
 }
 
 TEST_F(StorageChunkTest, OrderedBy) {

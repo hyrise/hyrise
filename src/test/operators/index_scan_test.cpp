@@ -90,10 +90,10 @@ class OperatorsIndexScanTest : public BaseTest {
 };
 
 typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex,
-                         BTreeIndex /* add further indices */>
-    DerivedIndices;
+                         BTreeIndex /* add further indexes */>
+    DerivedIndexes;
 
-TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
