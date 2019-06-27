@@ -168,8 +168,9 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
 
   for (auto const& chunk_encoding_spec : chunk_encoding_specs) {
     ChunkEncoder::encode_all_chunks(_table, chunk_encoding_spec);
-    for (auto const& chunk : _table->chunks()) {
-      verify_encoding(chunk, chunk_encoding_spec);
+    const auto chunk_count = _table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      verify_encoding(_table->get_chunk(chunk_id), chunk_encoding_spec);
     }
   }
 }
