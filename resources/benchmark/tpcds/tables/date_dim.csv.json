@@ -1,0 +1,153 @@
+{
+  "columns": [
+    {
+      "name": "d_date_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "d_date_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "d_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_month_seq",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_week_seq",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_quarter_seq",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_year",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_dow",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_moy",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_dom",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_qoy",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_fy_year",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_fy_quarter_seq",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_fy_week_seq",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_day_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_quarter_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_holiday",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_weekend",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_following_holiday",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_first_dom",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_last_dom",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_same_day_ly",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_same_day_lq",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "d_current_day",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_current_week",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_current_month",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_current_quarter",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "d_current_year",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}

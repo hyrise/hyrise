@@ -1,0 +1,134 @@
+{
+  "columns": [
+    {
+      "name": "wr_returned_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_returned_time_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_item_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "wr_refunded_customer_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_refunded_cdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_refunded_hdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_refunded_addr_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_returning_customer_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_returning_cdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_returning_hdemo_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_returning_addr_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_web_page_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_reason_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_order_number",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "wr_return_quantity",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "wr_return_amt",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "wr_return_tax",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "wr_return_amt_inc_tax",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "wr_fee",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "wr_return_ship_cost",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "wr_refunded_cash",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "wr_reversed_charge",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "wr_account_credit",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "wr_net_loss",
+      "type": "float",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}
+
