@@ -173,8 +173,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
                   const auto like_predicate =
                       CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
                           table_node, column_spec, selectivity, like_type);
-                  queries.push_back(_generate_table_scans_for_predicate_chain(table_node, like_predicate, reference_table_predicate, scan_type));
-                  queries.push_back(_generate_table_scans_for_predicate_chain(table_node, data_table_predicate, like_predicate, scan_type));
+                  // queries.push_back(_generate_table_scans_for_predicate_chain(table_node, like_predicate, reference_table_predicate, scan_type));
+                  // queries.push_back(_generate_table_scans_for_predicate_chain(table_node, data_table_predicate, like_predicate, scan_type));
                 }
               }
             }
@@ -183,49 +183,49 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
       }
     }
 
-    auto permutations = CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
+    // auto permutations = CalibrationQueryGeneratorPredicate::generate_predicate_permutations(_tables, _configuration);
 
-    for (const auto& permutation : permutations) {
-      // Reduce number of generated queries for Scans on only one or two columns.
-      // We don't need to generate a query for permutation of the (unused) third column.
+    // for (const auto& permutation : permutations) {
+    //   // Reduce number of generated queries for Scans on only one or two columns.
+    //   // We don't need to generate a query for permutation of the (unused) third column.
 
-      // Expect one encoding
-      if (!permutation.second_encoding) {
-        add_queries_if_present(
-            queries,
-            _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
+    //   // Expect one encoding
+    //   if (!permutation.second_encoding) {
+    //     add_queries_if_present(
+    //         queries,
+    //         _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_value));
 
-        add_queries_if_present(
-            queries, _generate_table_scan(permutation,
-                                          CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
+    //     add_queries_if_present(
+    //         queries, _generate_table_scan(permutation,
+    //                                       CalibrationQueryGeneratorPredicate::generate_predicate_between_value_value));
 
-        if (permutation.data_type == DataType::String) {
-          add_queries_if_present(
-              queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
+    //     if (permutation.data_type == DataType::String) {
+    //       // add_queries_if_present(
+    //       //     queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_like));
 
-          add_queries_if_present(
-              queries, _generate_table_scan(permutation,
-                                            CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
-        }
+    //       add_queries_if_present(
+    //           queries, _generate_table_scan(permutation,
+    //                                         CalibrationQueryGeneratorPredicate::generate_predicate_equi_on_strings));
+    //     }
 
-        add_queries_if_present(
-            queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
-      }
+    //     add_queries_if_present(
+    //         queries, _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_or));
+    //   }
 
-      // // Expect two encodings
-      // if (permutation.second_encoding && !permutation.third_encoding) {
-      //     add_queries_if_present(
-      //             queries,
-      //             _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
-      // }
+    //   // // Expect two encodings
+    //   // if (permutation.second_encoding && !permutation.third_encoding) {
+    //   //     add_queries_if_present(
+    //   //             queries,
+    //   //             _generate_table_scan(permutation, CalibrationQueryGeneratorPredicate::generate_predicate_column_column));
+    //   // }
 
-      // // Expect three encodings
-      // if (permutation.second_encoding && permutation.third_encoding) {
-      //     add_queries_if_present(
-      //             queries, _generate_table_scan(permutation,
-      //                                           CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
-      // }
-    }
+    //   // // Expect three encodings
+    //   // if (permutation.second_encoding && permutation.third_encoding) {
+    //   //     add_queries_if_present(
+    //   //             queries, _generate_table_scan(permutation,
+    //   //                                           CalibrationQueryGeneratorPredicate::generate_predicate_between_column_column));
+    //   // }
+    // }
   }
 
   if (_configuration.calibrate_joins) {

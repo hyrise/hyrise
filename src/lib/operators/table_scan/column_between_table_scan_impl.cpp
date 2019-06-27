@@ -92,21 +92,21 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
    * Early out: All entries (except NULLs) match
    */
   // NOLINTNEXTLINE - cpplint is drunk
-  if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
-      static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
-    });
+  // if (lower_bound_value_id == ValueID{0} && upper_bound_value_id == INVALID_VALUE_ID) {
+  //   attribute_vector_iterable.with_iterators(position_filter, [&](auto left_it, auto left_end) {
+  //     static const auto always_true = [](const auto&) { return true; };
+  //     _scan_with_iterators<true>(always_true, left_it, left_end, chunk_id, matches);
+  //   });
 
-    return;
-  }
+  //   return;
+  // }
 
   /**
    * Early out: No entries match
    */
-  if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= upper_bound_value_id) {
-    return;
-  }
+  // if (lower_bound_value_id == INVALID_VALUE_ID || lower_bound_value_id >= upper_bound_value_id) {
+  //   return;
+  // }
 
   /**
    * No early out possible: Actually scan the attribute vector

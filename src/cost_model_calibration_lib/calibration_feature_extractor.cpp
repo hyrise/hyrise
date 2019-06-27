@@ -41,8 +41,8 @@ const std::optional<CostModelFeatures> CalibrationFeatureExtractor::extract_feat
       // No need to add specific features
       break;
     default: {
-      std::cout << "Unhandled operator type in CalibrationFeatureExtractor: "
-                << operator_type_to_string.at(operator_type) << std::endl;
+      // std::cout << "Unhandled operator type in CalibrationFeatureExtractor: "
+                // << operator_type_to_string.at(operator_type) << std::endl;
     }
   }
 

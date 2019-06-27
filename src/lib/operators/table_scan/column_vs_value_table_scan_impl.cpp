@@ -104,19 +104,19 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
 
   auto iterable = create_iterable_from_attribute_vector(segment);
 
-  if (_value_matches_all(segment, search_value_id)) {
-    iterable.with_iterators(position_filter, [&](auto it, auto end) {
-      static const auto always_true = [](const auto&) { return true; };
-      // Matches all, so include all rows except those with NULLs in the result.
-      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
-    });
+  // if (_value_matches_all(segment, search_value_id)) {
+  //   iterable.with_iterators(position_filter, [&](auto it, auto end) {
+  //     static const auto always_true = [](const auto&) { return true; };
+  //     // Matches all, so include all rows except those with NULLs in the result.
+  //     _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
+  //   });
 
-    return;
-  }
+  //   return;
+  // }
 
-  if (_value_matches_none(segment, search_value_id)) {
-    return;
-  }
+  // if (_value_matches_none(segment, search_value_id)) {
+  //   return;
+  // }
 
   _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto predicate_comparator) {
     auto comparator = [predicate_comparator, search_value_id](const auto& position) {
