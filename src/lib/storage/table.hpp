@@ -24,6 +24,7 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
   friend class StorageTableTest;
+
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
@@ -185,6 +186,5 @@ class Table : private Noncopyable {
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
   std::shared_ptr<TableStatistics> _table_statistics;
-
 };
 }  // namespace opossum
