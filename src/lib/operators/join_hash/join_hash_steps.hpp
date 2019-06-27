@@ -89,6 +89,14 @@ class PosHashTable {
     }
   }
 
+  void shrink_to_fit() {
+    _pos_lists.resize(_hash_table.size());
+    _pos_lists.shrink_to_fit();
+    for (auto& pos_list : _pos_lists) {
+      pos_list.shrink_to_fit();
+    }
+  }
+
   // For a value seen on the probe side, return an iterator into the matching values
   template <typename InputType>
   const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
@@ -291,6 +299,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
             hash_table.emplace(element.value, element.row_id);
           }
 
+          hash_table.shrink_to_fit();
           hash_tables[current_partition_id] = std::move(hash_table);
         }));
     jobs.back()->schedule();
