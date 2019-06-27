@@ -49,6 +49,14 @@ class JoinIndex : public AbstractJoinOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
+  // This function is executed if the output table of the index side input operator is a data table.
+  std::shared_ptr<const Table> _perform_data_join();
+
+  // This function is executed if the output table of the index side input operator is a reference table.
+  std::shared_ptr<const Table> _perform_reference_join();
+
+  std::shared_ptr<const Table> _perform_fallback_nested_loop();
+
   void _append_matches(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                        const PosList& index_table_matches);
 
@@ -68,6 +76,9 @@ class JoinIndex : public AbstractJoinOperator {
   const IndexSide _index_side;
   OperatorJoinPredicate _adjusted_primary_predicate;
   std::shared_ptr<Table> _output_table;
+
+  std::shared_ptr<const Table> _probe_input_table;
+  std::shared_ptr<const Table> _index_input_table;
 
   std::shared_ptr<PosList> _probe_pos_list;
   std::shared_ptr<PosList> _index_pos_list;

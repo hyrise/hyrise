@@ -12,6 +12,8 @@
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
+// #include "operators/index_scan.hpp"
+// #include "operators/table_wrapper.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
@@ -56,25 +58,33 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
+  if (_index_side == IndexSide::Left) {
+    _probe_input_table = input_table_right();
+    _index_input_table = input_table_left();
+  } else {
+    _probe_input_table = input_table_left();
+    _index_input_table = input_table_right();
+  }
+
+  _index_matches.resize(_index_input_table->chunk_count());
+  _probe_matches.resize(_probe_input_table->chunk_count());
+
+  if (_mode == JoinMode::Inner &&
+      ((_index_side == IndexSide::Right && input_table_right()->type() == TableType::References) ||
+       (_index_side == IndexSide::Left && input_table_left()->type() == TableType::References)) &&
+      _secondary_predicates.empty()) {
+    return _perform_reference_join();
+  } else {
+    return _perform_data_join();
+  }
+}
+
+std::shared_ptr<const Table> JoinIndex::_perform_data_join() {
   Assert(supports(_mode, _primary_predicate.predicate_condition,
                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
                   !_secondary_predicates.empty()),
          "JoinHash doesn't support these parameters");
-
-  std::shared_ptr<const Table> probe_input_table;
-  std::shared_ptr<const Table> index_input_table;
-
-  if (_index_side == IndexSide::Left) {
-    probe_input_table = input_table_right();
-    index_input_table = input_table_left();
-  } else {
-    probe_input_table = input_table_left();
-    index_input_table = input_table_right();
-  }
-
-  _index_matches.resize(index_input_table->chunk_count());
-  _probe_matches.resize(probe_input_table->chunk_count());
 
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
@@ -83,14 +93,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   const auto track_index_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Right;
 
   if (track_probe_matches) {
-    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
-      _probe_matches[probe_chunk_id].resize(probe_input_table->get_chunk(probe_chunk_id)->size());
+    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
+      _probe_matches[probe_chunk_id].resize(_probe_input_table->get_chunk(probe_chunk_id)->size());
     }
   }
 
   if (track_index_matches) {
-    for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < index_input_table->chunk_count(); ++index_chunk_id) {
-      _index_matches[index_chunk_id].resize(index_input_table->get_chunk(index_chunk_id)->size());
+    for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
+      _index_matches[index_chunk_id].resize(_index_input_table->get_chunk(index_chunk_id)->size());
     }
   }
 
@@ -98,18 +108,18 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _index_pos_list = std::make_shared<PosList>();
 
   auto pos_list_size_to_reserve =
-      std::max(uint64_t{100}, std::min(probe_input_table->row_count(), index_input_table->row_count()));
+      std::max(uint64_t{100}, std::min(_probe_input_table->row_count(), _index_input_table->row_count()));
 
   _probe_pos_list->reserve(pos_list_size_to_reserve);
   _index_pos_list->reserve(pos_list_size_to_reserve);
 
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
 
-  auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*probe_input_table, *index_input_table, _mode, {}};
+  auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
 
   // Scan all chunks for index input
-  for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < index_input_table->chunk_count(); ++index_chunk_id) {
-    const auto index_chunk = index_input_table->get_chunk(index_chunk_id);
+  for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
+    const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
     const auto indices = index_chunk->get_indices(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
     std::shared_ptr<BaseIndex> index = nullptr;
 
@@ -121,9 +131,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
     // Scan all chunks from the pruning side input
     if (index) {
-      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
+      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
         const auto probe_segment =
-            probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
+            _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
         segment_with_iterators(*probe_segment, [&](auto it, const auto end) {
           _join_two_segments_using_index(it, end, probe_chunk_id, index_chunk_id, index);
         });
@@ -132,10 +142,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     } else {
       // Fall back to NestedLoopJoin
       const auto index_segment =
-          index_input_table->get_chunk(index_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.second);
-      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
+          _index_input_table->get_chunk(index_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.second);
+      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
         const auto probe_segment =
-            probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
+            _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
         JoinNestedLoop::JoinParams params{*_probe_pos_list,
                                           *_index_pos_list,
                                           _probe_matches[probe_chunk_id],
@@ -155,7 +165,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
   // For Full Outer and Left Join we need to add all unmatched rows for the probe side
   if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
-    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
+    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _probe_matches[probe_chunk_id].size(); ++chunk_offset) {
         if (!_probe_matches[probe_chunk_id][chunk_offset]) {
           _probe_pos_list->emplace_back(RowID{probe_chunk_id, chunk_offset});
@@ -185,8 +195,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < probe_input_table->chunk_count(); ++chunk_id) {
-      const auto chunk_size = probe_input_table->get_chunk(chunk_id)->size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < _probe_input_table->chunk_count(); ++chunk_id) {
+      const auto chunk_size = _probe_input_table->get_chunk(chunk_id)->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
           _probe_pos_list->emplace_back(chunk_id, chunk_offset);
@@ -199,16 +209,16 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   Segments output_segments;
 
   if (_index_side == IndexSide::Left) {
-    _write_output_segments(output_segments, index_input_table, _index_pos_list);
+    _write_output_segments(output_segments, _index_input_table, _index_pos_list);
   } else {
-    _write_output_segments(output_segments, probe_input_table, _probe_pos_list);
+    _write_output_segments(output_segments, _probe_input_table, _probe_pos_list);
   }
 
   if (!is_semi_or_anti_join) {
     if (_index_side == IndexSide::Left) {
-      _write_output_segments(output_segments, probe_input_table, _probe_pos_list);
+      _write_output_segments(output_segments, _probe_input_table, _probe_pos_list);
     } else {
-      _write_output_segments(output_segments, index_input_table, _index_pos_list);
+      _write_output_segments(output_segments, _index_input_table, _index_pos_list);
     }
   }
 
@@ -220,6 +230,114 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   }
 
   return _build_output_table({std::make_shared<Chunk>(output_segments)});
+}
+
+std::shared_ptr<const Table> JoinIndex::_perform_reference_join() {
+  // std::cout << "REF INDEX JOIN"
+  //           << "\n";
+  // std::vector<ColumnID> data_table_index_column_ids;
+
+  // // get referenced data table
+  // std::shared_ptr<const Table> referenced_data_table;
+  // if (!input_table_right()->chunks().empty() && !input_table_right()->chunks()[0]->segments().empty()) {
+  //   const auto& first_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(
+  //       input_table_right()->chunks()[0]->segments()[_primary_predicate.column_ids.second]);
+  //   if (first_reference_segment != nullptr) {
+  //     referenced_data_table = first_reference_segment->referenced_table();
+  //     // Experiment assumption (this is not valid generally):
+  //     // Each reference segment of the reference table references the same ColumnId
+  //     data_table_index_column_ids.emplace_back(first_reference_segment->referenced_column_id());
+  //   }
+  // }
+  // // use _perform_join if the referenced data table has no index
+  // Assert(referenced_data_table != nullptr, "ReferenceSegment has no reference table.");
+  // if (!referenced_data_table->indexes_statistics().empty()) {
+  //   // Assumption: Original data table of the right input table has
+  //   // an index for each segment that is evaluated for the join
+
+  //   // build the position list for the right input table
+  //   auto input_right_table_positions = PosList{};
+  //   input_right_table_positions.reserve(input_table_right()->row_count());
+  //   for (const auto& chunk : input_table_right()->chunks()) {
+  //     if (!chunk->segments().empty()) {
+  //       const auto& reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(chunk->segments()[0]);
+  //       Assert(reference_segment != nullptr, "Segment of reference table is not of type ReferenceSegment.");
+  //       const auto& reference_segment_pos_list = reference_segment->pos_list();
+  //       input_right_table_positions.insert(input_right_table_positions.end(), reference_segment_pos_list->begin(),
+  //                                          reference_segment_pos_list->end());
+  //     }
+  //   }
+
+  //   // std::cout << "input_right_table_positions sorted: ";
+  //   // std::cout << std::is_sorted(input_right_table_positions.begin(), input_right_table_positions.end()) << "\n";
+
+  //   std::sort(input_right_table_positions.begin(), input_right_table_positions.end());
+
+  //   //    const auto first_row_id = input_right_table_positions.front();
+  //   //    const auto last_row_id = input_right_table_positions.back();
+
+  //   _pos_list_left = std::make_shared<PosList>();
+  //   _pos_list_right = std::make_shared<PosList>();
+
+  //   _pos_list_left->reserve(input_right_table_positions.size());
+  //   _pos_list_right->reserve(input_right_table_positions.size());
+
+  //   //  iterate over the left join column
+  //   //    for each value vl of that column:
+  //   //      execute an index scan on the referenced_data_table
+  //   //      get the global posList (right_data_table_matches) for the scan on the referenced_data_table
+  //   //      sort input_right_table_positions
+  //   //      sort right_data_table_matches
+  //   //      input_right_table_matches = intersection(input_right_table_positions, right_data_table_matches)
+  //   //      add the RowID of vl as often as the size of input_right_table_matches to _pos_list_left
+  //   //      add input_right_table_matches to _pos_list_right
+
+  //   const auto& referenced_data_table_wrapper = std::make_shared<TableWrapper>(referenced_data_table);
+  //   referenced_data_table_wrapper->execute();
+
+  //   auto left_chunk_id = ChunkID{0};
+  //   for (const auto& chunk : input_table_left()->chunks()) {
+  //     const auto& left_segment = chunk->get_segment(_primary_predicate.column_ids.first);
+
+  //     resolve_data_and_segment_type(*left_segment, [&](auto type, auto& typed_segment) {
+  //       using Type = typename decltype(type)::type;
+  //       auto iterable = create_iterable_from_segment<Type>(typed_segment);
+
+  //       auto left_chunk_offset = ChunkOffset{0};
+  //       iterable.with_iterators([&](auto iterator, auto end) {
+  //         for (; iterator != end; ++iterator) {
+  //           const auto& value = *iterator;
+  //           const std::vector<AllTypeVariant> right_values{AllTypeVariant{value.value()}};
+  //           // WARNING! The SegmentIndexType is hard coded for the benchmark experiment here.
+  //           // TODO(anyone) modify passing the SegmentIndexType
+  //           const auto& index_scan_on_data_table = std::make_shared<IndexScan>(
+  //               referenced_data_table_wrapper, SegmentIndexType::GroupKey, data_table_index_column_ids,
+  //               _primary_predicate.predicate_condition, right_values);
+  //           auto right_data_table_matches = index_scan_on_data_table->execute_matches_calculation();
+
+  //           std::sort(right_data_table_matches->begin(), right_data_table_matches->end());
+  //           auto input_right_table_matches = PosList{};
+
+  //           std::set_intersection(input_right_table_positions.begin(), input_right_table_positions.end(),
+  //                                 right_data_table_matches->begin(), right_data_table_matches->end(),
+  //                                 std::back_inserter(input_right_table_matches));
+  //           _append_matches(left_chunk_id, left_chunk_offset, input_right_table_matches);
+  //           ++left_chunk_offset;
+  //         }
+  //       });
+  //     });
+  //     ++left_chunk_id;
+  //   }
+
+  //   // write output chunks
+  //   Segments output_segments;
+
+  //   _write_output_segments(output_segments, input_table_left(), _pos_list_left);
+  //   _write_output_segments(output_segments, input_table_right(), _pos_list_right);
+  //   return _build_output_table({std::make_shared<Chunk>(output_segments)});
+  // }
+  // use the fallback solution (nested loop)
+  return _perform_data_join();
 }
 
 void JoinIndex::_append_matches(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
