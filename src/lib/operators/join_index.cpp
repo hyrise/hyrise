@@ -110,7 +110,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   // Scan all chunks for index input
   for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < index_input_table->chunk_count(); ++index_chunk_id) {
     const auto index_chunk = index_input_table->get_chunk(index_chunk_id);
-    const auto indexes = chunk_right->get_indexes(std::vector<ColumnID>{_primary_predicate.column_ids.second});
+    const auto indexes = index_chunk->get_indexes(std::vector<ColumnID>{_primary_predicate.column_ids.second});
 
     std::shared_ptr<BaseIndex> index = nullptr;
 
