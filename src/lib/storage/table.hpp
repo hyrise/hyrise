@@ -1,15 +1,13 @@
 #pragma once
 
-#include <gtest/gtest_prod.h>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "boost/variant.hpp"
-
 #include "base_segment.hpp"
+#include "boost/variant.hpp"
 #include "chunk.hpp"
 #include "storage/index/index_info.hpp"
 #include "storage/table_column_definition.hpp"
@@ -25,6 +23,8 @@ class TableStatistics;
  * A Table is partitioned horizontally into a number of chunks.
  */
 class Table : private Noncopyable {
+  friend class StorageTableTest;
+
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
@@ -192,7 +192,5 @@ class Table : private Noncopyable {
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
   std::shared_ptr<TableStatistics> _table_statistics;
-
-  FRIEND_TEST(StorageTableTest, StableChunks);
 };
 }  // namespace opossum

@@ -20,6 +20,10 @@ class StorageTableTest : public BaseTest {
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
+  static tbb::concurrent_vector<std::shared_ptr<Chunk>>& get_chunks(std::shared_ptr<Table>& table) {
+    return table->_chunks;
+  }
+
   std::shared_ptr<Table> t;
   TableColumnDefinitions column_definitions;
 };
@@ -215,7 +219,8 @@ TEST_F(StorageTableTest, StableChunks) {
   table->append({100, "Hello"});
 
   // The address of the first shared_ptr control object
-  const auto first_chunk = &table->_chunks[0];
+  const auto& chunks_vector = get_chunks(table);
+  const auto first_chunk = &chunks_vector[0];
 
   for (auto i = 1; i < 10; ++i) {
     table->append({i, "Hello"});
@@ -223,7 +228,7 @@ TEST_F(StorageTableTest, StableChunks) {
 
   // The vector should have been resized / expanded by now
 
-  EXPECT_EQ(first_chunk, &table->_chunks[0]);
+  EXPECT_EQ(first_chunk, &chunks_vector[0]);
   EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[0], AllTypeVariant{100});
 }
 
