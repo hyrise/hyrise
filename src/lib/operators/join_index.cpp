@@ -85,7 +85,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   if (track_probe_matches) {
     for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
       const auto chunk = probe_input_table->get_chunk(probe_chunk_id);
-      if(!chunk) continue;
+      if (!chunk) continue;
 
       _probe_matches[probe_chunk_id].resize(chunk->size());
     }
@@ -94,7 +94,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   if (track_index_matches) {
     for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < index_input_table->chunk_count(); ++index_chunk_id) {
       const auto chunk = index_input_table->get_chunk(index_chunk_id);
-      if(!chunk) continue;
+      if (!chunk) continue;
 
       _index_matches[index_chunk_id].resize(chunk->size());
     }
@@ -116,7 +116,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   // Scan all chunks for index input
   for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < index_input_table->chunk_count(); ++index_chunk_id) {
     const auto index_chunk = index_input_table->get_chunk(index_chunk_id);
-    if(!index_chunk) continue;
+    if (!index_chunk) continue;
 
     const auto indices = index_chunk->get_indices(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
     std::shared_ptr<BaseIndex> index = nullptr;
@@ -131,10 +131,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     if (index) {
       for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
         const auto chunk = probe_input_table->get_chunk(probe_chunk_id);
-        if(!chunk) continue;
+        if (!chunk) continue;
 
-        const auto probe_segment =
-            chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
+        const auto probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
         segment_with_iterators(*probe_segment, [&](auto it, const auto end) {
           _join_two_segments_using_index(it, end, probe_chunk_id, index_chunk_id, index);
         });
@@ -143,16 +142,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     } else {
       // Fall back to NestedLoopJoin
       const auto chunk_index = index_input_table->get_chunk(index_chunk_id);
-      if(!chunk_index) continue;
+      if (!chunk_index) continue;
 
-      const auto index_segment =
-          chunk_index->get_segment(_adjusted_primary_predicate.column_ids.second);
+      const auto index_segment = chunk_index->get_segment(_adjusted_primary_predicate.column_ids.second);
       for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
         const auto chunk_probe = probe_input_table->get_chunk(probe_chunk_id);
-        if(!chunk_probe) continue;
+        if (!chunk_probe) continue;
 
-        const auto probe_segment =
-           chunk_probe->get_segment(_adjusted_primary_predicate.column_ids.first);
+        const auto probe_segment = chunk_probe->get_segment(_adjusted_primary_predicate.column_ids.first);
         JoinNestedLoop::JoinParams params{*_probe_pos_list,
                                           *_index_pos_list,
                                           _probe_matches[probe_chunk_id],
@@ -202,8 +199,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < probe_input_table()->chunk_count(); ++chunk_id) {
-      const auto chunk_left = probe_input_table()->get_chunk(chunk_id);
+    for (auto chunk_id = ChunkID{0}; chunk_id < probe_input_table->chunk_count(); ++chunk_id) {
+      const auto chunk_left = probe_input_table->get_chunk(chunk_id);
       if (!chunk_left) continue;
 
       const auto chunk_size = chunk_left->size();
