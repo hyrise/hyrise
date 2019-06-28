@@ -79,7 +79,7 @@ TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
 
   EXPECT_EQ(StorageManager::get().get_table("call_center")->row_count(), 6);
   EXPECT_EQ(StorageManager::get().get_table("catalog_page")->row_count(), 11718);
-  //  EXPECT_EQ(StorageManager::get().get_table("catalog_returns")->row_count(), 144201);
+  EXPECT_EQ(StorageManager::get().get_table("catalog_returns")->row_count(), 144201);
   EXPECT_EQ(StorageManager::get().get_table("catalog_sales")->row_count(), 1440060);
   EXPECT_EQ(StorageManager::get().get_table("customer")->row_count(), 100000);
   EXPECT_EQ(StorageManager::get().get_table("customer_address")->row_count(), 50000);
@@ -93,13 +93,13 @@ TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
   EXPECT_EQ(StorageManager::get().get_table("reason")->row_count(), 35);
   EXPECT_EQ(StorageManager::get().get_table("ship_mode")->row_count(), 20);
   EXPECT_EQ(StorageManager::get().get_table("store")->row_count(), 12);
-  //  EXPECT_EQ(StorageManager::get().get_table("store_returns")->row_count(), 288324);
-  //  EXPECT_EQ(StorageManager::get().get_table("store_sales")->row_count(), 2879434);
+  EXPECT_EQ(StorageManager::get().get_table("store_returns")->row_count(), 288324);
+  EXPECT_EQ(StorageManager::get().get_table("store_sales")->row_count(), 2879434);
   EXPECT_EQ(StorageManager::get().get_table("time")->row_count(), 86400);
   EXPECT_EQ(StorageManager::get().get_table("warehouse")->row_count(), 5);
   EXPECT_EQ(StorageManager::get().get_table("web_page")->row_count(), 60);
-  //  EXPECT_EQ(StorageManager::get().get_table("web_returns")->row_count(), 71746);
-  //  EXPECT_EQ(StorageManager::get().get_table("web_sales")->row_count(), 719620);
+  EXPECT_EQ(StorageManager::get().get_table("web_returns")->row_count(), 71746);
+  EXPECT_EQ(StorageManager::get().get_table("web_sales")->row_count(), 719620);
   EXPECT_EQ(StorageManager::get().get_table("web_site")->row_count(), 30);
 
   StorageManager::reset();
@@ -143,16 +143,16 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
         table_generator.generate_store_sales_and_returns(rows_to_check);
     EXPECT_EQ(store_sales_table->row_count(), rows_to_check);
     EXPECT_EQ(store_returns_table->row_count(), rows_to_check);
-//    EXPECT_TABLE_EQ_ORDERED(store_sales_table, load_csv("store_sales.csv"));
-    //    EXPECT_TABLE_EQ_ORDERED(store_returns_table, load_csv("store_returns.csv"));
+    EXPECT_TABLE_EQ_ORDERED(store_sales_table, load_csv("store_sales.csv"));
+    EXPECT_TABLE_EQ_ORDERED(store_returns_table, load_csv("store_returns.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_time(rows_to_check), load_csv("time_dim.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_warehouse(rows_to_check), load_csv("warehouse.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_page(rows_to_check), load_csv("web_page.csv"));
     const auto [web_sales_table, web_returns_table] = table_generator.generate_web_sales_and_returns(rows_to_check);
     EXPECT_EQ(web_sales_table->row_count(), rows_to_check);
     EXPECT_EQ(web_returns_table->row_count(), rows_to_check);
-    //    EXPECT_TABLE_EQ_ORDERED(web_sales_table, load_csv("web_sales.csv"));
-    //    EXPECT_TABLE_EQ_ORDERED(web_returns_table, load_csv("web_returns.csv"));
+    EXPECT_TABLE_EQ_ORDERED(web_sales_table, load_csv("web_sales.csv"));
+    EXPECT_TABLE_EQ_ORDERED(web_returns_table, load_csv("web_returns.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_site(rows_to_check), load_csv("web_site.csv"));
   }
 }
