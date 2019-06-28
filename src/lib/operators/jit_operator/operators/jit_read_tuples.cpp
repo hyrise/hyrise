@@ -107,13 +107,13 @@ void JitReadTuples::before_specialization(const Table& in_table, std::vector<boo
 
   if (in_table.chunk_count() == 0) return;
 
-  const auto chunk = *in_table.get_chunk(ChunkID{0});
+  const auto chunk = in_table.get_chunk(ChunkID{0});
   // Remove expressions that use a column where the first segment is not dictionary-encoded
   _value_id_expressions.erase(
       std::remove_if(_value_id_expressions.begin(), _value_id_expressions.end(),
                      [&](const JitValueIdExpression& value_id_expression) {
                        const auto column_id = _input_columns[value_id_expression.input_column_index].column_id;
-                       const auto segment = chunk.get_segment(column_id);
+                       const auto segment = chunk->get_segment(column_id);
                        const auto casted_dictionary = get_attribute_iterable_data(segment);
                        const bool remove = casted_dictionary.dictionary_segment == nullptr;
                        if (remove) {
@@ -189,7 +189,7 @@ void JitReadTuples::before_query(const Table& in_table, const std::vector<AllTyp
 
 bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
                                  const std::vector<AllTypeVariant>& parameter_values, JitRuntimeContext& context) {
-  const auto in_chunk = *in_table.get_chunk(chunk_id);
+  const auto& in_chunk = *in_table.get_chunk(chunk_id);
 
   context.inputs.clear();
   context.chunk_offset = 0;
