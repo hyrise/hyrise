@@ -1040,9 +1040,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
     }
   } else {
     for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
-      const auto identifiers =
-          _sql_identifier_resolver->get_expression_identifiers(lqp->column_expressions()[column_id]);
-      for (const auto& identifier : identifiers) {
+      for (const auto& identifier : _inflated_select_list_elements[column_id].identifiers) {
         column_names[column_id].emplace_back(identifier.column_name);
       }
     }
