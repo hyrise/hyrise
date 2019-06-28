@@ -69,5 +69,7 @@ int mk_w_catalog_sales(void *row, ds_key_t index, void* catalog_return, int* was
 int pr_w_catalog_sales(void *r);
 int ld_w_catalog_sales(void *r);
 int vld_w_catalog_sales(int nTable, ds_key_t kRow, int *Permutation);
+
+void reset_mk_w_catalog_sales_master_bInit();
 #endif
 

@@ -64,6 +64,8 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
     }
   }
 
+  reset_mk_w_catalog_sales_master_bInit();
+
   auto distributions_string = std::string{"DISTRIBUTIONS"};
   // PATH_TO_TPCDS_IDX is set to "${CMAKE_BINARY_DIR}/tpcds.idx" in CMakeLists.txt
   auto distributions_value = std::string{PATH_TO_TPCDS_IDX};

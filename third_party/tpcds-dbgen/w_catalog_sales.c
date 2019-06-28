@@ -62,7 +62,12 @@ static ds_key_t jDate;
 static int nTicketItemBase = 1;
 static int *pItemPermutation;
 static int nItemCount;
-                                                              
+
+int mk_w_catalog_sales_master_bInit = 0;
+
+void reset_mk_w_catalog_sales_master_bInit() {
+  mk_w_catalog_sales_master_bInit = 0;
+}
                                                               
 /*                                                            
  * the validation process requires generating a single lineitem
@@ -77,7 +82,6 @@ mk_w_catalog_sales_master (void *row, ds_key_t index)
 		dOne, dOneHalf;
 	int nGiftPct;
 	struct W_CATALOG_SALES_TBL *r;
-	static int bInit = 0;
 
 
 	if (row == NULL)
@@ -85,7 +89,7 @@ mk_w_catalog_sales_master (void *row, ds_key_t index)
 	else
 		r = row;
 
-	if (!bInit)
+	if (!mk_w_catalog_sales_master_bInit)
 	{
 	    strtodec (&dZero, "0.00");
         strtodec (&dHundred, "100.00");
@@ -94,7 +98,7 @@ mk_w_catalog_sales_master (void *row, ds_key_t index)
 		jDate = skipDays(CATALOG_SALES, &kNewDateIndex);
 		pItemPermutation = makePermutation(NULL, (nItemCount = (int)getIDCount(ITEM)), CS_PERMUTE);
 
-		bInit = 1;
+    mk_w_catalog_sales_master_bInit = 1;
 	}
 
    while (index > kNewDateIndex)	/* need to move to a new date */
