@@ -64,7 +64,7 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   _source()->before_query(*in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
 
-  const auto chunk_count in_table->chunk_count();
+  const auto chunk_count = in_table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count && context.limit_rows; ++chunk_id) {
     const auto chunk = in_table->get_chunk(chunk_id);
     if (!chunk) continue;
