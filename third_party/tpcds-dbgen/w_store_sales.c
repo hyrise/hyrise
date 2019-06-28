@@ -65,8 +65,8 @@ static ds_key_t jDate,
 /*
 * mk_store_sales
 */
-static void
-mk_master (void *row, ds_key_t index)
+void
+mk_w_store_sales_master (void *row, ds_key_t index)
 {
 	struct W_STORE_SALES_TBL *r;
 	static decimal_t dMin,
@@ -111,8 +111,8 @@ mk_master (void *row, ds_key_t index)
 }
 
 
-static void
-mk_detail (void *row, int bPrint, void* store_returns, int* was_returned)
+void
+mk_w_store_sales_detail (void *row, int bPrint, void* store_returns, int* was_returned)
 {
 int nTemp;
 struct W_STORE_RETURNS_TBL ReturnRow;
@@ -244,13 +244,13 @@ mk_w_store_sales (void *row, ds_key_t index, void* store_returns, int* was_retur
 		i;
 
    /* build the static portion of an order */
-	mk_master(row, index);
+  mk_w_store_sales_master(row, index);
 
    /* set the number of lineitems and build them */
 	genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
    for (i = 1; i <= nLineitems; i++)
    {
-	   mk_detail(row, 0, store_returns, was_returned);
+	   mk_w_store_sales_detail(row, 0, store_returns, was_returned);
    }
 
    /**
@@ -284,14 +284,14 @@ vld_w_store_sales(int nTable, ds_key_t kRow, int *Permutation)
 	row_skip(nTable, kRow - 1);
 	row_skip(STORE_RETURNS, kRow - 1);
 	jDate = skipDays(STORE_SALES, &kNewDateIndex);		
-	mk_master(NULL, kRow);
+	mk_w_store_sales_master(NULL, kRow);
 	genrand_integer(&nMaxLineitem, DIST_UNIFORM, 8, 16, 9, SS_TICKET_NUMBER);
 	genrand_integer(&nLineitem, DIST_UNIFORM, 1, nMaxLineitem, 0, SS_PRICING_QUANTITY);
 	for (i = 1; i < nLineitem; i++)
 	{
-		mk_detail(NULL, 0, NULL, NULL);
+		mk_w_store_sales_detail(NULL, 0, NULL, NULL);
 	}
-	mk_detail(NULL, 1, NULL, NULL);
+	mk_w_store_sales_detail(NULL, 1, NULL, NULL);
 
 	return(0);
 }
