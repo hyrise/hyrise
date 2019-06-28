@@ -219,7 +219,7 @@ TEST_F(StorageTableTest, StableChunks) {
   table->append({100, "Hello"});
 
   // The address of the first shared_ptr control object
-  const auto chunks_vector = get_chunks(table);
+  const auto& chunks_vector = get_chunks(table);
   const auto first_chunk = &chunks_vector[0];
 
   for (auto i = 1; i < 10; ++i) {
