@@ -141,12 +141,16 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_store(rows_to_check), load_csv("store.csv"));
     const auto [store_sales_table, store_returns_table] =
         table_generator.generate_store_sales_and_returns(rows_to_check);
-    //    EXPECT_TABLE_EQ_ORDERED(store_sales_table, load_csv("store_sales.csv"));
+    EXPECT_EQ(store_sales_table->row_count(), rows_to_check);
+    EXPECT_EQ(store_returns_table->row_count(), rows_to_check);
+//    EXPECT_TABLE_EQ_ORDERED(store_sales_table, load_csv("store_sales.csv"));
     //    EXPECT_TABLE_EQ_ORDERED(store_returns_table, load_csv("store_returns.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_time(rows_to_check), load_csv("time_dim.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_warehouse(rows_to_check), load_csv("warehouse.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_page(rows_to_check), load_csv("web_page.csv"));
     const auto [web_sales_table, web_returns_table] = table_generator.generate_web_sales_and_returns(rows_to_check);
+    EXPECT_EQ(web_sales_table->row_count(), rows_to_check);
+    EXPECT_EQ(web_returns_table->row_count(), rows_to_check);
     //    EXPECT_TABLE_EQ_ORDERED(web_sales_table, load_csv("web_sales.csv"));
     //    EXPECT_TABLE_EQ_ORDERED(web_returns_table, load_csv("web_returns.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_site(rows_to_check), load_csv("web_site.csv"));

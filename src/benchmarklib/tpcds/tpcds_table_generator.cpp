@@ -791,9 +791,8 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) co
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_store_sales_and_returns(
-    ds_key_t max_rows) const {
+    size_t max_rows) const {
   auto [store_sales_first, store_sales_count] = prepare_for_table(STORE_SALES);
-  store_sales_count = std::min(store_sales_count, max_rows);
 
   auto store_sales_builder = TableBuilder{_benchmark_config->chunk_size, store_sales_column_types,
                                           store_sales_column_names, static_cast<ChunkOffset>(store_sales_count)};
@@ -809,7 +808,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     mk_w_store_sales(&store_sales, store_sales_first + i, &store_returns, &was_returned);
     tpcds_row_stop(STORE_SALES);
 
-    store_sales_builder.append_row(
+    if (store_sales_builder.row_count() < max_rows) {
+      store_sales_builder.append_row(
         resolve_key(store_sales.ss_sold_date_sk), resolve_key(store_sales.ss_sold_time_sk),
         resolve_key(store_sales.ss_sold_item_sk), resolve_key(store_sales.ss_sold_customer_sk),
         resolve_key(store_sales.ss_sold_cdemo_sk), resolve_key(store_sales.ss_sold_hdemo_sk),
@@ -822,6 +822,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         decimal_to_float(store_sales.ss_pricing.ext_list_price), decimal_to_float(store_sales.ss_pricing.ext_tax),
         decimal_to_float(store_sales.ss_pricing.coupon_amt), decimal_to_float(store_sales.ss_pricing.net_paid),
         decimal_to_float(store_sales.ss_pricing.net_paid_inc_tax), decimal_to_float(store_sales.ss_pricing.net_profit));
+    }
 
     if (was_returned != 0) {
       store_returns_builder.append_row(
@@ -837,34 +838,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
           decimal_to_float(store_returns.sr_pricing.refunded_cash),
           decimal_to_float(store_returns.sr_pricing.reversed_charge),
           decimal_to_float(store_returns.sr_pricing.store_credit), decimal_to_float(store_returns.sr_pricing.net_loss));
-    }
-  }
-
-  // only used for testing; generate more web_returns until number of catalog returns == max_rows
-  if (max_rows != std::numeric_limits<ds_key_t>::max()) {
-    for (; store_returns_builder.row_count() < static_cast<size_t>(max_rows); i++) {
-      auto store_sales = W_STORE_SALES_TBL{};
-      auto store_returns = W_STORE_RETURNS_TBL{};
-      int was_returned = 0;
-
-      mk_w_store_sales(&store_sales, store_sales_first + i, &store_returns, &was_returned);
-      tpcds_row_stop(STORE_SALES);
-
-      if (was_returned != 0) {
-        store_returns_builder.append_row(
-            resolve_key(store_returns.sr_returned_date_sk), resolve_key(store_returns.sr_returned_time_sk),
-            resolve_key(store_returns.sr_item_sk), resolve_key(store_returns.sr_customer_sk),
-            resolve_key(store_returns.sr_cdemo_sk), resolve_key(store_returns.sr_hdemo_sk),
-            resolve_key(store_returns.sr_addr_sk), resolve_key(store_returns.sr_store_sk),
-            resolve_key(store_returns.sr_reason_sk), resolve_key(store_returns.sr_ticket_number),
-            store_returns.sr_pricing.quantity, decimal_to_float(store_returns.sr_pricing.net_paid),
-            decimal_to_float(store_returns.sr_pricing.ext_tax),
-            decimal_to_float(store_returns.sr_pricing.net_paid_inc_tax), decimal_to_float(store_returns.sr_pricing.fee),
-            decimal_to_float(store_returns.sr_pricing.ext_ship_cost),
-            decimal_to_float(store_returns.sr_pricing.refunded_cash),
-            decimal_to_float(store_returns.sr_pricing.reversed_charge),
-            decimal_to_float(store_returns.sr_pricing.store_credit),
-            decimal_to_float(store_returns.sr_pricing.net_loss));
+      if (store_returns_builder.row_count() == max_rows) {
+        break;
       }
     }
   }
@@ -941,9 +916,8 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_page(ds_key_t max_rows)
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_web_sales_and_returns(
-    ds_key_t max_rows) const {
+    size_t max_rows) const {
   auto [web_sales_first, web_sales_count] = prepare_for_table(WEB_SALES);
-  web_sales_count = std::min(web_sales_count, max_rows);
 
   auto web_sales_builder = TableBuilder{_benchmark_config->chunk_size, web_sales_column_types, web_sales_column_names,
                                         static_cast<ChunkOffset>(web_sales_count)};
@@ -959,7 +933,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     mk_w_web_sales(&web_sales, web_sales_first + i, &web_returns, &was_returned);
     tpcds_row_stop(WEB_SALES);
 
-    web_sales_builder.append_row(
+    if (web_sales_builder.row_count() < max_rows) {
+      web_sales_builder.append_row(
         resolve_key(web_sales.ws_sold_date_sk), resolve_key(web_sales.ws_sold_time_sk),
         resolve_key(web_sales.ws_ship_date_sk), resolve_key(web_sales.ws_item_sk),
         resolve_key(web_sales.ws_bill_customer_sk), resolve_key(web_sales.ws_bill_cdemo_sk),
@@ -979,6 +954,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         decimal_to_float(web_sales.ws_pricing.net_paid_inc_ship),
         decimal_to_float(web_sales.ws_pricing.net_paid_inc_ship_tax),
         decimal_to_float(web_sales.ws_pricing.net_profit));
+    }
 
     if (was_returned != 0) {
       web_returns_builder.append_row(
@@ -995,34 +971,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
           decimal_to_float(web_returns.wr_pricing.refunded_cash),
           decimal_to_float(web_returns.wr_pricing.reversed_charge),
           decimal_to_float(web_returns.wr_pricing.store_credit), decimal_to_float(web_returns.wr_pricing.net_loss));
-    }
-  }
-
-  // only used for testing; generate more web_returns until number of catalog returns == max_rows
-  if (max_rows != std::numeric_limits<ds_key_t>::max()) {
-    for (; web_returns_builder.row_count() < static_cast<size_t>(max_rows); i++) {
-      auto web_sales = W_WEB_SALES_TBL{};
-      auto web_returns = W_WEB_RETURNS_TBL{};
-      int was_returned = 0;
-
-      mk_w_web_sales(&web_sales, web_sales_first + i, &web_returns, &was_returned);
-      tpcds_row_stop(WEB_SALES);
-
-      if (was_returned != 0) {
-        web_returns_builder.append_row(
-            resolve_key(web_returns.wr_returned_date_sk), resolve_key(web_returns.wr_returned_time_sk),
-            resolve_key(web_returns.wr_item_sk), resolve_key(web_returns.wr_refunded_customer_sk),
-            resolve_key(web_returns.wr_refunded_cdemo_sk), resolve_key(web_returns.wr_refunded_hdemo_sk),
-            resolve_key(web_returns.wr_refunded_addr_sk), resolve_key(web_returns.wr_returning_customer_sk),
-            resolve_key(web_returns.wr_returning_cdemo_sk), resolve_key(web_returns.wr_returning_hdemo_sk),
-            resolve_key(web_returns.wr_returning_addr_sk), resolve_key(web_returns.wr_web_page_sk),
-            resolve_key(web_returns.wr_reason_sk), resolve_key(web_returns.wr_order_number),
-            web_returns.wr_pricing.quantity, decimal_to_float(web_returns.wr_pricing.net_paid),
-            decimal_to_float(web_returns.wr_pricing.ext_tax), decimal_to_float(web_returns.wr_pricing.net_paid_inc_tax),
-            decimal_to_float(web_returns.wr_pricing.fee), decimal_to_float(web_returns.wr_pricing.ext_ship_cost),
-            decimal_to_float(web_returns.wr_pricing.refunded_cash),
-            decimal_to_float(web_returns.wr_pricing.reversed_charge),
-            decimal_to_float(web_returns.wr_pricing.store_credit), decimal_to_float(web_returns.wr_pricing.net_loss));
+      if (web_returns_builder.row_count() == max_rows) {
+        break;
       }
     }
   }
