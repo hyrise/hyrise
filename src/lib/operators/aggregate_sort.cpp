@@ -400,7 +400,6 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       std::optional<ColumnDataType> previous_value;
-      ChunkID chunk_id_outer{0};
 
       /*
        * Initialize previous_value to the first value in the table, so we avoid considering it a value change.
@@ -417,12 +416,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       }
 
       // Iterate over all chunks and insert RowIDs when values change
-      for (auto chunk_id_inner = ChunkID{0}; chunk_id_inner < chunk_count; ++chunk_id_inner) {
-        const auto& segment = sorted_table->get_chunk(chunk_id_inner)->get_segment(column_id);
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           if (previous_value.has_value() == position.is_null() ||
               (previous_value.has_value() && !position.is_null() && position.value() != *previous_value)) {
-            group_boundaries.insert(RowID{chunk_id_outer, position.chunk_offset()});
+            group_boundaries.insert(RowID{chunk_id, position.chunk_offset()});
             if (position.is_null()) {
               previous_value.reset();
             } else {
@@ -430,7 +429,6 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
             }
           }
         });
-        chunk_id_outer++;
       }
     });
   }
