@@ -566,9 +566,9 @@ TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
     PredicateNode::make(greater_than_(int_float_a, value_(10)),
       stored_table_node_int_float));
 
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                      {ColumnID{0}, "a"},
-                                                                      {ColumnID{1}, "b"}
+  const auto view_columns = std::unordered_map<ColumnID, std::vector<std::string>>({
+                                                                      {ColumnID{0}, {"a", "x"}},
+                                                                      {ColumnID{1}, {"b", "y"}}
                                                                       });
   // clang-format on
 
@@ -592,10 +592,10 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView)
       PredicateNode::make(greater_than_(int_float_a, value_(10)),
         stored_table_node_int_float)));
 
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                      {ColumnID{0}, "a"},
-                                                                      {ColumnID{1}, "a"}
-                                                                      });
+  const auto view_columns = std::unordered_map<ColumnID, std::vector<std::string>>({
+                                                                                   {ColumnID{0}, {"a", "a1"}},
+                                                                                   {ColumnID{1}, {"a", "a2"}}
+                                                                                   });
   // clang-format on
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
@@ -1935,11 +1935,11 @@ TEST_F(SQLTranslatorTest, CreateView) {
       PredicateNode::make(equals_(int_float_a, "b"),
          stored_table_node_int_float)));
 
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                      {ColumnID{0}, "a"},
-                                                                      {ColumnID{1}, "b"},
-                                                                      {ColumnID{3}, "t"},
-                                                                      });
+  const auto view_columns = std::unordered_map<ColumnID, std::vector<std::string>>({
+                                                                                   {ColumnID{0}, {"a"}},
+                                                                                   {ColumnID{1}, {"b"}},
+                                                                                   {ColumnID{3}, {"t"}},
+                                                                                   });
   // clang-format on
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
@@ -1953,10 +1953,10 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
   const auto actual_lqp = compile_query("CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
 
   // clang-format off
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                      {ColumnID{0}, "c"},
-                                                                      {ColumnID{1}, "d"}
-                                                                      });
+  const auto view_columns = std::unordered_map<ColumnID, std::vector<std::string>>({
+                                                                                   {ColumnID{0}, {"c"}},
+                                                                                   {ColumnID{1}, {"d"}}
+                                                                                   });
 
   const auto view_lqp = PredicateNode::make(equals_(int_float_a, "b"), stored_table_node_int_float);
   // clang-format on
@@ -1981,7 +1981,10 @@ TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
       stored_table_node_int_float));
   // clang-format on
 
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({{ColumnID{0}, "b"}, {ColumnID{1}, "a"}});
+  const auto view_columns = std::unordered_map<ColumnID, std::vector<std::string>>({
+                                                                                   {ColumnID{0}, {"b"}},
+                                                                                   {ColumnID{1}, {"a"}}
+                                                                                   });
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
