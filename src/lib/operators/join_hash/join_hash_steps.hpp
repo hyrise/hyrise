@@ -338,9 +338,17 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   radix_output.partition_offsets.resize(num_partitions);
   radix_output.null_value_bitvector = output_nulls;
 
-  // use histograms to calculate partition offsets
-  size_t offset = 0;
+  /**
+   * `histograms` stores for each input chunk the histogram of value to radix pattern.
+   * In the following step, vectors are created per chunk that stores the write offset
+   * for each radix cluster (to allow lock-less concurrent writing).
+   */
+  std::cout << "before\n" << std::flush;
   std::vector<std::vector<size_t>> output_offsets_by_chunk(chunk_offsets.size(), std::vector<size_t>(num_partitions));
+  // std::vector<size_t> output_offsets_by_chunk;
+  // output_offsets_by_chunk.reserve(chunk_offsets.size() * num_partitions);
+
+  size_t offset = 0;
   for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
     for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
       output_offsets_by_chunk[chunk_id][partition_id] = offset;
@@ -348,6 +356,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
     }
     radix_output.partition_offsets[partition_id] = offset;
   }
+  std::cout << "after\n" << std::flush;
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_offsets.size());
