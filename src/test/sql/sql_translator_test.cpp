@@ -554,6 +554,57 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInCorre
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
+  const auto result_node = compile_query(
+      "CREATE VIEW alias_view AS SELECT a AS x, b as y FROM int_float WHERE a > 10");
+
+  // clang-format off
+  const auto aliases = std::vector<std::string>({"x", "y"});
+
+  const auto view_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
+    PredicateNode::make(greater_than_(int_float_a, value_(10)),
+      stored_table_node_int_float));
+
+  const auto view_columns = std::unordered_map<ColumnID, std::string>({
+                                                                      {ColumnID{0}, "a"},
+                                                                      {ColumnID{1}, "b"}
+                                                                      });
+  // clang-format on
+
+  const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
+
+  const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
+
+  EXPECT_LQP_EQ(expected_lqp, result_node);
+}
+
+TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView) {
+  const auto result_node = compile_query(
+      "CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
+
+  // clang-format off
+  const auto aliases = std::vector<std::string>({"a1", "a2"});
+
+  const auto view_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_a), aliases,
+    ProjectionNode::make(expression_vector(int_float_a, int_float_a),
+      PredicateNode::make(greater_than_(int_float_a, value_(10)),
+        stored_table_node_int_float)));
+
+  const auto view_columns = std::unordered_map<ColumnID, std::string>({
+                                                                      {ColumnID{0}, "a"},
+                                                                      {ColumnID{1}, "a"}
+                                                                      });
+  // clang-format on
+
+  const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
+
+  const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
+
+  EXPECT_LQP_EQ(expected_lqp, result_node);
+}
+
 TEST_F(SQLTranslatorTest, WhereSimple) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a < 200;");
 
