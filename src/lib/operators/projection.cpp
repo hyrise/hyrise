@@ -102,6 +102,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     if (!input_chunk) continue;
+
     output_chunks[chunk_id] =
         std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
   }

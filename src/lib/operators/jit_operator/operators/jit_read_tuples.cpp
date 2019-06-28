@@ -107,6 +107,7 @@ void JitReadTuples::before_specialization(const Table& in_table, std::vector<boo
 
   if (in_table.chunk_count() == 0) return;
 
+  // TODO Should we create a get_first_valid_chunk() function returning the first non-nullpointer-chunk of the table?
   const auto chunk = in_table.get_chunk(ChunkID{0});
   // Remove expressions that use a column where the first segment is not dictionary-encoded
   _value_id_expressions.erase(
