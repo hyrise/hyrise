@@ -576,7 +576,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
 
   const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
 
-  EXPECT_LQP_EQ(expected_lqp, result_node);
+  EXPECT_LQP_EQ(result_node, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView) {
@@ -602,7 +602,33 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView)
 
   const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
 
-  EXPECT_LQP_EQ(expected_lqp, result_node);
+  EXPECT_LQP_EQ(result_node, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectListManyAliasesDifferentForSimilarColumnsUsedInView) {
+  const auto result_node = compile_query(
+      "CREATE VIEW alias_view (a3, a4) AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
+
+  // clang-format off
+  const auto aliases = std::vector<std::string>({"a1", "a2"});
+
+  const auto view_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_a), aliases,
+    ProjectionNode::make(expression_vector(int_float_a, int_float_a),
+      PredicateNode::make(greater_than_(int_float_a, value_(10)),
+        stored_table_node_int_float)));
+
+  const auto view_columns = std::unordered_map<ColumnID, std::vector<std::string>>({
+                                                                                   {ColumnID{0}, {"a", "a1", "a3"}},
+                                                                                   {ColumnID{1}, {"a", "a2", "a4"}}
+                                                                                   });
+  // clang-format on
+
+  const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
+
+  const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
+
+  EXPECT_LQP_EQ(result_node, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, WhereSimple) {
@@ -1946,7 +1972,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
 
   const auto expected_lqp = CreateViewNode::make("my_first_view", view, false);
 
-  EXPECT_LQP_EQ(expected_lqp, result_node);
+  EXPECT_LQP_EQ(result_node, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, CreateAliasView) {
@@ -1954,8 +1980,8 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
   // clang-format off
   const auto view_columns = std::unordered_map<ColumnID, std::vector<std::string>>({
-                                                                                   {ColumnID{0}, {"c"}},
-                                                                                   {ColumnID{1}, {"d"}}
+                                                                                   {ColumnID{0}, {"a", "c"}},
+                                                                                   {ColumnID{1}, {"b", "d"}}
                                                                                    });
 
   const auto view_lqp = PredicateNode::make(equals_(int_float_a, "b"), stored_table_node_int_float);
@@ -1990,7 +2016,7 @@ TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
 
   const auto expected_lqp = CreateViewNode::make("my_first_view", view, true);
 
-  EXPECT_LQP_EQ(expected_lqp, result_node);
+  EXPECT_LQP_EQ(result_node, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, DropView) {

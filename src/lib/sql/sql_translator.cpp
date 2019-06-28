@@ -1030,6 +1030,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 
   std::unordered_map<ColumnID, std::vector<std::string>> column_names;
 
+  for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
+    for (const auto& identifier : _inflated_select_list_elements[column_id].identifiers) {
+      column_names[column_id].emplace_back(identifier.column_name);
+    }
+  }
+
   if (create_statement.viewColumns) {
     // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
     AssertInput(create_statement.viewColumns->size() == lqp->column_expressions().size(),
@@ -1037,12 +1043,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
       column_names[column_id].emplace_back((*create_statement.viewColumns)[column_id]);
-    }
-  } else {
-    for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
-      for (const auto& identifier : _inflated_select_list_elements[column_id].identifiers) {
-        column_names[column_id].emplace_back(identifier.column_name);
-      }
     }
   }
 
