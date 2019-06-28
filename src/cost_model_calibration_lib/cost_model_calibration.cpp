@@ -11,6 +11,11 @@
 #include "cost_model_calibration_table_generator.hpp"
 #include "import_export/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
+#include "statistics/base_attribute_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 
@@ -42,6 +47,9 @@ void CostModelCalibration::run() {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100'000};
   tableGenerator.load_calibration_tables();
   tableGenerator.generate_calibration_tables();
+
+  _export_segment_size_information();
+
   _calibrate();
 
   std::cout << "Finished Calibration" << std::endl;
@@ -162,6 +170,81 @@ void CostModelCalibration::_append_to_result_csv(const std::string& output_path,
       writer.write(value.second);
     }
     writer.end_line();
+  }
+}
+
+void CostModelCalibration::_export_segment_size_information() {
+  std::ofstream segment_size_csv_file("segment_size_information.csv");
+  segment_size_csv_file << "ENCODING_TYPE,VECTOR_COMPRESSION_TYPE,COMPRESSED_VECTOR_TYPE,DATA_TYPE,ROW_COUNT,ESTIMATED_DISTINCT_VALUE_COUNT,IS_NULLABLE,SIZE_IN_BYTES\n";
+
+  for (const auto& table_name : StorageManager::get().table_names()) {
+    const auto& table = StorageManager::get().get_table(table_name);
+
+    for (const auto& column_def : table->column_definitions()) {
+      const auto& column_name = column_def.name;
+      const auto& data_type = column_def.data_type;
+      const auto column_id = table->column_id_by_name(column_name);
+
+      auto distinct_value_count = size_t{0};
+      if (table->table_statistics() && column_id < table->table_statistics()->column_statistics.size()) {
+        const auto base_attribute_statistics = table->table_statistics()->column_statistics[column_id];
+        resolve_data_type(data_type, [&](const auto column_data_type) {
+          using ColumnDataType = typename decltype(column_data_type)::type;
+
+          const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(base_attribute_statistics);
+          if (attribute_statistics) {
+            const auto equal_distinct_count_histogram = std::dynamic_pointer_cast<EqualDistinctCountHistogram<ColumnDataType>>(attribute_statistics->histogram);
+            if (equal_distinct_count_histogram) {
+              distinct_value_count = static_cast<size_t>(equal_distinct_count_histogram->total_distinct_count());
+            }
+          }
+        });
+      }
+
+      for (auto chunk_id = ChunkID{0}, end = table->chunk_count(); chunk_id < end; ++chunk_id) {
+        const auto& chunk = table->get_chunk(chunk_id);
+        const auto& segment = chunk->get_segment(column_id);
+
+        const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+        if (encoded_segment) {
+          const auto encoding_type = encoded_segment->encoding_type();
+          segment_size_csv_file << encoding_type_to_string.left.at(encoding_type) << ",";
+
+          if (encoded_segment->compressed_vector_type()) {
+            segment_size_csv_file << parent_vector_compression_type(*encoded_segment->compressed_vector_type()) << ",";
+            switch (*encoded_segment->compressed_vector_type()) {
+              case CompressedVectorType::FixedSize4ByteAligned: {
+                segment_size_csv_file << "FixedSize4ByteAligned,";
+                break;
+              }
+              case CompressedVectorType::FixedSize2ByteAligned: {
+                segment_size_csv_file << "FixedSize2ByteAligned,";
+                break;
+              }
+              case CompressedVectorType::FixedSize1ByteAligned: {
+                segment_size_csv_file << "FixedSize1ByteAligned,";
+                break;
+              }
+              case CompressedVectorType::SimdBp128: {
+                segment_size_csv_file << "SimdBp128,";
+                break;
+              }
+              default:
+                segment_size_csv_file << "NULL,";
+            }
+          } else {
+            segment_size_csv_file << "NULL,";
+          }
+        } else {
+          segment_size_csv_file << "Unencoded,NULL,NULL,";
+        }
+
+        const auto estimated_segment_distinct_value_count = std::min(distinct_value_count, static_cast<size_t>(chunk->size()));
+        segment_size_csv_file << data_type_to_string.left.at(data_type) << "," << chunk->size() << ",";
+        segment_size_csv_file << estimated_segment_distinct_value_count << "," << (column_def.nullable ? 1 : 0) << ",";
+        segment_size_csv_file << segment->estimate_memory_usage() << "\n";
+      }
+    }
   }
 }
 

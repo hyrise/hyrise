@@ -23,6 +23,7 @@ class CostModelCalibration {
   void _calibrate();
   void _run_tpch();
   void _write_csv_header(const std::string& output_path);
+  void _export_segment_size_information();
 
   const CalibrationConfiguration _configuration;
   std::mutex _csv_write_mutex;
