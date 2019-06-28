@@ -38,7 +38,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::shared_ptr<Table> generate_call_center(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_catalog_page(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_catalog_sales_and_returns(
-      ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+      size_t max_rows = std::numeric_limits<size_t>::max()) const;
   std::shared_ptr<Table> generate_customer_address(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_customer(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_customer_demographics(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;

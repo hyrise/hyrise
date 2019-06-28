@@ -109,7 +109,7 @@ class TableBuilder {
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
                const ChunkOffset estimated_rows = 0)
-      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
+      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
@@ -145,6 +145,7 @@ class TableBuilder {
   // TODO: do we still need universal references?
   template <typename... Types>
   void append_row(Types&&... new_values) {
+    _row_count++;
     auto values_tuple = boost::hana::make_tuple(std::forward<Types>(new_values)...);
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(_value_vectors) == boost::hana::size(values_tuple));
 
@@ -188,11 +189,12 @@ class TableBuilder {
     }
   }
 
-  size_t row_count() const { return _table->row_count() + _current_chunk_row_count(); }
+  size_t row_count() const { return _row_count; }
 
  private:
   std::shared_ptr<Table> _table;
   ChunkOffset _estimated_rows_per_chunk;
+  size_t _row_count;
 
   boost::hana::tuple<std::vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
   boost::hana::tuple<table_builder::OptionalConstexpr<std::vector<bool>, (table_builder::is_optional<DataTypes>())>...>
