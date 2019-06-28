@@ -191,7 +191,7 @@ const auto call_center_column_names = boost::hana::make_tuple("cc_call_center_sk
 const auto catalog_page_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
 const auto catalog_page_column_names = boost::hana::make_tuple("cp_catalog_page_sk", "cp_catalog_page_id", "cp_start_date_sk", "cp_end_date_sk", "cp_department", "cp_catalog_number", "cp_catalog_page_number", "cp_description", "cp_type"); // NOLINT
 
-const auto catalog_returns_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, int32_t, float, float, float, float, float, float, float, float, float>(); // NOLINT
+const auto catalog_returns_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
 const auto catalog_returns_column_names = boost::hana::make_tuple("cr_returned_date_sk", "cr_returned_time_sk", "cr_item_sk", "cr_refunded_customer_sk", "cr_refunded_cdemo_sk", "cr_refunded_hdemo_sk", "cr_refunded_addr_sk", "cr_returning_customer_sk", "cr_returning_cdemo_sk", "cr_returning_hdemo_sk", "cr_returning_addr_sk", "cr_call_center_sk", "cr_catalog_page_sk", "cr_ship_mode_sk", "cr_warehouse_sk", "cr_reason_sk", "cr_order_number", "cr_return_quantity", "cr_return_amount", "cr_return_tax", "cr_return_amt_inc_tax", "cr_fee", "cr_return_ship_cost", "cr_refunded_cash", "cr_reversed_charge", "cr_store_credit", "cr_net_loss"); // NOLINT
 
 const auto catalog_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, int32_t, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float>(); // NOLINT
@@ -428,7 +428,6 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
   for (auto i = ds_key_t{0}; i < catalog_sales_count; i++) {
     auto catalog_sales = W_CATALOG_SALES_TBL{};
     auto catalog_returns = W_CATALOG_RETURNS_TBL{};
-    int was_returned = 0;
 
     // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
     {
@@ -436,6 +435,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
       int nLineitems;
       genrand_integer(&nLineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
       for (auto j = 1; j <= nLineitems; j++) {
+        int was_returned = 0;
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
         if (catalog_sales_builder.row_count() < max_rows) {
@@ -467,24 +467,33 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
         if (was_returned != 0) {
           catalog_returns_builder.append_row(
-              resolve_key(catalog_returns.cr_returned_date_sk), resolve_key(catalog_returns.cr_returned_time_sk),
-              resolve_key(catalog_returns.cr_item_sk), resolve_key(catalog_returns.cr_refunded_customer_sk),
-              resolve_key(catalog_returns.cr_refunded_cdemo_sk), resolve_key(catalog_returns.cr_refunded_hdemo_sk),
-              resolve_key(catalog_returns.cr_refunded_addr_sk), resolve_key(catalog_returns.cr_returning_customer_sk),
-              resolve_key(catalog_returns.cr_returning_cdemo_sk), resolve_key(catalog_returns.cr_returning_hdemo_sk),
-              resolve_key(catalog_returns.cr_returning_addr_sk), resolve_key(catalog_returns.cr_call_center_sk),
-              resolve_key(catalog_returns.cr_catalog_page_sk), resolve_key(catalog_returns.cr_ship_mode_sk),
-              resolve_key(catalog_returns.cr_warehouse_sk), resolve_key(catalog_returns.cr_reason_sk),
-              resolve_key(catalog_returns.cr_order_number), catalog_returns.cr_pricing.quantity,
-              decimal_to_float(catalog_returns.cr_pricing.net_paid),
-              decimal_to_float(catalog_returns.cr_pricing.ext_tax),
-              decimal_to_float(catalog_returns.cr_pricing.net_paid_inc_tax),
-              decimal_to_float(catalog_returns.cr_pricing.fee),
-              decimal_to_float(catalog_returns.cr_pricing.ext_ship_cost),
-              decimal_to_float(catalog_returns.cr_pricing.refunded_cash),
-              decimal_to_float(catalog_returns.cr_pricing.reversed_charge),
-              decimal_to_float(catalog_returns.cr_pricing.store_credit),
-              decimal_to_float(catalog_returns.cr_pricing.net_loss));
+              resolve_key<CR_RETURNED_DATE_SK>(catalog_returns.cr_returned_date_sk),
+              resolve_key<CR_RETURNED_TIME_SK>(catalog_returns.cr_returned_time_sk),
+              catalog_returns.cr_item_sk,
+              resolve_key<CR_REFUNDED_CUSTOMER_SK>(catalog_returns.cr_refunded_customer_sk),
+              resolve_key<CR_REFUNDED_CDEMO_SK>(catalog_returns.cr_refunded_cdemo_sk),
+              resolve_key<CR_REFUNDED_HDEMO_SK>(catalog_returns.cr_refunded_hdemo_sk),
+              resolve_key<CR_REFUNDED_ADDR_SK>(catalog_returns.cr_refunded_addr_sk),
+              resolve_key<CR_RETURNING_CUSTOMER_SK>(catalog_returns.cr_returning_customer_sk),
+              resolve_key<CR_RETURNING_CDEMO_SK>(catalog_returns.cr_returning_cdemo_sk),
+              resolve_key<CR_RETURNING_HDEMO_SK>(catalog_returns.cr_returning_hdemo_sk),
+              resolve_key<CR_RETURNING_ADDR_SK>(catalog_returns.cr_returning_addr_sk),
+              resolve_key<CR_CALL_CENTER_SK>(catalog_returns.cr_call_center_sk),
+              resolve_key<CR_CATALOG_PAGE_SK>(catalog_returns.cr_catalog_page_sk),
+              resolve_key<CR_SHIP_MODE_SK>(catalog_returns.cr_ship_mode_sk),
+              resolve_key<CR_WAREHOUSE_SK>(catalog_returns.cr_warehouse_sk),
+              resolve_key<CR_REASON_SK>(catalog_returns.cr_reason_sk),
+              catalog_returns.cr_order_number,
+              resolve_integer<CR_PRICING_QUANTITY>(catalog_returns.cr_pricing.quantity),
+              resolve_decimal<CR_PRICING_NET_PAID>(catalog_returns.cr_pricing.net_paid),
+              resolve_decimal<CR_PRICING_EXT_TAX>(catalog_returns.cr_pricing.ext_tax),
+              resolve_decimal<CR_PRICING_NET_PAID_INC_TAX>(catalog_returns.cr_pricing.net_paid_inc_tax),
+              resolve_decimal<CR_PRICING_FEE>(catalog_returns.cr_pricing.fee),
+              resolve_decimal<CR_PRICING_EXT_SHIP_COST>(catalog_returns.cr_pricing.ext_ship_cost),
+              resolve_decimal<CR_PRICING_REFUNDED_CASH>(catalog_returns.cr_pricing.refunded_cash),
+              resolve_decimal<CR_PRICING_REVERSED_CHARGE>(catalog_returns.cr_pricing.reversed_charge),
+              resolve_decimal<CR_PRICING_STORE_CREDIT>(catalog_returns.cr_pricing.store_credit),
+              resolve_decimal<CR_PRICING_NET_LOSS>(catalog_returns.cr_pricing.net_loss));
 
           if (catalog_returns_builder.row_count() == max_rows) {
             break;
