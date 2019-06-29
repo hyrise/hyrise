@@ -183,7 +183,8 @@ void AggregateHash::_aggregate() {
     // Create the actual data structure
     keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
     keys_per_chunk.reserve(input_table->chunk_count());
-    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+    const auto chunk_count = input_table->chunk_count();
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);
       if (!chunk) continue;
 
@@ -231,7 +232,8 @@ void AggregateHash::_aggregate() {
                                          std::equal_to<ColumnDataType>, decltype(allocator)>(allocator);
         AggregateKeyEntry id_counter = 1u;
 
-        for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+        const auto chunk_count = input_table->chunk_count();
+        for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
           const auto chunk_in = input_table->get_chunk(chunk_id);
           if (!chunk_in) continue;
 
@@ -303,7 +305,8 @@ void AggregateHash::_aggregate() {
   }
 
   // Process Chunks and perform aggregations
-  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = input_table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = input_table->get_chunk(chunk_id);
     if (!chunk_in) continue;
 

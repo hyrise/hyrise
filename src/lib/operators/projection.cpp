@@ -60,7 +60,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    */
   auto output_chunk_segments = std::vector<Segments>(input_table.chunk_count());
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
+  const auto chunk_count_input_table = input_table.chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     if (!input_chunk) continue;
 
@@ -97,9 +98,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                                     column_is_nullable[column_id]);
   }
 
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{input_table.chunk_count()};
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count_input_table};
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     if (!input_chunk) continue;
 

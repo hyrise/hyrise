@@ -37,7 +37,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   auto right_input_row_set = std::unordered_set<std::string>(input_table_right()->row_count());
 
   // Iterating over all chunks and for each chunk over all segments
-  for (ChunkID chunk_id{0}; chunk_id < input_table_right()->chunk_count(); chunk_id++) {
+  const auto chunk_count_right = input_table_right()->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count_right; chunk_id++) {
     const auto chunk = input_table_right()->get_chunk(chunk_id);
     if (!chunk) continue;
 
@@ -67,7 +68,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   output_chunks.reserve(input_table_left()->chunk_count());
 
   // Iterating over all chunks and for each chunk over all segment
-  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
+  const auto chunk_count_left = input_table_left()->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count_left; chunk_id++) {
     const auto in_chunk = input_table_left()->get_chunk(chunk_id);
     if (!in_chunk) continue;
 

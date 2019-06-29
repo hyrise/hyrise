@@ -161,7 +161,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   const auto chunk_count = static_cast<size_t>(table->chunk_count());
   Assert(chunk_encoding_specs.size() == chunk_count, "Number of encoding specs must match table’s chunk count.");
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
     if (!chunk) continue;
 
@@ -176,7 +176,8 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
          "Number of encoding specs must match table’s column count.");
   const auto column_types = table->column_data_types();
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
     if (!chunk) continue;
 
@@ -188,7 +189,8 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const SegmentEncodingSpec& segment_encoding_spec) {
   const auto column_types = table->column_data_types();
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
     if (!chunk) continue;
 

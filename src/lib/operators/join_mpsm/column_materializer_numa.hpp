@@ -84,7 +84,8 @@ class ColumnMaterializerNUMA {
     auto null_rows = std::make_unique<PosList>();
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
-    for (auto chunk_id = ChunkID{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+    const auto chunk_count = input->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input->get_chunk(chunk_id);
       if (!chunk) continue;
 

@@ -63,7 +63,8 @@ std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvalu
     const Table& table, const ColumnID column_id) {
   std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> accessors;
   accessors.resize(table.chunk_count());
-  for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+  const auto chunk_count = table.chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
     if (!chunk) continue;
 

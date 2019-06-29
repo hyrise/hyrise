@@ -139,7 +139,8 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   auto left_matches_by_chunk = std::vector<std::vector<bool>>(left_table->chunk_count());
 
   auto right_matches_by_chunk = std::vector<std::vector<bool>>(right_table->chunk_count());
-  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
+  const auto chunk_count_right = right_table->chunk_count();
+  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
     const auto chunk_right = right_table->get_chunk(chunk_id_right);
     if (!chunk_right) continue;
 
@@ -150,7 +151,8 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       MultiPredicateJoinEvaluator{*left_table, *right_table, _mode, maybe_flipped_secondary_predicates};
 
   // Scan all chunks from left input
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
+  const auto chunk_count_left = left_table->chunk_count();
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left; ++chunk_id_left) {
     const auto chunk_left = left_table->get_chunk(chunk_id_left);
     if (!chunk_left) continue;
 
@@ -162,7 +164,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       left_matches.resize(segment_left->size());
     }
 
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
       const auto chunk_right = right_table->get_chunk(chunk_id_right);
       if (!chunk_right) continue;
 
@@ -197,7 +199,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   // For Full Outer we need to add all unmatched rows for the right side.
   // Unmatched rows on the left side are already added in the main loop above
   if (_mode == JoinMode::FullOuter) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
       const auto chunk_right = right_table->get_chunk(chunk_id_right);
       if (!chunk_right) continue;
 
@@ -216,7 +218,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < left_table->chunk_count(); ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_left; ++chunk_id) {
       const auto chunk_left = left_table->get_chunk(chunk_id);
       if (!chunk_left) continue;
       const auto chunk_size = chunk_left->size();

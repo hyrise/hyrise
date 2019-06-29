@@ -83,7 +83,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   const auto track_index_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Right;
 
   if (track_probe_matches) {
-    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
+    const auto chunk_count = probe_input_table->chunk_count();
+    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
       const auto chunk = probe_input_table->get_chunk(probe_chunk_id);
       if (!chunk) continue;
 
@@ -92,7 +93,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   }
 
   if (track_index_matches) {
-    for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < index_input_table->chunk_count(); ++index_chunk_id) {
+    const auto chunk_count = index_input_table->chunk_count();
+    for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count; ++index_chunk_id) {
       const auto chunk = index_input_table->get_chunk(index_chunk_id);
       if (!chunk) continue;
 
@@ -114,7 +116,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*probe_input_table, *index_input_table, _mode, {}};
 
   // Scan all chunks for index input
-  for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < index_input_table->chunk_count(); ++index_chunk_id) {
+  const auto chunk_count_index_table = index_input_table->chunk_count();
+  for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_table; ++index_chunk_id) {
     const auto index_chunk = index_input_table->get_chunk(index_chunk_id);
     if (!index_chunk) continue;
 
@@ -129,7 +132,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
     // Scan all chunks from the pruning side input
     if (index) {
-      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
+      const auto chunk_count = probe_input_table->chunk_count();
+      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
         const auto chunk = probe_input_table->get_chunk(probe_chunk_id);
         if (!chunk) continue;
 
@@ -145,7 +149,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       if (!chunk_index) continue;
 
       const auto index_segment = chunk_index->get_segment(_adjusted_primary_predicate.column_ids.second);
-      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
+      const auto chunk_count = probe_input_table->chunk_count();
+      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
         const auto chunk_probe = probe_input_table->get_chunk(probe_chunk_id);
         if (!chunk_probe) continue;
 
@@ -169,7 +174,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
   // For Full Outer and Left Join we need to add all unmatched rows for the probe side
   if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
-    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < probe_input_table->chunk_count(); ++probe_chunk_id) {
+    const auto chunk_count = probe_input_table->chunk_count();
+    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _probe_matches[probe_chunk_id].size(); ++chunk_offset) {
         if (!_probe_matches[probe_chunk_id][chunk_offset]) {
           _probe_pos_list->emplace_back(RowID{probe_chunk_id, chunk_offset});
@@ -199,7 +205,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < probe_input_table->chunk_count(); ++chunk_id) {
+    const auto chunk_count = probe_input_table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk_left = probe_input_table->get_chunk(chunk_id);
       if (!chunk_left) continue;
 
