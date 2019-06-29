@@ -96,7 +96,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     if (!chunk_in) continue;
 
-    auto job_task = std::make_shared<JobTask>([this, chunk_id, &chunk_in, &in_table, &output_mutex, &output_chunks]() {
+    // we have to copy chunk_in by value here because of the limited scope of the for-loop
+    auto job_task = std::make_shared<JobTask>([this, chunk_id, chunk_in, &in_table, &output_mutex, &output_chunks]() {
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
       if (matches_out->empty()) return;
