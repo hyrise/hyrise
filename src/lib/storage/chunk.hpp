@@ -4,8 +4,6 @@
 #include <boost/container/pmr/memory_resource.hpp>
 
 // the linter wants this to be above everything else
-#include <shared_mutex>
-
 #include <algorithm>
 #include <atomic>
 #include <memory>
@@ -163,18 +161,18 @@ class Chunk : private Noncopyable {
   uint64_t invalid_row_count() const;
 
   /**
-     * Atomically increases the counter of deleted/invalidated rows within this chunk.
-     * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
-     */
+   * Atomically increases the counter of deleted/invalidated rows within this chunk.
+   * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
+   */
   void increase_invalid_row_count(uint64_t count) const;
 
   /**
-      * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
-      * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
-      * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
-      * have to look at this chunk anymore.
-      * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
-      */
+   * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
+   * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
+   * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
+   * have to look at this chunk anymore.
+   * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
+   */
   std::optional<CommitID> get_cleanup_commit_id() const;
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
@@ -192,7 +190,6 @@ class Chunk : private Noncopyable {
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
   mutable std::atomic_uint64_t _invalid_row_count = 0;
   std::optional<CommitID> _cleanup_commit_id;
-  mutable std::shared_mutex _mutex_cleanup_commit_id;
 };
 
 }  // namespace opossum

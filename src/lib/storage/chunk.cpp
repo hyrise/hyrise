@@ -212,7 +212,6 @@ void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_ro
 
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   DebugAssert(!_cleanup_commit_id, "Cleanup commit ID can only be set once.");
-  std::unique_lock lock(_mutex_cleanup_commit_id);
   _cleanup_commit_id = cleanup_commit_id;
 }
 
@@ -223,7 +222,6 @@ void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
 uint64_t Chunk::invalid_row_count() const { return _invalid_row_count.load(); }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  std::shared_lock lock(_mutex_cleanup_commit_id);
   return _cleanup_commit_id;
 }
 

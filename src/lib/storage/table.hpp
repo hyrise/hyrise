@@ -2,7 +2,6 @@
 
 #include <memory>
 #include <mutex>
-#include <shared_mutex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -187,7 +186,6 @@ class Table : private Noncopyable {
   const uint32_t _max_chunk_size;
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
   std::unique_ptr<std::mutex> _append_mutex;
-  mutable std::shared_mutex _chunk_mutex;
   std::vector<IndexInfo> _indexes;
   std::shared_ptr<TableStatistics> _table_statistics;
 };
