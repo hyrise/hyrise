@@ -41,7 +41,8 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   _chunks = {chunks.begin(), chunks.end()};
 
 #if HYRISE_DEBUG
-  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
@@ -142,7 +143,8 @@ void Table::append_mutable_chunk() {
 
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
-  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (chunk) ret += chunk->size();
   }
@@ -202,8 +204,8 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   PerformanceWarning("get_row() used");
-
-  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
@@ -235,7 +237,8 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
 
   // Materialize the Chunks
   auto chunk_begin_row_idx = size_t{0};
-  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
@@ -266,7 +269,8 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
