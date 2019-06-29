@@ -129,6 +129,7 @@ set(
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     optimizer/strategy/subquery_to_join_rule_test.cpp
+    plugins/mvcc_delete_plugin_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
@@ -204,6 +205,9 @@ set (
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
+    utils/plugin_test_utils.cpp
+    utils/plugin_test_utils.hpp
+    plugins/mvcc_delete_plugin_system_test.cpp
 )
 
 if (${ENABLE_JIT_SUPPORT})
@@ -288,6 +292,7 @@ set(
     gtest
     gmock
     sqlite3
+    MvccDeletePlugin  # So that we can test member methods without going through dlsym
     ${FILESYSTEM_LIBRARY}
 )
 

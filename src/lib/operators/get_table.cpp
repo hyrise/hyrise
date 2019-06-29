@@ -181,7 +181,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   }
 
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
-                                 stored_table->has_mvcc());
+                                 stored_table->uses_mvcc());
 }
 
 }  // namespace opossum

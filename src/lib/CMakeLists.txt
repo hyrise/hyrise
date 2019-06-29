@@ -700,15 +700,41 @@ add_custom_command (
 
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
-# Configure the regular hyrise library used for tests/server/playground...
-add_library(hyrise STATIC ${SOURCES})
+# hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
+add_library(hyrise_impl STATIC ${SOURCES})
+
+# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
+target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
+target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
+
+# -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
+target_compile_options(hyrise_impl PRIVATE -fPIC)
+
+# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
+# isn't updated when HEAD changes
+
+add_dependencies(hyrise_impl AlwaysCheckGit)
+
+if (${ENABLE_JIT_SUPPORT})
+    # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
+    # This silences some compiler warnings (uses -isystem instead of -I).
+    # target_include_directories(hyrise_impl SYSTEM PUBLIC ${LLVM_INCLUDE_DIR})
+endif()
+
+# This is a wrapper around hyrise_impl that forces the compiler to emit all symbols
+add_library(hyrise INTERFACE)
+# Forward all include directories from hyrise_impl
+target_include_directories(hyrise INTERFACE $<TARGET_PROPERTY:hyrise_impl,INCLUDE_DIRECTORIES>)
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)
-    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise>)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise_impl>)
 else()
-    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive,$<TARGET_FILE:hyrise_impl>,--no-whole-archive)
 endif()
+
+# Link against all libraries used by hyrise_impl - do this after INTERFACE_LINK_LIBRARIES is initially set so that it is not overwritten
+target_link_libraries(hyrise INTERFACE hyrise_impl)
 
 # For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
 # add a link to the resources/ directory at the root of the build directory).
@@ -716,19 +742,4 @@ add_custom_target(resourceLink
     COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
 )
 
-# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
-target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
-target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
-
-# -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
-target_compile_options(hyrise PRIVATE -fPIC)
-
-# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
-# isn't updated when HEAD changes
-add_dependencies(hyrise AlwaysCheckGit resourceLink)
-
-if (${ENABLE_JIT_SUPPORT})
-    # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
-    # This silences some compiler warnings (uses -isystem instead of -I).
-    # target_include_directories(hyrise SYSTEM PUBLIC ${LLVM_INCLUDE_DIR})
-endif()
+add_dependencies(hyrise resourceLink)

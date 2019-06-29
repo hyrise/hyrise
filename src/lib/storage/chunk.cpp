@@ -219,4 +219,10 @@ const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const
 
 void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
 
+uint64_t Chunk::invalid_row_count() const { return _invalid_row_count.load(); }
+
+std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
+  return _cleanup_commit_id;
+}
+
 }  // namespace opossum

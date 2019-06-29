@@ -80,7 +80,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_segment_in->referenced_table();
-      DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC data");
+      DebugAssert(referenced_table->uses_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
       const auto& pos_list_in = *ref_segment_in->pos_list();
       if (pos_list_in.references_single_chunk() && !pos_list_in.empty()) {

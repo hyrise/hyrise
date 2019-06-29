@@ -103,6 +103,7 @@ Contact: firstname.lastname@hpi.de
 -   Lawrence  Benson
 -   Timo      Djürken
 -   Fabian    Dumke
+-   Fabian    Engel
 -   Moritz    Eyssen
 -   Martin    Fischer
 -   Christian Flach
@@ -115,6 +116,7 @@ Contact: firstname.lastname@hpi.de
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
+-   David     Justen
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs

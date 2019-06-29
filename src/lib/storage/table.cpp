@@ -62,7 +62,7 @@ const TableColumnDefinitions& Table::column_definitions() const { return _column
 
 TableType Table::type() const { return _type; }
 
-UseMvcc Table::has_mvcc() const { return _use_mvcc; }
+UseMvcc Table::uses_mvcc() const { return _use_mvcc; }
 
 size_t Table::column_count() const { return _column_definitions.size(); }
 
@@ -193,6 +193,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
          "Supply MvccData to data Tables iff MVCC is enabled");
 
 #if HYRISE_DEBUG
+  DebugAssert(segments.size() == column_count(), "Input doesn't have the same number of columns");
   for (const auto& segment : segments) {
     const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     DebugAssert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
