@@ -42,7 +42,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
 #if HYRISE_DEBUG
   for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
-    const auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
     DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
@@ -114,11 +114,13 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
 }
 
 void Table::append(const std::vector<AllTypeVariant>& values) {
-  if (_chunks.empty() || std::atomic_load(&_chunks.back())->size() >= _max_chunk_size) {
+  auto last_chunk = !_chunks.empty() ? get_chunk(ChunkID{chunk_count() - 1}) : nullptr;
+  if (!last_chunk || last_chunk->size() >= _max_chunk_size) {
     append_mutable_chunk();
+    last_chunk = get_chunk(ChunkID{chunk_count() - 1});
   }
 
-  std::atomic_load(&_chunks.back())->append(values);
+  last_chunk->append(values);
 }
 
 void Table::append_mutable_chunk() {
@@ -141,7 +143,7 @@ void Table::append_mutable_chunk() {
 uint64_t Table::row_count() const {
   uint64_t ret = 0;
   for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
-    const auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    const auto chunk = get_chunk(chunk_id);
     if (chunk) ret += chunk->size();
   }
   return ret;
@@ -155,22 +157,31 @@ uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return std::atomic_load(&_chunks[chunk_id]);
+  if (_type == TableType::References) {
+    // Locking for reference tables is wasted performance since they are not accessed by multiple concurring threads
+    return _chunks[chunk_id];
+  } else {
+    return std::atomic_load(&_chunks[chunk_id]);
+  }
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  return std::atomic_load(&_chunks[chunk_id]);
+  if (_type == TableType::References) {
+    return _chunks[chunk_id];
+  } else {
+    return std::atomic_load(&_chunks[chunk_id]);
+  }
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   DebugAssert(([this, chunk_id]() {
-                const auto chunk = std::atomic_load(&_chunks[chunk_id]);
+                const auto chunk = get_chunk(chunk_id);
                 return (chunk->invalid_row_count() == chunk->size());
               }()),
               "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
-
+  Assert(_type == TableType::Data, "Removing chunks from other tables than data tables is not intended yet.");
   std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
 }
 
@@ -193,7 +204,7 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   PerformanceWarning("get_row() used");
 
   for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
-    const auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
     if (row_idx < chunk->size()) {
@@ -225,7 +236,7 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
   // Materialize the Chunks
   auto chunk_begin_row_idx = size_t{0};
   for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
-    const auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
     for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
@@ -256,7 +267,7 @@ size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < _chunks.size(); ++chunk_id) {
-    const auto chunk = std::atomic_load(&_chunks[chunk_id]);
+    const auto chunk = get_chunk(chunk_id);
     if (!chunk) continue;
 
     bytes += chunk->estimate_memory_usage();
