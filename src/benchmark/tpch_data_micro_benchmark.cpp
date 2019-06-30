@@ -298,7 +298,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationLarger)(
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_LargeHashJoin)(benchmark::State& state) {
   for (auto _ : state) {
     auto join = std::make_shared<JoinHash>(
-        _table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Inner,
+        _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
