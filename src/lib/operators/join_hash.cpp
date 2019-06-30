@@ -310,6 +310,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
+    std::cout << "1.1\n" << std::flush;
+
     /**
      * 1.1 Schedule a JobTask for materialization, optional radix partitioning and hash table building for the build side
      */
@@ -348,6 +350,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }));
     jobs.back()->schedule();
 
+    std::cout << "1.2\n" << std::flush;
+
     /**
      * 1.2 Schedule a JobTask for materialization, optional radix partitioning for the probe side
      */
@@ -379,6 +383,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     CurrentScheduler::wait_for_tasks(jobs);
 
+    std::cout << "1.3\n" << std::flush;
+
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted
     //   anyway (as long as JoinHash/AntiNullAsTrue doesn't support secondary predicates). Doing this early out
@@ -409,6 +415,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       build_side_pos_lists[i].reserve(result_rows_per_partition);
       probe_side_pos_lists[i].reserve(result_rows_per_partition);
     }
+
+    std::cout << "Probing main ...\n" << std::flush;
 
     /*
     NUMA notes:
@@ -476,6 +484,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     PosListsByChunk build_side_pos_lists_by_segment;
     PosListsByChunk probe_side_pos_lists_by_segment;
 
+    std::cout << "build pos list\n" << std::flush;
+
     // build_side_pos_lists_by_segment will only be needed if build is a reference table and being output
     if (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::ProbeOnly) {
       build_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_build_input_table);
@@ -494,6 +504,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     std::vector<std::shared_ptr<Chunk>> output_chunks{output_chunk_count};
+
+    std::cout << "write output\n" << std::flush;
 
     // for every partition create a reference segment
     for (size_t partition_id = 0, output_chunk_id{0}; partition_id < build_side_pos_lists.size(); ++partition_id) {
@@ -533,6 +545,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       output_chunks[output_chunk_id] = std::make_shared<Chunk>(std::move(output_segments));
       ++output_chunk_id;
     }
+
+    std::cout << "return\n" << std::flush;
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }

@@ -313,6 +313,8 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   const std::hash<HashedType> hash_function;
 
+  std::cout << "start mat\n" << std::flush;
+
   // materialized items of radix container
   const auto& container_elements = *radix_container.elements;
   [[maybe_unused]] const auto& null_value_bitvector = *radix_container.null_value_bitvector;
@@ -401,6 +403,8 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
+
+  std::cout << "end mat\n" << std::flush;
 
   return radix_output;
 }
