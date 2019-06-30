@@ -22,6 +22,9 @@ class AbstractBenchmarkItemRunner {
 
   virtual ~AbstractBenchmarkItemRunner() = default;
 
+  // Allows the benchmark to do whatever it needs to do once the tables have been loaded (e.g., PREPARE statements)
+  virtual void on_tables_loaded();
+
   // Executes a benchmark item and returns information about the SQL statements executed during its execution as well
   // as a bool indicating whether the verification failed.
   std::pair<std::vector<SQLPipelineMetrics>, bool> execute_item(const BenchmarkItemID item_id);
