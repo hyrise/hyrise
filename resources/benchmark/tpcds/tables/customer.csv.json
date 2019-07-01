@@ -97,7 +97,6 @@
     "escape": "\"",
     "quote": "\"",
     "reject_quoted_nonstrings": true,
-    "reject_null_strings": false,
     "rfc_mode": true,
     "separator": "|"
   }

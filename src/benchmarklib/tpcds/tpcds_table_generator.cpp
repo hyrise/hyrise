@@ -111,12 +111,6 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   return {k_first_row, k_row_count};
 }
 
-float decimal_to_float(decimal_t decimal) {
-  auto result = 0.0;
-  dectof(&result, &decimal);
-  return static_cast<float>(result / 10);
-}
-
 pmr_string boolean_to_string(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
 
 template <int column_id = 0>  // TODO remove " = 0"
@@ -151,7 +145,9 @@ std::optional<int32_t> resolve_integer(int value) {
 
 template <int column_id>
 std::optional<float> resolve_decimal(decimal_t decimal) {
-  return nullCheck(column_id) ? std::nullopt : std::optional{decimal_to_float(decimal)};
+  auto result = 0.0;
+  dectof(&result, &decimal);
+  return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(result / 10)};
 }
 
 template <int column_id = 0>  // TODO: remove " = 0"
@@ -180,11 +176,10 @@ decimal_t gmt_offset_to_decimal(int32_t gmt_offset) {
 // ds_key_t -> tpcds_key_t
 // int -> int32_t
 // char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
-// decimal, float -> float (using decimal_to_float function)
+// decimal, float -> float
 // ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
 
-// the types are derived from print functions (eg. pr_w_call_center in w_call_center.c), because these are used by the
-// dsdgen command line tool to create the *.dat files
+// the types are derived from create table statements in tpcds.sql
 
 // clang-format off
 const auto call_center_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT
@@ -196,7 +191,7 @@ const auto catalog_page_column_names = boost::hana::make_tuple("cp_catalog_page_
 const auto catalog_returns_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
 const auto catalog_returns_column_names = boost::hana::make_tuple("cr_returned_date_sk", "cr_returned_time_sk", "cr_item_sk", "cr_refunded_customer_sk", "cr_refunded_cdemo_sk", "cr_refunded_hdemo_sk", "cr_refunded_addr_sk", "cr_returning_customer_sk", "cr_returning_cdemo_sk", "cr_returning_hdemo_sk", "cr_returning_addr_sk", "cr_call_center_sk", "cr_catalog_page_sk", "cr_ship_mode_sk", "cr_warehouse_sk", "cr_reason_sk", "cr_order_number", "cr_return_quantity", "cr_return_amount", "cr_return_tax", "cr_return_amt_inc_tax", "cr_fee", "cr_return_ship_cost", "cr_refunded_cash", "cr_reversed_charge", "cr_store_credit", "cr_net_loss"); // NOLINT
 
-const auto catalog_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, int32_t, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float>(); // NOLINT
+const auto catalog_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
 const auto catalog_sales_column_names = boost::hana::make_tuple("cs_sold_date_sk", "cs_sold_time_sk", "cs_ship_date_sk", "cs_bill_customer_sk", "cs_bill_cdemo_sk", "cs_bill_hdemo_sk", "cs_bill_addr_sk", "cs_ship_customer_sk", "cs_ship_cdemo_sk", "cs_ship_hdemo_sk", "cs_ship_addr_sk", "cs_call_center_sk", "cs_catalog_page_sk", "cs_ship_mode_sk", "cs_warehouse_sk", "cs_item_sk", "cs_promo_sk", "cs_order_number", "cs_quantity", "cs_wholesale_cost", "cs_list_price", "cs_sales_price", "cs_ext_discount_amt", "cs_ext_sales_price", "cs_ext_wholesale_cost", "cs_ext_list_price", "cs_ext_tax", "cs_coupon_amt", "cs_ext_ship_cost", "cs_net_paid", "cs_net_paid_inc_tax", "cs_net_paid_inc_ship", "cs_net_paid_inc_ship_tax", "cs_net_profit"); // NOLINT
 
 const auto customer_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
@@ -205,16 +200,16 @@ const auto customer_column_names = boost::hana::make_tuple("c_customer_sk", "c_c
 const auto customer_address_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<pmr_string>>(); // NOLINT
 const auto customer_address_column_names = boost::hana::make_tuple("ca_address_sk", "ca_address_id", "ca_street_number", "ca_street_name", "ca_street_type", "ca_suite_number", "ca_city", "ca_county", "ca_state", "ca_zip", "ca_country", "ca_gmt_offset", "ca_location_type"); // NOLINT
 
-const auto customer_demographics_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string, pmr_string, int32_t, pmr_string, int32_t, int32_t, int32_t>(); // NOLINT
+const auto customer_demographics_column_types = boost::hana::tuple<tpcds_key_t, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
 const auto customer_demographics_column_names = boost::hana::make_tuple("cd_demo_sk", "cd_gender", "cd_marital_status", "cd_education_status", "cd_purchase_estimate", "cd_credit_rating", "cd_dep_count", "cd_dep_employed_count", "cd_dep_college_count"); // NOLINT
 
-const auto date_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, int32_t, int32_t, int32_t, int32_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string>(); // NOLINT
+const auto date_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
 const auto date_column_names = boost::hana::make_tuple("d_date_sk", "d_date_id", "d_date", "d_month_seq", "d_week_seq", "d_quarter_seq", "d_year", "d_dow", "d_moy", "d_dom", "d_qoy", "d_fy_year", "d_fy_quarter_seq", "d_fy_week_seq", "d_day_name", "d_quarter_name", "d_holiday", "d_weekend", "d_following_holiday", "d_first_dom", "d_last_dom", "d_same_day_ly", "d_same_day_lq", "d_current_day", "d_current_week", "d_current_month", "d_current_quarter", "d_current_year"); // NOLINT
 
-const auto household_demographics_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, pmr_string, int32_t, int32_t>(); // NOLINT
+const auto household_demographics_column_types = boost::hana::tuple<tpcds_key_t, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
 const auto household_demographics_column_names = boost::hana::make_tuple("hd_demo_sk", "hd_income_band_sk", "hd_buy_potential", "hd_dep_count", "hd_vehicle_count"); // NOLINT
 
-const auto income_band_column_types = boost::hana::tuple<int32_t, int32_t, int32_t>(); // NOLINT
+const auto income_band_column_types = boost::hana::tuple<int32_t, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
 const auto income_band_column_names = boost::hana::make_tuple("ib_income_band_sk", "ib_lower_bound", "ib_upper_bound"); // NOLINT
 
 const auto inventory_column_types = boost::hana::tuple<tpcds_key_t, tpcds_key_t, tpcds_key_t, std::optional<int32_t>>(); // NOLINT
@@ -226,10 +221,10 @@ const auto item_column_names = boost::hana::make_tuple("i_item_sk", "i_item_id",
 const auto promotion_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<float>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
 const auto promotion_column_names = boost::hana::make_tuple("p_promo_sk", "p_promo_id", "p_start_date_sk", "p_end_date_sk", "p_item_sk", "p_cost", "p_response_target", "p_promo_name", "p_channel_dmail", "p_channel_email", "p_channel_catalog", "p_channel_tv", "p_channel_radio", "p_channel_press", "p_channel_event", "p_channel_demo", "p_channel_details", "p_purpose", "p_discount_active"); // NOLINT
 
-const auto reason_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string>(); // NOLINT
+const auto reason_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>>(); // NOLINT
 const auto reason_column_names = boost::hana::make_tuple("r_reason_sk", "r_reason_id", "r_reason_desc"); // NOLINT
 
-const auto ship_mode_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string>(); // NOLINT
+const auto ship_mode_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
 const auto ship_mode_column_names = boost::hana::make_tuple("sm_ship_mode_sk", "sm_ship_mode_id", "sm_type", "sm_code", "sm_carrier", "sm_contract"); // NOLINT
 
 const auto store_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT
@@ -244,7 +239,7 @@ const auto store_sales_column_names = boost::hana::make_tuple("ss_sold_date_sk",
 const auto time_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
 const auto time_column_names = boost::hana::make_tuple("t_time_sk", "t_time_id", "t_time", "t_hour", "t_minute", "t_second", "t_am_pm", "t_shift", "t_sub_shift", "t_meal_time"); // NOLINT
 
-const auto warehouse_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, pmr_string, pmr_string, int32_t, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, pmr_string, float>(); // NOLINT
+const auto warehouse_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>>(); // NOLINT
 const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk", "w_warehouse_id", "w_warehouse_name", "w_warehouse_sq_ft", "w_street_number", "w_street_name", "w_street_type", "w_suite_number", "w_city", "w_county", "w_state", "w_zip", "w_country", "w_gmt_offset"); // NOLINT
 
 const auto web_page_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
@@ -253,7 +248,7 @@ const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk", "wp
 const auto web_returns_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
 const auto web_returns_column_names = boost::hana::make_tuple("wr_returned_date_sk", "wr_returned_time_sk", "wr_item_sk", "wr_refunded_customer_sk", "wr_refunded_cdemo_sk", "wr_refunded_hdemo_sk", "wr_refunded_addr_sk", "wr_returning_customer_sk", "wr_returning_cdemo_sk", "wr_returning_hdemo_sk", "wr_returning_addr_sk", "wr_web_page_sk", "wr_reason_sk", "wr_order_number", "wr_return_quantity", "wr_return_amt", "wr_return_tax", "wr_return_amt_inc_tax", "wr_fee", "wr_return_ship_cost", "wr_refunded_cash", "wr_reversed_charge", "wr_account_credit", "wr_net_loss"); // NOLINT
 
-const auto web_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, int32_t, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float>(); // NOLINT
+const auto web_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
 const auto web_sales_column_names = boost::hana::make_tuple("ws_sold_date_sk", "ws_sold_time_sk", "ws_ship_date_sk", "ws_item_sk", "ws_bill_customer_sk", "ws_bill_cdemo_sk", "ws_bill_hdemo_sk", "ws_bill_addr_sk", "ws_ship_customer_sk", "ws_ship_cdemo_sk", "ws_ship_hdemo_sk", "ws_ship_addr_sk", "ws_web_page_sk", "ws_web_site_sk", "ws_ship_mode_sk", "ws_warehouse_sk", "ws_promo_sk", "ws_order_number", "ws_quantity", "ws_wholesale_cost", "ws_list_price", "ws_sales_price", "ws_ext_discount_amt", "ws_ext_sales_price", "ws_ext_wholesale_cost", "ws_ext_list_price", "ws_ext_tax", "ws_coupon_amt", "ws_ext_ship_cost", "ws_net_paid", "ws_net_paid_inc_tax", "ws_net_paid_inc_ship", "ws_net_paid_inc_ship_tax", "ws_net_profit"); // NOLINT
 
 const auto web_site_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT
@@ -370,19 +365,37 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_ro
     tpcds_row_stop(CALL_CENTER);
 
     call_center_builder.append_row(
-        resolve_key(call_center.cc_call_center_sk), call_center.cc_call_center_id,
+        call_center.cc_call_center_sk,
+        call_center.cc_call_center_id,
         resolve_date_id<CC_REC_START_DATE_ID>(call_center.cc_rec_start_date_id),
         resolve_date_id<CC_REC_END_DATE_ID>(call_center.cc_rec_end_date_id),
         resolve_key<CC_CLOSED_DATE_ID>(call_center.cc_closed_date_id),
-        resolve_key<CC_OPEN_DATE_ID>(call_center.cc_open_date_id), call_center.cc_name, call_center.cc_class,
-        call_center.cc_employees, call_center.cc_sq_ft, call_center.cc_hours, call_center.cc_manager,
-        call_center.cc_market_id, call_center.cc_market_class, call_center.cc_market_desc,
-        call_center.cc_market_manager, call_center.cc_division_id, call_center.cc_division_name, call_center.cc_company,
-        call_center.cc_company_name, pmr_string{std::to_string(call_center.cc_address.street_num)},
-        resolve_street_name<CC_STREET_NAME>(call_center.cc_address), call_center.cc_address.street_type,
-        call_center.cc_address.suite_num, call_center.cc_address.city, call_center.cc_address.county,
-        call_center.cc_address.state, zip_to_string(call_center.cc_address.zip), call_center.cc_address.country,
-        static_cast<float>(call_center.cc_address.gmt_offset), decimal_to_float(call_center.cc_tax_percentage));
+        resolve_key<CC_OPEN_DATE_ID>(call_center.cc_open_date_id),
+        resolve_string<CC_NAME>(call_center.cc_name),
+        resolve_string<CC_CLASS>(call_center.cc_class),
+        resolve_integer<CC_EMPLOYEES>(call_center.cc_employees),
+        resolve_integer<CC_SQ_FT>(call_center.cc_sq_ft),
+        resolve_string<CC_HOURS>(call_center.cc_hours),
+        resolve_string<CC_MANAGER>(call_center.cc_manager),
+        resolve_integer<CC_MARKET_ID>(call_center.cc_market_id),
+        resolve_string<CC_MARKET_CLASS>(call_center.cc_market_class),
+        resolve_string<CC_MARKET_DESC>(call_center.cc_market_desc),
+        resolve_string<CC_MARKET_MANAGER>(call_center.cc_market_manager),
+        resolve_integer<CC_DIVISION>(call_center.cc_division_id),
+        resolve_string<CC_DIVISION_NAME>(call_center.cc_division_name),
+        resolve_integer<CC_COMPANY>(call_center.cc_company),
+        resolve_string<CC_COMPANY_NAME>(call_center.cc_company_name),
+        resolve_string<CC_ADDRESS>(pmr_string{std::to_string(call_center.cc_address.street_num)}),
+        resolve_street_name<CC_ADDRESS>(call_center.cc_address),
+        resolve_string<CC_ADDRESS>(call_center.cc_address.street_type),
+        resolve_string<CC_ADDRESS>(call_center.cc_address.suite_num),
+        resolve_string<CC_ADDRESS>(call_center.cc_address.city),
+        resolve_string<CC_ADDRESS>(call_center.cc_address.county),
+        resolve_string<CC_ADDRESS>(call_center.cc_address.state),
+        resolve_string<CC_ADDRESS>(zip_to_string(call_center.cc_address.zip)),
+        resolve_string<CC_ADDRESS>(call_center.cc_address.country),
+        resolve_decimal<CC_ADDRESS>(gmt_offset_to_decimal(call_center.cc_address.gmt_offset)),
+        resolve_decimal<CC_TAX_PERCENTAGE>(call_center.cc_tax_percentage));
   }
 
   return call_center_builder.finish_table();
@@ -402,7 +415,9 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_catalog_page(ds_key_t max_r
     mk_w_catalog_page(&catalog_page, catalog_page_first + i);
     tpcds_row_stop(CATALOG_PAGE);
 
-    catalog_page_builder.append_row(catalog_page.cp_catalog_page_sk, catalog_page.cp_catalog_page_id,
+    catalog_page_builder.append_row(
+      catalog_page.cp_catalog_page_sk,
+      catalog_page.cp_catalog_page_id,
                                     resolve_key<CP_START_DATE_ID>(catalog_page.cp_start_date_id),
                                     resolve_key<CP_END_DATE_ID>(catalog_page.cp_end_date_id),
                                     resolve_string<CP_DEPARTMENT>(catalog_page.cp_department),
@@ -442,35 +457,47 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
         if (catalog_sales_builder.row_count() < max_rows) {
           catalog_sales_builder.append_row(
-              resolve_key(catalog_sales.cs_sold_date_sk), resolve_key(catalog_sales.cs_sold_time_sk),
-              resolve_key(catalog_sales.cs_ship_date_sk), resolve_key(catalog_sales.cs_bill_customer_sk),
-              resolve_key(catalog_sales.cs_bill_cdemo_sk), resolve_key(catalog_sales.cs_bill_hdemo_sk),
-              resolve_key(catalog_sales.cs_bill_addr_sk), resolve_key(catalog_sales.cs_ship_customer_sk),
-              resolve_key(catalog_sales.cs_ship_cdemo_sk), resolve_key(catalog_sales.cs_ship_hdemo_sk),
-              resolve_key(catalog_sales.cs_ship_addr_sk), resolve_key(catalog_sales.cs_call_center_sk),
-              resolve_key(catalog_sales.cs_catalog_page_sk), resolve_key(catalog_sales.cs_ship_mode_sk),
-              resolve_key(catalog_sales.cs_warehouse_sk), resolve_key(catalog_sales.cs_sold_item_sk),
-              resolve_key(catalog_sales.cs_promo_sk), resolve_key(catalog_sales.cs_order_number),
-              catalog_sales.cs_pricing.quantity, decimal_to_float(catalog_sales.cs_pricing.wholesale_cost),
-              decimal_to_float(catalog_sales.cs_pricing.list_price),
-              decimal_to_float(catalog_sales.cs_pricing.sales_price),
-              decimal_to_float(catalog_sales.cs_pricing.ext_discount_amt),
-              decimal_to_float(catalog_sales.cs_pricing.ext_sales_price),
-              decimal_to_float(catalog_sales.cs_pricing.ext_wholesale_cost),
-              decimal_to_float(catalog_sales.cs_pricing.ext_list_price),
-              decimal_to_float(catalog_sales.cs_pricing.ext_tax), decimal_to_float(catalog_sales.cs_pricing.coupon_amt),
-              decimal_to_float(catalog_sales.cs_pricing.ext_ship_cost),
-              decimal_to_float(catalog_sales.cs_pricing.net_paid),
-              decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_tax),
-              decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_ship),
-              decimal_to_float(catalog_sales.cs_pricing.net_paid_inc_ship_tax),
-              decimal_to_float(catalog_sales.cs_pricing.net_profit));
+              resolve_key<CS_SOLD_DATE_SK>(catalog_sales.cs_sold_date_sk),
+              resolve_key<CS_SOLD_TIME_SK>(catalog_sales.cs_sold_time_sk),
+              resolve_key<CS_SHIP_DATE_SK>(catalog_sales.cs_ship_date_sk),
+              resolve_key<CS_BILL_CUSTOMER_SK>(catalog_sales.cs_bill_customer_sk),
+              resolve_key<CS_BILL_CDEMO_SK>(catalog_sales.cs_bill_cdemo_sk),
+              resolve_key<CS_BILL_HDEMO_SK>(catalog_sales.cs_bill_hdemo_sk),
+              resolve_key<CS_BILL_ADDR_SK>(catalog_sales.cs_bill_addr_sk),
+              resolve_key<CS_SHIP_CUSTOMER_SK>(catalog_sales.cs_ship_customer_sk),
+              resolve_key<CS_SHIP_CDEMO_SK>(catalog_sales.cs_ship_cdemo_sk),
+              resolve_key<CS_SHIP_HDEMO_SK>(catalog_sales.cs_ship_hdemo_sk),
+              resolve_key<CS_SHIP_ADDR_SK>(catalog_sales.cs_ship_addr_sk),
+              resolve_key<CS_CALL_CENTER_SK>(catalog_sales.cs_call_center_sk),
+              resolve_key<CS_CATALOG_PAGE_SK>(catalog_sales.cs_catalog_page_sk),
+              resolve_key<CS_SHIP_MODE_SK>(catalog_sales.cs_ship_mode_sk),
+              resolve_key<CS_WAREHOUSE_SK>(catalog_sales.cs_warehouse_sk),
+              catalog_sales.cs_sold_item_sk,
+              resolve_key<CS_PROMO_SK>(catalog_sales.cs_promo_sk),
+              catalog_sales.cs_order_number,
+              resolve_integer<CS_PRICING_QUANTITY>(catalog_sales.cs_pricing.quantity),
+              resolve_decimal<CS_PRICING_WHOLESALE_COST>(catalog_sales.cs_pricing.wholesale_cost),
+              resolve_decimal<CS_PRICING_LIST_PRICE>(catalog_sales.cs_pricing.list_price),
+              resolve_decimal<CS_PRICING_SALES_PRICE>(catalog_sales.cs_pricing.sales_price),
+              resolve_decimal<CS_PRICING_EXT_DISCOUNT_AMOUNT>(catalog_sales.cs_pricing.ext_discount_amt),
+              resolve_decimal<CS_PRICING_EXT_SALES_PRICE>(catalog_sales.cs_pricing.ext_sales_price),
+              resolve_decimal<CS_PRICING_EXT_WHOLESALE_COST>(catalog_sales.cs_pricing.ext_wholesale_cost),
+              resolve_decimal<CS_PRICING_EXT_LIST_PRICE>(catalog_sales.cs_pricing.ext_list_price),
+              resolve_decimal<CS_PRICING_EXT_TAX>(catalog_sales.cs_pricing.ext_tax),
+              resolve_decimal<CS_PRICING_COUPON_AMT>(catalog_sales.cs_pricing.coupon_amt),
+              resolve_decimal<CS_PRICING_EXT_SHIP_COST>(catalog_sales.cs_pricing.ext_ship_cost),
+              resolve_decimal<CS_PRICING_NET_PAID>(catalog_sales.cs_pricing.net_paid),
+              resolve_decimal<CS_PRICING_NET_PAID_INC_TAX>(catalog_sales.cs_pricing.net_paid_inc_tax),
+              resolve_decimal<CS_PRICING_NET_PAID_INC_SHIP>(catalog_sales.cs_pricing.net_paid_inc_ship),
+              resolve_decimal<CS_PRICING_NET_PAID_INC_SHIP_TAX>(catalog_sales.cs_pricing.net_paid_inc_ship_tax),
+              resolve_decimal<CS_PRICING_NET_PROFIT>(catalog_sales.cs_pricing.net_profit));
         }
 
         if (was_returned != 0) {
           catalog_returns_builder.append_row(
               resolve_key<CR_RETURNED_DATE_SK>(catalog_returns.cr_returned_date_sk),
-              resolve_key<CR_RETURNED_TIME_SK>(catalog_returns.cr_returned_time_sk), catalog_returns.cr_item_sk,
+              resolve_key<CR_RETURNED_TIME_SK>(catalog_returns.cr_returned_time_sk),
+                catalog_returns.cr_item_sk,
               resolve_key<CR_REFUNDED_CUSTOMER_SK>(catalog_returns.cr_refunded_customer_sk),
               resolve_key<CR_REFUNDED_CDEMO_SK>(catalog_returns.cr_refunded_cdemo_sk),
               resolve_key<CR_REFUNDED_HDEMO_SK>(catalog_returns.cr_refunded_hdemo_sk),
@@ -483,7 +510,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_key<CR_CATALOG_PAGE_SK>(catalog_returns.cr_catalog_page_sk),
               resolve_key<CR_SHIP_MODE_SK>(catalog_returns.cr_ship_mode_sk),
               resolve_key<CR_WAREHOUSE_SK>(catalog_returns.cr_warehouse_sk),
-              resolve_key<CR_REASON_SK>(catalog_returns.cr_reason_sk), catalog_returns.cr_order_number,
+              resolve_key<CR_REASON_SK>(catalog_returns.cr_reason_sk),
+                catalog_returns.cr_order_number,
               resolve_integer<CR_PRICING_QUANTITY>(catalog_returns.cr_pricing.quantity),
               resolve_decimal<CR_PRICING_NET_PAID>(catalog_returns.cr_pricing.net_paid),
               resolve_decimal<CR_PRICING_EXT_TAX>(catalog_returns.cr_pricing.ext_tax),
@@ -582,11 +610,15 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_demographics(ds_ke
             customer_demographics_first + i);
 
     customer_demographics_builder.append_row(
-        resolve_key(customer_demographics.cd_demo_sk), customer_demographics.cd_gender,
-        customer_demographics.cd_marital_status, customer_demographics.cd_education_status,
-        customer_demographics.cd_purchase_estimate, customer_demographics.cd_credit_rating,
-        customer_demographics.cd_dep_count, customer_demographics.cd_dep_employed_count,
-        customer_demographics.cd_dep_college_count);
+        customer_demographics.cd_demo_sk,
+        resolve_string<CD_GENDER>(customer_demographics.cd_gender),
+        resolve_string<CD_MARITAL_STATUS>(customer_demographics.cd_marital_status),
+        resolve_string<CD_EDUCATION_STATUS>(customer_demographics.cd_education_status),
+        resolve_integer<CD_PURCHASE_ESTIMATE>(customer_demographics.cd_purchase_estimate),
+        resolve_string<CD_CREDIT_RATING>(customer_demographics.cd_credit_rating),
+        resolve_integer<CD_DEP_COUNT>(customer_demographics.cd_dep_count),
+        resolve_integer<CD_DEP_EMPLOYED_COUNT>(customer_demographics.cd_dep_employed_count),
+        resolve_integer<CD_DEP_COLLEGE_COUNT>(customer_demographics.cd_dep_college_count));
   }
 
   return customer_demographics_builder.finish_table();
@@ -604,15 +636,36 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_date(ds_key_t max_rows) con
 
     auto quarter_name = pmr_string{std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy)};
 
-    date_builder.append_row(resolve_key(date.d_date_sk), date.d_date_id, resolve_date_id(date.d_date_sk),
-                            date.d_month_seq, date.d_week_seq, date.d_quarter_seq, date.d_year, date.d_dow, date.d_moy,
-                            date.d_dom, date.d_qoy, date.d_fy_year, date.d_fy_quarter_seq, date.d_fy_week_seq,
-                            date.d_day_name, std::move(quarter_name), boolean_to_string(date.d_holiday),
-                            boolean_to_string(date.d_weekend), boolean_to_string(date.d_following_holiday),
-                            date.d_first_dom, date.d_last_dom, date.d_same_day_ly, date.d_same_day_lq,
-                            boolean_to_string(date.d_current_day), boolean_to_string(date.d_current_week),
-                            boolean_to_string(date.d_current_month), boolean_to_string(date.d_current_quarter),
-                            boolean_to_string(date.d_current_year));
+    date_builder.append_row(
+      date.d_date_sk,
+      date.d_date_id,
+
+      resolve_date_id<D_DATE_SK>(date.d_date_sk),
+      resolve_integer<D_MONTH_SEQ>(date.d_month_seq),
+      resolve_integer<D_WEEK_SEQ>(date.d_week_seq),
+      resolve_integer<D_QUARTER_SEQ>(date.d_quarter_seq),
+      resolve_integer<D_YEAR>(date.d_year),
+      resolve_integer<D_DOW>(date.d_dow),
+      resolve_integer<D_MOY>(date.d_moy),
+      resolve_integer<D_DOM>(date.d_dom),
+      resolve_integer<D_QOY>(date.d_qoy),
+      resolve_integer<D_FY_YEAR>(date.d_fy_year),
+      resolve_integer<D_FY_QUARTER_SEQ>(date.d_fy_quarter_seq),
+      resolve_integer<D_FY_WEEK_SEQ>(date.d_fy_week_seq),
+      resolve_string<D_DAY_NAME>(date.d_day_name),
+      resolve_string<D_QUARTER_NAME>(std::move(quarter_name)),
+      resolve_string<D_HOLIDAY>(boolean_to_string(date.d_holiday)),
+      resolve_string<D_WEEKEND>(boolean_to_string(date.d_weekend)),
+      resolve_string<D_FOLLOWING_HOLIDAY>(boolean_to_string(date.d_following_holiday)),
+      resolve_integer<D_FIRST_DOM>(date.d_first_dom),
+      resolve_integer<D_LAST_DOM>(date.d_last_dom),
+      resolve_integer<D_SAME_DAY_LY>(date.d_same_day_ly),
+      resolve_integer<D_SAME_DAY_LQ>(date.d_same_day_lq),
+      resolve_string<D_CURRENT_DAY>(boolean_to_string(date.d_current_day)),
+      resolve_string<D_CURRENT_WEEK>(boolean_to_string(date.d_current_week)),
+      resolve_string<D_CURRENT_MONTH>(boolean_to_string(date.d_current_month)),
+      resolve_string<D_CURRENT_QUARTER>(boolean_to_string(date.d_current_quarter)),
+      resolve_string<D_CURRENT_YEAR>(boolean_to_string(date.d_current_year)));
   }
 
   return date_builder.finish_table();
@@ -632,9 +685,12 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_household_demographics(ds_k
             household_demographics_first + i);
 
     household_demographics_builder.append_row(
-        resolve_key(household_demographics.hd_demo_sk), resolve_key(household_demographics.hd_income_band_id),
-        household_demographics.hd_buy_potential, household_demographics.hd_dep_count,
-        household_demographics.hd_vehicle_count);
+        household_demographics.hd_demo_sk,
+
+        resolve_key<HD_INCOME_BAND_ID>(household_demographics.hd_income_band_id),
+        resolve_string<HD_BUY_POTENTIAL>(household_demographics.hd_buy_potential),
+        resolve_integer<HD_DEP_COUNT>(household_demographics.hd_dep_count),
+        resolve_integer<HD_VEHICLE_COUNT>(household_demographics.hd_vehicle_count));
   }
 
   return household_demographics_builder.finish_table();
@@ -650,8 +706,10 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_income_band(ds_key_t max_ro
   for (auto i = ds_key_t{0}; i < income_band_count; i++) {
     const auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL, &mk_w_income_band, INCOME_BAND>(income_band_first + i);
 
-    income_band_builder.append_row(income_band.ib_income_band_id, income_band.ib_lower_bound,
-                                   income_band.ib_upper_bound);
+    income_band_builder.append_row(
+      income_band.ib_income_band_id,
+      resolve_integer<IB_LOWER_BOUND>(income_band.ib_lower_bound),
+      resolve_integer<IB_UPPER_BOUND>(income_band.ib_upper_bound));
   }
 
   return income_band_builder.finish_table();
@@ -667,8 +725,11 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_inventory(ds_key_t max_rows
   for (auto i = ds_key_t{0}; i < inventory_count; i++) {
     const auto inventory = call_dbgen_mk<W_INVENTORY_TBL, &mk_w_inventory, INVENTORY>(inventory_first + i);
 
-    inventory_builder.append_row(inventory.inv_date_sk, inventory.inv_item_sk, inventory.inv_warehouse_sk,
-                                 resolve_integer<INV_QUANTITY_ON_HAND>(inventory.inv_quantity_on_hand));
+    inventory_builder.append_row(
+      inventory.inv_date_sk,
+      inventory.inv_item_sk,
+      inventory.inv_warehouse_sk,
+      resolve_integer<INV_QUANTITY_ON_HAND>(inventory.inv_quantity_on_hand));
   }
 
   return inventory_builder.finish_table();
@@ -741,7 +802,10 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_reason(ds_key_t max_rows) c
   for (auto i = ds_key_t{0}; i < reason_count; i++) {
     const auto reason = call_dbgen_mk<W_REASON_TBL, &mk_w_reason, REASON>(reason_first + i);
 
-    reason_builder.append_row(resolve_key(reason.r_reason_sk), reason.r_reason_id, reason.r_reason_description);
+    reason_builder.append_row(
+      reason.r_reason_sk,
+      reason.r_reason_id,
+      resolve_string<R_REASON_DESCRIPTION>(reason.r_reason_description));
   }
 
   return reason_builder.finish_table();
@@ -757,8 +821,14 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_ship_mode(ds_key_t max_rows
   for (auto i = ds_key_t{0}; i < ship_mode_count; i++) {
     const auto ship_mode = call_dbgen_mk<W_SHIP_MODE_TBL, &mk_w_ship_mode, SHIP_MODE>(ship_mode_first + i);
 
-    ship_mode_builder.append_row(resolve_key(ship_mode.sm_ship_mode_sk), ship_mode.sm_ship_mode_id, ship_mode.sm_type,
-                                 ship_mode.sm_code, ship_mode.sm_carrier, ship_mode.sm_contract);
+    ship_mode_builder.append_row(
+      ship_mode.sm_ship_mode_sk,
+      ship_mode.sm_ship_mode_id,
+
+      resolve_string<SM_TYPE>(ship_mode.sm_type),
+      resolve_string<SM_CODE>(ship_mode.sm_code),
+      resolve_string<SM_CARRIER>(ship_mode.sm_carrier),
+      resolve_string<SM_CONTRACT>(ship_mode.sm_contract));
   }
 
   return ship_mode_builder.finish_table();
@@ -775,14 +845,36 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) co
     const auto store = call_dbgen_mk<W_STORE_TBL, &mk_w_store, STORE>(store_first + i);
 
     store_builder.append_row(
-        store.store_sk, store.store_id, resolve_date_id(store.rec_start_date_id),
-        resolve_date_id(store.rec_end_date_id), resolve_key(store.closed_date_id), store.store_name, store.employees,
-        store.floor_space, store.hours, store.store_manager, store.market_id, store.geography_class, store.market_desc,
-        store.market_manager, resolve_key(store.division_id), store.division_name, resolve_key(store.company_id),
-        store.company_name, pmr_string{std::to_string(store.address.street_num)}, resolve_street_name(store.address),
-        store.address.street_type, store.address.suite_num, store.address.city, store.address.county,
-        store.address.state, zip_to_string(store.address.zip), store.address.country,
-        static_cast<float>(store.address.gmt_offset), decimal_to_float(store.dTaxPercentage));
+        store.store_sk,
+        store.store_id,
+
+        resolve_date_id<W_STORE_REC_START_DATE_ID>(store.rec_start_date_id),
+        resolve_date_id<W_STORE_REC_END_DATE_ID>(store.rec_end_date_id),
+        resolve_key<W_STORE_CLOSED_DATE_ID>(store.closed_date_id),
+        resolve_string<W_STORE_NAME>(store.store_name),
+        resolve_integer<W_STORE_EMPLOYEES>(store.employees),
+        resolve_integer<W_STORE_FLOOR_SPACE>(store.floor_space),
+        resolve_string<W_STORE_HOURS>(store.hours),
+        resolve_string<W_STORE_MANAGER>(store.store_manager),
+        resolve_integer<W_STORE_MARKET_ID>(store.market_id),
+        resolve_string<W_STORE_GEOGRAPHY_CLASS>(store.geography_class),
+        resolve_string<W_STORE_MARKET_DESC>(store.market_desc),
+        resolve_string<W_STORE_MARKET_MANAGER>(store.market_manager),
+        resolve_key<W_STORE_DIVISION_ID>(store.division_id),
+        resolve_string<W_STORE_DIVISION_NAME>(store.division_name),
+        resolve_key<W_STORE_COMPANY_ID>(store.company_id),
+        resolve_string<W_STORE_COMPANY_NAME>(store.company_name),
+        resolve_string<W_STORE_ADDRESS_STREET_NUM>(pmr_string{std::to_string(store.address.street_num)}),
+        resolve_street_name<W_STORE_ADDRESS_STREET_NAME1>(store.address),
+        resolve_string<W_STORE_ADDRESS_STREET_TYPE>(store.address.street_type),
+        resolve_string<W_STORE_ADDRESS_SUITE_NUM>(store.address.suite_num),
+        resolve_string<W_STORE_ADDRESS_CITY>(store.address.city),
+        resolve_string<W_STORE_ADDRESS_COUNTY>(store.address.county),
+        resolve_string<W_STORE_ADDRESS_STATE>(store.address.state),
+        resolve_string<W_STORE_ADDRESS_ZIP>(zip_to_string(store.address.zip)),
+        resolve_string<W_STORE_ADDRESS_COUNTRY>(store.address.country),
+        resolve_decimal<W_STORE_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(store.address.gmt_offset)),
+        resolve_decimal<W_STORE_TAX_PERCENTAGE>(store.dTaxPercentage));
   }
 
   return store_builder.finish_table();
@@ -814,13 +906,15 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         if (store_sales_builder.row_count() < max_rows) {
           store_sales_builder.append_row(
               resolve_key<SS_SOLD_DATE_SK>(store_sales.ss_sold_date_sk),
-              resolve_key<SS_SOLD_TIME_SK>(store_sales.ss_sold_time_sk), store_sales.ss_sold_item_sk,
+              resolve_key<SS_SOLD_TIME_SK>(store_sales.ss_sold_time_sk),
+                store_sales.ss_sold_item_sk,
               resolve_key<SS_SOLD_CUSTOMER_SK>(store_sales.ss_sold_customer_sk),
               resolve_key<SS_SOLD_CDEMO_SK>(store_sales.ss_sold_cdemo_sk),
               resolve_key<SS_SOLD_HDEMO_SK>(store_sales.ss_sold_hdemo_sk),
               resolve_key<SS_SOLD_ADDR_SK>(store_sales.ss_sold_addr_sk),
               resolve_key<SS_SOLD_STORE_SK>(store_sales.ss_sold_store_sk),
-              resolve_key<SS_SOLD_PROMO_SK>(store_sales.ss_sold_promo_sk), store_sales.ss_ticket_number,
+              resolve_key<SS_SOLD_PROMO_SK>(store_sales.ss_sold_promo_sk),
+                store_sales.ss_ticket_number,
               resolve_integer<SS_PRICING_QUANTITY>(store_sales.ss_pricing.quantity),
               resolve_decimal<SS_PRICING_WHOLESALE_COST>(store_sales.ss_pricing.wholesale_cost),
               resolve_decimal<SS_PRICING_LIST_PRICE>(store_sales.ss_pricing.list_price),
@@ -840,11 +934,13 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         if (was_returned != 0) {
           store_returns_builder.append_row(
               resolve_key<SR_RETURNED_DATE_SK>(store_returns.sr_returned_date_sk),
-              resolve_key<SR_RETURNED_TIME_SK>(store_returns.sr_returned_time_sk), store_returns.sr_item_sk,
+              resolve_key<SR_RETURNED_TIME_SK>(store_returns.sr_returned_time_sk),
+                store_returns.sr_item_sk,
               resolve_key<SR_CUSTOMER_SK>(store_returns.sr_customer_sk),
               resolve_key<SR_CDEMO_SK>(store_returns.sr_cdemo_sk), resolve_key<SR_HDEMO_SK>(store_returns.sr_hdemo_sk),
               resolve_key<SR_ADDR_SK>(store_returns.sr_addr_sk), resolve_key<SR_STORE_SK>(store_returns.sr_store_sk),
-              resolve_key<SR_REASON_SK>(store_returns.sr_reason_sk), store_returns.sr_ticket_number,
+              resolve_key<SR_REASON_SK>(store_returns.sr_reason_sk),
+                store_returns.sr_ticket_number,
               resolve_integer<SR_PRICING_QUANTITY>(store_returns.sr_pricing.quantity),
               resolve_decimal<SR_PRICING_NET_PAID>(store_returns.sr_pricing.net_paid),
               resolve_decimal<SR_PRICING_EXT_TAX>(store_returns.sr_pricing.ext_tax),
@@ -880,11 +976,21 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_time(ds_key_t max_rows) con
   for (auto i = ds_key_t{0}; i < time_count; i++) {
     const auto time = call_dbgen_mk<W_TIME_TBL, &mk_w_time, TIME>(time_first + i);
 
-    time_builder.append_row(time.t_time_sk, time.t_time_id, resolve_integer<T_TIME>(time.t_time),
-                            resolve_integer<T_HOUR>(time.t_hour), resolve_integer<T_MINUTE>(time.t_minute),
-                            resolve_integer<T_SECOND>(time.t_second), resolve_string<T_AM_PM>(time.t_am_pm),
-                            resolve_string<T_SHIFT>(time.t_shift), resolve_string<T_SUB_SHIFT>(time.t_sub_shift),
-                            resolve_string<T_MEAL_TIME>(time.t_meal_time));
+    time_builder.append_row(
+      time.t_time_sk,
+      time.t_time_id,
+      resolve_integer<T_TIME>(time.t_time),
+
+      resolve_integer<T_HOUR>(time.t_hour),
+        resolve_integer<T_MINUTE>(time.t_minute),
+
+        resolve_integer<T_SECOND>(time.t_second),
+          resolve_string<T_AM_PM>(time.t_am_pm),
+
+          resolve_string<T_SHIFT>(time.t_shift),
+            resolve_string<T_SUB_SHIFT>(time.t_sub_shift),
+
+          resolve_string<T_MEAL_TIME>(time.t_meal_time));
   }
 
   return time_builder.finish_table();
@@ -900,13 +1006,22 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_warehouse(ds_key_t max_rows
   for (auto i = ds_key_t{0}; i < warehouse_count; i++) {
     const auto warehouse = call_dbgen_mk<W_WAREHOUSE_TBL, &mk_w_warehouse, WAREHOUSE>(warehouse_first + i);
 
-    warehouse_builder.append_row(resolve_key(warehouse.w_warehouse_sk), warehouse.w_warehouse_id,
-                                 warehouse.w_warehouse_name, warehouse.w_warehouse_sq_ft,
-                                 pmr_string{std::to_string(warehouse.w_address.street_num)},
-                                 resolve_street_name(warehouse.w_address), warehouse.w_address.street_type,
-                                 warehouse.w_address.suite_num, warehouse.w_address.city, warehouse.w_address.county,
-                                 warehouse.w_address.state, zip_to_string(warehouse.w_address.zip),
-                                 warehouse.w_address.country, static_cast<float>(warehouse.w_address.gmt_offset));
+    warehouse_builder.append_row(
+      warehouse.w_warehouse_sk,
+      warehouse.w_warehouse_id,
+
+      resolve_string<W_WAREHOUSE_NAME>(warehouse.w_warehouse_name),
+      resolve_integer<W_WAREHOUSE_SQ_FT>(warehouse.w_warehouse_sq_ft),
+      resolve_string<W_ADDRESS_STREET_NUM>(pmr_string{std::to_string(warehouse.w_address.street_num)}),
+      resolve_street_name<W_ADDRESS_STREET_NAME1>(warehouse.w_address),
+      resolve_string<W_ADDRESS_STREET_TYPE>(warehouse.w_address.street_type),
+      resolve_string<W_ADDRESS_SUITE_NUM>(warehouse.w_address.suite_num),
+      resolve_string<W_ADDRESS_CITY>(warehouse.w_address.city),
+      resolve_string<W_ADDRESS_COUNTY>(warehouse.w_address.county),
+      resolve_string<W_ADDRESS_STATE>(warehouse.w_address.state),
+      resolve_string<W_ADDRESS_ZIP>(zip_to_string(warehouse.w_address.zip)),
+      resolve_string<W_ADDRESS_COUNTRY>(warehouse.w_address.country),
+      resolve_decimal<W_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(warehouse.w_address.gmt_offset)));
   }
 
   return warehouse_builder.finish_table();
@@ -963,32 +1078,47 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
         if (web_sales_builder.row_count() < max_rows) {
           web_sales_builder.append_row(
-              resolve_key(web_sales.ws_sold_date_sk), resolve_key(web_sales.ws_sold_time_sk),
-              resolve_key(web_sales.ws_ship_date_sk), resolve_key(web_sales.ws_item_sk),
-              resolve_key(web_sales.ws_bill_customer_sk), resolve_key(web_sales.ws_bill_cdemo_sk),
-              resolve_key(web_sales.ws_bill_hdemo_sk), resolve_key(web_sales.ws_bill_addr_sk),
-              resolve_key(web_sales.ws_ship_customer_sk), resolve_key(web_sales.ws_ship_cdemo_sk),
-              resolve_key(web_sales.ws_ship_hdemo_sk), resolve_key(web_sales.ws_ship_addr_sk),
-              resolve_key(web_sales.ws_web_page_sk), resolve_key(web_sales.ws_web_site_sk),
-              resolve_key(web_sales.ws_ship_mode_sk), resolve_key(web_sales.ws_warehouse_sk),
-              resolve_key(web_sales.ws_promo_sk), resolve_key(web_sales.ws_order_number), web_sales.ws_pricing.quantity,
-              decimal_to_float(web_sales.ws_pricing.wholesale_cost), decimal_to_float(web_sales.ws_pricing.list_price),
-              decimal_to_float(web_sales.ws_pricing.sales_price),
-              decimal_to_float(web_sales.ws_pricing.ext_discount_amt),
-              decimal_to_float(web_sales.ws_pricing.ext_sales_price),
-              decimal_to_float(web_sales.ws_pricing.ext_wholesale_cost),
-              decimal_to_float(web_sales.ws_pricing.ext_list_price), decimal_to_float(web_sales.ws_pricing.ext_tax),
-              decimal_to_float(web_sales.ws_pricing.coupon_amt), decimal_to_float(web_sales.ws_pricing.ext_ship_cost),
-              decimal_to_float(web_sales.ws_pricing.net_paid), decimal_to_float(web_sales.ws_pricing.net_paid_inc_tax),
-              decimal_to_float(web_sales.ws_pricing.net_paid_inc_ship),
-              decimal_to_float(web_sales.ws_pricing.net_paid_inc_ship_tax),
-              decimal_to_float(web_sales.ws_pricing.net_profit));
+              resolve_key<WS_SOLD_DATE_SK>(web_sales.ws_sold_date_sk),
+              resolve_key<WS_SOLD_TIME_SK>(web_sales.ws_sold_time_sk),
+              resolve_key<WS_SHIP_DATE_SK>(web_sales.ws_ship_date_sk),
+              web_sales.ws_item_sk,
+              resolve_key<WS_BILL_CUSTOMER_SK>(web_sales.ws_bill_customer_sk),
+              resolve_key<WS_BILL_CDEMO_SK>(web_sales.ws_bill_cdemo_sk),
+              resolve_key<WS_BILL_HDEMO_SK>(web_sales.ws_bill_hdemo_sk),
+              resolve_key<WS_BILL_ADDR_SK>(web_sales.ws_bill_addr_sk),
+              resolve_key<WS_SHIP_CUSTOMER_SK>(web_sales.ws_ship_customer_sk),
+              resolve_key<WS_SHIP_CDEMO_SK>(web_sales.ws_ship_cdemo_sk),
+              resolve_key<WS_SHIP_HDEMO_SK>(web_sales.ws_ship_hdemo_sk),
+              resolve_key<WS_SHIP_ADDR_SK>(web_sales.ws_ship_addr_sk),
+              resolve_key<WS_WEB_PAGE_SK>(web_sales.ws_web_page_sk),
+              resolve_key<WS_WEB_SITE_SK>(web_sales.ws_web_site_sk),
+              resolve_key<WS_SHIP_MODE_SK>(web_sales.ws_ship_mode_sk),
+              resolve_key<WS_WAREHOUSE_SK>(web_sales.ws_warehouse_sk),
+              resolve_key<WS_PROMO_SK>(web_sales.ws_promo_sk),
+              web_sales.ws_order_number,
+              resolve_integer<WS_PRICING_QUANTITY>(web_sales.ws_pricing.quantity),
+              resolve_decimal<WS_PRICING_WHOLESALE_COST>(web_sales.ws_pricing.wholesale_cost),
+              resolve_decimal<WS_PRICING_LIST_PRICE>(web_sales.ws_pricing.list_price),
+              resolve_decimal<WS_PRICING_SALES_PRICE>(web_sales.ws_pricing.sales_price),
+              resolve_decimal<WS_PRICING_EXT_DISCOUNT_AMT>(web_sales.ws_pricing.ext_discount_amt),
+              resolve_decimal<WS_PRICING_EXT_SALES_PRICE>(web_sales.ws_pricing.ext_sales_price),
+              resolve_decimal<WS_PRICING_EXT_WHOLESALE_COST>(web_sales.ws_pricing.ext_wholesale_cost),
+              resolve_decimal<WS_PRICING_EXT_LIST_PRICE>(web_sales.ws_pricing.ext_list_price),
+              resolve_decimal<WS_PRICING_EXT_TAX>(web_sales.ws_pricing.ext_tax),
+              resolve_decimal<WS_PRICING_COUPON_AMT>(web_sales.ws_pricing.coupon_amt),
+              resolve_decimal<WS_PRICING_EXT_SHIP_COST>(web_sales.ws_pricing.ext_ship_cost),
+              resolve_decimal<WS_PRICING_NET_PAID>(web_sales.ws_pricing.net_paid),
+              resolve_decimal<WS_PRICING_NET_PAID_INC_TAX>(web_sales.ws_pricing.net_paid_inc_tax),
+              resolve_decimal<WS_PRICING_NET_PAID_INC_SHIP>(web_sales.ws_pricing.net_paid_inc_ship),
+              resolve_decimal<WS_PRICING_NET_PAID_INC_SHIP_TAX>(web_sales.ws_pricing.net_paid_inc_ship_tax),
+              resolve_decimal<WS_PRICING_NET_PROFIT>(web_sales.ws_pricing.net_profit));
         }
 
         if (was_returned != 0) {
           web_returns_builder.append_row(
               resolve_key<WR_RETURNED_DATE_SK>(web_returns.wr_returned_date_sk),
-              resolve_key<WR_RETURNED_TIME_SK>(web_returns.wr_returned_time_sk), web_returns.wr_item_sk,
+              resolve_key<WR_RETURNED_TIME_SK>(web_returns.wr_returned_time_sk),
+                web_returns.wr_item_sk,
               resolve_key<WR_REFUNDED_CUSTOMER_SK>(web_returns.wr_refunded_customer_sk),
               resolve_key<WR_REFUNDED_CDEMO_SK>(web_returns.wr_refunded_cdemo_sk),
               resolve_key<WR_REFUNDED_HDEMO_SK>(web_returns.wr_refunded_hdemo_sk),
@@ -998,7 +1128,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_key<WR_RETURNING_HDEMO_SK>(web_returns.wr_returning_hdemo_sk),
               resolve_key<WR_RETURNING_ADDR_SK>(web_returns.wr_returning_addr_sk),
               resolve_key<WR_WEB_PAGE_SK>(web_returns.wr_web_page_sk),
-              resolve_key<WR_REASON_SK>(web_returns.wr_reason_sk), web_returns.wr_order_number,
+              resolve_key<WR_REASON_SK>(web_returns.wr_reason_sk),
+                web_returns.wr_order_number,
               resolve_integer<WR_PRICING_QUANTITY>(web_returns.wr_pricing.quantity),
               resolve_decimal<WR_PRICING_NET_PAID>(web_returns.wr_pricing.net_paid),
               resolve_decimal<WR_PRICING_EXT_TAX>(web_returns.wr_pricing.ext_tax),
