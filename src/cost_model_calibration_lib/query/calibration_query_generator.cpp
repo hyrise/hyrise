@@ -137,9 +137,6 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
       const auto table = sm.get_table(table_name);
 
       for (const auto& column_spec : _configuration.columns) {
-        // Calibrate validate on data tables
-        const auto validdate_table_node = StoredTableNode::make(table_name);
-        queries.push_back(_generate_validate_on_data_table(validdate_table_node));
         for (const auto selectivity : _configuration.selectivities) {
           for (const auto scan_type : {ScanType::TableScan, ScanType::IndexScan}) {
             // IndexScans are currently not supported on reference segments and indexes are only created for
@@ -162,10 +159,20 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
                 continue;  
               }
 
+              /**
+               * To cover a broad range of filter and validate placements, we yield two queries here.
+               * First, a validate on a data table is created with a following predicate (we gain a validate
+               * benchmark on a full table and a filter on a "full-sized" pos list) and a final validate.
+               * Second, we create two filters (first on a data table), second on a not "full-sized" pos list
+               * with a following validate (now, on a rather small pos list).
+               */
               const auto reference_table_predicate = CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
                 table_node, column_spec, reference_segment_predicate_selectivity);
+
               queries.push_back(
-                _generate_table_scans_for_predicate_chain(table_node, data_table_predicate, reference_table_predicate, scan_type));
+                _generate_query_for_validate_and_predicate(table_node, reference_table_predicate, scan_type));
+              queries.push_back(
+                _generate_query_for_predicate_chain_with_validate(table_node, data_table_predicate, reference_table_predicate, scan_type));
 
               if (column_spec.data_type == DataType::String && scan_type == ScanType::TableScan) {
                 // StringPredicateType::Equality is called as the default
@@ -173,8 +180,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
                   const auto like_predicate =
                       CalibrationQueryGeneratorPredicate::generate_concrete_predicate_column_value(
                           table_node, column_spec, selectivity, like_type);
-                  queries.push_back(_generate_table_scans_for_predicate_chain(table_node, like_predicate, reference_table_predicate, scan_type));
-                  queries.push_back(_generate_table_scans_for_predicate_chain(table_node, data_table_predicate, like_predicate, scan_type));
+                  queries.push_back(_generate_query_for_predicate_chain_with_validate(table_node, like_predicate, reference_table_predicate, scan_type));
+                  queries.push_back(_generate_query_for_predicate_chain_with_validate(table_node, data_table_predicate, like_predicate, scan_type));
                 }
               }
             }
@@ -245,7 +252,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   return queries;
 }
 
-const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_table_scans_for_predicate_chain(
+const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_query_for_predicate_chain_with_validate(
     const std::shared_ptr<StoredTableNode> table_node, const std::shared_ptr<AbstractExpression> data_table_predicate,
     const std::shared_ptr<AbstractExpression> reference_table_predicate, const ScanType scan_type) const {
   const auto data_table_predicate_node =
@@ -264,11 +271,20 @@ const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_tabl
   return validate_node;
 }
 
-const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_validate_on_data_table(
-      const std::shared_ptr<StoredTableNode> table_node) const {
-  const auto validate_node = ValidateNode::make();
-  validate_node->set_left_input(table_node);
-  return validate_node;
+const std::shared_ptr<AbstractLQPNode> CalibrationQueryGenerator::_generate_query_for_validate_and_predicate(
+      const std::shared_ptr<StoredTableNode> table_node, const std::shared_ptr<AbstractExpression> reference_table_predicate,
+      const ScanType scan_type) const {
+  const auto validate_node_begin = ValidateNode::make();
+  const auto validate_node_end = ValidateNode::make();
+
+  const auto reference_table_predicate_node =
+      CalibrationQueryGeneratorPredicate::generate_concreate_scan_predicate(reference_table_predicate, ScanType::TableScan);
+
+  validate_node_begin->set_left_input(table_node);
+  reference_table_predicate_node->set_left_input(validate_node_begin);
+  validate_node_end->set_left_input(reference_table_predicate_node);
+
+  return validate_node_end;
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_table_scan(
