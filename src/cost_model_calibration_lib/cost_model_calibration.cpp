@@ -233,7 +233,7 @@ void CostModelCalibration::_export_segment_size_information() {
                 segment_size_csv_file << "NULL,";
             }
           } else {
-            segment_size_csv_file << "NULL,";
+            segment_size_csv_file << "NULL,NULL,";
           }
         } else {
           segment_size_csv_file << "Unencoded,NULL,NULL,";
