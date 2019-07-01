@@ -365,19 +365,14 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_ro
     tpcds_row_stop(CALL_CENTER);
 
     call_center_builder.append_row(
-        call_center.cc_call_center_sk,
-        call_center.cc_call_center_id,
+        call_center.cc_call_center_sk, call_center.cc_call_center_id,
         resolve_date_id<CC_REC_START_DATE_ID>(call_center.cc_rec_start_date_id),
         resolve_date_id<CC_REC_END_DATE_ID>(call_center.cc_rec_end_date_id),
         resolve_key<CC_CLOSED_DATE_ID>(call_center.cc_closed_date_id),
-        resolve_key<CC_OPEN_DATE_ID>(call_center.cc_open_date_id),
-        resolve_string<CC_NAME>(call_center.cc_name),
-        resolve_string<CC_CLASS>(call_center.cc_class),
-        resolve_integer<CC_EMPLOYEES>(call_center.cc_employees),
-        resolve_integer<CC_SQ_FT>(call_center.cc_sq_ft),
-        resolve_string<CC_HOURS>(call_center.cc_hours),
-        resolve_string<CC_MANAGER>(call_center.cc_manager),
-        resolve_integer<CC_MARKET_ID>(call_center.cc_market_id),
+        resolve_key<CC_OPEN_DATE_ID>(call_center.cc_open_date_id), resolve_string<CC_NAME>(call_center.cc_name),
+        resolve_string<CC_CLASS>(call_center.cc_class), resolve_integer<CC_EMPLOYEES>(call_center.cc_employees),
+        resolve_integer<CC_SQ_FT>(call_center.cc_sq_ft), resolve_string<CC_HOURS>(call_center.cc_hours),
+        resolve_string<CC_MANAGER>(call_center.cc_manager), resolve_integer<CC_MARKET_ID>(call_center.cc_market_id),
         resolve_string<CC_MARKET_CLASS>(call_center.cc_market_class),
         resolve_string<CC_MARKET_DESC>(call_center.cc_market_desc),
         resolve_string<CC_MARKET_MANAGER>(call_center.cc_market_manager),
@@ -415,9 +410,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_catalog_page(ds_key_t max_r
     mk_w_catalog_page(&catalog_page, catalog_page_first + i);
     tpcds_row_stop(CATALOG_PAGE);
 
-    catalog_page_builder.append_row(
-      catalog_page.cp_catalog_page_sk,
-      catalog_page.cp_catalog_page_id,
+    catalog_page_builder.append_row(catalog_page.cp_catalog_page_sk, catalog_page.cp_catalog_page_id,
                                     resolve_key<CP_START_DATE_ID>(catalog_page.cp_start_date_id),
                                     resolve_key<CP_END_DATE_ID>(catalog_page.cp_end_date_id),
                                     resolve_string<CP_DEPARTMENT>(catalog_page.cp_department),
@@ -471,10 +464,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_key<CS_CALL_CENTER_SK>(catalog_sales.cs_call_center_sk),
               resolve_key<CS_CATALOG_PAGE_SK>(catalog_sales.cs_catalog_page_sk),
               resolve_key<CS_SHIP_MODE_SK>(catalog_sales.cs_ship_mode_sk),
-              resolve_key<CS_WAREHOUSE_SK>(catalog_sales.cs_warehouse_sk),
-              catalog_sales.cs_sold_item_sk,
-              resolve_key<CS_PROMO_SK>(catalog_sales.cs_promo_sk),
-              catalog_sales.cs_order_number,
+              resolve_key<CS_WAREHOUSE_SK>(catalog_sales.cs_warehouse_sk), catalog_sales.cs_sold_item_sk,
+              resolve_key<CS_PROMO_SK>(catalog_sales.cs_promo_sk), catalog_sales.cs_order_number,
               resolve_integer<CS_PRICING_QUANTITY>(catalog_sales.cs_pricing.quantity),
               resolve_decimal<CS_PRICING_WHOLESALE_COST>(catalog_sales.cs_pricing.wholesale_cost),
               resolve_decimal<CS_PRICING_LIST_PRICE>(catalog_sales.cs_pricing.list_price),
@@ -496,8 +487,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         if (was_returned != 0) {
           catalog_returns_builder.append_row(
               resolve_key<CR_RETURNED_DATE_SK>(catalog_returns.cr_returned_date_sk),
-              resolve_key<CR_RETURNED_TIME_SK>(catalog_returns.cr_returned_time_sk),
-                catalog_returns.cr_item_sk,
+              resolve_key<CR_RETURNED_TIME_SK>(catalog_returns.cr_returned_time_sk), catalog_returns.cr_item_sk,
               resolve_key<CR_REFUNDED_CUSTOMER_SK>(catalog_returns.cr_refunded_customer_sk),
               resolve_key<CR_REFUNDED_CDEMO_SK>(catalog_returns.cr_refunded_cdemo_sk),
               resolve_key<CR_REFUNDED_HDEMO_SK>(catalog_returns.cr_refunded_hdemo_sk),
@@ -510,8 +500,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_key<CR_CATALOG_PAGE_SK>(catalog_returns.cr_catalog_page_sk),
               resolve_key<CR_SHIP_MODE_SK>(catalog_returns.cr_ship_mode_sk),
               resolve_key<CR_WAREHOUSE_SK>(catalog_returns.cr_warehouse_sk),
-              resolve_key<CR_REASON_SK>(catalog_returns.cr_reason_sk),
-                catalog_returns.cr_order_number,
+              resolve_key<CR_REASON_SK>(catalog_returns.cr_reason_sk), catalog_returns.cr_order_number,
               resolve_integer<CR_PRICING_QUANTITY>(catalog_returns.cr_pricing.quantity),
               resolve_decimal<CR_PRICING_NET_PAID>(catalog_returns.cr_pricing.net_paid),
               resolve_decimal<CR_PRICING_EXT_TAX>(catalog_returns.cr_pricing.ext_tax),
@@ -610,8 +599,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_demographics(ds_ke
             customer_demographics_first + i);
 
     customer_demographics_builder.append_row(
-        customer_demographics.cd_demo_sk,
-        resolve_string<CD_GENDER>(customer_demographics.cd_gender),
+        customer_demographics.cd_demo_sk, resolve_string<CD_GENDER>(customer_demographics.cd_gender),
         resolve_string<CD_MARITAL_STATUS>(customer_demographics.cd_marital_status),
         resolve_string<CD_EDUCATION_STATUS>(customer_demographics.cd_education_status),
         resolve_integer<CD_PURCHASE_ESTIMATE>(customer_demographics.cd_purchase_estimate),
@@ -637,35 +625,25 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_date(ds_key_t max_rows) con
     auto quarter_name = pmr_string{std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy)};
 
     date_builder.append_row(
-      date.d_date_sk,
-      date.d_date_id,
+        date.d_date_sk, date.d_date_id,
 
-      resolve_date_id<D_DATE_SK>(date.d_date_sk),
-      resolve_integer<D_MONTH_SEQ>(date.d_month_seq),
-      resolve_integer<D_WEEK_SEQ>(date.d_week_seq),
-      resolve_integer<D_QUARTER_SEQ>(date.d_quarter_seq),
-      resolve_integer<D_YEAR>(date.d_year),
-      resolve_integer<D_DOW>(date.d_dow),
-      resolve_integer<D_MOY>(date.d_moy),
-      resolve_integer<D_DOM>(date.d_dom),
-      resolve_integer<D_QOY>(date.d_qoy),
-      resolve_integer<D_FY_YEAR>(date.d_fy_year),
-      resolve_integer<D_FY_QUARTER_SEQ>(date.d_fy_quarter_seq),
-      resolve_integer<D_FY_WEEK_SEQ>(date.d_fy_week_seq),
-      resolve_string<D_DAY_NAME>(date.d_day_name),
-      resolve_string<D_QUARTER_NAME>(std::move(quarter_name)),
-      resolve_string<D_HOLIDAY>(boolean_to_string(date.d_holiday)),
-      resolve_string<D_WEEKEND>(boolean_to_string(date.d_weekend)),
-      resolve_string<D_FOLLOWING_HOLIDAY>(boolean_to_string(date.d_following_holiday)),
-      resolve_integer<D_FIRST_DOM>(date.d_first_dom),
-      resolve_integer<D_LAST_DOM>(date.d_last_dom),
-      resolve_integer<D_SAME_DAY_LY>(date.d_same_day_ly),
-      resolve_integer<D_SAME_DAY_LQ>(date.d_same_day_lq),
-      resolve_string<D_CURRENT_DAY>(boolean_to_string(date.d_current_day)),
-      resolve_string<D_CURRENT_WEEK>(boolean_to_string(date.d_current_week)),
-      resolve_string<D_CURRENT_MONTH>(boolean_to_string(date.d_current_month)),
-      resolve_string<D_CURRENT_QUARTER>(boolean_to_string(date.d_current_quarter)),
-      resolve_string<D_CURRENT_YEAR>(boolean_to_string(date.d_current_year)));
+        resolve_date_id<D_DATE_SK>(date.d_date_sk), resolve_integer<D_MONTH_SEQ>(date.d_month_seq),
+        resolve_integer<D_WEEK_SEQ>(date.d_week_seq), resolve_integer<D_QUARTER_SEQ>(date.d_quarter_seq),
+        resolve_integer<D_YEAR>(date.d_year), resolve_integer<D_DOW>(date.d_dow), resolve_integer<D_MOY>(date.d_moy),
+        resolve_integer<D_DOM>(date.d_dom), resolve_integer<D_QOY>(date.d_qoy),
+        resolve_integer<D_FY_YEAR>(date.d_fy_year), resolve_integer<D_FY_QUARTER_SEQ>(date.d_fy_quarter_seq),
+        resolve_integer<D_FY_WEEK_SEQ>(date.d_fy_week_seq), resolve_string<D_DAY_NAME>(date.d_day_name),
+        resolve_string<D_QUARTER_NAME>(std::move(quarter_name)),
+        resolve_string<D_HOLIDAY>(boolean_to_string(date.d_holiday)),
+        resolve_string<D_WEEKEND>(boolean_to_string(date.d_weekend)),
+        resolve_string<D_FOLLOWING_HOLIDAY>(boolean_to_string(date.d_following_holiday)),
+        resolve_integer<D_FIRST_DOM>(date.d_first_dom), resolve_integer<D_LAST_DOM>(date.d_last_dom),
+        resolve_integer<D_SAME_DAY_LY>(date.d_same_day_ly), resolve_integer<D_SAME_DAY_LQ>(date.d_same_day_lq),
+        resolve_string<D_CURRENT_DAY>(boolean_to_string(date.d_current_day)),
+        resolve_string<D_CURRENT_WEEK>(boolean_to_string(date.d_current_week)),
+        resolve_string<D_CURRENT_MONTH>(boolean_to_string(date.d_current_month)),
+        resolve_string<D_CURRENT_QUARTER>(boolean_to_string(date.d_current_quarter)),
+        resolve_string<D_CURRENT_YEAR>(boolean_to_string(date.d_current_year)));
   }
 
   return date_builder.finish_table();
@@ -706,10 +684,9 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_income_band(ds_key_t max_ro
   for (auto i = ds_key_t{0}; i < income_band_count; i++) {
     const auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL, &mk_w_income_band, INCOME_BAND>(income_band_first + i);
 
-    income_band_builder.append_row(
-      income_band.ib_income_band_id,
-      resolve_integer<IB_LOWER_BOUND>(income_band.ib_lower_bound),
-      resolve_integer<IB_UPPER_BOUND>(income_band.ib_upper_bound));
+    income_band_builder.append_row(income_band.ib_income_band_id,
+                                   resolve_integer<IB_LOWER_BOUND>(income_band.ib_lower_bound),
+                                   resolve_integer<IB_UPPER_BOUND>(income_band.ib_upper_bound));
   }
 
   return income_band_builder.finish_table();
@@ -725,11 +702,8 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_inventory(ds_key_t max_rows
   for (auto i = ds_key_t{0}; i < inventory_count; i++) {
     const auto inventory = call_dbgen_mk<W_INVENTORY_TBL, &mk_w_inventory, INVENTORY>(inventory_first + i);
 
-    inventory_builder.append_row(
-      inventory.inv_date_sk,
-      inventory.inv_item_sk,
-      inventory.inv_warehouse_sk,
-      resolve_integer<INV_QUANTITY_ON_HAND>(inventory.inv_quantity_on_hand));
+    inventory_builder.append_row(inventory.inv_date_sk, inventory.inv_item_sk, inventory.inv_warehouse_sk,
+                                 resolve_integer<INV_QUANTITY_ON_HAND>(inventory.inv_quantity_on_hand));
   }
 
   return inventory_builder.finish_table();
@@ -802,10 +776,8 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_reason(ds_key_t max_rows) c
   for (auto i = ds_key_t{0}; i < reason_count; i++) {
     const auto reason = call_dbgen_mk<W_REASON_TBL, &mk_w_reason, REASON>(reason_first + i);
 
-    reason_builder.append_row(
-      reason.r_reason_sk,
-      reason.r_reason_id,
-      resolve_string<R_REASON_DESCRIPTION>(reason.r_reason_description));
+    reason_builder.append_row(reason.r_reason_sk, reason.r_reason_id,
+                              resolve_string<R_REASON_DESCRIPTION>(reason.r_reason_description));
   }
 
   return reason_builder.finish_table();
@@ -821,14 +793,11 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_ship_mode(ds_key_t max_rows
   for (auto i = ds_key_t{0}; i < ship_mode_count; i++) {
     const auto ship_mode = call_dbgen_mk<W_SHIP_MODE_TBL, &mk_w_ship_mode, SHIP_MODE>(ship_mode_first + i);
 
-    ship_mode_builder.append_row(
-      ship_mode.sm_ship_mode_sk,
-      ship_mode.sm_ship_mode_id,
+    ship_mode_builder.append_row(ship_mode.sm_ship_mode_sk, ship_mode.sm_ship_mode_id,
 
-      resolve_string<SM_TYPE>(ship_mode.sm_type),
-      resolve_string<SM_CODE>(ship_mode.sm_code),
-      resolve_string<SM_CARRIER>(ship_mode.sm_carrier),
-      resolve_string<SM_CONTRACT>(ship_mode.sm_contract));
+                                 resolve_string<SM_TYPE>(ship_mode.sm_type), resolve_string<SM_CODE>(ship_mode.sm_code),
+                                 resolve_string<SM_CARRIER>(ship_mode.sm_carrier),
+                                 resolve_string<SM_CONTRACT>(ship_mode.sm_contract));
   }
 
   return ship_mode_builder.finish_table();
@@ -845,25 +814,19 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) co
     const auto store = call_dbgen_mk<W_STORE_TBL, &mk_w_store, STORE>(store_first + i);
 
     store_builder.append_row(
-        store.store_sk,
-        store.store_id,
+        store.store_sk, store.store_id,
 
         resolve_date_id<W_STORE_REC_START_DATE_ID>(store.rec_start_date_id),
         resolve_date_id<W_STORE_REC_END_DATE_ID>(store.rec_end_date_id),
-        resolve_key<W_STORE_CLOSED_DATE_ID>(store.closed_date_id),
-        resolve_string<W_STORE_NAME>(store.store_name),
-        resolve_integer<W_STORE_EMPLOYEES>(store.employees),
-        resolve_integer<W_STORE_FLOOR_SPACE>(store.floor_space),
-        resolve_string<W_STORE_HOURS>(store.hours),
-        resolve_string<W_STORE_MANAGER>(store.store_manager),
+        resolve_key<W_STORE_CLOSED_DATE_ID>(store.closed_date_id), resolve_string<W_STORE_NAME>(store.store_name),
+        resolve_integer<W_STORE_EMPLOYEES>(store.employees), resolve_integer<W_STORE_FLOOR_SPACE>(store.floor_space),
+        resolve_string<W_STORE_HOURS>(store.hours), resolve_string<W_STORE_MANAGER>(store.store_manager),
         resolve_integer<W_STORE_MARKET_ID>(store.market_id),
         resolve_string<W_STORE_GEOGRAPHY_CLASS>(store.geography_class),
         resolve_string<W_STORE_MARKET_DESC>(store.market_desc),
         resolve_string<W_STORE_MARKET_MANAGER>(store.market_manager),
-        resolve_key<W_STORE_DIVISION_ID>(store.division_id),
-        resolve_string<W_STORE_DIVISION_NAME>(store.division_name),
-        resolve_key<W_STORE_COMPANY_ID>(store.company_id),
-        resolve_string<W_STORE_COMPANY_NAME>(store.company_name),
+        resolve_key<W_STORE_DIVISION_ID>(store.division_id), resolve_string<W_STORE_DIVISION_NAME>(store.division_name),
+        resolve_key<W_STORE_COMPANY_ID>(store.company_id), resolve_string<W_STORE_COMPANY_NAME>(store.company_name),
         resolve_string<W_STORE_ADDRESS_STREET_NUM>(pmr_string{std::to_string(store.address.street_num)}),
         resolve_street_name<W_STORE_ADDRESS_STREET_NAME1>(store.address),
         resolve_string<W_STORE_ADDRESS_STREET_TYPE>(store.address.street_type),
@@ -906,15 +869,13 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         if (store_sales_builder.row_count() < max_rows) {
           store_sales_builder.append_row(
               resolve_key<SS_SOLD_DATE_SK>(store_sales.ss_sold_date_sk),
-              resolve_key<SS_SOLD_TIME_SK>(store_sales.ss_sold_time_sk),
-                store_sales.ss_sold_item_sk,
+              resolve_key<SS_SOLD_TIME_SK>(store_sales.ss_sold_time_sk), store_sales.ss_sold_item_sk,
               resolve_key<SS_SOLD_CUSTOMER_SK>(store_sales.ss_sold_customer_sk),
               resolve_key<SS_SOLD_CDEMO_SK>(store_sales.ss_sold_cdemo_sk),
               resolve_key<SS_SOLD_HDEMO_SK>(store_sales.ss_sold_hdemo_sk),
               resolve_key<SS_SOLD_ADDR_SK>(store_sales.ss_sold_addr_sk),
               resolve_key<SS_SOLD_STORE_SK>(store_sales.ss_sold_store_sk),
-              resolve_key<SS_SOLD_PROMO_SK>(store_sales.ss_sold_promo_sk),
-                store_sales.ss_ticket_number,
+              resolve_key<SS_SOLD_PROMO_SK>(store_sales.ss_sold_promo_sk), store_sales.ss_ticket_number,
               resolve_integer<SS_PRICING_QUANTITY>(store_sales.ss_pricing.quantity),
               resolve_decimal<SS_PRICING_WHOLESALE_COST>(store_sales.ss_pricing.wholesale_cost),
               resolve_decimal<SS_PRICING_LIST_PRICE>(store_sales.ss_pricing.list_price),
@@ -934,13 +895,11 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         if (was_returned != 0) {
           store_returns_builder.append_row(
               resolve_key<SR_RETURNED_DATE_SK>(store_returns.sr_returned_date_sk),
-              resolve_key<SR_RETURNED_TIME_SK>(store_returns.sr_returned_time_sk),
-                store_returns.sr_item_sk,
+              resolve_key<SR_RETURNED_TIME_SK>(store_returns.sr_returned_time_sk), store_returns.sr_item_sk,
               resolve_key<SR_CUSTOMER_SK>(store_returns.sr_customer_sk),
               resolve_key<SR_CDEMO_SK>(store_returns.sr_cdemo_sk), resolve_key<SR_HDEMO_SK>(store_returns.sr_hdemo_sk),
               resolve_key<SR_ADDR_SK>(store_returns.sr_addr_sk), resolve_key<SR_STORE_SK>(store_returns.sr_store_sk),
-              resolve_key<SR_REASON_SK>(store_returns.sr_reason_sk),
-                store_returns.sr_ticket_number,
+              resolve_key<SR_REASON_SK>(store_returns.sr_reason_sk), store_returns.sr_ticket_number,
               resolve_integer<SR_PRICING_QUANTITY>(store_returns.sr_pricing.quantity),
               resolve_decimal<SR_PRICING_NET_PAID>(store_returns.sr_pricing.net_paid),
               resolve_decimal<SR_PRICING_EXT_TAX>(store_returns.sr_pricing.ext_tax),
@@ -976,21 +935,15 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_time(ds_key_t max_rows) con
   for (auto i = ds_key_t{0}; i < time_count; i++) {
     const auto time = call_dbgen_mk<W_TIME_TBL, &mk_w_time, TIME>(time_first + i);
 
-    time_builder.append_row(
-      time.t_time_sk,
-      time.t_time_id,
-      resolve_integer<T_TIME>(time.t_time),
+    time_builder.append_row(time.t_time_sk, time.t_time_id, resolve_integer<T_TIME>(time.t_time),
 
-      resolve_integer<T_HOUR>(time.t_hour),
-        resolve_integer<T_MINUTE>(time.t_minute),
+                            resolve_integer<T_HOUR>(time.t_hour), resolve_integer<T_MINUTE>(time.t_minute),
 
-        resolve_integer<T_SECOND>(time.t_second),
-          resolve_string<T_AM_PM>(time.t_am_pm),
+                            resolve_integer<T_SECOND>(time.t_second), resolve_string<T_AM_PM>(time.t_am_pm),
 
-          resolve_string<T_SHIFT>(time.t_shift),
-            resolve_string<T_SUB_SHIFT>(time.t_sub_shift),
+                            resolve_string<T_SHIFT>(time.t_shift), resolve_string<T_SUB_SHIFT>(time.t_sub_shift),
 
-          resolve_string<T_MEAL_TIME>(time.t_meal_time));
+                            resolve_string<T_MEAL_TIME>(time.t_meal_time));
   }
 
   return time_builder.finish_table();
@@ -1007,21 +960,20 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_warehouse(ds_key_t max_rows
     const auto warehouse = call_dbgen_mk<W_WAREHOUSE_TBL, &mk_w_warehouse, WAREHOUSE>(warehouse_first + i);
 
     warehouse_builder.append_row(
-      warehouse.w_warehouse_sk,
-      warehouse.w_warehouse_id,
+        warehouse.w_warehouse_sk, warehouse.w_warehouse_id,
 
-      resolve_string<W_WAREHOUSE_NAME>(warehouse.w_warehouse_name),
-      resolve_integer<W_WAREHOUSE_SQ_FT>(warehouse.w_warehouse_sq_ft),
-      resolve_string<W_ADDRESS_STREET_NUM>(pmr_string{std::to_string(warehouse.w_address.street_num)}),
-      resolve_street_name<W_ADDRESS_STREET_NAME1>(warehouse.w_address),
-      resolve_string<W_ADDRESS_STREET_TYPE>(warehouse.w_address.street_type),
-      resolve_string<W_ADDRESS_SUITE_NUM>(warehouse.w_address.suite_num),
-      resolve_string<W_ADDRESS_CITY>(warehouse.w_address.city),
-      resolve_string<W_ADDRESS_COUNTY>(warehouse.w_address.county),
-      resolve_string<W_ADDRESS_STATE>(warehouse.w_address.state),
-      resolve_string<W_ADDRESS_ZIP>(zip_to_string(warehouse.w_address.zip)),
-      resolve_string<W_ADDRESS_COUNTRY>(warehouse.w_address.country),
-      resolve_decimal<W_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(warehouse.w_address.gmt_offset)));
+        resolve_string<W_WAREHOUSE_NAME>(warehouse.w_warehouse_name),
+        resolve_integer<W_WAREHOUSE_SQ_FT>(warehouse.w_warehouse_sq_ft),
+        resolve_string<W_ADDRESS_STREET_NUM>(pmr_string{std::to_string(warehouse.w_address.street_num)}),
+        resolve_street_name<W_ADDRESS_STREET_NAME1>(warehouse.w_address),
+        resolve_string<W_ADDRESS_STREET_TYPE>(warehouse.w_address.street_type),
+        resolve_string<W_ADDRESS_SUITE_NUM>(warehouse.w_address.suite_num),
+        resolve_string<W_ADDRESS_CITY>(warehouse.w_address.city),
+        resolve_string<W_ADDRESS_COUNTY>(warehouse.w_address.county),
+        resolve_string<W_ADDRESS_STATE>(warehouse.w_address.state),
+        resolve_string<W_ADDRESS_ZIP>(zip_to_string(warehouse.w_address.zip)),
+        resolve_string<W_ADDRESS_COUNTRY>(warehouse.w_address.country),
+        resolve_decimal<W_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(warehouse.w_address.gmt_offset)));
   }
 
   return warehouse_builder.finish_table();
@@ -1080,8 +1032,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
           web_sales_builder.append_row(
               resolve_key<WS_SOLD_DATE_SK>(web_sales.ws_sold_date_sk),
               resolve_key<WS_SOLD_TIME_SK>(web_sales.ws_sold_time_sk),
-              resolve_key<WS_SHIP_DATE_SK>(web_sales.ws_ship_date_sk),
-              web_sales.ws_item_sk,
+              resolve_key<WS_SHIP_DATE_SK>(web_sales.ws_ship_date_sk), web_sales.ws_item_sk,
               resolve_key<WS_BILL_CUSTOMER_SK>(web_sales.ws_bill_customer_sk),
               resolve_key<WS_BILL_CDEMO_SK>(web_sales.ws_bill_cdemo_sk),
               resolve_key<WS_BILL_HDEMO_SK>(web_sales.ws_bill_hdemo_sk),
@@ -1093,10 +1044,8 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_key<WS_WEB_PAGE_SK>(web_sales.ws_web_page_sk),
               resolve_key<WS_WEB_SITE_SK>(web_sales.ws_web_site_sk),
               resolve_key<WS_SHIP_MODE_SK>(web_sales.ws_ship_mode_sk),
-              resolve_key<WS_WAREHOUSE_SK>(web_sales.ws_warehouse_sk),
-              resolve_key<WS_PROMO_SK>(web_sales.ws_promo_sk),
-              web_sales.ws_order_number,
-              resolve_integer<WS_PRICING_QUANTITY>(web_sales.ws_pricing.quantity),
+              resolve_key<WS_WAREHOUSE_SK>(web_sales.ws_warehouse_sk), resolve_key<WS_PROMO_SK>(web_sales.ws_promo_sk),
+              web_sales.ws_order_number, resolve_integer<WS_PRICING_QUANTITY>(web_sales.ws_pricing.quantity),
               resolve_decimal<WS_PRICING_WHOLESALE_COST>(web_sales.ws_pricing.wholesale_cost),
               resolve_decimal<WS_PRICING_LIST_PRICE>(web_sales.ws_pricing.list_price),
               resolve_decimal<WS_PRICING_SALES_PRICE>(web_sales.ws_pricing.sales_price),
@@ -1117,8 +1066,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         if (was_returned != 0) {
           web_returns_builder.append_row(
               resolve_key<WR_RETURNED_DATE_SK>(web_returns.wr_returned_date_sk),
-              resolve_key<WR_RETURNED_TIME_SK>(web_returns.wr_returned_time_sk),
-                web_returns.wr_item_sk,
+              resolve_key<WR_RETURNED_TIME_SK>(web_returns.wr_returned_time_sk), web_returns.wr_item_sk,
               resolve_key<WR_REFUNDED_CUSTOMER_SK>(web_returns.wr_refunded_customer_sk),
               resolve_key<WR_REFUNDED_CDEMO_SK>(web_returns.wr_refunded_cdemo_sk),
               resolve_key<WR_REFUNDED_HDEMO_SK>(web_returns.wr_refunded_hdemo_sk),
@@ -1128,8 +1076,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_key<WR_RETURNING_HDEMO_SK>(web_returns.wr_returning_hdemo_sk),
               resolve_key<WR_RETURNING_ADDR_SK>(web_returns.wr_returning_addr_sk),
               resolve_key<WR_WEB_PAGE_SK>(web_returns.wr_web_page_sk),
-              resolve_key<WR_REASON_SK>(web_returns.wr_reason_sk),
-                web_returns.wr_order_number,
+              resolve_key<WR_REASON_SK>(web_returns.wr_reason_sk), web_returns.wr_order_number,
               resolve_integer<WR_PRICING_QUANTITY>(web_returns.wr_pricing.quantity),
               resolve_decimal<WR_PRICING_NET_PAID>(web_returns.wr_pricing.net_paid),
               resolve_decimal<WR_PRICING_EXT_TAX>(web_returns.wr_pricing.ext_tax),
