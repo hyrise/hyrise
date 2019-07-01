@@ -44,6 +44,12 @@ def main():
   benchmark.expect("Running subset of queries: 21c,22b,23c,24a")
   benchmark.expect("-> Executed")
 
+  close_benchmark(benchmark)
+  check_exit_status(benchmark)
+
+  if benchmark.before.count('Verification failed'):
+    return_error = True
+
   if not os.path.isfile(arguments["--output"].replace("'", "")):
     print ("ERROR: Cannot find output file " + arguments["--output"])
     return_error = True
@@ -52,16 +58,14 @@ def main():
     output = json.load(f)
 
   return_error = check_json(not output["summary"]["table_size_in_bytes"], 0, "Table size is zero.", return_error)
-  return_error = check_json(output["benchmarks"][0]["name"], arguments["--queries"].replace("'", '').split(',')[0], "Query doesn't match with JSON:", return_error)
+  for i in xrange(0,4):
+    return_error = check_json(output["benchmarks"][i]["name"], arguments["--queries"].replace("'", '').split(',')[i], "Query doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_duration"], int(arguments["--time"]) * 1e9, "Max duration doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_runs"], int(arguments["--runs"]), "Max runs don't match with JSON:", return_error)
   return_error = check_json(output["context"]["benchmark_mode"], arguments["--mode"].replace("'", ''), "Benchmark mode doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["encoding"]["default"]["encoding"], arguments["--encoding"].replace("'", ''), "Encoding doesn't match with JSON:", return_error)
   return_error = check_json(str(output["context"]["using_scheduler"]).lower(), arguments["--scheduler"], "Scheduler doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error)
-
-  close_benchmark(benchmark)
-  check_exit_status(benchmark)
 
   if not glob.glob(arguments["--table_path"].replace("'", '') + "*.bin"):
     print ("ERROR: Cannot find binary tables in " + arguments["--table_path"])
@@ -99,9 +103,6 @@ def main():
   benchmark.expect("Running on tables from resources/test_data/imdb_sample/")
   benchmark.expect("Running subset of queries: 3b")
   benchmark.expect("Multi-threaded Topology:")
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)

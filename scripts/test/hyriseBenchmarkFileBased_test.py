@@ -46,6 +46,9 @@ def main():
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
+  if benchmark.before.count('Verification failed'):
+    return_error = True
+
   if not glob.glob(arguments["--table_path"].replace("'", '') + "*.bin"):
     print ("ERROR: Cannot find binary tables in " + arguments["--table_path"])
     return_error = True
@@ -99,9 +102,6 @@ def main():
   benchmark.expect("Running on tables from resources/test_data/tbl/file_based/")
   benchmark.expect("Running subset of queries: select_statement")
   benchmark.expect("Multi-threaded Topology:")
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)

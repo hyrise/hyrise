@@ -18,7 +18,7 @@ def check_json(json, argument, error, return_error, difference=None):
       print("ERROR: " + error + " " + str(json) + " " + str(argument))
       return True
   else:
-    if abs(json - argument) < difference:
+    if abs(json - argument) > difference:
       print("ERROR: " + error + " " + str(json) + " " + str(argument) + " " + str(difference))
       return True
   return return_error
@@ -39,7 +39,6 @@ def initialize(arguments, benchmark_name, verbose):
   build_dir = sys.argv[1]
 
   concat_arguments = ' '.join(['='.join(map(str, x)) for x in arguments.items()])
-  print(concat_arguments)
 
   benchmark = pexpect.spawn(build_dir + "/" + benchmark_name + " " + concat_arguments, maxread=1000000, timeout=600, dimensions=(200, 64))
   if verbose:

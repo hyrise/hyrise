@@ -19,6 +19,7 @@ def main():
   arguments["--runs"] = "100"
   arguments["--output"] = "'json_output.txt'"
   arguments["--mode"] = "'Shuffled'"
+  arguments["--encoding"] = "'Dictionary'"
   arguments["--compression"] = "'Fixed-size byte-aligned'"
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
@@ -44,12 +45,16 @@ def main():
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
+  if benchmark.before.count('Verification failed'):
+    return_error = True
+    
   if not os.path.isfile(arguments["--output"].replace("'", "")):
     print ("ERROR: Cannot find output file " + arguments["--output"])
     return_error = True
 
   with open(arguments["--output"].replace("'", '')) as f:
     output = json.load(f)
+
 
   return_error = check_json(not output["summary"]["table_size_in_bytes"], 0, "Table size is zero.", return_error)
   return_error = check_json(output["context"]["scale_factor"], float(arguments["--scale"]), "Scale factor doesn't match with JSON:", return_error, 0.001)
@@ -76,7 +81,7 @@ def main():
   arguments["--visualize"] = "true"
   arguments["--verify"] = "true"
 
-  benchmark = initialize(arguments2, "hyriseBenchmarkTPCH", True)
+  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
   benchmark.expect("Running in multi-threaded mode using all available cores")
   benchmark.expect("4 simulated clients are scheduling items in parallel")
@@ -94,9 +99,6 @@ def main():
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
 
   if return_error:
     sys.exit(1)
