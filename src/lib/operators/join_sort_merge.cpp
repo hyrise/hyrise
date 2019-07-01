@@ -61,7 +61,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
                   !_secondary_predicates.empty()),
-         "JoinHash doesn't support these parameters");
+         "JoinSortMerge doesn't support these parameters");
 
   // Check column types
   const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);
