@@ -21,6 +21,7 @@
 #include "operators/index_scan.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/validate.hpp"
 
 #include "storage/base_segment.hpp"
 #include "storage/encoding_type.hpp"
@@ -39,6 +40,7 @@ class CalibrationFeatureExtractor {
 
   static const std::optional<TableScanFeatures> _extract_features_for_operator(const std::shared_ptr<const TableScan>& op);
   static const TableScanFeatures _extract_features_for_operator(const std::shared_ptr<const IndexScan>& op);
+  static const std::optional<TableScanFeatures> _extract_features_for_operator(const std::shared_ptr<const Validate>& op);
   static const ProjectionFeatures _extract_features_for_operator(const std::shared_ptr<const Projection>& op);
   static const JoinFeatures _extract_features_for_operator(const std::shared_ptr<const AbstractJoinOperator>& op);
   static const AggregateFeatures _extract_features_for_operator(

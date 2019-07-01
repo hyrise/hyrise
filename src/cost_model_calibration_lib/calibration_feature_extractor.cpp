@@ -37,6 +37,16 @@ const std::optional<CostModelFeatures> CalibrationFeatureExtractor::extract_feat
       calibration_result.table_scan_features = _extract_features_for_operator(index_scan_op);
       break;
     }
+    case OperatorType::Validate: {
+      const auto validate_op = std::static_pointer_cast<const Validate>(op);
+
+      const auto table_scan_features = _extract_features_for_operator(validate_op);
+      if (table_scan_features)
+        calibration_result.table_scan_features = *table_scan_features;
+      else
+        return std::nullopt;
+      break;
+    }
     case OperatorType::GetTable:
       // No need to add specific features
       break;
@@ -171,6 +181,18 @@ const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_opera
   const auto column_expression = PQPColumnExpression::from_table(*left_input_table, left_column_ids.front());
   features.first_column = _extract_features_for_column_expression(left_input_table, column_expression, "first");
 
+  return features;
+}
+
+const std::optional<TableScanFeatures> CalibrationFeatureExtractor::_extract_features_for_operator(
+    const std::shared_ptr<const Validate>& op) {
+  TableScanFeatures features{};
+
+  auto left_input_table = op->input_table_left();
+  if (left_input_table->row_count() == 0 || left_input_table->chunk_count() == 0)
+    return std::nullopt;
+
+  features.effective_chunk_count = left_input_table->chunk_count();
   return features;
 }
 
