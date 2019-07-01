@@ -121,13 +121,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     const auto index_chunk = index_input_table->get_chunk(index_chunk_id);
     if (!index_chunk) continue;
 
-    const auto indices = index_chunk->get_indices(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
+    const auto indexes = index_chunk->get_indexes(std::vector<ColumnID>{_primary_predicate.column_ids.second});
     std::shared_ptr<BaseIndex> index = nullptr;
 
-    if (!indices.empty()) {
+    if (!indexes.empty()) {
       // We assume the first index to be efficient for our join
       // as we do not want to spend time on evaluating the best index inside of this join loop
-      index = indices.front();
+      index = indexes.front();
     }
 
     // Scan all chunks from the pruning side input

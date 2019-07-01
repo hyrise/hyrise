@@ -9,7 +9,7 @@
 #include "base_segment.hpp"
 #include "boost/variant.hpp"
 #include "chunk.hpp"
-#include "storage/index/index_info.hpp"
+#include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -163,7 +163,7 @@ class Table : private Noncopyable {
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
   /** @} */
 
-  std::vector<IndexInfo> get_indexes() const;
+  std::vector<IndexStatistics> indexes_statistics() const;
 
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
@@ -176,8 +176,8 @@ class Table : private Noncopyable {
 
       chunk->create_index<Index>(column_ids);
     }
-    IndexInfo i = {column_ids, name, index_type};
-    _indexes.emplace_back(i);
+    IndexStatistics index_statistics = {column_ids, name, index_type};
+    _indexes.emplace_back(index_statistics);
   }
 
   /**
@@ -191,8 +191,8 @@ class Table : private Noncopyable {
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
-  std::unique_ptr<std::mutex> _append_mutex;
-  std::vector<IndexInfo> _indexes;
   std::shared_ptr<TableStatistics> _table_statistics;
+  std::unique_ptr<std::mutex> _append_mutex;
+  std::vector<IndexStatistics> _indexes;
 };
 }  // namespace opossum
