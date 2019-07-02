@@ -31,7 +31,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
     auto& sm = StorageManager::get();
-    const auto scale_factor = 20.0f;
+    const auto scale_factor = 0.001f;
     const auto default_encoding = EncodingType::Dictionary;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();
@@ -290,15 +290,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationLarger)(
   for (auto _ : state) {
     auto join = std::make_shared<JoinSortMerge>(
         _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
-  }
-}
-
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_LargeHashJoin)(benchmark::State& state) {
-  for (auto _ : state) {
-    auto join = std::make_shared<JoinHash>(
-        _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();
   }
