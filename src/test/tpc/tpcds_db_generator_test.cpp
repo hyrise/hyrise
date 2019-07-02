@@ -110,19 +110,17 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
    * Check whether the data that TpcdsTableGenerator generates is the exact same that dsdgen generates.
    * Since dsdgen does not support very small scale factors only generate and check first rows for each table.
    */
-  constexpr auto rows_to_check = ds_key_t{50};
+  const auto rows_to_check = ds_key_t{50};
 
   // Run generation twice to make sure no global state (of which tpcds_dbgen has plenty :( ) from the
   //  first generation process carried over into the second
   for (auto i = 1; i <= 2; i++) {
     std::cout << "TableContentsFirstRows pass " << i << std::endl;
-    const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0);
+    const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 305);
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_call_center(rows_to_check), load_csv("call_center.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_catalog_page(rows_to_check), load_csv("catalog_page.csv"));
     const auto [catalog_sales_table, catalog_returns_table] =
         table_generator.generate_catalog_sales_and_returns(rows_to_check);
-    EXPECT_EQ(catalog_sales_table->row_count(), rows_to_check);
-    EXPECT_EQ(catalog_returns_table->row_count(), rows_to_check);
     EXPECT_TABLE_EQ_ORDERED(catalog_sales_table, load_csv("catalog_sales.csv"));
     EXPECT_TABLE_EQ_ORDERED(catalog_returns_table, load_csv("catalog_returns.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_customer_address(rows_to_check), load_csv("customer_address.csv"));
@@ -141,16 +139,12 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_store(rows_to_check), load_csv("store.csv"));
     const auto [store_sales_table, store_returns_table] =
         table_generator.generate_store_sales_and_returns(rows_to_check);
-    EXPECT_EQ(store_sales_table->row_count(), rows_to_check);
-    EXPECT_EQ(store_returns_table->row_count(), rows_to_check);
     EXPECT_TABLE_EQ_ORDERED(store_sales_table, load_csv("store_sales.csv"));
     EXPECT_TABLE_EQ_ORDERED(store_returns_table, load_csv("store_returns.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_time(rows_to_check), load_csv("time_dim.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_warehouse(rows_to_check), load_csv("warehouse.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_page(rows_to_check), load_csv("web_page.csv"));
     const auto [web_sales_table, web_returns_table] = table_generator.generate_web_sales_and_returns(rows_to_check);
-    EXPECT_EQ(web_sales_table->row_count(), rows_to_check);
-    EXPECT_EQ(web_returns_table->row_count(), rows_to_check);
     EXPECT_TABLE_EQ_ORDERED(web_sales_table, load_csv("web_sales.csv"));
     EXPECT_TABLE_EQ_ORDERED(web_returns_table, load_csv("web_returns.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_site(rows_to_check), load_csv("web_site.csv"));

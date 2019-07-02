@@ -113,7 +113,7 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
 
 pmr_string boolean_to_string(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
 
-template <int column_id = 0>  // TODO remove " = 0"
+template <int column_id>
 std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
   if (date_id <= 0 || nullCheck(column_id)) {
     return std::nullopt;
@@ -128,7 +128,7 @@ std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
   return result;
 }
 
-template <int column_id = 0>  // TODO remove " = 0"
+template <int column_id>
 std::optional<tpcds_key_t> resolve_key(ds_key_t key) {
   return nullCheck(column_id) || key == -1 ? std::nullopt : std::optional{static_cast<tpcds_key_t>(key)};
 }
@@ -150,7 +150,7 @@ std::optional<float> resolve_decimal(decimal_t decimal) {
   return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(result / 10)};
 }
 
-template <int column_id = 0>  // TODO: remove " = 0"
+template <int column_id>
 std::optional<pmr_string> resolve_street_name(const ds_addr_t& address) {
   return nullCheck(column_id) ? std::nullopt
                               : address.street_name2 == nullptr
@@ -169,8 +169,6 @@ decimal_t gmt_offset_to_decimal(int32_t gmt_offset) {
   itodec(&gmt_offset_decimal, gmt_offset * 10);
   return gmt_offset_decimal;
 }
-
-// TODO: resolve time
 
 // mapping types used by tpcds-dbgen as follows:
 // ds_key_t -> tpcds_key_t
@@ -344,7 +342,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   table_info_by_name["web_site"].table = generate_web_site();
   std::cout << "web_site table generated" << std::endl;
 
-  // TODO(pascal): dbgen cleanup?
+  // TODO: dbgen cleanup?
 
   return table_info_by_name;
 }
@@ -424,7 +422,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_catalog_page(ds_key_t max_r
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_catalog_sales_and_returns(
-    size_t max_rows) const {
+    ds_key_t max_rows) const {
   auto [catalog_sales_first, catalog_sales_count] = prepare_for_table(CATALOG_SALES);
   // catalog_sales_count is NOT the actual number of catalog sales created, for each of these "master" catalog_sales
   // multiple "detail" catalog sales are created and possibly returned
@@ -448,7 +446,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         int was_returned = 0;
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
-        if (catalog_sales_builder.row_count() < max_rows) {
+        if (catalog_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
           catalog_sales_builder.append_row(
               resolve_key<CS_SOLD_DATE_SK>(catalog_sales.cs_sold_date_sk),
               resolve_key<CS_SOLD_TIME_SK>(catalog_sales.cs_sold_time_sk),
@@ -512,14 +510,14 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_decimal<CR_PRICING_STORE_CREDIT>(catalog_returns.cr_pricing.store_credit),
               resolve_decimal<CR_PRICING_NET_LOSS>(catalog_returns.cr_pricing.net_loss));
 
-          if (catalog_returns_builder.row_count() == max_rows) {
+          if (catalog_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
             break;
           }
         }
       }
     }
     tpcds_row_stop(CATALOG_SALES);
-    if (catalog_returns_builder.row_count() == max_rows) {
+    if (catalog_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
       break;
     }
   }
@@ -844,7 +842,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) co
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_store_sales_and_returns(
-    size_t max_rows) const {
+    ds_key_t max_rows) const {
   auto [store_sales_first, store_sales_count] = prepare_for_table(STORE_SALES);
 
   auto store_sales_builder = TableBuilder{_benchmark_config->chunk_size, store_sales_column_types,
@@ -866,7 +864,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         int was_returned = 0;
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
-        if (store_sales_builder.row_count() < max_rows) {
+        if (store_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
           store_sales_builder.append_row(
               resolve_key<SS_SOLD_DATE_SK>(store_sales.ss_sold_date_sk),
               resolve_key<SS_SOLD_TIME_SK>(store_sales.ss_sold_time_sk), store_sales.ss_sold_item_sk,
@@ -910,14 +908,14 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_decimal<SR_PRICING_REVERSED_CHARGE>(store_returns.sr_pricing.reversed_charge),
               resolve_decimal<SR_PRICING_STORE_CREDIT>(store_returns.sr_pricing.store_credit),
               resolve_decimal<SR_PRICING_NET_LOSS>(store_returns.sr_pricing.net_loss));
-          if (store_returns_builder.row_count() == max_rows) {
+          if (store_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
             break;
           }
         }
       }
     }
     tpcds_row_stop(STORE_SALES);
-    if (store_returns_builder.row_count() == max_rows) {
+    if (store_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
       break;
     }
   }
@@ -936,13 +934,9 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_time(ds_key_t max_rows) con
     const auto time = call_dbgen_mk<W_TIME_TBL, &mk_w_time, TIME>(time_first + i);
 
     time_builder.append_row(time.t_time_sk, time.t_time_id, resolve_integer<T_TIME>(time.t_time),
-
                             resolve_integer<T_HOUR>(time.t_hour), resolve_integer<T_MINUTE>(time.t_minute),
-
                             resolve_integer<T_SECOND>(time.t_second), resolve_string<T_AM_PM>(time.t_am_pm),
-
                             resolve_string<T_SHIFT>(time.t_shift), resolve_string<T_SUB_SHIFT>(time.t_sub_shift),
-
                             resolve_string<T_MEAL_TIME>(time.t_meal_time));
   }
 
@@ -1006,7 +1000,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_page(ds_key_t max_rows)
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_web_sales_and_returns(
-    size_t max_rows) const {
+    ds_key_t max_rows) const {
   auto [web_sales_first, web_sales_count] = prepare_for_table(WEB_SALES);
 
   auto web_sales_builder = TableBuilder{_benchmark_config->chunk_size, web_sales_column_types, web_sales_column_names,
@@ -1028,7 +1022,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
         int was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned);
 
-        if (web_sales_builder.row_count() < max_rows) {
+        if (web_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
           web_sales_builder.append_row(
               resolve_key<WS_SOLD_DATE_SK>(web_sales.ws_sold_date_sk),
               resolve_key<WS_SOLD_TIME_SK>(web_sales.ws_sold_time_sk),
@@ -1087,7 +1081,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
               resolve_decimal<WR_PRICING_REVERSED_CHARGE>(web_returns.wr_pricing.reversed_charge),
               resolve_decimal<WR_PRICING_STORE_CREDIT>(web_returns.wr_pricing.store_credit),
               resolve_decimal<WR_PRICING_NET_LOSS>(web_returns.wr_pricing.net_loss));
-          if (web_returns_builder.row_count() == max_rows) {
+          if (web_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
             break;
           }
         }
@@ -1095,7 +1089,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     }
     tpcds_row_stop(WEB_SALES);
 
-    if (web_returns_builder.row_count() == max_rows) {
+    if (web_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
       break;
     }
   }

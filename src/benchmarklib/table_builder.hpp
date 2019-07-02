@@ -142,7 +142,6 @@ class TableBuilder {
     return _table;
   }
 
-  // TODO: do we still need universal references?
   template <typename... Types>
   void append_row(Types&&... new_values) {
     _row_count++;
