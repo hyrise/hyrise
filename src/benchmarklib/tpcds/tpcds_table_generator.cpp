@@ -77,7 +77,6 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   }
 }
 
-// TpcdsRow is the type of a database row, e.g. CALL_CENTER_TBL
 template <class TpcdsRow, int builder(void*, ds_key_t), int table_id>
 TpcdsRow call_dbgen_mk(ds_key_t index) {
   auto tpcds_row = TpcdsRow{};
@@ -111,8 +110,18 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   return {k_first_row, k_row_count};
 }
 
+
 pmr_string boolean_to_string(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
 
+pmr_string zip_to_string(int32_t zip) {
+  auto result = pmr_string(5, '?');
+  std::snprintf(result.data(), result.size() + 1, "%05d", zip);
+  return result;
+}
+
+
+
+// dsdgen deliberately creates NULL values if nullCheck(column_id) is true, the resolve functions do the same
 template <int column_id>
 std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
   if (date_id <= 0 || nullCheck(column_id)) {
@@ -147,7 +156,13 @@ template <int column_id>
 std::optional<float> resolve_decimal(decimal_t decimal) {
   auto result = 0.0;
   dectof(&result, &decimal);
+  // we have to divide by 10 after dectof to get the expected result
   return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(result / 10)};
+}
+
+template <int column_id>
+std::optional<float> resolve_gmt_offset(int32_t gmt_offset) {
+  return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(gmt_offset)};
 }
 
 template <int column_id>
@@ -156,18 +171,6 @@ std::optional<pmr_string> resolve_street_name(const ds_addr_t& address) {
                               : address.street_name2 == nullptr
                                     ? std::optional{pmr_string{address.street_name1}}
                                     : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
-}
-
-pmr_string zip_to_string(int32_t zip) {
-  auto result = pmr_string(5, '?');
-  std::snprintf(result.data(), result.size() + 1, "%05d", zip);
-  return result;
-}
-
-decimal_t gmt_offset_to_decimal(int32_t gmt_offset) {
-  auto gmt_offset_decimal = decimal_t{};
-  itodec(&gmt_offset_decimal, gmt_offset * 10);
-  return gmt_offset_decimal;
 }
 
 // mapping types used by tpcds-dbgen as follows:
@@ -387,7 +390,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_ro
         resolve_string<CC_ADDRESS>(call_center.cc_address.state),
         resolve_string<CC_ADDRESS>(zip_to_string(call_center.cc_address.zip)),
         resolve_string<CC_ADDRESS>(call_center.cc_address.country),
-        resolve_decimal<CC_ADDRESS>(gmt_offset_to_decimal(call_center.cc_address.gmt_offset)),
+        resolve_gmt_offset<CC_ADDRESS>(call_center.cc_address.gmt_offset),
         resolve_decimal<CC_TAX_PERCENTAGE>(call_center.cc_tax_percentage));
   }
 
@@ -548,7 +551,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_address(ds_key_t m
         resolve_string<CA_ADDRESS_STATE>(customer_address.ca_address.state),
         resolve_string<CA_ADDRESS_ZIP>(zip_to_string(customer_address.ca_address.zip)),
         resolve_string<CA_ADDRESS_COUNTRY>(customer_address.ca_address.country),
-        resolve_decimal<CA_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(customer_address.ca_address.gmt_offset)),
+        resolve_gmt_offset<CA_ADDRESS_GMT_OFFSET>(customer_address.ca_address.gmt_offset),
         resolve_string<CA_LOCATION_TYPE>(customer_address.ca_location_type));
   }
 
@@ -834,7 +837,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) co
         resolve_string<W_STORE_ADDRESS_STATE>(store.address.state),
         resolve_string<W_STORE_ADDRESS_ZIP>(zip_to_string(store.address.zip)),
         resolve_string<W_STORE_ADDRESS_COUNTRY>(store.address.country),
-        resolve_decimal<W_STORE_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(store.address.gmt_offset)),
+        resolve_gmt_offset<W_STORE_ADDRESS_GMT_OFFSET>(store.address.gmt_offset),
         resolve_decimal<W_STORE_TAX_PERCENTAGE>(store.dTaxPercentage));
   }
 
@@ -967,7 +970,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_warehouse(ds_key_t max_rows
         resolve_string<W_ADDRESS_STATE>(warehouse.w_address.state),
         resolve_string<W_ADDRESS_ZIP>(zip_to_string(warehouse.w_address.zip)),
         resolve_string<W_ADDRESS_COUNTRY>(warehouse.w_address.country),
-        resolve_decimal<W_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(warehouse.w_address.gmt_offset)));
+        resolve_gmt_offset<W_ADDRESS_GMT_OFFSET>(warehouse.w_address.gmt_offset));
   }
 
   return warehouse_builder.finish_table();
@@ -1133,7 +1136,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_site(ds_key_t max_rows)
         resolve_string<WEB_ADDRESS_STATE>(web_site.web_address.state),
         resolve_string<WEB_ADDRESS_ZIP>(zip_to_string(web_site.web_address.zip)),
         resolve_string<WEB_ADDRESS_COUNTRY>(web_site.web_address.country),
-        resolve_decimal<WEB_ADDRESS_GMT_OFFSET>(gmt_offset_to_decimal(web_site.web_address.gmt_offset)),
+        resolve_gmt_offset<WEB_ADDRESS_GMT_OFFSET>(web_site.web_address.gmt_offset),
         resolve_decimal<WEB_TAX_PERCENTAGE>(web_site.web_tax_percentage));
   }
 

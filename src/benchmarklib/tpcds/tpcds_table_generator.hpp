@@ -1,7 +1,7 @@
 #pragma once
 
 extern "C" {
-#include <../tpcds-dbgen/config.h>  // must be included before porting.h, otherwise HUGE_TYPE is not found
+#include <../tpcds-dbgen/config.h>
 #include <porting.h>
 }
 
@@ -27,7 +27,6 @@ namespace opossum {
  */
 class TpcdsTableGenerator final : public AbstractTableGenerator {
  public:
-  // default rng_seed is the default used by dsdgen
   explicit TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                int rng_seed = 19620718);
   TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
