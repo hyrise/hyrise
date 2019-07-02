@@ -331,6 +331,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           radix_build_column = partition_radix_parallel<BuildColumnType, HashedType, false>(
               materialized_build_column, build_chunk_offsets, histograms_build_column, _radix_bits);
         }
+        // After the data in materialized_build_column has been partitioned, it is not needed anymore.
+        materialized_build_column.clear();
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_build_column = std::move(materialized_build_column);
@@ -370,6 +372,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           radix_probe_column = partition_radix_parallel<ProbeColumnType, HashedType, false>(
               materialized_probe_column, probe_chunk_offsets, histograms_probe_column, _radix_bits);
         }
+        // After the data in materialized_probe_column has been partitioned, it is not needed anymore.
+        materialized_probe_column.clear();
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_probe_column = std::move(materialized_probe_column);
@@ -450,6 +454,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
+
+    // After probing, the partitioned columns are not needed anymore.
+    radix_build_column.clear();
+    radix_probe_column.clear();
 
     /**
      * 3. Write output Table
