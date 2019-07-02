@@ -313,8 +313,6 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   const std::hash<HashedType> hash_function;
 
-  std::cout << "start mat\n" << std::flush;
-
   // materialized items of radix container
   const auto& container_elements = *radix_container.elements;
   [[maybe_unused]] const auto& null_value_bitvector = *radix_container.null_value_bitvector;
@@ -341,24 +339,28 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   radix_output.null_value_bitvector = output_nulls;
 
   /**
-   * `histograms` stores for each input chunk the histogram of value to radix pattern.
-   * In the following step, vectors are created per chunk that stores the write offset
-   * for each radix cluster (to allow lock-less concurrent writing).
-   */
-  std::cout << "before\n" << std::flush;
-  // std::vector<std::vector<size_t>> output_offsets_by_chunk(chunk_offsets.size(), std::vector<size_t>(num_partitions));
-
-  /**
-   * We collect histograms, of the chunks:
-   * chunk one: [4 0 3]
-   * chunk one: [5 2 7]
-   * Result: [0 0 0] [4 0 3] with a final vector being [9 2 10]
-   * In a second phase, we add the length of each cluster (i.e., the value in the resulting
-     vector [9 2 10]) to all clusters, because we write a large consecutive vector (this step would be superflous, when each radix cluster would be a separate vector)
+   * The following steps create the offsets that allow each concurrent job to write lock-less into the newly
+   * created RadixContainer. The input RadixContainer was a simple list materialized values. The outcome
+   * container is consectitive vector, sorted by radix clusters (which are defined by the offsets).
+   * Input:
+   *  - `histograms` stores for each input chunk the histogram that counts the number of value per radix cluster.
+   *  - `chunk_offsets` store the offsets -- denoting the number of elements of each chunk -- in the continuous
+   *     vector of materialized values.
+   *
+   * Simple example:
+   * - histograms for chunks 0 and 1 [4 0 3] & [5 2 7] (i.e., first radix cluster has 4 + 5 values)
+   * - first step: create offsets that denote write offsets per radix cluster and collect lengths
+   *   - result: offsets vectors are [0 0 0] [4 0 3] and lengths are [9 2 10]
+   * - second step: create prefix sum vector of [9 2 10] >> [9 11 10]
+   * - third step: adapt offset vectors to create the offsets that allows writing
+   *   all thread in parallel into a _consecutive_ vector
+   *   - result: [0 9 11] [4 9 14]
+   * - note: the third step would be superflous, when each radix cluster is written to separate vector
    */
   std::vector<size_t> output_offsets_by_chunk;
   output_offsets_by_chunk.reserve(chunk_offsets.size() * num_partitions);
 
+  // Offset vector creation: first step
   auto prefix_sums = std::vector<size_t>(num_partitions);  // stores the prefix sums
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
     for (auto radix_cluster_id = size_t{0}; radix_cluster_id < num_partitions; ++radix_cluster_id) {
@@ -368,32 +370,12 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
     }
   }
 
-  // ///////////////////////////////////////////
-  // ///////////////////////////////////////////
-  // std::cout << "CO size: " << chunk_offsets.size() << "NUMPA: " << num_partitions << std::endl;
-  // for (const auto el : output_offsets_by_chunk) {
-  //   std::cout << "$ " << el << std::endl;
-  // }
-  // ///////////////////////////////////////////
-  // ///////////////////////////////////////////
-
-  // ///////////////////////////////////////////
-  // ///////////////////////////////////////////
-  // std::cout << "Prefixes" << std::endl; 
-  // for (const auto el : prefix_sums) {
-  //   std::cout << "# " << el << std::endl;
-  // }
-  // ///////////////////////////////////////////
-  // ///////////////////////////////////////////
-
+  // Offset vector creation: second step
   for (auto position = size_t{1}; position < prefix_sums.size(); ++position) {
     prefix_sums[position] += prefix_sums[position - 1];
   }
 
-  /**
-   * Second pass
-   *
-   */
+  // Offset vector creation: third step
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
     // Skip the first item of the loop
     for (auto radix_cluster_id = size_t{1}; radix_cluster_id < num_partitions; ++radix_cluster_id) {
@@ -401,54 +383,27 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
       output_offsets_by_chunk[write_position] += prefix_sums[radix_cluster_id - 1];
 
       // In the last iteration, the offsets are written to the radix container.
+      // Note: these offsets denote _the last element's ID_ per cluster
       if (chunk_id == (chunk_offsets.size() - 1)) {
         radix_output.partition_offsets[radix_cluster_id] = prefix_sums[radix_cluster_id];
       }
     }
   }
 
-  // ///////////////////////////////////////////
-  // ///////////////////////////////////////////
-  // std::cout << "CO size: " << chunk_offsets.size() << "NUMPA: " << num_partitions << std::endl; 
-  // for (const auto el : output_offsets_by_chunk) {
-  //   std::cout << "$ " << el << std::endl;
-  // }
-  // for (const auto el : radix_output.partition_offsets) {
-  //   std::cout << "~ " << el << std::endl;
-  // }
-  // ///////////////////////////////////////////
-  // ///////////////////////////////////////////
-
-  // size_t offset = 0;
-  // for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
-  //   for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
-  //     output_offsets_by_chunk[chunk_id][partition_id] = offset;
-  //     offset += histograms[chunk_id][partition_id];
-  //   }
-  //   radix_output.partition_offsets[partition_id] = offset;
-  // }
-  std::cout << "after\n" << std::flush;
-
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_offsets.size());
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      const size_t output_offsets_start = chunk_id * num_partitions;
-
-      const auto iter_output_offsets_start = output_offsets_by_chunk.begin() + output_offsets_start;
+      const auto iter_output_offsets_start = output_offsets_by_chunk.begin() + chunk_id * num_partitions;
       const auto iter_output_offsets_end = iter_output_offsets_start + num_partitions;
 
-      // Obtain modifiable offset vector that can used to store insert positions.
+      // Obtain modifiable offset vector used to store insert positions
       auto output_offsets = std::vector<size_t>(iter_output_offsets_start, iter_output_offsets_end);
 
       const size_t input_offset = chunk_offsets[chunk_id];
-      // auto& output_offsets = output_offsets_by_chunk[chunk_id];
-
-      size_t input_size = 0;
-      if (chunk_id < chunk_offsets.size() - 1) {
-        input_size = chunk_offsets[chunk_id + 1] - input_offset;
-      } else {
+      size_t input_size = chunk_offsets[chunk_id + 1] - input_offset;
+      if (chunk_id == chunk_offsets.size() - 1) {
         input_size = container_elements.size() - input_offset;
       }
 
@@ -480,8 +435,6 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
-
-  std::cout << "end mat\n" << std::flush;
 
   return radix_output;
 }
