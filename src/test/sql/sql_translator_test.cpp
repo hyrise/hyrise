@@ -555,8 +555,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInCorre
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
-  const auto result_node = compile_query(
-      "CREATE VIEW alias_view AS SELECT a AS x, b as y FROM int_float WHERE a > 10");
+  const auto result_node = compile_query("CREATE VIEW alias_view AS SELECT a AS x, b as y FROM int_float WHERE a > 10");
 
   // clang-format off
   const auto aliases = std::vector<std::string>({"x", "y"});
@@ -580,8 +579,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView) {
-  const auto result_node = compile_query(
-      "CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
+  const auto result_node =
+      compile_query("CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
 
   // clang-format off
   const auto aliases = std::vector<std::string>({"a1", "a2"});
@@ -606,8 +605,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView)
 }
 
 TEST_F(SQLTranslatorTest, SelectListManyAliasesDifferentForSimilarColumnsUsedInView) {
-  const auto result_node = compile_query(
-      "CREATE VIEW alias_view (a3, a4) AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
+  const auto result_node =
+      compile_query("CREATE VIEW alias_view (a3, a4) AS SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
 
   // clang-format off
   const auto aliases = std::vector<std::string>({"a1", "a2"});
@@ -2007,10 +2006,8 @@ TEST_F(SQLTranslatorTest, CreateViewIfNotExists) {
       stored_table_node_int_float));
   // clang-format on
 
-  const auto view_columns = std::unordered_map<ColumnID, std::vector<std::string>>({
-                                                                                   {ColumnID{0}, {"b"}},
-                                                                                   {ColumnID{1}, {"a"}}
-                                                                                   });
+  const auto view_columns =
+      std::unordered_map<ColumnID, std::vector<std::string>>({{ColumnID{0}, {"b"}}, {ColumnID{1}, {"a"}}});
 
   const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
