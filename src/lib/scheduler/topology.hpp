@@ -87,8 +87,8 @@ class Topology final : public Singleton<Topology> {
 
  private:
   Topology();
-  friend std::ostream& operator<<(std::ostream& stream, const Topology& topology);
 
+  friend std::ostream& operator<<(std::ostream& stream, const Topology& topology);
   friend class Singleton;
 
   void _init_default_topology(uint32_t max_num_cores = 0);

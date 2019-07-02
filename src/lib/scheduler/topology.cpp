@@ -96,7 +96,7 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
           }
           core_count++;
         }
-        if (!cpu_is_part_of_affinity) filtered_by_affinity = true;
+        if (!cpu_is_part_of_affinity) _filtered_by_affinity = true;
       }
 
       TopologyNode node(std::move(cpus));
@@ -194,8 +194,8 @@ void Topology::_create_memory_resources() {
 
 std::ostream& operator<<(std::ostream& stream, const Topology& topology) {
   stream << "Number of CPUs: " << topology.num_cpus() << std::endl;
-  if (topology.filtered_by_affinity()) {
-    stream << "Available CPUs / nodes filtered by externally set CPU affinity (e.g., numactl)." << std::endl;
+  if (topology._filtered_by_affinity) {
+    stream << "Available CPUs / nodes were filtered by externally set CPU affinity (e.g., numactl)." << std::endl;
   }
   for (size_t node_idx = 0; node_idx < topology.nodes().size(); ++node_idx) {
     stream << "Node #" << node_idx << " - ";
