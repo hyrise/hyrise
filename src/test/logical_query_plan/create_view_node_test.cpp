@@ -11,7 +11,8 @@ class CreateViewNodeTest : public ::testing::Test {
  public:
   void SetUp() override {
     _view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
-    _view = std::make_shared<LQPView>(_view_node, std::unordered_map<ColumnID, std::vector<std::string>>{{ColumnID{0}, {"a"}}});
+    _view = std::make_shared<LQPView>(_view_node, std::unordered_map<Colu./scirpts/lint.sh
+    mnID, std::vector<std::string>>{{ColumnID{0}, {"a"}}});
     _create_view_node = CreateViewNode::make("some_view", _view, false);
   }
 
@@ -41,7 +42,8 @@ TEST_F(CreateViewNodeTest, Equals) {
 
   const auto different_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
   const auto different_view =
-      std::make_shared<LQPView>(different_view_node, std::unordered_map<ColumnID, std::vector<std::string>>{{ColumnID{0}, {"b"}}});
+      std::make_shared<LQPView>(different_view_node,
+                                std::unordered_map<ColumnID, std::vector<std::string>>{{ColumnID{0}, {"b"}}});
   const auto different_create_view_node_b = CreateViewNode::make("some_view", different_view, false);
   const auto different_create_view_node_c = CreateViewNode::make("some_view", _view, true);
 
@@ -53,7 +55,8 @@ TEST_F(CreateViewNodeTest, Equals) {
 TEST_F(CreateViewNodeTest, Copy) {
   const auto same_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
   const auto same_view =
-      std::make_shared<LQPView>(_view_node, std::unordered_map<ColumnID, std::vector<std::string>>{{ColumnID{0}, {"a"}}});
+      std::make_shared<LQPView>(_view_node,
+                                std::unordered_map<ColumnID, std::vector<std::string>>{{ColumnID{0}, {"a"}}});
   const auto same_create_view_node = CreateViewNode::make("some_view", _view, false);
 
   EXPECT_EQ(*same_create_view_node, *_create_view_node->deep_copy());
