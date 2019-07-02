@@ -29,7 +29,7 @@ TEST_F(CreateViewNodeTest, Description) {
 
   const auto _create_view_node_2 = CreateViewNode::make("some_view", _view, true);
   EXPECT_EQ(_create_view_node_2->description(),
-            "[CreateView] IfNotExists Name: 'some_v.iew' (\n"
+            "[CreateView] IfNotExists Name: 'some_view' (\n"
             "[0] [MockNode 'Unnamed'] pruned: 0/1 columns\n"
             ")");
 }
