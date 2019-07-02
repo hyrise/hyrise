@@ -29,7 +29,7 @@ from datetime import datetime
 
 
 MAX_CORE_COUNT = multiprocessing.cpu_count()
-DEFAULT_TPCH_QUERIES = ','.join([str(query) for query in range(1, 23))
+DEFAULT_TPCH_QUERIES = ','.join([str(query) for query in range(1, 23)])
 
 def get_parser():
     parser = argparse.ArgumentParser()
