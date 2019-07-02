@@ -96,6 +96,7 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
           }
           core_count++;
         }
+        if (!cpu_is_part_of_affinity) filtered_by_affinity = true;
       }
 
       TopologyNode node(std::move(cpus));
