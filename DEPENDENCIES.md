@@ -17,7 +17,9 @@
 | llvm             | any              |    All   |                 Yes (code sanitizers) |
 | llvm-7.0-tools   | 7                |    Linux |                                    No |
 | parallel         | any              |    All   |                                   Yes |
-| python           | >= 2.7 && < 3    |    All   |                         Yes (linting) |
+| python           | >= 2.7 && < 3    |    All   |         Yes (linting and tests in CI) |
+| pexpect          | >= 4             |    All   |                     Yes (tests in CI) |
+| glob2            | >= 0.5           |    All   |                     Yes (tests in CI) |
 | readline         | >= 7             |    All   |                                    No |
 | sqlite3          | >= 3             |    All   |                                    No |
 | tbb/libtbb-dev   | any              |    All   |                                    No |
