@@ -87,6 +87,7 @@ class Topology final : public Singleton<Topology> {
 
  private:
   Topology();
+  friend std::ostream& operator<<(std::ostream& stream, const Topology& topology);
 
   friend class Singleton;
 
@@ -101,6 +102,7 @@ class Topology final : public Singleton<Topology> {
   std::vector<TopologyNode> _nodes;
   uint32_t _num_cpus{0};
   bool _fake_numa_topology{false};
+  bool _filtered_by_affinity{false};
 
   static const int _number_of_hardware_nodes;
 
