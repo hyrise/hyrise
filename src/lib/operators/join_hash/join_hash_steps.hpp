@@ -346,18 +346,87 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
    * for each radix cluster (to allow lock-less concurrent writing).
    */
   std::cout << "before\n" << std::flush;
-  std::vector<std::vector<size_t>> output_offsets_by_chunk(chunk_offsets.size(), std::vector<size_t>(num_partitions));
-  // std::vector<size_t> output_offsets_by_chunk;
-  // output_offsets_by_chunk.reserve(chunk_offsets.size() * num_partitions);
+  // std::vector<std::vector<size_t>> output_offsets_by_chunk(chunk_offsets.size(), std::vector<size_t>(num_partitions));
 
-  size_t offset = 0;
-  for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
-    for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
-      output_offsets_by_chunk[chunk_id][partition_id] = offset;
-      offset += histograms[chunk_id][partition_id];
+  /**
+   * We collect histograms, of the chunks:
+   * chunk one: [4 0 3]
+   * chunk one: [5 2 7]
+   * Result: [0 0 0] [4 0 3] with a final vector being [9 2 10]
+   * In a second phase, we add the length of each cluster (i.e., the value in the resulting
+     vector [9 2 10]) to all clusters, because we write a large consecutive vector (this step would be superflous, when each radix cluster would be a separate vector)
+   */
+  std::vector<size_t> output_offsets_by_chunk;
+  output_offsets_by_chunk.reserve(chunk_offsets.size() * num_partitions);
+
+  auto prefix_sums = std::vector<size_t>(num_partitions);  // stores the prefix sums
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
+    for (auto radix_cluster_id = size_t{0}; radix_cluster_id < num_partitions; ++radix_cluster_id) {
+      const auto radix_cluster_size = histograms[chunk_id][radix_cluster_id];
+      output_offsets_by_chunk.push_back(prefix_sums[radix_cluster_id]);
+      prefix_sums[radix_cluster_id] += radix_cluster_size;
     }
-    radix_output.partition_offsets[partition_id] = offset;
   }
+
+  // ///////////////////////////////////////////
+  // ///////////////////////////////////////////
+  // std::cout << "CO size: " << chunk_offsets.size() << "NUMPA: " << num_partitions << std::endl;
+  // for (const auto el : output_offsets_by_chunk) {
+  //   std::cout << "$ " << el << std::endl;
+  // }
+  // ///////////////////////////////////////////
+  // ///////////////////////////////////////////
+
+  // ///////////////////////////////////////////
+  // ///////////////////////////////////////////
+  // std::cout << "Prefixes" << std::endl; 
+  // for (const auto el : prefix_sums) {
+  //   std::cout << "# " << el << std::endl;
+  // }
+  // ///////////////////////////////////////////
+  // ///////////////////////////////////////////
+
+  for (auto position = size_t{1}; position < prefix_sums.size(); ++position) {
+    prefix_sums[position] += prefix_sums[position - 1];
+  }
+
+  /**
+   * Second pass
+   *
+   */
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
+    // Skip the first item of the loop
+    for (auto radix_cluster_id = size_t{1}; radix_cluster_id < num_partitions; ++radix_cluster_id) {
+      const auto write_position = chunk_id * num_partitions + radix_cluster_id;
+      output_offsets_by_chunk[write_position] += prefix_sums[radix_cluster_id - 1];
+
+      // In the last iteration, the offsets are written to the radix container.
+      if (chunk_id == (chunk_offsets.size() - 1)) {
+        radix_output.partition_offsets[radix_cluster_id] = prefix_sums[radix_cluster_id];
+      }
+    }
+  }
+
+  // ///////////////////////////////////////////
+  // ///////////////////////////////////////////
+  // std::cout << "CO size: " << chunk_offsets.size() << "NUMPA: " << num_partitions << std::endl; 
+  // for (const auto el : output_offsets_by_chunk) {
+  //   std::cout << "$ " << el << std::endl;
+  // }
+  // for (const auto el : radix_output.partition_offsets) {
+  //   std::cout << "~ " << el << std::endl;
+  // }
+  // ///////////////////////////////////////////
+  // ///////////////////////////////////////////
+
+  // size_t offset = 0;
+  // for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
+  //   for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
+  //     output_offsets_by_chunk[chunk_id][partition_id] = offset;
+  //     offset += histograms[chunk_id][partition_id];
+  //   }
+  //   radix_output.partition_offsets[partition_id] = offset;
+  // }
   std::cout << "after\n" << std::flush;
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -365,8 +434,16 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      size_t input_offset = chunk_offsets[chunk_id];
-      auto& output_offsets = output_offsets_by_chunk[chunk_id];
+      const size_t output_offsets_start = chunk_id * num_partitions;
+
+      const auto iter_output_offsets_start = output_offsets_by_chunk.begin() + output_offsets_start;
+      const auto iter_output_offsets_end = iter_output_offsets_start + num_partitions;
+
+      // Obtain modifiable offset vector that can used to store insert positions.
+      auto output_offsets = std::vector<size_t>(iter_output_offsets_start, iter_output_offsets_end);
+
+      const size_t input_offset = chunk_offsets[chunk_id];
+      // auto& output_offsets = output_offsets_by_chunk[chunk_id];
 
       size_t input_size = 0;
       if (chunk_id < chunk_offsets.size() - 1) {
@@ -376,7 +453,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
       }
 
       for (size_t chunk_offset = input_offset; chunk_offset < input_offset + input_size; ++chunk_offset) {
-        auto& element = container_elements[chunk_offset];
+        const auto& element = container_elements[chunk_offset];
 
         // In case of NULL-removing inner-joins, we ignore all NULL values.
         // Such values can be created in several ways: join input already has non-phyiscal NULL values (non-physical
