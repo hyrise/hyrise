@@ -116,7 +116,7 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
   //  first generation process carried over into the second
   for (auto i = 1; i <= 2; i++) {
     std::cout << "TableContentsFirstRows pass " << i << std::endl;
-    const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 305);
+    const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 305);  // seed 305 includes Mrs. Null
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_call_center(rows_to_check), load_csv("call_center.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_catalog_page(rows_to_check), load_csv("catalog_page.csv"));
     const auto [catalog_sales_table, catalog_returns_table] =

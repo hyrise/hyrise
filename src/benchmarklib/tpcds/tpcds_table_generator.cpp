@@ -110,7 +110,6 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   return {k_first_row, k_row_count};
 }
 
-
 pmr_string boolean_to_string(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
 
 pmr_string zip_to_string(int32_t zip) {
@@ -119,9 +118,8 @@ pmr_string zip_to_string(int32_t zip) {
   return result;
 }
 
-
-
 // dsdgen deliberately creates NULL values if nullCheck(column_id) is true, the resolve functions do the same
+// TODO: are templates a significant performance improvement?
 template <int column_id>
 std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
   if (date_id <= 0 || nullCheck(column_id)) {

@@ -22,11 +22,15 @@ struct ParseConfig {
   char escape = '"';
   char delimiter_escape = '\\';
 
-  // If this is set to true, "4.3" will not be accepted as a value for a float column
+  // If this is set to true, "4.3" will not be accepted as a value for a float column.
   bool reject_quoted_nonstrings = true;
 
-  // If this is set to true, an unquoted null string causes an exception (only empty field is allowed as null value)
+  // If this is set to true, an unquoted null string causes an exception (only empty field is allowed as null value).
   bool reject_null_strings = true;
+
+  // If this is set to true, "...,Null,..." would be parsed as "Null"-string, otherwise it's a null value.
+  // Has no effect if reject_null_strings is true.
+  bool unquoted_null_string_is_string = false;
 
   // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
   bool rfc_mode = true;

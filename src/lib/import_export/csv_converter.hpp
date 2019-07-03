@@ -59,7 +59,7 @@ class CsvConverter : public BaseCsvConverter {
       Assert(!_config.reject_null_strings,
              "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null value, "
              "or set 'reject_null_strings' to false in parse config.");
-      if (_is_nullable) {
+      if (_is_nullable && !_config.unquoted_null_string_is_string) {
         _null_values[position] = true;
         return;
       }
