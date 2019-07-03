@@ -260,18 +260,14 @@ std::shared_ptr<const Table> JoinIndex::_reference_join() {
     auto probe_chunk_id = ChunkID{0};
     for (const auto& probe_chunk : _probe_input_table->chunks()) {
       const auto& probe_segment = probe_chunk->get_segment(_primary_predicate.column_ids.first);
-
-      resolve_data_and_segment_type(*probe_segment, [&](auto type, auto& typed_probe_segment) {
-        using Type = typename decltype(type)::type;
-        auto probe_iterable = create_iterable_from_segment<Type>(typed_probe_segment);
-
-        auto probe_chunk_offset = ChunkOffset{0};
-        probe_iterable.with_iterators([&](auto probe_side_iter, auto end) {
+      //// new approach
+      segment_with_iterators(*probe_segment, [&](auto probe_side_iter, auto end) {
           for (; probe_side_iter != end; ++probe_side_iter) {
             const auto& probe_value = *probe_side_iter;
             const std::vector<AllTypeVariant> index_scan_values{AllTypeVariant{probe_value.value()}};
             // WARNING! The SegmentIndexType is hard coded for the benchmark experiment here.
             // TODO(Marcel) modify passing the SegmentIndexType
+            // TODO(Marcel) avoid using the operator, see _fallback_nested_loop
             const auto& index_scan_on_data_table = std::make_shared<IndexScan>(
                 referenced_data_table_wrapper, SegmentIndexType::GroupKey, data_table_index_column_ids,
                 _primary_predicate.predicate_condition, index_scan_values);
@@ -287,7 +283,7 @@ std::shared_ptr<const Table> JoinIndex::_reference_join() {
             ++probe_chunk_offset;
           }
         });
-      });
+      ////
       ++probe_chunk_id;
     }
     // TODO(Marcel) reduce code duplication, integrate this into one method
