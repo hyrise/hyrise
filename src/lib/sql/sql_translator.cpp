@@ -131,7 +131,7 @@ namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
-                    std::unordered_map<std::string, std::shared_ptr<LQPView>>()) {}
+                    std::unordered_map<std::string, std::shared_ptr<LQPView>>{}) {}
 
 std::vector<ParameterID> SQLTranslator::parameter_ids_of_value_placeholders() const {
   const auto& parameter_ids_of_value_placeholders = _parameter_id_allocator->value_placeholders();
@@ -279,7 +279,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
 void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc) {
   SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions};
-  auto lqp = with_translator._translate_select_statement(*desc.select);
+  const auto lqp = with_translator._translate_select_statement(*desc.select);
 
   // Save mappings: ColumnID -> ColumnName
   std::unordered_map<ColumnID, std::string> column_names;
@@ -292,7 +292,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
   }
 
   // Store resolved WithDescription / temporary view
-  auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
+  const auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
   //   A WITH description masks a preceding WITH description if their aliases are identical
   _with_descriptions.insert_or_assign(desc.alias, lqp_view);
 }
@@ -497,13 +497,12 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
   switch (hsql_table_ref.type) {
     case hsql::kTableName: {
+
       // WITH descriptions or sub-queries are treated as though they were inline views or tables
       // They mask existing tables or views with the same name.
-      if (_with_descriptions.count(hsql_table_ref.name)) {
-        const auto iter = _with_descriptions.find(hsql_table_ref.name);
-        AssertInput(iter != _with_descriptions.end(), "No such WITH query named '" + hsql_table_ref.name + "'");
-
-        const auto lqp_view = iter->second->deep_copy();
+      const auto with_descriptions_iterator = _with_descriptions.find(hsql_table_ref.name);
+      if (with_descriptions_iterator != _with_descriptions.end()) {
+        const auto lqp_view = with_descriptions_iterator->second->deep_copy();
         lqp = lqp_view->lqp;
 
         // Add all named columns to the IdentifierContext
