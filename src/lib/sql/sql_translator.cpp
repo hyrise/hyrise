@@ -516,17 +516,17 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       Assert(identifiers.size() == lqp->column_expressions().size(),
              "There have to be as many identifier lists as column expressions");
       for (auto idx = size_t{0}; idx < lqp->column_expressions().size(); ++idx) {
-        const auto& subquery_expression = lqp->column_expressions()[idx];
+        const auto& subquery_expression = lqp->column_expressions().at(idx);
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
           sql_identifier_resolver->add_column_name(subquery_expression, subquery_expression->as_column_name());
         }
-        for (const auto& identifier : identifiers[idx]) {
+        for (const auto& identifier : identifiers.at(idx)) {
           sql_identifier_resolver->add_column_name(subquery_expression, identifier.column_name);
         }
 
-        select_list_elements.emplace_back(SelectListElement{subquery_expression, identifiers[idx]});
+        select_list_elements.emplace_back(SelectListElement{subquery_expression, identifiers.at(idx)});
       }
 
       table_name = hsql_table_ref.alias->name;
@@ -547,7 +547,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
     std::set<std::shared_ptr<AbstractExpression>> renamed_expressions;
     for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
-      const auto& expression = column_expressions[column_id];
+      const auto& expression = column_expressions.at(column_id);
 
       if (renamed_expressions.find(expression) == renamed_expressions.end()) {
         // The original column names should not be accessible anymore because the table schema is renamed.
@@ -555,10 +555,10 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         renamed_expressions.insert(expression);
       }
 
-      const auto& column_name = (*hsql_table_ref.alias->columns)[column_id];
+      const auto& column_name = (*hsql_table_ref.alias->columns).at(column_id);
       sql_identifier_resolver->add_column_name(expression, column_name);
-      select_list_elements[column_id].identifiers.clear();
-      select_list_elements[column_id].identifiers.emplace_back(column_name);
+      select_list_elements.at(column_id).identifiers.clear();
+      select_list_elements.at(column_id).identifiers.emplace_back(column_name);
     }
   }
 
@@ -729,7 +729,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
       result_state.elements_in_order.emplace_back(right_element);
       result_state.sql_identifier_resolver->add_column_name(right_expression, right_identifier.column_name);
       if (right_identifier.table_name) {
-        result_state.elements_by_table_name[*right_identifier.table_name].emplace_back(right_element);
+        result_state.elements_by_table_name.at(*right_identifier.table_name).emplace_back(right_element);
         result_state.sql_identifier_resolver->set_table_name(right_expression, *right_identifier.table_name);
       }
     }
@@ -956,7 +956,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
         }
       }
     } else {
-      _inflated_select_list_elements.emplace_back(select_list_elements[select_list_idx]);
+      _inflated_select_list_elements.emplace_back(select_list_elements.at(select_list_idx));
     }
   }
 
@@ -1031,7 +1031,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
   std::unordered_map<ColumnID, std::vector<std::string>> column_names;
 
   for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
-    for (const auto& identifier : _inflated_select_list_elements[column_id].identifiers) {
+    for (const auto& identifier : _inflated_select_list_elements.at(column_id).identifiers) {
       column_names[column_id].emplace_back(identifier.column_name);
     }
   }
@@ -1042,7 +1042,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
                 "Number of Columns in CREATE VIEW does not match SELECT statement");
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
-      column_names[column_id].emplace_back((*create_statement.viewColumns)[column_id]);
+      column_names[column_id].emplace_back((*create_statement.viewColumns).at(column_id));
     }
   }
 
