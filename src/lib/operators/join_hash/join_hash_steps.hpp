@@ -363,15 +363,14 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
    *   - result: [0 9 11] [4 9 14]
    * - note: the third step would be superfluous when each radix cluster is written to a separate vector
    */
-  std::vector<size_t> output_offsets_by_chunk;
-  output_offsets_by_chunk.reserve(chunk_offsets.size() * num_partitions);
+  std::vector<size_t> output_offsets_by_chunk(chunk_offsets.size() * num_partitions);
 
   // Offset vector creation: first step
   auto prefix_sums = std::vector<size_t>(num_partitions);  // stores the prefix sums
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
     for (auto radix_cluster_id = size_t{0}; radix_cluster_id < num_partitions; ++radix_cluster_id) {
       const auto radix_cluster_size = histograms[chunk_id][radix_cluster_id];
-      output_offsets_by_chunk.push_back(prefix_sums[radix_cluster_id]);
+      output_offsets_by_chunk[chunk_id * num_partitions + radix_cluster_id] = prefix_sums[radix_cluster_id];
       prefix_sums[radix_cluster_id] += radix_cluster_size;
     }
   }
