@@ -211,8 +211,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 
   // Translate WITH clause
   if (select.withDescriptions) {
-    for (const auto& desc : *select.withDescriptions) {
-      _translate_hsql_with_description(*desc);
+    for (const auto& with_description : *select.withDescriptions) {
+      _translate_hsql_with_description(*with_description);
     }
   }
 
