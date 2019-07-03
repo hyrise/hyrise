@@ -340,12 +340,18 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   /**
    * The following steps create the offsets that allow each concurrent job to write lock-less into the newly
-   * created RadixContainer. The input RadixContainer was a simple list of materialized values. The outcome
-   * container is consecutive vector, sorted by radix clusters (which are defined by the offsets).
+   * created RadixContainer. The input RadixContainer is a list of materialized values in order of the input table.
+   * The output of `partition_radix_parallel()` is single consecutive vector and its values are sorted by radix
+   * clusters (which are defined by the offsets).
    * Input:
    *  - `histograms` stores for each input chunk a histogram that counts the number of values per radix cluster.
    *  - `chunk_offsets` stores the offsets -- denoting the number of elements of each chunk -- in the continuous
    *     vector of materialized values.
+   *
+   * The process of creating the offset information consists of three steps. A previous commit used a single
+   * loop and created multiple vectors. This approach has shown to be inefficient for very large inputs.
+   * Consequently, we now use a large single vector and operate fully sequentially. This come at the cost of
+   * iterating twice and introduces additional steps. However, the current approach should be faster.
    *
    * Simple example:
    * - histograms for chunks 0 and 1 [4 0 3] & [5 2 7] (i.e., first radix cluster has 4 + 5 values)
@@ -353,9 +359,9 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
    *   - result: offsets vectors are [0 0 0] [4 0 3] and lengths are [9 2 10]
    * - second step: create prefix sum vector of [9 2 10] >> [9 11 21]
    * - third step: adapt offset vectors to create the offsets that allow writing
-   *   all threads in parallel into a _consecutive_ vector
+   *   all threads in parallel into a _single_ vector
    *   - result: [0 9 11] [4 9 14]
-   * - note: the third step would be superfluous, when each radix cluster is written to a separate vector
+   * - note: the third step would be superfluous when each radix cluster is written to a separate vector
    */
   std::vector<size_t> output_offsets_by_chunk;
   output_offsets_by_chunk.reserve(chunk_offsets.size() * num_partitions);
