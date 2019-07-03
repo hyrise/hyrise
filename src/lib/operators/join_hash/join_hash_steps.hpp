@@ -21,6 +21,11 @@
 */
 namespace opossum {
 
+// For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
+// in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
+// track all occurrences of a value as that first position might be disqualified later.
+enum class JoinHashBuildMode { AllPositions, SinglePosition };
+
 using Hash = size_t;
 
 /*
@@ -42,15 +47,74 @@ template <typename T>
 using Partition = std::conditional_t<std::is_trivially_destructible_v<T>, uninitialized_vector<PartitionedElement<T>>,
                                      std::vector<PartitionedElement<T>>>;
 
-// The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
-// as n because in many cases, we join on primary key attributes where by definition we have only one match on the
-// smaller side.
-using SmallPosList = boost::container::small_vector<RowID, 1>;
+// Stores the mapping from HashedType to positions. Conceptually, this is similar to an (unordered_)multimap, but it
+// has some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
+// hashmap (think map<HashedType, PosList>), we store an offset. This keeps the hashmap small and makes it easier to
+// cache.
+template <typename HashedType>
+class PosHashTable {
+  // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
+  // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
+  //
+  // The hash table stores the relative offset of a SmallPosList (see below) in the vector of SmallPosLists. The range
+  // of the offset does not limit the number of rows in the partition but the number of distinct values. If we end up
+  // with a partition that has more values, the partitioning algorithm is at fault.
+  using Offset = uint32_t;
+  using HashTable = ska::bytell_hash_map<HashedType, Offset>;
 
-// In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
-// with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
-template <typename T>
-using HashTable = ska::bytell_hash_map<T, SmallPosList>;
+  // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
+  // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
+  // smaller side.
+  using SmallPosList = boost::container::small_vector<RowID, 1>;
+
+ public:
+  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
+      : _hash_table(max_size), _pos_lists(max_size), _mode(mode) {}
+
+  // For a value seen on the build side, add its row_id to the table
+  template <typename InputType>
+  void emplace(const InputType& value, RowID row_id) {
+    const auto casted_value = static_cast<HashedType>(value);
+    const auto it = _hash_table.find(casted_value);
+    if (it != _hash_table.end()) {
+      auto& pos_list = _pos_lists[it->second];
+      if (_mode == JoinHashBuildMode::AllPositions) {
+        pos_list.emplace_back(row_id);
+      }
+    } else {
+      auto& pos_list = _pos_lists[_hash_table.size()];
+      pos_list.push_back(row_id);
+      _hash_table.emplace(casted_value, _hash_table.size());
+      Assert(_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
+    }
+  }
+
+  void shrink_to_fit() {
+    _pos_lists.resize(_hash_table.size());
+    _pos_lists.shrink_to_fit();
+    for (auto& pos_list : _pos_lists) {
+      pos_list.shrink_to_fit();
+    }
+  }
+
+  // For a value seen on the probe side, return an iterator into the matching values
+  template <typename InputType>
+  const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
+    const auto casted_value = static_cast<HashedType>(value);
+    const auto it = _hash_table.find(casted_value);
+    if (it == _hash_table.end()) return end();
+    return _pos_lists.begin() + it->second;
+  }
+
+  const std::vector<SmallPosList>::const_iterator begin() const { return _pos_lists.begin(); }
+
+  const std::vector<SmallPosList>::const_iterator end() const { return _pos_lists.end(); }
+
+ private:
+  HashTable _hash_table;
+  std::vector<SmallPosList> _pos_lists;
+  JoinHashBuildMode _mode;
+};
 
 /*
 This struct contains radix-partitioned data in a contiguous buffer, as well as a list of offsets for each partition.
@@ -72,6 +136,13 @@ struct RadixContainer {
 
   // bit vector to store NULL flags
   std::shared_ptr<std::vector<bool>> null_value_bitvector;
+
+  void clear() {
+    elements = nullptr;
+    partition_offsets.clear();
+    partition_offsets.shrink_to_fit();
+    null_value_bitvector = nullptr;
+  }
 };
 
 inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const Table>& table) {
@@ -192,19 +263,15 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 Build all the hash tables for the partitions of the build column. One job per partition
 */
 
-// For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
-// in the input table of more than one occurrence of a value. However, if we have secondary predicates, we do need to
-// track all occurrences of a value as that first position might be disqualified later.
-enum class JoinHashBuildMode { AllPositions, SinglePosition };
-
-template <typename BuildColumnType, typename HashedType, JoinHashBuildMode mode>
-std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container) {
+template <typename BuildColumnType, typename HashedType>
+std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
+                                                           JoinHashBuildMode mode) {
   /*
   NUMA notes:
-  The hashtables for each partition P should also reside on the same node as the two vectors buildP and probeP.
+  The hash tables for each partition P should also reside on the same node as the two vectors buildP and probeP.
   */
-  std::vector<std::optional<HashTable<HashedType>>> hashtables;
-  hashtables.resize(radix_container.partition_offsets.size());
+  std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+  hash_tables.resize(radix_container.partition_offsets.size());
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size());
@@ -225,8 +292,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Bui
         [&, build_partition_begin, build_partition_end, current_partition_id, build_partition_size]() {
           auto& build_partition = static_cast<Partition<BuildColumnType>&>(*radix_container.elements);
 
-          // slightly oversize the hash table to avoid unnecessary rebuilds
-          auto hashtable = HashTable<HashedType>(static_cast<size_t>(build_partition_size * 1.2));
+          auto hash_table = PosHashTable<HashedType>(mode, static_cast<size_t>(build_partition_size));
 
           for (size_t partition_offset = build_partition_begin; partition_offset < build_partition_end;
                ++partition_offset) {
@@ -237,25 +303,18 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Bui
               continue;
             }
 
-            auto casted_value = static_cast<HashedType>(std::move(element.value));
-            auto it = hashtable.find(casted_value);
-            if (it != hashtable.end()) {
-              if constexpr (mode == JoinHashBuildMode::AllPositions) {
-                it->second.emplace_back(element.row_id);
-              }
-            } else {
-              hashtable.emplace(casted_value, SmallPosList{element.row_id});
-            }
+            hash_table.emplace(element.value, element.row_id);
           }
 
-          hashtables[current_partition_id] = std::move(hashtable);
+          hash_table.shrink_to_fit();
+          hash_tables[current_partition_id] = std::move(hash_table);
         }));
     jobs.back()->schedule();
   }
 
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return hashtables;
+  return hash_tables;
 }
 
 template <typename T, typename HashedType, bool retain_null_values>
@@ -360,7 +419,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   */
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
-           const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
+           const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
            std::vector<PosList>& pos_lists_build_side, std::vector<PosList>& pos_lists_probe_side, const JoinMode mode,
            const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
@@ -422,11 +481,11 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             continue;
           }
 
-          const auto& iter = hash_table.find(static_cast<HashedType>(probe_column_element.value));
+          const auto& primary_predicate_matching_rows =
+              hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-          if (iter != hash_table.end()) {
+          if (primary_predicate_matching_rows != hash_table.end()) {
             // Key exists, thus we have at least one hit for the primary predicate
-            const auto& primary_predicate_matching_rows = iter->second;
 
             // Since we cannot store NULL values directly in off-the-shelf containers,
             // we need to the check the NULL bit vector here because a NULL value (represented
@@ -446,13 +505,13 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
             // If NULL values are discarded, the matching probe_column_element pairs will be written to the result pos
             // lists.
             if (!multi_predicate_join_evaluator) {
-              for (const auto& row_id : primary_predicate_matching_rows) {
+              for (const auto& row_id : *primary_predicate_matching_rows) {
                 pos_list_build_side_local.emplace_back(row_id);
                 pos_list_probe_local.emplace_back(probe_column_element.row_id);
               }
             } else {
               auto match_found = false;
-              for (const auto& row_id : primary_predicate_matching_rows) {
+              for (const auto& row_id : *primary_predicate_matching_rows) {
                 if (multi_predicate_join_evaluator->satisfies_all_predicates(row_id, probe_column_element.row_id)) {
                   pos_list_build_side_local.emplace_back(row_id);
                   pos_list_probe_local.emplace_back(probe_column_element.row_id);
@@ -511,7 +570,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
-                     const std::vector<std::optional<HashTable<HashedType>>>& hash_tables,
+                     const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      std::vector<PosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -538,7 +597,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
       PosList pos_list_local;
 
       if (hash_tables[current_partition_id]) {
-        // Valid hashtable found, so there is at least one match in this partition
+        // Valid hash table found, so there is at least one match in this partition
 
         // Accessors are not thread-safe, so we create one evaluator per job
         MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode,
@@ -568,13 +627,12 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           }
 
           auto any_build_column_value_matches = false;
-          const auto& hashtable = hash_tables[current_partition_id].value();
-          const auto it = hashtable.find(static_cast<HashedType>(probe_column_element.value));
+          const auto& hash_table = hash_tables[current_partition_id].value();
+          const auto& primary_predicate_matching_rows =
+              hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-          if (it != hashtable.end()) {
-            const auto& matching_rows = it->second;
-
-            for (const auto& row_id : matching_rows) {
+          if (primary_predicate_matching_rows != hash_table.end()) {
+            for (const auto& row_id : *primary_predicate_matching_rows) {
               if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
                 any_build_column_value_matches = true;
                 break;
@@ -589,7 +647,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           }
         }
       } else if constexpr (mode == JoinMode::AntiNullAsFalse) {  // NOLINT - doesn't like else if constexpr
-        // no hashtable on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
+        // no hash table on other side, but we are in AntiNullAsFalse mode which means all tuples from the probing side
         // get emitted.
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -597,7 +655,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           pos_list_local.emplace_back(probe_column_element.row_id);
         }
       } else if constexpr (mode == JoinMode::AntiNullAsTrue) {  // NOLINT - doesn't like else if constexpr
-        // no hashtable on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
+        // no hash table on other side, but we are in AntiNullAsTrue mode which means all tuples from the probing side
         // get emitted. That is, except NULL values, which only get emitted if the build table is empty.
         pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -636,17 +694,21 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
   PosListsByChunk pos_lists_by_segment(input_table->column_count());
   auto pos_lists_by_segment_it = pos_lists_by_segment.begin();
 
-  const auto& input_chunks = input_table->chunks();
+  const auto input_chunks_count = input_table->chunk_count();
+  const auto input_columns_count = input_table->column_count();
 
   // For every column, for every chunk
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < input_columns_count; ++column_id) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
     auto pos_list_ptrs = std::make_shared<PosLists>(input_table->chunk_count());
     auto pos_lists_iter = pos_list_ptrs->begin();
 
     // Iterate over every chunk and add the chunks segment with column_id to pos_list_ptrs
-    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      const auto& ref_segment_uncasted = input_chunks[chunk_id]->segments()[column_id];
+    for (ChunkID chunk_id{0}; chunk_id < input_chunks_count; ++chunk_id) {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      const auto& ref_segment_uncasted = chunk->segments()[column_id];
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
       *pos_lists_iter = ref_segment->pos_list();
       ++pos_lists_iter;

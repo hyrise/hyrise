@@ -11,6 +11,7 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -19,13 +20,9 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
 
 #include "utils/assert.hpp"
-
-#include "logical_query_plan/mock_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -34,28 +31,20 @@ namespace opossum {
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    const auto table = load_table("resources/test_data/tbl/int_int_int.tbl");
-    StorageManager::get().add_table("a", table);
     _rule = std::make_shared<PredicateReorderingRule>();
 
-    std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics(
-        {std::make_shared<ColumnStatistics<int32_t>>(0.0f, 20, 10, 100),
-         std::make_shared<ColumnStatistics<int32_t>>(0.0f, 5, 50, 60),
-         std::make_shared<ColumnStatistics<int32_t>>(0.0f, 2, 110, 1100)});
-
-    auto table_statistics = std::make_shared<TableStatistics>(TableType::Data, 100, column_statistics);
-    // Assumes 50% deleted rows
-    table_statistics->increase_invalid_row_count(50);
-
-    node = StoredTableNode::make("a");
-    table->set_table_statistics(table_statistics);
+    node = create_mock_node_with_statistics(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
+        {GenericHistogram<int32_t>::with_single_bin(10, 100, 100, 20),
+         GenericHistogram<int32_t>::with_single_bin(50, 60, 100, 5),
+         GenericHistogram<int32_t>::with_single_bin(110, 1100, 100, 2)});
 
     a = LQPColumnReference{node, ColumnID{0}};
     b = LQPColumnReference{node, ColumnID{1}};
     c = LQPColumnReference{node, ColumnID{2}};
   }
 
-  std::shared_ptr<StoredTableNode> node;
+  std::shared_ptr<MockNode> node;
   LQPColumnReference a, b, c;
   std::shared_ptr<PredicateReorderingRule> _rule;
 };
@@ -91,14 +80,15 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
   EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
 }
 
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(equals_(a, 42),
-    PredicateNode::make(greater_than_(b, 50),
+  PredicateNode::make(equals_(a, 95),
+    PredicateNode::make(greater_than_(b, 55),
       PredicateNode::make(greater_than_(b, 40),
         ProjectionNode::make(expression_vector(a, b, c),
           PredicateNode::make(greater_than_equals_(a, 90),
@@ -108,8 +98,8 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 
   const auto expected_optimized_lqp =
   PredicateNode::make(greater_than_(b, 40),
-    PredicateNode::make(greater_than_(b, 50),
-      PredicateNode::make(equals_(a, 42),
+    PredicateNode::make(greater_than_(b, 55),
+      PredicateNode::make(equals_(a, 95),
         ProjectionNode::make(expression_vector(a, b, c),
           PredicateNode::make(less_than_(c, 500),
             PredicateNode::make(greater_than_equals_(a, 90),
@@ -134,13 +124,11 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   auto predicate_node_1 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 40));
   predicate_node_1->set_left_input(predicate_node_0);
 
-  predicate_node_1->get_statistics();
-
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
   // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
-  auto predicate_node_2 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 40));
+  auto predicate_node_2 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 400));
   predicate_node_2->set_left_input(stored_table_node);
 
   auto predicate_node_3 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 20));
@@ -156,33 +144,30 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
 TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   /**
-   * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
-   * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
-   * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
-   * correct input.
-   *
-   *             _______Cross________
-   *            /                    \
-   *  Predicate_0(a > 80)     Predicate_2(a > 90)
-   *           |                     |
-   *  Predicate_1(a > 60)     Predicate_3(a > 50)
-   *           |                     |
-   *        Table_0           Predicate_4(a > 30)
-   *                                 |
-   *                               Table_1
-   */
+     * Check that Reordering predicates works if a predicate chain is both on the left and right side of a node.
+     * This is particularly interesting because the PredicateReorderingRule needs to re-attach the ordered chain of
+     * predicates to the output (the cross node in this case). This test checks whether the attachment happens as the
+     * correct input.
+     *
+     *             _______Cross________
+     *            /                    \
+     *  Predicate_0(a > 80)     Predicate_2(a > 90)
+     *           |                     |
+     *  Predicate_1(a > 60)     Predicate_3(a > 50)
+     *           |                     |
+     *        Table_0           Predicate_4(a > 30)
+     *                                 |
+     *                               Table_1
+     */
 
   /**
-   * The mocked table has one column of int32_ts with the value range 0..100
-   */
-  auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
-  auto table_statistics = std::make_shared<TableStatistics>(
-      TableType::Data, 100, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
+     * The mocked table has one column of int32_ts with the value range 0..100
+     */
+  auto table_0 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                                  {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+  auto table_1 = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                                  {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
 
-  auto table_0 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-  table_0->set_statistics(table_statistics);
-  auto table_1 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-  table_1->set_statistics(table_statistics);
   auto cross_node = JoinNode::make(JoinMode::Cross);
   auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 80));
   auto predicate_1 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 60));
@@ -211,29 +196,26 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
 
 TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   /**
-   * If a PredicateNode has multiple outputs, it should not be considered for reordering
-   */
+     * If a PredicateNode has multiple outputs, it should not be considered for reordering
+     */
   /**
-   *      _____Union___
-   *    /             /
-   * Predicate_a     /
-   *    \           /
-   *     Predicate_b
-   *         |
-   *       Table
-   *
-   * predicate_a should come before predicate_b - but since Predicate_b has two outputs, it can't be reordered
-   */
+     *      _____Union___
+     *    /             /
+     * Predicate_a     /
+     *    \           /
+     *     Predicate_b
+     *         |
+     *       Table
+     *
+     * predicate_a should come before predicate_b - but since Predicate_b has two outputs, it can't be reordered
+     */
 
   /**
-   * The mocked table has one column of int32_ts with the value range 0..100
-   */
-  auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
-  auto table_statistics = std::make_shared<TableStatistics>(
-      TableType::Data, 100, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
-
-  auto table_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-  table_node->set_statistics(table_statistics);
+     * The mocked table has one column of int32_ts with the value range 0..100
+     */
+  auto table_node =
+      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
   auto union_node = UnionNode::make(UnionMode::Positions);
   auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
   auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
@@ -255,28 +237,14 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format off
   const auto input_lqp =
-    PredicateNode::make(greater_than_(a, 60),
-      ValidateNode::make(node));
-
-  const auto expected_lqp =
+  PredicateNode::make(greater_than_(a, 60),
     ValidateNode::make(
-      PredicateNode::make(greater_than_(a, 60),
-        node));
-  // clang-format on
-
-  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp);
-}
-
-TEST_F(PredicateReorderingTest, SecondValidateReorderingTest) {
-  // clang-format off
-  const auto input_lqp =
-    PredicateNode::make(greater_than_(a, 30),
-      ValidateNode::make(node));
+      node));
 
   const auto expected_lqp =
-    PredicateNode::make(greater_than_(a, 30),
-      ValidateNode::make(node));
+  ValidateNode::make(
+    PredicateNode::make(greater_than_(a, 60),
+      node));
   // clang-format on
 
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

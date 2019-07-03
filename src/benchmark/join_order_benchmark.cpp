@@ -12,12 +12,12 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sqlite_add_indices.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/sqlite_add_indices.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
       BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};
 
   if (benchmark_config->verify) {
-    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner);
+    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner.sqlite_wrapper);
   }
 
   std::cout << "done." << std::endl;

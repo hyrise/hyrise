@@ -41,7 +41,7 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
  * accessor each.
  */
 template <typename T, typename SegmentType>
-class SegmentAccessor : public AbstractSegmentAccessor<T> {
+class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
@@ -58,7 +58,7 @@ class SegmentAccessor : public AbstractSegmentAccessor<T> {
  * SingleChunkReferenceSegmentAccessor, we know that the same chunk is referenced, so we create the accessor only once.
  */
 template <typename T>
-class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
+class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
       : _segment{segment}, _table{segment.referenced_table()}, _accessors{1} {}
@@ -92,33 +92,27 @@ class MultipleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> 
 };
 
 // Accessor for ReferenceSegments that reference single chunks - see comment above
-template <typename T>
-class SingleChunkReferenceSegmentAccessor : public AbstractSegmentAccessor<T> {
+template <typename T, typename Segment>
+class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SingleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
-      : _segment{segment},
-        _chunk_id((*_segment.pos_list())[ChunkOffset{0}].chunk_id),
-        // If *_segment.pos_list()[ChunkOffset{0}] is NULL, its chunk_id is INVALID_CHUNK_OFFSET. When the
-        // SingleChunkReferenceSegmentAccessor is used, all entries reference the same chunk_id (INVALID_CHUNK_OFFSET).
-        // Therefore, we can safely assume that all other entries are also NULL and always return std::nullopt.
-        _accessor((*_segment.pos_list())[ChunkOffset{0}].is_null()
-                      ? std::make_unique<NullAccessor>()
-                      : create_segment_accessor<T>(segment.referenced_table()->get_chunk(_chunk_id)->get_segment(
-                            _segment.referenced_column_id()))) {}
+  explicit SingleChunkReferenceSegmentAccessor(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment)
+      : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    const auto referenced_chunk_offset = (*_segment.pos_list())[offset].chunk_offset;
-    return _accessor->access(referenced_chunk_offset);
+    const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
+    return _segment.get_typed_value(referenced_chunk_offset);
   }
 
  protected:
-  class NullAccessor : public AbstractSegmentAccessor<T> {
-    const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
-  };
-
-  const ReferenceSegment& _segment;
+  const PosList& _pos_list;
   const ChunkID _chunk_id;
-  const std::unique_ptr<AbstractSegmentAccessor<T>> _accessor;
+  const Segment& _segment;
+};
+
+// Accessor for ReferenceSegments that reference only NULL values
+template <typename T>
+class NullAccessor final : public AbstractSegmentAccessor<T> {
+  const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
 };
 
 }  // namespace opossum

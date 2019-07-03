@@ -9,6 +9,8 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -20,6 +22,12 @@ class StoredTableNodeTest : public BaseTest {
   void SetUp() override {
     StorageManager::get().add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl", 1));
     StorageManager::get().add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl", 1));
+
+    const auto& table_t_a = StorageManager::get().get_table("t_a");
+    ChunkEncoder::encode_all_chunks(table_t_a);
+    table_t_a->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
+    table_t_a->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a2");
+    table_t_a->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
 
     _stored_table_node = StoredTableNode::make("t_a");
     _a = LQPColumnReference(_stored_table_node, ColumnID{0});
@@ -93,13 +101,17 @@ TEST_F(StoredTableNodeTest, Copy) {
 TEST_F(StoredTableNodeTest, NodeExpressions) { ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u); }
 
 TEST_F(StoredTableNodeTest, GetStatistics) {
-  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().size(), 2u);
+  EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 3u);
 
-  const auto column_statistics_b = _stored_table_node->get_statistics()->column_statistics().at(1u);
+  auto expected_statistics = _stored_table_node->indexes_statistics().at(2u);
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
-  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().size(), 1u);
-  EXPECT_EQ(_stored_table_node->get_statistics()->column_statistics().at(0u), column_statistics_b);
+
+  // column with ColumnID{0} was pruned, therefore the column has to be left shifted
+  expected_statistics.column_ids[0] -= 1;
+
+  EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 1u);
+  EXPECT_EQ(_stored_table_node->indexes_statistics().at(0u), expected_statistics);
 }
 
 }  // namespace opossum

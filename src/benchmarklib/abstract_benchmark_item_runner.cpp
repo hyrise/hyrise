@@ -12,6 +12,8 @@ namespace opossum {
 AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config)
     : _config(config) {}
 
+void AbstractBenchmarkItemRunner::on_tables_loaded() {}
+
 std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
     const BenchmarkItemID item_id) {
   std::optional<std::string> visualize_prefix;

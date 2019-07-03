@@ -1,12 +1,14 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "testing_assert.hpp"
@@ -26,14 +28,17 @@ class OptimizerTest : public ::testing::Test {
     x = node_b->get_column("x");
     y = node_b->get_column("y");
 
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}});
+    u = node_c->get_column("u");
+
     subquery_lqp_a = LimitNode::make(to_expression(1), node_b);
     subquery_a = lqp_subquery_(subquery_lqp_a);
     subquery_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(x, y), node_b));
     subquery_b = lqp_subquery_(subquery_lqp_b);
   }
 
-  std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a, b, x, y;
+  std::shared_ptr<MockNode> node_a, node_b, node_c;
+  LQPColumnReference a, b, x, y, u;
   std::shared_ptr<AbstractLQPNode> subquery_lqp_a, subquery_lqp_b;
   std::shared_ptr<LQPSubqueryExpression> subquery_a, subquery_b;
 };

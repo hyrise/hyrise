@@ -71,23 +71,32 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
 
   auto max_node = numa_max_node();
   auto num_configured_cpus = static_cast<CpuID>(numa_num_configured_cpus());
-  auto cpu_bitmask = numa_allocate_cpumask();
+
+  // We take the CPU affinity (set, e.g., by numactl) of our process into account.
+  // Otherwise, we would always start with the first CPU, even if a specific NUMA node was selected.
+  auto affinity_cpu_bitmask = numa_allocate_cpumask();
+  numa_sched_getaffinity(0, affinity_cpu_bitmask);
+
+  auto this_node_cpu_bitmask = numa_allocate_cpumask();
   auto core_count = uint32_t{0};
 
   for (auto node_id = 0; node_id <= max_node; node_id++) {
     if (max_num_cores == 0 || core_count < max_num_cores) {
       auto cpus = std::vector<TopologyCpu>();
 
-      numa_node_to_cpus(node_id, cpu_bitmask);
+      numa_node_to_cpus(node_id, this_node_cpu_bitmask);
 
       for (CpuID cpu_id{0}; cpu_id < num_configured_cpus; ++cpu_id) {
-        if (numa_bitmask_isbitset(cpu_bitmask, cpu_id)) {
+        const auto cpu_is_part_of_node = numa_bitmask_isbitset(this_node_cpu_bitmask, cpu_id);
+        const auto cpu_is_part_of_affinity = numa_bitmask_isbitset(affinity_cpu_bitmask, cpu_id);
+        if (cpu_is_part_of_node && cpu_is_part_of_affinity) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
             cpus.emplace_back(TopologyCpu(cpu_id));
             _num_cpus++;
           }
           core_count++;
         }
+        if (!cpu_is_part_of_affinity) _filtered_by_affinity = true;
       }
 
       TopologyNode node(std::move(cpus));
@@ -97,7 +106,8 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
 
   _create_memory_resources();
 
-  numa_free_cpumask(cpu_bitmask);
+  numa_free_cpumask(affinity_cpu_bitmask);
+  numa_free_cpumask(this_node_cpu_bitmask);
 #endif
 }
 
@@ -184,6 +194,9 @@ void Topology::_create_memory_resources() {
 
 std::ostream& operator<<(std::ostream& stream, const Topology& topology) {
   stream << "Number of CPUs: " << topology.num_cpus() << std::endl;
+  if (topology._filtered_by_affinity) {
+    stream << "Available CPUs / nodes were filtered by externally set CPU affinity (e.g., numactl)." << std::endl;
+  }
   for (size_t node_idx = 0; node_idx < topology.nodes().size(); ++node_idx) {
     stream << "Node #" << node_idx << " - ";
     stream << topology.nodes()[node_idx];

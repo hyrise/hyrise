@@ -10,7 +10,7 @@ Papers that were published before October 2017 were based on the previous versio
 
 # Getting started
 
-*Have a look at our [contributor guidelines](CONTRIBUTING.md)*
+*Have a look at our [contributor guidelines](CONTRIBUTING.md)*.
 
 You can find definitions of most of the terms and abbreviations used in the code in the [glossary](GLOSSARY.md). If you cannot find something that you are looking for, feel free to open an issue.
 
@@ -122,8 +122,8 @@ Contact: firstname.lastname@hpi.de
 -   Tom       Lichtenstein
 -   Alexander Löser
 -   Jan       Mattfeld
--   Julian    Menzler
 -   Arne      Mayer
+-   Julian    Menzler
 -   Torben    Meyer
 -   Leander   Neiß
 -   Hendrik   Rätz
