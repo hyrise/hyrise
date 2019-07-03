@@ -75,7 +75,7 @@ try {
 
         parallel clangDebug: {
           stage("clang-debug") {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && VERBOSE=1 make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-debug/hyriseTest clang-debug"
           }
         }, gccDebug: {
