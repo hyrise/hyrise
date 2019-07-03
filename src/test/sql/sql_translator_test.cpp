@@ -554,7 +554,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInCorre
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView)   {
+TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
   const auto result_node = compile_query("CREATE VIEW alias_view AS SELECT a AS x, b as y FROM int_float WHERE a > 10");
 
   // clang-format off
