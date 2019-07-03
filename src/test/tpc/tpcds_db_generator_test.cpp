@@ -112,6 +112,9 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
    */
   const auto rows_to_check = ds_key_t{50};
 
+  // Initialize with different params to check whether global state is correctly reset.
+  TpcdsTableGenerator(10, 2, 42);
+
   // Run generation twice to make sure no global state (of which tpcds_dbgen has plenty :( ) from the
   //  first generation process carried over into the second
   for (auto i = 1; i <= 2; i++) {

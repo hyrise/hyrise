@@ -62,6 +62,11 @@ static int *pItemPermutation,
 static ds_key_t jDate,
    kNewDateIndex;
 
+int mk_w_store_sales_master_bInit = 0;
+void reset_mk_w_store_sales_master_bInit() {
+  mk_w_store_sales_master_bInit = 0;
+}
+
 /*
 * mk_store_sales
 */
@@ -71,8 +76,7 @@ mk_w_store_sales_master (void *row, ds_key_t index)
 	struct W_STORE_SALES_TBL *r;
 	static decimal_t dMin,
 		dMax;
-	static int bInit = 0,
-		nMaxItemCount;
+	static int nMaxItemCount;
 	static ds_key_t kNewDateIndex = 0;
 
 	if (row == NULL)
@@ -80,15 +84,15 @@ mk_w_store_sales_master (void *row, ds_key_t index)
 	else
 		r = row;
 
-	if (!bInit)
+	if (!mk_w_store_sales_master_bInit)
 	{
       strtodec (&dMin, "1.00");
       strtodec (&dMax, "100000.00");
 		nMaxItemCount = 20;
 		jDate = skipDays(STORE_SALES, &kNewDateIndex);
 		pItemPermutation = makePermutation(NULL, nItemCount = (int)getIDCount(ITEM), SS_PERMUTATION);
-		
-		bInit = 1;
+
+    mk_w_store_sales_master_bInit = 1;
 	}
 
 	

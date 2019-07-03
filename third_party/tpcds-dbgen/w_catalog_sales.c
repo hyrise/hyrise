@@ -64,7 +64,6 @@ static int *pItemPermutation;
 static int nItemCount;
 
 int mk_w_catalog_sales_master_bInit = 0;
-
 void reset_mk_w_catalog_sales_master_bInit() {
   mk_w_catalog_sales_master_bInit = 0;
 }

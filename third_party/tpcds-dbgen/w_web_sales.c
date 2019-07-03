@@ -61,6 +61,12 @@ static ds_key_t kNewDateIndex = 0;
 static ds_key_t jDate;
 static int nItemIndex = 0;
 
+int mk_w_web_sales_master_bInit = 0;
+int mk_w_web_sales_detail_bInit = 0;
+void reset_mk_w_web_sales_bInit() {
+  mk_w_web_sales_master_bInit = 0;
+  mk_w_web_sales_detail_bInit = 0;
+}
 
 /*
  * the validation process requires generating a single lineitem
@@ -74,21 +80,20 @@ mk_w_web_sales_master (void *row, ds_key_t index)
       dMax;
    int nGiftPct;
    struct W_WEB_SALES_TBL *r;
-   static int bInit = 0,
-	   nItemCount;
+   static int nItemCount;
 	
 	if (row == NULL)
 		r = &g_w_web_sales;
 	else
 		r = row;
 
-	if (!bInit)
+	if (!mk_w_web_sales_master_bInit)
 	{
 		strtodec (&dMin, "1.00");
 		strtodec (&dMax, "100000.00");
 		jDate = skipDays(WEB_SALES, &kNewDateIndex);	
 		nItemCount = (int)getIDCount(ITEM);
-		bInit = 1;
+    mk_w_web_sales_master_bInit = 1;
 	}
 		
 	
@@ -141,8 +146,7 @@ void
 mk_w_web_sales_detail (void *row, int bPrint, void* web_returns, int* was_returned)
 {
 	static int *pItemPermutation,
-		nItemCount,
-		bInit = 0;
+		nItemCount;
 	struct W_WEB_SALES_TBL *r;
 	int nShipLag,
 		nTemp;
@@ -150,12 +154,12 @@ mk_w_web_sales_detail (void *row, int bPrint, void* web_returns, int* was_return
    tdef *pT = getSimpleTdefsByNumber(WEB_SALES);
 
 
-	if (!bInit)
+	if (!mk_w_web_sales_detail_bInit)
 	{
 		jDate = skipDays(WEB_SALES, &kNewDateIndex);
 		pItemPermutation = makePermutation(NULL, nItemCount = (int)getIDCount(ITEM), WS_PERMUTATION);
-		
-		bInit = 1;
+
+    mk_w_web_sales_detail_bInit = 1;
 	}
 
 	if (row == NULL)

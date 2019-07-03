@@ -71,6 +71,7 @@ struct W_WEB_SALES_TBL {
 #define WS_MIN_SHIP_DELAY	1			/* time between order date and ship date */
 #define WS_MAX_SHIP_DELAY	120
 
+void reset_mk_w_web_sales_bInit();
 void mk_w_web_sales_master (void *row, ds_key_t index);
 void mk_w_web_sales_detail (void *row, int bPrint, void* web_returns, int* was_returned);
 int mk_w_web_sales(void *pDest, ds_key_t kIndex, void* web_returns, int* was_returned);
