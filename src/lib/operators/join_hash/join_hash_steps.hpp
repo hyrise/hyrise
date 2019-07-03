@@ -351,7 +351,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
    * - histograms for chunks 0 and 1 [4 0 3] & [5 2 7] (i.e., first radix cluster has 4 + 5 values)
    * - first step: create offsets that denote write offsets per radix cluster and collect lengths
    *   - result: offsets vectors are [0 0 0] [4 0 3] and lengths are [9 2 10]
-   * - second step: create prefix sum vector of [9 2 10] >> [9 11 10]
+   * - second step: create prefix sum vector of [9 2 10] >> [9 11 21]
    * - third step: adapt offset vectors to create the offsets that allow writing
    *   all threads in parallel into a _consecutive_ vector
    *   - result: [0 9 11] [4 9 14]
