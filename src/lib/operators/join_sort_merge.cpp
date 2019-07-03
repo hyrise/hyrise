@@ -35,7 +35,7 @@ bool JoinSortMerge::supports(JoinMode join_mode, PredicateCondition predicate_co
 /**
 * The sort merge join performs a join on two input tables on specific join columns. For usage notes, see the
 * join_sort_merge.hpp. This is how the join works:
-* -> The input tables are materialized and clustered to a specified amount of clusters.
+* -> The input tables are materialized and clustered into a specified number of clusters.
 *    /utils/radix_cluster_sort.hpp for more info on the clustering phase.
 * -> The join is performed per cluster. For the joining phase, runs of entries with the same value are identified
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
@@ -61,7 +61,7 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
                   !_secondary_predicates.empty()),
-         "JoinHash doesn't support these parameters");
+         "JoinSortMerge doesn't support these parameters");
 
   // Check column types
   const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);

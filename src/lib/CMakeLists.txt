@@ -456,7 +456,8 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
-    storage/index/index_info.hpp
+    storage/index/index_statistics.cpp
+    storage/index/index_statistics.hpp
     storage/index/segment_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
@@ -551,6 +552,8 @@ set(
     utils/assert.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
+    utils/column_ids_after_pruning.cpp
+    utils/column_ids_after_pruning.hpp
     utils/copyable_atomic.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp

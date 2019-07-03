@@ -147,8 +147,6 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
-const tbb::concurrent_vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
-
 uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
@@ -232,13 +230,13 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
-std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
-
 std::shared_ptr<TableStatistics> Table::table_statistics() const { return _table_statistics; }
 
 void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
   _table_statistics = table_statistics;
 }
+
+std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};
@@ -251,7 +249,7 @@ size_t Table::estimate_memory_usage() const {
     bytes += column_definition.name.size();
   }
 
-  // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
+  // TODO(anybody) Statistics and Indexes missing from Memory Usage Estimation
   // TODO(anybody) TableLayout missing
 
   return bytes;

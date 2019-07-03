@@ -46,7 +46,11 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   //               resources.
   std::unordered_map<T, HistogramCountType> value_distribution_map;
 
-  for (const auto& chunk : table.chunks()) {
+  const auto chunk_count = table.chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table.get_chunk(chunk_id);
+    if (!chunk) continue;
+
     value_distribution_map =
         add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), std::move(value_distribution_map), domain);
   }
