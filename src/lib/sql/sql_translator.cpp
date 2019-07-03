@@ -1552,6 +1552,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements(
     const std::vector<SelectListElement>& select_list_elements) const {
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  expressions.reserve(select_list_elements.size());
   for (const auto& element : select_list_elements) {
     expressions.emplace_back(element.expression);
   }
@@ -1562,7 +1563,7 @@ SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<Abstra
     : expression(expression) {}
 
 SQLTranslator::SelectListElement::SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
-                                                    const std::vector<SQLIdentifier> identifiers)
+                                                    const std::vector<SQLIdentifier>& identifiers)
     : expression(expression), identifiers(identifiers) {}
 
 SQLTranslator::TableSourceState::TableSourceState(

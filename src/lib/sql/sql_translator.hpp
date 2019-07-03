@@ -56,7 +56,7 @@ class SQLTranslator final {
   struct SelectListElement {
     explicit SelectListElement(const std::shared_ptr<AbstractExpression>& expression);
     SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
-                      const std::vector<SQLIdentifier> identifiers);
+                      const std::vector<SQLIdentifier>& identifiers);
 
     std::shared_ptr<AbstractExpression> expression;
     std::vector<SQLIdentifier> identifiers;
