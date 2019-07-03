@@ -73,13 +73,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       ((_index_side == IndexSide::Right && input_table_right()->type() == TableType::References) ||
        (_index_side == IndexSide::Left && input_table_left()->type() == TableType::References)) &&
       _secondary_predicates.empty()) {
-    return _perform_reference_join();
+    return _reference_join();
   } else {
-    return _perform_data_join();
+    return _data_join();
   }
 }
 
-std::shared_ptr<const Table> JoinIndex::_perform_data_join() {
+std::shared_ptr<const Table> JoinIndex::_data_join() {
   Assert(supports(_mode, _primary_predicate.predicate_condition,
                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
@@ -140,70 +140,12 @@ std::shared_ptr<const Table> JoinIndex::_perform_data_join() {
       }
       performance_data.chunks_scanned_with_index++;
     } else {
-      // Fall back to NestedLoopJoin
-      const auto index_segment =
-          _index_input_table->get_chunk(index_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.second);
-      for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
-        const auto probe_segment =
-            _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
-        JoinNestedLoop::JoinParams params{*_probe_pos_list,
-                                          *_index_pos_list,
-                                          _probe_matches[probe_chunk_id],
-                                          _index_matches[index_chunk_id],
-                                          track_probe_matches,
-                                          track_index_matches,
-                                          _mode,
-                                          _adjusted_primary_predicate.predicate_condition,
-                                          secondary_predicate_evaluator,
-                                          !is_semi_or_anti_join};
-        JoinNestedLoop::_join_two_untyped_segments(*probe_segment, *index_segment, probe_chunk_id, index_chunk_id,
-                                                   params);
-      }
-      performance_data.chunks_scanned_without_index++;
+      _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+                            secondary_predicate_evaluator);
     }
   }
 
-  // For Full Outer and Left Join we need to add all unmatched rows for the probe side
-  if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
-    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
-      for (ChunkOffset chunk_offset{0}; chunk_offset < _probe_matches[probe_chunk_id].size(); ++chunk_offset) {
-        if (!_probe_matches[probe_chunk_id][chunk_offset]) {
-          _probe_pos_list->emplace_back(RowID{probe_chunk_id, chunk_offset});
-          _index_pos_list->emplace_back(NULL_ROW_ID);
-        }
-      }
-    }
-  }
-
-  // For Full Outer and Right Join we need to add all unmatched rows for the index side.
-  if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
-    for (ChunkID chunk_id{0}; chunk_id < _index_matches.size(); ++chunk_id) {
-      for (ChunkOffset chunk_offset{0}; chunk_offset < _index_matches[chunk_id].size(); ++chunk_offset) {
-        if (!_index_matches[chunk_id][chunk_offset]) {
-          _index_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
-          _probe_pos_list->emplace_back(NULL_ROW_ID);
-        }
-      }
-    }
-  }
-
-  _probe_pos_list->shrink_to_fit();
-  _index_pos_list->shrink_to_fit();
-
-  // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
-  // We use `probe_matches_by_chunk` to determine whether a tuple from the probe side found a match.
-  if (is_semi_or_anti_join) {
-    const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
-
-    for (auto chunk_id = ChunkID{0}; chunk_id < _probe_input_table->chunk_count(); ++chunk_id) {
-      const auto chunk_size = _probe_input_table->get_chunk(chunk_id)->size();
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-        if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
-          _probe_pos_list->emplace_back(chunk_id, chunk_offset);
-        }
-      }
-    }
-  }
+  _append_matches_non_inner(is_semi_or_anti_join);
 
   // write output chunks
   Segments output_segments;
@@ -232,7 +174,32 @@ std::shared_ptr<const Table> JoinIndex::_perform_data_join() {
   return _build_output_table({std::make_shared<Chunk>(output_segments)});
 }
 
-std::shared_ptr<const Table> JoinIndex::_perform_reference_join() {
+void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
+                                      const bool track_index_matches, const bool is_semi_or_anti_join,
+                                      MultiPredicateJoinEvaluator& secondary_predicate_evaluator) {
+  auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
+
+  const auto index_segment =
+      _index_input_table->get_chunk(index_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.second);
+  for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
+    const auto probe_segment =
+        _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
+    JoinNestedLoop::JoinParams params{*_probe_pos_list,
+                                      *_index_pos_list,
+                                      _probe_matches[probe_chunk_id],
+                                      _index_matches[index_chunk_id],
+                                      track_probe_matches,
+                                      track_index_matches,
+                                      _mode,
+                                      _adjusted_primary_predicate.predicate_condition,
+                                      secondary_predicate_evaluator,
+                                      !is_semi_or_anti_join};
+    JoinNestedLoop::_join_two_untyped_segments(*probe_segment, *index_segment, probe_chunk_id, index_chunk_id, params);
+  }
+  performance_data.chunks_scanned_without_index++;
+}
+
+std::shared_ptr<const Table> JoinIndex::_reference_join() {
   // std::cout << "REF INDEX JOIN"
   //           << "\n";
   // std::vector<ColumnID> data_table_index_column_ids;
@@ -249,7 +216,7 @@ std::shared_ptr<const Table> JoinIndex::_perform_reference_join() {
   //     data_table_index_column_ids.emplace_back(first_reference_segment->referenced_column_id());
   //   }
   // }
-  // // use _perform_join if the referenced data table has no index
+  // // use _join if the referenced data table has no index
   // Assert(referenced_data_table != nullptr, "ReferenceSegment has no reference table.");
   // if (!referenced_data_table->indexes_statistics().empty()) {
   //   // Assumption: Original data table of the right input table has
@@ -337,15 +304,7 @@ std::shared_ptr<const Table> JoinIndex::_perform_reference_join() {
   //   return _build_output_table({std::make_shared<Chunk>(output_segments)});
   // }
   // use the fallback solution (nested loop)
-  return _perform_data_join();
-}
-
-void JoinIndex::_append_matches(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
-                                const PosList& index_table_matches) {
-  for (const auto& index_side_row_id : index_table_matches) {
-    _probe_pos_list->emplace_back(RowID{probe_chunk_id, probe_chunk_offset});
-    _index_pos_list->emplace_back((index_side_row_id));
-  }
+  return _data_join();
 }
 
 // join loop that joins two segments of two columns using an iterator for the probe side,
@@ -433,6 +392,58 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
     std::for_each(range_begin, range_end, [this, index_chunk_id](ChunkOffset index_chunk_offset) {
       _index_matches[index_chunk_id][index_chunk_offset] = true;
     });
+  }
+}
+
+void JoinIndex::_append_matches(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
+                                const PosList& index_table_matches) {
+  for (const auto& index_side_row_id : index_table_matches) {
+    _probe_pos_list->emplace_back(RowID{probe_chunk_id, probe_chunk_offset});
+    _index_pos_list->emplace_back((index_side_row_id));
+  }
+}
+
+void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
+  // For Full Outer and Left Join we need to add all unmatched rows for the probe side
+  if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
+    for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < _probe_matches[probe_chunk_id].size(); ++chunk_offset) {
+        if (!_probe_matches[probe_chunk_id][chunk_offset]) {
+          _probe_pos_list->emplace_back(RowID{probe_chunk_id, chunk_offset});
+          _index_pos_list->emplace_back(NULL_ROW_ID);
+        }
+      }
+    }
+  }
+
+  // For Full Outer and Right Join we need to add all unmatched rows for the index side.
+  if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
+    for (ChunkID chunk_id{0}; chunk_id < _index_matches.size(); ++chunk_id) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < _index_matches[chunk_id].size(); ++chunk_offset) {
+        if (!_index_matches[chunk_id][chunk_offset]) {
+          _index_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
+          _probe_pos_list->emplace_back(NULL_ROW_ID);
+        }
+      }
+    }
+  }
+
+  _probe_pos_list->shrink_to_fit();
+  _index_pos_list->shrink_to_fit();
+
+  // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
+  // We use `probe_matches_by_chunk` to determine whether a tuple from the probe side found a match.
+  if (is_semi_or_anti_join) {
+    const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < _probe_input_table->chunk_count(); ++chunk_id) {
+      const auto chunk_size = _probe_input_table->get_chunk(chunk_id)->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
+          _probe_pos_list->emplace_back(chunk_id, chunk_offset);
+        }
+      }
+    }
   }
 }
 

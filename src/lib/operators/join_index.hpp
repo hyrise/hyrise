@@ -15,6 +15,8 @@ namespace opossum {
 
 enum class IndexSide { Left, Right };
 
+class MultiPredicateJoinEvaluator;
+
 /**
    * This operator joins two tables using one column of each table.
    * A speedup compared to the Nested Loop Join is achieved by avoiding the inner loop, and instead
@@ -50,12 +52,14 @@ class JoinIndex : public AbstractJoinOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   // This function is executed if the output table of the index side input operator is a data table.
-  std::shared_ptr<const Table> _perform_data_join();
+  std::shared_ptr<const Table> _data_join();
 
   // This function is executed if the output table of the index side input operator is a reference table.
-  std::shared_ptr<const Table> _perform_reference_join();
+  std::shared_ptr<const Table> _reference_join();
 
-  std::shared_ptr<const Table> _perform_fallback_nested_loop();
+  void _fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
+                             const bool track_index_matches, const bool is_semi_or_anti_join,
+                             MultiPredicateJoinEvaluator& secondary_predicate_evaluator);
 
   void _append_matches(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                        const PosList& index_table_matches);
@@ -67,6 +71,8 @@ class JoinIndex : public AbstractJoinOperator {
   void _append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                        const ChunkID index_chunk_id);
+
+  void _append_matches_non_inner(const bool is_semi_or_anti_join);
 
   void _write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                               std::shared_ptr<PosList> pos_list);
