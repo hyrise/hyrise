@@ -402,9 +402,9 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
       auto output_offsets = std::vector<size_t>(iter_output_offsets_start, iter_output_offsets_end);
 
       const size_t input_offset = chunk_offsets[chunk_id];
-      size_t input_size = chunk_offsets[chunk_id + 1] - input_offset;
-      if (chunk_id == chunk_offsets.size() - 1) {
-        input_size = container_elements.size() - input_offset;
+      size_t input_size = container_elements.size() - input_offset;
+      if (chunk_id < chunk_offsets.size() - 1) {
+        input_size = chunk_offsets[chunk_id + 1] - input_offset;
       }
 
       for (size_t chunk_offset = input_offset; chunk_offset < input_offset + input_size; ++chunk_offset) {
