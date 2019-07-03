@@ -121,9 +121,7 @@ pmr_string zip_to_string(int32_t zip) {
 }
 
 // dsdgen deliberately creates NULL values if nullCheck(column_id) is true, the resolve functions do the same
-// TODO: are templates a significant performance improvement?
-template <int column_id>
-std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
+std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
   if (date_id <= 0 || nullCheck(column_id)) {
     return std::nullopt;
   }
@@ -137,36 +135,30 @@ std::optional<pmr_string> resolve_date_id(ds_key_t date_id) {
   return result;
 }
 
-template <int column_id>
-std::optional<tpcds_key_t> resolve_key(ds_key_t key) {
+std::optional<tpcds_key_t> resolve_key(int column_id, ds_key_t key) {
   return nullCheck(column_id) || key == -1 ? std::nullopt : std::optional{static_cast<tpcds_key_t>(key)};
 }
 
-template <int column_id>
-std::optional<pmr_string> resolve_string(pmr_string string) {
+std::optional<pmr_string> resolve_string(int column_id, pmr_string string) {
   return nullCheck(column_id) || string.empty() ? std::nullopt : std::optional{std::move(string)};
 }
 
-template <int column_id>
-std::optional<int32_t> resolve_integer(int value) {
+std::optional<int32_t> resolve_integer(int column_id, int value) {
   return nullCheck(column_id) ? std::nullopt : std::optional{int32_t{value}};
 }
 
-template <int column_id>
-std::optional<float> resolve_decimal(decimal_t decimal) {
+std::optional<float> resolve_decimal(int column_id, decimal_t decimal) {
   auto result = 0.0;
   dectof(&result, &decimal);
   // we have to divide by 10 after dectof to get the expected result
   return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(result / 10)};
 }
 
-template <int column_id>
-std::optional<float> resolve_gmt_offset(int32_t gmt_offset) {
+std::optional<float> resolve_gmt_offset(int column_id, int32_t gmt_offset) {
   return nullCheck(column_id) ? std::nullopt : std::optional{static_cast<float>(gmt_offset)};
 }
 
-template <int column_id>
-std::optional<pmr_string> resolve_street_name(const ds_addr_t& address) {
+std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& address) {
   return nullCheck(column_id) ? std::nullopt
                               : address.street_name2 == nullptr
                                     ? std::optional{pmr_string{address.street_name1}}
@@ -367,31 +359,31 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_ro
 
     call_center_builder.append_row(
         call_center.cc_call_center_sk, call_center.cc_call_center_id,
-        resolve_date_id<CC_REC_START_DATE_ID>(call_center.cc_rec_start_date_id),
-        resolve_date_id<CC_REC_END_DATE_ID>(call_center.cc_rec_end_date_id),
-        resolve_key<CC_CLOSED_DATE_ID>(call_center.cc_closed_date_id),
-        resolve_key<CC_OPEN_DATE_ID>(call_center.cc_open_date_id), resolve_string<CC_NAME>(call_center.cc_name),
-        resolve_string<CC_CLASS>(call_center.cc_class), resolve_integer<CC_EMPLOYEES>(call_center.cc_employees),
-        resolve_integer<CC_SQ_FT>(call_center.cc_sq_ft), resolve_string<CC_HOURS>(call_center.cc_hours),
-        resolve_string<CC_MANAGER>(call_center.cc_manager), resolve_integer<CC_MARKET_ID>(call_center.cc_market_id),
-        resolve_string<CC_MARKET_CLASS>(call_center.cc_market_class),
-        resolve_string<CC_MARKET_DESC>(call_center.cc_market_desc),
-        resolve_string<CC_MARKET_MANAGER>(call_center.cc_market_manager),
-        resolve_integer<CC_DIVISION>(call_center.cc_division_id),
-        resolve_string<CC_DIVISION_NAME>(call_center.cc_division_name),
-        resolve_integer<CC_COMPANY>(call_center.cc_company),
-        resolve_string<CC_COMPANY_NAME>(call_center.cc_company_name),
-        resolve_string<CC_ADDRESS>(pmr_string{std::to_string(call_center.cc_address.street_num)}),
-        resolve_street_name<CC_ADDRESS>(call_center.cc_address),
-        resolve_string<CC_ADDRESS>(call_center.cc_address.street_type),
-        resolve_string<CC_ADDRESS>(call_center.cc_address.suite_num),
-        resolve_string<CC_ADDRESS>(call_center.cc_address.city),
-        resolve_string<CC_ADDRESS>(call_center.cc_address.county),
-        resolve_string<CC_ADDRESS>(call_center.cc_address.state),
-        resolve_string<CC_ADDRESS>(zip_to_string(call_center.cc_address.zip)),
-        resolve_string<CC_ADDRESS>(call_center.cc_address.country),
-        resolve_gmt_offset<CC_ADDRESS>(call_center.cc_address.gmt_offset),
-        resolve_decimal<CC_TAX_PERCENTAGE>(call_center.cc_tax_percentage));
+        resolve_date_id(CC_REC_START_DATE_ID, call_center.cc_rec_start_date_id),
+        resolve_date_id(CC_REC_END_DATE_ID, call_center.cc_rec_end_date_id),
+        resolve_key(CC_CLOSED_DATE_ID, call_center.cc_closed_date_id),
+        resolve_key(CC_OPEN_DATE_ID, call_center.cc_open_date_id), resolve_string(CC_NAME, call_center.cc_name),
+        resolve_string(CC_CLASS, call_center.cc_class), resolve_integer(CC_EMPLOYEES, call_center.cc_employees),
+        resolve_integer(CC_SQ_FT, call_center.cc_sq_ft), resolve_string(CC_HOURS, call_center.cc_hours),
+        resolve_string(CC_MANAGER, call_center.cc_manager), resolve_integer(CC_MARKET_ID, call_center.cc_market_id),
+        resolve_string(CC_MARKET_CLASS, call_center.cc_market_class),
+        resolve_string(CC_MARKET_DESC, call_center.cc_market_desc),
+        resolve_string(CC_MARKET_MANAGER, call_center.cc_market_manager),
+        resolve_integer(CC_DIVISION, call_center.cc_division_id),
+        resolve_string(CC_DIVISION_NAME, call_center.cc_division_name),
+        resolve_integer(CC_COMPANY, call_center.cc_company),
+        resolve_string(CC_COMPANY_NAME, call_center.cc_company_name),
+        resolve_string(CC_ADDRESS, pmr_string{std::to_string(call_center.cc_address.street_num)}),
+        resolve_street_name(CC_ADDRESS, call_center.cc_address),
+        resolve_string(CC_ADDRESS, call_center.cc_address.street_type),
+        resolve_string(CC_ADDRESS, call_center.cc_address.suite_num),
+        resolve_string(CC_ADDRESS, call_center.cc_address.city),
+        resolve_string(CC_ADDRESS, call_center.cc_address.county),
+        resolve_string(CC_ADDRESS, call_center.cc_address.state),
+        resolve_string(CC_ADDRESS, zip_to_string(call_center.cc_address.zip)),
+        resolve_string(CC_ADDRESS, call_center.cc_address.country),
+        resolve_gmt_offset(CC_ADDRESS, call_center.cc_address.gmt_offset),
+        resolve_decimal(CC_TAX_PERCENTAGE, call_center.cc_tax_percentage));
   }
 
   return call_center_builder.finish_table();
@@ -412,13 +404,13 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_catalog_page(ds_key_t max_r
     tpcds_row_stop(CATALOG_PAGE);
 
     catalog_page_builder.append_row(catalog_page.cp_catalog_page_sk, catalog_page.cp_catalog_page_id,
-                                    resolve_key<CP_START_DATE_ID>(catalog_page.cp_start_date_id),
-                                    resolve_key<CP_END_DATE_ID>(catalog_page.cp_end_date_id),
-                                    resolve_string<CP_DEPARTMENT>(catalog_page.cp_department),
-                                    resolve_integer<CP_CATALOG_NUMBER>(catalog_page.cp_catalog_number),
-                                    resolve_integer<CP_CATALOG_PAGE_NUMBER>(catalog_page.cp_catalog_page_number),
-                                    resolve_string<CP_DESCRIPTION>(catalog_page.cp_description),
-                                    resolve_string<CP_TYPE>(catalog_page.cp_type));
+                                    resolve_key(CP_START_DATE_ID, catalog_page.cp_start_date_id),
+                                    resolve_key(CP_END_DATE_ID, catalog_page.cp_end_date_id),
+                                    resolve_string(CP_DEPARTMENT, catalog_page.cp_department),
+                                    resolve_integer(CP_CATALOG_NUMBER, catalog_page.cp_catalog_number),
+                                    resolve_integer(CP_CATALOG_PAGE_NUMBER, catalog_page.cp_catalog_page_number),
+                                    resolve_string(CP_DESCRIPTION, catalog_page.cp_description),
+                                    resolve_string(CP_TYPE, catalog_page.cp_type));
   }
 
   return catalog_page_builder.finish_table();
@@ -451,67 +443,67 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
         if (catalog_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
           catalog_sales_builder.append_row(
-              resolve_key<CS_SOLD_DATE_SK>(catalog_sales.cs_sold_date_sk),
-              resolve_key<CS_SOLD_TIME_SK>(catalog_sales.cs_sold_time_sk),
-              resolve_key<CS_SHIP_DATE_SK>(catalog_sales.cs_ship_date_sk),
-              resolve_key<CS_BILL_CUSTOMER_SK>(catalog_sales.cs_bill_customer_sk),
-              resolve_key<CS_BILL_CDEMO_SK>(catalog_sales.cs_bill_cdemo_sk),
-              resolve_key<CS_BILL_HDEMO_SK>(catalog_sales.cs_bill_hdemo_sk),
-              resolve_key<CS_BILL_ADDR_SK>(catalog_sales.cs_bill_addr_sk),
-              resolve_key<CS_SHIP_CUSTOMER_SK>(catalog_sales.cs_ship_customer_sk),
-              resolve_key<CS_SHIP_CDEMO_SK>(catalog_sales.cs_ship_cdemo_sk),
-              resolve_key<CS_SHIP_HDEMO_SK>(catalog_sales.cs_ship_hdemo_sk),
-              resolve_key<CS_SHIP_ADDR_SK>(catalog_sales.cs_ship_addr_sk),
-              resolve_key<CS_CALL_CENTER_SK>(catalog_sales.cs_call_center_sk),
-              resolve_key<CS_CATALOG_PAGE_SK>(catalog_sales.cs_catalog_page_sk),
-              resolve_key<CS_SHIP_MODE_SK>(catalog_sales.cs_ship_mode_sk),
-              resolve_key<CS_WAREHOUSE_SK>(catalog_sales.cs_warehouse_sk), catalog_sales.cs_sold_item_sk,
-              resolve_key<CS_PROMO_SK>(catalog_sales.cs_promo_sk), catalog_sales.cs_order_number,
-              resolve_integer<CS_PRICING_QUANTITY>(catalog_sales.cs_pricing.quantity),
-              resolve_decimal<CS_PRICING_WHOLESALE_COST>(catalog_sales.cs_pricing.wholesale_cost),
-              resolve_decimal<CS_PRICING_LIST_PRICE>(catalog_sales.cs_pricing.list_price),
-              resolve_decimal<CS_PRICING_SALES_PRICE>(catalog_sales.cs_pricing.sales_price),
-              resolve_decimal<CS_PRICING_EXT_DISCOUNT_AMOUNT>(catalog_sales.cs_pricing.ext_discount_amt),
-              resolve_decimal<CS_PRICING_EXT_SALES_PRICE>(catalog_sales.cs_pricing.ext_sales_price),
-              resolve_decimal<CS_PRICING_EXT_WHOLESALE_COST>(catalog_sales.cs_pricing.ext_wholesale_cost),
-              resolve_decimal<CS_PRICING_EXT_LIST_PRICE>(catalog_sales.cs_pricing.ext_list_price),
-              resolve_decimal<CS_PRICING_EXT_TAX>(catalog_sales.cs_pricing.ext_tax),
-              resolve_decimal<CS_PRICING_COUPON_AMT>(catalog_sales.cs_pricing.coupon_amt),
-              resolve_decimal<CS_PRICING_EXT_SHIP_COST>(catalog_sales.cs_pricing.ext_ship_cost),
-              resolve_decimal<CS_PRICING_NET_PAID>(catalog_sales.cs_pricing.net_paid),
-              resolve_decimal<CS_PRICING_NET_PAID_INC_TAX>(catalog_sales.cs_pricing.net_paid_inc_tax),
-              resolve_decimal<CS_PRICING_NET_PAID_INC_SHIP>(catalog_sales.cs_pricing.net_paid_inc_ship),
-              resolve_decimal<CS_PRICING_NET_PAID_INC_SHIP_TAX>(catalog_sales.cs_pricing.net_paid_inc_ship_tax),
-              resolve_decimal<CS_PRICING_NET_PROFIT>(catalog_sales.cs_pricing.net_profit));
+              resolve_key(CS_SOLD_DATE_SK, catalog_sales.cs_sold_date_sk),
+              resolve_key(CS_SOLD_TIME_SK, catalog_sales.cs_sold_time_sk),
+              resolve_key(CS_SHIP_DATE_SK, catalog_sales.cs_ship_date_sk),
+              resolve_key(CS_BILL_CUSTOMER_SK, catalog_sales.cs_bill_customer_sk),
+              resolve_key(CS_BILL_CDEMO_SK, catalog_sales.cs_bill_cdemo_sk),
+              resolve_key(CS_BILL_HDEMO_SK, catalog_sales.cs_bill_hdemo_sk),
+              resolve_key(CS_BILL_ADDR_SK, catalog_sales.cs_bill_addr_sk),
+              resolve_key(CS_SHIP_CUSTOMER_SK, catalog_sales.cs_ship_customer_sk),
+              resolve_key(CS_SHIP_CDEMO_SK, catalog_sales.cs_ship_cdemo_sk),
+              resolve_key(CS_SHIP_HDEMO_SK, catalog_sales.cs_ship_hdemo_sk),
+              resolve_key(CS_SHIP_ADDR_SK, catalog_sales.cs_ship_addr_sk),
+              resolve_key(CS_CALL_CENTER_SK, catalog_sales.cs_call_center_sk),
+              resolve_key(CS_CATALOG_PAGE_SK, catalog_sales.cs_catalog_page_sk),
+              resolve_key(CS_SHIP_MODE_SK, catalog_sales.cs_ship_mode_sk),
+              resolve_key(CS_WAREHOUSE_SK, catalog_sales.cs_warehouse_sk), catalog_sales.cs_sold_item_sk,
+              resolve_key(CS_PROMO_SK, catalog_sales.cs_promo_sk), catalog_sales.cs_order_number,
+              resolve_integer(CS_PRICING_QUANTITY, catalog_sales.cs_pricing.quantity),
+              resolve_decimal(CS_PRICING_WHOLESALE_COST, catalog_sales.cs_pricing.wholesale_cost),
+              resolve_decimal(CS_PRICING_LIST_PRICE, catalog_sales.cs_pricing.list_price),
+              resolve_decimal(CS_PRICING_SALES_PRICE, catalog_sales.cs_pricing.sales_price),
+              resolve_decimal(CS_PRICING_EXT_DISCOUNT_AMOUNT, catalog_sales.cs_pricing.ext_discount_amt),
+              resolve_decimal(CS_PRICING_EXT_SALES_PRICE, catalog_sales.cs_pricing.ext_sales_price),
+              resolve_decimal(CS_PRICING_EXT_WHOLESALE_COST, catalog_sales.cs_pricing.ext_wholesale_cost),
+              resolve_decimal(CS_PRICING_EXT_LIST_PRICE, catalog_sales.cs_pricing.ext_list_price),
+              resolve_decimal(CS_PRICING_EXT_TAX, catalog_sales.cs_pricing.ext_tax),
+              resolve_decimal(CS_PRICING_COUPON_AMT, catalog_sales.cs_pricing.coupon_amt),
+              resolve_decimal(CS_PRICING_EXT_SHIP_COST, catalog_sales.cs_pricing.ext_ship_cost),
+              resolve_decimal(CS_PRICING_NET_PAID, catalog_sales.cs_pricing.net_paid),
+              resolve_decimal(CS_PRICING_NET_PAID_INC_TAX, catalog_sales.cs_pricing.net_paid_inc_tax),
+              resolve_decimal(CS_PRICING_NET_PAID_INC_SHIP, catalog_sales.cs_pricing.net_paid_inc_ship),
+              resolve_decimal(CS_PRICING_NET_PAID_INC_SHIP_TAX, catalog_sales.cs_pricing.net_paid_inc_ship_tax),
+              resolve_decimal(CS_PRICING_NET_PROFIT, catalog_sales.cs_pricing.net_profit));
         }
 
         if (was_returned != 0) {
           catalog_returns_builder.append_row(
-              resolve_key<CR_RETURNED_DATE_SK>(catalog_returns.cr_returned_date_sk),
-              resolve_key<CR_RETURNED_TIME_SK>(catalog_returns.cr_returned_time_sk), catalog_returns.cr_item_sk,
-              resolve_key<CR_REFUNDED_CUSTOMER_SK>(catalog_returns.cr_refunded_customer_sk),
-              resolve_key<CR_REFUNDED_CDEMO_SK>(catalog_returns.cr_refunded_cdemo_sk),
-              resolve_key<CR_REFUNDED_HDEMO_SK>(catalog_returns.cr_refunded_hdemo_sk),
-              resolve_key<CR_REFUNDED_ADDR_SK>(catalog_returns.cr_refunded_addr_sk),
-              resolve_key<CR_RETURNING_CUSTOMER_SK>(catalog_returns.cr_returning_customer_sk),
-              resolve_key<CR_RETURNING_CDEMO_SK>(catalog_returns.cr_returning_cdemo_sk),
-              resolve_key<CR_RETURNING_HDEMO_SK>(catalog_returns.cr_returning_hdemo_sk),
-              resolve_key<CR_RETURNING_ADDR_SK>(catalog_returns.cr_returning_addr_sk),
-              resolve_key<CR_CALL_CENTER_SK>(catalog_returns.cr_call_center_sk),
-              resolve_key<CR_CATALOG_PAGE_SK>(catalog_returns.cr_catalog_page_sk),
-              resolve_key<CR_SHIP_MODE_SK>(catalog_returns.cr_ship_mode_sk),
-              resolve_key<CR_WAREHOUSE_SK>(catalog_returns.cr_warehouse_sk),
-              resolve_key<CR_REASON_SK>(catalog_returns.cr_reason_sk), catalog_returns.cr_order_number,
-              resolve_integer<CR_PRICING_QUANTITY>(catalog_returns.cr_pricing.quantity),
-              resolve_decimal<CR_PRICING_NET_PAID>(catalog_returns.cr_pricing.net_paid),
-              resolve_decimal<CR_PRICING_EXT_TAX>(catalog_returns.cr_pricing.ext_tax),
-              resolve_decimal<CR_PRICING_NET_PAID_INC_TAX>(catalog_returns.cr_pricing.net_paid_inc_tax),
-              resolve_decimal<CR_PRICING_FEE>(catalog_returns.cr_pricing.fee),
-              resolve_decimal<CR_PRICING_EXT_SHIP_COST>(catalog_returns.cr_pricing.ext_ship_cost),
-              resolve_decimal<CR_PRICING_REFUNDED_CASH>(catalog_returns.cr_pricing.refunded_cash),
-              resolve_decimal<CR_PRICING_REVERSED_CHARGE>(catalog_returns.cr_pricing.reversed_charge),
-              resolve_decimal<CR_PRICING_STORE_CREDIT>(catalog_returns.cr_pricing.store_credit),
-              resolve_decimal<CR_PRICING_NET_LOSS>(catalog_returns.cr_pricing.net_loss));
+              resolve_key(CR_RETURNED_DATE_SK, catalog_returns.cr_returned_date_sk),
+              resolve_key(CR_RETURNED_TIME_SK, catalog_returns.cr_returned_time_sk), catalog_returns.cr_item_sk,
+              resolve_key(CR_REFUNDED_CUSTOMER_SK, catalog_returns.cr_refunded_customer_sk),
+              resolve_key(CR_REFUNDED_CDEMO_SK, catalog_returns.cr_refunded_cdemo_sk),
+              resolve_key(CR_REFUNDED_HDEMO_SK, catalog_returns.cr_refunded_hdemo_sk),
+              resolve_key(CR_REFUNDED_ADDR_SK, catalog_returns.cr_refunded_addr_sk),
+              resolve_key(CR_RETURNING_CUSTOMER_SK, catalog_returns.cr_returning_customer_sk),
+              resolve_key(CR_RETURNING_CDEMO_SK, catalog_returns.cr_returning_cdemo_sk),
+              resolve_key(CR_RETURNING_HDEMO_SK, catalog_returns.cr_returning_hdemo_sk),
+              resolve_key(CR_RETURNING_ADDR_SK, catalog_returns.cr_returning_addr_sk),
+              resolve_key(CR_CALL_CENTER_SK, catalog_returns.cr_call_center_sk),
+              resolve_key(CR_CATALOG_PAGE_SK, catalog_returns.cr_catalog_page_sk),
+              resolve_key(CR_SHIP_MODE_SK, catalog_returns.cr_ship_mode_sk),
+              resolve_key(CR_WAREHOUSE_SK, catalog_returns.cr_warehouse_sk),
+              resolve_key(CR_REASON_SK, catalog_returns.cr_reason_sk), catalog_returns.cr_order_number,
+              resolve_integer(CR_PRICING_QUANTITY, catalog_returns.cr_pricing.quantity),
+              resolve_decimal(CR_PRICING_NET_PAID, catalog_returns.cr_pricing.net_paid),
+              resolve_decimal(CR_PRICING_EXT_TAX, catalog_returns.cr_pricing.ext_tax),
+              resolve_decimal(CR_PRICING_NET_PAID_INC_TAX, catalog_returns.cr_pricing.net_paid_inc_tax),
+              resolve_decimal(CR_PRICING_FEE, catalog_returns.cr_pricing.fee),
+              resolve_decimal(CR_PRICING_EXT_SHIP_COST, catalog_returns.cr_pricing.ext_ship_cost),
+              resolve_decimal(CR_PRICING_REFUNDED_CASH, catalog_returns.cr_pricing.refunded_cash),
+              resolve_decimal(CR_PRICING_REVERSED_CHARGE, catalog_returns.cr_pricing.reversed_charge),
+              resolve_decimal(CR_PRICING_STORE_CREDIT, catalog_returns.cr_pricing.store_credit),
+              resolve_decimal(CR_PRICING_NET_LOSS, catalog_returns.cr_pricing.net_loss));
 
           if (catalog_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
             break;
@@ -542,17 +534,17 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_address(ds_key_t m
 
     customer_address_builder.append_row(
         customer_address.ca_addr_sk, customer_address.ca_addr_id,
-        resolve_string<CA_ADDRESS_STREET_NUM>(pmr_string{std::to_string(customer_address.ca_address.street_num)}),
-        resolve_street_name<CA_ADDRESS_STREET_NAME1>(customer_address.ca_address),
-        resolve_string<CA_ADDRESS_STREET_TYPE>(customer_address.ca_address.street_type),
-        resolve_string<CA_ADDRESS_SUITE_NUM>(customer_address.ca_address.suite_num),
-        resolve_string<CA_ADDRESS_CITY>(customer_address.ca_address.city),
-        resolve_string<CA_ADDRESS_COUNTY>(customer_address.ca_address.county),
-        resolve_string<CA_ADDRESS_STATE>(customer_address.ca_address.state),
-        resolve_string<CA_ADDRESS_ZIP>(zip_to_string(customer_address.ca_address.zip)),
-        resolve_string<CA_ADDRESS_COUNTRY>(customer_address.ca_address.country),
-        resolve_gmt_offset<CA_ADDRESS_GMT_OFFSET>(customer_address.ca_address.gmt_offset),
-        resolve_string<CA_LOCATION_TYPE>(customer_address.ca_location_type));
+        resolve_string(CA_ADDRESS_STREET_NUM, pmr_string{std::to_string(customer_address.ca_address.street_num)}),
+        resolve_street_name(CA_ADDRESS_STREET_NAME1, customer_address.ca_address),
+        resolve_string(CA_ADDRESS_STREET_TYPE, customer_address.ca_address.street_type),
+        resolve_string(CA_ADDRESS_SUITE_NUM, customer_address.ca_address.suite_num),
+        resolve_string(CA_ADDRESS_CITY, customer_address.ca_address.city),
+        resolve_string(CA_ADDRESS_COUNTY, customer_address.ca_address.county),
+        resolve_string(CA_ADDRESS_STATE, customer_address.ca_address.state),
+        resolve_string(CA_ADDRESS_ZIP, zip_to_string(customer_address.ca_address.zip)),
+        resolve_string(CA_ADDRESS_COUNTRY, customer_address.ca_address.country),
+        resolve_gmt_offset(CA_ADDRESS_GMT_OFFSET, customer_address.ca_address.gmt_offset),
+        resolve_string(CA_LOCATION_TYPE, customer_address.ca_location_type));
   }
 
   return customer_address_builder.finish_table();
@@ -569,18 +561,18 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer(ds_key_t max_rows)
     const auto customer = call_dbgen_mk<W_CUSTOMER_TBL, &mk_w_customer, CUSTOMER>(customer_first + i);
 
     customer_builder.append_row(
-        customer.c_customer_sk, customer.c_customer_id, resolve_key<C_CURRENT_CDEMO_SK>(customer.c_current_cdemo_sk),
-        resolve_key<C_CURRENT_HDEMO_SK>(customer.c_current_hdemo_sk),
-        resolve_key<C_CURRENT_ADDR_SK>(customer.c_current_addr_sk),
-        resolve_integer<C_FIRST_SHIPTO_DATE_ID>(customer.c_first_shipto_date_id),
-        resolve_integer<C_FIRST_SALES_DATE_ID>(customer.c_first_sales_date_id),
-        resolve_string<C_SALUTATION>(customer.c_salutation), resolve_string<C_FIRST_NAME>(customer.c_first_name),
-        resolve_string<C_LAST_NAME>(customer.c_last_name),
-        resolve_string<C_PREFERRED_CUST_FLAG>(boolean_to_string(customer.c_preferred_cust_flag)),
-        resolve_integer<C_BIRTH_DAY>(customer.c_birth_day), resolve_integer<C_BIRTH_MONTH>(customer.c_birth_month),
-        resolve_integer<C_BIRTH_YEAR>(customer.c_birth_year), resolve_string<C_BIRTH_COUNTRY>(customer.c_birth_country),
-        resolve_string<C_LOGIN>(customer.c_login), resolve_string<C_EMAIL_ADDRESS>(customer.c_email_address),
-        resolve_string<C_LAST_REVIEW_DATE>(pmr_string{std::to_string(customer.c_last_review_date)}));
+        customer.c_customer_sk, customer.c_customer_id, resolve_key(C_CURRENT_CDEMO_SK, customer.c_current_cdemo_sk),
+        resolve_key(C_CURRENT_HDEMO_SK, customer.c_current_hdemo_sk),
+        resolve_key(C_CURRENT_ADDR_SK, customer.c_current_addr_sk),
+        resolve_integer(C_FIRST_SHIPTO_DATE_ID, customer.c_first_shipto_date_id),
+        resolve_integer(C_FIRST_SALES_DATE_ID, customer.c_first_sales_date_id),
+        resolve_string(C_SALUTATION, customer.c_salutation), resolve_string(C_FIRST_NAME, customer.c_first_name),
+        resolve_string(C_LAST_NAME, customer.c_last_name),
+        resolve_string(C_PREFERRED_CUST_FLAG, boolean_to_string(customer.c_preferred_cust_flag)),
+        resolve_integer(C_BIRTH_DAY, customer.c_birth_day), resolve_integer(C_BIRTH_MONTH, customer.c_birth_month),
+        resolve_integer(C_BIRTH_YEAR, customer.c_birth_year), resolve_string(C_BIRTH_COUNTRY, customer.c_birth_country),
+        resolve_string(C_LOGIN, customer.c_login), resolve_string(C_EMAIL_ADDRESS, customer.c_email_address),
+        resolve_string(C_LAST_REVIEW_DATE, pmr_string{std::to_string(customer.c_last_review_date)}));
   }
 
   return customer_builder.finish_table();
@@ -600,14 +592,14 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_demographics(ds_ke
             customer_demographics_first + i);
 
     customer_demographics_builder.append_row(
-        customer_demographics.cd_demo_sk, resolve_string<CD_GENDER>(customer_demographics.cd_gender),
-        resolve_string<CD_MARITAL_STATUS>(customer_demographics.cd_marital_status),
-        resolve_string<CD_EDUCATION_STATUS>(customer_demographics.cd_education_status),
-        resolve_integer<CD_PURCHASE_ESTIMATE>(customer_demographics.cd_purchase_estimate),
-        resolve_string<CD_CREDIT_RATING>(customer_demographics.cd_credit_rating),
-        resolve_integer<CD_DEP_COUNT>(customer_demographics.cd_dep_count),
-        resolve_integer<CD_DEP_EMPLOYED_COUNT>(customer_demographics.cd_dep_employed_count),
-        resolve_integer<CD_DEP_COLLEGE_COUNT>(customer_demographics.cd_dep_college_count));
+        customer_demographics.cd_demo_sk, resolve_string(CD_GENDER, customer_demographics.cd_gender),
+        resolve_string(CD_MARITAL_STATUS, customer_demographics.cd_marital_status),
+        resolve_string(CD_EDUCATION_STATUS, customer_demographics.cd_education_status),
+        resolve_integer(CD_PURCHASE_ESTIMATE, customer_demographics.cd_purchase_estimate),
+        resolve_string(CD_CREDIT_RATING, customer_demographics.cd_credit_rating),
+        resolve_integer(CD_DEP_COUNT, customer_demographics.cd_dep_count),
+        resolve_integer(CD_DEP_EMPLOYED_COUNT, customer_demographics.cd_dep_employed_count),
+        resolve_integer(CD_DEP_COLLEGE_COUNT, customer_demographics.cd_dep_college_count));
   }
 
   return customer_demographics_builder.finish_table();
@@ -628,23 +620,23 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_date(ds_key_t max_rows) con
     date_builder.append_row(
         date.d_date_sk, date.d_date_id,
 
-        resolve_date_id<D_DATE_SK>(date.d_date_sk), resolve_integer<D_MONTH_SEQ>(date.d_month_seq),
-        resolve_integer<D_WEEK_SEQ>(date.d_week_seq), resolve_integer<D_QUARTER_SEQ>(date.d_quarter_seq),
-        resolve_integer<D_YEAR>(date.d_year), resolve_integer<D_DOW>(date.d_dow), resolve_integer<D_MOY>(date.d_moy),
-        resolve_integer<D_DOM>(date.d_dom), resolve_integer<D_QOY>(date.d_qoy),
-        resolve_integer<D_FY_YEAR>(date.d_fy_year), resolve_integer<D_FY_QUARTER_SEQ>(date.d_fy_quarter_seq),
-        resolve_integer<D_FY_WEEK_SEQ>(date.d_fy_week_seq), resolve_string<D_DAY_NAME>(date.d_day_name),
-        resolve_string<D_QUARTER_NAME>(std::move(quarter_name)),
-        resolve_string<D_HOLIDAY>(boolean_to_string(date.d_holiday)),
-        resolve_string<D_WEEKEND>(boolean_to_string(date.d_weekend)),
-        resolve_string<D_FOLLOWING_HOLIDAY>(boolean_to_string(date.d_following_holiday)),
-        resolve_integer<D_FIRST_DOM>(date.d_first_dom), resolve_integer<D_LAST_DOM>(date.d_last_dom),
-        resolve_integer<D_SAME_DAY_LY>(date.d_same_day_ly), resolve_integer<D_SAME_DAY_LQ>(date.d_same_day_lq),
-        resolve_string<D_CURRENT_DAY>(boolean_to_string(date.d_current_day)),
-        resolve_string<D_CURRENT_WEEK>(boolean_to_string(date.d_current_week)),
-        resolve_string<D_CURRENT_MONTH>(boolean_to_string(date.d_current_month)),
-        resolve_string<D_CURRENT_QUARTER>(boolean_to_string(date.d_current_quarter)),
-        resolve_string<D_CURRENT_YEAR>(boolean_to_string(date.d_current_year)));
+        resolve_date_id(D_DATE_SK, date.d_date_sk), resolve_integer(D_MONTH_SEQ, date.d_month_seq),
+        resolve_integer(D_WEEK_SEQ, date.d_week_seq), resolve_integer(D_QUARTER_SEQ, date.d_quarter_seq),
+        resolve_integer(D_YEAR, date.d_year), resolve_integer(D_DOW, date.d_dow), resolve_integer(D_MOY, date.d_moy),
+        resolve_integer(D_DOM, date.d_dom), resolve_integer(D_QOY, date.d_qoy),
+        resolve_integer(D_FY_YEAR, date.d_fy_year), resolve_integer(D_FY_QUARTER_SEQ, date.d_fy_quarter_seq),
+        resolve_integer(D_FY_WEEK_SEQ, date.d_fy_week_seq), resolve_string(D_DAY_NAME, date.d_day_name),
+        resolve_string(D_QUARTER_NAME, std::move(quarter_name)),
+        resolve_string(D_HOLIDAY, boolean_to_string(date.d_holiday)),
+        resolve_string(D_WEEKEND, boolean_to_string(date.d_weekend)),
+        resolve_string(D_FOLLOWING_HOLIDAY, boolean_to_string(date.d_following_holiday)),
+        resolve_integer(D_FIRST_DOM, date.d_first_dom), resolve_integer(D_LAST_DOM, date.d_last_dom),
+        resolve_integer(D_SAME_DAY_LY, date.d_same_day_ly), resolve_integer(D_SAME_DAY_LQ, date.d_same_day_lq),
+        resolve_string(D_CURRENT_DAY, boolean_to_string(date.d_current_day)),
+        resolve_string(D_CURRENT_WEEK, boolean_to_string(date.d_current_week)),
+        resolve_string(D_CURRENT_MONTH, boolean_to_string(date.d_current_month)),
+        resolve_string(D_CURRENT_QUARTER, boolean_to_string(date.d_current_quarter)),
+        resolve_string(D_CURRENT_YEAR, boolean_to_string(date.d_current_year)));
   }
 
   return date_builder.finish_table();
@@ -666,10 +658,10 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_household_demographics(ds_k
     household_demographics_builder.append_row(
         household_demographics.hd_demo_sk,
 
-        resolve_key<HD_INCOME_BAND_ID>(household_demographics.hd_income_band_id),
-        resolve_string<HD_BUY_POTENTIAL>(household_demographics.hd_buy_potential),
-        resolve_integer<HD_DEP_COUNT>(household_demographics.hd_dep_count),
-        resolve_integer<HD_VEHICLE_COUNT>(household_demographics.hd_vehicle_count));
+        resolve_key(HD_INCOME_BAND_ID, household_demographics.hd_income_band_id),
+        resolve_string(HD_BUY_POTENTIAL, household_demographics.hd_buy_potential),
+        resolve_integer(HD_DEP_COUNT, household_demographics.hd_dep_count),
+        resolve_integer(HD_VEHICLE_COUNT, household_demographics.hd_vehicle_count));
   }
 
   return household_demographics_builder.finish_table();
@@ -686,8 +678,8 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_income_band(ds_key_t max_ro
     const auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL, &mk_w_income_band, INCOME_BAND>(income_band_first + i);
 
     income_band_builder.append_row(income_band.ib_income_band_id,
-                                   resolve_integer<IB_LOWER_BOUND>(income_band.ib_lower_bound),
-                                   resolve_integer<IB_UPPER_BOUND>(income_band.ib_upper_bound));
+                                   resolve_integer(IB_LOWER_BOUND, income_band.ib_lower_bound),
+                                   resolve_integer(IB_UPPER_BOUND, income_band.ib_upper_bound));
   }
 
   return income_band_builder.finish_table();
@@ -704,7 +696,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_inventory(ds_key_t max_rows
     const auto inventory = call_dbgen_mk<W_INVENTORY_TBL, &mk_w_inventory, INVENTORY>(inventory_first + i);
 
     inventory_builder.append_row(inventory.inv_date_sk, inventory.inv_item_sk, inventory.inv_warehouse_sk,
-                                 resolve_integer<INV_QUANTITY_ON_HAND>(inventory.inv_quantity_on_hand));
+                                 resolve_integer(INV_QUANTITY_ON_HAND, inventory.inv_quantity_on_hand));
   }
 
   return inventory_builder.finish_table();
@@ -721,17 +713,17 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_item(ds_key_t max_rows) con
     const auto item = call_dbgen_mk<W_ITEM_TBL, &mk_w_item, ITEM>(item_first + i);
 
     item_builder.append_row(
-        item.i_item_sk, item.i_item_id, resolve_date_id<I_REC_START_DATE_ID>(item.i_rec_start_date_id),
-        resolve_date_id<I_REC_END_DATE_ID>(item.i_rec_end_date_id), resolve_string<I_ITEM_DESC>(item.i_item_desc),
-        resolve_decimal<I_CURRENT_PRICE>(item.i_current_price),
-        resolve_decimal<I_WHOLESALE_COST>(item.i_wholesale_cost), resolve_key<I_BRAND_ID>(item.i_brand_id),
-        resolve_string<I_BRAND>(item.i_brand), resolve_key<I_CLASS_ID>(item.i_class_id),
-        resolve_string<I_CLASS>(item.i_class), resolve_key<I_CATEGORY_ID>(item.i_category_id),
-        resolve_string<I_CATEGORY>(item.i_category), resolve_key<I_MANUFACT_ID>(item.i_manufact_id),
-        resolve_string<I_MANUFACT>(item.i_manufact), resolve_string<I_SIZE>(item.i_size),
-        resolve_string<I_FORMULATION>(item.i_formulation), resolve_string<I_COLOR>(item.i_color),
-        resolve_string<I_UNITS>(item.i_units), resolve_string<I_CONTAINER>(item.i_container),
-        resolve_key<I_MANAGER_ID>(item.i_manager_id), resolve_string<I_PRODUCT_NAME>(item.i_product_name));
+        item.i_item_sk, item.i_item_id, resolve_date_id(I_REC_START_DATE_ID, item.i_rec_start_date_id),
+        resolve_date_id(I_REC_END_DATE_ID, item.i_rec_end_date_id), resolve_string(I_ITEM_DESC, item.i_item_desc),
+        resolve_decimal(I_CURRENT_PRICE, item.i_current_price),
+        resolve_decimal(I_WHOLESALE_COST, item.i_wholesale_cost), resolve_key(I_BRAND_ID, item.i_brand_id),
+        resolve_string(I_BRAND, item.i_brand), resolve_key(I_CLASS_ID, item.i_class_id),
+        resolve_string(I_CLASS, item.i_class), resolve_key(I_CATEGORY_ID, item.i_category_id),
+        resolve_string(I_CATEGORY, item.i_category), resolve_key(I_MANUFACT_ID, item.i_manufact_id),
+        resolve_string(I_MANUFACT, item.i_manufact), resolve_string(I_SIZE, item.i_size),
+        resolve_string(I_FORMULATION, item.i_formulation), resolve_string(I_COLOR, item.i_color),
+        resolve_string(I_UNITS, item.i_units), resolve_string(I_CONTAINER, item.i_container),
+        resolve_key(I_MANAGER_ID, item.i_manager_id), resolve_string(I_PRODUCT_NAME, item.i_product_name));
   }
 
   return item_builder.finish_table();
@@ -748,20 +740,20 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_promotion(ds_key_t max_rows
     const auto promotion = call_dbgen_mk<W_PROMOTION_TBL, &mk_w_promotion, PROMOTION>(promotion_first + i);
 
     promotion_builder.append_row(
-        promotion.p_promo_sk, promotion.p_promo_id, resolve_key<P_START_DATE_ID>(promotion.p_start_date_id),
-        resolve_key<P_END_DATE_ID>(promotion.p_end_date_id), resolve_key<P_ITEM_SK>(promotion.p_item_sk),
-        resolve_decimal<P_COST>(promotion.p_cost), resolve_integer<P_RESPONSE_TARGET>(promotion.p_response_target),
-        resolve_string<P_PROMO_NAME>(promotion.p_promo_name),
-        resolve_string<P_CHANNEL_DMAIL>(boolean_to_string(promotion.p_channel_dmail)),
-        resolve_string<P_CHANNEL_EMAIL>(boolean_to_string(promotion.p_channel_email)),
-        resolve_string<P_CHANNEL_CATALOG>(boolean_to_string(promotion.p_channel_catalog)),
-        resolve_string<P_CHANNEL_TV>(boolean_to_string(promotion.p_channel_tv)),
-        resolve_string<P_CHANNEL_RADIO>(boolean_to_string(promotion.p_channel_radio)),
-        resolve_string<P_CHANNEL_PRESS>(boolean_to_string(promotion.p_channel_press)),
-        resolve_string<P_CHANNEL_EVENT>(boolean_to_string(promotion.p_channel_event)),
-        resolve_string<P_CHANNEL_DEMO>(boolean_to_string(promotion.p_channel_demo)),
-        resolve_string<P_CHANNEL_DETAILS>(promotion.p_channel_details), resolve_string<P_PURPOSE>(promotion.p_purpose),
-        resolve_string<P_DISCOUNT_ACTIVE>(boolean_to_string(promotion.p_discount_active)));
+        promotion.p_promo_sk, promotion.p_promo_id, resolve_key(P_START_DATE_ID, promotion.p_start_date_id),
+        resolve_key(P_END_DATE_ID, promotion.p_end_date_id), resolve_key(P_ITEM_SK, promotion.p_item_sk),
+        resolve_decimal(P_COST, promotion.p_cost), resolve_integer(P_RESPONSE_TARGET, promotion.p_response_target),
+        resolve_string(P_PROMO_NAME, promotion.p_promo_name),
+        resolve_string(P_CHANNEL_DMAIL, boolean_to_string(promotion.p_channel_dmail)),
+        resolve_string(P_CHANNEL_EMAIL, boolean_to_string(promotion.p_channel_email)),
+        resolve_string(P_CHANNEL_CATALOG, boolean_to_string(promotion.p_channel_catalog)),
+        resolve_string(P_CHANNEL_TV, boolean_to_string(promotion.p_channel_tv)),
+        resolve_string(P_CHANNEL_RADIO, boolean_to_string(promotion.p_channel_radio)),
+        resolve_string(P_CHANNEL_PRESS, boolean_to_string(promotion.p_channel_press)),
+        resolve_string(P_CHANNEL_EVENT, boolean_to_string(promotion.p_channel_event)),
+        resolve_string(P_CHANNEL_DEMO, boolean_to_string(promotion.p_channel_demo)),
+        resolve_string(P_CHANNEL_DETAILS, promotion.p_channel_details), resolve_string(P_PURPOSE, promotion.p_purpose),
+        resolve_string(P_DISCOUNT_ACTIVE, boolean_to_string(promotion.p_discount_active)));
   }
 
   return promotion_builder.finish_table();
@@ -778,7 +770,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_reason(ds_key_t max_rows) c
     const auto reason = call_dbgen_mk<W_REASON_TBL, &mk_w_reason, REASON>(reason_first + i);
 
     reason_builder.append_row(reason.r_reason_sk, reason.r_reason_id,
-                              resolve_string<R_REASON_DESCRIPTION>(reason.r_reason_description));
+                              resolve_string(R_REASON_DESCRIPTION, reason.r_reason_description));
   }
 
   return reason_builder.finish_table();
@@ -796,9 +788,9 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_ship_mode(ds_key_t max_rows
 
     ship_mode_builder.append_row(ship_mode.sm_ship_mode_sk, ship_mode.sm_ship_mode_id,
 
-                                 resolve_string<SM_TYPE>(ship_mode.sm_type), resolve_string<SM_CODE>(ship_mode.sm_code),
-                                 resolve_string<SM_CARRIER>(ship_mode.sm_carrier),
-                                 resolve_string<SM_CONTRACT>(ship_mode.sm_contract));
+                                 resolve_string(SM_TYPE, ship_mode.sm_type), resolve_string(SM_CODE, ship_mode.sm_code),
+                                 resolve_string(SM_CARRIER, ship_mode.sm_carrier),
+                                 resolve_string(SM_CONTRACT, ship_mode.sm_contract));
   }
 
   return ship_mode_builder.finish_table();
@@ -817,28 +809,28 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_store(ds_key_t max_rows) co
     store_builder.append_row(
         store.store_sk, store.store_id,
 
-        resolve_date_id<W_STORE_REC_START_DATE_ID>(store.rec_start_date_id),
-        resolve_date_id<W_STORE_REC_END_DATE_ID>(store.rec_end_date_id),
-        resolve_key<W_STORE_CLOSED_DATE_ID>(store.closed_date_id), resolve_string<W_STORE_NAME>(store.store_name),
-        resolve_integer<W_STORE_EMPLOYEES>(store.employees), resolve_integer<W_STORE_FLOOR_SPACE>(store.floor_space),
-        resolve_string<W_STORE_HOURS>(store.hours), resolve_string<W_STORE_MANAGER>(store.store_manager),
-        resolve_integer<W_STORE_MARKET_ID>(store.market_id),
-        resolve_string<W_STORE_GEOGRAPHY_CLASS>(store.geography_class),
-        resolve_string<W_STORE_MARKET_DESC>(store.market_desc),
-        resolve_string<W_STORE_MARKET_MANAGER>(store.market_manager),
-        resolve_key<W_STORE_DIVISION_ID>(store.division_id), resolve_string<W_STORE_DIVISION_NAME>(store.division_name),
-        resolve_key<W_STORE_COMPANY_ID>(store.company_id), resolve_string<W_STORE_COMPANY_NAME>(store.company_name),
-        resolve_string<W_STORE_ADDRESS_STREET_NUM>(pmr_string{std::to_string(store.address.street_num)}),
-        resolve_street_name<W_STORE_ADDRESS_STREET_NAME1>(store.address),
-        resolve_string<W_STORE_ADDRESS_STREET_TYPE>(store.address.street_type),
-        resolve_string<W_STORE_ADDRESS_SUITE_NUM>(store.address.suite_num),
-        resolve_string<W_STORE_ADDRESS_CITY>(store.address.city),
-        resolve_string<W_STORE_ADDRESS_COUNTY>(store.address.county),
-        resolve_string<W_STORE_ADDRESS_STATE>(store.address.state),
-        resolve_string<W_STORE_ADDRESS_ZIP>(zip_to_string(store.address.zip)),
-        resolve_string<W_STORE_ADDRESS_COUNTRY>(store.address.country),
-        resolve_gmt_offset<W_STORE_ADDRESS_GMT_OFFSET>(store.address.gmt_offset),
-        resolve_decimal<W_STORE_TAX_PERCENTAGE>(store.dTaxPercentage));
+        resolve_date_id(W_STORE_REC_START_DATE_ID, store.rec_start_date_id),
+        resolve_date_id(W_STORE_REC_END_DATE_ID, store.rec_end_date_id),
+        resolve_key(W_STORE_CLOSED_DATE_ID, store.closed_date_id), resolve_string(W_STORE_NAME, store.store_name),
+        resolve_integer(W_STORE_EMPLOYEES, store.employees), resolve_integer(W_STORE_FLOOR_SPACE, store.floor_space),
+        resolve_string(W_STORE_HOURS, store.hours), resolve_string(W_STORE_MANAGER, store.store_manager),
+        resolve_integer(W_STORE_MARKET_ID, store.market_id),
+        resolve_string(W_STORE_GEOGRAPHY_CLASS, store.geography_class),
+        resolve_string(W_STORE_MARKET_DESC, store.market_desc),
+        resolve_string(W_STORE_MARKET_MANAGER, store.market_manager),
+        resolve_key(W_STORE_DIVISION_ID, store.division_id), resolve_string(W_STORE_DIVISION_NAME, store.division_name),
+        resolve_key(W_STORE_COMPANY_ID, store.company_id), resolve_string(W_STORE_COMPANY_NAME, store.company_name),
+        resolve_string(W_STORE_ADDRESS_STREET_NUM, pmr_string{std::to_string(store.address.street_num)}),
+        resolve_street_name(W_STORE_ADDRESS_STREET_NAME1, store.address),
+        resolve_string(W_STORE_ADDRESS_STREET_TYPE, store.address.street_type),
+        resolve_string(W_STORE_ADDRESS_SUITE_NUM, store.address.suite_num),
+        resolve_string(W_STORE_ADDRESS_CITY, store.address.city),
+        resolve_string(W_STORE_ADDRESS_COUNTY, store.address.county),
+        resolve_string(W_STORE_ADDRESS_STATE, store.address.state),
+        resolve_string(W_STORE_ADDRESS_ZIP, zip_to_string(store.address.zip)),
+        resolve_string(W_STORE_ADDRESS_COUNTRY, store.address.country),
+        resolve_gmt_offset(W_STORE_ADDRESS_GMT_OFFSET, store.address.gmt_offset),
+        resolve_decimal(W_STORE_TAX_PERCENTAGE, store.dTaxPercentage));
   }
 
   return store_builder.finish_table();
@@ -869,48 +861,48 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
         if (store_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
           store_sales_builder.append_row(
-              resolve_key<SS_SOLD_DATE_SK>(store_sales.ss_sold_date_sk),
-              resolve_key<SS_SOLD_TIME_SK>(store_sales.ss_sold_time_sk), store_sales.ss_sold_item_sk,
-              resolve_key<SS_SOLD_CUSTOMER_SK>(store_sales.ss_sold_customer_sk),
-              resolve_key<SS_SOLD_CDEMO_SK>(store_sales.ss_sold_cdemo_sk),
-              resolve_key<SS_SOLD_HDEMO_SK>(store_sales.ss_sold_hdemo_sk),
-              resolve_key<SS_SOLD_ADDR_SK>(store_sales.ss_sold_addr_sk),
-              resolve_key<SS_SOLD_STORE_SK>(store_sales.ss_sold_store_sk),
-              resolve_key<SS_SOLD_PROMO_SK>(store_sales.ss_sold_promo_sk), store_sales.ss_ticket_number,
-              resolve_integer<SS_PRICING_QUANTITY>(store_sales.ss_pricing.quantity),
-              resolve_decimal<SS_PRICING_WHOLESALE_COST>(store_sales.ss_pricing.wholesale_cost),
-              resolve_decimal<SS_PRICING_LIST_PRICE>(store_sales.ss_pricing.list_price),
-              resolve_decimal<SS_PRICING_SALES_PRICE>(store_sales.ss_pricing.sales_price),
-              resolve_decimal<SS_PRICING_COUPON_AMT>(store_sales.ss_pricing.coupon_amt),
-              resolve_decimal<SS_PRICING_EXT_SALES_PRICE>(store_sales.ss_pricing.ext_sales_price),
-              resolve_decimal<SS_PRICING_EXT_WHOLESALE_COST>(store_sales.ss_pricing.ext_wholesale_cost),
-              resolve_decimal<SS_PRICING_EXT_LIST_PRICE>(store_sales.ss_pricing.ext_list_price),
-              resolve_decimal<SS_PRICING_EXT_TAX>(store_sales.ss_pricing.ext_tax),
-              resolve_decimal<SS_PRICING_COUPON_AMT>(store_sales.ss_pricing.coupon_amt),
-              resolve_decimal<SS_PRICING_NET_PAID>(store_sales.ss_pricing.net_paid),
-              resolve_decimal<SS_PRICING_NET_PAID_INC_TAX>(store_sales.ss_pricing.net_paid_inc_tax),
-              resolve_decimal<SS_PRICING_NET_PROFIT>(store_sales.ss_pricing.net_profit));
+              resolve_key(SS_SOLD_DATE_SK, store_sales.ss_sold_date_sk),
+              resolve_key(SS_SOLD_TIME_SK, store_sales.ss_sold_time_sk), store_sales.ss_sold_item_sk,
+              resolve_key(SS_SOLD_CUSTOMER_SK, store_sales.ss_sold_customer_sk),
+              resolve_key(SS_SOLD_CDEMO_SK, store_sales.ss_sold_cdemo_sk),
+              resolve_key(SS_SOLD_HDEMO_SK, store_sales.ss_sold_hdemo_sk),
+              resolve_key(SS_SOLD_ADDR_SK, store_sales.ss_sold_addr_sk),
+              resolve_key(SS_SOLD_STORE_SK, store_sales.ss_sold_store_sk),
+              resolve_key(SS_SOLD_PROMO_SK, store_sales.ss_sold_promo_sk), store_sales.ss_ticket_number,
+              resolve_integer(SS_PRICING_QUANTITY, store_sales.ss_pricing.quantity),
+              resolve_decimal(SS_PRICING_WHOLESALE_COST, store_sales.ss_pricing.wholesale_cost),
+              resolve_decimal(SS_PRICING_LIST_PRICE, store_sales.ss_pricing.list_price),
+              resolve_decimal(SS_PRICING_SALES_PRICE, store_sales.ss_pricing.sales_price),
+              resolve_decimal(SS_PRICING_COUPON_AMT, store_sales.ss_pricing.coupon_amt),
+              resolve_decimal(SS_PRICING_EXT_SALES_PRICE, store_sales.ss_pricing.ext_sales_price),
+              resolve_decimal(SS_PRICING_EXT_WHOLESALE_COST, store_sales.ss_pricing.ext_wholesale_cost),
+              resolve_decimal(SS_PRICING_EXT_LIST_PRICE, store_sales.ss_pricing.ext_list_price),
+              resolve_decimal(SS_PRICING_EXT_TAX, store_sales.ss_pricing.ext_tax),
+              resolve_decimal(SS_PRICING_COUPON_AMT, store_sales.ss_pricing.coupon_amt),
+              resolve_decimal(SS_PRICING_NET_PAID, store_sales.ss_pricing.net_paid),
+              resolve_decimal(SS_PRICING_NET_PAID_INC_TAX, store_sales.ss_pricing.net_paid_inc_tax),
+              resolve_decimal(SS_PRICING_NET_PROFIT, store_sales.ss_pricing.net_profit));
           // dsdgen prints coupon_amt twice, so we do too...
         }
 
         if (was_returned != 0) {
           store_returns_builder.append_row(
-              resolve_key<SR_RETURNED_DATE_SK>(store_returns.sr_returned_date_sk),
-              resolve_key<SR_RETURNED_TIME_SK>(store_returns.sr_returned_time_sk), store_returns.sr_item_sk,
-              resolve_key<SR_CUSTOMER_SK>(store_returns.sr_customer_sk),
-              resolve_key<SR_CDEMO_SK>(store_returns.sr_cdemo_sk), resolve_key<SR_HDEMO_SK>(store_returns.sr_hdemo_sk),
-              resolve_key<SR_ADDR_SK>(store_returns.sr_addr_sk), resolve_key<SR_STORE_SK>(store_returns.sr_store_sk),
-              resolve_key<SR_REASON_SK>(store_returns.sr_reason_sk), store_returns.sr_ticket_number,
-              resolve_integer<SR_PRICING_QUANTITY>(store_returns.sr_pricing.quantity),
-              resolve_decimal<SR_PRICING_NET_PAID>(store_returns.sr_pricing.net_paid),
-              resolve_decimal<SR_PRICING_EXT_TAX>(store_returns.sr_pricing.ext_tax),
-              resolve_decimal<SR_PRICING_NET_PAID_INC_TAX>(store_returns.sr_pricing.net_paid_inc_tax),
-              resolve_decimal<SR_PRICING_FEE>(store_returns.sr_pricing.fee),
-              resolve_decimal<SR_PRICING_EXT_SHIP_COST>(store_returns.sr_pricing.ext_ship_cost),
-              resolve_decimal<SR_PRICING_REFUNDED_CASH>(store_returns.sr_pricing.refunded_cash),
-              resolve_decimal<SR_PRICING_REVERSED_CHARGE>(store_returns.sr_pricing.reversed_charge),
-              resolve_decimal<SR_PRICING_STORE_CREDIT>(store_returns.sr_pricing.store_credit),
-              resolve_decimal<SR_PRICING_NET_LOSS>(store_returns.sr_pricing.net_loss));
+              resolve_key(SR_RETURNED_DATE_SK, store_returns.sr_returned_date_sk),
+              resolve_key(SR_RETURNED_TIME_SK, store_returns.sr_returned_time_sk), store_returns.sr_item_sk,
+              resolve_key(SR_CUSTOMER_SK, store_returns.sr_customer_sk),
+              resolve_key(SR_CDEMO_SK, store_returns.sr_cdemo_sk), resolve_key(SR_HDEMO_SK, store_returns.sr_hdemo_sk),
+              resolve_key(SR_ADDR_SK, store_returns.sr_addr_sk), resolve_key(SR_STORE_SK, store_returns.sr_store_sk),
+              resolve_key(SR_REASON_SK, store_returns.sr_reason_sk), store_returns.sr_ticket_number,
+              resolve_integer(SR_PRICING_QUANTITY, store_returns.sr_pricing.quantity),
+              resolve_decimal(SR_PRICING_NET_PAID, store_returns.sr_pricing.net_paid),
+              resolve_decimal(SR_PRICING_EXT_TAX, store_returns.sr_pricing.ext_tax),
+              resolve_decimal(SR_PRICING_NET_PAID_INC_TAX, store_returns.sr_pricing.net_paid_inc_tax),
+              resolve_decimal(SR_PRICING_FEE, store_returns.sr_pricing.fee),
+              resolve_decimal(SR_PRICING_EXT_SHIP_COST, store_returns.sr_pricing.ext_ship_cost),
+              resolve_decimal(SR_PRICING_REFUNDED_CASH, store_returns.sr_pricing.refunded_cash),
+              resolve_decimal(SR_PRICING_REVERSED_CHARGE, store_returns.sr_pricing.reversed_charge),
+              resolve_decimal(SR_PRICING_STORE_CREDIT, store_returns.sr_pricing.store_credit),
+              resolve_decimal(SR_PRICING_NET_LOSS, store_returns.sr_pricing.net_loss));
           if (store_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
             break;
           }
@@ -936,11 +928,11 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_time(ds_key_t max_rows) con
   for (auto i = ds_key_t{0}; i < time_count; i++) {
     const auto time = call_dbgen_mk<W_TIME_TBL, &mk_w_time, TIME>(time_first + i);
 
-    time_builder.append_row(time.t_time_sk, time.t_time_id, resolve_integer<T_TIME>(time.t_time),
-                            resolve_integer<T_HOUR>(time.t_hour), resolve_integer<T_MINUTE>(time.t_minute),
-                            resolve_integer<T_SECOND>(time.t_second), resolve_string<T_AM_PM>(time.t_am_pm),
-                            resolve_string<T_SHIFT>(time.t_shift), resolve_string<T_SUB_SHIFT>(time.t_sub_shift),
-                            resolve_string<T_MEAL_TIME>(time.t_meal_time));
+    time_builder.append_row(time.t_time_sk, time.t_time_id, resolve_integer(T_TIME, time.t_time),
+                            resolve_integer(T_HOUR, time.t_hour), resolve_integer(T_MINUTE, time.t_minute),
+                            resolve_integer(T_SECOND, time.t_second), resolve_string(T_AM_PM, time.t_am_pm),
+                            resolve_string(T_SHIFT, time.t_shift), resolve_string(T_SUB_SHIFT, time.t_sub_shift),
+                            resolve_string(T_MEAL_TIME, time.t_meal_time));
   }
 
   return time_builder.finish_table();
@@ -959,18 +951,18 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_warehouse(ds_key_t max_rows
     warehouse_builder.append_row(
         warehouse.w_warehouse_sk, warehouse.w_warehouse_id,
 
-        resolve_string<W_WAREHOUSE_NAME>(warehouse.w_warehouse_name),
-        resolve_integer<W_WAREHOUSE_SQ_FT>(warehouse.w_warehouse_sq_ft),
-        resolve_string<W_ADDRESS_STREET_NUM>(pmr_string{std::to_string(warehouse.w_address.street_num)}),
-        resolve_street_name<W_ADDRESS_STREET_NAME1>(warehouse.w_address),
-        resolve_string<W_ADDRESS_STREET_TYPE>(warehouse.w_address.street_type),
-        resolve_string<W_ADDRESS_SUITE_NUM>(warehouse.w_address.suite_num),
-        resolve_string<W_ADDRESS_CITY>(warehouse.w_address.city),
-        resolve_string<W_ADDRESS_COUNTY>(warehouse.w_address.county),
-        resolve_string<W_ADDRESS_STATE>(warehouse.w_address.state),
-        resolve_string<W_ADDRESS_ZIP>(zip_to_string(warehouse.w_address.zip)),
-        resolve_string<W_ADDRESS_COUNTRY>(warehouse.w_address.country),
-        resolve_gmt_offset<W_ADDRESS_GMT_OFFSET>(warehouse.w_address.gmt_offset));
+        resolve_string(W_WAREHOUSE_NAME, warehouse.w_warehouse_name),
+        resolve_integer(W_WAREHOUSE_SQ_FT, warehouse.w_warehouse_sq_ft),
+        resolve_string(W_ADDRESS_STREET_NUM, pmr_string{std::to_string(warehouse.w_address.street_num)}),
+        resolve_street_name(W_ADDRESS_STREET_NAME1, warehouse.w_address),
+        resolve_string(W_ADDRESS_STREET_TYPE, warehouse.w_address.street_type),
+        resolve_string(W_ADDRESS_SUITE_NUM, warehouse.w_address.suite_num),
+        resolve_string(W_ADDRESS_CITY, warehouse.w_address.city),
+        resolve_string(W_ADDRESS_COUNTY, warehouse.w_address.county),
+        resolve_string(W_ADDRESS_STATE, warehouse.w_address.state),
+        resolve_string(W_ADDRESS_ZIP, zip_to_string(warehouse.w_address.zip)),
+        resolve_string(W_ADDRESS_COUNTRY, warehouse.w_address.country),
+        resolve_gmt_offset(W_ADDRESS_GMT_OFFSET, warehouse.w_address.gmt_offset));
   }
 
   return warehouse_builder.finish_table();
@@ -987,16 +979,16 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_page(ds_key_t max_rows)
     const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + i);
 
     web_page_builder.append_row(
-        web_page.wp_page_sk, web_page.wp_page_id, resolve_date_id<WP_REC_START_DATE_ID>(web_page.wp_rec_start_date_id),
-        resolve_date_id<WP_REC_END_DATE_ID>(web_page.wp_rec_end_date_id),
-        resolve_key<WP_CREATION_DATE_SK>(web_page.wp_creation_date_sk),
-        resolve_key<WP_ACCESS_DATE_SK>(web_page.wp_access_date_sk),
-        resolve_string<WP_AUTOGEN_FLAG>(boolean_to_string(web_page.wp_autogen_flag)),
-        resolve_key<WP_CUSTOMER_SK>(web_page.wp_customer_sk), resolve_string<WP_URL>(web_page.wp_url),
-        resolve_string<WP_TYPE>(web_page.wp_type), resolve_integer<WP_CHAR_COUNT>(web_page.wp_char_count),
-        resolve_integer<WP_LINK_COUNT>(web_page.wp_link_count),
-        resolve_integer<WP_IMAGE_COUNT>(web_page.wp_image_count),
-        resolve_integer<WP_MAX_AD_COUNT>(web_page.wp_max_ad_count));
+        web_page.wp_page_sk, web_page.wp_page_id, resolve_date_id(WP_REC_START_DATE_ID, web_page.wp_rec_start_date_id),
+        resolve_date_id(WP_REC_END_DATE_ID, web_page.wp_rec_end_date_id),
+        resolve_key(WP_CREATION_DATE_SK, web_page.wp_creation_date_sk),
+        resolve_key(WP_ACCESS_DATE_SK, web_page.wp_access_date_sk),
+        resolve_string(WP_AUTOGEN_FLAG, boolean_to_string(web_page.wp_autogen_flag)),
+        resolve_key(WP_CUSTOMER_SK, web_page.wp_customer_sk), resolve_string(WP_URL, web_page.wp_url),
+        resolve_string(WP_TYPE, web_page.wp_type), resolve_integer(WP_CHAR_COUNT, web_page.wp_char_count),
+        resolve_integer(WP_LINK_COUNT, web_page.wp_link_count),
+        resolve_integer(WP_IMAGE_COUNT, web_page.wp_image_count),
+        resolve_integer(WP_MAX_AD_COUNT, web_page.wp_max_ad_count));
   }
 
   return web_page_builder.finish_table();
@@ -1027,63 +1019,63 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
         if (web_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
           web_sales_builder.append_row(
-              resolve_key<WS_SOLD_DATE_SK>(web_sales.ws_sold_date_sk),
-              resolve_key<WS_SOLD_TIME_SK>(web_sales.ws_sold_time_sk),
-              resolve_key<WS_SHIP_DATE_SK>(web_sales.ws_ship_date_sk), web_sales.ws_item_sk,
-              resolve_key<WS_BILL_CUSTOMER_SK>(web_sales.ws_bill_customer_sk),
-              resolve_key<WS_BILL_CDEMO_SK>(web_sales.ws_bill_cdemo_sk),
-              resolve_key<WS_BILL_HDEMO_SK>(web_sales.ws_bill_hdemo_sk),
-              resolve_key<WS_BILL_ADDR_SK>(web_sales.ws_bill_addr_sk),
-              resolve_key<WS_SHIP_CUSTOMER_SK>(web_sales.ws_ship_customer_sk),
-              resolve_key<WS_SHIP_CDEMO_SK>(web_sales.ws_ship_cdemo_sk),
-              resolve_key<WS_SHIP_HDEMO_SK>(web_sales.ws_ship_hdemo_sk),
-              resolve_key<WS_SHIP_ADDR_SK>(web_sales.ws_ship_addr_sk),
-              resolve_key<WS_WEB_PAGE_SK>(web_sales.ws_web_page_sk),
-              resolve_key<WS_WEB_SITE_SK>(web_sales.ws_web_site_sk),
-              resolve_key<WS_SHIP_MODE_SK>(web_sales.ws_ship_mode_sk),
-              resolve_key<WS_WAREHOUSE_SK>(web_sales.ws_warehouse_sk), resolve_key<WS_PROMO_SK>(web_sales.ws_promo_sk),
-              web_sales.ws_order_number, resolve_integer<WS_PRICING_QUANTITY>(web_sales.ws_pricing.quantity),
-              resolve_decimal<WS_PRICING_WHOLESALE_COST>(web_sales.ws_pricing.wholesale_cost),
-              resolve_decimal<WS_PRICING_LIST_PRICE>(web_sales.ws_pricing.list_price),
-              resolve_decimal<WS_PRICING_SALES_PRICE>(web_sales.ws_pricing.sales_price),
-              resolve_decimal<WS_PRICING_EXT_DISCOUNT_AMT>(web_sales.ws_pricing.ext_discount_amt),
-              resolve_decimal<WS_PRICING_EXT_SALES_PRICE>(web_sales.ws_pricing.ext_sales_price),
-              resolve_decimal<WS_PRICING_EXT_WHOLESALE_COST>(web_sales.ws_pricing.ext_wholesale_cost),
-              resolve_decimal<WS_PRICING_EXT_LIST_PRICE>(web_sales.ws_pricing.ext_list_price),
-              resolve_decimal<WS_PRICING_EXT_TAX>(web_sales.ws_pricing.ext_tax),
-              resolve_decimal<WS_PRICING_COUPON_AMT>(web_sales.ws_pricing.coupon_amt),
-              resolve_decimal<WS_PRICING_EXT_SHIP_COST>(web_sales.ws_pricing.ext_ship_cost),
-              resolve_decimal<WS_PRICING_NET_PAID>(web_sales.ws_pricing.net_paid),
-              resolve_decimal<WS_PRICING_NET_PAID_INC_TAX>(web_sales.ws_pricing.net_paid_inc_tax),
-              resolve_decimal<WS_PRICING_NET_PAID_INC_SHIP>(web_sales.ws_pricing.net_paid_inc_ship),
-              resolve_decimal<WS_PRICING_NET_PAID_INC_SHIP_TAX>(web_sales.ws_pricing.net_paid_inc_ship_tax),
-              resolve_decimal<WS_PRICING_NET_PROFIT>(web_sales.ws_pricing.net_profit));
+              resolve_key(WS_SOLD_DATE_SK, web_sales.ws_sold_date_sk),
+              resolve_key(WS_SOLD_TIME_SK, web_sales.ws_sold_time_sk),
+              resolve_key(WS_SHIP_DATE_SK, web_sales.ws_ship_date_sk), web_sales.ws_item_sk,
+              resolve_key(WS_BILL_CUSTOMER_SK, web_sales.ws_bill_customer_sk),
+              resolve_key(WS_BILL_CDEMO_SK, web_sales.ws_bill_cdemo_sk),
+              resolve_key(WS_BILL_HDEMO_SK, web_sales.ws_bill_hdemo_sk),
+              resolve_key(WS_BILL_ADDR_SK, web_sales.ws_bill_addr_sk),
+              resolve_key(WS_SHIP_CUSTOMER_SK, web_sales.ws_ship_customer_sk),
+              resolve_key(WS_SHIP_CDEMO_SK, web_sales.ws_ship_cdemo_sk),
+              resolve_key(WS_SHIP_HDEMO_SK, web_sales.ws_ship_hdemo_sk),
+              resolve_key(WS_SHIP_ADDR_SK, web_sales.ws_ship_addr_sk),
+              resolve_key(WS_WEB_PAGE_SK, web_sales.ws_web_page_sk),
+              resolve_key(WS_WEB_SITE_SK, web_sales.ws_web_site_sk),
+              resolve_key(WS_SHIP_MODE_SK, web_sales.ws_ship_mode_sk),
+              resolve_key(WS_WAREHOUSE_SK, web_sales.ws_warehouse_sk), resolve_key(WS_PROMO_SK, web_sales.ws_promo_sk),
+              web_sales.ws_order_number, resolve_integer(WS_PRICING_QUANTITY, web_sales.ws_pricing.quantity),
+              resolve_decimal(WS_PRICING_WHOLESALE_COST, web_sales.ws_pricing.wholesale_cost),
+              resolve_decimal(WS_PRICING_LIST_PRICE, web_sales.ws_pricing.list_price),
+              resolve_decimal(WS_PRICING_SALES_PRICE, web_sales.ws_pricing.sales_price),
+              resolve_decimal(WS_PRICING_EXT_DISCOUNT_AMT, web_sales.ws_pricing.ext_discount_amt),
+              resolve_decimal(WS_PRICING_EXT_SALES_PRICE, web_sales.ws_pricing.ext_sales_price),
+              resolve_decimal(WS_PRICING_EXT_WHOLESALE_COST, web_sales.ws_pricing.ext_wholesale_cost),
+              resolve_decimal(WS_PRICING_EXT_LIST_PRICE, web_sales.ws_pricing.ext_list_price),
+              resolve_decimal(WS_PRICING_EXT_TAX, web_sales.ws_pricing.ext_tax),
+              resolve_decimal(WS_PRICING_COUPON_AMT, web_sales.ws_pricing.coupon_amt),
+              resolve_decimal(WS_PRICING_EXT_SHIP_COST, web_sales.ws_pricing.ext_ship_cost),
+              resolve_decimal(WS_PRICING_NET_PAID, web_sales.ws_pricing.net_paid),
+              resolve_decimal(WS_PRICING_NET_PAID_INC_TAX, web_sales.ws_pricing.net_paid_inc_tax),
+              resolve_decimal(WS_PRICING_NET_PAID_INC_SHIP, web_sales.ws_pricing.net_paid_inc_ship),
+              resolve_decimal(WS_PRICING_NET_PAID_INC_SHIP_TAX, web_sales.ws_pricing.net_paid_inc_ship_tax),
+              resolve_decimal(WS_PRICING_NET_PROFIT, web_sales.ws_pricing.net_profit));
         }
 
         if (was_returned != 0) {
           web_returns_builder.append_row(
-              resolve_key<WR_RETURNED_DATE_SK>(web_returns.wr_returned_date_sk),
-              resolve_key<WR_RETURNED_TIME_SK>(web_returns.wr_returned_time_sk), web_returns.wr_item_sk,
-              resolve_key<WR_REFUNDED_CUSTOMER_SK>(web_returns.wr_refunded_customer_sk),
-              resolve_key<WR_REFUNDED_CDEMO_SK>(web_returns.wr_refunded_cdemo_sk),
-              resolve_key<WR_REFUNDED_HDEMO_SK>(web_returns.wr_refunded_hdemo_sk),
-              resolve_key<WR_REFUNDED_ADDR_SK>(web_returns.wr_refunded_addr_sk),
-              resolve_key<WR_RETURNING_CUSTOMER_SK>(web_returns.wr_returning_customer_sk),
-              resolve_key<WR_RETURNING_CDEMO_SK>(web_returns.wr_returning_cdemo_sk),
-              resolve_key<WR_RETURNING_HDEMO_SK>(web_returns.wr_returning_hdemo_sk),
-              resolve_key<WR_RETURNING_ADDR_SK>(web_returns.wr_returning_addr_sk),
-              resolve_key<WR_WEB_PAGE_SK>(web_returns.wr_web_page_sk),
-              resolve_key<WR_REASON_SK>(web_returns.wr_reason_sk), web_returns.wr_order_number,
-              resolve_integer<WR_PRICING_QUANTITY>(web_returns.wr_pricing.quantity),
-              resolve_decimal<WR_PRICING_NET_PAID>(web_returns.wr_pricing.net_paid),
-              resolve_decimal<WR_PRICING_EXT_TAX>(web_returns.wr_pricing.ext_tax),
-              resolve_decimal<WR_PRICING_NET_PAID_INC_TAX>(web_returns.wr_pricing.net_paid_inc_tax),
-              resolve_decimal<WR_PRICING_FEE>(web_returns.wr_pricing.fee),
-              resolve_decimal<WR_PRICING_EXT_SHIP_COST>(web_returns.wr_pricing.ext_ship_cost),
-              resolve_decimal<WR_PRICING_REFUNDED_CASH>(web_returns.wr_pricing.refunded_cash),
-              resolve_decimal<WR_PRICING_REVERSED_CHARGE>(web_returns.wr_pricing.reversed_charge),
-              resolve_decimal<WR_PRICING_STORE_CREDIT>(web_returns.wr_pricing.store_credit),
-              resolve_decimal<WR_PRICING_NET_LOSS>(web_returns.wr_pricing.net_loss));
+              resolve_key(WR_RETURNED_DATE_SK, web_returns.wr_returned_date_sk),
+              resolve_key(WR_RETURNED_TIME_SK, web_returns.wr_returned_time_sk), web_returns.wr_item_sk,
+              resolve_key(WR_REFUNDED_CUSTOMER_SK, web_returns.wr_refunded_customer_sk),
+              resolve_key(WR_REFUNDED_CDEMO_SK, web_returns.wr_refunded_cdemo_sk),
+              resolve_key(WR_REFUNDED_HDEMO_SK, web_returns.wr_refunded_hdemo_sk),
+              resolve_key(WR_REFUNDED_ADDR_SK, web_returns.wr_refunded_addr_sk),
+              resolve_key(WR_RETURNING_CUSTOMER_SK, web_returns.wr_returning_customer_sk),
+              resolve_key(WR_RETURNING_CDEMO_SK, web_returns.wr_returning_cdemo_sk),
+              resolve_key(WR_RETURNING_HDEMO_SK, web_returns.wr_returning_hdemo_sk),
+              resolve_key(WR_RETURNING_ADDR_SK, web_returns.wr_returning_addr_sk),
+              resolve_key(WR_WEB_PAGE_SK, web_returns.wr_web_page_sk),
+              resolve_key(WR_REASON_SK, web_returns.wr_reason_sk), web_returns.wr_order_number,
+              resolve_integer(WR_PRICING_QUANTITY, web_returns.wr_pricing.quantity),
+              resolve_decimal(WR_PRICING_NET_PAID, web_returns.wr_pricing.net_paid),
+              resolve_decimal(WR_PRICING_EXT_TAX, web_returns.wr_pricing.ext_tax),
+              resolve_decimal(WR_PRICING_NET_PAID_INC_TAX, web_returns.wr_pricing.net_paid_inc_tax),
+              resolve_decimal(WR_PRICING_FEE, web_returns.wr_pricing.fee),
+              resolve_decimal(WR_PRICING_EXT_SHIP_COST, web_returns.wr_pricing.ext_ship_cost),
+              resolve_decimal(WR_PRICING_REFUNDED_CASH, web_returns.wr_pricing.refunded_cash),
+              resolve_decimal(WR_PRICING_REVERSED_CHARGE, web_returns.wr_pricing.reversed_charge),
+              resolve_decimal(WR_PRICING_STORE_CREDIT, web_returns.wr_pricing.store_credit),
+              resolve_decimal(WR_PRICING_NET_LOSS, web_returns.wr_pricing.net_loss));
           if (web_returns_builder.row_count() == static_cast<size_t>(max_rows)) {
             break;
           }
@@ -1117,27 +1109,27 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_site(ds_key_t max_rows)
 
     web_site_builder.append_row(
         web_site.web_site_sk, web_site.web_site_id,
-        resolve_date_id<WEB_REC_START_DATE_ID>(web_site.web_rec_start_date_id),
-        resolve_date_id<WEB_REC_END_DATE_ID>(web_site.web_rec_end_date_id), resolve_string<WEB_NAME>(web_site.web_name),
-        resolve_key<WEB_OPEN_DATE>(web_site.web_open_date), resolve_key<WEB_CLOSE_DATE>(web_site.web_close_date),
-        resolve_string<WEB_CLASS>(web_site.web_class), resolve_string<WEB_MANAGER>(web_site.web_manager),
-        resolve_integer<WEB_MARKET_ID>(web_site.web_market_id),
-        resolve_string<WEB_MARKET_CLASS>(web_site.web_market_class),
-        resolve_string<WEB_MARKET_DESC>(web_site.web_market_desc),
-        resolve_string<WEB_MARKET_MANAGER>(web_site.web_market_manager),
-        resolve_integer<WEB_COMPANY_ID>(web_site.web_company_id),
-        resolve_string<WEB_COMPANY_NAME>(web_site.web_company_name),
-        resolve_string<WEB_ADDRESS_STREET_NUM>(pmr_string{std::to_string(web_site.web_address.street_num)}),
-        resolve_street_name<WEB_ADDRESS_STREET_NAME1>(web_site.web_address),
-        resolve_string<WEB_ADDRESS_STREET_TYPE>(web_site.web_address.street_type),
-        resolve_string<WEB_ADDRESS_SUITE_NUM>(web_site.web_address.suite_num),
-        resolve_string<WEB_ADDRESS_CITY>(web_site.web_address.city),
-        resolve_string<WEB_ADDRESS_COUNTY>(web_site.web_address.county),
-        resolve_string<WEB_ADDRESS_STATE>(web_site.web_address.state),
-        resolve_string<WEB_ADDRESS_ZIP>(zip_to_string(web_site.web_address.zip)),
-        resolve_string<WEB_ADDRESS_COUNTRY>(web_site.web_address.country),
-        resolve_gmt_offset<WEB_ADDRESS_GMT_OFFSET>(web_site.web_address.gmt_offset),
-        resolve_decimal<WEB_TAX_PERCENTAGE>(web_site.web_tax_percentage));
+        resolve_date_id(WEB_REC_START_DATE_ID, web_site.web_rec_start_date_id),
+        resolve_date_id(WEB_REC_END_DATE_ID, web_site.web_rec_end_date_id), resolve_string(WEB_NAME, web_site.web_name),
+        resolve_key(WEB_OPEN_DATE, web_site.web_open_date), resolve_key(WEB_CLOSE_DATE, web_site.web_close_date),
+        resolve_string(WEB_CLASS, web_site.web_class), resolve_string(WEB_MANAGER, web_site.web_manager),
+        resolve_integer(WEB_MARKET_ID, web_site.web_market_id),
+        resolve_string(WEB_MARKET_CLASS, web_site.web_market_class),
+        resolve_string(WEB_MARKET_DESC, web_site.web_market_desc),
+        resolve_string(WEB_MARKET_MANAGER, web_site.web_market_manager),
+        resolve_integer(WEB_COMPANY_ID, web_site.web_company_id),
+        resolve_string(WEB_COMPANY_NAME, web_site.web_company_name),
+        resolve_string(WEB_ADDRESS_STREET_NUM, pmr_string{std::to_string(web_site.web_address.street_num)}),
+        resolve_street_name(WEB_ADDRESS_STREET_NAME1, web_site.web_address),
+        resolve_string(WEB_ADDRESS_STREET_TYPE, web_site.web_address.street_type),
+        resolve_string(WEB_ADDRESS_SUITE_NUM, web_site.web_address.suite_num),
+        resolve_string(WEB_ADDRESS_CITY, web_site.web_address.city),
+        resolve_string(WEB_ADDRESS_COUNTY, web_site.web_address.county),
+        resolve_string(WEB_ADDRESS_STATE, web_site.web_address.state),
+        resolve_string(WEB_ADDRESS_ZIP, zip_to_string(web_site.web_address.zip)),
+        resolve_string(WEB_ADDRESS_COUNTRY, web_site.web_address.country),
+        resolve_gmt_offset(WEB_ADDRESS_GMT_OFFSET, web_site.web_address.gmt_offset),
+        resolve_decimal(WEB_TAX_PERCENTAGE, web_site.web_tax_percentage));
   }
 
   return web_site_builder.finish_table();
