@@ -340,11 +340,11 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   /**
    * The following steps create the offsets that allow each concurrent job to write lock-less into the newly
-   * created RadixContainer. The input RadixContainer was a simple list materialized values. The outcome
-   * container is consectitive vector, sorted by radix clusters (which are defined by the offsets).
+   * created RadixContainer. The input RadixContainer was a simple list of materialized values. The outcome
+   * container is consecutive vector, sorted by radix clusters (which are defined by the offsets).
    * Input:
-   *  - `histograms` stores for each input chunk the histogram that counts the number of value per radix cluster.
-   *  - `chunk_offsets` store the offsets -- denoting the number of elements of each chunk -- in the continuous
+   *  - `histograms` stores for each input chunk a histogram that counts the number of values per radix cluster.
+   *  - `chunk_offsets` stores the offsets -- denoting the number of elements of each chunk -- in the continuous
    *     vector of materialized values.
    *
    * Simple example:
@@ -352,10 +352,10 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
    * - first step: create offsets that denote write offsets per radix cluster and collect lengths
    *   - result: offsets vectors are [0 0 0] [4 0 3] and lengths are [9 2 10]
    * - second step: create prefix sum vector of [9 2 10] >> [9 11 10]
-   * - third step: adapt offset vectors to create the offsets that allows writing
-   *   all thread in parallel into a _consecutive_ vector
+   * - third step: adapt offset vectors to create the offsets that allow writing
+   *   all threads in parallel into a _consecutive_ vector
    *   - result: [0 9 11] [4 9 14]
-   * - note: the third step would be superflous, when each radix cluster is written to separate vector
+   * - note: the third step would be superfluous, when each radix cluster is written to a separate vector
    */
   std::vector<size_t> output_offsets_by_chunk;
   output_offsets_by_chunk.reserve(chunk_offsets.size() * num_partitions);
