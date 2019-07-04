@@ -160,7 +160,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     } else {
       auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
       auto output_segments_iter = output_segments.begin();
-      auto output_indices = Indices{};
+      auto output_indexes = Indexes{};
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
       for (auto stored_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
@@ -171,15 +171,15 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         }
 
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
-        auto indices = stored_chunk->get_indices({*output_segments_iter});
-        if (!indices.empty()) {
-          output_indices.insert(std::end(output_indices), std::begin(indices), std::end(indices));
+        auto indexes = stored_chunk->get_indexes({*output_segments_iter});
+        if (!indexes.empty()) {
+          output_indexes.insert(std::end(output_indexes), std::begin(indexes), std::end(indexes));
         }
         ++output_segments_iter;
       }
 
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
-                                                    stored_chunk->get_allocator(), std::move(output_indices));
+                                                    stored_chunk->get_allocator(), std::move(output_indexes));
     }
 
     ++output_chunks_iter;

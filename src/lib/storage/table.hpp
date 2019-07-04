@@ -6,9 +6,8 @@
 #include <utility>
 #include <vector>
 
-#include "boost/variant.hpp"
-
 #include "base_segment.hpp"
+#include "boost/variant.hpp"
 #include "chunk.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
@@ -24,6 +23,8 @@ class TableStatistics;
  * A Table is partitioned horizontally into a number of chunks.
  */
 class Table : private Noncopyable {
+  friend class StorageTableTest;
+
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
@@ -82,9 +83,6 @@ class Table : private Noncopyable {
    */
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
-
-  // Returns all Chunks
-  const tbb::concurrent_vector<std::shared_ptr<Chunk>>& chunks() const;
 
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);

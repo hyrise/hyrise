@@ -106,20 +106,17 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   // update index statistics
   for (auto stored_index_stats_iter = stored_indexes_statistics.begin();
        stored_index_stats_iter != stored_indexes_statistics.end();) {
-    auto update_index_statistics = [&]() {
-      for (auto& original_column_id : (*stored_index_stats_iter).column_ids) {
-        const auto& updated_column_id = column_id_mapping[original_column_id];
-        if (!updated_column_id) {
-          // column was pruned, we cannot use the index anymore.
-          stored_indexes_statistics.erase(stored_index_stats_iter);
-          return;
-        } else {
-          original_column_id = *updated_column_id;
-          ++stored_index_stats_iter;
-        }
+    for (auto& original_column_id : (*stored_index_stats_iter).column_ids) {
+      const auto& updated_column_id = column_id_mapping[original_column_id];
+      if (!updated_column_id) {
+        // column was pruned, we cannot use the index anymore.
+        stored_indexes_statistics.erase(stored_index_stats_iter);
+        break;
+      } else {
+        original_column_id = *updated_column_id;
+        ++stored_index_stats_iter;
       }
-    };
-    update_index_statistics();
+    }
   }
   return stored_indexes_statistics;
 }

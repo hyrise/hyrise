@@ -756,6 +756,33 @@ TEST_F(GenericHistogramTest, SlicedFloat) {
   test_sliced_with_predicates(histograms, predicates);
 }
 
+TEST_F(GenericHistogramTest, SplitAtEmptyBinBounds) {
+  // clang-format off
+  const auto histogram = GenericHistogram<int32_t>(
+          std::vector<int32_t>{},
+          std::vector<int32_t>{},
+          std::vector<HistogramCountType>{},
+          std::vector<HistogramCountType>{});
+  // clang-format on
+
+  const auto expected_minima = std::vector<int32_t>{};
+  const auto expected_maxima = std::vector<int32_t>{};
+  const auto expected_heights = std::vector<HistogramCountType>{};
+  const auto expected_distinct_counts =
+      std::vector<HistogramCountType>{};
+
+  const auto new_hist = histogram.split_at_bin_bounds(std::vector<std::pair<int32_t, int32_t>>{{}, {}});
+
+  EXPECT_EQ(new_hist->bin_count(), expected_minima.size());
+
+  for (auto bin_id = BinID{0}; bin_id < expected_minima.size(); bin_id++) {
+    EXPECT_EQ(new_hist->bin_minimum(bin_id), expected_minima[bin_id]);
+    EXPECT_EQ(new_hist->bin_maximum(bin_id), expected_maxima[bin_id]);
+    EXPECT_FLOAT_EQ(new_hist->bin_height(bin_id), expected_heights[bin_id]);
+    EXPECT_FLOAT_EQ(new_hist->bin_distinct_count(bin_id), expected_distinct_counts[bin_id]);
+  }
+}
+
 TEST_F(GenericHistogramTest, SplitAtBinBounds) {
   // clang-format off
   const auto histogram = GenericHistogram<int32_t>(

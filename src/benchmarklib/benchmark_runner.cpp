@@ -55,6 +55,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   _table_generator->generate_and_store();
 
+  _benchmark_item_runner->on_tables_loaded();
+
   if (_config.verify) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
     Timer timer;

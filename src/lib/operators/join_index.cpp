@@ -62,7 +62,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
                   !_secondary_predicates.empty()),
-         "JoinHash doesn't support these parameters");
+         "JoinIndex doesn't support these parameters");
+
+  std::shared_ptr<const Table> probe_input_table;
+  std::shared_ptr<const Table> index_input_table;
 
   if (_index_side == IndexSide::Left) {
     _probe_input_table = input_table_right();
@@ -310,7 +313,6 @@ const std::vector<IndexRange> JoinIndex::_index_ranges_for_value(SegmentPosition
         // first, get all values less than the search value
         range_begin = index->cbegin();
         range_end = index->lower_bound({probe_side_position.value()});
-
         index_ranges.emplace_back(IndexRange{range_begin, range_end});
 
         // set range for second half to all values greater than the search value

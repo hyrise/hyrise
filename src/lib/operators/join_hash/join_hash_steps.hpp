@@ -89,6 +89,14 @@ class PosHashTable {
     }
   }
 
+  void shrink_to_fit() {
+    _pos_lists.resize(_hash_table.size());
+    _pos_lists.shrink_to_fit();
+    for (auto& pos_list : _pos_lists) {
+      pos_list.shrink_to_fit();
+    }
+  }
+
   // For a value seen on the probe side, return an iterator into the matching values
   template <typename InputType>
   const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
@@ -128,6 +136,13 @@ struct RadixContainer {
 
   // bit vector to store NULL flags
   std::shared_ptr<std::vector<bool>> null_value_bitvector;
+
+  void clear() {
+    elements = nullptr;
+    partition_offsets.clear();
+    partition_offsets.shrink_to_fit();
+    null_value_bitvector = nullptr;
+  }
 };
 
 inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const Table>& table) {
@@ -291,6 +306,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
             hash_table.emplace(element.value, element.row_id);
           }
 
+          hash_table.shrink_to_fit();
           hash_tables[current_partition_id] = std::move(hash_table);
         }));
     jobs.back()->schedule();
@@ -338,15 +354,61 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
   radix_output.partition_offsets.resize(num_partitions);
   radix_output.null_value_bitvector = output_nulls;
 
-  // use histograms to calculate partition offsets
-  size_t offset = 0;
-  std::vector<std::vector<size_t>> output_offsets_by_chunk(chunk_offsets.size(), std::vector<size_t>(num_partitions));
-  for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
-    for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
-      output_offsets_by_chunk[chunk_id][partition_id] = offset;
-      offset += histograms[chunk_id][partition_id];
+  /**
+   * The following steps create the offsets that allow each concurrent job to write lock-less into the newly
+   * created RadixContainer. The input RadixContainer is a list of materialized values in order of the input table.
+   * The output of `partition_radix_parallel()` is single consecutive vector and its values are sorted by radix
+   * clusters (which are defined by the offsets).
+   * Input:
+   *  - `histograms` stores for each input chunk a histogram that counts the number of values per radix cluster.
+   *  - `chunk_offsets` stores the offsets -- denoting the number of elements of each chunk -- in the continuous
+   *     vector of materialized values.
+   *
+   * The process of creating the offset information consists of three steps. A previous commit used a single
+   * loop and created multiple vectors. This approach has shown to be inefficient for very large inputs.
+   * Consequently, we now use a large single vector and operate fully sequentially. This come at the cost of
+   * iterating twice and introduces additional steps. However, the current approach should be faster.
+   *
+   * Simple example:
+   * - histograms for chunks 0 and 1 [4 0 3] & [5 2 7] (i.e., first radix cluster has 4 + 5 values)
+   * - first step: create offsets that denote write offsets per radix cluster and collect lengths
+   *   - result: offsets vectors are [0 0 0] [4 0 3] and lengths are [9 2 10]
+   * - second step: create prefix sum vector of [9 2 10] >> [9 11 21]
+   * - third step: adapt offset vectors to create the offsets that allow writing
+   *   all threads in parallel into a _single_ vector
+   *   - result: [0 9 11] [4 9 14]
+   * - note: the third step would be superfluous when each radix cluster is written to a separate vector
+   */
+  std::vector<size_t> output_offsets_by_chunk(chunk_offsets.size() * num_partitions);
+
+  // Offset vector creation: first step
+  auto prefix_sums = std::vector<size_t>(num_partitions);  // stores the prefix sums
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
+    for (auto radix_cluster_id = size_t{0}; radix_cluster_id < num_partitions; ++radix_cluster_id) {
+      const auto radix_cluster_size = histograms[chunk_id][radix_cluster_id];
+      output_offsets_by_chunk[chunk_id * num_partitions + radix_cluster_id] = prefix_sums[radix_cluster_id];
+      prefix_sums[radix_cluster_id] += radix_cluster_size;
     }
-    radix_output.partition_offsets[partition_id] = offset;
+  }
+
+  // Offset vector creation: second step
+  for (auto position = size_t{1}; position < prefix_sums.size(); ++position) {
+    prefix_sums[position] += prefix_sums[position - 1];
+  }
+
+  // Offset vector creation: third step
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
+    // Skip the first item of the loop
+    for (auto radix_cluster_id = size_t{1}; radix_cluster_id < num_partitions; ++radix_cluster_id) {
+      const auto write_position = chunk_id * num_partitions + radix_cluster_id;
+      output_offsets_by_chunk[write_position] += prefix_sums[radix_cluster_id - 1];
+
+      // In the last iteration, the offsets are written to the radix container.
+      // Note: these offsets denote _the last element's ID_ per cluster
+      if (chunk_id == (chunk_offsets.size() - 1)) {
+        radix_output.partition_offsets[radix_cluster_id] = prefix_sums[radix_cluster_id];
+      }
+    }
   }
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -354,18 +416,20 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_offsets.size(); ++chunk_id) {
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
-      size_t input_offset = chunk_offsets[chunk_id];
-      auto& output_offsets = output_offsets_by_chunk[chunk_id];
+      const auto iter_output_offsets_start = output_offsets_by_chunk.begin() + chunk_id * num_partitions;
+      const auto iter_output_offsets_end = iter_output_offsets_start + num_partitions;
 
-      size_t input_size = 0;
+      // Obtain modifiable offset vector used to store insert positions
+      auto output_offsets = std::vector<size_t>(iter_output_offsets_start, iter_output_offsets_end);
+
+      const size_t input_offset = chunk_offsets[chunk_id];
+      size_t input_size = container_elements.size() - input_offset;
       if (chunk_id < chunk_offsets.size() - 1) {
         input_size = chunk_offsets[chunk_id + 1] - input_offset;
-      } else {
-        input_size = container_elements.size() - input_offset;
       }
 
       for (size_t chunk_offset = input_offset; chunk_offset < input_offset + input_size; ++chunk_offset) {
-        auto& element = container_elements[chunk_offset];
+        const auto& element = container_elements[chunk_offset];
 
         // In case of NULL-removing inner-joins, we ignore all NULL values.
         // Such values can be created in several ways: join input already has non-phyiscal NULL values (non-physical
@@ -678,17 +742,21 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
   PosListsByChunk pos_lists_by_segment(input_table->column_count());
   auto pos_lists_by_segment_it = pos_lists_by_segment.begin();
 
-  const auto& input_chunks = input_table->chunks();
+  const auto input_chunks_count = input_table->chunk_count();
+  const auto input_columns_count = input_table->column_count();
 
   // For every column, for every chunk
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
+  for (ColumnID column_id{0}; column_id < input_columns_count; ++column_id) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
     auto pos_list_ptrs = std::make_shared<PosLists>(input_table->chunk_count());
     auto pos_lists_iter = pos_list_ptrs->begin();
 
     // Iterate over every chunk and add the chunks segment with column_id to pos_list_ptrs
-    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      const auto& ref_segment_uncasted = input_chunks[chunk_id]->segments()[column_id];
+    for (ChunkID chunk_id{0}; chunk_id < input_chunks_count; ++chunk_id) {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      const auto& ref_segment_uncasted = chunk->segments()[column_id];
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
       *pos_lists_iter = ref_segment->pos_list();
       ++pos_lists_iter;

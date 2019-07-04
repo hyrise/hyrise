@@ -14,9 +14,7 @@
 namespace opossum {
 
 enum class IndexSide { Left, Right };
-
 class MultiPredicateJoinEvaluator;
-
 using IndexRange = std::pair<BaseIndex::Iterator, BaseIndex::Iterator>;
 
 /**
