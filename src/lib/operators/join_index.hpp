@@ -17,6 +17,8 @@ enum class IndexSide { Left, Right };
 
 class MultiPredicateJoinEvaluator;
 
+using IndexRange = std::pair<BaseIndex::Iterator, BaseIndex::Iterator>;
+
 /**
    * This operator joins two tables using one column of each table.
    * A speedup compared to the Nested Loop Join is achieved by avoiding the inner loop, and instead
@@ -51,12 +53,6 @@ class JoinIndex : public AbstractJoinOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
-  // This function is executed if the output table of the index side input operator is a data table.
-  std::shared_ptr<const Table> _data_join();
-
-  // This function is executed if the output table of the index side input operator is a reference table.
-  std::shared_ptr<const Table> _reference_join();
-
   void _fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                              const bool track_index_matches, const bool is_semi_or_anti_join,
                              MultiPredicateJoinEvaluator& secondary_predicate_evaluator);
@@ -67,6 +63,9 @@ class JoinIndex : public AbstractJoinOperator {
   template <typename ProbeIterator>
   void _join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id,
                                       const ChunkID index_chunk_id, const std::shared_ptr<BaseIndex>& index);
+
+  template <typename SegmentPosition>
+  const std::vector<IndexRange> _index_ranges_for_value(SegmentPosition probe_side_position, const std::shared_ptr<BaseIndex>& index) const;
 
   void _append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
