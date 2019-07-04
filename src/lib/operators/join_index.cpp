@@ -107,100 +107,143 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
 
   // TODO(Marcel) implement this branch correctly (INDEX REF JOIN)
-  if (_mode == JoinMode::Inner &&
-      ((_index_side == IndexSide::Right && input_table_right()->type() == TableType::References) ||
-       (_index_side == IndexSide::Left && input_table_left()->type() == TableType::References)) &&
+  if (_mode == JoinMode::Inner && _index_input_table->type() == TableType::References &&
       _secondary_predicates.empty()) {  // INDEX REFERENCE JOIN
-    std::vector<ColumnID> data_table_index_column_ids;
-
-    // get referenced data table
-    std::shared_ptr<const Table> referenced_data_table;
-    if (!_index_input_table->chunks().empty() && !_index_input_table->chunks()[0]->segments().empty()) {
-      const auto& first_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(
-          _index_input_table->chunks()[0]->segments()[_primary_predicate.column_ids.second]);
-      Assert(first_reference_segment != nullptr,
+    // Scan all chunks for index input
+    for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
+      const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
+      if(index_chunk->size() == 0){
+        continue;
+      }
+      const auto& reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(
+          index_chunk->segments()[_primary_predicate.column_ids.second]);
+      Assert(reference_segment != nullptr,
              "Non-empty index intput table (reference table) has to have only reference segments.");
-      referenced_data_table = first_reference_segment->referenced_table();
-      // Experiment assumption (this is not valid generally):
-      // Each reference segment of the reference table references the same ColumnId
-      data_table_index_column_ids.emplace_back(first_reference_segment->referenced_column_id());
+      auto index_data_table = reference_segment->referenced_table();
+      const std::vector<ColumnID> index_data_table_column_ids{reference_segment->referenced_column_id()};
+      Assert(index_data_table != nullptr, "ReferenceSegment has no reference table.");
 
-      Assert(referenced_data_table != nullptr, "ReferenceSegment has no reference table.");
-      if (!referenced_data_table->indexes_statistics().empty()) {
-        std::cout << "NO FALLBACK"
-                  << "\n";
-        // Assumption: Original data table of the right input table has
-        // an index for each segment that is evaluated for the join
+      auto reference_segment_pos_list = reference_segment->pos_list();
+      Assert(reference_segment_pos_list->references_single_chunk(),"Single chunk reference guarantee required");
+      PosList index_scan_pos_list{};
+      if(!reference_segment_pos_list->empty()){
+        const auto& index_data_table_chunk = index_data_table->get_chunk((*reference_segment_pos_list)[0].chunk_id);
+        const auto indices = index_data_table_chunk->get_indices(index_data_table_column_ids);
+        std::shared_ptr<BaseIndex> index = nullptr;
 
-        // build the position list for the index input table
-        auto index_input_table_positions = PosList{};
-        index_input_table_positions.reserve(_index_input_table->row_count());
-        for (const auto& index_chunk : _index_input_table->chunks()) {
-          if (!index_chunk->segments().empty()) {
-            const auto& reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(index_chunk->segments()[0]);
-            Assert(reference_segment != nullptr, "Segment of reference table is not of type ReferenceSegment.");
-            const auto& reference_segment_pos_list = reference_segment->pos_list();
-            index_input_table_positions.insert(index_input_table_positions.end(), reference_segment_pos_list->begin(),
-                                               reference_segment_pos_list->end());
+        if (!indices.empty()) {
+          // We assume the first index to be efficient for our join
+          // as we do not want to spend time on evaluating the best index inside of this join loop
+          index = indices.front();
+        }
+
+        // Scan all chunks from the pruning side input
+        if (index) {
+          for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count();
+               ++probe_chunk_id) {
+            const auto probe_segment =
+                _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
+            segment_with_iterators(*probe_segment, [&](auto it, const auto end) {
+              // get index scan pos list per index, append it to index_scan_pos_list
+              PosList index_table_matches{};
+              std::sort(reference_segment_pos_list->begin(), reference_segment_pos_list->end());
+              std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
+              std::set_intersection(reference_segment_pos_list->begin(), reference_segment_pos_list->end(),
+                              index_scan_pos_list.begin(), index_scan_pos_list.end(),
+                              std::back_inserter(index_table_matches));
+              // _append_matches();
+            });
           }
-        }
-
-        std::sort(index_input_table_positions.begin(), index_input_table_positions.end());
-
-        //  iterate over the probe join column
-        //    for each value vl of that column:
-        //      execute an index scan on the referenced_data_table
-        //      get the global posList (index_data_table_matches) for the scan on the referenced_data_table
-        //      sort index_input_table_positions
-        //      sort index_data_table_matches
-        //      index_table_matches = intersection(index_input_table_positions, index_data_table_matches)
-        //      add the RowID of vl as often as the size of index_table_matches to _probe_pos_list
-        //      add index_table_matches to _index_pos_list
-
-        const auto& referenced_data_table_wrapper = std::make_shared<TableWrapper>(referenced_data_table);
-        referenced_data_table_wrapper->execute();
-
-        auto probe_chunk_id = ChunkID{0};
-        for (const auto& probe_chunk : _probe_input_table->chunks()) {
-          const auto& probe_segment = probe_chunk->get_segment(_primary_predicate.column_ids.first);
-          //// new approach
-          segment_with_iterators(*probe_segment, [&](auto probe_side_iter, auto end) {
-            // for (; probe_side_iter != end; ++probe_side_iter) {
-            //   const auto& probe_value = *probe_side_iter;
-            //   const std::vector<AllTypeVariant> index_scan_values{AllTypeVariant{probe_value.value()}};
-            //   // WARNING! The SegmentIndexType is hard coded for the benchmark experiment here.
-            //   // TODO(Marcel) modify passing the SegmentIndexType
-            //   // TODO(Marcel) avoid using the operator, see _fallback_nested_loop
-            //   const auto& index_scan_on_data_table = std::make_shared<IndexScan>(
-            //       referenced_data_table_wrapper, SegmentIndexType::GroupKey, data_table_index_column_ids,
-            //       _primary_predicate.predicate_condition, index_scan_values);
-            //   auto index_data_table_matches = index_scan_on_data_table->execute_matches_calculation();
-
-            //   std::sort(index_data_table_matches->begin(), index_data_table_matches->end());
-            //   auto index_table_matches = PosList{};
-
-            //   std::set_intersection(index_input_table_positions.begin(), index_input_table_positions.end(),
-            //                         index_data_table_matches->begin(), index_data_table_matches->end(),
-            //                         std::back_inserter(index_table_matches));
-            //   _append_matches(probe_chunk_id, probe_chunk_offset, index_table_matches);
-            //   ++probe_chunk_offset;
-            // }
-          });
-          ////
-          ++probe_chunk_id;
-        }
-      } else {
-        // fallback to nested loop join
-        std::cout << "FALLBACK"
-                  << "\n";
-        for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < _index_input_table->chunk_count();
-             ++index_chunk_id) {
-          const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
+          performance_data.chunks_scanned_with_index++;
+        } else {
+          std::cout << "FALLBACK\n";
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
         }
       }
     }
+    // std::vector<ColumnID> data_table_index_column_ids;
+
+    // // get referenced data table
+    // std::shared_ptr<const Table> referenced_data_table;
+    // if (!_index_input_table->chunks().empty() && !_index_input_table->chunks()[0]->segments().empty()) {
+    //   const auto& first_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(
+    //       _index_input_table->chunks()[0]->segments()[_primary_predicate.column_ids.second]);
+    //   Assert(first_reference_segment != nullptr,
+    //          "Non-empty index intput table (reference table) has to have only reference segments.");
+    //   referenced_data_table = first_reference_segment->referenced_table();
+    //   // Experiment assumption (this is not valid generally):
+    //   // Each reference segment of the reference table references the same ColumnId
+    //   data_table_index_column_ids.emplace_back(first_reference_segment->referenced_column_id());
+
+    //   Assert(referenced_data_table != nullptr, "ReferenceSegment has no reference table.");
+    //   if (!referenced_data_table->indexes_statistics().empty()) {
+    //     std::cout << "NO FALLBACK"
+    //               << "\n";
+    //     // Assumption: Original data table of the right input table has
+    //     // an index for each segment that is evaluated for the join
+
+    //     // build the position list for the index input table
+    //     auto index_input_table_positions = PosList{};
+    //     index_input_table_positions.reserve(_index_input_table->row_count());
+    //     for (const auto& index_chunk : _index_input_table->chunks()) {
+    //       if (!index_chunk->segments().empty()) {
+    //         const auto& reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(index_chunk->segments()[0]);
+    //         Assert(reference_segment != nullptr, "Segment of reference table is not of type ReferenceSegment.");
+    //         const auto& reference_segment_pos_list = reference_segment->pos_list();
+    //         index_input_table_positions.insert(index_input_table_positions.end(), reference_segment_pos_list->begin(),
+    //                                            reference_segment_pos_list->end());
+    //       }
+    //     }
+
+    //     std::sort(index_input_table_positions.begin(), index_input_table_positions.end());
+
+    //     //  iterate over the probe join column
+    //     //    for each value vl of that column:
+    //     //      execute an index scan on the referenced_data_table
+    //     //      get the global posList (index_data_table_matches) for the scan on the referenced_data_table
+    //     //      sort index_input_table_positions
+    //     //      sort index_data_table_matches
+    //     //      index_table_matches = intersection(index_input_table_positions, index_data_table_matches)
+    //     //      add the RowID of vl as often as the size of index_table_matches to _probe_pos_list
+    //     //      add index_table_matches to _index_pos_list
+
+    //     for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count();
+    //          ++probe_chunk_id) {
+    //       const auto probe_segment =
+    //           _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
+    //       segment_with_iterators(*probe_segment, [&](auto probe_iter, auto probe_end) {
+    //         for (; probe_iter != probe_end; ++probe_iter) {
+    //           const auto probe_side_position = *probe_iter;
+    //           const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
+    //           auto index_data_table_matches = PosList{};
+    //           for (const auto& index_range : index_ranges) {
+    //             // get one index data table pos list (fill them into index_data_table_matches)
+    //             std::cout << "INDEX RANGES ARE NOT HANDLED YET" << index_range.first << "\n";
+    //           }
+    //           std::sort(index_data_table_matches.begin(), index_data_table_matches.end());
+    //           auto index_table_matches = PosList{};
+
+    //           std::set_intersection(index_input_table_positions.begin(), index_input_table_positions.end(),
+    //                                 index_data_table_matches.begin(), index_data_table_matches.end(),
+    //                                 std::back_inserter(index_table_matches));
+    //           _append_matches(probe_chunk_id, probe_side_position.chunk_offset(), index_table_matches);
+    //         }
+    //       });
+    //     }
+    //     performance_data.chunks_scanned_with_index++;
+    //   } else {
+    //     // fallback to nested loop join
+    //     std::cout << "FALLBACK"
+    //               << "\n";
+    //     for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < _index_input_table->chunk_count();
+    //          ++index_chunk_id) {
+    //       const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
+    //       _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+    //                             secondary_predicate_evaluator);
+    //     }
+    //   }
+    // }
   } else {  // INDEX DATA JOIN
     // Scan all chunks for index input
     for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
