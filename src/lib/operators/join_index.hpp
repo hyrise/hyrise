@@ -65,7 +65,8 @@ class JoinIndex : public AbstractJoinOperator {
                                       const ChunkID index_chunk_id, const std::shared_ptr<BaseIndex>& index);
 
   template <typename SegmentPosition>
-  const std::vector<IndexRange> _index_ranges_for_value(SegmentPosition probe_side_position, const std::shared_ptr<BaseIndex>& index) const;
+  const std::vector<IndexRange> _index_ranges_for_value(SegmentPosition probe_side_position,
+                                                        const std::shared_ptr<BaseIndex>& index) const;
 
   void _append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
