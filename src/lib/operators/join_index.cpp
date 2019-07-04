@@ -11,8 +11,6 @@
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
-#include "operators/index_scan.hpp"
-#include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/segment_iterate.hpp"
