@@ -127,6 +127,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
       Assert(referenced_data_table != nullptr, "ReferenceSegment has no reference table.");
       if (!referenced_data_table->indexes_statistics().empty()) {
+        std::cout << "NO FALLBACK"
+                  << "\n";
         // Assumption: Original data table of the right input table has
         // an index for each segment that is evaluated for the join
 
@@ -189,6 +191,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         }
       } else {
         // fallback to nested loop join
+        std::cout << "FALLBACK"
+                  << "\n";
         for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < _index_input_table->chunk_count();
              ++index_chunk_id) {
           const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);

@@ -103,8 +103,7 @@ class JoinIndexTest : public BaseTest {
 
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
     const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join->performance_data());
-    if (using_index && right->get_output()->type() == TableType::Data) {
-      // We can't execute the index join on referencing tables
+    if (using_index && (right->get_output()->type() == TableType::Data || mode == JoinMode::Inner)) {
       EXPECT_EQ(performance_data.chunks_scanned_with_index, static_cast<size_t>(right->get_output()->chunk_count()));
       EXPECT_EQ(performance_data.chunks_scanned_without_index, 0);
     } else {
