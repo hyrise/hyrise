@@ -131,13 +131,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           continue;
         }
         const auto& index_data_table_chunk = index_data_table->get_chunk((*reference_segment_pos_list)[0].chunk_id);
-        const auto& indices = index_data_table_chunk->get_indices(index_data_table_column_ids);
+        const auto& indexes = index_data_table_chunk->get_indexes(index_data_table_column_ids);
         std::shared_ptr<BaseIndex> index = nullptr;
 
-        if (!indices.empty()) {
+        if (!indexes.empty()) {
           // We assume the first index to be efficient for our join
           // as we do not want to spend time on evaluating the best index inside of this join loop
-          index = indices.front();
+          index = indexes.front();
         }
 
         // Scan all chunks from the pruning side input
@@ -154,27 +154,29 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           performance_data.chunks_scanned_with_index++;
         } else {
           std::cout << "FALLBACK (no index available\n";
-          _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                                secondary_predicate_evaluator);
+          Fail("DebugFail");
+          // _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+          //                       secondary_predicate_evaluator);
         }
       } else {
         std::cout << "FALLBACK (ref seg references multiple chunks\n";
-        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                              secondary_predicate_evaluator);
+        Fail("DebugFail");
+        // _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+        //                       secondary_predicate_evaluator);
       }
     }
   } else {  // INDEX DATA JOIN
     // Scan all chunks for index input
     for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
       const auto& index_chunk = _index_input_table->get_chunk(index_chunk_id);
-      const auto& indices =
-          index_chunk->get_indices(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
+      const auto& indexes =
+          index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
       std::shared_ptr<BaseIndex> index = nullptr;
 
-      if (!indices.empty()) {
+      if (!indexes.empty()) {
         // We assume the first index to be efficient for our join
         // as we do not want to spend time on evaluating the best index inside of this join loop
-        index = indices.front();
+        index = indexes.front();
       }
 
       // Scan all chunks from the pruning side input
