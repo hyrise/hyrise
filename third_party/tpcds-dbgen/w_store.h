@@ -38,7 +38,6 @@
 
 #include "address.h"
 #include "decimal.h"
-#include "date.h"
 
 #define RS_W_STORE_NAME	50
 #define RS_W_STORE_MGR	40
@@ -84,7 +83,6 @@ struct W_STORE_TBL {
 #define STORE_MAX_REV_GROWTH	 "0.50"
 #define STORE_DESC_MIN			15
 
-date_t *mk_w_store_static_tDate;
 
 int mk_w_store(void *pDest, ds_key_t kIndex);
 int pr_w_store(void *pSrc);

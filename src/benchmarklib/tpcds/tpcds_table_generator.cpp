@@ -263,8 +263,7 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
-  //TODO: reset
-  const auto max_rows = ds_key_t{10};  // std::numeric_limits<ds_key_t>::max();
+  const auto max_rows = std::numeric_limits<ds_key_t>::max();
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
 
@@ -340,7 +339,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   table_info_by_name["web_site"].table = generate_web_site(max_rows);
   std::cout << "web_site table generated" << std::endl;
 
-  cleanup_tpcds_tools();
+  // TODO: dbgen cleanup?
 
   return table_info_by_name;
 }
@@ -1136,14 +1135,6 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_web_site(ds_key_t max_rows)
   }
 
   return web_site_builder.finish_table();
-}
-
-void TpcdsTableGenerator::cleanup_tpcds_tools() const {
-  if (mk_w_store_static_tDate){
-    free(mk_w_store_static_tDate);
-    std::cout << "freed\n";  // TODO: remove
-  }
-  mk_w_store_static_tDate = nullptr;
 }
 
 }  // namespace opossum
