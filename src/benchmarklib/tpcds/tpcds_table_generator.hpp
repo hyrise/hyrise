@@ -59,5 +59,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_web_sales_and_returns(
       ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+
+  void cleanup_tpcds_tools() const;
 };
 }  // namespace opossum
