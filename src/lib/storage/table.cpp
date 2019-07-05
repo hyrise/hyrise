@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
@@ -146,8 +147,6 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
-const tbb::concurrent_vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
-
 ChunkOffset Table::max_chunk_size() const { return _max_chunk_size; }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
@@ -164,10 +163,6 @@ void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   DebugAssert(_chunks[chunk_id]->invalid_row_count() == _chunks[chunk_id]->size(),
               "Physical delete of chunk prevented: Chunk needs to be fully invalidated before.");
-  if (_table_statistics) {
-    auto invalidated_rows_count = _chunks[chunk_id]->size();
-    _table_statistics->decrease_invalid_row_count(invalidated_rows_count);
-  }
   _chunks[chunk_id] = nullptr;
 }
 
@@ -235,7 +230,13 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
 
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
-std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
+std::shared_ptr<TableStatistics> Table::table_statistics() const { return _table_statistics; }
+
+void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
+  _table_statistics = table_statistics;
+}
+
+std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};
@@ -248,7 +249,7 @@ size_t Table::estimate_memory_usage() const {
     bytes += column_definition.name.size();
   }
 
-  // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation
+  // TODO(anybody) Statistics and Indexes missing from Memory Usage Estimation
   // TODO(anybody) TableLayout missing
 
   return bytes;

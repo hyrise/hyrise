@@ -263,78 +263,80 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
+  const auto max_rows = std::numeric_limits<ds_key_t>::max();
+
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
 
-  table_info_by_name["call_center"].table = generate_call_center();
+  table_info_by_name["call_center"].table = generate_call_center(max_rows);
   std::cout << "call_center table generated" << std::endl;
 
-  table_info_by_name["catalog_page"].table = generate_catalog_page();
+  table_info_by_name["catalog_page"].table = generate_catalog_page(max_rows);
   std::cout << "catalog_page table generated" << std::endl;
 
-  auto catalog_sales_and_returns = generate_catalog_sales_and_returns();
+  auto catalog_sales_and_returns = generate_catalog_sales_and_returns(max_rows);
   std::cout << "catalog_sales table generated" << std::endl;
   std::cout << "catalog_returns table generated" << std::endl;
   table_info_by_name["catalog_sales"].table = catalog_sales_and_returns.first;
   table_info_by_name["catalog_returns"].table = catalog_sales_and_returns.second;
 
-  table_info_by_name["customer"].table = generate_customer();
+  table_info_by_name["customer"].table = generate_customer(max_rows);
   std::cout << "customer table generated" << std::endl;
 
-  table_info_by_name["customer_address"].table = generate_customer_address();
+  table_info_by_name["customer_address"].table = generate_customer_address(max_rows);
   std::cout << "customer_address table generated" << std::endl;
 
-  table_info_by_name["customer_demographics"].table = generate_customer_demographics();
+  table_info_by_name["customer_demographics"].table = generate_customer_demographics(max_rows);
   std::cout << "customer_demographics table generated" << std::endl;
 
-  table_info_by_name["date"].table = generate_date();
+  table_info_by_name["date"].table = generate_date(max_rows);
   std::cout << "date table generated" << std::endl;
 
-  table_info_by_name["household_demographics"].table = generate_household_demographics();
+  table_info_by_name["household_demographics"].table = generate_household_demographics(max_rows);
   std::cout << "household_demographics table generated" << std::endl;
 
-  table_info_by_name["income_band"].table = generate_income_band();
+  table_info_by_name["income_band"].table = generate_income_band(max_rows);
   std::cout << "income_band table generated" << std::endl;
 
-  table_info_by_name["inventory"].table = generate_inventory();
+  table_info_by_name["inventory"].table = generate_inventory(max_rows);
   std::cout << "inventory table generated" << std::endl;
 
-  table_info_by_name["item"].table = generate_item();
+  table_info_by_name["item"].table = generate_item(max_rows);
   std::cout << "item table generated" << std::endl;
 
-  table_info_by_name["promotion"].table = generate_promotion();
+  table_info_by_name["promotion"].table = generate_promotion(max_rows);
   std::cout << "promotion table generated" << std::endl;
 
-  table_info_by_name["reason"].table = generate_reason();
+  table_info_by_name["reason"].table = generate_reason(max_rows);
   std::cout << "reason table generated" << std::endl;
 
-  table_info_by_name["ship_mode"].table = generate_ship_mode();
+  table_info_by_name["ship_mode"].table = generate_ship_mode(max_rows);
   std::cout << "ship_mode table generated" << std::endl;
 
-  table_info_by_name["store"].table = generate_store();
+  table_info_by_name["store"].table = generate_store(max_rows);
   std::cout << "store table generated" << std::endl;
 
-  auto store_sales_and_returns = generate_store_sales_and_returns();
+  auto store_sales_and_returns = generate_store_sales_and_returns(max_rows);
   std::cout << "store_sales table generated" << std::endl;
   std::cout << "store_returns table generated" << std::endl;
   table_info_by_name["store_sales"].table = store_sales_and_returns.first;
   table_info_by_name["store_returns"].table = store_sales_and_returns.second;
 
-  table_info_by_name["time"].table = generate_time();
+  table_info_by_name["time"].table = generate_time(max_rows);
   std::cout << "time table generated" << std::endl;
 
-  table_info_by_name["warehouse"].table = generate_warehouse();
+  table_info_by_name["warehouse"].table = generate_warehouse(max_rows);
   std::cout << "warehouse table generated" << std::endl;
 
-  table_info_by_name["web_page"].table = generate_web_page();
+  table_info_by_name["web_page"].table = generate_web_page(max_rows);
   std::cout << "web_page table generated" << std::endl;
 
-  auto web_sales_and_returns = generate_web_sales_and_returns();
+  auto web_sales_and_returns = generate_web_sales_and_returns(max_rows);
   std::cout << "web_sales table generated" << std::endl;
   std::cout << "web_returns table generated" << std::endl;
   table_info_by_name["web_sales"].table = web_sales_and_returns.first;
   table_info_by_name["web_returns"].table = web_sales_and_returns.second;
 
-  table_info_by_name["web_site"].table = generate_web_site();
+  table_info_by_name["web_site"].table = generate_web_site(max_rows);
   std::cout << "web_site table generated" << std::endl;
 
   // TODO: dbgen cleanup?

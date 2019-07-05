@@ -105,9 +105,13 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
             create_between_table_scan(_data_table_wrapper, ColumnID{0}, left_casted, right_casted, predicate_condition);
         scan->execute();
 
-        const auto& result_table = *scan->get_output();
+        const auto result_table = scan->get_output();
         auto result_ints = std::vector<int>{};
-        for (const auto& chunk : result_table.chunks()) {
+
+        const auto chunk_count = result_table->chunk_count();
+        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+          const auto chunk = result_table->get_chunk(chunk_id);
+
           const auto segment_b = chunk->get_segment(ColumnID{1});
           for (auto offset = ChunkOffset{0}; offset < segment_b->size(); ++offset) {
             result_ints.emplace_back(boost::get<int>((*segment_b)[offset]));

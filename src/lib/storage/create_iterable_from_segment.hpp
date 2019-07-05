@@ -83,7 +83,7 @@ template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
   PerformanceWarning("FrameOfReferenceSegmentIterable erased by compile-time setting");
-  return AnySegmentIterable<T>(FrameOfReferenceIterable<T>(segment));
+  return AnySegmentIterable<T>(FrameOfReferenceSegmentIterable<T>(segment));
 #else
   if constexpr (EraseSegmentType) {
     return create_any_segment_iterable<T>(segment);

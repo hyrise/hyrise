@@ -26,6 +26,7 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::Avg, "AVG"},
         {AggregateFunction::Count, "COUNT"},
         {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
+        {AggregateFunction::StandardDeviationSample, "STDDEV_SAMP"},
     });
 
 const boost::bimap<FunctionType, std::string> function_type_to_string =

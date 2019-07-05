@@ -48,11 +48,19 @@ STRONG_TYPEDEF(size_t, ParameterID);
 
 namespace opossum {
 
+// Float aliases used in cardinality estimations/statistics
+using Cardinality = float;
+using DistinctCount = float;
+using Selectivity = float;
+
+// Cost that an AbstractCostModel assigns to an Operator/LQP node. The unit of the Cost is left to the Cost estimator
+// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common)
+using Cost = float;
+
 // We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from
 // different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
-
 template <typename T>
 using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 
@@ -229,8 +237,6 @@ enum class UnionMode { Positions };
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
-
-enum class HistogramType { EqualWidth, EqualHeight, EqualDistinctCount };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 

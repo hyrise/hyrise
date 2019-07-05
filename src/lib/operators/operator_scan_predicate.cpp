@@ -23,6 +23,8 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
     value = *column_id;
   } else if (const auto parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     value = parameter_expression->parameter_id;
+  } else if (const auto placeholder_expression = dynamic_cast<const PlaceholderExpression*>(&expression)) {
+    value = placeholder_expression->parameter_id;
   } else {
     return std::nullopt;
   }

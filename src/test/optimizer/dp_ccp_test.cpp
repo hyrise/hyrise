@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
-#include "cost_model/cost_model_logical.hpp"
+#include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -8,7 +8,8 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "statistics/column_statistics.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
@@ -25,33 +26,20 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class DpCcpTest : public ::testing::Test {
+class DpCcpTest : public BaseTest {
  public:
   void SetUp() override {
-    cost_estimator = std::make_shared<CostModelLogical>();
+    cardinality_estimator = std::make_shared<CardinalityEstimator>();
+    cost_estimator = std::make_shared<CostEstimatorLogical>(cardinality_estimator);
 
-    const auto column_statistics_a_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
-    const auto column_statistics_b_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 40, 100);
-    const auto column_statistics_c_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 100);
-    const auto column_statistics_d_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 100);
-
-    const auto table_statistics_a = std::make_shared<TableStatistics>(
-        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_a_a});
-    const auto table_statistics_b = std::make_shared<TableStatistics>(
-        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_b_a});
-    const auto table_statistics_c = std::make_shared<TableStatistics>(
-        TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_c_a});
-    const auto table_statistics_d = std::make_shared<TableStatistics>(
-        TableType::Data, 200, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_d_a});
-
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
-    node_a->set_statistics(table_statistics_a);
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
-    node_b->set_statistics(table_statistics_b);
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
-    node_c->set_statistics(table_statistics_c);
-    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
-    node_d->set_statistics(table_statistics_d);
+    node_a = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 50, 20, 10)});
+    node_b = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
+                                              {GenericHistogram<int32_t>::with_single_bin(40, 100, 20, 10)});
+    node_c = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 20,
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 100, 20, 10)});
+    node_d = create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 200,
+                                              {GenericHistogram<int32_t>::with_single_bin(1, 100, 200, 10)});
 
     a_a = node_a->get_column("a");
     b_a = node_b->get_column("a");
@@ -60,6 +48,7 @@ class DpCcpTest : public ::testing::Test {
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d;
+  std::shared_ptr<AbstractCardinalityEstimator> cardinality_estimator;
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
   LQPColumnReference a_a, b_a, c_a, d_a;
 };
@@ -80,9 +69,8 @@ TEST_F(DpCcpTest, JoinOrdering) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c, join_edge_b_c}));
-  DpCcp dp_ccp{cost_estimator};
 
-  const auto actual_lqp = dp_ccp(join_graph);
+  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -107,9 +95,8 @@ TEST_F(DpCcpTest, CrossJoin) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, cross_join_edge_a_c}));
-  DpCcp dp_ccp{cost_estimator};
 
-  const auto actual_lqp = dp_ccp(join_graph);
+  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -144,9 +131,8 @@ TEST_F(DpCcpTest, LocalPredicateOrdering) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b, self_edge_a, self_edge_b}));
-  DpCcp dp_ccp{cost_estimator};
 
-  const auto actual_lqp = dp_ccp(join_graph);
+  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -174,9 +160,8 @@ TEST_F(DpCcpTest, ComplexJoinPredicate) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b}),
                                     std::vector<JoinGraphEdge>({join_edge_a_b}));
-  DpCcp dp_ccp{cost_estimator};
 
-  const auto actual_lqp = dp_ccp(join_graph);
+  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -206,9 +191,8 @@ TEST_F(DpCcpTest, HyperEdge) {
   const auto join_graph =
       JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c, node_d}),
                 std::vector<JoinGraphEdge>({join_edge_a_b_c, join_edge_a_b, join_edge_b_c, cross_edge_b_d}));
-  DpCcp dp_ccp{cost_estimator};
 
-  const auto actual_lqp = dp_ccp(join_graph);
+  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
@@ -243,9 +227,8 @@ TEST_F(DpCcpTest, UncorrelatedPredicates) {
 
   const auto join_graph = JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_d}),
                                     std::vector<JoinGraphEdge>({join_edge_a_d, join_edge_uncorrelated}));
-  DpCcp dp_ccp{cost_estimator};
 
-  const auto actual_lqp = dp_ccp(join_graph);
+  const auto actual_lqp = DpCcp{}(join_graph, cost_estimator);  // NOLINT
 
   // clang-format off
   const auto expected_lqp =
