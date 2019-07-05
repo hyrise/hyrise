@@ -69,7 +69,6 @@ mk_w_customer (void * row, ds_key_t index)
 	int res = 0,
 		nTemp;
 	
-	static int nBaseDate;
 	/* begin locals declarations */
 	int nNameIndex,
 		nGender;
@@ -90,7 +89,6 @@ mk_w_customer (void * row, ds_key_t index)
 
 	if (!bInit)
 	{			
-        nBaseDate = dttoj (strtodate (DATE_MINIMUM));
 		strtodt(&dtBirthMax, "1992-12-31");
 		strtodt(&dtBirthMin, "1924-01-01");
 		strtodt(&dtToday, TODAYS_DATE);

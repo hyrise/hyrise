@@ -81,7 +81,7 @@ mk_w_store (void* row, ds_key_t index)
 		nDaysOpen,
 		nMin,
 		nMax;
-	static date_t *tDate;
+	date_t *tDate;
 	static decimal_t min_rev_growth,
 		max_rev_growth,
 		dMinTaxPercentage,
@@ -95,13 +95,11 @@ mk_w_store (void* row, ds_key_t index)
 		r = &g_w_store;
 	else
 		r = row;
-	
-	
-if (!bInit)
+		
+	if (!bInit)
 	{
         nHierarchyTotal = (int) get_rowcount (DIVISIONS);
         nHierarchyTotal *= (int) get_rowcount (COMPANY);
-        tDate = strtodate (DATE_MINIMUM);
         strtodec (&min_rev_growth, STORE_MIN_REV_GROWTH);
         strtodec (&max_rev_growth, STORE_MAX_REV_GROWTH);
         strtodec (&dRevMin, "1.00");
@@ -139,7 +137,11 @@ if (!bInit)
 		genrand_integer (NULL, DIST_UNIFORM, STORE_MIN_DAYS_OPEN, STORE_MAX_DAYS_OPEN, 0,
 		W_STORE_CLOSED_DATE_ID);
 	if (nPercentage < STORE_CLOSED_PCT)
+	{
+		tDate = strtodate (DATE_MINIMUM);
 		r->closed_date_id = tDate->julian + nDaysOpen;
+		free(tDate);
+	}
 	else
 		r->closed_date_id = -1;
 	changeSCD(SCD_KEY, &r->closed_date_id, &rOldValues->closed_date_id,  &nFieldChangeFlags,  bFirstRecord);
