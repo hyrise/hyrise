@@ -152,15 +152,15 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           performance_data.chunks_scanned_with_index++;
         } else {
           std::cout << "FALLBACK (no index available\n";
-          Fail("DebugFail");
-          // _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-          //                       secondary_predicate_evaluator);
+          // Fail("DebugFail");
+          _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+                                secondary_predicate_evaluator);
         }
       } else {
         std::cout << "FALLBACK (ref seg references multiple chunks\n";
-        Fail("DebugFail");
-        // _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-        //                       secondary_predicate_evaluator);
+        // Fail("DebugFail");
+        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+                              secondary_predicate_evaluator);
       }
     }
   } else {  // INDEX DATA JOIN
