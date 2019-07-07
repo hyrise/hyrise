@@ -55,9 +55,6 @@ class JoinIndex : public AbstractJoinOperator {
                              const bool track_index_matches, const bool is_semi_or_anti_join,
                              MultiPredicateJoinEvaluator& secondary_predicate_evaluator);
 
-  void _append_matches(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
-                       const PosList& index_table_matches);
-
   template <typename ProbeIterator>
   void _data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                            const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
@@ -77,6 +74,9 @@ class JoinIndex : public AbstractJoinOperator {
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                        const ChunkID index_chunk_id);
 
+  void _append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
+                                    const PosList& index_table_matches);
+
   void _append_matches_non_inner(const bool is_semi_or_anti_join);
 
   void _write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
@@ -93,6 +93,7 @@ class JoinIndex : public AbstractJoinOperator {
 
   std::shared_ptr<PosList> _probe_pos_list;
   std::shared_ptr<PosList> _index_pos_list;
+  std::vector<bool> _index_pos_dereferenced;
 
   // for left/right/outer joins
   // The outer vector enumerates chunks, the inner enumerates chunk_offsets

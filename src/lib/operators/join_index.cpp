@@ -151,14 +151,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           }
           performance_data.chunks_scanned_with_index++;
         } else {
-          std::cout << "FALLBACK (no index available\n";
-          // Fail("DebugFail");
           _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
         }
       } else {
-        std::cout << "FALLBACK (ref seg references multiple chunks\n";
-        // Fail("DebugFail");
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
       }
@@ -231,6 +227,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
 
   const auto index_segment =
       _index_input_table->get_chunk(index_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.second);
+  const auto& index_pos_list_size_pre_fallback = _index_pos_list->size();
   for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
     const auto probe_segment =
         _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
@@ -246,6 +243,9 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
                                       !is_semi_or_anti_join};
     JoinNestedLoop::_join_two_untyped_segments(*probe_segment, *index_segment, probe_chunk_id, index_chunk_id, params);
   }
+  const auto& index_pos_list_size_post_fallback = _index_pos_list->size();
+  const auto& count_index_positions = index_pos_list_size_post_fallback - index_pos_list_size_pre_fallback;
+  std::fill_n(std::back_inserter(_index_pos_dereferenced), count_index_positions, false);
   performance_data.chunks_scanned_without_index++;
 }
 
@@ -279,6 +279,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
                        return RowID{index_chunk_id, index_chunk_offset};
                      });
     }
+
     PosList sortable_ref_seg_pos_list;
     sortable_ref_seg_pos_list.insert(sortable_ref_seg_pos_list.end(), reference_segment_pos_list->begin(),
                                      reference_segment_pos_list->end());
@@ -289,7 +290,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
     std::set_intersection(sortable_ref_seg_pos_list.begin(), sortable_ref_seg_pos_list.end(),
                           index_scan_pos_list.begin(), index_scan_pos_list.end(),
                           std::back_inserter(index_table_matches));
-    _append_matches(probe_chunk_id, probe_side_position.chunk_offset(), index_table_matches);
+    _append_matches_dereferenced(probe_chunk_id, probe_side_position.chunk_offset(), index_table_matches);
   }
 }
 
@@ -376,11 +377,12 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
   }
 }
 
-void JoinIndex::_append_matches(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
-                                const PosList& index_table_matches) {
+void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
+                                             const PosList& index_table_matches) {
   for (const auto& index_side_row_id : index_table_matches) {
     _probe_pos_list->emplace_back(RowID{probe_chunk_id, probe_chunk_offset});
     _index_pos_list->emplace_back((index_side_row_id));
+    _index_pos_dereferenced.emplace_back(true);
   }
 }
 
@@ -444,18 +446,23 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
             input_table->get_chunk(ChunkID{0})->get_segment(column_id));
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
-        for (const auto& row : *pos_list) {
+        for (auto pos_list_offset = ChunkOffset{0}; pos_list_offset < pos_list->size(); ++pos_list_offset) {
+          const auto& row = (*pos_list)[pos_list_offset];
           if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);
             continue;
           }
-          if (row.chunk_id != current_chunk_id) {
-            current_chunk_id = row.chunk_id;
+          if (pos_list == _index_pos_list && _index_pos_dereferenced[pos_list_offset]) {
+            new_pos_list->push_back(row);
+          } else {
+            if (row.chunk_id != current_chunk_id) {
+              current_chunk_id = row.chunk_id;
 
-            reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
-                input_table->get_chunk(current_chunk_id)->get_segment(column_id));
+              reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
+                  input_table->get_chunk(current_chunk_id)->get_segment(column_id));
+            }
+            new_pos_list->push_back((*reference_segment->pos_list())[row.chunk_offset]);
           }
-          new_pos_list->push_back((*reference_segment->pos_list())[row.chunk_offset]);
         }
         segment = std::make_shared<ReferenceSegment>(reference_segment->referenced_table(),
                                                      reference_segment->referenced_column_id(), new_pos_list);

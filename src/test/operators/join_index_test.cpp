@@ -254,12 +254,6 @@ TYPED_TEST(JoinIndexTest, InnerRefJoinFilteredBig) {
   auto scan_d = this->create_table_scan(this->_table_wrapper_d, ColumnID{1}, PredicateCondition::GreaterThanEquals, 6);
   scan_d->execute();
 
-  std::cout << "Join on {ColumnID{0}, ColumnID{1}\n";
-  std::cout << "\nProbeTable\n";
-  Print::print(scan_c->get_output());
-  std::cout << "\nIndexTable\n";
-  Print::print(scan_d->get_output());
-
   this->test_join_output(scan_c, scan_d, {{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_string_inner_join_filtered.tbl", 1);
 }
