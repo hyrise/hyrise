@@ -1,7 +1,7 @@
 #include "postgres_handler.hpp"
 
-#include <arpa/inet.h>
-#include <unistd.h>
+// #include <arpa/inet.h>
+// #include <unistd.h>
 #include <cstring>
 
 #include "network_message_types.hpp"
@@ -9,13 +9,13 @@
 
 namespace opossum {
 
-PostgresHandler::PostgresHandler(std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
+// PostgresHandler::PostgresHandler(std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
 
 uint32_t PostgresHandler::read_startup_packet() {
   constexpr auto ssl_request_code = 80877103u;
 
-  auto startup_packet_length = ntohl(_read_buffer.get_value<uint32_t>());
-  auto protocol_version = ntohl(_read_buffer.get_value<uint32_t>());
+  const auto startup_packet_length = _read_buffer.get_value<uint32_t>();
+  const auto protocol_version = _read_buffer.get_value<uint32_t>();
 
   // We currently do not support SSL
   if (protocol_version == ssl_request_code) {
@@ -29,9 +29,9 @@ uint32_t PostgresHandler::read_startup_packet() {
 
 NetworkMessageType PostgresHandler::get_packet_type() { return _read_buffer.get_message_type(); }
 
-const std::string PostgresHandler::read_query_packet() {
+std::string PostgresHandler::read_query_packet() {
   // TODO(toni): refactor
-  auto query_length = ntohl(_read_buffer.get_value<uint32_t>()) - 4u;
+  auto query_length = _read_buffer.get_value<uint32_t>() - 4u;
   return _read_buffer.get_string(query_length);
 }
 
@@ -50,21 +50,21 @@ void PostgresHandler::handle_startup_packet_body(const uint32_t size) {
 void PostgresHandler::send_authentication() {
   // TODO(toni): refactoring here, too many magic numbers
   _write_buffer.put_value(NetworkMessageType::AuthenticationRequest);
-  _write_buffer.put_value(htonl(8u));
-  _write_buffer.put_value(htonl(0u));
+  _write_buffer.put_value<uint32_t>(8u);
+  _write_buffer.put_value<uint32_t>(0u);
 }
 
 void PostgresHandler::send_parameter(const std::string& key, const std::string& value) {
   auto body_length = sizeof(uint32_t) + key.length() + 1u + value.length() + 1u;
   _write_buffer.put_value(NetworkMessageType::ParameterStatus);
-  _write_buffer.put_value(htonl(body_length));
+  _write_buffer.put_value<uint32_t>(body_length);
   _write_buffer.put_string(key);
   _write_buffer.put_string(value);
 }
 
 void PostgresHandler::send_ready_for_query() {
   _write_buffer.put_value(NetworkMessageType::ReadyForQuery);
-  _write_buffer.put_value(htonl(sizeof(uint32_t) + sizeof(TransactionStatusIndicator::Idle)));
+  _write_buffer.put_value<uint32_t>(sizeof(uint32_t) + sizeof(TransactionStatusIndicator::Idle));
   _write_buffer.put_value(TransactionStatusIndicator::Idle);
   _write_buffer.flush();
 }
@@ -73,7 +73,7 @@ void PostgresHandler::command_complete(const std::string& command_complete_messa
   auto packet_size = sizeof(uint32_t) + command_complete_message.length() + sizeof(char);
 
   _write_buffer.put_value(NetworkMessageType::CommandComplete);
-  _write_buffer.put_value(htonl(packet_size));
+  _write_buffer.put_value<uint32_t>(packet_size);
   _write_buffer.put_string(command_complete_message);
 }
 
@@ -87,10 +87,10 @@ void PostgresHandler::send_row_description(const std::vector<RowDescription>& ro
                   single_row_description.column_name.size();
   }
 
-  _write_buffer.put_value(htonl(packet_size));
+  _write_buffer.put_value<uint32_t>(packet_size);
 
   // Int16 Specifies the number of fields in a row (can be zero).
-  _write_buffer.put_value(htons(row_description.size()));
+  _write_buffer.put_value<uint16_t>(row_description.size());
 
   /* FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
    *
@@ -122,12 +122,12 @@ void PostgresHandler::send_row_description(const std::vector<RowDescription>& ro
 
   for (const auto& column_description : row_description) {
     _write_buffer.put_string(column_description.column_name);
-    _write_buffer.put_value(htonl(0u));                             // no object id
-    _write_buffer.put_value(htons(0u));                             // no attribute number
-    _write_buffer.put_value(htonl(column_description.object_id));   // object id of type
-    _write_buffer.put_value(htons(column_description.type_width));  // regular int
-    _write_buffer.put_value(htonl(-1));                             // no modifier
-    _write_buffer.put_value(htons(0u));                             // text format
+    _write_buffer.put_value<int32_t>(0u);                             // no object id
+    _write_buffer.put_value<int16_t>(0u);                             // no attribute number
+    _write_buffer.put_value<int32_t>(column_description.object_id);   // object id of type
+    _write_buffer.put_value<uint16_t>(column_description.type_width); // regular int
+    _write_buffer.put_value<int32_t>(-1);                             // no modifier
+    _write_buffer.put_value<int16_t>(0u);                             // text format
   }
 }
 
@@ -140,10 +140,10 @@ void PostgresHandler::send_data_row(const std::vector<std::string>& row_strings)
     packet_size = packet_size + attribute.size() + sizeof(uint32_t);
   }
 
-  _write_buffer.put_value(htonl(packet_size));
+  _write_buffer.put_value<uint32_t>(packet_size);
 
   // Number of columns in row
-  _write_buffer.put_value(htons(row_strings.size()));
+  _write_buffer.put_value<uint16_t>(row_strings.size());
 
   /*
   DataRow (B)
@@ -168,16 +168,98 @@ void PostgresHandler::send_data_row(const std::vector<std::string>& row_strings)
 
   for (const auto& value_string : row_strings) {
     // Size of string representation of value, NOT of value type's size
-    _write_buffer.put_value(htonl(value_string.length()));
+    _write_buffer.put_value<uint32_t>(value_string.size());
 
-    // Text mode means that all values are sent as non-terminated strings
+    // Text mode means all values are sent as non-terminated strings
     _write_buffer.put_string(value_string, false);
   }
 }
 
-void PostgresHandler::send_parse_complete() {
-  _write_buffer.put_value(NetworkMessageType::ParseComplete);
-  _write_buffer.put_value(sizeof(uint32_t));
+std::pair<std::string, std::string> PostgresHandler::read_parse_packet() {
+  _read_buffer.get_value<uint32_t>(); // Ignore packet size
+
+  const std::string statement_name = _read_buffer.get_string();
+  const std::string query = _read_buffer.get_string();
+  const auto network_parameter_data_types = _read_buffer.get_value<uint16_t>();
+
+  for (auto i = 0; i < network_parameter_data_types; i++) {
+  /*auto parameter_data_types = */ _read_buffer.get_value<uint32_t>();
+  }
+
+  return {std::move(statement_name), std::move(query)};
+}
+
+void PostgresHandler::read_sync_packet() {
+  // This packet is empty. Hence, only read its size
+  _read_buffer.get_value<uint32_t>();
   _write_buffer.flush();
 }
+
+PreparedStatementParameters PostgresHandler::read_bind_packet() {
+  _read_buffer.get_value<uint32_t>();
+  auto portal = _read_buffer.get_string();
+  auto statement_name = _read_buffer.get_string();
+  auto num_format_codes = _read_buffer.get_value<int16_t>();
+  
+  // auto format_codes = std::vector<int16_t>();
+  // format_codes.reserve(num_format_codes);
+
+  for (auto i = 0; i < num_format_codes; i++) {
+    // format_codes.emplace_back(_read_buffer.get_value<int16_t>());
+    _read_buffer.get_value<int16_t>();
+  }
+
+  auto num_parameter_values = _read_buffer.get_value<int16_t>();
+
+  // TODO(toni): room for refactoring here?
+  std::vector<AllTypeVariant> parameter_values;
+  for (auto i = 0; i < num_parameter_values; ++i) {
+    // TODO include null terminator
+    const auto parameter_value_length = _read_buffer.get_value<int32_t>();
+    const std::string x = _read_buffer.get_string(parameter_value_length, false);
+    // auto x = _read_buffer.get_string();
+    // const pmr_string x_str(x.begin(), x.end());
+    parameter_values.emplace_back(x.c_str());
+  }
+
+  auto num_result_column_format_codes = _read_buffer.get_value<int16_t>();
+
+  for (auto i = 0; i < num_result_column_format_codes; i++) {
+  // format_codes.emplace_back(_read_buffer.get_value<int16_t>());
+    _read_buffer.get_value<int16_t>();
+  }
+  // auto result_column_format_codes = read_values<int16_t>(num_result_column_format_codes);
+
+  return {statement_name, portal, std::move(parameter_values)};
+}
+
+void PostgresHandler::read_describe_packet() {
+  const auto packet_length = _read_buffer.get_value<uint32_t>();
+  const auto object_to_describe = _read_buffer.get_value<char>();
+  const auto statement_or_portal_name = _read_buffer.get_string(packet_length - sizeof(uint32_t) - sizeof(char));
+
+
+    // statement descriptions are returned as two separate messages:
+// ParameterDescription and RowDescription
+// portal descriptions are just RowDescriptions
+  if (object_to_describe == 'S') {
+    // TODO(toni): describe portal
+  }
+}
+
+std::string PostgresHandler::read_execute_packet() {
+  const auto packet_length = _read_buffer.get_value<uint32_t>();
+  const auto portal = _read_buffer.get_string(packet_length - 2 * sizeof(uint32_t));
+  // TODO(toni): necessary?
+  /*const auto max_rows = */ _read_buffer.get_value<int32_t>();
+  return portal;
+}
+
+// send only status and length
+void PostgresHandler::send_status_message(const NetworkMessageType message_type) {
+  _write_buffer.put_value(message_type);
+  _write_buffer.put_value<uint32_t>(sizeof(uint32_t));
+}
+
+
 }  // namespace opossum

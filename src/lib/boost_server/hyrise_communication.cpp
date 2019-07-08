@@ -3,20 +3,22 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
+#include "storage/storage_manager.hpp"
 #include "tasks/server/pipeline_execution_task.hpp"
+#include "tasks/server/parse_prepared_statement_task.hpp"
+#include "tasks/server/bind_prepared_statement_task.hpp"
 #include "types.hpp"
+#include <thread>
 
 namespace opossum {
 
 // Copy paste
-std::vector<RowDescription> build_row_description(const std::shared_ptr<SQLPipeline> sql_pipeline) {
-  auto table = sql_pipeline->get_result_table();
-
-  // If there is no result table, e.g. after an INSERT command, we cannot send
-  // row data
+std::vector<RowDescription> build_row_description(std::shared_ptr<const Table> table) {
+  // If there is no result table, e.g. after an INSERT command, we cannot send row data
   if (!table) return std::vector<RowDescription>();
 
   std::vector<RowDescription> result;
@@ -59,8 +61,7 @@ std::vector<RowDescription> build_row_description(const std::shared_ptr<SQLPipel
   return result;
 }
 
-uint64_t send_query_response(const std::shared_ptr<SQLPipeline> sql_pipeline, PostgresHandler& postgres_handler) {
-  auto table = sql_pipeline->get_result_table();
+uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler& postgres_handler) {
   uint32_t chunk_size;
   auto column_count = table->column_count();
   auto row_strings = std::vector<std::string>(column_count);
@@ -80,10 +81,7 @@ uint64_t send_query_response(const std::shared_ptr<SQLPipeline> sql_pipeline, Po
 
 std::shared_ptr<SQLPipeline> execute_pipeline(const std::string& sql) {
   auto task = std::make_shared<PipelineExecutionTask>(sql);
-  task->schedule();
-
-  // blocking and erroneous
-  // condition variable as callback here
+  CurrentScheduler::schedule_and_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
   auto sql_pipeline = task->get_sql_pipeline();
   if (sql_pipeline->failed_pipeline_statement()) {
     // TODO(toni): error handling
@@ -91,8 +89,7 @@ std::shared_ptr<SQLPipeline> execute_pipeline(const std::string& sql) {
   return sql_pipeline;
 }
 
-std::string build_command_complete_message(const std::shared_ptr<SQLPipeline> sql_pipeline, uint64_t row_count) {
-  auto root_operator_type = sql_pipeline->get_physical_plans().front();
+std::string build_command_complete_message(std::shared_ptr<const AbstractOperator> root_operator_type, const uint64_t row_count) {
   switch (root_operator_type->type()) {
     case OperatorType::Insert: {
       // 0 is ignored OID and 1 inserted row
@@ -114,8 +111,27 @@ std::string build_command_complete_message(const std::shared_ptr<SQLPipeline> sq
   }
 }
 
-// std::string build_execution_info_message(const std::shared_ptr<SQLPipeline>&
-// sql_pipeline) {
-//   return sql_pipeline->metrics().to_string();
-// }
+void setup_prepared_plan(const std::string& statement_name, const std::string& query) {
+  // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
+  // https://www.postgresql.org/docs/10/static/protocol-flow.html
+  if (StorageManager::get().has_prepared_plan(statement_name)) {
+    AssertInput(statement_name.empty(),
+                "Named prepared statements must be explicitly closed before they can be redefined.");
+    StorageManager::get().drop_prepared_plan(statement_name);
+  }
+
+  auto task = std::make_shared<ParsePreparedStatementTask>(query);
+  CurrentScheduler::schedule_and_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
+
+  StorageManager::get().add_prepared_plan(statement_name, std::move(task->get_plan()));
+}
+
+std::shared_ptr<AbstractOperator> bind_plan(const std::shared_ptr<PreparedPlan> prepared_plan, const std::vector<AllTypeVariant>& parameters) {
+    auto task = std::make_shared<BindPreparedStatementTask>(prepared_plan, parameters);
+    std::vector<std::shared_ptr<AbstractTask>> tasks{task};
+    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+
+    return task->get_pqp();
+}
+
 }  // namespace opossum

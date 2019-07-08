@@ -24,7 +24,6 @@ class Server {
 
   void _start_session(boost::system::error_code error);
 
-  bool _terminate = false;
   boost::asio::io_service _io_service;
   boost::asio::ip::tcp::socket _socket;
   boost::asio::ip::tcp::acceptor _acceptor;

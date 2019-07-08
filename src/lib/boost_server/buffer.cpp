@@ -1,38 +1,82 @@
 #include "buffer.hpp"
 
-#include <arpa/inet.h>
-
 namespace opossum {
 
 static constexpr auto LENGTH_FIELD_SIZE = sizeof(uint32_t);
 static constexpr auto MESSAGE_TYPE_SIZE = sizeof(NetworkMessageType);
 
-std::string ReadBuffer::get_string(const size_t string_length) {
-  std::string query = "";
-  query.reserve(string_length);
+
+std::string ReadBuffer::get_string() {
+  auto string_end = BufferIterator(_data);
+  std::string result = "";
+
 
   // First, use bytes available in buffer
   if (size() != 0) {
-    query = {_start_position, std::min(string_length - 1, size())};
-    _start_position += query.size();
+    // We have to convert the byte buffer into a std::string, making sure
+    // we don't run past the end of the buffer and stop at the first null byte
+    string_end = std::find(_start_position, _current_position, '\0');
+    std::copy(_start_position, string_end, std::back_inserter(result));
+    // Off by 1?
+    _start_position += result.size();
   }
 
-  if (string_length == query.size()) {
-    return query;
+  // String might already be complete at this point
+  if (*string_end == '\0') {
+      // Skip null terminator
+      _start_position++;
+      return result;
   }
+
+  while (*string_end != '\0') {
+    // We dont know how long this is going to be. Hence, receive at least 1 char.
+    _receive_if_necessary(1u);
+    string_end = std::find(_start_position, _current_position, '\0');
+    std::copy(_start_position, string_end, std::back_inserter(result));
+    _start_position = string_end;
+  }
+  // Skip null terminator
+  _start_position++;
+
+  return result;
+}
+
+// TODO(toni): doc: has to include null terminator
+std::string ReadBuffer::get_string(const size_t string_length, const bool has_null_terminator) {
+  std::string result = "";
+  auto new_string_length = string_length;
+  if (has_null_terminator) {
+    new_string_length--;
+  }
+  result.reserve(new_string_length);
+
+  // First, use bytes available in buffer
+  if (size() != 0) {
+    std::copy_n(_start_position, std::min(new_string_length, size()), std::back_inserter(result));
+    // std::copy_n(_start_position, std::min(string_length, size()), std::back_inserter(result));
+    _start_position += result.size();
+  }
+
+  // String might already be complete at this point
+  // TODO(toni): maybe _start_position++
+  // if (new_string_length == result.size()) { return result; }
 
   // Read from network device until string is complete. Ignore last character since it is \0
-  while (query.size() < string_length - 1) {
-    const auto substring_length = std::min(string_length - query.size(), BUFFER_SIZE) - 1;
+  while (result.size() < new_string_length) {
+  // while (result.size() < string_length) {
+    const auto substring_length = std::min(new_string_length - result.size(), BUFFER_SIZE) - 1;
     _receive_if_necessary(substring_length);
-    std::copy_n(_start_position, substring_length, std::back_inserter(query));
+    std::copy_n(_start_position, substring_length, std::back_inserter(result));
     _start_position += substring_length;
   }
 
+  // TODO(toni): check string lengths
   // Skip ignored string terminator
+  if(has_null_terminator) {
   _start_position++;
+  }
 
-  return query;
+  return result;
 }
 
 NetworkMessageType ReadBuffer::get_message_type() {
@@ -43,16 +87,23 @@ NetworkMessageType ReadBuffer::get_message_type() {
 }
 
 void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
-  while (_unprocessed_bytes() < bytes_required) {
-    _receive();
-  }
-}
+  // Already enough data present in buffer
+  if (size() >= bytes_required) { return; }
 
-void ReadBuffer::_receive() {
-  // TODO(toni): Check if enough space BUFFER_SIZE
-  if (_start_position == _current_position) reset();
-  const auto bytes_read = _socket->read_some(boost::asio::buffer(_current_position, BUFFER_SIZE));
-  // TODO(toni): handle bytes_read == 0 -> terminate
+  size_t bytes_read;
+  if ((_current_position - _start_position) < 0 || &*_start_position == &_data[0]) {
+    bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&(*_current_position), BUFFER_SIZE), boost::asio::transfer_at_least(bytes_required));
+  } else {
+    bytes_read = boost::asio::read(*_socket,
+        std::array<boost::asio::mutable_buffer, 2>{
+            boost::asio::buffer(&*_current_position, std::distance(&*_current_position, _data.end())),
+            boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_start_position - 1)) },
+        boost::asio::transfer_at_least(bytes_required));
+  }
+
+  if (!bytes_read) {
+    // TODO(toni): Connection abort
+  }
   _current_position += bytes_read;
 }
 
@@ -83,17 +134,31 @@ void WriteBuffer::put_string(const std::string& value, const bool terminate) {
   }
 }
 
-void WriteBuffer::_flush_if_necessary(const size_t bytes_required) {
-  if (bytes_required > BUFFER_SIZE - size() - 1) {
-    _send();
+void WriteBuffer::flush(const size_t bytes_required){
+  const auto bytes_to_send = bytes_required ? bytes_required : size();
+  size_t bytes_sent;
+
+  if ((_current_position - _start_position) < 0) {
+    // Data not continously stored in buffer
+    bytes_sent = boost::asio::write(*_socket,
+        std::array<boost::asio::mutable_buffer, 2>{
+            boost::asio::buffer(&*_start_position, std::distance(&*_start_position, _data.end())),
+            boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_current_position)) },
+        boost::asio::transfer_at_least(bytes_to_send));
+  } else {
+    bytes_sent = boost::asio::write(*_socket, boost::asio::buffer(&*_start_position, size()),
+        boost::asio::transfer_at_least(bytes_to_send));
   }
+
+  if (!bytes_sent) {
+    // TODO(toni): connection abort
+  }
+  _start_position += bytes_sent;
 }
 
-void WriteBuffer::flush() { _send(); }
-
-void WriteBuffer::_send() {
-  [[maybe_unused]] const auto bytes_sent = _socket->write_some(boost::asio::buffer(_start_position, size()));
-  // TODO(toni): handle bytes_sent == 0 -> terminate
-  reset();
+void WriteBuffer::_flush_if_necessary(const size_t bytes_required) {
+  if (bytes_required >= BUFFER_SIZE - size()) {
+    flush(bytes_required);
+  }
 }
 }  // namespace opossum

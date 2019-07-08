@@ -40,7 +40,7 @@ class ServerTestRunner : public BaseTest {
     _server_thread->join();
   }
 
-  std::unique_ptr<Server> _server = std::make_unique<Server>(5432);  // run on port 0 so the server can pick a free one
+  std::unique_ptr<Server> _server = std::make_unique<Server>(0);  // run on port 0 so the server can pick a free one
   // std::unique_ptr<Server> _server = std::make_unique<Server>(0); // run on port 0 so the server can pick a free one
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
@@ -106,37 +106,54 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
   EXPECT_EQ(result2.size(), 2u);
 }
 
-// TEST_F(/* #1357 */ DISABLED_ServerTestRunner, TestParallelConnections) {
-//   // This test is by no means perfect, as it can show flaky behaviour. But it is rather hard to get reliable tests with
-//   // multiple concurrent connections to detect a randomly (but often) occurring bug. This test will/can only fail if a
-//   // bug is present but it should not fail if no bug is present. It just sends 100 parallel connections and if that
-//   // fails, there probably is a bug.
-//   const std::string sql = "SELECT * FROM table_a;";
-//   const auto expected_num_rows = _table_a->row_count();
+TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
+  pqxx::connection connection{_connection_string};
+  pqxx::nontransaction transaction{connection};
 
-//   const auto connection_run = [&]() {
-//     pqxx::connection connection{_connection_string};
-//     pqxx::nontransaction transaction{connection};
-//     const auto result = transaction.exec(sql);
-//     EXPECT_EQ(result.size(), expected_num_rows);
-//   };
+  const std::string prepared_name = "";
+  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
 
-//   const auto num_threads = 100u;
-//   std::vector<std::future<void>> thread_futures;
-//   thread_futures.reserve(num_threads);
+  const auto param = 1234u;
+  const auto result1 = transaction.exec_prepared(prepared_name, param);
+  EXPECT_EQ(result1.size(), 1u);
 
-//   for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
-//     // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
-//     thread_futures.emplace_back(std::async(std::launch::async, connection_run));
-//   }
+  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a <= ?");
 
-//   for (auto& thread_fut : thread_futures) {
-//     // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
-//     // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-//     if (thread_fut.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
-//       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
-//     }
-//   }
-// }
+  const auto result2 = transaction.exec_prepared(prepared_name, param);
+  EXPECT_EQ(result2.size(), 2u);
+}
+
+TEST_F(ServerTestRunner, TestParallelConnections) {
+  // This test is by no means perfect, as it can show flaky behaviour. But it is rather hard to get reliable tests with
+  // multiple concurrent connections to detect a randomly (but often) occurring bug. This test will/can only fail if a
+  // bug is present but it should not fail if no bug is present. It just sends 100 parallel connections and if that
+  // fails, there probably is a bug.
+  const std::string sql = "SELECT * FROM table_a;";
+  const auto expected_num_rows = _table_a->row_count();
+
+  const auto connection_run = [&]() {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    const auto result = transaction.exec(sql);
+    EXPECT_EQ(result.size(), expected_num_rows);
+  };
+
+  const auto num_threads = 100u;
+  std::vector<std::future<void>> thread_futures;
+  thread_futures.reserve(num_threads);
+
+  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
+    thread_futures.emplace_back(std::async(std::launch::async, connection_run));
+  }
+
+  for (auto& thread_fut : thread_futures) {
+    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
+    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    if (thread_fut.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
+      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+    }
+  }
+}
 
 }  // namespace opossum
