@@ -22,6 +22,8 @@ class LQPView {
   bool deep_equals(const LQPView& other) const;
 
   const std::shared_ptr<AbstractLQPNode> lqp;
+
+  // Each ColumnID maps to n strings because a column can have multiple aliases.
   const std::unordered_map<ColumnID, std::vector<std::string>> column_names;
 };
 
