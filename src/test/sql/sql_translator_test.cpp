@@ -385,7 +385,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasUsedInJoin) {
 }
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumns) {
-  const auto actual_lqp = compile_query("SELECT a AS a1, b AS b2, b AS b3, a AS a2, b AS b1, a AS a2 FROM int_float");
+  const auto actual_lqp = compile_query("SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM int_float");
 
   const auto aliases = std::vector<std::string>({"a1", "b2", "b3", "a3", "b1", "a2"});
   const auto expressions =
@@ -420,7 +420,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregates) {
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubquery) {
   const auto actual_lqp = compile_query(
-      "SELECT a1, b2, a3 FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a2, b AS b1, a AS a2 FROM int_float) AS R");
+      "SELECT a1, b2, a3 FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM int_float) AS R");
 
   const auto outer_aliases = std::vector<std::string>({"a1", "b2", "a3"});
   const auto inner_aliases = std::vector<std::string>({"a1", "b2", "b3", "a3", "b1", "a2"});
@@ -480,12 +480,12 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsAndFromColu
 
 TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsInSubqueryAndFromColumnAliasing) {
   const auto actual_lqp = compile_query(
-      "SELECT u, z, w FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a2, b AS b1, a AS a2 FROM int_float)"
-      "AS R (u, v, w, x, y, z)");
+      "SELECT u, z, w FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM int_float)"
+      "AS R (y, x, v, w, u, z)");
 
   const auto outer_aliases = std::vector<std::string>({"u", "z", "w"});
   const auto inner_aliases = std::vector<std::string>({"a1", "b2", "b3", "a3", "b1", "a2"});
-  const auto outer_expressions = expression_vector(int_float_a, int_float_b, int_float_a);
+  const auto outer_expressions = expression_vector(int_float_b, int_float_a, int_float_a);
   const auto inner_expressions =
       expression_vector(int_float_a, int_float_b, int_float_b, int_float_a, int_float_b, int_float_a);
 
