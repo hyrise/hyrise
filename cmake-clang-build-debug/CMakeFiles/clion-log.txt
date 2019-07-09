@@ -1,0 +1,64 @@
+/home/jj/Applications/cmake_ninja_wrapper.py -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang++-7 -DCMAKE_C_COMPILER=clang-7 -G "CodeBlocks - Unix Makefiles" /home/jj/code/hyrise
+-- The C compiler identification is Clang 7.0.1
+-- The CXX compiler identification is Clang 7.0.1
+-- Check for working C compiler: /usr/bin/clang-7
+-- Check for working C compiler: /usr/bin/clang-7 -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Check for working CXX compiler: /usr/bin/clang++-7
+-- Check for working CXX compiler: /usr/bin/clang++-7 -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found C++ stdlib filesystem library: lib=/usr/lib/gcc/x86_64-linux-gnu/8/libstdc++fs.a
+-- Found numa library: inc=/usr/include, lib=/usr/lib/x86_64-linux-gnu/libnuma.so
+-- Found tbb library: inc=/usr/include, lib=/usr/lib/x86_64-linux-gnu/libtbb.so
+-- Found readline library: inc=/usr/include, lib=/usr/lib/x86_64-linux-gnu/libreadline.so
+-- Looking for wsyncup in /usr/lib/x86_64-linux-gnu/libcurses.so
+-- Looking for wsyncup in /usr/lib/x86_64-linux-gnu/libcurses.so - found
+-- Looking for cbreak in /usr/lib/x86_64-linux-gnu/libncurses.so
+-- Looking for cbreak in /usr/lib/x86_64-linux-gnu/libncurses.so - found
+-- Found Curses: /usr/lib/x86_64-linux-gnu/libncurses.so  
+-- Found sqlite3 library: inc=/usr/include, lib=/usr/lib/x86_64-linux-gnu/libsqlite3.so
+-- Found pq library: inc=/usr/include/postgresql, lib=/usr/lib/x86_64-linux-gnu/libpq.so
+-- Looking for pthread.h
+-- Looking for pthread.h - found
+-- Looking for pthread_create
+-- Looking for pthread_create - not found
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - found
+-- Found Threads: TRUE  
+-- Boost version: 1.67.0
+-- Found the following Boost libraries:
+--   container
+--   system
+--   thread
+--   chrono
+--   date_time
+--   atomic
+-- Found llvm library: inc=/usr/lib/llvm-7/include, lib=/usr/lib/llvm-7/lib/libLLVM.so
+-- Found PythonInterp: /usr/bin/python (found version "2.7.16") 
+-- Found NUMA: /usr/lib/x86_64-linux-gnu/libnuma.so  
+-- Found HWLOC: /usr/lib/x86_64-linux-gnu/libhwloc.so  
+-- Performing Test COMPILER_HAS_HIDDEN_VISIBILITY
+-- Performing Test COMPILER_HAS_HIDDEN_VISIBILITY - Success
+-- Performing Test COMPILER_HAS_HIDDEN_INLINE_VISIBILITY
+-- Performing Test COMPILER_HAS_HIDDEN_INLINE_VISIBILITY - Failed
+-- Performing Test COMPILER_HAS_DEPRECATED_ATTR
+CMake Error: CMAKE_CXX_COMPILER not set, after EnableLanguage
+CMake Error at /usr/share/cmake-3.13/Modules/CheckCXXSourceCompiles.cmake:99 (try_compile):
+  Failed to configure test project build system.
+Call Stack (most recent call first):
+  /usr/share/cmake-3.13/Modules/GenerateExportHeader.cmake:193 (check_cxx_source_compiles)
+  /usr/share/cmake-3.13/Modules/GenerateExportHeader.cmake:250 (_check_cxx_compiler_attribute)
+  /usr/share/cmake-3.13/Modules/GenerateExportHeader.cmake:407 (_test_compiler_has_deprecated)
+  third_party/pgasus/src/base/CMakeLists.txt:45 (generate_export_header)
+
+
+-- Configuring incomplete, errors occurred!
+See also "/home/jj/code/hyrise/cmake-clang-build-debug/CMakeFiles/CMakeError.log".

@@ -1,0 +1,16 @@
+Performing C++ SOURCE FILE Test COMPILER_HAS_HIDDEN_INLINE_VISIBILITY failed with the following output:
+Change Dir: /home/jj/code/hyrise/cmake-clang-build-debug/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_1cc1a/fast"
+/usr/bin/make -f CMakeFiles/cmTC_1cc1a.dir/build.make CMakeFiles/cmTC_1cc1a.dir/build
+make[1]: Entering directory '/home/jj/code/hyrise/cmake-clang-build-debug/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_1cc1a.dir/src.cxx.o
+/usr/bin/clang++-7    -DCOMPILER_HAS_HIDDEN_INLINE_VISIBILITY   -fvisibility-inlines-hidden -o CMakeFiles/cmTC_1cc1a.dir/src.cxx.o -c /home/jj/code/hyrise/cmake-clang-build-debug/CMakeFiles/CMakeTmp/src.cxx
+clang: error: no such file or directory: '/home/jj/code/hyrise/cmake-clang-build-debug/CMakeFiles/CMakeTmp/src.cxx'
+clang: error: no input files
+make[1]: *** [CMakeFiles/cmTC_1cc1a.dir/build.make:66: CMakeFiles/cmTC_1cc1a.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/jj/code/hyrise/cmake-clang-build-debug/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_1cc1a/fast] Error 2
+
+Source file was:
+int main() { return 0; }

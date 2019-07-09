@@ -448,7 +448,7 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
 
   // clang-format off
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   const auto expected_lqp =
   AliasNode::make(aggregates, aliases,
     AliasNode::make(aggregates, aliases,
@@ -1054,7 +1054,7 @@ TEST_F(SQLTranslatorTest, SubqueryFromSimple) {
   const auto expressions = expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b);
   const auto aliases = std::vector<std::string>({"x", "a", "b"});
 
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(expressions, aliases,
