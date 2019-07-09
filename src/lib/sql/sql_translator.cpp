@@ -515,7 +515,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       }
       Assert(identifiers.size() == lqp->column_expressions().size(),
              "There have to be as many identifier lists as column expressions");
-      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < lqp->column_expressions().size(); ++select_list_element_idx) {
+      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < lqp->column_expressions().size();
+           ++select_list_element_idx) {
         const auto& subquery_expression = lqp->column_expressions()[select_list_element_idx];
 
         // Make sure each column from the Subquery has a name

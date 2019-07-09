@@ -768,8 +768,7 @@ TEST_F(GenericHistogramTest, SplitAtEmptyBinBounds) {
   const auto expected_minima = std::vector<int32_t>{};
   const auto expected_maxima = std::vector<int32_t>{};
   const auto expected_heights = std::vector<HistogramCountType>{};
-  const auto expected_distinct_counts =
-      std::vector<HistogramCountType>{};
+  const auto expected_distinct_counts = std::vector<HistogramCountType>{};
 
   const auto new_hist = histogram.split_at_bin_bounds(std::vector<std::pair<int32_t, int32_t>>{{}, {}});
 

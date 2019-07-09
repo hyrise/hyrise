@@ -69,7 +69,7 @@ using AggregateResultIdMapAllocator = PolymorphicAllocator<std::pair<const Aggre
 template <typename AggregateKey>
 using AggregateResultIdMap =
     ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
-                       AggregateResultIdMapAllocator<AggregateKey>>;
+                         AggregateResultIdMapAllocator<AggregateKey>>;
 
 /*
 The key type that is used for the aggregation map.
