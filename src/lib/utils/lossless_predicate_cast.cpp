@@ -25,7 +25,8 @@ std::optional<float> next_float_towards(const double value, const double towards
   return next;
 }
 
-std::optional<std::pair<PredicateCondition, AllTypeVariant>> lossless_predicate_variant_cast(const PredicateCondition condition, const AllTypeVariant& variant, DataType target_data_type) {
+std::optional<std::pair<PredicateCondition, AllTypeVariant>> lossless_predicate_variant_cast(
+    const PredicateCondition condition, const AllTypeVariant& variant, DataType target_data_type) {
   // Code duplication with lossless_cast.cpp, but it's are already hard enough to read
 
   const auto source_data_type = data_type_from_all_type_variant(variant);
@@ -56,4 +57,4 @@ std::optional<std::pair<PredicateCondition, AllTypeVariant>> lossless_predicate_
   return result;
 }
 
-}
+}  // namespace opossum

@@ -234,7 +234,6 @@ std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const Pr
 // Join, e.g., {GreaterThanEquals, LessThan} into BetweenUpperExclusive
 PredicateCondition conditions_to_between(const PredicateCondition lower, const PredicateCondition upper);
 
-
 // Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
 // AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
 //                      dropped. This behavior mirrors NOT IN.

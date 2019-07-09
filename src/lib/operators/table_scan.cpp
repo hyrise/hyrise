@@ -232,7 +232,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
       // lossless_predicate_variant_cast considers the input value to be the right-side value, so we need to flip the
       // condition twice.
-      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(flip_predicate_condition(predicate_condition), *left_value, right_column_expression->data_type());
+      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(
+          flip_predicate_condition(predicate_condition), *left_value, right_column_expression->data_type());
       if (adjusted_predicate_and_value) {
         predicate_condition = flip_predicate_condition(adjusted_predicate_and_value->first);
         left_value = adjusted_predicate_and_value->second;
@@ -243,7 +244,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     }
     if (right_value && left_column_expression) {
       // Same for the other side - no flip needed
-      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(predicate_condition, *right_value, left_column_expression->data_type());
+      const auto adjusted_predicate_and_value =
+          lossless_predicate_variant_cast(predicate_condition, *right_value, left_column_expression->data_type());
       if (adjusted_predicate_and_value) {
         predicate_condition = adjusted_predicate_and_value->first;
         right_value = adjusted_predicate_and_value->second;
@@ -296,7 +298,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
     if (lower_bound_value) {
-      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(lower_condition, *lower_bound_value, left_column->data_type());
+      const auto adjusted_predicate_and_value =
+          lossless_predicate_variant_cast(lower_condition, *lower_bound_value, left_column->data_type());
       if (adjusted_predicate_and_value) {
         lower_condition = adjusted_predicate_and_value->first;
         lower_bound_value = adjusted_predicate_and_value->second;
@@ -307,7 +310,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
     auto upper_bound_value = expression_get_value_or_parameter(*between_expression->upper_bound());
     if (upper_bound_value) {
-      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(upper_condition, *upper_bound_value, left_column->data_type());
+      const auto adjusted_predicate_and_value =
+          lossless_predicate_variant_cast(upper_condition, *upper_bound_value, left_column->data_type());
       if (adjusted_predicate_and_value) {
         upper_condition = adjusted_predicate_and_value->first;
         upper_bound_value = adjusted_predicate_and_value->second;
@@ -322,8 +326,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     if (left_column && lower_bound_value && upper_bound_value &&
         lower_bound_value->type() == upper_bound_value->type()) {
       return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,
-                                                          *lower_bound_value, *upper_bound_value,
-                                                          predicate_condition);
+                                                          *lower_bound_value, *upper_bound_value, predicate_condition);
     }
   }
 

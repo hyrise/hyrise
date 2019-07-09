@@ -30,6 +30,7 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
   const PredicateCondition predicate_condition;
+
  protected:
   void _scan_reference_segment(const ReferenceSegment& segment, const ChunkID chunk_id, PosList& matches) const;
 
