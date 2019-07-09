@@ -103,6 +103,7 @@ SELECT a AS x, SUM(b) FROM mixed GROUP BY a;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING a > 10;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
 SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
+SELECT a AS a1, a AS a2 FROM mixed;
 SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM mixed;
 SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed GROUP BY a;
 SELECT a1, b2, a3 FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM mixed) AS R;
