@@ -51,8 +51,8 @@ class SQLTranslator final {
   static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
  private:
-  // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows similar
-  // expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
+  // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
+  // for similar SQL statements with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
   struct SelectListElement {
     explicit SelectListElement(const std::shared_ptr<AbstractExpression>& expression);
     SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
