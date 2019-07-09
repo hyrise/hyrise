@@ -515,18 +515,18 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       }
       Assert(identifiers.size() == lqp->column_expressions().size(),
              "There have to be as many identifier lists as column expressions");
-      for (auto idx = size_t{0}; idx < lqp->column_expressions().size(); ++idx) {
-        const auto& subquery_expression = lqp->column_expressions()[idx];
+      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < lqp->column_expressions().size(); ++select_list_element_idx) {
+        const auto& subquery_expression = lqp->column_expressions()[select_list_element_idx];
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
           sql_identifier_resolver->add_column_name(subquery_expression, subquery_expression->as_column_name());
         }
-        for (const auto& identifier : identifiers[idx]) {
+        for (const auto& identifier : identifiers[select_list_element_idx]) {
           sql_identifier_resolver->add_column_name(subquery_expression, identifier.column_name);
         }
 
-        select_list_elements.emplace_back(SelectListElement{subquery_expression, identifiers[idx]});
+        select_list_elements.emplace_back(SelectListElement{subquery_expression, identifiers[select_list_element_idx]});
       }
 
       table_name = hsql_table_ref.alias->name;
