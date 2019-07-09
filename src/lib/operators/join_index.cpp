@@ -124,7 +124,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       const auto& reference_segment_pos_list = reference_segment->pos_list();
 
       if (reference_segment_pos_list->empty()) {
-          continue;
+        continue;
       }
 
       if (reference_segment_pos_list->references_single_chunk()) {
@@ -177,7 +177,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
           });
         }
-        performance_data.chunks_scanned_with_index++;        
+        performance_data.chunks_scanned_with_index++;
       } else {
         _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                               secondary_predicate_evaluator);
@@ -253,8 +253,7 @@ void JoinIndex::_data_join_two_segments_using_index(ProbeIterator probe_iter, Pr
     const auto probe_side_position = *probe_iter;
     const auto index_ranges = _index_ranges_for_value(probe_side_position, index);
     for (const auto& [index_begin, index_end] : index_ranges) {
-      _append_matches(index_begin, index_end, probe_side_position.chunk_offset(),
-                      probe_chunk_id, index_chunk_id);
+      _append_matches(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id, index_chunk_id);
     }
   }
 }
@@ -274,16 +273,15 @@ void JoinIndex::_reference_join_two_segments_using_index(
                      });
     }
 
-    PosList sortable_ref_seg_pos_list;
-    sortable_ref_seg_pos_list.insert(sortable_ref_seg_pos_list.end(), reference_segment_pos_list->begin(),
-                                     reference_segment_pos_list->end());
-    std::sort(sortable_ref_seg_pos_list.begin(), sortable_ref_seg_pos_list.end());
+    PosList mutable_ref_seg_pos_list;
+    mutable_ref_seg_pos_list.insert(mutable_ref_seg_pos_list.end(), reference_segment_pos_list->begin(),
+                                    reference_segment_pos_list->end());
+    std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
     std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
 
     PosList index_table_matches{};
-    std::set_intersection(sortable_ref_seg_pos_list.begin(), sortable_ref_seg_pos_list.end(),
-                          index_scan_pos_list.begin(), index_scan_pos_list.end(),
-                          std::back_inserter(index_table_matches));
+    std::set_intersection(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end(), index_scan_pos_list.begin(),
+                          index_scan_pos_list.end(), std::back_inserter(index_table_matches));
     _append_matches_dereferenced(probe_chunk_id, probe_side_position.chunk_offset(), index_table_matches);
   }
 }
@@ -439,9 +437,10 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
         auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
             input_table->get_chunk(ChunkID{0})->get_segment(column_id));
 
-        // de-reference to the correct RowID so the output can be used in a Multi Join
-        for (auto pos_list_offset = ChunkOffset{0}; pos_list_offset < pos_list->size(); ++pos_list_offset) {
-          const auto& row = (*pos_list)[pos_list_offset];
+        // de-reference to the correct RowID so the output can be used in a Multi Join 
+        const auto& pos_list_ = *pos_list; // dereference pos_list here to avoid dereferencing in the loop
+        for (auto pos_list_offset = ChunkOffset{0}; pos_list_offset < pos_list_.size(); ++pos_list_offset) {
+          const auto& row = pos_list_[pos_list_offset];
           if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);
             continue;
