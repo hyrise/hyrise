@@ -22,6 +22,16 @@ class TableScan : public AbstractReadOnlyOperator {
  public:
   TableScan(const std::shared_ptr<const AbstractOperator>& in, const std::shared_ptr<AbstractExpression>& predicate);
 
+  const std::shared_ptr<AbstractExpression>& predicate() const;
+
+  const std::string name() const override;
+  const std::string description(DescriptionMode description_mode) const override;
+
+  /**
+   * Create the TableScanImpl based on the predicate type. Public for testing purposes.
+   */
+  std::unique_ptr<AbstractTableScanImpl> create_impl() const;
+
   /**
    * @brief If set, the specified chunks will not be scanned.
    *
@@ -36,17 +46,7 @@ class TableScan : public AbstractReadOnlyOperator {
    * operators. This is why this scan accepts a list of
    * excluded chunks and all others a list of included chunks.
    */
-  void set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids);
-
-  const std::shared_ptr<AbstractExpression>& predicate() const;
-
-  const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
-
-  /**
-   * Create the TableScanImpl based on the predicate type. Public for testing purposes.
-   */
-  std::unique_ptr<AbstractTableScanImpl> create_impl() const;
+  std::vector<ChunkID> excluded_chunk_ids;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -72,8 +72,6 @@ class TableScan : public AbstractReadOnlyOperator {
 
   // The description of the impl, so that it still available after the _impl is resetted in _on_cleanup()
   std::string _impl_description{"Unset"};
-
-  std::vector<ChunkID> _excluded_chunk_ids;
 };
 
 }  // namespace opossum

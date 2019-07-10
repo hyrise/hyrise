@@ -1713,7 +1713,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
 
   const auto view_columns = std::unordered_map<ColumnID, std::string>({
                                                                       {ColumnID{0}, "a"},
-                                                                      {ColumnID{1}, "b"},
+                                                                      {ColumnID{1}, "b2"},
                                                                       {ColumnID{3}, "t"},
                                                                       });
   // clang-format on

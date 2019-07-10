@@ -93,14 +93,6 @@ class LQPTranslatorTest : public BaseTest {
     int_float5_d = int_float5_node->get_column("d");
   }
 
-  const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
-    return index_scan->_included_chunk_ids;
-  }
-
-  const std::vector<ChunkID> get_excluded_chunk_ids(const std::shared_ptr<const TableScan>& table_scan) {
-    return table_scan->_excluded_chunk_ids;
-  }
-
   std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
   std::shared_ptr<StoredTableNode> int_float_node, int_string_node, int_float2_node, int_float5_node;
   LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b, int_float5_a,
@@ -434,12 +426,12 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
+  EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   const auto b = PQPColumnExpression::from_table(*table, "b");
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
 }
 
@@ -468,13 +460,13 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
+  EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
   EXPECT_EQ(index_scan_op->input_left()->type(), OperatorType::GetTable);
 
   const auto b = PQPColumnExpression::from_table(*table, "b");
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(b, 42, 1337));
 }
 

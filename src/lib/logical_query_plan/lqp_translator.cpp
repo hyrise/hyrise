@@ -217,8 +217,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
-  index_scan->set_included_chunk_ids(indexed_chunks);
-  table_scan->set_excluded_chunk_ids(indexed_chunks);
+  index_scan->included_chunk_ids = indexed_chunks;
+  table_scan->excluded_chunk_ids = indexed_chunks;
 
   return std::make_shared<UnionPositions>(index_scan, table_scan);
 }
