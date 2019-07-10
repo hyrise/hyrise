@@ -12,7 +12,7 @@ std::optional<float> next_float_towards(const double value, const double towards
 
   if (value == towards) return std::nullopt;
 
-  const float casted_value = static_cast<float>(value);
+  const auto casted_value = static_cast<float>(value);
 
   if (casted_value < value && towards < value) return casted_value;
   if (casted_value > value && towards > value) return casted_value;
