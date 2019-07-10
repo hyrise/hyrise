@@ -438,9 +438,9 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
             input_table->get_chunk(ChunkID{0})->get_segment(column_id));
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
-        const auto& pos_list_ = *pos_list;  // dereference pos_list here to avoid dereferencing in the loop
-        for (auto pos_list_offset = ChunkOffset{0}; pos_list_offset < pos_list_.size(); ++pos_list_offset) {
-          const auto& row = pos_list_[pos_list_offset];
+        const auto& position_list = *pos_list;  // dereference pos_list here to avoid dereferencing in the loop
+        for (auto pos_list_offset = ChunkOffset{0}; pos_list_offset < position_list.size(); ++pos_list_offset) {
+          const auto& row = position_list[pos_list_offset];
           if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);
             continue;
