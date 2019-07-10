@@ -23,10 +23,10 @@ class StorageManagerTest : public BaseTest {
     sm.add_table("second_table", t2);
 
     const auto v1_lqp = StoredTableNode::make("first_table");
-    const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
+    const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::vector<std::string>>{});
 
     const auto v2_lqp = StoredTableNode::make("second_table");
-    const auto v2 = std::make_shared<LQPView>(v2_lqp, std::unordered_map<ColumnID, std::string>{});
+    const auto v2 = std::make_shared<LQPView>(v2_lqp, std::unordered_map<ColumnID, std::vector<std::string>>{});
 
     sm.add_view("first_view", std::move(v1));
     sm.add_view("second_view", std::move(v2));
@@ -69,7 +69,7 @@ TEST_F(StorageManagerTest, HasTable) {
 
 TEST_F(StorageManagerTest, AddViewTwice) {
   const auto v1_lqp = StoredTableNode::make("first_table");
-  const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
+  const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::vector<std::string>>{});
 
   auto& sm = StorageManager::get();
   EXPECT_THROW(sm.add_view("first_table", v1), std::exception);

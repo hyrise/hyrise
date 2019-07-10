@@ -98,9 +98,6 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
 
   const auto& cache_entry = cache_iter->second;
 
-  DebugAssert(requested_column_order.size() == cache_entry.column_expression_order.size(),
-              "Wrong number in requested column order");
-
   const auto cached_table_statistics = cache_entry.table_statistics;
 
   // Compute the mapping from result column ids to cached column ids and the column data types
@@ -116,8 +113,7 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   }
 
   // Allocate the TableStatistics to be returned
-  auto output_column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{cached_table_statistics->column_statistics.size()};
+  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{requested_column_order.size()};
 
   // Bring AttributeStatistics into the requested order for each statistics slice
   for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
