@@ -36,7 +36,7 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   metrics.emplace_back(std::move(pipeline.metrics()));
 
   if (_expected_result_table) {
-    _compare_tables(_expected_result_table, std::get<1>(pipeline.get_result_table()),
+    _compare_tables(_expected_result_table, result_table,
                     "Using dedicated expected result table");
   } else if (_sqlite_wrapper) {
     _verify_with_sqlite(pipeline);
