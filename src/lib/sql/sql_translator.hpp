@@ -52,7 +52,7 @@ class SQLTranslator final {
 
  private:
   // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
-  // for equal SQL statements with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
+  // for equal SQL expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
   struct SelectListElement {
     explicit SelectListElement(const std::shared_ptr<AbstractExpression>& expression);
     SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
