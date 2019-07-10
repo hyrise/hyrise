@@ -294,7 +294,9 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   ASSERT_TRUE(get_table);
 
   // Add values:
-  StorageManager::get().get_table("index_test_table")->append({4, 5});
+  const auto table = StorageManager::get().get_table("index_test_table");
+  table->append({4, 5});
+  EXPECT_EQ(table->chunk_count(), 3);
 
   // Test correct execution:
   get_table->execute();
