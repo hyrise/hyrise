@@ -35,7 +35,7 @@ std::optional<std::pair<PredicateCondition, AllTypeVariant>> lossless_predicate_
   // doesn't resolve NULL)
   if (source_data_type == DataType::Null && target_data_type == DataType::Null) {
     return std::optional<std::pair<PredicateCondition, AllTypeVariant>>{
-        std::pair<PredicateCondition, AllTypeVariant>{condition, source}};
+        std::pair<PredicateCondition, AllTypeVariant>{condition, variant}};
   }
 
   // Safe casting between NULL and non-NULL type is not possible. (Cannot be handled below as resolve_data_type()
