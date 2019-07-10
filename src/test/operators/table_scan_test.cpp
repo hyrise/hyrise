@@ -889,34 +889,34 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   // Cases where the lossless_predicate_cast is used and the predicate condition gets adjusted:
   {
     const auto abstract_impl = TableScan{get_int_float_op(), greater_than_(column_b, 3.1)}.create_impl();
-    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::GreaterThanEquals);
     EXPECT_EQ(impl->value, AllTypeVariant{3.1000001430511474609375f});
   }
   {
     const auto abstract_impl = TableScan{get_int_float_op(), greater_than_equals_(column_b, 3.1)}.create_impl();
-    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::GreaterThanEquals);
     EXPECT_EQ(impl->value, AllTypeVariant{3.1000001430511474609375f});
   }
   {
     const auto abstract_impl = TableScan{get_int_float_op(), equals_(column_b, 3.1)}.create_impl();
-    const auto impl = dynamic_cast<ExpressionEvaluatorTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ExpressionEvaluatorTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     // Cannot losslessly convert here.
   }
   {
     const auto abstract_impl = TableScan{get_int_float_op(), less_than_(column_b, 3.1)}.create_impl();
-    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::LessThanEquals);
     EXPECT_EQ(impl->value, AllTypeVariant{3.099999904632568359375f});
   }
   {
     const auto abstract_impl = TableScan{get_int_float_op(), less_than_equals_(column_b, 3.1)}.create_impl();
-    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::LessThanEquals);
     EXPECT_EQ(impl->value, AllTypeVariant{3.099999904632568359375f});
@@ -925,7 +925,7 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   // Test it once with reversed roles:
   {
     const auto abstract_impl = TableScan{get_int_float_op(), greater_than_(3.1, column_b)}.create_impl();
-    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnVsValueTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::LessThanEquals);
     EXPECT_EQ(impl->value, AllTypeVariant{3.099999904632568359375f});
@@ -934,7 +934,7 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   // The same for different types of between:
   {
     const auto abstract_impl = TableScan{get_int_float_op(), between_inclusive_(column_b, 3.1, 4.1)}.create_impl();
-    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::BetweenInclusive);
     EXPECT_EQ(impl->left_value, AllTypeVariant{3.1000001430511474609375f});
@@ -943,7 +943,7 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
 
   {
     const auto abstract_impl = TableScan{get_int_float_op(), between_inclusive_(column_b, 3.1, 4.0)}.create_impl();
-    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::BetweenInclusive);
     EXPECT_EQ(impl->left_value, AllTypeVariant{3.1000001430511474609375f});
@@ -951,8 +951,8 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
   }
 
   {
-    const auto abstract_impl = TableScan{get_int_float_op(), between_upper_exclusive_(column_b, 3.1, 4.0)}.create_impl();
-    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl);
+    const auto abstract_impl = TableScan{get_int_float_op(), between_upper_exclusive_(column_b, 3.1, 4.0)}.create_impl();  // NOLINT
+    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::BetweenUpperExclusive);
     EXPECT_EQ(impl->left_value, AllTypeVariant{3.1000001430511474609375f});
@@ -961,7 +961,7 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
 
   {
     const auto abstract_impl = TableScan{get_int_float_op(), between_exclusive_(column_b, 3.1, 4.0)}.create_impl();
-    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::BetweenUpperExclusive);
     EXPECT_EQ(impl->left_value, AllTypeVariant{3.1000001430511474609375f});
@@ -970,7 +970,7 @@ TEST_P(OperatorsTableScanTest, GetImpl) {
 
   {
     const auto abstract_impl = TableScan{get_int_float_op(), between_exclusive_(column_b, 3.1, 4.1)}.create_impl();
-    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl);
+    const auto impl = dynamic_cast<ColumnBetweenTableScanImpl*>(abstract_impl.get());
     ASSERT_TRUE(impl);
     EXPECT_EQ(impl->predicate_condition, PredicateCondition::BetweenInclusive);
     EXPECT_EQ(impl->left_value, AllTypeVariant{3.1000001430511474609375f});
