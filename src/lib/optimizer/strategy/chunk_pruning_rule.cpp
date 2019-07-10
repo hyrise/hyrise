@@ -69,6 +69,10 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
     pruned_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
+  if (!pruned_chunk_ids.empty()) {
+    std::cout << "Pruning!" << std::endl;
+  }
+
   // wanted side effect of using sets: pruned_chunk_ids vector is sorted
   auto& already_pruned_chunk_ids = stored_table->pruned_chunk_ids();
   if (!already_pruned_chunk_ids.empty()) {
