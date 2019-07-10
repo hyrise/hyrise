@@ -120,7 +120,7 @@ pmr_string zip_to_string(int32_t zip) {
   return result;
 }
 
-// dsdgen deliberately creates NULL values if nullCheck(column_id) is true, the resolve functions do the same
+// dsdgen deliberately creates NULL values if nullCheck(column_id) is true, resolve functions mimic that
 std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
   if (date_id <= 0 || nullCheck(column_id)) {
     return std::nullopt;
@@ -263,7 +263,7 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
-  const auto max_rows = std::numeric_limits<ds_key_t>::max();
+  const auto max_rows = std::numeric_limits<ds_key_t>::max();  // TODO remove this comment ds_key_t{10};
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
 
@@ -339,7 +339,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   table_info_by_name["web_site"].table = generate_web_site(max_rows);
   std::cout << "web_site table generated" << std::endl;
 
-  // TODO: dbgen cleanup?
+  tpcds_cleanup();  // TODO: future calls to tpcds functions will fail after cleanup
 
   return table_info_by_name;
 }
