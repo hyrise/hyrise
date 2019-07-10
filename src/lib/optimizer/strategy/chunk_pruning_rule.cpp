@@ -34,20 +34,20 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   // try to find a chain of predicate nodes that ends in a leaf
   std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
-  // Gather PredicateNodes on top of a StoredTableNode. Ignore non-filtering and ValidateNodes.
+  // Gather consecutive PredicateNodes
   auto current_node = node;
-  while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate ||
-         _is_non_filtering_node(*current_node)) {
-    if (current_node->type == LQPNodeType::Predicate) {
-      predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
-    }
-
+  while (current_node->type == LQPNodeType::Predicate) {
+    predicate_nodes.emplace_back(std::static_pointer_cast<PredicateNode>(current_node));
+    current_node = current_node->left_input();
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-    if (current_node->output_count() > 1) {
+    if (current_node->type == LQPNodeType::Predicate && current_node->output_count() > 1) {
       _apply_to_inputs(node);
       return;
     }
+  }
 
+  // skip over validation nodes
+  if (current_node->type == LQPNodeType::Validate) {
     current_node = current_node->left_input();
   }
 
@@ -65,12 +65,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 
   std::set<ChunkID> pruned_chunk_ids;
   for (auto& predicate : predicate_nodes) {
-    auto new_exclusions = _compute_exclude_list(*table, *predicate->predicate(), stored_table);
-    pruned_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
-  }
-
-  if (!pruned_chunk_ids.empty()) {
-    std::cout << "Pruning!" << std::endl;
+    auto new_exclusions = _compute_exclude_list(statistics, predicate);
+    excluded_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
   // wanted side effect of using sets: pruned_chunk_ids vector is sorted
@@ -86,22 +82,10 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const Table& table, const AbstractExpression& predicate,
-    const std::shared_ptr<StoredTableNode>& stored_table_node) const {
-  // Hacky:
-  // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in
-  // `stored_table_node`.
-  // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct AttributeStatistics
-  // in `table->table_statistics()`, we create a clone of `stored_table_node` without the pruning info.
-  auto stored_table_node_without_column_pruning =
-      std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
-  stored_table_node_without_column_pruning->set_pruned_column_ids({});
-  const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(
-      predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
-  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning,
-                                                                          *stored_table_node_without_column_pruning);
-  // End of hacky
-
+    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
+    const std::shared_ptr<PredicateNode>& predicate_node) const {
+  const auto operator_predicates =
+      OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
   if (!operator_predicates) return {};
 
   std::set<ChunkID> result;
@@ -153,39 +137,6 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
   }
 
   return result;
-}
-
-bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_statistics,
-                                  const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-                                  const std::optional<AllTypeVariant>& variant_value2) const {
-  auto can_prune = false;
-
-  resolve_data_type(base_segment_statistics.data_type, [&](const auto data_type_t) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
-
-    const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);
-
-    // Range filters are only available for arithmetic (non-string) types.
-    if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-      if (segment_statistics.range_filter) {
-        if (segment_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
-          can_prune = true;
-        }
-      }
-    }
-
-    if (segment_statistics.min_max_filter) {
-      if (segment_statistics.min_max_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
-        can_prune = true;
-      }
-    }
-  });
-
-  return can_prune;
-}
-
-bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const {
-  return node.type == LQPNodeType::Alias || node.type == LQPNodeType::Projection || node.type == LQPNodeType::Sort;
 }
 
 }  // namespace opossum

@@ -14,7 +14,6 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/validate_node.hpp"
 #include "operators/get_table.hpp"
 #include "optimizer/strategy/chunk_pruning_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
@@ -291,53 +290,6 @@ TEST_F(ChunkPruningTest, FixedStringPruningTest) {
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
   std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
-}
-
-TEST_F(ChunkPruningTest, PrunePastNonFilteringNodes) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
-
-  const auto a = stored_table_node->get_column("a");
-  const auto b = stored_table_node->get_column("b");
-
-  // clang-format off
-  auto input_lqp =
-  PredicateNode::make(greater_than_(a, 200),
-    ProjectionNode::make(expression_vector(b, a),
-      SortNode::make(expression_vector(b), std::vector<OrderByMode>{OrderByMode::Ascending},
-        ValidateNode::make(
-          stored_table_node))));
-  // clang-format on
-
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_EQ(actual_lqp, input_lqp);
-
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
-}
-
-TEST_F(ChunkPruningTest, ValueOutOfRange) {
-  // Filters are not required to handle values out of their data type's range and the ColumnPruningRule currently
-  // doesn't convert out-of-range values into the type's range
-  // TODO(anybody) In the test LQP below, the ChunkPruningRule could convert the -3'000'000'000 to MIN_INT (but ONLY
-  //               as long as the predicate_condition is >= and not >).
-
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
-
-  // clang-format off
-  auto input_lqp =
-  PredicateNode::make(greater_than_equals_(LQPColumnReference(stored_table_node, ColumnID{0}), int64_t{-3'000'000'000}),
-    stored_table_node);
-  // clang-format on
-
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_EQ(actual_lqp, input_lqp);
-  std::vector<ChunkID> expected_chunk_ids = {};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
