@@ -148,8 +148,9 @@ int main(int argc, char* argv[]) {
 
   Assert(data_files_available(table_path), "Generating table data files failed.");
 
-  auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(
-      config, query_path, filename_blacklist(), std::nullopt, "third_party/tpcds-result-reproduction/answer_sets_tbl");
+  auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
+  query_generator->set_expected_results_directory_path(
+      std::filesystem::path{"third_party/tpcds-result-reproduction/answer_sets_tbl"});
   auto table_generator = std::make_unique<FileBasedTableGenerator>(config, table_path);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator), context};
 

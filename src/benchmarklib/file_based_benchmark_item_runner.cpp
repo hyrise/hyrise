@@ -5,7 +5,6 @@
 #include <fstream>
 
 #include "SQLParser.h"
-#include "operators/print.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -15,9 +14,8 @@ namespace opossum {
 FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
     const std::unordered_set<std::string>& filename_blacklist,
-    const std::optional<std::unordered_set<std::string>>& query_subset,
-    const std::optional<std::filesystem::path>& expected_results_directory_path)
-    : AbstractBenchmarkItemRunner(config), _expected_results_directory_path(expected_results_directory_path) {
+    const std::optional<std::unordered_set<std::string>>& query_subset)
+    : AbstractBenchmarkItemRunner(config) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   std::filesystem::path path{query_path};
@@ -98,6 +96,11 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
       _queries.emplace_back(query);
     }
   }
+}
+
+void FileBasedBenchmarkItemRunner::set_expected_results_directory_path(
+    const std::filesystem::path& expected_results_directory_path) {
+  _expected_results_directory_path = expected_results_directory_path;
 }
 
 void FileBasedBenchmarkItemRunner::load_dedicated_expected_results() {

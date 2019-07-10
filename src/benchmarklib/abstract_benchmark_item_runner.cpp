@@ -12,6 +12,8 @@ namespace opossum {
 AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config)
     : _config(config) {}
 
+void AbstractBenchmarkItemRunner::load_dedicated_expected_results() {}
+
 void AbstractBenchmarkItemRunner::on_tables_loaded() {}
 
 std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
@@ -24,7 +26,7 @@ std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::ex
   }
 
   std::shared_ptr<const Table> expected_result_table = nullptr;
-  if (item_id < _dedicated_expected_results.size()) {
+  if (!_dedicated_expected_results.empty()) {
     expected_result_table = _dedicated_expected_results[item_id];
   }
 

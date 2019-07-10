@@ -23,7 +23,6 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
-  void load_dedicated_expected_results() override;
 
  protected:
   void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
