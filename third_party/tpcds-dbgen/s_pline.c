@@ -113,7 +113,7 @@ mk_s_pline(void *pDest, ds_key_t kIndex)
 	r->kPromotionID = mk_join(S_PLINE_PROMOTION_ID, PROMOTION, 1);
 	genrand_integer(&r->Pricing.quantity, DIST_UNIFORM, PLINE_MIN_QUANTITY, PLINE_MAX_QUANTITY, 0, S_PLINE_QUANTITY);
 	set_pricing(S_PLINE_PRICING, &r->Pricing);
-	gen_text(r->szComment, 1, RS_S_PLINE_COMMENT, S_PLINE_COMMENT);
+	gen_text(r->szComment, 1, RS_S_PLINE_COMMENT, S_PLINE_COMMENT, 0);
 	/* tpcds_row_stop(S_PURCHASE_LINEITEM); */
 	
 	return(0);

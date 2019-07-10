@@ -67,6 +67,13 @@ void reset_mk_w_store_sales_master_bInit() {
   mk_w_store_sales_master_bInit = 0;
 }
 
+void free_w_store_sales_pItemPermutation() {
+	if (pItemPermutation) {
+		free(pItemPermutation);
+	}
+	pItemPermutation = NULL;
+}
+
 /*
 * mk_store_sales
 */

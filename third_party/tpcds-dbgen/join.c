@@ -199,19 +199,22 @@ cp_join(int tbl, int col, ds_key_t jDate)
 		nCount,
 		nOffset,
 		nPage;
-	static date_t *dTemp;
+	date_t *dTemp;
 	char *szTemp;
 
 	if (!init)
 	{
 		nPagePerCatalog = ((int)get_rowcount(CATALOG_PAGE) / CP_CATALOGS_PER_YEAR) / (YEAR_MAXIMUM - YEAR_MINIMUM + 2);
-		dTemp = strtodate(DATA_START_DATE);
 		init = 1;
 	}
 	
 	nType = pick_distribution(&szTemp, "catalog_page_type", 1, 2, col);
 	genrand_integer(&nPage, DIST_UNIFORM, 1, nPagePerCatalog, 0, col);
+
+  dTemp = strtodate(DATA_START_DATE);
 	nOffset = (int)jDate - dTemp->julian - 1;
+	free(dTemp);
+
 	nCount = (nOffset / 365) * CP_CATALOGS_PER_YEAR;
 	nOffset %= 365;
 

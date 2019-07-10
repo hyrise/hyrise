@@ -45,6 +45,12 @@
 #include "r_params.h"
 #include "tdefs.h"
 #include "release.h"
+#include "dist.h"
+
+#include "w_web_sales.h"
+#include "w_store_sales.h"
+#include "w_catalog_sales.h"
+#include "misc.h"
 
 #define PARAM_MAX_LEN	80
 
@@ -74,6 +80,89 @@ static int param_init = 0;
 #else
 #define OPTION_START '-'
 #endif
+
+static void safe_free(void* p) {
+  if (p) {
+    free(p);
+  }
+}
+
+void tpcds_cleanup() {
+  free_mk_w_web_sales_detail_pItemPermutation();
+  free_w_store_sales_pItemPermutation();
+  free_w_catalog_sales_pItemPermutation();
+
+  for (int i = 0; options[i].name != NULL; i++)
+  {
+    safe_free(params[options[i].index]);
+  }
+
+  find_dist(NULL, 1);
+  gen_text(NULL, 0, 0, 0, 1);
+
+//  free_dist("adjectives");
+//  free_dist("adverbs");
+//  free_dist("articles");
+//  free_dist("auxiliaries");
+//  free_dist("brand_syllables");
+//  free_dist("buy_potential");
+//  free_dist("calendar");
+//  free_dist("call_center_class");
+//  free_dist("call_center_hours");
+//  free_dist("call_centers");
+//  free_dist("catalog_page_type");
+//  free_dist("categories");
+//  free_dist("children_class");
+//  free_dist("cities");
+//  free_dist("colors");
+//  free_dist("container");
+//  free_dist("countries");
+//  free_dist("credit_rating");
+//  free_dist("dependent_count");
+//  free_dist("divisions");
+//  free_dist("education");
+//  free_dist("electronic_class");
+//  free_dist("fips_county");
+//  free_dist("first_names");
+//  free_dist("gender");
+//  free_dist("geography_class");
+//  free_dist("home_class");
+//  free_dist("hours");
+//  free_dist("i_current_price");
+//  free_dist("i_manager_id");
+//  free_dist("i_manufact_id");
+//  free_dist("income_band");
+//  free_dist("last_names");
+//  free_dist("location_type");
+//  free_dist("marital_status");
+//  free_dist("men_class");
+//  free_dist("music_class");
+//  free_dist("nouns");
+//  free_dist("prepositions");
+//  free_dist("promo_purpose");
+//  free_dist("purchase_band");
+//  free_dist("return_reasons");
+//  free_dist("rowcounts");
+//  free_dist("salutations");
+//  free_dist("sentences");
+//  free_dist("ship_mode_carrier");
+//  free_dist("ship_mode_code");
+//  free_dist("ship_mode_type");
+//  free_dist("sizes");
+//  free_dist("stores");
+//  free_dist("store_type");
+//  free_dist("street_names");
+//  free_dist("street_type");
+//  free_dist("syllables");
+//  free_dist("terminators");
+//  free_dist("top_domains");
+//  free_dist("units");
+//  free_dist("vehicle_count");
+//  free_dist("verbs");
+//  free_dist("web_page_use");
+//  free_dist("women_class");
+}
+
 
 int read_file(char *param_name, char *option);
 int fnd_param(char *name);

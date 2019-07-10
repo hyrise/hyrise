@@ -61,7 +61,7 @@ static int used_space = 0; /* current length of the sentence being built */
 #define SPACE_INCREMENT	100
 
 static char *
-mk_sentence(int stream)
+mk_sentence(int stream, int should_free)
 {
 	static char *verbiage = NULL;
 	static int allocated_space = 0;
@@ -70,6 +70,13 @@ mk_sentence(int stream)
 		*cp,
 		*word = NULL,
 		temp[2];
+
+	if (should_free) {
+	  if (verbiage) {
+	    free(verbiage);
+	  }
+	  return NULL;
+	}
 
 	temp[1] = '\0';
 	pick_distribution(&syntax, "sentences", 1, 1, stream);
@@ -151,12 +158,16 @@ mk_sentence(int stream)
  * TODO: None
  */
 char *
-gen_text(char *dest, int min, int max, int stream)
+gen_text(char *dest, int min, int max, int stream, int should_free)
 {
 	int target_len,
 		generated_length,
 		capitalize = 1;
 	char *s;
+
+	if (should_free) {
+	  return mk_sentence(0, 1);
+	}
 
 	used_space = 0;
 	genrand_integer(&target_len, DIST_UNIFORM, min, max, 0, stream);
@@ -172,7 +183,7 @@ gen_text(char *dest, int min, int max, int stream)
 	while (target_len > 0)
 		{
 		used_space = 0;
-		s = mk_sentence(stream);
+		s = mk_sentence(stream, 0);
 		if (capitalize)
 			*s = toupper(*s);
 		generated_length = strlen(s);
@@ -218,7 +229,7 @@ main()
 
 	for (i=0; i < 100; i++)
 		{
-		gen_text(test_dest, 100, 200, 1);
+		gen_text(test_dest, 100, 200, 1, 0);
 		printf("%s\n", test_dest);
 		test_dest[0] = '\0';
 		}

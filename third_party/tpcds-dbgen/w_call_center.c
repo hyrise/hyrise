@@ -187,10 +187,10 @@ mk_w_call_center (void* row, ds_key_t index)
 	genrand_integer (&r->cc_market_id, DIST_UNIFORM, 1, 6, 0, CC_MARKET_ID);
 	changeSCD(SCD_INT, &r->cc_market_id, &rOldValues->cc_market_id,  &nFieldChangeFlags,  bFirstRecord);
 
-	gen_text (r->cc_market_class, 20, RS_CC_MARKET_CLASS, CC_MARKET_CLASS);
+	gen_text (r->cc_market_class, 20, RS_CC_MARKET_CLASS, CC_MARKET_CLASS, 0);
 	changeSCD(SCD_CHAR, &r->cc_market_class, &rOldValues->cc_market_class,  &nFieldChangeFlags,  bFirstRecord);
 
-	gen_text (r->cc_market_desc, 20, RS_CC_MARKET_DESC, CC_MARKET_DESC);
+	gen_text (r->cc_market_desc, 20, RS_CC_MARKET_DESC, CC_MARKET_DESC, 0);
 	changeSCD(SCD_CHAR, &r->cc_market_desc, &rOldValues->cc_market_desc,  &nFieldChangeFlags,  bFirstRecord);
 
 	pick_distribution (&sName1, "first_names", 1, 1, CC_MARKET_MANAGER);

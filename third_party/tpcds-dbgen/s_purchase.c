@@ -93,7 +93,7 @@ mk_master(void *pDest, ds_key_t kIndex)
 	jtodt(&r->dtPurchaseDate, getUpdateDate(S_PURCHASE, kIndex));
 	genrand_integer(&r->nRegister, DIST_UNIFORM, 1, 17, 0, S_PURCHASE_REGISTER);
 	genrand_integer(&r->nClerk, DIST_UNIFORM, 101, 300, 0, S_PURCHASE_CLERK);
-	gen_text(&r->szComment[0], (int)(RS_S_PURCHASE_COMMENT * 0.6), RS_S_PURCHASE_COMMENT, S_PURCHASE_COMMENT);
+	gen_text(&r->szComment[0], (int)(RS_S_PURCHASE_COMMENT * 0.6), RS_S_PURCHASE_COMMENT, S_PURCHASE_COMMENT, 0);
 
    return(0);
 }

@@ -81,3 +81,5 @@ int		set_option(char *pname, char *value);
 void	load_params(void);
 int		IsIntParam(char *szName);
 int		IsStrParam(char *szName);
+
+void tpcds_cleanup();

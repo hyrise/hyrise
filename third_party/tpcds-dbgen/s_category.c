@@ -79,7 +79,7 @@ mk_s_category(void *pDest, ds_key_t kIndex)
 	}
 	r->category_id = kIndex;
 	mk_word(r->category_name, "Syllables", kIndex, RS_CATEGORY_NAME, S_CATEGORY_NAME);
-	gen_text(r->category_desc, S_CATEGORY_DESC_MIN, RS_CATEGORY_DESC, S_CATEGORY_DESC);
+	gen_text(r->category_desc, S_CATEGORY_DESC_MIN, RS_CATEGORY_DESC, S_CATEGORY_DESC, 0);
 	
 	return(0);
 }

@@ -81,7 +81,7 @@ mk_s_subclass(void *pDest, ds_key_t kIndex)
 	r->kID = kIndex;
 	r->kClassID = mk_join(S_SUBC_CLASS_ID, S_CLASS, 1);
 	mk_word(r->szName, "Syllables", kIndex, RS_S_SUBC_NAME, S_SUBC_NAME);
-	gen_text(r->szDesc, 1, RS_S_SUBC_DESC, S_SUBC_DESC);
+	gen_text(r->szDesc, 1, RS_S_SUBC_DESC, S_SUBC_DESC, 0);
 	tpcds_row_stop(S_SUBCLASS);
 	
 	return(0);

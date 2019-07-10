@@ -72,7 +72,7 @@ mk_w_promotion(void *pDest, ds_key_t index)
 	int res = 0;
 	
 	/* begin locals declarations */
-	static date_t *start_date;
+	date_t *start_date;
 	ds_key_t nTemp;
 	int nFlags;
    tdef *pTdef = getSimpleTdefsByNumber(PROMOTION);
@@ -86,18 +86,21 @@ mk_w_promotion(void *pDest, ds_key_t index)
 	{
 		memset(&g_w_promotion, 0, sizeof(struct W_PROMOTION_TBL));
 		bInit = 1;
-        start_date = strtodate (DATE_MINIMUM);
 	}
 	
 	nullSet(&pTdef->kNullBitMap, P_NULLS);
 	r->p_promo_sk = index;
 	mk_bkey(&r->p_promo_id[0], index, P_PROMO_ID);
 	nTemp = index;
+
+  start_date = strtodate (DATE_MINIMUM);
 	r->p_start_date_id =
 		start_date->julian +
 		genrand_integer (NULL, DIST_UNIFORM,
 		PROMO_START_MIN, PROMO_START_MAX, PROMO_START_MEAN,
 		P_START_DATE_ID);
+	free(start_date);
+
 	r->p_end_date_id =
 		r->p_start_date_id + genrand_integer (NULL, DIST_UNIFORM,
 		PROMO_LEN_MIN,
@@ -128,7 +131,7 @@ mk_w_promotion(void *pDest, ds_key_t index)
 	nFlags <<= 1;
 	r->p_discount_active = nFlags & 0x01;
 	gen_text (&r->p_channel_details[0], PROMO_DETAIL_LEN_MIN,
-		PROMO_DETAIL_LEN_MAX, P_CHANNEL_DETAILS);
+		PROMO_DETAIL_LEN_MAX, P_CHANNEL_DETAILS, 0);
 	pick_distribution (&r->p_purpose, "promo_purpose", 1, 1,
 		P_PURPOSE);
 	

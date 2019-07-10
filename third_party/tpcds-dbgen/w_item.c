@@ -138,7 +138,7 @@ mk_w_item (void* row, ds_key_t index)
 	/* the rest of the record in a history-keeping dimension can either be a new data value or not;
 	 * use a random number and its bit pattern to determine which fields to replace and which to retain
 	 */
-	gen_text (r->i_item_desc, 1, RS_I_ITEM_DESC, I_ITEM_DESC);
+	gen_text (r->i_item_desc, 1, RS_I_ITEM_DESC, I_ITEM_DESC, 0);
 	changeSCD(SCD_CHAR, &r->i_item_desc, &rOldValues->i_item_desc,  &nFieldChangeFlags,  bFirstRecord);
 	
 	nIndex = pick_distribution(&szMinPrice, "i_current_price", 2, 1, I_CURRENT_PRICE);

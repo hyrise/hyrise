@@ -103,6 +103,12 @@ di_compare(const void *op1, const void *op2)
 	return(strcasecmp(ie1->name, ie2->name));
 }
 
+static void safe_free(void* p) {
+  if (p) {
+    free(p);
+  }
+}
+
 /*
 * Routine: find_dist(char *name)
 * Purpose: translate from dist_t name to d_idx_t *
@@ -118,17 +124,46 @@ di_compare(const void *op1, const void *op2)
 * TODO: None
 */
 d_idx_t *
-find_dist(char *name)
+find_dist(char *name, int should_free)
 {
 	static int index_loaded = 0,
-		entry_count;
+		         entry_count;
 	static d_idx_t *idx = NULL;
 	d_idx_t key,
-		*id = NULL;
-	int i;
-   FILE *ifp;
+	       *id = NULL;
+	int i, j;
+  FILE *ifp;
 	int32_t temp;
-	
+
+  if (should_free) {
+    for (j = 0; j < entry_count; j++) {
+      if (idx[j].dist) {
+        safe_free(idx[j].dist->type_vector);
+        safe_free(idx[j].dist->maximums);
+        safe_free(idx[j].dist->strings);
+
+        if (idx[j].name_space) {
+          safe_free(idx[j].dist->names); //segfault
+        }
+
+        for (i = 0; i < idx[j].w_width; i++) {
+          safe_free(idx[j].dist->weight_sets[i]);
+        }
+        safe_free(idx[j].dist->weight_sets);
+
+        for (i = 0; i < idx[j].v_width; i++) {
+          safe_free(idx[j].dist->value_sets[i]);
+        }
+        safe_free(idx[j].dist->value_sets);
+
+        safe_free(idx[j].dist);
+//        printf("freeing %s\n", idx[j].name); // TODO
+      }
+    }
+
+    safe_free(idx);
+    return NULL;
+  }
 	
 	/* load the index if this is the first time through */
 	if (!index_loaded)
@@ -229,18 +264,20 @@ find_dist(char *name)
 			fclose(ifp);
 		}
 	}
+
+//  printf("find_dist %s\n", name); // TODO
 	
 	/* find the distribution, if it exists and move to it */
 	strcpy(key.name, name);
-	id = (d_idx_t *)bsearch((void *)&key, (void *)idx, entry_count, 
-		sizeof(d_idx_t), di_compare);
-	if (id != NULL)	/* found a valid distribution */
-		if (id->flags != FL_LOADED)	 /* but it needs to be loaded */
-			load_dist(id);
-		
-		
-		
-		return(id);
+	id = (d_idx_t *)bsearch((void *)&key, (void *)idx, entry_count, sizeof(d_idx_t), di_compare);
+	if (id != NULL) {  /* found a valid distribution */
+    if (id->flags != FL_LOADED) {   /* but it needs to be loaded */
+//      printf("loading %s\n", name); // TODO
+      load_dist(id);
+    }
+  }
+
+	return(id);
 }
 
 /*
@@ -405,7 +442,7 @@ dist_op(void *dest, int op, char *d_name, int vset, int wset, int stream)
 	char *char_val;
 	int i_res = 1;
 	
-	if ((d = find_dist(d_name)) == NULL)
+	if ((d = find_dist(d_name, 0)) == NULL)
 	{
 		char msg[80];
 		sprintf(msg, "Invalid distribution name '%s'", d_name);
@@ -500,7 +537,7 @@ dist_weight(int *dest, char *d, int index, int wset)
 	dist_t *dist;
 	int res;
 	
-	if ((d_idx = find_dist(d)) == NULL)
+	if ((d_idx = find_dist(d, 0)) == NULL)
 	{
 		char msg[80];
 		sprintf(msg, "Invalid distribution name '%s'", d);
@@ -544,7 +581,7 @@ DistNameIndex(char *szDist, int nNameType, char *szName)
 	int res;
 	char *cp = NULL;
 	
-	if ((d_idx = find_dist(szDist)) == NULL)
+	if ((d_idx = find_dist(szDist, 0)) == NULL)
 		return(-1);	
 	dist = d_idx->dist;
 	
@@ -592,7 +629,7 @@ distsize(char *name)
 {
 	d_idx_t *dist;
 
-	dist = find_dist(name);
+	dist = find_dist(name, 0);
 
 	if (dist == NULL)
 		return(-1);
@@ -626,7 +663,7 @@ int IntegrateDist(char *szDistName, int nPct, int nStartIndex, int nWeightSet)
 	if ((nPct <= 0) || (nPct >= 100))
 		return(QERR_RANGE_ERROR);
 	
-	pDistIndex=find_dist(szDistName);
+	pDistIndex=find_dist(szDistName, 0);
 	if (pDistIndex == NULL)
 		return(QERR_BAD_NAME);
 
@@ -666,7 +703,7 @@ dist_type(char *name, int nValueSet)
 {
 	d_idx_t *dist;
 
-	dist = find_dist(name);
+	dist = find_dist(name, 0);
 
 	if (dist == NULL)
 		return(-1);
@@ -699,7 +736,7 @@ dump_dist(char *name)
 	char *pCharVal = NULL;
 	int nVal;
 
-	pIndex = find_dist(name);
+	pIndex = find_dist(name, 0);
 	if (pIndex == NULL)
 		ReportErrorNoLine(QERR_BAD_NAME, name, 1);
 	printf("create %s;\n", pIndex->name);
@@ -795,7 +832,7 @@ int DistSizeToShiftWidth(char *szDist, int nWeightSet)
 		nMax;
 	d_idx_t *d;
 
-	d = find_dist(szDist);
+	d = find_dist(szDist, 0);
 	nMax = dist_max(d->dist, nWeightSet);
 	
 	while (nTotal < nMax)
@@ -831,7 +868,7 @@ int MatchDistWeight(void *dest, char *szDist, int nWeight, int nWeightSet, int V
 			nRetcode;
 		char *char_val;
 		
-		if ((d = find_dist(szDist)) == NULL)
+		if ((d = find_dist(szDist, 0)) == NULL)
 		{
 			char msg[80];
 			sprintf(msg, "Invalid distribution name '%s'", szDist);

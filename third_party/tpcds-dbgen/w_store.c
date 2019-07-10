@@ -182,7 +182,7 @@ mk_w_store (void* row, ds_key_t index)
 	pick_distribution (&r->geography_class, "geography_class", 1, 1, W_STORE_GEOGRAPHY_CLASS);
 	changeSCD(SCD_PTR, &r->geography_class, &rOldValues->geography_class,  &nFieldChangeFlags,  bFirstRecord);
 
-	gen_text (&r->market_desc[0], STORE_DESC_MIN, RS_S_MARKET_DESC, W_STORE_MARKET_DESC);
+	gen_text (&r->market_desc[0], STORE_DESC_MIN, RS_S_MARKET_DESC, W_STORE_MARKET_DESC, 0);
 	changeSCD(SCD_CHAR, &r->market_desc, &rOldValues->market_desc,  &nFieldChangeFlags,  bFirstRecord);
 
 	pick_distribution (&sName1, "first_names", 1, 1, W_STORE_MARKET_MANAGER);

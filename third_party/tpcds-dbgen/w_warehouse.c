@@ -74,7 +74,7 @@ mk_w_warehouse (void* row, ds_key_t index)
 	r->w_warehouse_sk = index;
 	mk_bkey(&r->w_warehouse_id[0], index, W_WAREHOUSE_ID);
 	gen_text (&r->w_warehouse_name[0], W_NAME_MIN,
-		RS_W_WAREHOUSE_NAME, W_WAREHOUSE_NAME);
+		RS_W_WAREHOUSE_NAME, W_WAREHOUSE_NAME, 0);
 	r->w_warehouse_sq_ft =
 		genrand_integer (NULL, DIST_UNIFORM,
 		W_SQFT_MIN, W_SQFT_MAX, 0, W_WAREHOUSE_SQ_FT);

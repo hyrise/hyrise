@@ -58,6 +58,7 @@ struct W_STORE_SALES_TBL {
 };
 
 void reset_mk_w_store_sales_master_bInit();
+void free_w_store_sales_pItemPermutation();
 void mk_w_store_sales_master (void *row, ds_key_t index);
 void mk_w_store_sales_detail (void *row, int bPrint, void* store_returns, int* was_returned);
 int mk_w_store_sales(void *pDest, ds_key_t kIndex, void* store_returns, int* was_returned);

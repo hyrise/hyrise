@@ -101,7 +101,7 @@ mk_master(void *pDest, ds_key_t kIndex)
 	else
 		r->kShipCustomerID = r->kBillCustomerID;
 	r->kShipModeID = mk_join(S_CORD_SHIP_MODE_ID, SHIP_MODE, 1);
-	gen_text(&r->szComment[0], (int)(RS_S_CATALOG_ORDER_COMMENT * 0.6), RS_S_CATALOG_ORDER_COMMENT, S_CORD_COMMENT);
+	gen_text(&r->szComment[0], (int)(RS_S_CATALOG_ORDER_COMMENT * 0.6), RS_S_CATALOG_ORDER_COMMENT, S_CORD_COMMENT, 0);
 
    return(0);
 }

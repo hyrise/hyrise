@@ -73,7 +73,7 @@ int
 mk_w_catalog_page (void *row, ds_key_t index)
 {
 	int res = 0;
-	static date_t *dStartDate;
+	date_t *dStartDate;
 	static int nCatalogPageMax;
 	int nDuration, 
 		nOffset,
@@ -90,8 +90,7 @@ mk_w_catalog_page (void *row, ds_key_t index)
 	
 	if (!bInit)
 	{
-		nCatalogPageMax = ((int)get_rowcount(CATALOG_PAGE) / CP_CATALOGS_PER_YEAR) / (YEAR_MAXIMUM - YEAR_MINIMUM + 2); 
-		dStartDate = strtodate(DATA_START_DATE);
+		nCatalogPageMax = ((int)get_rowcount(CATALOG_PAGE) / CP_CATALOGS_PER_YEAR) / (YEAR_MAXIMUM - YEAR_MINIMUM + 2);
 
 		/* columns that still need to be populated */
         strcpy (r->cp_department, "DEPARTMENT");
@@ -125,11 +124,17 @@ mk_w_catalog_page (void *row, ds_key_t index)
 		nOffset = (nCatalogInterval - 6) * nDuration;
 		nType = 3;	/* monthly */
 	}
+
+
+  dStartDate = strtodate(DATA_START_DATE);
 	r->cp_start_date_id = dStartDate->julian + nOffset;
+	free(dStartDate);
+
+
    r->cp_start_date_id += ((r->cp_catalog_number - 1) / CP_CATALOGS_PER_YEAR) * 365;
 	r->cp_end_date_id = r->cp_start_date_id + nDuration - 1;
 	dist_member(&r->cp_type, "catalog_page_type", nType, 1);
-	gen_text(&r->cp_description[0], RS_CP_DESCRIPTION / 2, RS_CP_DESCRIPTION - 1, CP_DESCRIPTION);
+	gen_text(&r->cp_description[0], RS_CP_DESCRIPTION / 2, RS_CP_DESCRIPTION - 1, CP_DESCRIPTION, 0);
 
 	return (res);
 }

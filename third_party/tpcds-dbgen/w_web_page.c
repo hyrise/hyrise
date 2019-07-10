@@ -81,7 +81,7 @@ mk_w_web_page (void * row, ds_key_t index)
 	int32_t res = 0,
 		bFirstRecord = 0,
 		nFieldChangeFlags;
-	static date_t *dToday;
+	date_t *dToday;
 	static ds_key_t nConcurrent,
 		nRevisions;
 
@@ -102,10 +102,6 @@ mk_w_web_page (void * row, ds_key_t index)
 
 	if (!bInit)
 	{
-		/* setup invariant values */
-		sprintf(szTemp, "%d-%d-%d", CURRENT_YEAR, CURRENT_MONTH, CURRENT_DAY);
-		dToday = strtodate(szTemp);
-
 		/* set up for the SCD handling */
 		nConcurrent = (int)get_rowcount(CONCURRENT_WEB_SITES);
 		nRevisions = (int)get_rowcount(WEB_PAGE) / nConcurrent;
@@ -138,7 +134,12 @@ mk_w_web_page (void * row, ds_key_t index)
 	changeSCD(SCD_KEY, &r->wp_creation_date_sk, &rOldValues->wp_creation_date_sk,  &nFieldChangeFlags,  bFirstRecord);
 
 	genrand_integer(&nAccess, DIST_UNIFORM, 0, WP_IDLE_TIME_MAX, 0, WP_ACCESS_DATE_SK);
+
+  sprintf(szTemp, "%d-%d-%d", CURRENT_YEAR, CURRENT_MONTH, CURRENT_DAY);
+  dToday = strtodate(szTemp);
 	r->wp_access_date_sk = dToday->julian - nAccess;
+	free(dToday);
+
 	changeSCD(SCD_KEY, &r->wp_access_date_sk, &rOldValues->wp_access_date_sk,  &nFieldChangeFlags,  bFirstRecord);
    if (r->wp_access_date_sk == 0)
       r->wp_access_date_sk = -1;    /* special case for dates */

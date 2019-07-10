@@ -142,11 +142,20 @@ mk_w_web_sales_master (void *row, ds_key_t index)
 return;
 }
 
+
+int *mk_w_web_sales_detail_pItemPermutation;
+
+void free_mk_w_web_sales_detail_pItemPermutation() {
+	if(mk_w_web_sales_detail_pItemPermutation) {
+		free(mk_w_web_sales_detail_pItemPermutation);
+	}
+	mk_w_web_sales_detail_pItemPermutation = NULL;
+}
+
 void
 mk_w_web_sales_detail (void *row, int bPrint, void* web_returns, int* was_returned)
 {
-	static int *pItemPermutation,
-		nItemCount;
+	static int nItemCount;
 	struct W_WEB_SALES_TBL *r;
 	int nShipLag,
 		nTemp;
@@ -157,7 +166,7 @@ mk_w_web_sales_detail (void *row, int bPrint, void* web_returns, int* was_return
 	if (!mk_w_web_sales_detail_bInit)
 	{
 		jDate = skipDays(WEB_SALES, &kNewDateIndex);
-		pItemPermutation = makePermutation(NULL, nItemCount = (int)getIDCount(ITEM), WS_PERMUTATION);
+		mk_w_web_sales_detail_pItemPermutation = makePermutation(NULL, nItemCount = (int)getIDCount(ITEM), WS_PERMUTATION);
 
     mk_w_web_sales_detail_bInit = 1;
 	}
@@ -179,7 +188,7 @@ mk_w_web_sales_detail (void *row, int bPrint, void* web_returns, int* was_return
 
       if (++nItemIndex > nItemCount)
          nItemIndex = 1;
-      r->ws_item_sk = matchSCDSK(getPermutationEntry(pItemPermutation, nItemIndex), r->ws_sold_date_sk, ITEM);
+      r->ws_item_sk = matchSCDSK(getPermutationEntry(mk_w_web_sales_detail_pItemPermutation, nItemIndex), r->ws_sold_date_sk, ITEM);
 
       /* the web page needs to be valid for the sale date */
       r->ws_web_page_sk = mk_join (WS_WEB_PAGE_SK, WEB_PAGE, r->ws_sold_date_sk);

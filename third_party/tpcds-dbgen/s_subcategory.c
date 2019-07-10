@@ -81,7 +81,7 @@ mk_s_subcategory(void *pDest, ds_key_t kIndex)
 	r->kID = kIndex;
 	r->kCategoryID = mk_join(S_SBCT_CATEGORY_ID, S_CATEGORY, 1);
 	mk_word(r->szName, "Syllables", kIndex, RS_S_SBCT_NAME, S_SBCT_NAME);
-	gen_text(r->szDesc, 1, RS_S_SBCT_DESC, S_SBCT_DESC);
+	gen_text(r->szDesc, 1, RS_S_SBCT_DESC, S_SBCT_DESC, 0);
 	tpcds_row_stop(S_SUBCATEGORY);
 	
 	return(0);

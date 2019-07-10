@@ -64,6 +64,7 @@ struct W_CATALOG_SALES_TBL {
 };
 
 void mk_w_catalog_sales_master (void *row, ds_key_t index);
+void free_w_catalog_sales_pItemPermutation();
 void mk_w_catalog_sales_detail(void *row, int bPrint, void* catalog_returns, int* was_returned);
 int mk_w_catalog_sales(void *row, ds_key_t index, void* catalog_return, int* was_returned);
 int pr_w_catalog_sales(void *r);

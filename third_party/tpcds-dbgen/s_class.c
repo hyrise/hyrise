@@ -81,7 +81,7 @@ mk_s_class(void *pDest, ds_key_t kIndex)
 	
 	r->id = kIndex;
 	r->subcat_id = mk_join(S_CLASS_SUBCAT_ID, S_SUBCATEGORY, 1);
-	gen_text(r->desc, S_CLASS_DESC_MIN, RS_CLASS_DESC, S_CLASS_DESC);
+	gen_text(r->desc, S_CLASS_DESC_MIN, RS_CLASS_DESC, S_CLASS_DESC, 0);
 	tpcds_row_stop(S_CLASS);
 
 	return(0);

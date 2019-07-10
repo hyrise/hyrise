@@ -86,7 +86,7 @@ mk_s_catalog(void *pDest, ds_key_t kIndex)
 	genrand_date(&r->s_catalog_start_date, DIST_UNIFORM, &dtStartMin, &dtStartMax, NULL, S_CATALOG_START_DATE);
 	genrand_integer(&nDateDelta, DIST_UNIFORM, S_CATALOG_DURATION_MIN, S_CATALOG_DURATION_MAX, 0, S_CATALOG_END_DATE);
 	jtodt(&r->s_catalog_end_date, r->s_catalog_start_date.julian + nDateDelta);
-	gen_text(r->s_catalog_catalog_desc, S_CATALOG_DESC_MIN, S_CATALOG_DESC_MAX, S_CATALOG_DESC);
+	gen_text(r->s_catalog_catalog_desc, S_CATALOG_DESC_MIN, S_CATALOG_DESC_MAX, S_CATALOG_DESC, 0);
 	genrand_integer(&r->s_catalog_catalog_type, DIST_UNIFORM, 1, S_CATALOG_TYPE_COUNT, 0, S_CATALOG_TYPE);
 
 	return(0);

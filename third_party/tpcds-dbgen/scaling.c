@@ -666,7 +666,7 @@ dateScaling(int nTable, ds_key_t jDate)
 
 	if (!bInit)
 	{
-		pDistIndex = find_dist("calendar");
+		pDistIndex = find_dist("calendar", 0);
 		pDist = pDistIndex->dist;
 		if (!pDist)
 			ReportError(QERR_NO_MEMORY, "dateScaling()", 1);

@@ -112,7 +112,7 @@ mk_master(void *pDest, ds_key_t kIndex)
 		r->kShipCustomerID = r->kBillCustomerID;
 	r->kShipModeID = mk_join(S_WORD_SHIP_MODE_ID, SHIP_MODE, 1);
 	r->kWebSiteID = mk_join(S_WORD_WEB_SITE_ID, WEB_SITE, 1);
-	gen_text(&r->szComment[0], (int)(RS_S_WORD_COMMENT * 0.6), RS_S_WORD_COMMENT, S_WORD_COMMENT);
+	gen_text(&r->szComment[0], (int)(RS_S_WORD_COMMENT * 0.6), RS_S_WORD_COMMENT, S_WORD_COMMENT, 0);
 	
 	return;
 }

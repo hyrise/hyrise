@@ -80,7 +80,7 @@ mk_s_market(void *pDest, ds_key_t kIndex)
 	
 	r->id = kIndex;
 	mk_word(r->class_name, "syllables", kIndex, RS_S_MARKET_CLASS_NAME, S_MARKET_CLASS_NAME);
-	gen_text(r->desc, 1, RS_S_MARKET_CLASS_DESC, S_MARKET_DESC);
+	gen_text(r->desc, 1, RS_S_MARKET_CLASS_DESC, S_MARKET_DESC, 0);
 	r->manager_id = mk_join(S_MARKET_MANAGER_ID, S_MANAGER, 1);
 	tpcds_row_stop(S_MARKET);
 	

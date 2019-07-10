@@ -79,7 +79,6 @@ mk_w_web_site (void *row, ds_key_t index)
 	int32_t res = 0,
 		nFieldChangeFlags,
 		bFirstRecord = 0;
-	static date_t *dToday;
 	static decimal_t dMinTaxPercentage,
 		dMaxTaxPercentage;
 	static int32_t bInit = 0;
@@ -101,7 +100,6 @@ mk_w_web_site (void *row, ds_key_t index)
 	{
 		/* setup invariant values */
 		sprintf(szTemp, "%d-%d-%d", CURRENT_YEAR, CURRENT_MONTH, CURRENT_DAY);
-		dToday = strtodate(szTemp);
 		strcpy(r->web_class, "Unknown");
 		strtodec(&dMinTaxPercentage, WEB_MIN_TAX_PERCENTAGE);
 		strtodec(&dMaxTaxPercentage, WEB_MAX_TAX_PERCENTAGE);
@@ -144,11 +142,11 @@ mk_w_web_site (void *row, ds_key_t index)
 	changeSCD(SCD_INT, &r->web_market_id, &rOldValues->web_market_id,  &nFieldChangeFlags,  bFirstRecord);
 
 	gen_text (r->web_market_class, 20, RS_WEB_MARKET_CLASS,
-		WEB_MARKET_CLASS);
+		WEB_MARKET_CLASS, 0);
 	changeSCD(SCD_CHAR, &r->web_market_class, &rOldValues->web_market_class,  &nFieldChangeFlags,  bFirstRecord);
 
 	gen_text (r->web_market_desc, 20, RS_WEB_MARKET_DESC,
-		WEB_MARKET_DESC);
+		WEB_MARKET_DESC, 0);
 	changeSCD(SCD_CHAR, &r->web_market_desc, &rOldValues->web_market_desc,  &nFieldChangeFlags,  bFirstRecord);
 
 	pick_distribution (&sName1, "first_names", 1, 1, WEB_MARKET_MANAGER);

@@ -79,7 +79,7 @@ mk_s_reason(void *pDest, ds_key_t kIndex)
 	}
 	
 	r->kID = kIndex;
-	gen_text(r->szDesc, 1, RS_S_REASON_DESC, S_REASON_DESC);
+	gen_text(r->szDesc, 1, RS_S_REASON_DESC, S_REASON_DESC, 0);
 	tpcds_row_stop(S_REASON);
 	
 	return(0);

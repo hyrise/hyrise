@@ -79,7 +79,7 @@ int	dist_op(void *dest, int op, char *d_name, int vset, int wset, int stream);
 int dist_weight(int *dest, char *d, int index, int wset);
 int distsize(char *szDistname);
 int dist_type(char *szDistName, int vset);
-d_idx_t *find_dist(char *name);
+d_idx_t *find_dist(char *name, int should_free);
 int IntegrateDist(char *szDistName, int nPct, int nStartIndex, int nWeightSet);
 void dump_dist(char *szName);
 int dist_active(char *szName, int nWeightSet);

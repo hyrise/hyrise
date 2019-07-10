@@ -67,6 +67,13 @@ int mk_w_catalog_sales_master_bInit = 0;
 void reset_mk_w_catalog_sales_master_bInit() {
   mk_w_catalog_sales_master_bInit = 0;
 }
+
+void free_w_catalog_sales_pItemPermutation() {
+	if (pItemPermutation) {
+		free(pItemPermutation);
+	}
+	pItemPermutation = NULL;
+}
                                                               
 /*                                                            
  * the validation process requires generating a single lineitem
