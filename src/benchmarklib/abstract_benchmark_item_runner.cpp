@@ -1,7 +1,6 @@
 #include "abstract_benchmark_item_runner.hpp"
 
 #include <boost/algorithm/string/replace.hpp>
-#include <memory>
 
 #include "benchmark_sql_executor.hpp"
 #include "concurrency/transaction_manager.hpp"

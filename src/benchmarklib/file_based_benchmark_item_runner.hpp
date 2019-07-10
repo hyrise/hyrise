@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <unordered_set>
 
 #include "abstract_benchmark_item_runner.hpp"
