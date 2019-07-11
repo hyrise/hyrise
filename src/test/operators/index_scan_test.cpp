@@ -63,7 +63,8 @@ class OperatorsIndexScanTest : public BaseTest {
 
     const auto partially_indexed_table = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 7);
     ChunkEncoder::encode_all_chunks(partially_indexed_table);
-    partially_indexed_table->get_chunk(ChunkID{1})->template create_index<DerivedIndex>({ColumnID{0}});
+    const auto second_chunk = partially_indexed_table->get_chunk(ChunkID{1});
+    second_chunk->template create_index<DerivedIndex>(std::vector<ColumnID>{ColumnID{0}});
     StorageManager::get().add_table("index_test_table", partially_indexed_table);
   }
 
