@@ -22,13 +22,13 @@ class CreateViewNodeTest : public ::testing::Test {
 
 TEST_F(CreateViewNodeTest, Description) {
   EXPECT_EQ(_create_view_node->description(),
-            "[CreateView] Name: 'some_view', Columns: a FROM (\n"
+            "[CreateView] Name: some_view, Columns: a FROM (\n"
             "[0] [MockNode 'Unnamed'] pruned: 0/1 columns\n"
             ")");
 
   const auto _create_view_node_2 = CreateViewNode::make("some_view", _view, true);
   EXPECT_EQ(_create_view_node_2->description(),
-            "[CreateView] IfNotExists Name: 'some_view', Columns: a FROM (\n"
+            "[CreateView] IfNotExists Name: some_view, Columns: a FROM (\n"
             "[0] [MockNode 'Unnamed'] pruned: 0/1 columns\n"
             ")");
 }
