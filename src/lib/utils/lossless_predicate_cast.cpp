@@ -34,8 +34,10 @@ std::optional<std::pair<PredicateCondition, AllTypeVariant>> lossless_predicate_
   // Lossless casting from NULL to NULL is always NULL. (Cannot be handled below as resolve_data_type()
   // doesn't resolve NULL)
   if (source_data_type == DataType::Null && target_data_type == DataType::Null) {
-    auto pair = std::pair<PredicateCondition, AllTypeVariant>{condition, variant};
-    return std::optional<std::pair<PredicateCondition, AllTypeVariant>>{pair};
+    // We should be able to return {condition, variant} here, but clang-tidy has what I believe to be a false
+    // positive. Instead of ignoring it and risking overlooking something, we let the ExpressionEvaluator handle
+    // this case. This is only for stupid queries like `WHERE x = NULL`, anyway.
+    return std::nullopt;
   }
 
   // Safe casting between NULL and non-NULL type is not possible. (Cannot be handled below as resolve_data_type()
