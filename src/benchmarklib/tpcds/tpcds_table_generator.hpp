@@ -1,8 +1,8 @@
 #pragma once
 
 extern "C" {
-#include <../tpcds-dbgen/config.h>
-#include <porting.h>
+#include <tpcds-kit/tools/config.h>
+#include <tpcds-kit/tools/porting.h>
 }
 
 #include <memory>

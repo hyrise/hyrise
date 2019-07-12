@@ -87,7 +87,7 @@
     },
     {
       "name": "c_last_review_date",
-      "type": "string",
+      "type": "int",
       "nullable": true
     }
   ],

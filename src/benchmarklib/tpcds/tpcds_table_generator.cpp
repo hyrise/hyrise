@@ -1,39 +1,39 @@
 #include "tpcds_table_generator.hpp"
 
 extern "C" {
-#include <dbgen_version.h>
-#include <decimal.h>
-#include <genrand.h>
-#include <nulls.h>
-#include <parallel.h>
-#include <r_params.h>
-#include <tables.h>
-#include <tdefs.h>
+#include <tpcds-kit/tools/dbgen_version.h>
+#include <tpcds-kit/tools/decimal.h>
+#include <tpcds-kit/tools/genrand.h>
+#include <tpcds-kit/tools/nulls.h>
+#include <tpcds-kit/tools/parallel.h>
+#include <tpcds-kit/tools/r_params.h>
+#include <tpcds-kit/tools/tables.h>
+#include <tpcds-kit/tools/tdefs.h>
 
-#include <w_call_center.h>
-#include <w_catalog_page.h>
-#include <w_catalog_returns.h>
-#include <w_catalog_sales.h>
-#include <w_customer.h>
-#include <w_customer_address.h>
-#include <w_customer_demographics.h>
-#include <w_datetbl.h>
-#include <w_household_demographics.h>
-#include <w_income_band.h>
-#include <w_inventory.h>
-#include <w_item.h>
-#include <w_promotion.h>
-#include <w_reason.h>
-#include <w_ship_mode.h>
-#include <w_store.h>
-#include <w_store_returns.h>
-#include <w_store_sales.h>
-#include <w_timetbl.h>
-#include <w_warehouse.h>
-#include <w_web_page.h>
-#include <w_web_returns.h>
-#include <w_web_sales.h>
-#include <w_web_site.h>
+#include <tpcds-kit/tools/w_call_center.h>
+#include <tpcds-kit/tools/w_catalog_page.h>
+#include <tpcds-kit/tools/w_catalog_returns.h>
+#include <tpcds-kit/tools/w_catalog_sales.h>
+#include <tpcds-kit/tools/w_customer.h>
+#include <tpcds-kit/tools/w_customer_address.h>
+#include <tpcds-kit/tools/w_customer_demographics.h>
+#include <tpcds-kit/tools/w_datetbl.h>
+#include <tpcds-kit/tools/w_household_demographics.h>
+#include <tpcds-kit/tools/w_income_band.h>
+#include <tpcds-kit/tools/w_inventory.h>
+#include <tpcds-kit/tools/w_item.h>
+#include <tpcds-kit/tools/w_promotion.h>
+#include <tpcds-kit/tools/w_reason.h>
+#include <tpcds-kit/tools/w_ship_mode.h>
+#include <tpcds-kit/tools/w_store.h>
+#include <tpcds-kit/tools/w_store_returns.h>
+#include <tpcds-kit/tools/w_store_sales.h>
+#include <tpcds-kit/tools/w_timetbl.h>
+#include <tpcds-kit/tools/w_warehouse.h>
+#include <tpcds-kit/tools/w_web_page.h>
+#include <tpcds-kit/tools/w_web_returns.h>
+#include <tpcds-kit/tools/w_web_sales.h>
+#include <tpcds-kit/tools/w_web_site.h>
 }
 
 #include <benchmark_config.hpp>
@@ -56,7 +56,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   // init_rand from genrand.c, adapted
   {
     auto nSeed = get_int(rng_seed_string.data());
-    auto skip = MAXINT / MAX_COLUMN;
+    auto skip = INT_MAX / MAX_COLUMN;
     for (auto i = 0; i < MAX_COLUMN; i++) {
       Streams[i].nInitialSeed = nSeed + skip * i;
       Streams[i].nSeed = nSeed + skip * i;
@@ -64,9 +64,10 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
     }
   }
 
-  reset_mk_w_catalog_sales_master_bInit();
-  reset_mk_w_store_sales_master_bInit();
-  reset_mk_w_web_sales_bInit();
+  mk_w_store_sales_master(nullptr, 0, 1);
+  mk_w_web_sales_master(nullptr, 0, 1);
+  mk_w_web_sales_detail(nullptr, 0, nullptr, nullptr, 1);
+  mk_w_catalog_sales_master(nullptr, 0, 1);
 
   auto distributions_string = std::string{"DISTRIBUTIONS"};
   // PATH_TO_TPCDS_IDX is set to "${CMAKE_BINARY_DIR}/tpcds.idx" in CMakeLists.txt
@@ -187,7 +188,7 @@ const auto catalog_returns_column_names = boost::hana::make_tuple("cr_returned_d
 const auto catalog_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
 const auto catalog_sales_column_names = boost::hana::make_tuple("cs_sold_date_sk", "cs_sold_time_sk", "cs_ship_date_sk", "cs_bill_customer_sk", "cs_bill_cdemo_sk", "cs_bill_hdemo_sk", "cs_bill_addr_sk", "cs_ship_customer_sk", "cs_ship_cdemo_sk", "cs_ship_hdemo_sk", "cs_ship_addr_sk", "cs_call_center_sk", "cs_catalog_page_sk", "cs_ship_mode_sk", "cs_warehouse_sk", "cs_item_sk", "cs_promo_sk", "cs_order_number", "cs_quantity", "cs_wholesale_cost", "cs_list_price", "cs_sales_price", "cs_ext_discount_amt", "cs_ext_sales_price", "cs_ext_wholesale_cost", "cs_ext_list_price", "cs_ext_tax", "cs_coupon_amt", "cs_ext_ship_cost", "cs_net_paid", "cs_net_paid_inc_tax", "cs_net_paid_inc_ship", "cs_net_paid_inc_ship_tax", "cs_net_profit"); // NOLINT
 
-const auto customer_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
+const auto customer_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>>(); // NOLINT
 const auto customer_column_names = boost::hana::make_tuple("c_customer_sk", "c_customer_id", "c_current_cdemo_sk", "c_current_hdemo_sk", "c_current_addr_sk", "c_first_shipto_date_sk", "c_first_sales_date_sk", "c_salutation", "c_first_name", "c_last_name", "c_preferred_cust_flag", "c_birth_day", "c_birth_month", "c_birth_year", "c_birth_country", "c_login", "c_email_address", "c_last_review_date"); // NOLINT
 
 const auto customer_address_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<pmr_string>>(); // NOLINT
@@ -436,7 +437,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
     // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
     {
-      mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + i);
+      mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + i, 0);
       int nLineitems;
       genrand_integer(&nLineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
       for (auto j = 1; j <= nLineitems; j++) {
@@ -574,7 +575,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer(ds_key_t max_rows)
         resolve_integer(C_BIRTH_DAY, customer.c_birth_day), resolve_integer(C_BIRTH_MONTH, customer.c_birth_month),
         resolve_integer(C_BIRTH_YEAR, customer.c_birth_year), resolve_string(C_BIRTH_COUNTRY, customer.c_birth_country),
         resolve_string(C_LOGIN, customer.c_login), resolve_string(C_EMAIL_ADDRESS, customer.c_email_address),
-        resolve_string(C_LAST_REVIEW_DATE, pmr_string{std::to_string(customer.c_last_review_date)}));
+        resolve_integer(C_LAST_REVIEW_DATE, customer.c_last_review_date));
   }
 
   return customer_builder.finish_table();
@@ -853,7 +854,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
     // modified call to mk_w_store_sales(&store_sales, store_sales_first + i, &store_returns, &was_returned)
     {
-      mk_w_store_sales_master(&store_sales, store_sales_first + i);
+      mk_w_store_sales_master(&store_sales, store_sales_first + i, 0);
 
       int nLineitems;
       genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
@@ -1011,13 +1012,13 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
 
     // modified call to mk_w_web_sales(&web_sales, web_sales_first + i, &web_returns, &was_returned);
     {
-      mk_w_web_sales_master(&web_sales, web_sales_first + i);
+      mk_w_web_sales_master(&web_sales, web_sales_first + i, 0);
 
       int nLineitems;
       genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
       for (auto j = 1; j <= nLineitems; j++) {
         int was_returned = 0;
-        mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned);
+        mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 
         if (web_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
           web_sales_builder.append_row(
