@@ -9,7 +9,7 @@ namespace opossum {
 
 using Socket = boost::asio::ip::tcp::socket;
 
-static constexpr size_t BUFFER_SIZE = 1024u;
+static constexpr size_t BUFFER_SIZE = 8u;
 
 class BufferIterator: public std::iterator<std::forward_iterator_tag, char> {
  public:
@@ -56,7 +56,6 @@ class BufferIterator: public std::iterator<std::forward_iterator_tag, char> {
     size_t _position;
 };
 
-
 class Buffer {
  public:
   explicit Buffer(std::shared_ptr<Socket> socket) : _socket(socket) {}
@@ -66,6 +65,9 @@ class Buffer {
     return _data.begin();
   }
 
+  // Problem: full and empty might be same state, so head == tail
+  // Solution: Full state is tail + 1 == head
+  //           Empty state is head == tail
   inline size_t size() const {
     return (_current_position - _start_position) % BUFFER_SIZE;
   }
@@ -130,9 +132,7 @@ class ReadBuffer : public Buffer {
 
 class WriteBuffer : public Buffer {
  public:
-        template <typename sock>
-
-  explicit WriteBuffer(std::shared_ptr<sock> socket) : Buffer(socket) {}
+  explicit WriteBuffer(std::shared_ptr<Socket> socket) : Buffer(socket) {}
 
   void flush(const size_t bytes_required = 0);
 

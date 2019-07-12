@@ -44,36 +44,25 @@ std::string ReadBuffer::get_string() {
 // TODO(toni): doc: has to include null terminator
 std::string ReadBuffer::get_string(const size_t string_length, const bool has_null_terminator) {
   std::string result = "";
-  auto new_string_length = string_length;
-  if (has_null_terminator) {
-    new_string_length--;
-  }
-  result.reserve(new_string_length);
+  result.reserve(string_length);
 
   // First, use bytes available in buffer
   if (size() != 0) {
-    std::copy_n(_start_position, std::min(new_string_length, size()), std::back_inserter(result));
-    // std::copy_n(_start_position, std::min(string_length, size()), std::back_inserter(result));
+    std::copy_n(_start_position, std::min(string_length, size()), std::back_inserter(result));
     _start_position += result.size();
   }
 
-  // String might already be complete at this point
-  // TODO(toni): maybe _start_position++
-  // if (new_string_length == result.size()) { return result; }
-
-  // Read from network device until string is complete. Ignore last character since it is \0
-  while (result.size() < new_string_length) {
-  // while (result.size() < string_length) {
-    const auto substring_length = std::min(new_string_length - result.size(), BUFFER_SIZE) - 1;
+  // Read from network device until string is complete or skip if string is already complete.
+  while (result.size() < string_length) {
+    const auto substring_length = std::min(string_length - result.size(), BUFFER_SIZE - 1);
     _receive_if_necessary(substring_length);
     std::copy_n(_start_position, substring_length, std::back_inserter(result));
     _start_position += substring_length;
   }
 
-  // TODO(toni): check string lengths
-  // Skip ignored string terminator
+  // Ignore last character if it is \0
   if(has_null_terminator) {
-  _start_position++;
+    result.pop_back();
   }
 
   return result;
@@ -92,7 +81,7 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
 
   size_t bytes_read;
   if ((_current_position - _start_position) < 0 || &*_start_position == &_data[0]) {
-    bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&(*_current_position), BUFFER_SIZE), boost::asio::transfer_at_least(bytes_required));
+    bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&(*_current_position), BUFFER_SIZE - 1), boost::asio::transfer_at_least(bytes_required));
   } else {
     bytes_read = boost::asio::read(*_socket,
         std::array<boost::asio::mutable_buffer, 2>{

@@ -13,6 +13,7 @@
 #include "tasks/server/bind_prepared_statement_task.hpp"
 #include "types.hpp"
 #include <thread>
+#include "lossless_cast.hpp"
 
 namespace opossum {
 
@@ -63,15 +64,19 @@ std::vector<RowDescription> build_row_description(std::shared_ptr<const Table> t
 
 uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler& postgres_handler) {
   uint32_t chunk_size;
-  auto column_count = table->column_count();
+  const auto column_count = table->column_count();
   auto row_strings = std::vector<std::string>(column_count);
 
   for (const auto& chunk : table->chunks()) {
     chunk_size = chunk->size();
+    // auto segments = std::vector<std::shared_ptr<BaseSegment>>(column_count);
+    // for (const auto& segment : chunk->segments()) {
+    //   segments.emplace_back(segment);
+    // }
     for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
       for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-        const auto& segment = chunk->get_segment(column_id);
-        row_strings[column_id] = boost::lexical_cast<pmr_string>((*segment)[current_chunk_offset]);
+        const auto& attribute_value = (*(chunk->get_segment(column_id)))[current_chunk_offset];
+        row_strings[column_id] = lossless_variant_cast<pmr_string>(attribute_value).value();
       }
       postgres_handler.send_data_row(row_strings);
     }

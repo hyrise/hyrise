@@ -18,6 +18,7 @@ target_link_libraries(
 target_link_libraries(
     hyriseServerBoost
     hyrise
+    hyriseBenchmarkLib
 )
 target_include_directories(
     hyriseServerBoost

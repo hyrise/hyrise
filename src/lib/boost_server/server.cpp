@@ -2,6 +2,7 @@
 
 #include <boost/thread.hpp>
 #include <iostream>
+#include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
 
@@ -26,6 +27,7 @@ void Server::_start_session(boost::system::error_code error) {
 }
 
 void Server::run() {
+  TpchTableGenerator{0.01f, 100'000}.generate_and_store();
   _accept_new_session();
   std::cout << "Server running on port " << get_port() << std::endl;
   _io_service.run();

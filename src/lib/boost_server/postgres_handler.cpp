@@ -43,8 +43,8 @@ void PostgresHandler::ssl_deny() {
 
 void PostgresHandler::handle_startup_packet_body(const uint32_t size) {
   // As of now, we don't do anything with the startup packet body. It contains authentication data and the database
-  // name the user desires to connect to.
-  _read_buffer.reset();
+  // name the user desires to connect to. Let's read this information from the network device as a string and throw it away.
+  _read_buffer.get_string(size, false);
 }
 
 void PostgresHandler::send_authentication() {
