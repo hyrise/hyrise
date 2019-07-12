@@ -10,7 +10,10 @@ namespace opossum {
 void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpression>& expression,
                                             const std::string& column_name) {
   auto& entry = _find_or_create_expression_entry(expression);
-  entry.column_names.emplace_back(column_name);
+  if (std::find(entry.column_names.begin(), entry.column_names.end(), column_name) == entry.column_names.end()) {
+    // This cannot be implemented as a set because the column_names's order would get lost.
+    entry.column_names.emplace_back(column_name);
+  }
 }
 
 void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<opossum::AbstractExpression>& expression) {
