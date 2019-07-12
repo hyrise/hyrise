@@ -53,6 +53,14 @@ struct PosList final : private pmr_vector<RowID> {
 
   PosList& operator=(PosList&& other) = default;
 
+  PosList copy() const {
+    PosList copy(this->size());
+    for (uint32_t idx = 0; idx < this->size(); ++idx) {
+      copy[idx] = (*this)[idx];
+    }
+    return copy;
+  }
+
   // If all entries in the PosList shares a single ChunkID, it makes sense to explicitly give this guarantee in order
   // to enable some optimizations.
   void guarantee_single_chunk() { _references_single_chunk = true; }

@@ -170,6 +170,7 @@ set(
     storage/lz4_segment_test.cpp
     storage/materialize_test.cpp
     storage/multi_segment_index_test.cpp
+    storage/pos_list_test.cpp
     storage/prepared_plan_test.cpp
     storage/reference_segment_test.cpp
     storage/segment_accessor_test.cpp
