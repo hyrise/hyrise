@@ -308,6 +308,8 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
+    optimizer/strategy/or_to_union_rule.cpp
+    optimizer/strategy/or_to_union_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/predicate_split_up_rule.cpp

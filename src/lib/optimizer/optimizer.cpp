@@ -17,6 +17,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
+#include "strategy/or_to_union_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
@@ -104,6 +105,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+
+  optimizer->add_rule(std::make_unique<OrToUnionRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
