@@ -16,8 +16,10 @@ std::string CreateViewNode::description() const {
   stream << "[CreateView] " << (if_not_exists ? "IfNotExists " : "");
   stream << "Name: " << view_name << ", Columns: ";
 
-  for (const auto& [column_id, column_name] : view->column_names) {
-    stream << column_name << " ";
+  for (const auto& [column_id, column_names] : view->column_names) {
+    // Hotfix to make the master green:
+    Assert(column_names.size() == 1, "Using multiple names for a view column has unclear semantics (#1748)");
+    stream << column_names[0] << " ";
   }
 
   stream << "FROM (\n" << *view->lqp << ")";
