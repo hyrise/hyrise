@@ -1,4 +1,5 @@
 #include "SQLParser.h"
+#include "lossless_cast.hpp"
 #include "postgres_handler.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -13,8 +14,6 @@
 #include "tasks/server/bind_prepared_statement_task.hpp"
 #include "types.hpp"
 #include <thread>
-#include "storage/segment_iterate.hpp"
-#include "lossless_cast.hpp"
 
 namespace opossum {
 
@@ -59,48 +58,22 @@ std::vector<RowDescription> build_row_description(std::shared_ptr<const Table> t
 
     result.emplace_back(RowDescription{column_names[column_id], object_id, type_id});
   }
-
   return result;
 }
 
 uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler& postgres_handler) {
-  uint32_t chunk_size;
   const auto column_count = table->column_count();
-  auto row_strings = std::vector<std::string>(column_count);
-
+  auto attribute_strings = std::vector<std::string>(column_count);
 
   for (const auto& chunk : table->chunks()) {
-    chunk_size = chunk->size();
-    // auto segments = std::vector<std::shared_ptr<BaseSegment>>(column_count);
-    // for (const auto& segment : chunk->segments()) {
-    //   segments.emplace_back(segment);
-    // }
+    const auto chunk_size = chunk->size();
+    const auto& segments = chunk->segments();
     for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
-      for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-        const auto& attribute_value = (*(chunk->get_segment(column_id)))[current_chunk_offset];
-        row_strings[column_id] = lossless_variant_cast<pmr_string>(attribute_value).value();
-        // std::stringstream bla;
-        // bla << (*(chunk->get_segment(column_id)))[current_chunk_offset];
-        
-        // batch based MB/s
-
-        // segment_iterate(*(chunk->get_segment(column_id)), [&](const auto& val) {
-        //     std::cout << val.value() << std::endl;
-        // });
-        
-
-        // segment_with_iterators(*(chunk->get_segment(column_id)), [&](auto it, const auto end) {
-        //     for (; it != end; ++it) {
-        //         std::cout << (*it).value() << std::endl;
-        //     }
-        // });
-
-        // row_strings[column_id] = static_cast<pmr_string>(val);
-        // row_strings[column_id] = boost::lexical_cast<std::string>((*segment)[current_chunk_offset]);
-        // row_strings[column_id] = type_cast<std::string>((*segment)[current_chunk_offset]);
-        // row_strings[column_id] =  std::to_string((*segment)[current_chunk_offset]);
+      for (size_t segment_counter = 0; segment_counter < segments.size(); segment_counter++) {
+        const auto& attribute_value = (*segments[segment_counter])[current_chunk_offset];
+        attribute_strings[segment_counter] = lossless_variant_cast<pmr_string>(attribute_value).value();
       }
-      postgres_handler.send_data_row(row_strings);
+      postgres_handler.send_data_row(attribute_strings);
     }
   }
   return table->row_count();
