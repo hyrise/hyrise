@@ -9,7 +9,7 @@ namespace opossum {
 
 using Socket = boost::asio::ip::tcp::socket;
 
-static constexpr size_t BUFFER_SIZE = 8u;
+static constexpr size_t BUFFER_SIZE = 4096u;
 
 class BufferIterator: public std::iterator<std::forward_iterator_tag, char> {
  public:
@@ -58,7 +58,7 @@ class BufferIterator: public std::iterator<std::forward_iterator_tag, char> {
 
 class Buffer {
  public:
-  explicit Buffer(std::shared_ptr<Socket> socket) : _socket(socket) {}
+  explicit Buffer(const std::shared_ptr<Socket> socket) : _socket(socket) {}
 
   // really inline?
   inline char* data() noexcept {
@@ -69,7 +69,12 @@ class Buffer {
   // Solution: Full state is tail + 1 == head
   //           Empty state is head == tail
   inline size_t size() const {
-    return (_current_position - _start_position) % BUFFER_SIZE;
+    const auto current_size = _current_position - _start_position;
+    if (current_size < 0) {
+      return current_size + BUFFER_SIZE;
+    } else {
+      return current_size;
+    }
   }
 
   inline void reset() {
@@ -132,7 +137,7 @@ class ReadBuffer : public Buffer {
 
 class WriteBuffer : public Buffer {
  public:
-  explicit WriteBuffer(std::shared_ptr<Socket> socket) : Buffer(socket) {}
+  explicit WriteBuffer(const std::shared_ptr<Socket> socket) : Buffer(socket) {}
 
   void flush(const size_t bytes_required = 0);
 
@@ -141,7 +146,6 @@ class WriteBuffer : public Buffer {
   template <typename T, typename std::enable_if_t<std::is_same_v<uint32_t, T> || std::is_same_v<int32_t, T>, int> = 0>
   void put_value(const T network_value) {
     _flush_if_necessary(sizeof(T));
-    // auto val = htonl(network_value);
     const auto converted_value = htonl(network_value);
     std::copy_n(reinterpret_cast<const char*>(&converted_value), sizeof(T), _current_position);
     _current_position += sizeof(T);

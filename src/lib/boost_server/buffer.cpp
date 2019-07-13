@@ -79,15 +79,19 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
   // Already enough data present in buffer
   if (size() >= bytes_required) { return; }
 
+  // Buffer might contain unread data, so cant read full buffer size
+  const auto maximum_readable_size = BUFFER_SIZE - size() - 1;
+
   size_t bytes_read;
   if ((_current_position - _start_position) < 0 || &*_start_position == &_data[0]) {
-    bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&(*_current_position), BUFFER_SIZE - 1), boost::asio::transfer_at_least(bytes_required));
+    bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&(*_current_position), maximum_readable_size),
+                                   boost::asio::transfer_at_least(bytes_required - size()));
   } else {
     bytes_read = boost::asio::read(*_socket,
         std::array<boost::asio::mutable_buffer, 2>{
             boost::asio::buffer(&*_current_position, std::distance(&*_current_position, _data.end())),
             boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_start_position - 1)) },
-        boost::asio::transfer_at_least(bytes_required));
+        boost::asio::transfer_at_least(bytes_required - size()));
   }
 
   if (!bytes_read) {
@@ -146,7 +150,7 @@ void WriteBuffer::flush(const size_t bytes_required){
 }
 
 void WriteBuffer::_flush_if_necessary(const size_t bytes_required) {
-  if (bytes_required >= BUFFER_SIZE - size()) {
+  if (bytes_required >= BUFFER_SIZE - size() - 1) {
     flush(bytes_required);
   }
 }

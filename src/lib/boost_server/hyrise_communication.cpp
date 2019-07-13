@@ -13,6 +13,7 @@
 #include "tasks/server/bind_prepared_statement_task.hpp"
 #include "types.hpp"
 #include <thread>
+#include "storage/segment_iterate.hpp"
 #include "lossless_cast.hpp"
 
 namespace opossum {
@@ -67,6 +68,7 @@ uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler
   const auto column_count = table->column_count();
   auto row_strings = std::vector<std::string>(column_count);
 
+
   for (const auto& chunk : table->chunks()) {
     chunk_size = chunk->size();
     // auto segments = std::vector<std::shared_ptr<BaseSegment>>(column_count);
@@ -77,6 +79,26 @@ uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler
       for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
         const auto& attribute_value = (*(chunk->get_segment(column_id)))[current_chunk_offset];
         row_strings[column_id] = lossless_variant_cast<pmr_string>(attribute_value).value();
+        // std::stringstream bla;
+        // bla << (*(chunk->get_segment(column_id)))[current_chunk_offset];
+        
+        // batch based MB/s
+
+        // segment_iterate(*(chunk->get_segment(column_id)), [&](const auto& val) {
+        //     std::cout << val.value() << std::endl;
+        // });
+        
+
+        // segment_with_iterators(*(chunk->get_segment(column_id)), [&](auto it, const auto end) {
+        //     for (; it != end; ++it) {
+        //         std::cout << (*it).value() << std::endl;
+        //     }
+        // });
+
+        // row_strings[column_id] = static_cast<pmr_string>(val);
+        // row_strings[column_id] = boost::lexical_cast<std::string>((*segment)[current_chunk_offset]);
+        // row_strings[column_id] = type_cast<std::string>((*segment)[current_chunk_offset]);
+        // row_strings[column_id] =  std::to_string((*segment)[current_chunk_offset]);
       }
       postgres_handler.send_data_row(row_strings);
     }
@@ -85,13 +107,17 @@ uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler
 }
 
 std::shared_ptr<SQLPipeline> execute_pipeline(const std::string& sql) {
-  auto task = std::make_shared<PipelineExecutionTask>(sql);
-  CurrentScheduler::schedule_and_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
-  auto sql_pipeline = task->get_sql_pipeline();
-  if (sql_pipeline->failed_pipeline_statement()) {
-    // TODO(toni): error handling
-  }
+  auto sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{sql}.with_mvcc(UseMvcc::No).create_pipeline());
+  sql_pipeline->get_result_table();
   return sql_pipeline;
+
+  // auto task = std::make_shared<PipelineExecutionTask>(sql);
+  // CurrentScheduler::schedule_and_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
+  // auto sql_pipeline = task->get_sql_pipeline();
+  // if (sql_pipeline->failed_pipeline_statement()) {
+  //   // TODO(toni): error handling
+  // }
+  // return sql_pipeline;
 }
 
 std::string build_command_complete_message(std::shared_ptr<const AbstractOperator> root_operator_type, const uint64_t row_count) {
