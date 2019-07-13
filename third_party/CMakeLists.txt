@@ -448,4 +448,5 @@ target_include_directories(tpcds_dbgen
 target_compile_definitions(
   tpcds_dbgen
   PUBLIC
-  -D${MACHINE})
+  -D${MACHINE}
+  -DWITH_CLEANUP_FUNCTION)
