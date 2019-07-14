@@ -273,7 +273,9 @@ void JoinIndex::_reference_join_two_segments_using_index(
                      });
     }
 
-    PosList mutable_ref_seg_pos_list = reference_segment_pos_list->copy();
+    PosList mutable_ref_seg_pos_list(reference_segment_pos_list->size());
+    std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(),
+              mutable_ref_seg_pos_list.begin());
     std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
     std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
 
