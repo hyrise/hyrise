@@ -58,6 +58,7 @@ set(
     logical_query_plan/update_node_test.cpp
     logical_query_plan/validate_node_test.cpp
     lossless_cast_test.cpp
+    static_hash_map_test.cpp
     memory/numa_memory_resource_test.cpp
     operators/aggregate_hashsort_test.cpp
     operators/aggregate_test_runner.cpp
@@ -190,6 +191,7 @@ set(
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/bit_utils_test.cpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/plugin_manager_test.cpp

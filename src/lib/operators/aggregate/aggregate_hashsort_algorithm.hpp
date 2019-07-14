@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aggregate_hashsort_utils.hpp"
+#include "static_hash_map.hpp"
 
 namespace opossum {
 
@@ -153,12 +154,29 @@ std::pair<bool, size_t> hashing(const AggregateHashSortSetup& setup, const size_
   hash_table.min_load_factor(0.0f);
 #endif
 
+#ifdef USE_STATIC_HASH_MAP
+  using HashTableCompare = typename Run::HashTableCompare;
+
+  const auto compare = HashTableCompare{setup};
+
+  auto hash_table = StaticHashMap<HashTableKey, size_t, Hasher, HashTableCompare>{
+      ceil_power_of_two(static_cast<size_t>(hash_table_size)), hasher, compare};
+#if VERBOSE
+  Timer timer_set_empty_key;
+#endif
+#endif
+
 #if VERBOSE
   std::cout << indent(level) << "hashing(): requested hash_table_size: " << hash_table_size <<
   "; actual hash table size: " << hash_table.bucket_count() << "\n";
 #endif
 
+#ifdef USE_DENSE_HASH_MAP
   hash_table.max_load_factor(1.0f);
+#endif
+#ifdef USE_UNORDERED_MAP
+  hash_table.max_load_factor(1.0f);
+#endif
 
   auto hash_table_full = false;
   auto group_counter = size_t{0};

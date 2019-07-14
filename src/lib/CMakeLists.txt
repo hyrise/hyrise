@@ -321,6 +321,7 @@ set(
     optimizer/strategy/subquery_to_join_rule.cpp
     optimizer/strategy/subquery_to_join_rule.hpp
     resolve_type.hpp
+    static_hash_map.hpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp

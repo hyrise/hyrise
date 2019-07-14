@@ -21,6 +21,7 @@
 
 // #define USE_UNORDERED_MAP
 #define USE_DENSE_HASH_MAP
+//#define USE_STATIC_HASH_MAP
 
 namespace opossum {
 
@@ -777,6 +778,11 @@ inline size_t configure_hash_table(const AggregateHashSortSetup& setup, const si
   return static_cast<size_t>(
       std::ceil(std::min(config.hash_table_size * config.hash_table_max_load_factor, static_cast<float>(row_count)) /
                 config.hash_table_max_load_factor));
+#endif
+  
+#ifdef USE_STATIC_HASH_MAP
+  return static_cast<size_t>(
+      std::ceil(std::min(static_cast<float>(setup.config.hash_table_size), static_cast<float>(row_count)) / setup.config.hash_table_max_load_factor));
 #endif
 }
 
