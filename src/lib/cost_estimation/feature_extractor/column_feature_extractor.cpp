@@ -134,7 +134,8 @@ size_t ColumnFeatureExtractor::_get_memory_usage_for_column(const std::shared_pt
                                                             ColumnID column_id) {
   size_t memory_usage = 0;
 
-  for (const auto& chunk : table->chunks()) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    auto chunk = table->get_chunk(chunk_id);
     const auto& segment = chunk->get_segment(column_id);
     memory_usage += segment->estimate_memory_usage();
   }

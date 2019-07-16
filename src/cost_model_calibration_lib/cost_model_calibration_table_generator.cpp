@@ -38,8 +38,8 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
 
     const auto column_count = table->column_count();
-    const auto chunks = table->chunks();
-    for (const auto& chunk : chunks) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      auto chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         std::vector<ColumnID> column_ids{};
         column_ids.push_back(column_id);
