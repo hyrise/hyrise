@@ -15,12 +15,12 @@ class BaseSegment;
 /**
  * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
  * ARTIndex etc.
- * It is assumed that all index types support range queries and that they are composite indices.
+ * It is assumed that all index types support range queries and that they are composite indexes.
  * I.e. the index is sorted based on the column order. To check whether a key is less than another
  * key, the comparison is performed for the first column. If and only if they are equal, a check is
  * executed for the part of the next column. If needed, this step is repeated for all column
  * parts of both keys.
- * Since all indices have to support range queries, we chose to use iterators as means to get all
+ * Since all indexes have to support range queries, we chose to use iterators as means to get all
  * values that are requested from an index.
  * Further, this allows to use many stl functions like std::transform, std::for_each, std::find ...
  * In addition to that, we save space and time as it is not needed to copy values (compared to returning vectors of
@@ -52,9 +52,9 @@ class BaseIndex : private Noncopyable {
                                             uint32_t value_bytes);
 
   /**
-   * Creates an index on all given segments. Since all indices are composite indices the order of
-   * the provided segments matters. Creating two indices with the same segments, but in different orders
-   * leads to very different indices.
+   * Creates an index on all given segments. Since all indexes are composite indexes the order of
+   * the provided segments matters. Creating two indexes with the same segments, but in different orders
+   * leads to very different indexes.
    */
 
   BaseIndex() = delete;
@@ -128,7 +128,7 @@ class BaseIndex : private Noncopyable {
  protected:
   /**
    * Seperate the public interface of the index from the interface for programmers implementing own
-   * indices. Each method has to fullfill the contract of the corresponding public methods.
+   * indexes. Each method has to fullfill the contract of the corresponding public methods.
    */
   virtual Iterator _lower_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;

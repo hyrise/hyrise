@@ -1,0 +1,28 @@
+{
+  "columns": [
+    {
+      "name": "ib_income_band_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "ib_lower_bound",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "ib_upper_bound",
+      "type": "int",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}

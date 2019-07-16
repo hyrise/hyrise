@@ -1,0 +1,58 @@
+{
+  "columns": [
+    {
+      "name": "cp_catalog_page_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "cp_catalog_page_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "cp_start_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cp_end_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cp_department",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cp_catalog_number",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cp_catalog_page_number",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cp_description",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cp_type",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}

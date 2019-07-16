@@ -15,7 +15,7 @@ AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& exp
 
 std::string AliasNode::description() const {
   std::stringstream stream;
-  stream << "Alias [";
+  stream << "[Alias] ";
   for (auto column_id = ColumnID{0}; column_id < node_expressions.size(); ++column_id) {
     if (node_expressions[column_id]->as_column_name() == aliases[column_id]) {
       stream << aliases[column_id];
@@ -25,7 +25,6 @@ std::string AliasNode::description() const {
 
     if (column_id + 1u < node_expressions.size()) stream << ", ";
   }
-  stream << "]";
   return stream.str();
 }
 

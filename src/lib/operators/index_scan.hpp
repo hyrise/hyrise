@@ -15,7 +15,7 @@ class Table;
 class AbstractTask;
 
 /**
- * Operator that performs a predicate search using indices
+ * Operator that performs a predicate search using indexes
  *
  * Note: Scans only the set of chunks passed to the constructor
  */
