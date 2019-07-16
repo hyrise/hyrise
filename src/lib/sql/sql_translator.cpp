@@ -482,9 +482,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
           const auto column_name_iter = view->column_names.find(column_id);
           if (column_name_iter != view->column_names.end()) {
-            for (const auto& column_name : column_name_iter->second) {
-              sql_identifier_resolver->add_column_name(column_expression, column_name);
-            }
+            sql_identifier_resolver->add_column_name(column_expression, column_name_iter->second);
           }
           sql_identifier_resolver->set_table_name(column_expression, hsql_table_ref.name);
         }
@@ -1029,11 +1027,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsql::CreateStatement& create_statement) {
   auto lqp = _translate_select_statement(static_cast<const hsql::SelectStatement&>(*create_statement.select));
 
-  std::unordered_map<ColumnID, std::vector<std::string>> column_names;
+  std::unordered_map<ColumnID, std::string> column_names;
 
   for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
     for (const auto& identifier : _inflated_select_list_elements[column_id].identifiers) {
-      column_names[column_id].emplace_back(identifier.column_name);
+      column_names.emplace(column_id, identifier.column_name);
     }
   }
 
@@ -1043,7 +1041,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
                 "Number of Columns in CREATE VIEW does not match SELECT statement");
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
-      column_names[column_id].emplace_back((*create_statement.viewColumns)[column_id]);
+      column_names.emplace(column_id, (*create_statement.viewColumns)[column_id]);
+    }
+  } else {
+    for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
+      const auto identifiers =
+          _sql_identifier_resolver->get_expression_identifiers(lqp->column_expressions()[column_id]);
+      for (const auto& identifier : identifiers) {
+        column_names.emplace(column_id, identifier.column_name);
+      }
     }
   }
 

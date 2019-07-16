@@ -17,8 +17,6 @@ std::string CreateViewNode::description() const {
   stream << "Name: " << view_name << ", Columns: ";
 
   for (const auto& [column_id, column_names] : view->column_names) {
-    // Hotfix to make the master green:
-    Assert(column_names.size() == 1, "Using multiple names for a view column has unclear semantics (#1748)");
     stream << column_names[0] << " ";
   }
 
