@@ -2105,12 +2105,13 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
 
   // clang-format off
   const auto expected_lqp =
-    AliasNode::make(expression_vector(int_int_int_b), std::vector<std::string>({"z"}),
-      ProjectionNode::make(expression_vector(int_int_int_b),
-        PredicateNode::make(greater_than_equals_(int_int_int_b, value_(10)),
-          ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
-            PredicateNode::make(greater_than_(int_int_int_a, value_(9)),
-              stored_table_node_int_int_int)))));
+    AliasNode::make(expression_vector(int_int_int_b), std::vector<std::string>{"z"},
+      AliasNode::make(expression_vector(int_int_int_b), std::vector<std::string>{"z"},
+        ProjectionNode::make(expression_vector(int_int_int_b),
+          PredicateNode::make(greater_than_equals_(int_int_int_b, value_(10)),
+            ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+              PredicateNode::make(greater_than_(int_int_int_a, value_(9)),
+                stored_table_node_int_int_int))))));
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
