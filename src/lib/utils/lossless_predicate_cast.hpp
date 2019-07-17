@@ -6,7 +6,7 @@ std::optional<float> next_float_towards(double value, double towards);
 
 // Even if lossless_cast is not successful, we might be able to do a cast if we know the predicate that is used.
 // As 3.1 has different float representations as a double and as a float (and neither is exact), lossless_cast will
-// fail. However, `float(a) > double(3.1)` can be reformulated as `float(a) >= float(3.099999904632568359375)`.
+// fail. However, `float(a) > double(3.1)` can be reformulated as `float(a) >= float(3.1000001430511474609375)`.
 // In the table scan, this helps us harmonizing the input types and using more efficient scan implementations without
 // falling back to more general implementations.
 //
