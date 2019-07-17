@@ -714,7 +714,7 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   auto predicate_node_a = PredicateNode::make(equals_(int_float2_a, 3));
   auto predicate_node_b = PredicateNode::make(equals_(int_float2_a, 4));
   auto predicate_node_c = PredicateNode::make(equals_(int_float2_b, 5));
-  auto union_node = UnionNode::make(UnionMode::All);
+  auto union_node = UnionNode::make(UnionMode::Positions);
   const auto& lqp = union_node;
 
   union_node->set_left_input(predicate_node_a);

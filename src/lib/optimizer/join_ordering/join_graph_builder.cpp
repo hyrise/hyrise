@@ -83,10 +83,14 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
        */
 
       const auto union_node = std::static_pointer_cast<UnionNode>(node);
-      const auto parse_result = _parse_union(union_node);
+      if (union_node->union_mode == UnionMode::Positions) {
+        const auto parse_result = _parse_union(union_node);
 
-      _traverse(parse_result.base_node);
-      _predicates.emplace_back(parse_result.predicate);
+        _traverse(parse_result.base_node);
+        _predicates.emplace_back(parse_result.predicate);
+      } else {
+        _vertices.emplace_back(node);
+      }
     } break;
 
     default: { Fail("Node type cannot be used for JoinGraph, should have been detected as a vertex"); }

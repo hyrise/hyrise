@@ -129,7 +129,7 @@ TEST_F(JoinGraphBuilderTest, Disjunction) {
 
   // clang-format off
   const auto lqp =
-  UnionNode::make(UnionMode::All,
+  UnionNode::make(UnionMode::Positions,
     PredicateNode::make(equals_(a_a, 5),
       node_a),
     UnionNode::make(UnionMode::Positions,
