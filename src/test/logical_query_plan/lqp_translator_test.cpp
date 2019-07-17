@@ -45,6 +45,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -421,7 +422,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
    * Check PQP
    */
-  const auto union_op = std::dynamic_pointer_cast<UnionPositions>(op);
+  const auto union_op = std::dynamic_pointer_cast<UnionAll>(op);
   ASSERT_TRUE(union_op);
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
@@ -455,7 +456,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
    * Check PQP
    */
-  const auto union_op = std::dynamic_pointer_cast<UnionPositions>(op);
+  const auto union_op = std::dynamic_pointer_cast<UnionAll>(op);
   ASSERT_TRUE(union_op);
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
