@@ -94,6 +94,6 @@ TEST(TpchTableGeneratorTest, GenerateAndStore) {
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("nation"));
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("region"));
 
-  StorageManager::reset();
+  Hyrise::reset();
 }
 }  // namespace opossum

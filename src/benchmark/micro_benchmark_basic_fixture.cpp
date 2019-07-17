@@ -32,7 +32,7 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& state) {
   _table_dict_wrapper->execute();
 }
 
-void MicroBenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::Hyrise::get().storage_manager.reset(); }
+void MicroBenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::Hyrise::reset(); }
 
 void MicroBenchmarkBasicFixture::_clear_cache() { micro_benchmark_clear_cache(); }
 

@@ -91,7 +91,7 @@ TEST_F(StorageManagerTest, DropView) {
 }
 
 TEST_F(StorageManagerTest, ResetView) {
-  StorageManager::reset();
+  Hyrise::reset();
   auto& sm = Hyrise::get().storage_manager;
   EXPECT_THROW(sm.get_view("first_view"), std::exception);
 }

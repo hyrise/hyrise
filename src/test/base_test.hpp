@@ -68,9 +68,7 @@ class BaseTestWithParam
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
     CurrentScheduler::set(nullptr);
 
-    PluginManager::reset();
-    StorageManager::reset();
-    TransactionManager::reset();
+    Hyrise::reset();
     SQLPipelineBuilder::default_pqp_cache = nullptr;
     SQLPipelineBuilder::default_lqp_cache = nullptr;
   }

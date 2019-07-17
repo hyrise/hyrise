@@ -71,7 +71,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
     join->execute();
   }
 
-  opossum::Hyrise::get().storage_manager.reset();
+  opossum::Hyrise::reset();
 }
 
 template <class C>

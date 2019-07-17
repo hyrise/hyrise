@@ -13,7 +13,7 @@ namespace opossum {
 static void BM_TpchTableGenerator(benchmark::State& state) {  // NOLINT
   for (auto _ : state) {
     TpchTableGenerator(0.5f, 1000).generate_and_store();
-    StorageManager::reset();
+    Hyrise::reset();
   }
 }
 BENCHMARK(BM_TpchTableGenerator);

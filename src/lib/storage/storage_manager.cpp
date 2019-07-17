@@ -16,6 +16,10 @@
 
 namespace opossum {
 
+StorageManager::StorageManager() : _tables(std::map<std::string, std::shared_ptr<Table>>{}),
+                                   _views(std::map<std::string, std::shared_ptr<LQPView>>{}),
+                                   _prepared_plans(std::map<std::string, std::shared_ptr<PreparedPlan>>{}) {}
+
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
@@ -130,8 +134,6 @@ void StorageManager::drop_prepared_plan(const std::string& name) {
 const std::map<std::string, std::shared_ptr<PreparedPlan>>& StorageManager::prepared_plans() const {
   return _prepared_plans;
 }
-
-void StorageManager::reset() { get() = StorageManager{}; }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};

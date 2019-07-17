@@ -7,19 +7,16 @@
 
 namespace opossum {
 
-void TransactionManager::reset() {
-  auto& manager = get();
-  manager._next_transaction_id = INITIAL_TRANSACTION_ID;
-  manager._last_commit_id = INITIAL_COMMIT_ID;
-  manager._last_commit_context = std::make_shared<CommitContext>(INITIAL_COMMIT_ID);
-  Assert(manager._active_snapshot_commit_ids.empty(),
-         "Some transactions do not seem to have finished yet as they are still registered as active.");
-}
-
 TransactionManager::TransactionManager()
     : _next_transaction_id{INITIAL_TRANSACTION_ID},
       _last_commit_id{INITIAL_COMMIT_ID},
-      _last_commit_context{std::make_shared<CommitContext>(INITIAL_COMMIT_ID)} {}
+      _last_commit_context{std::make_shared<CommitContext>(INITIAL_COMMIT_ID)},
+      _mutex_active_snapshot_commit_ids{std::mutex{}},
+      _active_snapshot_commit_ids{std::unordered_multiset<CommitID>{}} {}
+
+TransactionManager& TransactionManager::operator=(TransactionManager&& transaction_manager) {
+  return transaction_manager;
+}
 
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 

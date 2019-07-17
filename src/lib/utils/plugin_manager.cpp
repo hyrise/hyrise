@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+PluginManager::PluginManager() : _plugins(std::unordered_map<PluginName, PluginHandleWrapper>{}) {}
+
 bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
   for (auto& [_, plugin_handle_wrapper] : _plugins) {
     if (plugin_handle_wrapper.plugin == plugin) {
@@ -47,8 +49,6 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
   plugin->start();
 }
-
-void PluginManager::reset() { get() = PluginManager(); }
 
 void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin = _plugins.find(name);
