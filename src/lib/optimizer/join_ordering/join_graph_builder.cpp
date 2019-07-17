@@ -83,6 +83,7 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
        */
 
       const auto union_node = std::static_pointer_cast<UnionNode>(node);
+
       if (union_node->union_mode == UnionMode::Positions) {
         const auto parse_result = _parse_union(union_node);
 
