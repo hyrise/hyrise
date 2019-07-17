@@ -16,8 +16,8 @@ std::string CreateViewNode::description() const {
   stream << "[CreateView] " << (if_not_exists ? "IfNotExists " : "");
   stream << "Name: " << view_name << ", Columns: ";
 
-  for (const auto& [column_id, column_names] : view->column_names) {
-    stream << column_names[0] << " ";
+  for (const auto& [column_id, column_name] : view->column_names) {
+    stream << column_name << " ";
   }
 
   stream << "FROM (\n" << *view->lqp << ")";

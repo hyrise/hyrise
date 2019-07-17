@@ -566,8 +566,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesUsedInView) {
       stored_table_node_int_float));
 
   const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                      {ColumnID{0}, "a"},
-                                                                      {ColumnID{1}, "b"}
+                                                                      {ColumnID{0}, "x"},
+                                                                      {ColumnID{1}, "y"}
                                                                       });
   // clang-format on
 
@@ -592,8 +592,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarColumnsUsedInView)
         stored_table_node_int_float)));
 
   const auto view_columns = std::unordered_map<ColumnID, std::string>({
-                                                                      {ColumnID{0}, "a"},
-                                                                      {ColumnID{1}, "a"}
+                                                                      {ColumnID{0}, "a1"},
+                                                                      {ColumnID{1}, "a2"}
                                                                       });
   // clang-format on
 
