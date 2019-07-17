@@ -1994,6 +1994,8 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("DELETE FROM no_such_table WHERE a = 1"), InvalidInputException);
   EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1"), InvalidInputException);
   EXPECT_THROW(compile_query("UPDATE no_such_table SET a = 1 WHERE a = 1"), InvalidInputException);
+  EXPECT_THROW(compile_query("WITH q AS (SELECT * FROM int_float), q AS (SELECT b FROM q) SELECT * FROM q;"),
+               InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQuerySimple) {
@@ -2003,9 +2005,9 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQuerySimple) {
       "SELECT * FROM with_query WHERE a > 123;");
   // clang-format off
   const auto expected_lqp =
-      PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
-        ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
-          stored_table_node_int_int_int));
+    PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
+      ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+        stored_table_node_int_int_int));
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

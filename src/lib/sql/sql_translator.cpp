@@ -294,7 +294,8 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
   // Store resolved WithDescription / temporary view
   const auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
   //   A WITH description masks a preceding WITH description if their aliases are identical
-  _with_descriptions.insert_or_assign(desc.alias, lqp_view);
+  AssertInput(_with_descriptions.count(desc.alias) == 0, "Invalid redeclaration of WITH alias.");
+  _with_descriptions.emplace(desc.alias, lqp_view);
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr,
