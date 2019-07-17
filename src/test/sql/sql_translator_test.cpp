@@ -2052,29 +2052,40 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAliasWhere) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseDoubleQuery) {
-  // WITH queries build on top of each other
   const auto actual_lqp = compile_query(
       "WITH "
-      "with_query1 AS (SELECT a, b FROM int_int_int), "
-      "with_query2 AS (SELECT b FROM with_query1) "
-      "SELECT * FROM with_query2;");
+      "wq1 AS (SELECT a AS a1, b AS b1 FROM int_float), "
+      "wq2 AS (SELECT a AS a2, b AS b2 FROM int_float2) "
+      "SELECT * FROM wq1 JOIN wq2 ON a1 = a2;");
 
-  // clang-format off
+  const auto expressions_wq1 = expression_vector(int_float_a, int_float_b);
+  const auto expressions_wq2 = expression_vector(int_float2_a, int_float2_b);
+  const auto aliases_wq1 = std::vector<std::string>({"a1", "b1"});
+  const auto aliases_wq2 = std::vector<std::string>({"a2", "b2"});
+  const auto node_a =
+    AliasNode::make(expressions_wq1, aliases_wq1,
+      stored_table_node_int_float);
+  const auto node_b =
+    AliasNode::make(expressions_wq2, aliases_wq2,
+      stored_table_node_int_float2);
+
+  const auto a1_equals_a2 = equals_(int_float_a, int_float2_a);
+  const auto expressions_join = expression_vector(int_float_a, int_float_b, int_float2_a, int_float2_b);
+  const auto aliases_join = std::vector<std::string>({"a1", "b1", "a2", "b2"});
+
   const auto expected_lqp =
-    ProjectionNode::make(expression_vector(int_int_int_b),
-      ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
-        stored_table_node_int_int_int));
-  // clang-format on
+    AliasNode::make(expressions_join, aliases_join,
+      JoinNode::make(JoinMode::Inner, a1_equals_a2, node_a, node_b));
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, WithClauseDoubleQueryMasking) {
-  // Second WITH query masks first one
+TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesSimple) {
   const auto actual_lqp = compile_query(
       "WITH "
-      "with_query AS (SELECT a, b FROM int_int_int), "
-      "with_query AS (SELECT b FROM with_query) "
-      "SELECT * FROM with_query;");
+      "wq1 AS (SELECT a, b FROM int_int_int), "
+      "wq2 AS (SELECT b FROM wq1) "
+      "SELECT * FROM wq2;");
 
   // clang-format off
   const auto expected_lqp =
