@@ -1043,14 +1043,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
     for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
       column_names.insert_or_assign(column_id, (*create_statement.viewColumns)[column_id]);
     }
-  } else {
-    for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
-      const auto identifiers =
-          _sql_identifier_resolver->get_expression_identifiers(lqp->column_expressions()[column_id]);
-      for (const auto& identifier : identifiers) {
-        column_names.insert_or_assign(column_id, identifier.column_name);
-      }
-    }
   }
 
   return CreateViewNode::make(create_statement.tableName, std::make_shared<LQPView>(lqp, column_names),
