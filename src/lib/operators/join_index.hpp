@@ -21,6 +21,11 @@ using IndexRange = std::pair<BaseIndex::Iterator, BaseIndex::Iterator>;
    * This operator joins two tables using one column of each table.
    * A speedup compared to the Nested Loop Join is achieved by avoiding the inner loop, and instead
    * finding the index side values utilizing the index.
+   * 
+   * For index reference joins, only the join JoinMode::Inner is supported. Additionally, if the join segments of the
+   * reference table don't provide the guarantee of referencing one single chunk (of the original data table), then the
+   * fallback solution (nested join loop) is used. Using the fallback solution does not increment the number of chunks
+   * scanned with index in the performance data.
    *
    * Note: An index needs to be present on the index side table in order to execute an index join.
    */

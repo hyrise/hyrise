@@ -113,10 +113,6 @@ class JoinIndexTest : public BaseTest {
     }
 
     const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join->performance_data());
-    // for index reference joins, only the join JoinMode::Inner is supported. Additionally, if the join segments of the
-    // reference table don't provde the guarantee of referencing one single chunk (of the original data table), then the
-    // fallback solution (nested join loop) is used. Using the fallback solution does not increment the number of chunks
-    // scanned with index.
     if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
                         (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
       EXPECT_EQ(performance_data.chunks_scanned_with_index,
@@ -473,7 +469,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
   join->execute();
 
   // Referencing single chunk guarantee is not given since the left input of the index join is also an index join
-  // and the IndexSide is left. The execution of the join index does not provide single chunk reference guarantee.
+  // and the IndexSide is left. The execution of the index join does not provide single chunk reference guarantee.
   this->test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_left.tbl", 1, true,
                          IndexSide::Left, false);
@@ -529,7 +525,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexRight) {
   join->execute();
 
   // Referencing single chunk guarantee is not given since the right input of the index join is also an index join
-  // and the IndexSide is right. The execution of the join index does not provide single chunk reference guarantee.
+  // and the IndexSide is right. The execution of the index join does not provide single chunk reference guarantee.
   this->test_join_output(scan_c, join, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
                          "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_right.tbl", 1, true,
                          IndexSide::Right, false);

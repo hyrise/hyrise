@@ -217,6 +217,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                                       const bool track_index_matches, const bool is_semi_or_anti_join,
                                       MultiPredicateJoinEvaluator& secondary_predicate_evaluator) {
+  PerformanceWarning("Fallback nested loop used.");
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
 
   const auto index_segment =
@@ -274,8 +275,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
     }
 
     PosList mutable_ref_seg_pos_list(reference_segment_pos_list->size());
-    std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(),
-              mutable_ref_seg_pos_list.begin());
+    std::copy(reference_segment_pos_list->begin(), reference_segment_pos_list->end(), mutable_ref_seg_pos_list.begin());
     std::sort(mutable_ref_seg_pos_list.begin(), mutable_ref_seg_pos_list.end());
     std::sort(index_scan_pos_list.begin(), index_scan_pos_list.end());
 
