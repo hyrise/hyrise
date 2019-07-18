@@ -1295,8 +1295,11 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
   // NOLINTNEXTLINE
   const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
-      "SELECT ? + (SELECT a + ? FROM int_float2) FROM (SELECT a FROM int_float WHERE ? > (SELECT a + ? FROM "
-      "int_string)) s1");
+      "SELECT ? + (SELECT a + ? "
+                  "FROM int_float2) "
+      "FROM (SELECT a "
+            "FROM int_float WHERE ? > (SELECT a + ? "
+                                      "FROM int_string)) s1");
 
   ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 4u);
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{2});
@@ -1375,9 +1378,11 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
    * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
    */
   const auto query =
-      "SELECT ?, "
-      "  (SELECT ? + MAX(b) + (SELECT int_float2.a + ? + int_float2.b) FROM int_float2) "
-      "FROM (SELECT a + ? AS k FROM int_float) s1 WHERE k > (SELECT ? FROM int_string)";
+      "SELECT ?, (SELECT ? + MAX(b) + (SELECT int_float2.a + ? + int_float2.b) "
+                 "FROM int_float2) "
+      "FROM (SELECT a + ? AS k "
+            "FROM int_float) s1 WHERE k > (SELECT ? "
+                                          "FROM int_string)";
 
   // NOLINTNEXTLINE
   const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(query);
