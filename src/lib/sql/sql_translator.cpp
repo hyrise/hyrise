@@ -500,9 +500,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
     case hsql::kTableName: {
       // WITH descriptions or sub-queries are treated as though they were inline views or tables
       // They mask existing tables or views with the same name.
-      const auto with_descriptions_iterator = _with_descriptions.find(hsql_table_ref.name);
-      if (with_descriptions_iterator != _with_descriptions.end()) {
-        const auto lqp_view = with_descriptions_iterator->second->deep_copy();
+      const auto with_descriptions_iter = _with_descriptions.find(hsql_table_ref.name);
+      if (with_descriptions_iter != _with_descriptions.end()) {
+        const auto lqp_view = with_descriptions_iter->second->deep_copy();
         lqp = lqp_view->lqp;
 
         // Add all named columns to the IdentifierContext
