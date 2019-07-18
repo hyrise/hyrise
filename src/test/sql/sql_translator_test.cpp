@@ -2183,4 +2183,26 @@ TEST_F(SQLTranslatorTest, WithClausePlaceholderSupport) {
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
+
+TEST_F(SQLTranslatorTest, WithClauseTableMasking) {
+  // Check StorageManager for existance of table int_float
+  const auto pre_condition_lqp_actual = compile_query("SELECT * FROM int_float;");
+  const auto pre_condition_lqp_expected = stored_table_node_int_float;
+  EXPECT_LQP_EQ(pre_condition_lqp_actual, pre_condition_lqp_expected);
+
+  // Mask StorageManager's int_float table via WITH clause
+  const auto actual_lqp = compile_query(
+      "WITH "
+      "int_float AS (SELECT a, b FROM int_int_int) "
+      "SELECT * FROM int_float;");
+
+  // clang-format off
+  const auto expected_lqp =
+    ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+      stored_table_node_int_int_int);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
