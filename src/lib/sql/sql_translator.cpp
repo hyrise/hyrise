@@ -498,7 +498,6 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
   switch (hsql_table_ref.type) {
     case hsql::kTableName: {
-
       // WITH descriptions or sub-queries are treated as though they were inline views or tables
       // They mask existing tables or views with the same name.
       const auto with_descriptions_iterator = _with_descriptions.find(hsql_table_ref.name);
