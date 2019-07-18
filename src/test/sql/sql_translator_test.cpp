@@ -2006,54 +2006,66 @@ TEST_F(SQLTranslatorTest, CatchInputErrors) {
 TEST_F(SQLTranslatorTest, WithClauseSingleQuerySimple) {
   const auto actual_lqp = compile_query(
       "WITH "
-      "with_query AS (SELECT a, b FROM int_int_int) "
-      "SELECT * FROM with_query WHERE a > 123;");
+      "wq AS (SELECT a, b FROM int_int_int) "
+      "SELECT * FROM wq WHERE a > 123;");
+
   // clang-format off
+  const auto wq_lqp =
+    ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+      stored_table_node_int_int_int);
+
   const auto expected_lqp =
     PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
-      ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
-        stored_table_node_int_int_int));
+      wq_lqp);
   // clang-format on
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQueryAlias) {
   const auto actual_lqp_alias = compile_query(
       "WITH "
-      "with_query AS (SELECT a AS x FROM int_int_int) "
-      "SELECT * FROM with_query WHERE x > 123;");
-  const auto aliases = std::vector<std::string>{"x"};
-  const auto expressions = expression_vector(int_int_int_a);
+      "wq AS (SELECT a AS x FROM int_int_int) "
+      "SELECT * FROM wq WHERE x > 123;");
 
   // clang-format off
+  const auto aliases = std::vector<std::string>{"x"};
+  const auto expressions = expression_vector(int_int_int_a);
+  const auto wq_lqp =
+    AliasNode::make(expressions, aliases,
+      ProjectionNode::make(expression_vector(int_int_int_a),
+        stored_table_node_int_int_int));
+
   const auto expected_lqp_alias =
     AliasNode::make(expressions, aliases,
       PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
-        AliasNode::make(expressions, aliases,
-          ProjectionNode::make(expression_vector(int_int_int_a),
-            stored_table_node_int_int_int))));
+        wq_lqp));
   // clang-format on
+
   EXPECT_LQP_EQ(actual_lqp_alias, expected_lqp_alias);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQueryAliasWhere) {
-  const auto actual_lqp_alias = compile_query(
+  const auto actual_lqp = compile_query(
       "WITH "
-      "with_query AS (SELECT a AS x FROM int_int_int WHERE a > 123) "
-      "SELECT x AS z FROM with_query;");
-  const auto aliases_inner = std::vector<std::string>{"x"};
-  const auto aliases_outer = std::vector<std::string>{"z"};
-  const auto expressions = expression_vector(int_int_int_a);
+      "wq AS (SELECT a AS x FROM int_int_int WHERE a > 123) "
+      "SELECT x AS z FROM wq;");
 
   // clang-format off
-  const auto expected_lqp_alias =
-    AliasNode::make(expressions, aliases_outer,
-      AliasNode::make(expressions, aliases_inner,
-        ProjectionNode::make(expression_vector(int_int_int_a),
-          PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
-            stored_table_node_int_int_int))));
+  const auto alias_x = std::vector<std::string>{"x"};
+  const auto wq_lqp =
+    AliasNode::make(expression_vector(int_int_int_a), alias_x,
+      ProjectionNode::make(expression_vector(int_int_int_a),
+        PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
+          stored_table_node_int_int_int)));
+
+  const auto alias_z = std::vector<std::string>{"z"};
+  const auto expected_lqp =
+    AliasNode::make(expression_vector(int_int_int_a), alias_z,
+      wq_lqp);
   // clang-format on
-  EXPECT_LQP_EQ(actual_lqp_alias, expected_lqp_alias);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseDoubleQuery) {
@@ -2062,25 +2074,26 @@ TEST_F(SQLTranslatorTest, WithClauseDoubleQuery) {
       "wq1 AS (SELECT a AS a1, b AS b1 FROM int_float), "
       "wq2 AS (SELECT a AS a2, b AS b2 FROM int_float2) "
       "SELECT * FROM wq1 JOIN wq2 ON a1 = a2;");
-
+  // clang-format off
   const auto expressions_wq1 = expression_vector(int_float_a, int_float_b);
-  const auto expressions_wq2 = expression_vector(int_float2_a, int_float2_b);
   const auto aliases_wq1 = std::vector<std::string>{"a1", "b1"};
-  const auto aliases_wq2 = std::vector<std::string>{"a2", "b2"};
-  const auto node_a =
+  const auto wq1_lqp =
     AliasNode::make(expressions_wq1, aliases_wq1,
       stored_table_node_int_float);
-  const auto node_b =
+
+  const auto expressions_wq2 = expression_vector(int_float2_a, int_float2_b);
+  const auto aliases_wq2 = std::vector<std::string>{"a2", "b2"};
+  const auto wq2_lqp =
     AliasNode::make(expressions_wq2, aliases_wq2,
       stored_table_node_int_float2);
 
-  const auto a1_equals_a2 = equals_(int_float_a, int_float2_a);
   const auto expressions_join = expression_vector(int_float_a, int_float_b, int_float2_a, int_float2_b);
   const auto aliases_join = std::vector<std::string>({"a1", "b1", "a2", "b2"});
-
+  const auto a1_equals_a2 = equals_(int_float_a, int_float2_a);
   const auto expected_lqp =
     AliasNode::make(expressions_join, aliases_join,
-      JoinNode::make(JoinMode::Inner, a1_equals_a2, node_a, node_b));
+      JoinNode::make(JoinMode::Inner, a1_equals_a2, wq1_lqp, wq2_lqp));
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -2093,11 +2106,16 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesSimple) {
       "SELECT * FROM wq2;");
 
   // clang-format off
-  const auto expected_lqp =
+  const auto wq1_lqp =
+    ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+      stored_table_node_int_int_int);
+  const auto wq2_lqp =
     ProjectionNode::make(expression_vector(int_int_int_b),
-      ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
-        stored_table_node_int_int_int));
+      wq1_lqp);
+
+  const auto expected_lqp = wq2_lqp;
   // clang-format on
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -2109,14 +2127,22 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
       "SELECT * FROM wq2;");
 
   // clang-format off
+  const auto wq1_lqp =
+    ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
+      PredicateNode::make(greater_than_(int_int_int_a, value_(9)),
+        stored_table_node_int_int_int));
+
+  const auto alias_z = std::vector<std::string>{"z"};
+  const auto wq2_lqp =
+    AliasNode::make(expression_vector(int_int_int_b), alias_z,
+      ProjectionNode::make(expression_vector(int_int_int_b),
+        PredicateNode::make(greater_than_equals_(int_int_int_b, value_(10)),
+          wq1_lqp)));
+
+  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
   const auto expected_lqp =
-    AliasNode::make(expression_vector(int_int_int_b), std::vector<std::string>{"z"},
-      AliasNode::make(expression_vector(int_int_int_b), std::vector<std::string>{"z"},
-        ProjectionNode::make(expression_vector(int_int_int_b),
-          PredicateNode::make(greater_than_equals_(int_int_int_b, value_(10)),
-            ProjectionNode::make(expression_vector(int_int_int_a, int_int_int_b),
-              PredicateNode::make(greater_than_(int_int_int_a, value_(9)),
-                stored_table_node_int_int_int))))));
+    AliasNode::make(expression_vector(int_int_int_b), alias_z,
+      wq2_lqp);
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
