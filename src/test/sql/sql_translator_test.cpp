@@ -2147,4 +2147,40 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, WithClausePlaceholderSupport) {
+  // NOLINTNEXTLINE
+  const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
+      "WITH "
+      "wq AS (SELECT ?, a, b "
+             "FROM int_int_int WHERE a > ?) "
+      "SELECT ?, a "
+      "FROM (SELECT * FROM wq WHERE b = ?) AS t WHERE a = ?;");
+
+  ASSERT_EQ(parameter_ids_of_value_placeholders.size(), 5u);
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(0), ParameterID{0});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(1), ParameterID{1});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(2), ParameterID{3});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{2});
+  EXPECT_EQ(parameter_ids_of_value_placeholders.at(4), ParameterID{4});
+
+  // clang-format off
+  const auto placeholder_0 = placeholder_(ParameterID{0});
+  const auto placeholder_1 = placeholder_(ParameterID{1});
+  const auto wq_lqp =
+    ProjectionNode::make(expression_vector(placeholder_0, int_int_int_a, int_int_int_b),
+      PredicateNode::make(greater_than_(int_int_int_a, placeholder_1),
+        stored_table_node_int_int_int));
+
+  const auto placeholder_2 = placeholder_(ParameterID{3});
+  const auto placeholder_3 = placeholder_(ParameterID{2});
+  const auto placeholder_4 = placeholder_(ParameterID{4});
+  const auto expected_lqp =
+    ProjectionNode::make(expression_vector(placeholder_2, int_int_int_a),
+      PredicateNode::make(equals_(int_int_int_a, placeholder_4),
+        PredicateNode::make(equals_(int_int_int_b, placeholder_3),
+          wq_lqp)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 }  // namespace opossum
