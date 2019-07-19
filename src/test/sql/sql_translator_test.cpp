@@ -1293,7 +1293,7 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 }
 
 TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
-  // NOLINTNEXTLINE
+  // clang-format off
   const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
       "SELECT ? + (SELECT a + ? "
                   "FROM int_float2) "
@@ -1312,7 +1312,6 @@ TEST_F(SQLTranslatorTest, ValuePlaceholdersInSubselect) {
   const auto placeholder_2 = placeholder_(ParameterID{0});
   const auto placeholder_3 = placeholder_(ParameterID{1});
 
-  // clang-format off
   const auto subquery_a_lqp =
   ProjectionNode::make(expression_vector(add_(int_float2_a, placeholder_1)),
                        stored_table_node_int_float2);
@@ -1377,6 +1376,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   /**
    * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
    */
+  // clang-format off
   const auto query =
       "SELECT ?, (SELECT ? + MAX(b) + (SELECT int_float2.a + ? + int_float2.b) "
                  "FROM int_float2) "
@@ -1402,8 +1402,6 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
 
   const auto parameter_int_float2_a = correlated_parameter_(ParameterID{3}, int_float2_a);
   const auto parameter_int_float2_b = correlated_parameter_(ParameterID{5}, int_float2_b);
-
-  // clang-format off
 
   // SELECT int_float2.a + ? + int_float2.b
   const auto subquery_a_lqp =
@@ -2148,7 +2146,7 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
 }
 
 TEST_F(SQLTranslatorTest, WithClausePlaceholderSupport) {
-  // NOLINTNEXTLINE
+  // clang-format off
   const auto [actual_lqp, parameter_ids_of_value_placeholders] = compile_prepared_query(
       "WITH "
       "wq AS (SELECT ?, a, b "
@@ -2163,7 +2161,6 @@ TEST_F(SQLTranslatorTest, WithClausePlaceholderSupport) {
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(3), ParameterID{2});
   EXPECT_EQ(parameter_ids_of_value_placeholders.at(4), ParameterID{4});
 
-  // clang-format off
   const auto placeholder_0 = placeholder_(ParameterID{0});
   const auto placeholder_1 = placeholder_(ParameterID{1});
   const auto wq_lqp =
