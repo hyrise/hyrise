@@ -71,7 +71,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     }
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
-    _benchmark_item_runner->load_dedicated_expected_results();
   }
 }
 
