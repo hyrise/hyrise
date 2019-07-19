@@ -18,7 +18,6 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   std::filesystem::path path{query_path};
-
   Assert(std::filesystem::exists(path), "No such file or directory '" + query_path + "'");
 
   if (std::filesystem::is_regular_file(path)) {
