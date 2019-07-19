@@ -15,7 +15,7 @@
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "operators/union_positions.hpp"
+#include "operators/union_all.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
@@ -282,8 +282,7 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   if (this->_index_type != SegmentIndexType::GroupKey) return;
   const auto indexed_chunks = std::vector<ChunkID>{ChunkID{1}};
 
-  // TODO(anyone): This should actually be UnionAll (#1711)
-  auto union_op = std::dynamic_pointer_cast<UnionPositions>(pqp);
+  auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);
   ASSERT_TRUE(union_op);
   auto index_scan = std::dynamic_pointer_cast<IndexScan>(union_op->mutable_input_left());
   ASSERT_TRUE(index_scan);
