@@ -7,7 +7,6 @@
 #include "SQLParser.h"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
-#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -94,39 +93,6 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
   for (const auto& query : queries_in_file) {
     if (!query_subset || query_subset->count(query.name)) {
       _queries.emplace_back(query);
-    }
-  }
-}
-
-void FileBasedBenchmarkItemRunner::set_expected_results_directory_path(
-    const std::filesystem::path& expected_results_directory_path) {
-  _expected_results_directory_path = expected_results_directory_path;
-}
-
-void FileBasedBenchmarkItemRunner::load_dedicated_expected_results() {
-  if (_expected_results_directory_path) {
-    std::cout << _expected_results_directory_path->string() << "\n";
-    Assert(std::filesystem::is_directory(*_expected_results_directory_path),
-           "Expected results path (" + _expected_results_directory_path->string() + ") has to be a directory.");
-
-    const auto is_tbl_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".tbl"); };
-
-    _dedicated_expected_results.resize(_queries.size());
-
-    std::cout << "- Loading expected result tables"
-              << "\n";
-
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(*_expected_results_directory_path)) {
-      if (std::filesystem::is_regular_file(entry) && is_tbl_file(entry.path())) {
-        const auto query_name = entry.path().stem().string();
-        const auto iter = std::find_if(_queries.cbegin(), _queries.cend(),
-                                       [&query_name](const auto& query) { return query.name == query_name; });
-        if (iter != _queries.cend()) {
-          const auto item_id = std::distance(_queries.cbegin(), iter);
-          std::cout << "-  Loading result table " + entry.path().string() << "\n";
-          _dedicated_expected_results[item_id] = load_table(entry.path().string());
-        }
-      }
     }
   }
 }

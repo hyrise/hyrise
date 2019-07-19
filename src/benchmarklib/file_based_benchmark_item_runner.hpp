@@ -20,8 +20,6 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
-  void load_dedicated_expected_results() override;
-  void set_expected_results_directory_path(const std::filesystem::path& expected_results_directory_path);
 
  protected:
   void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
@@ -37,7 +35,6 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   std::vector<Query> _queries;
   std::vector<BenchmarkItemID> _items;
-  std::optional<std::filesystem::path> _expected_results_directory_path;
 };
 
 }  // namespace opossum
