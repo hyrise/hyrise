@@ -40,7 +40,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   const auto chunk_count_right = input_table_right()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count_right; chunk_id++) {
     const auto chunk = input_table_right()->get_chunk(chunk_id);
-    if (!chunk) continue;
+    Assert(chunk, "Unexpected nullpointer-chunk.");
 
     // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
@@ -71,7 +71,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   const auto chunk_count_left = input_table_left()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count_left; chunk_id++) {
     const auto in_chunk = input_table_left()->get_chunk(chunk_id);
-    if (!in_chunk) continue;
+    Assert(in_chunk, "Unexpected nullpointer-chunk.");
 
     Segments output_segments;
 

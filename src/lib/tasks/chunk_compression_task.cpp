@@ -27,7 +27,7 @@ void ChunkCompressionTask::_on_execute() {
   for (auto chunk_id : _chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
     const auto chunk = table->get_chunk(chunk_id);
-    if (!chunk) continue;
+    Assert(chunk, "Unexpected nullpointer-chunk.");
 
     DebugAssert(_chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");

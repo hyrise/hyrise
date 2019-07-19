@@ -172,7 +172,7 @@ class Table : private Noncopyable {
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto chunk = std::atomic_load(&_chunks[chunk_id]);
-      if (!chunk) continue;
+      Assert(chunk, "Unexpected nullpointer-chunk.");
 
       chunk->create_index<Index>(column_ids);
     }
@@ -190,7 +190,16 @@ class Table : private Noncopyable {
   const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
+
+  /**
+   * To prevent data races for TableType::Data tables, we must always access vector elements via atomics functions.
+   * This is due to the existance of the MvccDeletePlugin, which might modify shared pointers from a separate thread.
+   *
+   * With C++20 we will get std::atomic<std::shared_ptr<T>>, which allows us to omit the std::atomic_load() and
+   * std::atomic_store() function calls.
+   */
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
+
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexStatistics> _indexes;

@@ -66,7 +66,7 @@ std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvalu
   const auto chunk_count = table.chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
-    if (!chunk) continue;
+    Assert(chunk, "Unexpected nullpointer-chunk.");
 
     const auto& segment = chunk->get_segment(column_id);
     accessors[chunk_id] = create_segment_accessor<T>(segment);

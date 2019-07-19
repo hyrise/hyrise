@@ -57,7 +57,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   const auto chunk_count = input_table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
-    if (!input_chunk) continue;
+    Assert(input_chunk, "Unexpected nullpointer-chunk.");
 
     auto output_segments = Segments{};
     output_segments.reserve(input_table.column_count());

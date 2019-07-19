@@ -139,7 +139,7 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
     chunk_offsets[chunk_id] = offset;
 
     const auto chunk = table->get_chunk(chunk_id);
-    if (!chunk) continue;
+    Assert(chunk, "Unexpected nullpointer-chunk.");
 
     offset += chunk->size();
   }
@@ -700,7 +700,7 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
     // Iterate over every chunk and add the chunks segment with column_id to pos_list_ptrs
     for (ChunkID chunk_id{0}; chunk_id < input_chunks_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);
-      if (!chunk) continue;
+      Assert(chunk, "Unexpected nullpointer-chunk.");
 
       const auto& ref_segment_uncasted = chunk->segments()[column_id];
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);

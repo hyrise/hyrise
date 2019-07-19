@@ -74,7 +74,7 @@ class ColumnMaterializer {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input->get_chunk(chunk_id);
-      if (!chunk) continue;
+      Assert(chunk, "Unexpected nullpointer-chunk.");
 
       const auto samples_to_write = std::min(samples_per_chunk, chunk->size());
       subsamples.push_back(Subsample<T>(samples_to_write));

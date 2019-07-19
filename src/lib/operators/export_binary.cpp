@@ -167,7 +167,8 @@ void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
 
 void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
   const auto chunk = table.get_chunk(chunk_id);
-  if (!chunk) return;
+  Assert(chunk, "Unexpected nullpointer-chunk.");
+
   const auto context = std::make_shared<ExportContext>(ofstream);
 
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));

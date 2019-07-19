@@ -221,7 +221,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     const auto chunk_count = _table_in->chunk_count();
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = _table_in->get_chunk(chunk_id);
-      if (!chunk) continue;
+      Assert(chunk, "Unexpected nullpointer-chunk.");
 
       auto base_segment = chunk->get_segment(_column_id);
 

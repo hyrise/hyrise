@@ -34,11 +34,11 @@ std::shared_ptr<const Table> Product::_on_execute() {
 
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
     const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
-    if (!chunk_left) continue;
+    Assert(chunk_left, "Unexpected nullpointer-chunk.");
 
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
       const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
-      if (!chunk_right) continue;
+      Assert(chunk_right, "Unexpected nullpointer-chunk.");
 
       _add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
     }
