@@ -232,7 +232,7 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
-enum class UnionMode { Positions };
+enum class UnionMode { Positions, All };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 

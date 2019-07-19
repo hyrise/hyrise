@@ -652,6 +652,11 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
     }
   }
 
+  if (candidate_split_set.empty()) {
+    GenericHistogramBuilder<T> builder{0, _domain};
+    return builder.build();
+  }
+
   /**
    * Sequentialize `candidate_split_set` and sort it.
    *

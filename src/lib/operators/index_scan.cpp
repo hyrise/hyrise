@@ -27,8 +27,6 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const Se
 
 const std::string IndexScan::name() const { return "IndexScan"; }
 
-void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _included_chunk_ids = chunk_ids; }
-
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = input_table_left();
 
@@ -39,7 +37,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   std::mutex output_mutex;
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  if (_included_chunk_ids.empty()) {
+  if (included_chunk_ids.empty()) {
     jobs.reserve(_in_table->chunk_count());
     const auto chunk_count = _in_table->chunk_count();
     for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
@@ -49,8 +47,8 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
     }
   } else {
-    jobs.reserve(_included_chunk_ids.size());
-    for (auto chunk_id : _included_chunk_ids) {
+    jobs.reserve(included_chunk_ids.size());
+    for (auto chunk_id : included_chunk_ids) {
       if (_in_table->get_chunk(chunk_id)) {
         jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
       }

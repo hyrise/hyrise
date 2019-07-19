@@ -101,7 +101,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
                   !_secondary_predicates.empty()),
-         "JoinHash doesn't support these parameters");
+         "JoinNestedLoop doesn't support these parameters");
 
   PerformanceWarning("Nested Loop Join used");
 

@@ -77,13 +77,10 @@ try {
           stage("clang-debug") {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "./clang-debug/hyriseTest clang-debug"
-            sh "./scripts/test/hyriseConsole_test.py clang-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {
             sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            // Test that running the binary from the build folder works
-            sh "./scripts/test/hyriseConsole_test.py gcc-debug"
             sh "cd gcc-debug && ./hyriseTest"
           }
         }, lint: {
@@ -100,6 +97,11 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "./clang-release/hyriseTest clang-release"
               sh "./clang-release/hyriseSystemTest clang-release"
+              sh "./scripts/test/hyriseConsole_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-release"
+
             } else {
               Utils.markStageSkippedForConditional("clangRelease")
             }
@@ -109,6 +111,15 @@ try {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
               sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
+              sh "./scripts/test/hyriseConsole_test.py clang-debug"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-debug"
+              sh "./scripts/test/hyriseConsole_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py gcc-debug"
+
             } else {
               Utils.markStageSkippedForConditional("debugSystemTests")
             }
@@ -148,6 +159,10 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
+              sh "./scripts/test/hyriseConsole_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py gcc-release"
             }
           } else {
               Utils.markStageSkippedForConditional("gccRelease")
