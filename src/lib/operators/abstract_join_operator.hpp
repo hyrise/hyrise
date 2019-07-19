@@ -11,6 +11,13 @@
 
 namespace opossum {
 
+enum class IndexSide { Left, Right };
+
+struct JoinSpecificConfiguration {
+  // Only for JoinIndex
+  std::optional<IndexSide> index_side;
+};
+
 /**
  * Base class for predicated (i.e., non-cross) join operator implementations. Cross Joins are performed by the Product
  * operator.

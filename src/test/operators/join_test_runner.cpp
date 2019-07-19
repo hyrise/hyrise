@@ -591,7 +591,7 @@ TEST_P(JoinTestRunner, TestJoin) {
 INSTANTIATE_TEST_CASE_P(JoinNestedLoop, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinHash, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinSortMerge, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()), );  // NOLINT
-INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
+// INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinMPSM, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinMPSM>()), );  // NOLINT
 // clang-format on
 

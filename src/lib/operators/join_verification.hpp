@@ -12,7 +12,10 @@ namespace opossum {
 class JoinVerification : public AbstractJoinOperator {
  public:
   static bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                       DataType right_data_type, bool secondary_predicates);
+                       DataType right_data_type, bool secondary_predicates,
+                       std::optional<TableType> left_table_type = std::nullopt,
+                       std::optional<TableType> right_table_type = std::nullopt,
+                       JoinSpecificConfiguration config = JoinSpecificConfiguration{});
 
   using Tuple = std::vector<AllTypeVariant>;
 

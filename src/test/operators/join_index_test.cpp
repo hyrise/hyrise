@@ -559,7 +559,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
                          "resources/test_data/tbl/join_operators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
+TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns all rows
   auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -568,16 +568,41 @@ TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
                          JoinMode::Right, "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinRefSegment) {
+TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
+  // scan that returns all rows
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
+
+  EXPECT_THROW(
+      this->test_join_output(scan_a, this->_table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                             JoinMode::Right, "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1,
+                             true, IndexSide::Left),
+      std::logic_error);
+}
+
+TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns all rows
   auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                         JoinMode::Left, "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1);
+                         JoinMode::Left, "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1, true,
+                         IndexSide::Left);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {
+TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
+  // scan that returns all rows
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_b->execute();
+
+  EXPECT_THROW(
+      this->test_join_output(this->_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                             JoinMode::Left, "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1, true,
+                             IndexSide::Right),
+      std::logic_error);
+}
+
+TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns no rows
   auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
@@ -586,13 +611,38 @@ TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {
                          JoinMode::Right, "resources/test_data/tbl/join_operators/int_join_empty.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefSegment) {
+TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
+  // scan that returns no rows
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
+  scan_a->execute();
+
+  EXPECT_THROW(
+      this->test_join_output(scan_a, this->_table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                             JoinMode::Right, "resources/test_data/tbl/join_operators/int_join_empty.tbl", 1, true,
+                             IndexSide::Left),
+      std::logic_error);
+}
+
+TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns no rows
   auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_b, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                         JoinMode::Left, "resources/test_data/tbl/join_operators/int_join_empty_left.tbl", 1);
+                         JoinMode::Left, "resources/test_data/tbl/join_operators/int_join_empty_left.tbl", 1, true,
+                         IndexSide::Left);
+}
+
+TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
+  // scan that returns no rows
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
+  scan_b->execute();
+
+  EXPECT_THROW(
+      this->test_join_output(this->_table_wrapper_b, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                             JoinMode::Left, "resources/test_data/tbl/join_operators/int_join_empty_left.tbl", 1, true,
+                             IndexSide::Right),
+      std::logic_error);
 }
 
 }  // namespace opossum
