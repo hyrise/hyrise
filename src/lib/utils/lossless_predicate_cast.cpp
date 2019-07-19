@@ -27,22 +27,12 @@ std::optional<float> next_float_towards(const double value, const double towards
 
 std::optional<std::pair<PredicateCondition, AllTypeVariant>> lossless_predicate_variant_cast(
     const PredicateCondition condition, const AllTypeVariant& variant, DataType target_data_type) {
-  // Code duplication with lossless_cast.cpp, but it's are already hard enough to read
-
   const auto source_data_type = data_type_from_all_type_variant(variant);
 
-  // Lossless casting from NULL to NULL is always NULL. (Cannot be handled below as resolve_data_type()
-  // doesn't resolve NULL)
-  if (source_data_type == DataType::Null && target_data_type == DataType::Null) {
-    // We should be able to return {condition, variant} here, but clang-tidy has what I believe to be a false
-    // positive. Instead of ignoring it and risking overlooking something, we let the ExpressionEvaluator handle
-    // this case. This is only for stupid queries like `WHERE x = NULL`, anyway.
-    return std::nullopt;
-  }
-
-  // Safe casting between NULL and non-NULL type is not possible. (Cannot be handled below as resolve_data_type()
-  // doesn't resolve NULL)
-  if ((source_data_type == DataType::Null) != (target_data_type == DataType::Null)) {
+  if (source_data_type == DataType::Null || target_data_type == DataType::Null) {
+    // We do not deal with NULL values here. Casting from/to NULL has no meaning. While NULL can technically be an
+    // argument for a table scan (SELECT ... WHERE a = NULL), it will not produce any results. IS NULL should have
+    // been used instead. As such, we do not care about these combinations and let the fallback solution handle it.
     return std::nullopt;
   }
 
