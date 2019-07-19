@@ -43,7 +43,12 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
 }
 
 void FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  sql_executor.execute(_queries[item_id].sql);
+  std::shared_ptr<const Table> expected_result_table = nullptr;
+  if (!_dedicated_expected_results.empty()) {
+    expected_result_table = _dedicated_expected_results[item_id];
+  }
+
+  sql_executor.execute(_queries[item_id].sql, expected_result_table);
 }
 
 std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {

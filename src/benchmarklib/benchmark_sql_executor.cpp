@@ -10,15 +10,14 @@
 
 namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
-                                           const std::optional<std::string>& visualize_prefix,
-                                           const std::shared_ptr<const Table>& expected_result_table)
+                                           const std::optional<std::string>& visualize_prefix)
     : _enable_jit(enable_jit),
-      _expected_result_table(expected_result_table),
       _sqlite_wrapper(sqlite_wrapper),
       _visualize_prefix(visualize_prefix),
       _transaction_context(TransactionManager::get().new_transaction_context()) {}
 
-std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(const std::string& sql) {
+std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(
+    const std::string& sql, const std::shared_ptr<const Table>& expected_result_table) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
   if (_visualize_prefix) pipeline_builder.dont_cleanup_temporaries();
   pipeline_builder.with_transaction_context(_transaction_context);
@@ -35,8 +34,8 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 
   metrics.emplace_back(std::move(pipeline.metrics()));
 
-  if (_expected_result_table) {
-    _compare_tables(_expected_result_table, result_table, "Using dedicated expected result table");
+  if (expected_result_table) {
+    _compare_tables(expected_result_table, result_table, "Using dedicated expected result table");
   } else if (_sqlite_wrapper) {
     _verify_with_sqlite(pipeline);
   }

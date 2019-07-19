@@ -50,12 +50,7 @@ std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::ex
     visualize_prefix = std::move(name);
   }
 
-  std::shared_ptr<const Table> expected_result_table = nullptr;
-  if (!_dedicated_expected_results.empty()) {
-    expected_result_table = _dedicated_expected_results[item_id];
-  }
-
-  BenchmarkSQLExecutor sql_executor(_config->enable_jit, _sqlite_wrapper, visualize_prefix, expected_result_table);
+  BenchmarkSQLExecutor sql_executor(_config->enable_jit, _sqlite_wrapper, visualize_prefix);
   _on_execute_item(item_id, sql_executor);
   return {std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }

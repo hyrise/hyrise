@@ -16,13 +16,13 @@ class BenchmarkSQLExecutor {
   // @param visualize_prefix    Prefix for the filename of the generated query plans (e.g., "TPC-H_6-").
   //                            The suffix will be "LQP/PQP-<statement_idx>.<extension>"
   BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
-                       const std::optional<std::string>& visualize_prefix,
-                       const std::shared_ptr<const Table>& expected_result_table = nullptr);
+                       const std::optional<std::string>& visualize_prefix);
 
   // This executes the given SQL query, records its metrics and returns a single table (the same as
   // SQLPipeline::get_result_table() would).
   // If visualization and/or verification are enabled, these are transparently done as well.
-  std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> execute(const std::string& sql);
+  std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> execute(
+      const std::string& sql, const std::shared_ptr<const Table>& expected_result_table = nullptr);
 
   // Contains one entry per executed SQLPipeline
   std::vector<SQLPipelineMetrics> metrics;
@@ -37,7 +37,6 @@ class BenchmarkSQLExecutor {
   void _visualize(SQLPipeline& pipeline) const;
 
   const bool _enable_jit;
-  const std::shared_ptr<const Table> _expected_result_table;
   const std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
   const std::optional<std::string> _visualize_prefix;
 
