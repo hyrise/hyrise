@@ -227,7 +227,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     auto right_value = expression_get_value_or_parameter(*right_operand);
 
     if (left_value && right_column_expression) {
-      // Try to case the value to the type of the column. This might require adjusting the predicate (see
+      // Try to cast the value to the type of the column. This might require adjusting the predicate (see
       // lossless_predicate_cast.hpp for details).
 
       // lossless_predicate_variant_cast considers the input value to be the right-side value, so we need to flip the
