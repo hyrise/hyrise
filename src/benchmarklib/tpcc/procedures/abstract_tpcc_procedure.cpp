@@ -12,6 +12,13 @@ AbstractTpccProcedure::AbstractTpccProcedure(BenchmarkSQLExecutor& sql_executor)
   _sql_executor.transaction_context = TransactionManager::get().new_transaction_context();
 }
 
+AbstractTpccProcedure::AbstractTpccProcedure(const AbstractTpccProcedure& other) : _sql_executor(other._sql_executor) {}
+
+AbstractTpccProcedure& AbstractTpccProcedure::operator=(const AbstractTpccProcedure& other) {
+  DebugAssert(&_sql_executor == &other._sql_executor, "Can only assign AbstractTpccProcedure if the sql_executors are the same");
+  return *this;
+}
+
 thread_local std::minstd_rand AbstractTpccProcedure::_random_engine = std::minstd_rand{42};
 thread_local TpccRandomGenerator AbstractTpccProcedure::_tpcc_random_generator = TpccRandomGenerator{42};
 

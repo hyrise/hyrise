@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
+#include "tpcc/constants.hpp"
 #include "tpcc/procedures/tpcc_delivery.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -10,14 +11,15 @@ namespace opossum {
 class TpccTest : public BaseTest {
  public:
   static void SetUpTestCase() {
-    auto table_generator = TPCHTableGenerator{Chunk::DEFAULT_SIZE, NUM_WAREHOUSES};
+    auto benchmark_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
+    auto table_generator = TPCCTableGenerator{NUM_WAREHOUSES, benchmark_config};
 
-    tables = table_generator.generate_all_tables();
+    tables = table_generator.generate();
   }
 
   void SetUp() override {
-    for (const auto& [table_name, table] : tables) {
-      StorageManager::get().add_table(table_name, table);  // TODO copy this somehow for test isolation
+    for (const auto& [table_name, table_info] : tables) {
+      StorageManager::get().add_table(table_name, table_info.table);  // TODO copy this somehow for test isolation
     }
   }
 
@@ -60,11 +62,11 @@ class TpccTest : public BaseTest {
                                                               {"ORDER_LINE", 0},  // see verify_table_sizes
                                                               {"ORDER", NUM_WAREHOUSES * 30'000}};
 
-  static std::map<std::string, std::shared_ptr<Table>> tables;
+  static std::unordered_map<std::string, BenchmarkTableInfo> tables;
   static constexpr auto NUM_WAREHOUSES = 2;
 };
 
-std::map<std::string, std::shared_ptr<Table>> TpccTest::tables;
+std::unordered_map<std::string, BenchmarkTableInfo> TpccTest::tables;
 
 TEST_F(TpccTest, InitialTables) { verify_table_sizes(initial_sizes); }
 
@@ -238,18 +240,18 @@ TEST_F(TpccTest, NewOrder) {
   EXPECT_EQ(order_row[7], AllTypeVariant{0});
 
   // VERIFY ORDER_LINE entries
-  for (auto line_idx = 0; line_idx < order_lines.size(); ++line_idx) {
+  for (auto line_idx = size_t{0}; line_idx < order_lines.size(); ++line_idx) {
     const auto row_idx = new_sizes["ORDER_LINE"] - order_lines.size() + line_idx;
     const auto order_line_row = StorageManager::get().get_table("ORDER_LINE")->get_row(row_idx);
     EXPECT_EQ(order_line_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});
     EXPECT_EQ(order_line_row[1], AllTypeVariant{new_order.d_id});
     EXPECT_EQ(order_line_row[2], AllTypeVariant{new_order.w_id});
-    EXPECT_EQ(order_line_row[3], line_idx + 1);
-    EXPECT_EQ(order_line_row[4], order_lines[line_idx].ol_i_id);
+    EXPECT_EQ(order_line_row[3], AllTypeVariant{static_cast<int32_t>(line_idx + 1)});
+    EXPECT_EQ(order_line_row[4], AllTypeVariant{order_lines[line_idx].ol_i_id});
     EXPECT_LE(order_lines[line_idx].ol_i_id, NUM_ITEMS);
-    EXPECT_LE(order_line_row[5], NUM_WAREHOUSES);
-    EXPECT_EQ(order_line_row[6], -1);
-    EXPECT_EQ(order_line_row[7], order_lines[line_idx].ol_quantity);
+    EXPECT_LE(order_line_row[5], AllTypeVariant{NUM_WAREHOUSES});
+    EXPECT_EQ(order_line_row[6], AllTypeVariant{-1});
+    EXPECT_EQ(order_line_row[7], AllTypeVariant{order_lines[line_idx].ol_quantity});
   }
 }
 

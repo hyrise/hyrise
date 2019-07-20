@@ -14,9 +14,9 @@ class AbstractTpccProcedure {
  public:
   AbstractTpccProcedure(BenchmarkSQLExecutor& sql_executor);
 
-  AbstractTpccProcedure(const AbstractTpccProcedure& sql_executor) = default;
+  AbstractTpccProcedure(const AbstractTpccProcedure& sql_executor);
   virtual ~AbstractTpccProcedure() = default;
-  AbstractTpccProcedure& operator=(const AbstractTpccProcedure& sql_executor) = default;
+  AbstractTpccProcedure& operator=(const AbstractTpccProcedure& sql_executor);
 
   // Executes the procedure; returns true if it was successful and false if a transaction conflict occurred
   [[nodiscard]] virtual bool execute() = 0;
