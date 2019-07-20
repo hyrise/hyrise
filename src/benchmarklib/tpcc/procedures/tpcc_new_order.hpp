@@ -6,7 +6,7 @@ namespace opossum {
 
 class TpccNewOrder : public AbstractTpccProcedure {
  public:
-  TpccNewOrder(const int num_warehouses, BenchmarkSQLExecutor sql_executor);
+  TpccNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
   [[nodiscard]] bool execute() override;
   char identifier() const override;

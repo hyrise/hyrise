@@ -11,7 +11,7 @@ namespace opossum {
 
 class TpccDelivery : public AbstractTpccProcedure {
  public:
-  TpccDelivery(const int num_warehouses, BenchmarkSQLExecutor sql_executor);
+  TpccDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
   [[nodiscard]] bool execute() override;
   char identifier() const override;

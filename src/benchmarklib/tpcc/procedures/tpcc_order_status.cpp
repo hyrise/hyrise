@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-TpccOrderStatus::TpccOrderStatus(const int num_warehouses, BenchmarkSQLExecutor sql_executor)
+TpccOrderStatus::TpccOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTpccProcedure(sql_executor) {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   _w_id = warehouse_dist(_random_engine);

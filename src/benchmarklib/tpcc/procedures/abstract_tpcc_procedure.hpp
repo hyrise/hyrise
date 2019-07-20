@@ -12,7 +12,7 @@ namespace opossum {
 
 class AbstractTpccProcedure {
  public:
-  AbstractTpccProcedure(BenchmarkSQLExecutor sql_executor);
+  AbstractTpccProcedure(BenchmarkSQLExecutor& sql_executor);
 
   AbstractTpccProcedure(const AbstractTpccProcedure& sql_executor) = default;
   virtual ~AbstractTpccProcedure() = default;
@@ -28,7 +28,7 @@ class AbstractTpccProcedure {
   static thread_local std::minstd_rand _random_engine;
   static thread_local TpccRandomGenerator _tpcc_random_generator;
 
-  BenchmarkSQLExecutor _sql_executor;
+  BenchmarkSQLExecutor& _sql_executor;
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractTpccProcedure& procedure);

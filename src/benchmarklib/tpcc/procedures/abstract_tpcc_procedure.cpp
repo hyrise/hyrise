@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-AbstractTpccProcedure::AbstractTpccProcedure(BenchmarkSQLExecutor sql_executor) : _sql_executor(sql_executor) {
+AbstractTpccProcedure::AbstractTpccProcedure(BenchmarkSQLExecutor& sql_executor) : _sql_executor(sql_executor) {
   PerformanceWarning(
       "The TPC-C support is in a very early stage. Indexes are not used and even the most obvious optimizations are "
       "not done yet.");
