@@ -250,7 +250,7 @@ boost::future<uint64_t> ClientConnection::_send_bytes_async(const std::shared_pt
 
   if (_response_buffer.size() + packet_size > _max_response_size) {
     // We have to flush before we can actually process the data
-    return _flush_async() >> then >> [=](uint64_t) { return _send_bytes_async(packet, flush); };
+    return _flush_async() >> then >> [this, packet, flush](uint64_t) { return _send_bytes_async(packet, flush); };
   }
 
   _response_buffer.insert(_response_buffer.end(), packet->data.begin(), packet->data.end());
@@ -265,7 +265,7 @@ boost::future<uint64_t> ClientConnection::_send_bytes_async(const std::shared_pt
 
 boost::future<uint64_t> ClientConnection::_flush_async() {
   return _socket.async_send(boost::asio::buffer(_response_buffer), boost::asio::use_boost_future) >> then >>
-         [=](uint64_t sent_bytes) {
+         [this](uint64_t sent_bytes) {
            // If this fails, the connection may be closed but the server will keep running.
            Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
            _response_buffer.clear();

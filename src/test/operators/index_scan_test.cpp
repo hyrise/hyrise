@@ -90,10 +90,10 @@ class OperatorsIndexScanTest : public BaseTest {
 };
 
 typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex,
-                         BTreeIndex /* add further indices */>
-    DerivedIndices;
+                         BTreeIndex /* add further indexes */>
+    DerivedIndexes;
 
-TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
@@ -218,6 +218,25 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
     scan->execute();
 
     this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+  }
+}
+
+TYPED_TEST(OperatorsIndexScanTest, PosListGuarenteesSingleChunkReference) {
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
+  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
+
+  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
+                                          PredicateCondition::Equals, right_values, right_values2);
+  scan->execute();
+
+  const auto chunk_count = scan->get_output()->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = scan->get_output()->get_chunk(chunk_id);
+
+    const auto segment = chunk->get_segment(this->_column_ids[0]);
+    const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
+    const auto& pos_list = reference_segment->pos_list();
+    EXPECT_TRUE(pos_list->references_single_chunk());
   }
 }
 

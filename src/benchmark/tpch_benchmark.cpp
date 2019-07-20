@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
   if (CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
     const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
-    scale_factor = json_config.value("scale", 1f);
+    scale_factor = json_config.value("scale", 1.f);
     comma_separated_queries = json_config.value("queries", std::string(""));
 
     config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));

@@ -48,6 +48,14 @@ void AbstractTableGenerator::generate_and_store() {
    * Write the Tables into binary files if required
    */
   if (_benchmark_config->cache_binary_tables) {
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      const auto& table = table_info.table;
+      if (table->chunk_count() > 1 && table->get_chunk(ChunkID{0})->size() != _benchmark_config->chunk_size) {
+        std::cout << "- WARNING: " << table_name << " was loaded from binary, but has a mismatching chunk size of "
+                  << table->get_chunk(ChunkID{0})->size() << std::endl;
+      }
+    }
+
     std::cout << "- Writing tables into binary files if necessary" << std::endl;
 
     for (auto& [table_name, table_info] : table_info_by_name) {
@@ -90,6 +98,13 @@ void AbstractTableGenerator::generate_and_store() {
 
   std::cout << "- Adding tables to StorageManager and generating statistics done ("
             << format_duration(metrics.store_duration) << ")" << std::endl;
+}
+
+std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config_with_chunk_size(
+    ChunkOffset chunk_size) {
+  auto config = BenchmarkConfig::get_default_config();
+  config.chunk_size = chunk_size;
+  return std::make_shared<BenchmarkConfig>(config);
 }
 
 }  // namespace opossum

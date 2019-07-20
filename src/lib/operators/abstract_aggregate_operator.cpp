@@ -65,8 +65,9 @@ void AbstractAggregateOperator::_validate_aggregates() const {
     } else {
       DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
       Assert(input_table->column_data_type(*aggregate.column) != DataType::String ||
-                 (aggregate.function != AggregateFunction::Sum && aggregate.function != AggregateFunction::Avg),
-             "Aggregate: Cannot calculate SUM or AVG on string column");
+                 (aggregate.function != AggregateFunction::Sum && aggregate.function != AggregateFunction::Avg &&
+                  aggregate.function != AggregateFunction::StandardDeviationSample),
+             "Aggregate: Cannot calculate SUM, AVG or STDDEV_SAMP on string column");
     }
   }
 }

@@ -19,6 +19,8 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor, const std::vector<BenchmarkItemID>& items);
 
+  void on_tables_loaded() override;
+
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
 

@@ -66,7 +66,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
-  auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+  auto job_task = std::make_shared<JobTask>([this, chunk_id, &output_mutex]() {
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
     // The output chunk is allocated on the same NUMA node as the input chunk.
@@ -175,8 +175,17 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       Fail("Unsupported comparison type encountered");
   }
 
-  matches_out.reserve(matches_out.size() + std::distance(range_begin, range_end));
-  std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
+  DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
+  matches_out.guarantee_single_chunk();
+
+  const auto current_matches_size = matches_out.size();
+  const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
+  matches_out.resize(final_matches_size);
+
+  for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
+    matches_out[matches_position] = RowID{chunk_id, *range_begin};
+    range_begin++;
+  }
 
   return matches_out;
 }

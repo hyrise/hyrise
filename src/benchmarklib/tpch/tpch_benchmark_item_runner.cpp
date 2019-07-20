@@ -38,8 +38,6 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _scale_factor(scale_factor) {
   _items.resize(22);
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
-
-  _prepare_queries();
 }
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
@@ -54,8 +52,6 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
                        return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;  // NOLINT
                      }),
          "Invalid TPC-H item id");
-
-  _prepare_queries();
 }
 
 const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const { return _items; }
@@ -65,7 +61,7 @@ void TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   sql_executor.execute(sql);
 }
 
-void TPCHBenchmarkItemRunner::_prepare_queries() const {
+void TPCHBenchmarkItemRunner::on_tables_loaded() {
   if (!_use_prepared_statements) return;
 
   std::cout << " - Preparing queries" << std::endl;

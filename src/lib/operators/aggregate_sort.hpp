@@ -108,7 +108,8 @@ class AggregateSort : public AbstractAggregateOperator {
   void _set_and_write_aggregate_value(std::vector<AggregateType>& aggregate_results,
                                       std::vector<bool>& aggregate_null_values, const uint64_t aggregate_group_index,
                                       [[maybe_unused]] const uint64_t aggregate_index,
-                                      std::optional<AggregateType>& current_aggregate_value,
+                                      std::optional<AggregateType>& current_primary_aggregate,
+                                      std::vector<AggregateType>& current_secondary_aggregates,
                                       [[maybe_unused]] const uint64_t value_count,
                                       [[maybe_unused]] const uint64_t value_count_with_null,
                                       [[maybe_unused]] const uint64_t unique_value_count) const;
