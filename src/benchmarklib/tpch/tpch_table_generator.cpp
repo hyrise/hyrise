@@ -217,13 +217,13 @@ std::unordered_map<TpchTable, std::string> tpch_table_names = {
     {TpchTable::Customer, "customer"}, {TpchTable::Orders, "orders"},     {TpchTable::LineItem, "lineitem"},
     {TpchTable::Nation, "nation"},     {TpchTable::Region, "region"}};
 
-TpchTableGenerator::TpchTableGenerator(float scale_factor, uint32_t chunk_size)
+TPCHTableGenerator::TPCHTableGenerator(float scale_factor, uint32_t chunk_size)
     : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor(scale_factor) {}
 
-TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
+TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
-std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
+std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
 

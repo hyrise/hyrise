@@ -22,13 +22,13 @@
 
 namespace opossum {
 
-TpccTableGenerator::TpccTableGenerator(const ChunkOffset chunk_size, const size_t warehouse_size,
+TPCHTableGenerator::TPCHTableGenerator(const ChunkOffset chunk_size, const size_t warehouse_size,
                                        EncodingConfig encoding_config)
     : AbstractBenchmarkTableGenerator(chunk_size),
       _warehouse_size(warehouse_size),
       _encoding_config(std::move(encoding_config)) {}
 
-std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
+std::shared_ptr<Table> TPCHTableGenerator::generate_items_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
 
   /**
@@ -69,7 +69,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
   return table;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_warehouse_table() {
+std::shared_ptr<Table> TPCHTableGenerator::generate_warehouse_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size});
 
   /**
@@ -109,7 +109,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_warehouse_table() {
   return table;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
+std::shared_ptr<Table> TPCHTableGenerator::generate_stock_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_STOCK_ITEMS_PER_WAREHOUSE});
 
@@ -162,7 +162,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
   return table;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_district_table() {
+std::shared_ptr<Table> TPCHTableGenerator::generate_district_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE});
 
@@ -207,7 +207,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_district_table() {
   return table;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_customer_table() {
+std::shared_ptr<Table> TPCHTableGenerator::generate_customer_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT});
 
@@ -277,7 +277,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_customer_table() {
   return table;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
+std::shared_ptr<Table> TPCHTableGenerator::generate_history_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{
       _warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT, NUM_HISTORY_ENTRIES_PER_CUSTOMER});
 
@@ -317,8 +317,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
   return table;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
-    const TpccTableGenerator::OrderLineCounts& order_line_counts) {
+std::shared_ptr<Table> TPCHTableGenerator::generate_order_table(
+    const TPCHTableGenerator::OrderLineCounts& order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS_PER_DISTRICT});
 
@@ -366,7 +366,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
   return table;
 }
 
-TpccTableGenerator::OrderLineCounts TpccTableGenerator::generate_order_line_counts() {
+TPCHTableGenerator::OrderLineCounts TPCHTableGenerator::generate_order_line_counts() {
   OrderLineCounts v(_warehouse_size);
   for (auto& v_per_warehouse : v) {
     v_per_warehouse.resize(NUM_DISTRICTS_PER_WAREHOUSE);
@@ -391,8 +391,8 @@ TpccTableGenerator::OrderLineCounts TpccTableGenerator::generate_order_line_coun
  * @return
  */
 template <typename T>
-std::vector<T> TpccTableGenerator::_generate_inner_order_line_column(
-    std::vector<size_t> indices, TpccTableGenerator::OrderLineCounts order_line_counts,
+std::vector<T> TPCHTableGenerator::_generate_inner_order_line_column(
+    std::vector<size_t> indices, TPCHTableGenerator::OrderLineCounts order_line_counts,
     const std::function<T(std::vector<size_t>)>& generator_function) {
   auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
 
@@ -408,10 +408,10 @@ std::vector<T> TpccTableGenerator::_generate_inner_order_line_column(
 }
 
 template <typename T>
-void TpccTableGenerator::_add_order_line_column(std::vector<Segments>& segments_by_chunk,
+void TPCHTableGenerator::_add_order_line_column(std::vector<Segments>& segments_by_chunk,
                                                 TableColumnDefinitions& column_definitions, std::string name,
                                                 std::shared_ptr<std::vector<size_t>> cardinalities,
-                                                TpccTableGenerator::OrderLineCounts order_line_counts,
+                                                TPCHTableGenerator::OrderLineCounts order_line_counts,
                                                 const std::function<T(std::vector<size_t>)>& generator_function) {
   const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
       [&](std::vector<size_t> indices) {
@@ -420,8 +420,8 @@ void TpccTableGenerator::_add_order_line_column(std::vector<Segments>& segments_
   add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
-    const TpccTableGenerator::OrderLineCounts& order_line_counts) {
+std::shared_ptr<Table> TPCHTableGenerator::generate_order_line_table(
+    const TPCHTableGenerator::OrderLineCounts& order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS_PER_DISTRICT});
 
@@ -475,7 +475,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
   return table;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
+std::shared_ptr<Table> TPCHTableGenerator::generate_new_order_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_NEW_ORDERS_PER_DISTRICT});
 
@@ -505,19 +505,19 @@ std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
   return table;
 }
 
-std::map<std::string, std::shared_ptr<Table>> TpccTableGenerator::generate_all_tables() {
+std::map<std::string, std::shared_ptr<Table>> TPCHTableGenerator::generate_all_tables() {
   std::vector<std::thread> threads;
-  auto item_table = std::async(std::launch::async, &TpccTableGenerator::generate_items_table, this);
-  auto warehouse_table = std::async(std::launch::async, &TpccTableGenerator::generate_warehouse_table, this);
-  auto stock_table = std::async(std::launch::async, &TpccTableGenerator::generate_stock_table, this);
-  auto district_table = std::async(std::launch::async, &TpccTableGenerator::generate_district_table, this);
-  auto customer_table = std::async(std::launch::async, &TpccTableGenerator::generate_customer_table, this);
-  auto history_table = std::async(std::launch::async, &TpccTableGenerator::generate_history_table, this);
-  auto order_line_counts = std::async(std::launch::async, &TpccTableGenerator::generate_order_line_counts, this).get();
-  auto order_table = std::async(std::launch::async, &TpccTableGenerator::generate_order_table, this, order_line_counts);
+  auto item_table = std::async(std::launch::async, &TPCHTableGenerator::generate_items_table, this);
+  auto warehouse_table = std::async(std::launch::async, &TPCHTableGenerator::generate_warehouse_table, this);
+  auto stock_table = std::async(std::launch::async, &TPCHTableGenerator::generate_stock_table, this);
+  auto district_table = std::async(std::launch::async, &TPCHTableGenerator::generate_district_table, this);
+  auto customer_table = std::async(std::launch::async, &TPCHTableGenerator::generate_customer_table, this);
+  auto history_table = std::async(std::launch::async, &TPCHTableGenerator::generate_history_table, this);
+  auto order_line_counts = std::async(std::launch::async, &TPCHTableGenerator::generate_order_line_counts, this).get();
+  auto order_table = std::async(std::launch::async, &TPCHTableGenerator::generate_order_table, this, order_line_counts);
   auto order_line_table =
-      std::async(std::launch::async, &TpccTableGenerator::generate_order_line_table, this, order_line_counts);
-  auto new_order_table = std::async(std::launch::async, &TpccTableGenerator::generate_new_order_table, this);
+      std::async(std::launch::async, &TPCHTableGenerator::generate_order_line_table, this, order_line_counts);
+  auto new_order_table = std::async(std::launch::async, &TPCHTableGenerator::generate_new_order_table, this);
 
   return std::map<std::string, std::shared_ptr<Table>>({{"ITEM", item_table.get()},
                                                         {"WAREHOUSE", warehouse_table.get()},
@@ -535,36 +535,36 @@ std::map<std::string, std::shared_ptr<Table>> TpccTableGenerator::generate_all_t
  * a) generate a TPC-C table by table name (e.g. ITEM, WAREHOUSE), and
  * b) have all available table names browsable for the Console auto completion.
  */
-TpccTableGeneratorFunctions TpccTableGenerator::table_generator_functions() {
-  TpccTableGeneratorFunctions generators{
-      {"ITEM", []() { return TpccTableGenerator().generate_items_table(); }},
-      {"WAREHOUSE", []() { return TpccTableGenerator().generate_warehouse_table(); }},
-      {"STOCK", []() { return TpccTableGenerator().generate_stock_table(); }},
-      {"DISTRICT", []() { return TpccTableGenerator().generate_district_table(); }},
-      {"CUSTOMER", []() { return TpccTableGenerator().generate_customer_table(); }},
-      {"HISTORY", []() { return TpccTableGenerator().generate_history_table(); }},
-      {"ORDER", []() { return TpccTableGenerator().generate_new_order_table(); }},
+TPCHTableGeneratorFunctions TPCHTableGenerator::table_generator_functions() {
+  TPCHTableGeneratorFunctions generators{
+      {"ITEM", []() { return TPCHTableGenerator().generate_items_table(); }},
+      {"WAREHOUSE", []() { return TPCHTableGenerator().generate_warehouse_table(); }},
+      {"STOCK", []() { return TPCHTableGenerator().generate_stock_table(); }},
+      {"DISTRICT", []() { return TPCHTableGenerator().generate_district_table(); }},
+      {"CUSTOMER", []() { return TPCHTableGenerator().generate_customer_table(); }},
+      {"HISTORY", []() { return TPCHTableGenerator().generate_history_table(); }},
+      {"ORDER", []() { return TPCHTableGenerator().generate_new_order_table(); }},
       {"NEW_ORDER",
        []() {
-         auto order_line_counts = TpccTableGenerator().generate_order_line_counts();
-         return TpccTableGenerator().generate_order_table(order_line_counts);
+         auto order_line_counts = TPCHTableGenerator().generate_order_line_counts();
+         return TPCHTableGenerator().generate_order_table(order_line_counts);
        }},
       {"ORDER_LINE", []() {
-         auto order_line_counts = TpccTableGenerator().generate_order_line_counts();
-         return TpccTableGenerator().generate_order_line_table(order_line_counts);
+         auto order_line_counts = TPCHTableGenerator().generate_order_line_counts();
+         return TPCHTableGenerator().generate_order_line_table(order_line_counts);
        }}};
   return generators;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_table(const std::string& table_name) {
-  auto generators = TpccTableGenerator::table_generator_functions();
+std::shared_ptr<Table> TPCHTableGenerator::generate_table(const std::string& table_name) {
+  auto generators = TPCHTableGenerator::table_generator_functions();
   if (generators.find(table_name) == generators.end()) {
     return nullptr;
   }
   return generators[table_name]();
 }
 
-void TpccTableGenerator::_encode_table(const std::string& table_name, const std::shared_ptr<Table>& table) {
+void TPCHTableGenerator::_encode_table(const std::string& table_name, const std::shared_ptr<Table>& table) {
   BenchmarkTableEncoder::encode(table_name, table, _encoding_config);
 }
 

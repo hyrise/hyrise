@@ -10,7 +10,7 @@ namespace opossum {
 class TpccTest : public BaseTest {
  public:
   static void SetUpTestCase() {
-    auto table_generator = TpccTableGenerator{Chunk::DEFAULT_SIZE, NUM_WAREHOUSES};
+    auto table_generator = TPCHTableGenerator{Chunk::DEFAULT_SIZE, NUM_WAREHOUSES};
 
     tables = table_generator.generate_all_tables();
   }

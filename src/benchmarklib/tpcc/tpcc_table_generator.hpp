@@ -18,12 +18,12 @@ namespace opossum {
 
 class Table;
 
-using TpccTableGeneratorFunctions = std::unordered_map<std::string, std::function<std::shared_ptr<Table>()>>;
+using TPCHTableGeneratorFunctions = std::unordered_map<std::string, std::function<std::shared_ptr<Table>()>>;
 
-class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
+class TPCHTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
-  explicit TpccTableGenerator(const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, const size_t warehouse_size = 1,
+  explicit TPCHTableGenerator(const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE, const size_t warehouse_size = 1,
                               EncodingConfig encoding_config = EncodingConfig{});
 
   std::shared_ptr<Table> generate_items_table();
@@ -50,7 +50,7 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   std::map<std::string, std::shared_ptr<Table>> generate_all_tables() override;
 
-  static TpccTableGeneratorFunctions table_generator_functions();
+  static TPCHTableGeneratorFunctions table_generator_functions();
 
   std::shared_ptr<Table> generate_table(const std::string& table_name);
 

@@ -142,7 +142,7 @@ Console::Console()
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
-  auto tpcc_generators = TpccTableGenerator::table_generator_functions();
+  auto tpcc_generators = TPCCTableGenerator::table_generator_functions();
   for (const auto& generator : tpcc_generators) {
     _tpcc_commands.push_back(generator.first);
   }
@@ -442,7 +442,7 @@ int Console::_generate_tpcc(const std::string& tablename) {
 
   if (tablename.empty() || "ALL" == tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
-    auto tables = TpccTableGenerator(Chunk::DEFAULT_SIZE, 2).generate_all_tables();
+    auto tables = TPCCTableGenerator(Chunk::DEFAULT_SIZE, 2).generate_all_tables();
     for (auto& [table_name, table] : tables) {
       if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
       storage_manager.add_table(table_name, table);
@@ -451,7 +451,7 @@ int Console::_generate_tpcc(const std::string& tablename) {
   }
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = TpccTableGenerator().generate_table(tablename);
+  auto table = TPCCTableGenerator().generate_table(tablename);
   if (!table) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return ReturnCode::Error;

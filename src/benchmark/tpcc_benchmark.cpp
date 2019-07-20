@@ -1,67 +1,55 @@
-#include <random>
 
-#include "benchmark_runner.hpp"
-#include "storage/storage_manager.hpp"
-#include "tpcc/procedures/tpcc_delivery.hpp"
-#include "tpcc/procedures/tpcc_new_order.hpp"
-#include "tpcc/procedures/tpcc_order_status.hpp"
-#include "tpcc/procedures/tpcc_payment.hpp"
-#include "tpcc/procedures/tpcc_stock_level.hpp"
-#include "tpcc/tpcc_table_generator.hpp"
+using namespace opossum;  // NOLINT
 
-// ...
-// We do not execute the TPC-C benchmark through the BenchmarkRunner as the runner is focused on single queries,
-// expressed as a single SQL statement. The transaction-based logic of the TPC-C leads to multiple integration
-// problems, not only during execution, but also w.r.t. reporting and verification. Additionally, TPC-C requires
-// us to execute a weighted mix of transactions, which is not needed for other supported benchmarks.
-// We completely ignore the virtual terminals from the TPC-C specification (as does pretty much everyone else).
+/**
+ * This benchmark measures Hyrise's performance executing the TPC-C benchmark. As with the other TPC-* benchmarks, we
+ * took some liberty in interpreting the standard. Most notably, all parts about the simulated terminals are ignored.
+ * Instead, only the queries leading to the terminal output are executed. In the research world, doing so has become
+ * the de facto standard. 
+ *
+ * main() is mostly concerned with parsing the CLI options while BenchmarkRunner.run() performs the actual benchmark
+ * logic.
+ */
 
 int main(int argc, char* argv[]) {
-  using namespace opossum;
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-C Benchmark");
 
-  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPCC Benchmark");
+  // clang-format off
+  cli_options.add_options()
+    // We use -s instead of -w for consistency with the options of our other TPC-x binaries.
+    ("s,scale", "Scale factor (warehouses)", cxxopts::value<float>()->default_value("1")); // NOLINT
+  // clang-format on
 
-  const auto num_warehouses = 2;
+  std::shared_ptr<BenchmarkConfig> config;
+  int num_warehouses;
 
-  auto table_generator = TpccTableGenerator{Chunk::DEFAULT_SIZE, num_warehouses};
+  if (CLIConfigParser::cli_has_json_config(argc, argv)) {
+    // JSON config file was passed in
+    const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
+    num_warehouses = json_config.value("scale", 1);
 
-  for (const auto& [name, table] : table_generator.generate_all_tables()) {
-    StorageManager::get().add_table(name, table);
+    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
+  } else {
+    // Parse regular command line args
+    const auto cli_parse_result = cli_options.parse(argc, argv);
+
+    if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+
+    num_warehouses = cli_parse_result["scale"].as<int>();
+
+    config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
-  std::cout << "timestamp,procedure,success,duration" << std::endl;
+  auto context = BenchmarkRunner::create_context(*config);
 
-  const auto benchmark_begin = std::chrono::high_resolution_clock::now();
+  std::cout << "- TPC-C scale factor (number of warehouses) is " << num_warehouses << std::endl;
 
-  std::minstd_rand random_engine;
-  std::uniform_int_distribution<> procedure_dist{0, 99};
-  for (auto run = 0; run < 100000; ++run) {
-    auto procedure = std::unique_ptr<AbstractTpccProcedure>{};
+  // Add TPC-C-specific information
+  context.emplace("scale_factor", scale_factor);
+  context.emplace("use_prepared_statements", use_prepared_statements);
 
-    auto procedure_random = procedure_dist(random_engine);
-
-    BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
-
-    if (procedure_random < 4) {
-      procedure = std::make_unique<TpccStockLevel>(num_warehouses, sql_executor);
-    } else if (procedure_random < 8) {
-      procedure = std::make_unique<TpccDelivery>(num_warehouses, sql_executor);
-    } else if (procedure_random < 12) {
-      procedure = std::make_unique<TpccOrderStatus>(num_warehouses, sql_executor);
-    } else if (procedure_random < 55) {
-      procedure = std::make_unique<TpccPayment>(num_warehouses, sql_executor);
-    } else {
-      procedure = std::make_unique<TpccNewOrder>(num_warehouses, sql_executor);
-    }
-
-    const auto procedure_begin = std::chrono::high_resolution_clock::now();
-    const bool success = procedure->execute();
-    const auto procedure_end = std::chrono::high_resolution_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - benchmark_begin).count() << ','
-              << procedure->identifier() << ',' << (success ? '1' : '0') << ","
-              << std::chrono::duration_cast<std::chrono::nanoseconds>(procedure_end - procedure_begin).count()
-              << std::endl;
-  }
-
-  return 0;
+  // Run the benchmark
+  auto item_runner = std::make_unique<TPCCBenchmarkItemRunner>(config, num_warehouses);
+  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context)
+      .run();
 }
