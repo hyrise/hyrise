@@ -132,6 +132,15 @@ void BenchmarkRunner::run() {
 void BenchmarkRunner::_benchmark_shuffled() {
   auto item_ids = _benchmark_item_runner->items();
 
+  if (const auto& weights = _benchmark_item_runner->weights(); !weights.empty()) {
+    auto item_ids_weighted = std::vector<BenchmarkItemID>{};
+    for (const auto& selected_item_id : item_ids) {
+      const auto item_weight = weights[selected_item_id];
+      item_ids_weighted.resize(item_ids_weighted.size() + item_weight, selected_item_id);
+    }
+    item_ids = item_ids_weighted;
+  }
+
   auto item_ids_shuffled = std::vector<BenchmarkItemID>{};
 
   for (const auto& item_id : item_ids) {
@@ -363,6 +372,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
+    // TODO Make shuffled default for TPC-C
     ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value("Ordered")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT

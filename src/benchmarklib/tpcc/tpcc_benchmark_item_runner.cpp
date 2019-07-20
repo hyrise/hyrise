@@ -45,4 +45,11 @@ std::string TPCCBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) co
   }
 }
 
+const std::vector<int>& TPCCBenchmarkItemRunner::weights() const {
+  // TODO verify
+  static const std::vector<int> weights{4, 45, 4, 43, 4};
+  return weights;
+}
+
+
 }  // namespace opossum

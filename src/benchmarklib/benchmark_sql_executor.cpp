@@ -14,7 +14,6 @@ BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_pt
     : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {}
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(const std::string& sql) {
-  std::cout << sql << std::endl;
   auto pipeline_builder = SQLPipelineBuilder{sql};
   if (_visualize_prefix) pipeline_builder.dont_cleanup_temporaries();
   if (transaction_context) pipeline_builder.with_transaction_context(transaction_context);

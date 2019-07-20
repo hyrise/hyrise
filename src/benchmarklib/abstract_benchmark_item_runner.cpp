@@ -29,4 +29,9 @@ void AbstractBenchmarkItemRunner::set_sqlite_wrapper(const std::shared_ptr<SQLit
   _sqlite_wrapper = sqlite_wrapper;
 }
 
+const std::vector<int>& AbstractBenchmarkItemRunner::weights() const {
+  static const std::vector<int> empty_vector;
+  return empty_vector;
+}
+
 }  // namespace opossum
