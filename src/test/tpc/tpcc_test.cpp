@@ -195,11 +195,10 @@ TEST_F(TpccTest, NewOrder) {
 
   int old_d_next_o_id;
   {
-    auto pipeline =
-        SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} + std::to_string(new_order.w_id) +
-                           " AND D_ID = " + std::to_string(new_order.d_id)}
-            .with_transaction_context(old_transaction_context)
-            .create_pipeline();
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} +
+                                       std::to_string(new_order.w_id) + " AND D_ID = " + std::to_string(new_order.d_id)}
+                        .with_transaction_context(old_transaction_context)
+                        .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_EQ(table->row_count(), 1);
     old_d_next_o_id = table->get_value<int>(ColumnID{0}, 0);
@@ -207,10 +206,9 @@ TEST_F(TpccTest, NewOrder) {
 
   // Verify updated D_NEXT_O_ID
   {
-    auto pipeline =
-        SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} + std::to_string(new_order.w_id) +
-                           " AND D_ID = " + std::to_string(new_order.d_id)}
-            .create_pipeline();
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} +
+                                       std::to_string(new_order.w_id) + " AND D_ID = " + std::to_string(new_order.d_id)}
+                        .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_EQ(table->row_count(), 1);
     EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0), old_d_next_o_id + 1);

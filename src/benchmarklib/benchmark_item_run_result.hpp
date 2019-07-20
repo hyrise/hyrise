@@ -2,8 +2,8 @@
 
 #include <atomic>
 
-#include "sql/sql_pipeline.hpp"
 #include "benchmark_config.hpp"
+#include "sql/sql_pipeline.hpp"
 
 namespace opossum {
 

@@ -92,10 +92,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void _add_column(std::vector<Segments>& segments_by_chunk,
-                  TableColumnDefinitions& column_definitions, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities,
-                  const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
+  void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
+                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
     bool is_first_column = column_definitions.size() == 0;
@@ -196,10 +195,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
    * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void _add_column(std::vector<Segments>& segments_by_chunk,
-                  TableColumnDefinitions& column_definitions, std::string name,
-                  std::shared_ptr<std::vector<size_t>> cardinalities,
-                  const std::function<T(std::vector<size_t>)>& generator_function) {
+  void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
+                   std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                   const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
     _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);

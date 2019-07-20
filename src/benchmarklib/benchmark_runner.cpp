@@ -292,19 +292,16 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
       auto all_pipeline_metrics_json = nlohmann::json::array();
       for (const auto& pipeline_metrics : run_result.metrics) {
-        auto pipeline_metrics_json = nlohmann::json{
-          {"parse_duration", pipeline_metrics.parse_time_nanos.count()},
-          {"statements", nlohmann::json::array()}
-        };
+        auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
+                                                    {"statements", nlohmann::json::array()}};
 
         for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
-          auto sql_statement_metrics_json = nlohmann::json{
-            {"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
-            {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
-            {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
-            {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
-            {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}
-          };
+          auto sql_statement_metrics_json =
+              nlohmann::json{{"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
+                             {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
+                             {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
+                             {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
+                             {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
 
           pipeline_metrics_json["statements"].push_back(sql_statement_metrics_json);
         }
@@ -312,16 +309,13 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         all_pipeline_metrics_json.push_back(pipeline_metrics_json);
       }
 
-      runs_json.push_back(nlohmann::json{
-        {"begin", run_result.begin.count()},
-        {"duration", run_result.duration.count()},  // TODO test compare_benchmarks.json, MT benchmarks
-        {"metrics", all_pipeline_metrics_json}
-      });
+      runs_json.push_back(
+          nlohmann::json{{"begin", run_result.begin.count()},
+                         {"duration", run_result.duration.count()},  // TODO test compare_benchmarks.json, MT benchmarks
+                         {"metrics", all_pipeline_metrics_json}});
     }
 
-    nlohmann::json benchmark{{"name", name},
-                             {"runs", runs_json},
-                             {"iterations", result.runs.size()}};
+    nlohmann::json benchmark{{"name", name}, {"runs", runs_json}, {"iterations", result.runs.size()}};
 
     if (_config.benchmark_mode == BenchmarkMode::Ordered) {
       // These metrics are not meaningful for permuted / shuffled execution
@@ -330,8 +324,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
       const auto items_per_second = static_cast<float>(result.runs.size()) / duration_seconds;
       benchmark["items_per_second"] = items_per_second;
-      const auto time_per_item =
-          result.runs.size() > 0 ? duration_of_all_runs_ns / result.runs.size() : std::nanf("");
+      const auto time_per_item = result.runs.size() > 0 ? duration_of_all_runs_ns / result.runs.size() : std::nanf("");
       benchmark["avg_real_time_per_iteration"] = time_per_item;
     }
 

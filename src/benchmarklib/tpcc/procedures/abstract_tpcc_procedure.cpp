@@ -15,7 +15,8 @@ AbstractTpccProcedure::AbstractTpccProcedure(BenchmarkSQLExecutor& sql_executor)
 AbstractTpccProcedure::AbstractTpccProcedure(const AbstractTpccProcedure& other) : _sql_executor(other._sql_executor) {}
 
 AbstractTpccProcedure& AbstractTpccProcedure::operator=(const AbstractTpccProcedure& other) {
-  DebugAssert(&_sql_executor == &other._sql_executor, "Can only assign AbstractTpccProcedure if the sql_executors are the same");
+  DebugAssert(&_sql_executor == &other._sql_executor,
+              "Can only assign AbstractTpccProcedure if the sql_executors are the same");
   return *this;
 }
 

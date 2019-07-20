@@ -2,8 +2,8 @@
 
 #include <atomic>
 
-#include "benchmark_item_run_result.hpp"
 #include "benchmark_config.hpp"
+#include "benchmark_item_run_result.hpp"
 
 namespace opossum {
 

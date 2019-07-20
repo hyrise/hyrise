@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   auto item_runner = std::make_unique<TPCCBenchmarkItemRunner>(config, num_warehouses);
-  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCCTableGenerator>(num_warehouses, config), context)
+  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCCTableGenerator>(num_warehouses, config),
+                  context)
       .run();
 }
