@@ -149,14 +149,16 @@ int main(int argc, char* argv[]) {
   Assert(data_files_available(table_path), "Generating table data files failed.");
 
   auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
+  if (config->verify) {
+    query_generator->load_dedicated_expected_results(
+        std::filesystem::path{"third_party/tpcds-result-reproduction/answer_sets_tbl"});
+  }
   auto table_generator = std::make_unique<FileBasedTableGenerator>(config, table_path);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator), context};
-
   if (config->verify) {
     add_indices_to_sqlite("resources/benchmark/tpcds/schema.sql", "resources/benchmark/tpcds/create_indices.sql",
                           benchmark_runner.sqlite_wrapper);
   }
-
   std::cout << "done." << std::endl;
 
   benchmark_runner.run();

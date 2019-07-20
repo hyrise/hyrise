@@ -58,7 +58,12 @@ const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const { ret
 
 void TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   const auto sql = _build_query(item_id);
-  sql_executor.execute(sql);
+  std::shared_ptr<const Table> expected_result_table = nullptr;
+  if (!_dedicated_expected_results.empty()) {
+    expected_result_table = _dedicated_expected_results[item_id];
+  }
+
+  sql_executor.execute(sql, expected_result_table);
 }
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
