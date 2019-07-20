@@ -9,6 +9,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 #include "utils/timer.hpp"

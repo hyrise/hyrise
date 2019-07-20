@@ -20,6 +20,10 @@ class StorageTableTest : public BaseTest {
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
+  static tbb::concurrent_vector<std::shared_ptr<Chunk>>& get_chunks(std::shared_ptr<Table>& table) {
+    return table->_chunks;
+  }
+
   std::shared_ptr<Table> t;
   TableColumnDefinitions column_definitions;
 };
@@ -81,6 +85,35 @@ TEST_F(StorageTableTest, GetValue) {
   ASSERT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 0u).compare("Hello,"));
   ASSERT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 2u).compare("!"));
   EXPECT_THROW(t->get_value<int>(ColumnID{3}, 0u), std::exception);
+}
+
+TEST_F(StorageTableTest, GetRow) {
+  t->append({4, "Hello,"});
+  t->append({6, "world"});
+  t->append({3, "!"});
+  ASSERT_EQ(t->get_row(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
+  ASSERT_EQ(t->get_row(1u), std::vector<AllTypeVariant>({6, "world"}));
+  ASSERT_EQ(t->get_row(2u), std::vector<AllTypeVariant>({3, "!"}));
+  EXPECT_ANY_THROW(t->get_row(4u));
+}
+
+TEST_F(StorageTableTest, GetRows) {
+  TableColumnDefinitions column_definitions_nullable{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  const auto table = std::make_shared<Table>(column_definitions_nullable, TableType::Data, 2);
+
+  table->append({4, "Hello,"});
+  table->append({6, "world"});
+  table->append({3, "!"});
+  table->append({9, NullValue{}});
+
+  const auto rows = table->get_rows();
+
+  ASSERT_EQ(rows.size(), 4u);
+  EXPECT_EQ(rows.at(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
+  EXPECT_EQ(rows.at(1u), std::vector<AllTypeVariant>({6, "world"}));
+  EXPECT_EQ(rows.at(2u), std::vector<AllTypeVariant>({3, "!"}));
+  EXPECT_EQ(rows.at(3u).at(0u), AllTypeVariant{9});
+  EXPECT_TRUE(variant_is_null(rows.at(3u).at(1u)));
 }
 
 TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
@@ -186,7 +219,8 @@ TEST_F(StorageTableTest, StableChunks) {
   table->append({100, "Hello"});
 
   // The address of the first shared_ptr control object
-  const auto first_chunk = &table->chunks()[0];
+  const auto& chunks_vector = get_chunks(table);
+  const auto first_chunk = &chunks_vector[0];
 
   for (auto i = 1; i < 10; ++i) {
     table->append({i, "Hello"});
@@ -194,7 +228,7 @@ TEST_F(StorageTableTest, StableChunks) {
 
   // The vector should have been resized / expanded by now
 
-  EXPECT_EQ(first_chunk, &table->chunks()[0]);
+  EXPECT_EQ(first_chunk, &chunks_vector[0]);
   EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[0], AllTypeVariant{100});
 }
 

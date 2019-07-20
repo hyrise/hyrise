@@ -36,10 +36,6 @@ class UnionNodeTest : public BaseTest {
 
 TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: UnionPositions"); }
 
-TEST_F(UnionNodeTest, StatisticsNotImplemented) {
-  EXPECT_THROW(_union_node->derive_statistics_from(_mock_node1, _mock_node1), std::exception);
-}
-
 TEST_F(UnionNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_union_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
   EXPECT_EQ(*_union_node->column_expressions().at(1), *_mock_node1->column_expressions().at(1));

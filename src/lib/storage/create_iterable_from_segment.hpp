@@ -39,38 +39,58 @@ auto create_iterable_from_segment(const ValueSegment<T>& segment) {
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
+#ifdef HYRISE_ERASE_DICTIONARY
+  PerformanceWarning("DictionarySegmentIterable erased by compile-time setting");
+  return AnySegmentIterable<T>(DictionarySegmentIterable<T, pmr_vector<T>>(segment));
+#else
   if constexpr (EraseSegmentType) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return DictionarySegmentIterable<T, pmr_vector<T>>{segment};
   }
+#endif
 }
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
+#ifdef HYRISE_ERASE_RUNLENGTH
+  PerformanceWarning("RunLengthSegmentIterable erased by compile-time setting");
+  return AnySegmentIterable<T>(RunLengthSegmentIterable<T>(segment));
+#else
   if constexpr (EraseSegmentType) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return RunLengthSegmentIterable<T>{segment};
   }
+#endif
 }
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment) {
+#ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
+  PerformanceWarning("FixedStringDictionarySegmentIterable erased by compile-time setting");
+  return AnySegmentIterable<T>(DictionarySegmentIterable<T, FixedStringVector>(segment));
+#else
   if constexpr (EraseSegmentType) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return DictionarySegmentIterable<T, FixedStringVector>{segment};
   }
+#endif
 }
 
 template <typename T, bool EraseSegmentType = HYRISE_DEBUG>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
+#ifdef HYRISE_ERASE_FRAMEOFREFERENCE
+  PerformanceWarning("FrameOfReferenceSegmentIterable erased by compile-time setting");
+  return AnySegmentIterable<T>(FrameOfReferenceSegmentIterable<T>(segment));
+#else
   if constexpr (EraseSegmentType) {
     return create_any_segment_iterable<T>(segment);
   } else {
     return FrameOfReferenceSegmentIterable<T>{segment};
   }
+#endif
 }
 
 template <typename T, bool EraseSegmentType = true>

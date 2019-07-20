@@ -280,7 +280,7 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   insert->execute();
   context->commit();
 
-  EXPECT_TABLE_EQ_ORDERED(target_table, table_int_float)
+  EXPECT_TABLE_EQ_ORDERED(target_table, table_int_float);
 }
 
 }  // namespace opossum

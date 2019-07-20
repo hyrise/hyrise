@@ -10,6 +10,7 @@
 #include "server/server.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 int main(int argc, char* argv[]) {
   uint16_t port = 5432;
@@ -31,7 +32,7 @@ int main(int argc, char* argv[]) {
   // until the server doesn't request any IO any more, i.e. is has terminated. The server requests IO in its
   // constructor and then runs forever.
   opossum::Server server{io_service, port};
-
+  opossum::TpchTableGenerator{0.01f, 100'000}.generate_and_store();
   io_service.run();
 
   return 0;

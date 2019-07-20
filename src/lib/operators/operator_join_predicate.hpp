@@ -9,6 +9,7 @@ namespace opossum {
 
 class AbstractExpression;
 class AbstractLQPNode;
+class JoinNode;
 
 // Predicate representation for Join operators consists of one column of each input side and a join predicate.
 struct OperatorJoinPredicate {
@@ -31,5 +32,9 @@ struct OperatorJoinPredicate {
   ColumnIDPair column_ids;
   PredicateCondition predicate_condition;
 };
+
+// For gtest
+bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r);
+bool operator==(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r);
 
 }  // namespace opossum

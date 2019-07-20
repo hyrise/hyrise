@@ -13,14 +13,19 @@ namespace opossum {
 // operator to retrieve a table from the StorageManager by specifying its name
 class GetTable : public AbstractReadOnlyOperator {
  public:
+  // Convenience constructor without pruning info
   explicit GetTable(const std::string& name);
+
+  // Constructor with pruning info
+  GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
+           const std::vector<ColumnID>& pruned_column_ids);
 
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
 
   const std::string& table_name() const;
-
-  void set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk_ids);
+  const std::vector<ChunkID>& pruned_chunk_ids() const;
+  const std::vector<ColumnID>& pruned_column_ids() const;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -32,6 +37,7 @@ class GetTable : public AbstractReadOnlyOperator {
 
   // name of the table to retrieve
   const std::string _name;
-  std::vector<ChunkID> _excluded_chunk_ids;
+  const std::vector<ChunkID> _pruned_chunk_ids;
+  const std::vector<ColumnID> _pruned_column_ids;
 };
 }  // namespace opossum

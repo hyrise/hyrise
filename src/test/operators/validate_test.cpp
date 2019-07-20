@@ -110,7 +110,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   }
 
   auto reference_table = std::make_shared<Table>(_test_table->column_definitions(), TableType::References);
-  reference_table->append_chunk(std::make_shared<Chunk>(segments));
+  reference_table->append_chunk(segments);
 
   auto table_wrapper = std::make_shared<TableWrapper>(reference_table);
   table_wrapper->execute();

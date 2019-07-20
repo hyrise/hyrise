@@ -1,9 +1,10 @@
 #include "check_table_equal.hpp"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <iomanip>
 #include <iostream>
-
-#include "boost/lexical_cast.hpp"
 
 #include "lossless_cast.hpp"
 
@@ -23,31 +24,17 @@ using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
 Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
   // initialize matrix with table sizes, including column names/types
-  Matrix matrix(table->row_count() + 2, std::vector<AllTypeVariant>(table->column_count()));
+  Matrix header(2, std::vector<AllTypeVariant>(table->column_count()));
 
   // set column names/types
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-    matrix[0][column_id] = pmr_string{table->column_name(column_id)};
-    matrix[1][column_id] = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+    header[0][column_id] = pmr_string{table->column_name(column_id)};
+    header[1][column_id] = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
   }
 
   // set values
-  unsigned row_offset = 0;
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); chunk_id++) {
-    auto chunk = table->get_chunk(chunk_id);
-
-    // an empty table's chunk might be missing actual segments
-    if (chunk->size() == 0) continue;
-
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      const auto segment = chunk->get_segment(column_id);
-
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-        matrix[row_offset + chunk_offset + 2][column_id] = (*segment)[chunk_offset];
-      }
-    }
-    row_offset += chunk->size();
-  }
+  auto matrix = table->get_rows();
+  matrix.insert(matrix.begin(), header.begin(), header.end());
 
   return matrix;
 }
@@ -109,24 +96,65 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 }  // namespace
 
 namespace opossum {
-bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
-                       const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
-                       TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
+
+bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
+                         const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
+                         TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
+  if (actual_segment->data_type() != expected_segment->data_type()) {
+    return false;
+  }
+
+  const auto definitions =
+      std::vector<TableColumnDefinition>{TableColumnDefinition("single_column", actual_segment->data_type(), true)};
+
+  auto table_type = [&](const std::shared_ptr<BaseSegment> segment) {
+    if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
+      return TableType::References;
+    }
+    return TableType::Data;
+  };
+
+  auto actual_table = std::make_shared<Table>(definitions, table_type(actual_segment));
+  actual_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{actual_segment});
+  auto expected_table = std::make_shared<Table>(definitions, table_type(expected_segment));
+  expected_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{expected_segment});
+
+  // If check_table_equal returns something other than std::nullopt, a difference has been found.
+  return !check_table_equal(actual_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode);
+}
+
+std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
+                                             const std::shared_ptr<const Table>& expected_table,
+                                             OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
+                                             FloatComparisonMode float_comparison_mode) {
+  if (!opossum_table && expected_table) return "No 'actual' table given";
+  if (opossum_table && !expected_table) return "No 'expected' table given";
+  if (!opossum_table && !expected_table) return "No 'expected' table and no 'actual' table given";
+
+  auto stream = std::stringstream{};
+
   auto opossum_matrix = table_to_matrix(opossum_table);
   auto expected_matrix = table_to_matrix(expected_table);
 
+  // sort if order does not matter
+  if (order_sensitivity == OrderSensitivity::No) {
+    // skip header when sorting
+    std::sort(opossum_matrix.begin() + 2, opossum_matrix.end());
+    std::sort(expected_matrix.begin() + 2, expected_matrix.end());
+  }
+
   const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
                                           const std::vector<std::pair<uint64_t, uint16_t>>& highlighted_cells = {}) {
-    std::cout << "===================== Tables are not equal =====================" << std::endl;
-    std::cout << "------------------------- Actual Result ------------------------" << std::endl;
-    std::cout << matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
-    std::cout << "----------------------------------------------------------------" << std::endl << std::endl;
-    std::cout << "------------------------ Expected Result -----------------------" << std::endl;
-    std::cout << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
-    std::cout << "----------------------------------------------------------------" << std::endl;
-    std::cout << "Type of error: " << error_type << std::endl;
-    std::cout << "================================================================" << std::endl << std::endl;
-    std::cout << error_msg << std::endl << std::endl;
+    stream << "===================== Tables are not equal =====================" << std::endl;
+    stream << "------------------------- Actual Result ------------------------" << std::endl;
+    stream << matrix_to_string(opossum_matrix, highlighted_cells, ANSI_COLOR_RED, ANSI_COLOR_BG_RED);
+    stream << "----------------------------------------------------------------" << std::endl << std::endl;
+    stream << "------------------------ Expected Result -----------------------" << std::endl;
+    stream << matrix_to_string(expected_matrix, highlighted_cells, ANSI_COLOR_GREEN, ANSI_COLOR_BG_GREEN);
+    stream << "----------------------------------------------------------------" << std::endl;
+    stream << "Type of error: " << error_type << std::endl;
+    stream << "================================================================" << std::endl << std::endl;
+    stream << error_msg << std::endl << std::endl;
   };
 
   // compare schema of tables
@@ -137,7 +165,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                                   "Expected number of columns: " + std::to_string(expected_table->column_count());
 
     print_table_comparison(error_type, error_msg);
-    return false;
+    return stream.str();
   }
 
   //  - column names and types
@@ -160,13 +188,13 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
       }
     }
 
-    if (opossum_table->column_name(column_id) != expected_table->column_name(column_id)) {
+    if (!boost::iequals(opossum_table->column_name(column_id), expected_table->column_name(column_id))) {
       const std::string error_type = "Column name mismatch (column " + std::to_string(column_id) + ")";
       const std::string error_msg = "Actual column name: " + opossum_table->column_name(column_id) + "\n" +
                                     "Expected column name: " + expected_table->column_name(column_id);
 
       print_table_comparison(error_type, error_msg, {{0, column_id}});
-      return false;
+      return stream.str();
     }
 
     if (left_column_type != right_column_type) {
@@ -176,7 +204,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
           "Expected column type: " + data_type_to_string.left.at(expected_table->column_data_type(column_id));
 
       print_table_comparison(error_type, error_msg, {{1, column_id}});
-      return false;
+      return stream.str();
     }
   }
 
@@ -188,7 +216,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                                   "Expected number of rows: " + std::to_string(expected_table->row_count());
 
     print_table_comparison(error_type, error_msg);
-    return false;
+    return stream.str();
   }
 
   // sort if order does not matter
@@ -249,10 +277,10 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     }
 
     print_table_comparison(error_type, error_msg, mismatched_cells);
-    return false;
+    return stream.str();
   }
 
-  return true;
+  return std::nullopt;
 }
 
 }  // namespace opossum

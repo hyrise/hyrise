@@ -68,10 +68,10 @@ TEST_F(JoinGraphTest, OutputToStream) {
   stream << join_graph;
 
   EXPECT_EQ(stream.str(), R"(==== Vertices ====
-[MockNode 'a']
-[MockNode 'b']
-[MockNode 'c']
-[MockNode 'd']
+[MockNode 'a'] pruned: 0/1 columns
+[MockNode 'b'] pruned: 0/1 columns
+[MockNode 'c'] pruned: 0/1 columns
+[MockNode 'd'] pruned: 0/1 columns
 ===== Edges ======
 Vertices: 0011; 1 predicates
 a = a

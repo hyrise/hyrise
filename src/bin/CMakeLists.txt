@@ -7,6 +7,7 @@ add_executable(
 target_link_libraries(
     hyriseServer
     hyrise
+    hyriseBenchmarkLib
 )
 
 # Configure boost server
@@ -39,10 +40,6 @@ target_link_libraries(
     hyrise
     hyriseBenchmarkLib
 )
-
-# Configure tpchTableGenerator
-add_executable(tpchTableGenerator tpch_table_generator.cpp)
-target_link_libraries(tpchTableGenerator hyrise hyriseBenchmarkLib)
 
 # Configure client
 add_executable(

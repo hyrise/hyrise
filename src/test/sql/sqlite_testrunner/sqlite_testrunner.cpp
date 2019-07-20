@@ -127,8 +127,6 @@ void SQLiteTestRunner::SetUp() {
       StorageManager::get().add_table(table_name, table_cache_entry.table);
     }
   }
-
-  SQLPhysicalPlanCache::get().clear();
 }
 
 std::vector<std::string> SQLiteTestRunner::queries() {
@@ -148,7 +146,7 @@ std::vector<std::string> SQLiteTestRunner::queries() {
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  const auto [sql, use_jit, encoding_type] = GetParam();  // NOLINT
+  const auto [sql, use_jit, encoding_type] = GetParam();
 
   SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
                encoding_type_to_string.left.at(encoding_type));
@@ -163,7 +161,8 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_lqp_translator(lqp_translator).create_pipeline();
 
   // Execute query in Hyrise and SQLite
-  const auto result_table = sql_pipeline.get_result_table();
+  const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
+  ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
   const auto sqlite_result_table = _sqlite->execute_query(sql);
 
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
@@ -180,9 +179,12 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
     }
   }
 
-  ASSERT_TRUE(check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
-                                FloatComparisonMode::RelativeDifference))
-      << "Query failed: " << sql;
+  const auto table_comparison_msg = check_table_equal(result_table, sqlite_result_table, order_sensitivity,
+                                                      TypeCmpMode::Lenient, FloatComparisonMode::RelativeDifference);
+
+  if (table_comparison_msg) {
+    FAIL() << "Query failed: " << *table_comparison_msg << std::endl;
+  }
 
   // Mark Tables modified by the query as dirty
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {

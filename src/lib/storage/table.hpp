@@ -6,11 +6,10 @@
 #include <utility>
 #include <vector>
 
-#include "boost/variant.hpp"
-
 #include "base_segment.hpp"
+#include "boost/variant.hpp"
 #include "chunk.hpp"
-#include "storage/index/index_info.hpp"
+#include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -24,14 +23,20 @@ class TableStatistics;
  * A Table is partitioned horizontally into a number of chunks.
  */
 class Table : private Noncopyable {
+  friend class StorageTableTest;
+
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
   // We want a common interface for tables that contain data (TableType::Data) and tables that contain reference
   // segments (TableType::References). The attribute max_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
-  explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
-                 const std::optional<uint32_t> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+  Table(const TableColumnDefinitions& column_definitions, const TableType type,
+        const std::optional<uint32_t> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+
+  Table(const TableColumnDefinitions& column_definitions, const TableType type,
+        std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
+
   /**
    * @defgroup Getter and convenience functions for the column definitions
    * @{
@@ -79,45 +84,36 @@ class Table : private Noncopyable {
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
 
-  // Returns all Chunks
-  const tbb::concurrent_vector<std::shared_ptr<Chunk>>& chunks() const;
-
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
 
-  /*
+  /**
    * Removes the chunk with the given id.
    * Makes sure that the the chunk was fully invalidated by the logical delete before deleting it physically.
-  */
+   */
   void remove_chunk(ChunkID chunk_id);
 
   /**
-   * Creates a new Chunk and appends it to this table.
-   * Makes sure the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
-   * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
+   * Creates a new Chunk from a set of segments and appends it to this table.
+   * When implementing operators, prefer building the Chunks upfront and adding them to the output table on
+   * construction of the Table. This avoids having to append repeatedly to the tbb::concurrent_vector storing the Chunks
+   *
+   * Asserts that the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
    *
    * @param mvcc_data   Has to be passed in iff the Table is a data Table that uses MVCC
    */
   void append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data = nullptr,
                     const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
-  /**
-   * Appends an existing chunk to this table.
-   * Makes sure the segments in the chunk match with the TableType and the MVCC setting is the same as for the table.
-   */
-  void append_chunk(const std::shared_ptr<Chunk>& chunk);
-
   // Create and append a Chunk consisting of ValueSegments.
   void append_mutable_chunk();
-
   /** @} */
 
   /**
    * @defgroup Convenience methods for accessing/adding Table data. Slow, use only for testing!
    * @{
    */
-
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
   void append(const std::vector<AllTypeVariant>& values);
@@ -144,15 +140,26 @@ class Table : private Noncopyable {
     Fail("Row does not exist.");
   }
 
+  // Materialize a single Tuple
+  std::vector<AllTypeVariant> get_row(size_t row_idx) const;
+
+  // Materialize the entire Table
+  std::vector<std::vector<AllTypeVariant>> get_rows() const;
   /** @} */
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
-  void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
+  /**
+   * Tables, typically those stored in the StorageManager, can be associated with statistics to perform Cardinality
+   * estimation during optimization.
+   * @{
+   */
+  std::shared_ptr<TableStatistics> table_statistics() const;
 
-  std::shared_ptr<TableStatistics> table_statistics() const { return _table_statistics; }
+  void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
+  /** @} */
 
-  std::vector<IndexInfo> get_indexes() const;
+  std::vector<IndexStatistics> indexes_statistics() const;
 
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
@@ -161,8 +168,8 @@ class Table : private Noncopyable {
     for (auto& chunk : _chunks) {
       chunk->create_index<Index>(column_ids);
     }
-    IndexInfo i = {column_ids, name, index_type};
-    _indexes.emplace_back(i);
+    IndexStatistics index_statistics = {column_ids, name, index_type};
+    _indexes.emplace_back(index_statistics);
   }
 
   /**
@@ -178,6 +185,6 @@ class Table : private Noncopyable {
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
-  std::vector<IndexInfo> _indexes;
+  std::vector<IndexStatistics> _indexes;
 };
 }  // namespace opossum

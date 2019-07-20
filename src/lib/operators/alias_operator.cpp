@@ -52,8 +52,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   /**
    * Generate the output table, forwarding segments from the input chunks and ordering them according to _column_ids
    */
-  const auto output_table =
-      std::make_shared<Table>(output_column_definitions, input_table.type(), std::nullopt, input_table.has_mvcc());
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{input_table.chunk_count()};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
@@ -65,10 +64,12 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       output_segments.emplace_back(input_chunk->get_segment(column_id));
     }
 
-    output_table->append_chunk(output_segments, input_chunk->mvcc_data(), input_chunk->get_allocator());
+    output_chunks[chunk_id] =
+        std::make_shared<Chunk>(std::move(output_segments), input_table.get_chunk(chunk_id)->mvcc_data());
   }
 
-  return output_table;
+  return std::make_shared<Table>(output_column_definitions, input_table.type(), std::move(output_chunks),
+                                 input_table.has_mvcc());
 }
 
 }  // namespace opossum

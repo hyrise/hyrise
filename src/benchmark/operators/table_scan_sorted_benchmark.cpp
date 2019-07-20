@@ -9,6 +9,7 @@
 #include "micro_benchmark_utils.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "table_generator.hpp"
@@ -83,7 +84,10 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   }
 
   if (mode == "Sorted") {
-    for (auto& chunk : table->chunks()) {
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = table->get_chunk(chunk_id);
+
       chunk->set_ordered_by(std::make_pair(ColumnID(0), OrderByMode::Ascending));
     }
   }

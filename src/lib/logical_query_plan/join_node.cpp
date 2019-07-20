@@ -14,7 +14,6 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "operators/operator_join_predicate.hpp"
-#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -92,33 +91,6 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
     ColumnID right_column_id =
         static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
     return right_input()->is_column_nullable(right_column_id);
-  }
-}
-
-// currently TableStatistics are only generated for the primary predicate
-// TODO(anyone) support TableStatistics generation for multiple predicates
-std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  DebugAssert(left_input && right_input, "JoinNode needs left_input and right_input");
-
-  const auto cross_join_statistics = std::make_shared<TableStatistics>(
-      left_input->get_statistics()->estimate_cross_join(*right_input->get_statistics()));
-
-  if (join_mode == JoinMode::Cross) {
-    return cross_join_statistics;
-
-  } else {
-    Assert(!join_predicates().empty(), "Expected join predicate");
-
-    const auto operator_join_predicate =
-        OperatorJoinPredicate::from_expression(*join_predicates().front(), *left_input, *right_input);
-
-    // TODO(anybody) (Complex) predicate we can't build statistics for
-    if (!operator_join_predicate) return cross_join_statistics;
-
-    return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
-        *right_input->get_statistics(), join_mode, operator_join_predicate->column_ids,
-        operator_join_predicate->predicate_condition));
   }
 }
 

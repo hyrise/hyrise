@@ -5,12 +5,17 @@
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
+#include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "statistics/chunk_statistics/chunk_statistics.hpp"
+#include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/min_max_filter.hpp"
+#include "statistics/statistics_objects/range_filter.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -50,39 +55,49 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
     _apply_to_inputs(node);
     return;
   }
-  auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
+  const auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
   DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");
 
   /**
    * A chain of predicates followed by a stored table node was found.
    */
   auto table = StorageManager::get().get_table(stored_table->table_name);
-  std::vector<std::shared_ptr<ChunkStatistics>> statistics;
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    statistics.push_back(table->get_chunk(chunk_id)->statistics());
-  }
-  std::set<ChunkID> excluded_chunk_ids;
+
+  std::set<ChunkID> pruned_chunk_ids;
   for (auto& predicate : predicate_nodes) {
-    auto new_exclusions = _compute_exclude_list(statistics, *predicate->predicate(), *stored_table);
-    excluded_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
+    auto new_exclusions = _compute_exclude_list(*table, *predicate->predicate(), stored_table);
+    pruned_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
-  // wanted side effect of usings sets: excluded_chunk_ids vector is sorted
-  auto& already_excluded_chunk_ids = stored_table->excluded_chunk_ids();
-  if (!already_excluded_chunk_ids.empty()) {
+  // wanted side effect of using sets: pruned_chunk_ids vector is sorted
+  auto& already_pruned_chunk_ids = stored_table->pruned_chunk_ids();
+  if (!already_pruned_chunk_ids.empty()) {
     std::vector<ChunkID> intersection;
-    std::set_intersection(already_excluded_chunk_ids.begin(), already_excluded_chunk_ids.end(),
-                          excluded_chunk_ids.begin(), excluded_chunk_ids.end(), std::back_inserter(intersection));
-    stored_table->set_excluded_chunk_ids(intersection);
+    std::set_intersection(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), pruned_chunk_ids.begin(),
+                          pruned_chunk_ids.end(), std::back_inserter(intersection));
+    stored_table->set_pruned_chunk_ids(intersection);
   } else {
-    stored_table->set_excluded_chunk_ids(std::vector<ChunkID>(excluded_chunk_ids.begin(), excluded_chunk_ids.end()));
+    stored_table->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
   }
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, const AbstractExpression& predicate,
-    const StoredTableNode& stored_table_node) const {
-  const auto operator_predicates = OperatorScanPredicate::from_expression(predicate, stored_table_node);
+    const Table& table, const AbstractExpression& predicate,
+    const std::shared_ptr<StoredTableNode>& stored_table_node) const {
+  // Hacky:
+  // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in
+  // `stored_table_node`.
+  // To be able to build a OperatorScanPredicate that contains a ColumnID referring to the correct AttributeStatistics
+  // in `table->table_statistics()`, we create a clone of `stored_table_node` without the pruning info.
+  auto stored_table_node_without_column_pruning =
+      std::static_pointer_cast<StoredTableNode>(stored_table_node->deep_copy());
+  stored_table_node_without_column_pruning->set_pruned_column_ids({});
+  const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(
+      predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
+  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning,
+                                                                          *stored_table_node_without_column_pruning);
+  // End of hacky
+
   if (!operator_predicates) return {};
 
   std::set<ChunkID> result;
@@ -93,7 +108,8 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       continue;
     }
 
-    const auto column_data_type = stored_table_node.column_expressions()[operator_predicate.column_id]->data_type();
+    const auto column_data_type =
+        stored_table_node_without_column_pruning->column_expressions()[operator_predicate.column_id]->data_type();
 
     // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
     // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
@@ -117,19 +133,51 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       }
     }
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < statistics.size(); ++chunk_id) {
-      if (!statistics[chunk_id]) {
+    auto condition = operator_predicate.predicate_condition;
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+      const auto pruning_statistics = table.get_chunk(chunk_id)->pruning_statistics();
+      if (!pruning_statistics) {
         continue;
       }
 
-      if (statistics[chunk_id]->can_prune(operator_predicate.column_id, operator_predicate.predicate_condition, *value,
-                                          value2)) {
+      const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
+      if (_can_prune(*segment_statistics, condition, *value, value2)) {
         result.insert(chunk_id);
       }
     }
   }
 
   return result;
+}
+
+bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_statistics,
+                                  const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+                                  const std::optional<AllTypeVariant>& variant_value2) const {
+  auto can_prune = false;
+
+  resolve_data_type(base_segment_statistics.data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+
+    const auto& segment_statistics = static_cast<const AttributeStatistics<ColumnDataType>&>(base_segment_statistics);
+
+    // Range filters are only available for arithmetic (non-string) types.
+    if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+      if (segment_statistics.range_filter) {
+        if (segment_statistics.range_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
+          can_prune = true;
+        }
+      }
+    }
+
+    if (segment_statistics.min_max_filter) {
+      if (segment_statistics.min_max_filter->does_not_contain(predicate_condition, variant_value, variant_value2)) {
+        can_prune = true;
+      }
+    }
+  });
+
+  return can_prune;
 }
 
 bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const {

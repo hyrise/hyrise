@@ -51,27 +51,37 @@ class SQLTranslator final {
   static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr, const UseMvcc use_mvcc);
 
  private:
+  // An expression and its identifiers. This is partly redundant to the SQLIdentifierResolver, but allows expressions
+  // for equal SQL expressions with different identifiers (e.g., SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2 FROM ...).
+  struct SelectListElement {
+    explicit SelectListElement(const std::shared_ptr<AbstractExpression>& expression);
+    SelectListElement(const std::shared_ptr<AbstractExpression>& expression,
+                      const std::vector<SQLIdentifier>& identifiers);
+
+    std::shared_ptr<AbstractExpression> expression;
+    std::vector<SQLIdentifier> identifiers;
+  };
+
   // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
   // used, e.g. "SELECT * FROM t1, t2 JOIN t3 ON t1.a = t2.a" is illegal since t1 is invisible to the seconds entry.
   // Also ensures the correct columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove
   // columns from input tables
   struct TableSourceState final {
     TableSourceState() = default;
-    TableSourceState(
-        const std::shared_ptr<AbstractLQPNode>& lqp,
-        const std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>>& elements_by_table_name,
-        const std::vector<std::shared_ptr<AbstractExpression>>& elements_in_order,
-        const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
+    TableSourceState(const std::shared_ptr<AbstractLQPNode>& lqp,
+                     const std::unordered_map<std::string, std::vector<SelectListElement>>& elements_by_table_name,
+                     const std::vector<SelectListElement>& elements_in_order,
+                     const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver);
 
     void append(TableSourceState&& rhs);
 
     std::shared_ptr<AbstractLQPNode> lqp;
 
     // Collects the output of the FROM clause to expand wildcards (*; <t>.*) used in the SELECT list
-    std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>> elements_by_table_name;
+    std::unordered_map<std::string, std::vector<SelectListElement>> elements_by_table_name;
 
     // To establish the correct order of columns in SELECT *
-    std::vector<std::shared_ptr<AbstractExpression>> elements_in_order;
+    std::vector<SelectListElement> elements_in_order;
 
     std::shared_ptr<SQLIdentifierResolver> sql_identifier_resolver;
   };
@@ -105,7 +115,9 @@ class SQLTranslator final {
   TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
-  void _translate_select_list_groupby_having(const hsql::SelectStatement& select);
+  std::vector<SelectListElement> _translate_select_list(const std::vector<hsql::Expr*>& select_list);
+  void _translate_select_groupby_having(const hsql::SelectStatement& select,
+                                        const std::vector<SelectListElement>& select_list_elements);
 
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
@@ -147,6 +159,9 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
+  std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
+      const std::vector<SelectListElement>& select_list_elements) const;
+
  private:
   const UseMvcc _use_mvcc;
 
@@ -157,7 +172,7 @@ class SQLTranslator final {
   std::optional<TableSourceState> _from_clause_result;
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
-  std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
+  std::vector<SelectListElement> _inflated_select_list_elements;
 };
 
 }  // namespace opossum

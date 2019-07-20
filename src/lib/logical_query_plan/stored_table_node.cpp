@@ -1,8 +1,12 @@
 #include "stored_table_node.hpp"
 
 #include "expression/lqp_column_expression.hpp"
+#include "statistics/table_statistics.hpp"
+#include "storage/index/index_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "utils/assert.hpp"
+#include "utils/column_ids_after_pruning.hpp"
 
 namespace opossum {
 
@@ -15,26 +19,71 @@ LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
   return {shared_from_this(), column_id};
 }
 
-void StoredTableNode::set_excluded_chunk_ids(const std::vector<ChunkID>& chunks) { _excluded_chunk_ids = chunks; }
+void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_chunk_ids) {
+  DebugAssert(std::is_sorted(pruned_chunk_ids.begin(), pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
+  DebugAssert(std::adjacent_find(pruned_chunk_ids.begin(), pruned_chunk_ids.end()) == pruned_chunk_ids.end(),
+              "Expected vector of unique ChunkIDs");
 
-const std::vector<ChunkID>& StoredTableNode::excluded_chunk_ids() const { return _excluded_chunk_ids; }
+  _pruned_chunk_ids = pruned_chunk_ids;
+}
 
-std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + table_name + "'"; }
+const std::vector<ChunkID>& StoredTableNode::pruned_chunk_ids() const { return _pruned_chunk_ids; }
+
+void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
+  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
+              "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::adjacent_find(pruned_column_ids.begin(), pruned_column_ids.end()) == pruned_column_ids.end(),
+              "Expected vector of unique ColumnIDs");
+
+  // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at
+  // least one column in the output of this node, which is used by Table::size() to determine the number of 5's.
+  const auto stored_column_count = StorageManager::get().get_table(table_name)->column_count();
+  Assert(pruned_column_ids.size() < stored_column_count, "Cannot exclude all columns from Table.");
+
+  _pruned_column_ids = pruned_column_ids;
+
+  // Rebuilding this lazily the next time `column_expressions()` is called
+  _column_expressions.reset();
+}
+
+const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
+
+std::string StoredTableNode::description() const {
+  const auto stored_table = StorageManager::get().get_table(table_name);
+
+  std::ostringstream stream;
+  stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
+  stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s), ";
+  stream << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
+
+  return stream.str();
+}
 
 const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_expressions() const {
-  // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
-  // in the constructor
-  if (!_expressions) {
+  // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
+  // that in the constructor and (b) because we don't have column pruning information in the constructor
+  if (!_column_expressions) {
     const auto table = StorageManager::get().get_table(table_name);
 
-    _expressions.emplace(table->column_count());
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      (*_expressions)[column_id] =
-          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), column_id});
+    // Build `_expression` with respect to the `_pruned_column_ids`
+    _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());
+
+    auto pruned_column_ids_iter = _pruned_column_ids.begin();
+    auto output_column_id = ColumnID{0};
+    for (auto stored_column_id = ColumnID{0}; stored_column_id < table->column_count(); ++stored_column_id) {
+      // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
+      if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
+        ++pruned_column_ids_iter;
+        continue;
+      }
+
+      (*_column_expressions)[output_column_id] =
+          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), stored_column_id});
+      ++output_column_id;
     }
   }
 
-  return *_expressions;
+  return *_column_expressions;
 }
 
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
@@ -42,21 +91,47 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  DebugAssert(!left_input && !right_input, "StoredTableNode must be leaf");
-  return StorageManager::get().get_table(table_name)->table_statistics();
+std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
+  DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
+
+  const auto table = StorageManager::get().get_table(table_name);
+  auto stored_indexes_statistics = table->indexes_statistics();
+
+  if (_pruned_column_ids.empty()) {
+    return stored_indexes_statistics;
+  }
+
+  const auto column_id_mapping = column_ids_after_pruning(table->column_count(), _pruned_column_ids);
+
+  // update index statistics
+  for (auto stored_index_stats_iter = stored_indexes_statistics.begin();
+       stored_index_stats_iter != stored_indexes_statistics.end();) {
+    for (auto& original_column_id : (*stored_index_stats_iter).column_ids) {
+      const auto& updated_column_id = column_id_mapping[original_column_id];
+      if (!updated_column_id) {
+        // column was pruned, we cannot use the index anymore.
+        stored_indexes_statistics.erase(stored_index_stats_iter);
+        break;
+      } else {
+        original_column_id = *updated_column_id;
+        ++stored_index_stats_iter;
+      }
+    }
+  }
+  return stored_indexes_statistics;
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto copy = make(table_name);
-  copy->set_excluded_chunk_ids(_excluded_chunk_ids);
+  copy->set_pruned_chunk_ids(_pruned_chunk_ids);
+  copy->set_pruned_column_ids(_pruned_column_ids);
   return copy;
 }
 
 bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
-  return table_name == stored_table_node.table_name && _excluded_chunk_ids == stored_table_node._excluded_chunk_ids;
+  return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids &&
+         _pruned_column_ids == stored_table_node._pruned_column_ids;
 }
 
 }  // namespace opossum

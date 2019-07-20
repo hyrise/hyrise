@@ -20,9 +20,6 @@ using hsql::SQLParserResult;
 class SQLBenchmark : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(benchmark::State& st) override {
-    // Disable and clear all SQL caches.
-    SQLPhysicalPlanCache::get().resize(0);
-
     // Add tables to StorageManager.
     // This is required for the translator to get the column names of a table.
     auto& storage_manager = StorageManager::get();
@@ -61,12 +58,12 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
 
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
   void BM_QueryPlanCache(benchmark::State& state) {
-    // Enable query plan cache.
-    SQLPhysicalPlanCache::get().clear();
-    SQLPhysicalPlanCache::get().resize(16);
+    const auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+
+    pqp_cache->resize(16);
 
     for (auto _ : state) {
-      auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
+      auto pipeline_statement = SQLPipelineBuilder{query}.with_pqp_cache(pqp_cache).create_pipeline_statement();
       pipeline_statement.get_physical_plan();
     }
   }

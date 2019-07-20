@@ -56,7 +56,9 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
   const auto in_table = input_table_left();
-  auto output = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
+
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
+  output_chunks.reserve(in_table->chunk_count());
 
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
@@ -139,10 +141,11 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     }
 
     if (!pos_list_out->empty() > 0) {
-      output->append_chunk(output_segments);
+      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
     }
   }
-  return output;
+
+  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
 }  // namespace opossum

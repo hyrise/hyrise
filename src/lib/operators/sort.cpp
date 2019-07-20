@@ -54,7 +54,7 @@ class Sort::SortImplMaterializeOutput {
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
-  std::shared_ptr<const Table> execute() {
+  std::shared_ptr<Table> execute() {
     // First we create a new table as the output
     auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 
@@ -97,7 +97,7 @@ class Sort::SortImplMaterializeOutput {
         segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
-          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
+          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
 
           auto& segment_ptr_and_typed_ptr_pair = segment_ptr_and_accessor_by_chunk_id[chunk_id];
           auto& base_segment = segment_ptr_and_typed_ptr_pair.first;
@@ -202,8 +202,10 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
     auto output = materialization->execute();
-    for (auto& chunk : output->chunks()) {
-      chunk->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
+
+    const auto chunk_count = output->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      output->get_chunk(chunk_id)->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
     }
 
     return output;

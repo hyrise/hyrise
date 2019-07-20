@@ -5,7 +5,11 @@
 #include <utility>
 #include <vector>
 
+#include "storage/dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/frame_of_reference_segment.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/run_length_segment.hpp"
 #include "storage/segment_accessor.hpp"
 #include "storage/segment_iterables.hpp"
 
@@ -36,9 +40,35 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     if (pos_list.references_single_chunk() && pos_list.size() > 0 && !begin_it->is_null()) {
       auto referenced_segment = referenced_table->get_chunk(begin_it->chunk_id)->get_segment(referenced_column_id);
+
+      bool functor_was_called = false;
+
       if constexpr (erase_reference_segment_type == EraseReferencedSegmentType::No) {
         resolve_segment_type<T>(*referenced_segment, [&](const auto& typed_segment) {
           using SegmentType = std::decay_t<decltype(typed_segment)>;
+
+          // This is ugly, but it allows us to define segment types that we are not interested in and save a lot of
+          // compile time during development. While new segment types should be added here,
+#ifdef HYRISE_ERASE_DICTIONARY
+          if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) return;
+#endif
+
+#ifdef HYRISE_ERASE_RUNLENGTH
+          if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) return;
+#endif
+
+#ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
+          if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) return;
+#endif
+
+#ifdef HYRISE_ERASE_FRAMEOFREFERENCE
+          if constexpr (std::is_same_v<T, int32_t>) {
+            if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
+          }
+#endif
+
+          // Always erase LZ4Segment accessors
+          if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
 
           if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
             auto accessor = std::make_shared<SegmentAccessor<T, SegmentType>>(typed_segment);
@@ -47,23 +77,33 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
             auto end = SingleChunkIterator<SegmentAccessor<T, SegmentType>>{accessor, begin_it, end_it};
 
             functor(begin, end);
+            functor_was_called = true;
           } else {
             Fail("Found ReferenceSegment pointing to ReferenceSegment");
           }
         });
+
+        if (!functor_was_called) {
+          PerformanceWarning("ReferenceSegmentIterable for referenced segment type erased by compile-time setting");
+        }
+
       } else {
-        // As accessor is now an AbstractSegmentAccessor, functor only gets initialized only once, no matter how many
-        // different accessors there might be.
         PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
-
-        auto accessor =
-            std::shared_ptr<AbstractSegmentAccessor<T>>{std::move(create_segment_accessor<T>(referenced_segment))};
-
-        auto begin = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, begin_it};
-        auto end = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, end_it};
-
-        functor(begin, end);
       }
+
+      if (functor_was_called) return;
+
+      // The functor was not called yet, because we did not instantiate specialized code for the segment type.
+      // As accessor is an AbstractSegmentAccessor here, functor only gets initialized only once, no matter how many
+      // different accessors there might be.
+
+      auto accessor =
+          std::shared_ptr<AbstractSegmentAccessor<T>>{std::move(create_segment_accessor<T>(referenced_segment))};
+
+      auto begin = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, begin_it};
+      auto end = SingleChunkIterator<AbstractSegmentAccessor<T>>{accessor, begin_it, end_it};
+
+      functor(begin, end);
     } else {
       using Accessors = std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>;
 

@@ -22,7 +22,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for formula in boost cmake tbb pkg-config readline ncurses sqlite3 parallel libpq autoconf; do
+            for formula in boost cmake tbb graphviz pkg-config readline ncurses sqlite3 parallel libpq autoconf; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue
@@ -51,7 +51,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-7 libclang-7-dev clang-tidy-7 clang-format-7 gcovr python2.7 gcc-8 g++-8 llvm llvm-7-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev autoconf &
+                sudo apt-get install --no-install-recommends -y clang-7 libclang-7-dev clang-tidy-7 clang-format-7 gcovr python2.7 python-pexpect python-glob2 graphviz gcc-8 g++-8 llvm llvm-7-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev autoconf &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."

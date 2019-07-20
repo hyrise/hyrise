@@ -121,6 +121,7 @@ inline detail::unary<AggregateFunction::Min, AggregateExpression> min_;
 inline detail::unary<AggregateFunction::Avg, AggregateExpression> avg_;
 inline detail::unary<AggregateFunction::Count, AggregateExpression> count_;
 inline detail::unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct_;
+inline detail::unary<AggregateFunction::StandardDeviationSample, AggregateExpression> standard_deviation_sample_;
 
 inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
 inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul_;

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -16,25 +18,25 @@
 namespace opossum {
 
 template <typename T>
-struct MaterializedValue {
-  MaterializedValue() = default;
-  MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
+struct MaterializedValueNUMA {
+  MaterializedValueNUMA() = default;
+  MaterializedValueNUMA(RowID row, T v) : row_id{row}, value{v} {}
 
   RowID row_id;
   T value;
 };
 
 template <typename T>
-using MaterializedValueAllocator = PolymorphicAllocator<MaterializedValue<T>>;
+using MaterializedValueAllocatorNUMA = PolymorphicAllocator<MaterializedValueNUMA<T>>;
 
 template <typename T>
-using MaterializedSegment = std::vector<MaterializedValue<T>, MaterializedValueAllocator<T>>;
+using MaterializedSegmentNUMA = std::vector<MaterializedValueNUMA<T>, MaterializedValueAllocatorNUMA<T>>;
 
 template <typename T>
 struct MaterializedNUMAPartition {
   NodeID node_id;
-  MaterializedValueAllocator<T> alloc;
-  std::vector<std::shared_ptr<MaterializedSegment<T>>> materialized_segments;
+  MaterializedValueAllocatorNUMA<T> alloc;
+  std::vector<std::shared_ptr<MaterializedSegmentNUMA<T>>> materialized_segments;
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
       : node_id{node_id}, alloc{Topology::get().get_memory_resource(node_id)}, materialized_segments(reserve_size) {}
@@ -43,7 +45,7 @@ struct MaterializedNUMAPartition {
 
   void shrink_to_fit() {
     materialized_segments.erase(std::remove(materialized_segments.begin(), materialized_segments.end(),
-                                            std::shared_ptr<MaterializedSegment<T>>{}),
+                                            std::shared_ptr<MaterializedSegmentNUMA<T>>{}),
                                 materialized_segments.end());
   }
 };
@@ -84,7 +86,7 @@ class ColumnMaterializerNUMA {
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
     for (auto chunk_id = ChunkID{0}; chunk_id < input->chunk_count(); ++chunk_id) {
       // This allocator is used to ensure that materialized chunks are colocated with the original chunks
-      auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
+      auto alloc = MaterializedValueAllocatorNUMA<T>{input->get_chunk(chunk_id)->get_allocator()};
 
       auto numa_node_id = NodeID{0};  // default NUMA Node, everything is on the same node for non numa systems
 
@@ -118,7 +120,7 @@ class ColumnMaterializerNUMA {
       std::unique_ptr<MaterializedNUMAPartitionList<T>>& output, std::unique_ptr<PosList>& null_rows_output,
       ChunkID chunk_id, std::shared_ptr<const Table> input, ColumnID column_id, NodeID numa_node_id) {
     // This allocator ensures that materialized values are colocated with the actual values.
-    auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
+    auto alloc = MaterializedValueAllocatorNUMA<T>{input->get_chunk(chunk_id)->get_allocator()};
 
     const auto segment = input->get_chunk(chunk_id)->get_segment(column_id);
 
@@ -139,7 +141,7 @@ class ColumnMaterializerNUMA {
   void _materialize_generic_segment(const BaseSegment& segment, ChunkID chunk_id,
                                     std::unique_ptr<PosList>& null_rows_output,
                                     MaterializedNUMAPartition<T>& partition) {
-    auto output = std::make_shared<MaterializedSegment<T>>(partition.alloc);
+    auto output = std::make_shared<MaterializedSegmentNUMA<T>>(partition.alloc);
     output->reserve(segment.size());
 
     segment_iterate<T>(segment, [&](const auto& position) {
@@ -162,7 +164,7 @@ class ColumnMaterializerNUMA {
   void _materialize_dictionary_segment(const DictionarySegment<T>& segment, ChunkID chunk_id,
                                        std::unique_ptr<PosList>& null_rows_output,
                                        MaterializedNUMAPartition<T>& partition) {
-    auto output = std::make_shared<MaterializedSegment<T>>(partition.alloc);
+    auto output = std::make_shared<MaterializedSegmentNUMA<T>>(partition.alloc);
     output->reserve(segment.size());
 
     auto value_ids = segment.attribute_vector();

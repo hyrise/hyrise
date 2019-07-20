@@ -16,6 +16,7 @@ RUN apt-get update \
         gcovr \
         gcc-8 \
         g++-8 \
+        graphviz \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
         libclang-7-dev \
@@ -31,6 +32,8 @@ RUN apt-get update \
         parallel \
         python2.7 \
         python-pip \
+        python-pexpect \
+        python-glob2 \
         sudo \
         valgrind \
         libpq-dev \

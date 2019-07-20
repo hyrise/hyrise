@@ -6,7 +6,7 @@
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
-#include "file_based_query_generator.hpp"
+#include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "import_export/csv_parser.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -17,6 +17,7 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/sqlite_add_indices.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 
@@ -112,48 +113,14 @@ int main(int argc, char* argv[]) {
   // Run the benchmark
   auto context = BenchmarkRunner::create_context(*benchmark_config);
   auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
-  auto query_generator =
-      std::make_unique<FileBasedQueryGenerator>(*benchmark_config, query_path, non_query_file_names, query_subset);
+  auto benchmark_item_runner =
+      std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, non_query_file_names, query_subset);
 
   auto benchmark_runner =
-      BenchmarkRunner{*benchmark_config, std::move(query_generator), std::move(table_generator), context};
+      BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};
 
   if (benchmark_config->verify) {
-    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
-    // Without this, SQLite would never finish.
-
-    std::cout << "- Adding indexes to SQLite" << std::endl;
-    Timer timer;
-
-    // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
-    // schema and copy the data.
-    for (const auto& table_name : StorageManager::get().table_names()) {
-      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
-                                                         " RENAME TO " + table_name + "_unindexed");
-    }
-
-    // Recreate tables from schema.sql
-    std::ifstream schema_file(query_path + "/schema.sql");
-    std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
-    benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
-
-    // Add foreign keys
-    std::ifstream foreign_key_file(query_path + "/fkindexes.sql");
-    std::string foreign_key_sql((std::istreambuf_iterator<char>(foreign_key_file)), std::istreambuf_iterator<char>());
-    benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_sql);
-
-    // Copy over data
-    for (const auto& table_name : StorageManager::get().table_names()) {
-      Timer per_table_time;
-      std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
-
-      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "} + table_name +  // NOLINT
-                                                         " SELECT * FROM " + table_name + "_unindexed");
-
-      std::cout << " (" << per_table_time.lap_formatted() << ")" << std::endl;
-    }
-
-    std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")" << std::endl;
+    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner.sqlite_wrapper);
   }
 
   std::cout << "done." << std::endl;

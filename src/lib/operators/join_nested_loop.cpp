@@ -49,29 +49,22 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 
     const auto left_row_id = RowID{chunk_id_left, left_value.chunk_offset()};
 
-    if (left_value.is_null()) {
-      if (params.mode == JoinMode::AntiNullAsTrue) {
-        // AntiNullAsTrue with a NULL on the left side is always TRUE - except if the right table is empty.
-        // This is because `NULL NOT IN ()` is actually TRUE and AntiNullAsTrue emulates NOT IN.
-        params.left_matches[left_row_id.chunk_offset] = right_begin != right_end;
-      }
-      continue;
-    }
-
     for (auto right_it = right_begin; right_it != right_end; ++right_it) {
       const auto right_value = *right_it;
-      if (right_value.is_null()) {
-        if (params.mode == JoinMode::AntiNullAsTrue) {
-          params.left_matches[left_row_id.chunk_offset] = true;
-        }
-        continue;
-      }
-
       const auto right_row_id = RowID{chunk_id_right, right_value.chunk_offset()};
 
-      if (func(left_value.value(), right_value.value()) &&
-          params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
-        process_match(left_row_id, right_row_id, params);
+      // AntiNullAsTrue is the only join mode where NULLs in any operand lead to a match. For all other
+      // join modes, any NULL in the predicate results in a non-match.
+      if (params.mode == JoinMode::AntiNullAsTrue) {
+        if ((left_value.is_null() || right_value.is_null() || func(left_value.value(), right_value.value())) &&
+            params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          process_match(left_row_id, right_row_id, params);
+        }
+      } else {
+        if ((!left_value.is_null() && !right_value.is_null() && func(left_value.value(), right_value.value())) &&
+            params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          process_match(left_row_id, right_row_id, params);
+        }
       }
     }
   }
@@ -80,13 +73,17 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 
 namespace opossum {
 
+bool JoinNestedLoop::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                              DataType right_data_type, bool secondary_predicates) {
+  return true;
+}
+
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                                const OperatorJoinPredicate& primary_predicate,
                                const std::vector<OperatorJoinPredicate>& secondary_predicates)
     : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {
-  Assert(mode != JoinMode::AntiNullAsTrue || _secondary_predicates.empty(),
-         "AntiNullAsTrue joins are not supported by JoinNestedLoop with secondary predicates.");
+  // TODO(moritz) incorporate into supports()?
 }
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
@@ -100,9 +97,13 @@ std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
-  PerformanceWarning("Nested Loop Join used");
+  Assert(supports(_mode, _primary_predicate.predicate_condition,
+                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                  !_secondary_predicates.empty()),
+         "JoinNestedLoop doesn't support these parameters");
 
-  const auto output_table = _initialize_output_table();
+  PerformanceWarning("Nested Loop Join used");
 
   auto left_table = input_table_left();
   auto right_table = input_table_right();
@@ -136,10 +137,14 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   const auto track_right_matches = _mode == JoinMode::FullOuter;
 
   auto left_matches_by_chunk = std::vector<std::vector<bool>>(left_table->chunk_count());
+
   auto right_matches_by_chunk = std::vector<std::vector<bool>>(right_table->chunk_count());
+  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
+    right_matches_by_chunk[chunk_id_right].resize(right_table->get_chunk(chunk_id_right)->size());
+  }
 
   auto secondary_predicate_evaluator =
-      MultiPredicateJoinEvaluator{*left_table, *right_table, maybe_flipped_secondary_predicates};
+      MultiPredicateJoinEvaluator{*left_table, *right_table, _mode, maybe_flipped_secondary_predicates};
 
   // Scan all chunks from left input
   for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
@@ -153,13 +158,12 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
-      right_matches_by_chunk[chunk_id_right].resize(segment_right->size());
 
       JoinParams params{*pos_list_left,
                         *pos_list_right,
                         left_matches,
                         right_matches_by_chunk[chunk_id_right],
-                        is_semi_or_anti_join || is_outer_join,
+                        track_left_matches,
                         track_right_matches,
                         _mode,
                         maybe_flipped_predicate_condition,
@@ -226,9 +230,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
     }
   }
 
-  output_table->append_chunk(segments);
-
-  return output_table;
+  return _build_output_table({std::make_shared<Chunk>(std::move(segments))});
 }
 
 void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_left,

@@ -1,5 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
+
 try {
   node('master') {
     stage ("Start") {
@@ -69,7 +71,6 @@ try {
           mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           wait"
-          full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
         }
 
         parallel clangDebug: {
@@ -80,7 +81,6 @@ try {
         }, gccDebug: {
           stage("gcc-debug") {
             sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            // Test that running the binary from the build folder works
             sh "cd gcc-debug && ./hyriseTest"
           }
         }, lint: {
@@ -97,6 +97,11 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "./clang-release/hyriseTest clang-release"
               sh "./clang-release/hyriseSystemTest clang-release"
+              sh "./scripts/test/hyriseConsole_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-release"
+
             } else {
               Utils.markStageSkippedForConditional("clangRelease")
             }
@@ -106,6 +111,15 @@ try {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
               sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
+              sh "./scripts/test/hyriseConsole_test.py clang-debug"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-debug"
+              sh "./scripts/test/hyriseConsole_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py gcc-debug"
+
             } else {
               Utils.markStageSkippedForConditional("debugSystemTests")
             }
@@ -145,6 +159,10 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
+              sh "./scripts/test/hyriseConsole_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py gcc-release"
             }
           } else {
               Utils.markStageSkippedForConditional("gccRelease")
@@ -253,23 +271,28 @@ try {
       }
     }
   }
-} finally {
-  stage("Notify") {
-    script {
-      if (currentBuild.currentResult == 'SUCCESS') {
+
+  node ('master') {
+    stage("Notify") {
+      script {
         githubNotify context: 'CI Pipeline', status: 'SUCCESS'
         if (env.BRANCH_NAME == 'master' || full_ci) {
           githubNotify context: 'Full CI', status: 'SUCCESS'
         }
-      } else {
-        githubNotify context: 'CI Pipeline', status: 'FAILURE'
-        if (env.BRANCH_NAME == 'master' || full_ci) {
-          githubNotify context: 'Full CI', status: 'FAILURE'
-        }
-        if (env.BRANCH_NAME == 'master') {
-          slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
-        }
       }
     }
+  }
+} catch (error) {
+  stage("Notify") {
+    script {
+      githubNotify context: 'CI Pipeline', status: 'FAILURE'
+      if (env.BRANCH_NAME == 'master' || full_ci) {
+        githubNotify context: 'Full CI', status: 'FAILURE'
+      }
+      if (env.BRANCH_NAME == 'master') {
+        slackSend message: ":rotating_light: ALARM! Build on ${env.BRANCH_NAME} failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+      }
+    }
+    throw error
   }
 }

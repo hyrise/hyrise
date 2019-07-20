@@ -36,19 +36,27 @@ STRONG_TYPEDEF(uint32_t, ClusterID);
 **/
 
 namespace opossum {
-JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
-                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const OperatorJoinPredicate& primary_predicate)
-    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, {}) {
-  // Validate the parameters
-  DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
-  DebugAssert(left, "The left input operator is null.");
-  DebugAssert(right, "The right input operator is null.");
-  DebugAssert(primary_predicate.predicate_condition == PredicateCondition::Equals,
-              "Only Equi joins are supported by MPSM join.");
+
+bool JoinMPSM::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
+                        DataType right_data_type, bool secondary_predicates) {
+  return predicate_condition == PredicateCondition::Equals && left_data_type == right_data_type &&
+         join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue &&
+         join_mode != JoinMode::AntiNullAsFalse && !secondary_predicates;
 }
 
+JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
+                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                   const OperatorJoinPredicate& primary_predicate,
+                   const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, secondary_predicates) {}
+
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
+  Assert(supports(_mode, _primary_predicate.predicate_condition,
+                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                  !_secondary_predicates.empty()),
+         "JoinMPSM doesn't support these parameters");
+
   // Check column types
   const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);
   DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_predicate.column_ids.second),
@@ -259,7 +267,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
   void _emit_right_null_combinations(NodeID output_partition, ClusterID output_cluster,
-                                     std::shared_ptr<MaterializedSegment<T>> left_chunk,
+                                     std::shared_ptr<MaterializedSegmentNUMA<T>> left_chunk,
                                      std::vector<bool> left_joined) {
     for (auto entry_id = size_t{0}; entry_id < left_joined.size(); ++entry_id) {
       if (!left_joined[entry_id]) {
@@ -281,7 +289,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegment<T>> values) {
+  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegmentNUMA<T>> values) {
     if (start_index >= values->size()) {
       return 0;
     }
@@ -321,7 +329,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     _output_pos_lists_left[left_node_id][left_cluster_id] = std::make_shared<PosList>();
 
-    std::shared_ptr<MaterializedSegment<T>> left_cluster =
+    std::shared_ptr<MaterializedSegmentNUMA<T>> left_cluster =
         (*_sorted_left_table)[left_node_id].materialized_segments[left_cluster_id];
 
     auto left_joined = std::vector<bool>(left_cluster->size(), false);
@@ -329,7 +337,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     for (auto right_node_id = NodeID{0}; right_node_id < static_cast<NodeID>(_cluster_count); ++right_node_id) {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
-      std::shared_ptr<MaterializedSegment<T>> right_cluster =
+      std::shared_ptr<MaterializedSegmentNUMA<T>> right_cluster =
           (*_sorted_right_table)[right_node_id].materialized_segments[right_cluster_id];
 
       auto left_run_start = size_t{0};
@@ -527,9 +535,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _add_output_segments(output_segments, _mpsm_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_table = _mpsm_join._initialize_output_table();
-    output_table->append_chunk(output_segments);
-    return output_table;
+    return _mpsm_join._build_output_table({std::make_shared<Chunk>(std::move(output_segments))});
   }
 };
 

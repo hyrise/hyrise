@@ -22,35 +22,33 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
   static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
-    const auto alloc = value_segment->values().get_allocator();
-
+  std::shared_ptr<BaseEncodedSegment> _on_encode(const AnySegmentIterable<T> segment_iterable,
+                                                 const PolymorphicAllocator<T>& allocator) {
     static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
-
-    const auto size = value_segment->size();
 
     // Ceiling of integer division
     const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
 
-    const auto num_blocks = div_ceil(size, block_size);
-
     // holds the minimum of each block
-    auto block_minima = pmr_vector<T>{alloc};
-    block_minima.reserve(num_blocks);
+    auto block_minima = pmr_vector<T>{allocator};
 
     // holds the uncompressed offset values
-    auto offset_values = pmr_vector<uint32_t>{alloc};
-    offset_values.reserve(size);
+    auto offset_values = pmr_vector<uint32_t>{allocator};
 
     // holds whether a segment value is null
-    auto null_values = pmr_vector<bool>{alloc};
-    null_values.reserve(size);
+    auto null_values = pmr_vector<bool>{allocator};
 
     // used as optional input for the compression of the offset values
     auto max_offset = uint32_t{0u};
 
-    auto iterable = ValueSegmentIterable<T>{*value_segment};
-    iterable.with_iterators([&](auto segment_it, auto segment_end) {
+    segment_iterable.with_iterators([&](auto segment_it, auto segment_end) {
+      const auto size = std::distance(segment_it, segment_end);
+      const auto num_blocks = div_ceil(size, block_size);
+
+      block_minima.reserve(num_blocks);
+      offset_values.reserve(size);
+      null_values.reserve(size);
+
       // a temporary storage to hold the values of one block
       auto current_value_block = std::array<T, block_size>{};
 
@@ -67,7 +65,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
         // The last value block might not be filled completely
         const auto this_value_block_end = value_block_it;
 
-        const auto [min_it, max_it] = std::minmax_element(current_value_block.begin(), this_value_block_end);  // NOLINT
+        const auto [min_it, max_it] = std::minmax_element(current_value_block.begin(), this_value_block_end);
 
         // Make sure that the largest offset fits into uint32_t (required for vector compression.)
         Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(),
@@ -86,9 +84,9 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
       }
     });
 
-    auto compressed_offset_values = compress_vector(offset_values, vector_compression_type(), alloc, {max_offset});
+    auto compressed_offset_values = compress_vector(offset_values, vector_compression_type(), allocator, {max_offset});
 
-    return std::allocate_shared<FrameOfReferenceSegment<T>>(alloc, std::move(block_minima), std::move(null_values),
+    return std::allocate_shared<FrameOfReferenceSegment<T>>(allocator, std::move(block_minima), std::move(null_values),
                                                             std::move(compressed_offset_values));
   }
 };

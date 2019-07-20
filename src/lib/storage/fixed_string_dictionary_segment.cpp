@@ -35,6 +35,8 @@ const AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffs
 
 template <typename T>
 const std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+  DebugAssert(chunk_offset < size(), "ChunkOffset out of bounds.");
+
   const auto value_id = _decompressor->get(chunk_offset);
   if (value_id == _null_value_id) {
     return std::nullopt;

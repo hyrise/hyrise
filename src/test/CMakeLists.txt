@@ -10,11 +10,13 @@ set(
 set(
     HYRISE_UNIT_TEST_SOURCES
     ${SHARED_SOURCES}
+    benchmarklib/sqlite_add_indices_test.cpp
+    benchmarklib/table_builder_test.cpp
     cache/cache_test.cpp
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
     concurrency/transaction_manager_test.cpp
-    cost_model/cost_estimator_test.cpp
+    cost_estimation/abstract_cost_estimator_test.cpp
     expression/expression_evaluator_to_pos_list_test.cpp
     expression/expression_evaluator_to_values_test.cpp
     expression/expression_result_test.cpp
@@ -32,6 +34,7 @@ set(
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
     lib/utils/load_table_test.cpp
+    lib/utils/verify_tables_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/alias_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
@@ -47,12 +50,14 @@ set(
     logical_query_plan/logical_query_plan_test.cpp
     logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     logical_query_plan/lqp_utils_test.cpp
+    logical_query_plan/lqp_translator_test.cpp
     logical_query_plan/mock_node_test.cpp
     logical_query_plan/predicate_node_test.cpp
     logical_query_plan/projection_node_test.cpp
     logical_query_plan/show_columns_node_test.cpp
     logical_query_plan/show_tables_node_test.cpp
     logical_query_plan/sort_node_test.cpp
+    logical_query_plan/static_table_node_test.cpp
     logical_query_plan/stored_table_node_test.cpp
     logical_query_plan/union_node_test.cpp
     logical_query_plan/update_node_test.cpp
@@ -70,17 +75,16 @@ set(
     operators/import_csv_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
-    operators/join_equi_test.cpp
-    operators/join_full_test.cpp
     operators/join_hash_test.cpp
     operators/join_hash_types_test.cpp
     operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
-    operators/join_null_test.cpp
-    operators/join_semi_anti_test.cpp
-    operators/join_test.hpp
-    operators/join_multi_predicates_test.cpp
+    operators/join_mpsm_test.cpp
+    operators/join_nested_loop_test.cpp
+    operators/join_sort_merge_test.cpp
+    operators/join_test_runner.cpp
+    operators/join_verification_test.cpp
     operators/limit_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/create_prepared_plan_test.cpp
@@ -111,7 +115,6 @@ set(
     optimizer/enumerate_ccp_test.cpp
     optimizer/join_graph_builder_test.cpp
     optimizer/join_graph_test.cpp
-    logical_query_plan/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/between_composition_rule_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
@@ -139,19 +142,16 @@ set(
     sql/sql_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner_unencoded.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
-    statistics/chunk_statistics/histograms/abstract_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_distinct_count_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_height_histogram_test.cpp
-    statistics/chunk_statistics/histograms/equal_width_histogram_test.cpp
-    statistics/chunk_statistics/histograms/histogram_utils_test.cpp
-    statistics/chunk_statistics/min_max_filter_test.cpp
-    statistics/chunk_statistics/counting_quotient_filter_test.cpp
-    statistics/chunk_statistics/range_filter_test.cpp
-    statistics/column_statistics_test.cpp
-    statistics/generate_table_statistics_test.cpp
-    statistics/statistics_import_export_test.cpp
-    statistics/statistics_test_utils.hpp
-    statistics/table_statistics_join_test.cpp
+    lossy_cast_test.cpp
+    statistics/cardinality_estimator_test.cpp
+    statistics/attribute_statistics_test.cpp
+    statistics/join_graph_statistics_cache_test.cpp
+    statistics/statistics_objects/equal_distinct_count_histogram_test.cpp
+    statistics/statistics_objects/generic_histogram_test.cpp
+    statistics/statistics_objects/string_histogram_domain_test.cpp
+    statistics/statistics_objects/min_max_filter_test.cpp
+    statistics/statistics_objects/counting_quotient_filter_test.cpp
+    statistics/statistics_objects/range_filter_test.cpp
     statistics/table_statistics_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
     storage/any_segment_iterable_test.cpp
@@ -193,6 +193,7 @@ set(
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
+    utils/column_ids_after_pruning_test.cpp
     utils/singleton_test.cpp
     utils/string_utils_test.cpp
 )

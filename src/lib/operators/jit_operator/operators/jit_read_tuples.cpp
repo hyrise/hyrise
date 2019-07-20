@@ -93,7 +93,14 @@ std::string JitReadTuples::description() const {
   return desc.str();
 }
 
-void JitReadTuples::before_specialization(const Table& in_table) {
+void JitReadTuples::before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) {
+  // Update the nullable information in the JitExpressions accessing input table values
+  tuple_non_nullable_information.resize(_num_tuple_values);
+  for (auto& input_column : _input_columns) {
+    input_column.tuple_entry.guaranteed_non_null = !in_table.column_is_nullable(input_column.column_id);
+    tuple_non_nullable_information[input_column.tuple_entry.tuple_index] = input_column.tuple_entry.guaranteed_non_null;
+  }
+
   // Check for each JitValueIdExpression whether its referenced expression can be actually used with value ids.
   // If it can not be used, the JitValueIdExpression is removed from the vector of JitValueIdExpressions.
   // It it can be used, the corresponding expression is updated to use value ids.
@@ -298,7 +305,7 @@ bool JitReadTuples::before_chunk(const Table& in_table, const ChunkID chunk_id,
 
     if (segments_are_dictionaries[input_column_index]) {
       // We need the value ids from a dictionary segment
-      const auto [dict_segment, pos_list] = get_attribute_iterable_data(segment);  // NOLINT(whitespace/braces)
+      const auto [dict_segment, pos_list] = get_attribute_iterable_data(segment);
       DebugAssert(dict_segment, "Segment is not a dictionary or a reference segment referencing a dictionary");
       if (pos_list) {
         create_iterable_from_attribute_vector(*dict_segment).with_iterators(pos_list, [&](auto it, auto end) {
@@ -333,7 +340,7 @@ void JitReadTuples::execute(JitRuntimeContext& context) const {
   }
 }
 
-JitTupleEntry JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
+JitTupleEntry JitReadTuples::add_input_column(const DataType data_type, const bool guaranteed_non_null,
                                               const ColumnID column_id, const bool use_actual_value) {
   // There is no need to add the same input column twice.
   // If the same column is requested for the second time, we return the JitTupleEntry created previously.
@@ -344,7 +351,7 @@ JitTupleEntry JitReadTuples::add_input_column(const DataType data_type, const bo
     return it->tuple_entry;
   }
 
-  const auto tuple_entry = JitTupleEntry(data_type, is_nullable, _num_tuple_values++);
+  const auto tuple_entry = JitTupleEntry(data_type, guaranteed_non_null, _num_tuple_values++);
   _input_columns.push_back({column_id, tuple_entry, use_actual_value});
   return tuple_entry;
 }
@@ -353,14 +360,14 @@ JitTupleEntry JitReadTuples::add_literal_value(const AllTypeVariant& value) {
   // Somebody needs a literal value. We assign it a position in the runtime tuple and store the literal value,
   // so we can initialize the corresponding tuple entry to the correct literal value later.
   const auto data_type = data_type_from_all_type_variant(value);
-  const bool nullable = variant_is_null(value);
-  const auto tuple_entry = JitTupleEntry(data_type, nullable, _num_tuple_values++);
+  const bool guaranteed_non_null = !variant_is_null(value);
+  const auto tuple_entry = JitTupleEntry(data_type, guaranteed_non_null, _num_tuple_values++);
   _input_literals.push_back({value, tuple_entry});
   return tuple_entry;
 }
 
 JitTupleEntry JitReadTuples::add_parameter(const DataType data_type, const ParameterID parameter_id) {
-  const auto tuple_entry = JitTupleEntry(data_type, true, _num_tuple_values++);
+  const auto tuple_entry = JitTupleEntry(data_type, false, _num_tuple_values++);
   _input_parameters.push_back({parameter_id, tuple_entry});
   return tuple_entry;
 }

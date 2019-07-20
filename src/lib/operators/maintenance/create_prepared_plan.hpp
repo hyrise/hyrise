@@ -12,7 +12,7 @@ class CreatePreparedPlan : public AbstractReadOnlyOperator {
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
 
-  std::string prepared_plan_name() const;
+  const std::string& prepared_plan_name() const;
   std::shared_ptr<PreparedPlan> prepared_plan() const;
 
  protected:

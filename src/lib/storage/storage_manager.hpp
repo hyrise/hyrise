@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -74,8 +75,13 @@ class StorageManager : public Singleton<StorageManager> {
   const StorageManager& operator=(const StorageManager&) = delete;
   StorageManager& operator=(StorageManager&&) = default;
 
+  // Tables can currently not be modified concurrently
   std::map<std::string, std::shared_ptr<Table>> _tables;
+
+  // The map of views is locked because views are created dynamically, e.g., in TPC-H 15
   std::map<std::string, std::shared_ptr<LQPView>> _views;
+  mutable std::unique_ptr<std::shared_mutex> _view_mutex = std::make_unique<std::shared_mutex>();
+
   std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
 };
 

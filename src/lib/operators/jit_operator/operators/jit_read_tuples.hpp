@@ -120,7 +120,7 @@ class JitReadTuples : public AbstractJittable {
    * The update in the operators includes the change to use value ids in expressions if the corresponding segments are
    * dictionary encoded.
    */
-  void before_specialization(const Table& in_table);
+  void before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information);
   /*
    * Prepares the JitRuntimeContext by storing the fixed values (i.e., literals, parameters) in the runtime tuple.
    */
@@ -143,7 +143,7 @@ class JitReadTuples : public AbstractJittable {
    * by the jittable operators and expressions.
    * The returned JitTupleEntry identifies the position of a value in the runtime tuple.
    */
-  JitTupleEntry add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id,
+  JitTupleEntry add_input_column(const DataType data_type, const bool guaranteed_non_null, const ColumnID column_id,
                                  const bool use_actual_value = true);
   JitTupleEntry add_literal_value(const AllTypeVariant& value);
   JitTupleEntry add_parameter(const DataType data_type, const ParameterID parameter_id);

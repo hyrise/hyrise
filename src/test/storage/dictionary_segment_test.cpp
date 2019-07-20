@@ -10,17 +10,52 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 
 namespace opossum {
 
-class StorageDictionarySegmentTest : public BaseTest {
+class StorageDictionarySegmentTest : public BaseTestWithParam<VectorCompressionType> {
  protected:
   std::shared_ptr<ValueSegment<int>> vs_int = std::make_shared<ValueSegment<int>>();
   std::shared_ptr<ValueSegment<pmr_string>> vs_str = std::make_shared<ValueSegment<pmr_string>>();
   std::shared_ptr<ValueSegment<double>> vs_double = std::make_shared<ValueSegment<double>>();
 };
 
-TEST_F(StorageDictionarySegmentTest, CompressSegmentInt) {
+auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
+  const auto vector_compression = info.param;
+
+  auto stream = std::stringstream{};
+  stream << vector_compression;
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
+                        ::testing::Values(VectorCompressionType::SimdBp128,
+                                          VectorCompressionType::FixedSizeByteAligned),
+                        formatter);
+
+TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
+  for (int i = 0; i <= 10; i += 2) vs_int->append(i);
+
+  auto segment =
+      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
+
+  // Test for AllTypeVariant as parameter
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(4)), ValueID{2});
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(4)), ValueID{3});
+
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(5)), ValueID{3});
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(5)), ValueID{3});
+
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
+}
+
+TEST_P(StorageDictionarySegmentTest, CompressSegmentInt) {
   vs_int->append(4);
   vs_int->append(4);
   vs_int->append(3);
@@ -28,7 +63,8 @@ TEST_F(StorageDictionarySegmentTest, CompressSegmentInt) {
   vs_int->append(5);
   vs_int->append(3);
 
-  auto segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  auto segment =
+      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test attribute_vector size
@@ -44,7 +80,7 @@ TEST_F(StorageDictionarySegmentTest, CompressSegmentInt) {
   EXPECT_EQ((*dict)[2], 5);
 }
 
-TEST_F(StorageDictionarySegmentTest, CompressSegmentString) {
+TEST_P(StorageDictionarySegmentTest, CompressSegmentString) {
   vs_str->append("Bill");
   vs_str->append("Steve");
   vs_str->append("Alexander");
@@ -52,7 +88,8 @@ TEST_F(StorageDictionarySegmentTest, CompressSegmentString) {
   vs_str->append("Hasso");
   vs_str->append("Bill");
 
-  auto segment = encode_segment(EncodingType::Dictionary, DataType::String, vs_str);
+  auto segment =
+      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<pmr_string>>(segment);
 
   // Test attribute_vector size
@@ -69,7 +106,7 @@ TEST_F(StorageDictionarySegmentTest, CompressSegmentString) {
   EXPECT_EQ((*dict)[3], "Steve");
 }
 
-TEST_F(StorageDictionarySegmentTest, CompressSegmentDouble) {
+TEST_P(StorageDictionarySegmentTest, CompressSegmentDouble) {
   vs_double->append(0.9);
   vs_double->append(1.0);
   vs_double->append(1.0);
@@ -77,7 +114,8 @@ TEST_F(StorageDictionarySegmentTest, CompressSegmentDouble) {
   vs_double->append(0.9);
   vs_double->append(1.1);
 
-  auto segment = encode_segment(EncodingType::Dictionary, DataType::Double, vs_double);
+  auto segment = encode_and_compress_segment(vs_double, DataType::Double,
+                                             SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<double>>(segment);
 
   // Test attribute_vector size
@@ -93,7 +131,7 @@ TEST_F(StorageDictionarySegmentTest, CompressSegmentDouble) {
   EXPECT_EQ((*dict)[2], 1.1);
 }
 
-TEST_F(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
+TEST_P(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
   vs_int = std::make_shared<ValueSegment<int>>(true);
 
   vs_int->append(4);
@@ -103,7 +141,8 @@ TEST_F(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
   vs_int->append(NULL_VALUE);
   vs_int->append(3);
 
-  auto segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  auto segment =
+      encode_and_compress_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
 
   // Test attribute_vector size
@@ -121,29 +160,14 @@ TEST_F(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
   EXPECT_TRUE(variant_is_null((*dict_segment)[4]));
 }
 
-TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
-  for (int i = 0; i <= 10; i += 2) vs_int->append(i);
-
-  auto segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
-  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
-
-  // Test for AllTypeVariant as parameter
-  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(4)), ValueID{2});
-  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(4)), ValueID{3});
-
-  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(5)), ValueID{3});
-  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(5)), ValueID{3});
-
-  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
-  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
-}
-
 TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
   vs_int->append(0);
   vs_int->append(1);
   vs_int->append(2);
 
-  auto segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  auto segment = encode_and_compress_segment(
+      vs_int, DataType::Int,
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
   auto attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
@@ -157,7 +181,9 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
     vs_int->append(i);
   }
 
-  segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  segment = encode_and_compress_segment(
+      vs_int, DataType::Int,
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(segment);
   attribute_vector_uint8_t =
       std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
@@ -168,19 +194,24 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
   EXPECT_NE(attribute_vector_uint16_t, nullptr);
 }
 
-TEST_F(StorageDictionarySegmentTest, MemoryUsageEstimation) {
+TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedMemoryUsageEstimation) {
   /**
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
    * memory usage estimations
    */
 
   const auto empty_memory_usage =
-      encode_segment(EncodingType::Dictionary, DataType::Int, vs_int)->estimate_memory_usage();
+      encode_and_compress_segment(
+          vs_int, DataType::Int,
+          SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned})
+          ->estimate_memory_usage();
 
   vs_int->append(0);
   vs_int->append(1);
   vs_int->append(2);
-  const auto compressed_segment = encode_segment(EncodingType::Dictionary, DataType::Int, vs_int);
+  auto compressed_segment = encode_and_compress_segment(
+      vs_int, DataType::Int,
+      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned});
   const auto dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(compressed_segment);
 
   static constexpr auto size_of_attribute = 1u;

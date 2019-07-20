@@ -47,12 +47,12 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
     // Pattern has the form 'hello%'
     return StartsWithPattern{std::get<pmr_string>(tokens[0])};
 
-  } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
+  } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
              std::holds_alternative<pmr_string>(tokens[1])) {
     // Pattern has the form '%hello'
     return EndsWithPattern{std::get<pmr_string>(tokens[1])};
 
-  } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
+  } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
              std::holds_alternative<pmr_string>(tokens[1]) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
     // Pattern has the form '%hello%'
     return ContainsPattern{std::get<pmr_string>(tokens[1])};

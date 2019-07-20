@@ -107,6 +107,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
 
   output->append_chunk(output_segments);
 }
+
 std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {

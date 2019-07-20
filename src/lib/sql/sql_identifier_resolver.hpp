@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -14,7 +13,8 @@ class AbstractExpression;
 
 struct SQLIdentifierContextEntry final {
   std::shared_ptr<AbstractExpression> expression;
-  std::optional<SQLIdentifier> identifier;
+  std::optional<std::string> table_name;
+  std::vector<std::string> column_names;
 };
 
 /**
@@ -25,9 +25,11 @@ class SQLIdentifierResolver final {
  public:
   /**
    * @{
-   * Set/Update the column/table name of an expression
+   * Set/Update/Delete the column/table names of an expression. There can be multiple column names referring to a single
+   * expression because a new alias does not replace a former column name or alias.
    */
-  void set_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name);
+  void add_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name);
+  void reset_column_names(const std::shared_ptr<AbstractExpression>& expression);
   void set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name);
   /** @} */
 
@@ -39,10 +41,10 @@ class SQLIdentifierResolver final {
   std::shared_ptr<AbstractExpression> resolve_identifier_relaxed(const SQLIdentifier& identifier) const;
 
   /**
-   * Resolve the identifier of an @param expression
-   * @return    The SQLIdentifier, or std::nullopt if the expression has no identifier associated with it
+   * Resolve the identifiers of an @param expression
+   * @return    The SQLIdentifiers
    */
-  const std::optional<SQLIdentifier> get_expression_identifier(
+  const std::vector<SQLIdentifier> get_expression_identifiers(
       const std::shared_ptr<AbstractExpression>& expression) const;
 
   /**
@@ -56,6 +58,7 @@ class SQLIdentifierResolver final {
   void append(SQLIdentifierResolver&& rhs);
 
  private:
+  SQLIdentifierContextEntry& _find_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
   SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
 
   std::vector<SQLIdentifierContextEntry> _entries;

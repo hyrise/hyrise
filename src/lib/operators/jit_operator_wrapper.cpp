@@ -49,6 +49,8 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   Assert(_source(), "JitOperatorWrapper does not have a valid source node.");
   Assert(_sink(), "JitOperatorWrapper does not have a valid sink node.");
 
+  _prepare_and_specialize_operator_pipeline();
+
   const auto in_table = input_left()->get_output();
 
   auto out_table = _sink()->create_output_table(*in_table);
@@ -58,8 +60,6 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
     context.transaction_id = transaction_context()->transaction_id();
     context.snapshot_commit_id = transaction_context()->snapshot_commit_id();
   }
-
-  _prepare_and_specialize_operator_pipeline();
 
   _source()->before_query(*in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
@@ -86,14 +86,12 @@ void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
   if (_specialized_function_wrapper->execute_func) return;
 
   const auto in_table = input_left()->get_output();
-  _source()->before_specialization(*in_table);
 
   const auto jit_operators = _specialized_function_wrapper->jit_operators;
 
+  std::vector<bool> tuple_non_nullable_information;
   for (auto& jit_operator : jit_operators) {
-    if (auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operator)) {
-      jit_validate->input_table_type = input_left()->get_output()->type();
-    }
+    jit_operator->before_specialization(*in_table, tuple_non_nullable_information);
   }
 
   // Connect operators to a chain

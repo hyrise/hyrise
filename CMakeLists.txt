@@ -1,5 +1,5 @@
 # consider updating DEPENDENCIES.md when you touch this line
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
 project(Hyrise)
 
@@ -19,7 +19,7 @@ function(compiler_not_supported message)
 endfunction(compiler_not_supported)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.2)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.2)
         compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
     if (APPLE)
@@ -27,7 +27,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         compiler_not_supported("We had to drop support for GCC on OS X because it caused segfaults when used with tbb. You can continue, but don't hold us responsible for any segmentation faults.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")

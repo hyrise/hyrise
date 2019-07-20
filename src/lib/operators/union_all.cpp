@@ -19,9 +19,11 @@ const std::string UnionAll::name() const { return "UnionAll"; }
 std::shared_ptr<const Table> UnionAll::_on_execute() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables must have same number of columns");
-  DebugAssert(input_table_left()->type() == input_table_left()->type(), "Input tables must have the same type");
+  DebugAssert(input_table_left()->type() == input_table_right()->type(), "Input tables must have the same type");
 
-  auto output = std::make_shared<Table>(input_table_left()->column_definitions(), input_table_left()->type());
+  auto output_chunks =
+      std::vector<std::shared_ptr<Chunk>>{input_table_left()->chunk_count() + input_table_right()->chunk_count()};
+  auto output_chunk_idx = size_t{0};
 
   // add positions to output by iterating over both input tables
   for (const auto& input : {input_table_left(), input_table_right()}) {
@@ -36,11 +38,13 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
       }
 
       // adding newly filled chunk to the output table
-      output->append_chunk(output_segments);
+      output_chunks[output_chunk_idx] = std::make_shared<Chunk>(output_segments);
+      ++output_chunk_idx;
     }
   }
 
-  return output;
+  return std::make_shared<Table>(input_table_left()->column_definitions(), input_table_left()->type(),
+                                 std::move(output_chunks));
 }
 std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

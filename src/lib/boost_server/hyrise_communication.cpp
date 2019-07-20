@@ -64,8 +64,11 @@ std::vector<RowDescription> build_row_description(std::shared_ptr<const Table> t
 uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler& postgres_handler) {
   const auto column_count = table->column_count();
   auto attribute_strings = std::vector<std::string>(column_count);
+  const auto chunk_count = table->chunk_count();
 
-  for (const auto& chunk : table->chunks()) {
+  // for (const auto& chunk : table->chunks()) {
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; chunk_id++) {
+    const auto& chunk = table->get_chunk(chunk_id);
     const auto chunk_size = chunk->size();
     const auto& segments = chunk->segments();
     for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
@@ -80,7 +83,8 @@ uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler
 }
 
 std::shared_ptr<SQLPipeline> execute_pipeline(const std::string& sql) {
-  auto sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{sql}.with_mvcc(UseMvcc::No).create_pipeline());
+  // auto sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{sql}.with_mvcc(UseMvcc::No).create_pipeline());
+  auto sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
   sql_pipeline->get_result_table();
   return sql_pipeline;
 
