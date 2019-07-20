@@ -80,6 +80,7 @@ class BenchmarkRunner {
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
+  std::chrono::steady_clock::time_point _benchmark_start;
   Duration _total_run_duration{};
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can

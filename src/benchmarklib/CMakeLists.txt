@@ -35,6 +35,10 @@ set(
     abstract_benchmark_item_runner.cpp
     benchmark_config.cpp
     benchmark_config.hpp
+    benchmark_item_result.cpp
+    benchmark_item_result.hpp
+    benchmark_item_run_result.cpp
+    benchmark_item_run_result.hpp
     benchmark_runner.cpp
     benchmark_runner.hpp
     benchmark_sql_executor.cpp
@@ -54,8 +58,6 @@ set(
     table_generator.cpp
     table_generator.hpp
     random_generator.hpp
-    benchmark_item_result.cpp
-    benchmark_item_result.hpp
 )
 
 
