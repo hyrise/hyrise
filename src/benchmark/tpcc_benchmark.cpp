@@ -1,3 +1,9 @@
+#include "tpcc/tpcc_table_generator.hpp"
+
+#include "benchmark_runner.hpp"
+#include "cli_config_parser.hpp"
+#include "tpcc/tpcc_benchmark_item_runner.hpp"
+#include "tpcc/tpcc_table_generator.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -17,7 +23,7 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     // We use -s instead of -w for consistency with the options of our other TPC-x binaries.
-    ("s,scale", "Scale factor (warehouses)", cxxopts::value<float>()->default_value("1")); // NOLINT
+    ("s,scale", "Scale factor (warehouses)", cxxopts::value<int>()->default_value("1")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;
@@ -45,11 +51,10 @@ int main(int argc, char* argv[]) {
   std::cout << "- TPC-C scale factor (number of warehouses) is " << num_warehouses << std::endl;
 
   // Add TPC-C-specific information
-  context.emplace("scale_factor", scale_factor);
-  context.emplace("use_prepared_statements", use_prepared_statements);
+  context.emplace("scale_factor", num_warehouses);
 
   // Run the benchmark
   auto item_runner = std::make_unique<TPCCBenchmarkItemRunner>(config, num_warehouses);
-  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context)
+  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCCTableGenerator>(num_warehouses, config), context)
       .run();
 }

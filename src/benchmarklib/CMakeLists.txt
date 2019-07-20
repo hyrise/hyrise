@@ -5,6 +5,8 @@ set(
 
     tpcc/constants.hpp
     tpcc/defines.hpp
+    tpcc/tpcc_benchmark_item_runner.cpp
+    tpcc/tpcc_benchmark_item_runner.hpp
     tpcc/tpcc_random_generator.hpp
     tpcc/tpcc_table_generator.cpp
     tpcc/tpcc_table_generator.hpp
@@ -28,7 +30,6 @@ set(
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
 
-    abstract_benchmark_table_generator.hpp
     abstract_table_generator.cpp
     abstract_table_generator.hpp
     abstract_benchmark_item_runner.hpp
