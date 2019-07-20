@@ -41,17 +41,20 @@ def get_iteration_durations(iterations):
     return iteration_durations
 
 def calculate_and_format_p_value(old, new):
-    p_value = ttest_ind(array('d', old["durations"]), array('d', new["durations"]))[1]
+    old_durations = [run["duration"] for run in old["runs"]]
+    new_durations = [run["duration"] for run in new["runs"]]
+
+    p_value = ttest_ind(array('d', old_durations), array('d', new_durations))[1]
     is_significant = p_value < p_value_significance_threshold
 
     notes = ""
-    old_runtime = sum(runtime for runtime in old["durations"])
-    new_runtime = sum(runtime for runtime in new["durations"])
+    old_runtime = sum(runtime for runtime in old_durations)
+    new_runtime = sum(runtime for runtime in new_durations)
     if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns):
         is_significant = False
         notes += "(run time too short) "
 
-    if (len(old["durations"]) < min_iterations or len(new["durations"]) < min_iterations):
+    if (len(old_durations) < min_iterations or len(new_durations) < min_iterations):
         is_significant = False
         notes += "(not enough runs) "
 
@@ -88,7 +91,7 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     diff_formatted = format_diff(diff)
     p_value_formatted = calculate_and_format_p_value(old, new)
 
-    table_data.append([name, str(old['items_per_second']), str(len(old['metrics'])), str(new['items_per_second']), str(len(new['metrics'])), diff_formatted, p_value_formatted])
+    table_data.append([name, str(old['items_per_second']), str(len(old['runs'])), str(new['items_per_second']), str(len(new['runs'])), diff_formatted, p_value_formatted])
 
 table_data.append(['geometric mean', '', '', '', '', format_diff(geometric_mean(diffs)), ''])
 
