@@ -96,8 +96,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   const auto is_semi_or_anti_join =
       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-  const auto track_probe_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Left || is_semi_or_anti_join;
-  const auto track_index_matches = _mode == JoinMode::FullOuter || _mode == JoinMode::Right;
+  const auto track_probe_matches = _mode == JoinMode::FullOuter ||
+                                   (_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
+                                   (_mode == JoinMode::Right && _index_side == IndexSide::Left) ||
+                                   (is_semi_or_anti_join && _index_side == IndexSide::Right);
+  const auto track_index_matches = _mode == JoinMode::FullOuter ||
+                                   (_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
+                                   (_mode == JoinMode::Right && _index_side == IndexSide::Right) ||
+                                   (is_semi_or_anti_join && _index_side == IndexSide::Left);
 
   if (track_probe_matches) {
     for (ChunkID probe_chunk_id{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
@@ -365,7 +371,8 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
   }
 
   // Remember the matches for outer joins
-  if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
+  if ((_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
+      (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
     _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
   }
 
@@ -377,7 +384,8 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
                    return RowID{index_chunk_id, index_chunk_offset};
                  });
 
-  if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
+  if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
+      (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter) {
     std::for_each(range_begin, range_end, [this, index_chunk_id](ChunkOffset index_chunk_offset) {
       _index_matches[index_chunk_id][index_chunk_offset] = true;
     });
@@ -395,7 +403,8 @@ void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, cons
 
 void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   // For Full Outer and Left Join we need to add all unmatched rows for the probe side
-  if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
+  if ((_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
+      (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
     for (ChunkID probe_chunk_id{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _probe_matches[probe_chunk_id].size(); ++chunk_offset) {
         if (!_probe_matches[probe_chunk_id][chunk_offset]) {
@@ -407,7 +416,8 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   }
 
   // For Full Outer and Right Join we need to add all unmatched rows for the index side.
-  if (_mode == JoinMode::FullOuter || _mode == JoinMode::Right) {
+  if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
+      (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter) {
     for (ChunkID chunk_id{0}; chunk_id < _index_matches.size(); ++chunk_id) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _index_matches[chunk_id].size(); ++chunk_offset) {
         if (!_index_matches[chunk_id][chunk_offset]) {

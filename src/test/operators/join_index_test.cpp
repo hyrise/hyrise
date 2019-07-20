@@ -9,7 +9,6 @@
 
 #include "all_type_variant.hpp"
 #include "operators/join_index.hpp"
-#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
