@@ -20,7 +20,8 @@ class BenchmarkSQLExecutor {
   // This executes the given SQL query, records its metrics and returns a single table (the same as
   // SQLPipeline::get_result_table() would).
   // If visualization and/or verification are enabled, these are transparently done as well.
-  std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> execute(const std::string& sql);
+  std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> execute(
+      const std::string& sql, const std::shared_ptr<const Table>& expected_result_table = nullptr);
 
   // If auto-commit is disabled, explicitly commit / roll back the transaction
   void commit();
@@ -35,6 +36,9 @@ class BenchmarkSQLExecutor {
   std::shared_ptr<TransactionContext> transaction_context = nullptr;
 
  private:
+  void _compare_tables(const std::shared_ptr<const Table>& expected_result_table,
+                       const std::shared_ptr<const Table>& actual_result_table,
+                       const std::optional<const std::string>& description = std::nullopt);
   void _verify_with_sqlite(SQLPipeline& pipeline);
   void _visualize(SQLPipeline& pipeline) const;
 
