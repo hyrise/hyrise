@@ -41,6 +41,11 @@ class AbstractBenchmarkItemRunner {
   // Set the SQLite wrapper used for query verification. `nullptr` disables verification. Default is disabled.
   void set_sqlite_wrapper(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper);
 
+  // Returns a mapping from item ID to its relative weight in the execution of the benchmark. Relevant for example in
+  // the TPC-C benchmark, where not all transactions are executed equally often. Returns an empty vector if all items
+  // are weighted the same
+  virtual const std::vector<int>& weights() const;
+
  protected:
   // Executes the benchmark item with the given ID. BenchmarkItemRunners should not use the SQL pipeline directly,
   // but use the provided BenchmarkSQLExecutor. That class not only tracks the execution metrics and provides them
