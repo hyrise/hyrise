@@ -238,7 +238,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         result.verification_passed = result.verification_passed.value_or(true) && !any_run_verification_failed;
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
-          result.runs.push_back(run_start - _benchmark_start, run_end - run_start, std::move(metrics));
+          result.runs.push_back({run_start - _benchmark_start, run_end - run_start, std::move(metrics)});
         }
       },
       SchedulePriority::High);
