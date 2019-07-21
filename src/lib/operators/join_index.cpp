@@ -175,7 +175,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                               secondary_predicate_evaluator);
       }
     }
-  } else {  // DATA JOIN or OUTER REFERENCE JOIN
+  } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
     // Scan all chunks for index input
     for (ChunkID index_chunk_id{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
       const auto& index_chunk = _index_input_table->get_chunk(index_chunk_id);
