@@ -11,9 +11,6 @@ namespace opossum {
 struct BenchmarkItemResult {
   BenchmarkItemResult();
 
-  // Used only for BenchmarkMode::Ordered mode
-  Duration duration_of_all_runs{0};
-
   // Stores the detailed information about the runs executed.
   tbb::concurrent_vector<BenchmarkItemRunResult> runs;
 

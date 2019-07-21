@@ -105,7 +105,9 @@ bool TpccPayment::execute() {
     customer_id = customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }
 
-  // There is a possible optimization here if we take `customer_table` as an input to an UPDATE operator, but that would be outside of the SQL realm. Also, it would it make it impossible to run _execute_sql via the network layer later on.
+  // There is a possible optimization here if we take `customer_table` as an input to an UPDATE operator, but that
+  // would be outside of the SQL realm. Also, it would it make it impossible to run _execute_sql via the network
+  // layer later on.
   const auto customer_update_balance_pair =
       _sql_executor.execute(std::string{"UPDATE CUSTOMER SET C_BALANCE = C_BALANCE - "} + std::to_string(_h_amount) +
                             ", C_YTD_PAYMENT = C_YTD_PAYMENT + " + std::to_string(_h_amount) +

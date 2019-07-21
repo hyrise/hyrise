@@ -12,7 +12,7 @@ namespace opossum {
 
 class AbstractTpccProcedure {
  public:
-  AbstractTpccProcedure(BenchmarkSQLExecutor& sql_executor);
+  explicit AbstractTpccProcedure(BenchmarkSQLExecutor& sql_executor);
 
   AbstractTpccProcedure(const AbstractTpccProcedure& sql_executor);
   virtual ~AbstractTpccProcedure() = default;

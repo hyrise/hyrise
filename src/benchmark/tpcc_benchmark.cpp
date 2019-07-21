@@ -3,7 +3,6 @@
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "tpcc/tpcc_benchmark_item_runner.hpp"
-#include "tpcc/tpcc_table_generator.hpp"
 
 using namespace opossum;  // NOLINT
 

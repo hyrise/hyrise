@@ -117,6 +117,8 @@ bool TpccNewOrder::execute() {
   // Iterate over order lines
   auto order_line_idx = size_t{0};
   for (const auto& order_line : order_lines) {
+    ++order_line_idx;  // 1-indexed
+
     const auto item_select_pair =
         _sql_executor.execute(std::string{"SELECT I_ID, I_PRICE, I_NAME, I_DATA FROM ITEM WHERE I_ID = "} +
                               std::to_string(order_line.ol_i_id));
@@ -130,7 +132,8 @@ bool TpccNewOrder::execute() {
 
     const auto i_price = item_table->get_value<float>(ColumnID{1}, 0);
 
-    // Retrieve the STOCK entry. Currently, this is done in the loop and it should be more performant to do a similar `IN (...)` optimization. Not sure how legal that is though.
+    // Retrieve the STOCK entry. Currently, this is done in the loop and it should be more performant to do a similar
+    // `IN (...)` optimization. Not sure how legal that is though.
     const auto stock_select_pair = _sql_executor.execute(
         std::string{"SELECT S_QUANTITY, S_DIST_"} + (d_id < 10 ? "0" : "") + std::to_string(d_id) +
         ", S_DATA, S_YTD, S_ORDER_CNT, S_REMOTE_CNT FROM STOCK WHERE S_I_ID = " + std::to_string(order_line.ol_i_id) +
@@ -171,7 +174,8 @@ bool TpccNewOrder::execute() {
     const auto ol_amount = order_line.ol_quantity * i_price;
 
     // Add to ORDER_LINE
-    // TODO(anyone): This can be made faster if we interpret "For each O_OL_CNT item on the order" less strictly and allow for a single insert at the end
+    // TODO(anyone): This can be made faster if we interpret "For each O_OL_CNT item on the order" less strictly and
+    //               allow for a single insert at the end
     // TODO(anyone): Use actual NULL for OL_DELIVERY_D
     const auto order_line_insert_pair = _sql_executor.execute(
         std::string{"INSERT INTO ORDER_LINE (OL_O_ID, OL_D_ID, OL_W_ID, OL_NUMBER, OL_I_ID, OL_SUPPLY_W_ID, "

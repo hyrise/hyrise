@@ -17,7 +17,6 @@ const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
 }
 
 void TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  // TODO weighted distribution
   switch (item_id) {
     // TODO Do something with failed transactions
     case 0:
@@ -60,7 +59,8 @@ std::string TPCCBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) co
 }
 
 const std::vector<int>& TPCCBenchmarkItemRunner::weights() const {
-  // TODO verify
+  // Except for New-Order, the given weights are minimum (see 5.2.3 in the standard). Since New-Order is the transactino
+  // being counted, we want it to have the maximum weight possible.
   static const std::vector<int> weights{4, 45, 4, 43, 4};
   return weights;
 }

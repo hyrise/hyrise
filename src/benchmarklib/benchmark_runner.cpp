@@ -204,10 +204,9 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
-    result.duration_of_all_runs = _state.benchmark_duration;
 
     const auto duration_of_all_runs_ns =
-        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration_of_all_runs).count());
+        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.runs.size()) / duration_seconds;
 
@@ -287,8 +286,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto& name = _benchmark_item_runner->item_name(item_id);
     const auto& result = _results.at(item_id);
 
+    auto total_item_duration = Duration{0};
     auto runs_json = nlohmann::json::array();
     for (const auto& run_result : result.runs) {
+      total_item_duration += run_result.duration;
+
       // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
       auto all_pipeline_metrics_json = nlohmann::json::array();
       for (const auto& pipeline_metrics : run_result.metrics) {
@@ -309,24 +311,20 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         all_pipeline_metrics_json.push_back(pipeline_metrics_json);
       }
 
-      runs_json.push_back(
-          nlohmann::json{{"begin", run_result.begin.count()},
-                         {"duration", run_result.duration.count()},  // TODO test compare_benchmarks.json, MT benchmarks
-                         {"metrics", all_pipeline_metrics_json}});
+      runs_json.push_back(nlohmann::json{{"begin", run_result.begin.count()},
+                                         {"duration", run_result.duration.count()},  // TODO adapt MT benchmarks
+                                         {"metrics", all_pipeline_metrics_json}});
     }
 
     nlohmann::json benchmark{{"name", name}, {"runs", runs_json}, {"iterations", result.runs.size()}};
 
-    if (_config.benchmark_mode == BenchmarkMode::Ordered) {
-      // These metrics are not meaningful for permuted / shuffled execution
-      const auto duration_of_all_runs_ns =
-          static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration_of_all_runs).count());
-      const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
-      const auto items_per_second = static_cast<float>(result.runs.size()) / duration_seconds;
-      benchmark["items_per_second"] = items_per_second;
-      const auto time_per_item = result.runs.size() > 0 ? duration_of_all_runs_ns / result.runs.size() : std::nanf("");
-      benchmark["avg_real_time_per_iteration"] = time_per_item;
-    }
+    const auto total_item_duration_ns =
+        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(total_item_duration).count());
+    const auto duration_seconds = total_item_duration_ns / 1'000'000'000;
+    const auto items_per_second = static_cast<float>(result.runs.size()) / duration_seconds;
+    benchmark["items_per_second"] = items_per_second;
+    const auto time_per_item = result.runs.size() > 0 ? total_item_duration_ns / result.runs.size() : std::nanf("");
+    benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);
   }
