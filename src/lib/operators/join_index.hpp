@@ -30,11 +30,7 @@ using IndexRange = std::pair<BaseIndex::Iterator, BaseIndex::Iterator>;
    */
 class JoinIndex : public AbstractJoinOperator {
  public:
-  static bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                       DataType right_data_type, bool secondary_predicates,
-                       std::optional<TableType> left_table_type = std::nullopt,
-                       std::optional<TableType> right_table_type = std::nullopt,
-                       JoinSpecificConfiguration config = JoinSpecificConfiguration{});
+  static bool supports(const JoinConfiguration config);
 
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
             const JoinMode mode, const OperatorJoinPredicate& primary_predicate,

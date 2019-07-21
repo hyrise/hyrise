@@ -195,9 +195,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         return;
       }
 
-      if (JoinOperator::supports(configuration.join_mode, configuration.predicate_condition,
-                                 configuration.data_type_left, configuration.data_type_right,
-                                 !configuration.secondary_predicates.empty())) {
+      if (JoinOperator::supports({configuration.join_mode, configuration.predicate_condition,
+                                  configuration.data_type_left, configuration.data_type_right,
+                                  !configuration.secondary_predicates.empty()})) {
         configurations.emplace_back(configuration);
       }
     };

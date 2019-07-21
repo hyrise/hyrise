@@ -13,9 +13,16 @@ namespace opossum {
 
 enum class IndexSide { Left, Right };
 
-struct JoinSpecificConfiguration {
+struct JoinConfiguration {
+  JoinMode join_mode;
+  PredicateCondition predicate_condition;
+  DataType left_data_type;
+  DataType right_data_type;
+  bool secondary_predicates;
   // Only for JoinIndex
-  std::optional<IndexSide> index_side;
+  std::optional<TableType> left_table_type{std::nullopt};
+  std::optional<TableType> right_table_type{std::nullopt};
+  std::optional<IndexSide> index_side{std::nullopt};
 };
 
 /**

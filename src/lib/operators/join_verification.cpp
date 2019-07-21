@@ -16,12 +16,7 @@ std::vector<T> concatenate(const std::vector<T>& l, const std::vector<T>& r) {
 
 namespace opossum {
 
-bool JoinVerification::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                                DataType right_data_type, bool secondary_predicates,
-                                std::optional<TableType> left_table_type, std::optional<TableType> right_table_type,
-                                JoinSpecificConfiguration config) {
-  return true;
-}
+bool JoinVerification::supports(const JoinConfiguration config) { return true; }
 
 JoinVerification::JoinVerification(const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,

@@ -26,22 +26,20 @@ namespace opossum {
  * For the remaining join types or if no index is found it falls back to a nested loop join.
  */
 
-bool JoinIndex::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                         DataType right_data_type, bool secondary_predicates, std::optional<TableType> left_table_type,
-                         std::optional<TableType> right_table_type, JoinSpecificConfiguration config) {
-  if (!left_table_type || !right_table_type || !config.index_side) {
+bool JoinIndex::supports(const JoinConfiguration config) {
+  if (!config.left_table_type || !config.right_table_type || !config.index_side) {
     Fail("Table types and index side are required to make support decisions for the index join.");
   } else {
     TableType index_side_table_type;
     if (*config.index_side == IndexSide::Left) {
-      index_side_table_type = *left_table_type;
+      index_side_table_type = *config.left_table_type;
     } else {
-      index_side_table_type = *right_table_type;
+      index_side_table_type = *config.right_table_type;
     }
-    if (index_side_table_type == TableType::References && join_mode != JoinMode::Inner) {
+    if (index_side_table_type == TableType::References && config.join_mode != JoinMode::Inner) {
       return false;
     } else {
-      return !secondary_predicates;
+      return !config.secondary_predicates;
     }
   }
 }
@@ -71,13 +69,12 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
 void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
-  JoinSpecificConfiguration config{};
-  config.index_side = _index_side;
-  Assert(supports(_mode, _primary_predicate.predicate_condition,
-                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                  !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type(), config),
-         "JoinIndex doesn't support these parameters");
+  Assert(
+      supports({_mode, _primary_predicate.predicate_condition,
+                input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type(), _index_side}),
+      "JoinIndex doesn't support these parameters");
 
   std::shared_ptr<const Table> probe_input_table;
   std::shared_ptr<const Table> index_input_table;
