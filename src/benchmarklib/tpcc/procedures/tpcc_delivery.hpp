@@ -9,9 +9,9 @@ namespace opossum {
 //         notion of terminals) and does not write a result file.
 // 2.7.4.2 We do not report a skipped delivery ratio over 1%
 
-class TpccDelivery : public AbstractTpccProcedure {
+class TPCCDelivery : public AbstractTPCCProcedure {
  public:
-  TpccDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
+  TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
   [[nodiscard]] bool execute() override;
   char identifier() const override;

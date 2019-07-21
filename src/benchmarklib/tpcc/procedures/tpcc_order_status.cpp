@@ -5,8 +5,8 @@
 
 namespace opossum {
 
-TpccOrderStatus::TpccOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTpccProcedure(sql_executor) {
+TPCCOrderStatus::TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
+    : AbstractTPCCProcedure(sql_executor) {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   _w_id = warehouse_dist(_random_engine);
 
@@ -24,7 +24,7 @@ TpccOrderStatus::TpccOrderStatus(const int num_warehouses, BenchmarkSQLExecutor&
   }
 }
 
-bool TpccOrderStatus::execute() {
+bool TPCCOrderStatus::execute() {
   auto customer_table = std::shared_ptr<const Table>{};
   auto customer_offset = size_t{};
   auto customer_id = int32_t{};
@@ -72,6 +72,6 @@ bool TpccOrderStatus::execute() {
   return true;
 }
 
-char TpccOrderStatus::identifier() const { return 'O'; }
+char TPCCOrderStatus::identifier() const { return 'O'; }
 
 }  // namespace opossum

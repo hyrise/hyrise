@@ -6,8 +6,8 @@
 
 namespace opossum {
 
-TpccNewOrder::TpccNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTpccProcedure(sql_executor) {
+TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
+    : AbstractTPCCProcedure(sql_executor) {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   w_id = warehouse_dist(_random_engine);
 
@@ -50,7 +50,7 @@ TpccNewOrder::TpccNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
   o_entry_d = std::time(nullptr);
 }
 
-bool TpccNewOrder::execute() {
+bool TPCCNewOrder::execute() {
   // Retrieve W_TAX, the warehouse tax rate
   const auto warehouse_select_pair =
       _sql_executor.execute(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(w_id));
@@ -191,6 +191,6 @@ bool TpccNewOrder::execute() {
   return true;
 }
 
-char TpccNewOrder::identifier() const { return 'N'; }
+char TPCCNewOrder::identifier() const { return 'N'; }
 
 }  // namespace opossum

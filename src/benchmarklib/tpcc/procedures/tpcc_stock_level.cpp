@@ -7,8 +7,8 @@
 
 namespace opossum {
 
-TpccStockLevel::TpccStockLevel(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTpccProcedure(sql_executor) {
+TPCCStockLevel::TPCCStockLevel(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
+    : AbstractTPCCProcedure(sql_executor) {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   _w_id = warehouse_dist(_random_engine);
 
@@ -19,7 +19,7 @@ TpccStockLevel::TpccStockLevel(const int num_warehouses, BenchmarkSQLExecutor& s
   _threshold = threshold_dist(_random_engine);
 }
 
-bool TpccStockLevel::execute() {
+bool TPCCStockLevel::execute() {
   const auto district_table_pair =
       _sql_executor.execute(std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} + std::to_string(_w_id) +
                             " AND D_ID = " + std::to_string(_d_id));
@@ -49,6 +49,6 @@ bool TpccStockLevel::execute() {
   return true;
 }
 
-char TpccStockLevel::identifier() const { return 'S'; }
+char TPCCStockLevel::identifier() const { return 'S'; }
 
 }  // namespace opossum

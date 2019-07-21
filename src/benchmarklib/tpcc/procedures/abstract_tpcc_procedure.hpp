@@ -10,13 +10,13 @@
 
 namespace opossum {
 
-class AbstractTpccProcedure {
+class AbstractTPCCProcedure {
  public:
-  explicit AbstractTpccProcedure(BenchmarkSQLExecutor& sql_executor);
+  explicit AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor);
 
-  AbstractTpccProcedure(const AbstractTpccProcedure& sql_executor);
-  virtual ~AbstractTpccProcedure() = default;
-  AbstractTpccProcedure& operator=(const AbstractTpccProcedure& sql_executor);
+  AbstractTPCCProcedure(const AbstractTPCCProcedure& sql_executor);
+  virtual ~AbstractTPCCProcedure() = default;
+  AbstractTPCCProcedure& operator=(const AbstractTPCCProcedure& sql_executor);
 
   // Executes the procedure; returns true if it was successful and false if a transaction conflict occurred
   [[nodiscard]] virtual bool execute() = 0;
@@ -26,11 +26,11 @@ class AbstractTpccProcedure {
 
  protected:
   static thread_local std::minstd_rand _random_engine;
-  static thread_local TpccRandomGenerator _tpcc_random_generator;
+  static thread_local TPCCRandomGenerator _tpcc_random_generator;
 
   BenchmarkSQLExecutor& _sql_executor;
 };
 
-std::ostream& operator<<(std::ostream& stream, const AbstractTpccProcedure& procedure);
+std::ostream& operator<<(std::ostream& stream, const AbstractTPCCProcedure& procedure);
 
 }  // namespace opossum

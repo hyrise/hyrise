@@ -20,19 +20,19 @@ void TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   switch (item_id) {
     // TODO Do something with failed transactions
     case 0:
-      (void)TpccDelivery{_num_warehouses, sql_executor}.execute();
+      (void)TPCCDelivery{_num_warehouses, sql_executor}.execute();
       break;
     case 1:
-      (void)TpccNewOrder{_num_warehouses, sql_executor}.execute();
+      (void)TPCCNewOrder{_num_warehouses, sql_executor}.execute();
       break;
     case 2:
-      (void)TpccOrderStatus{_num_warehouses, sql_executor}.execute();
+      (void)TPCCOrderStatus{_num_warehouses, sql_executor}.execute();
       break;
     case 3:
-      (void)TpccPayment{_num_warehouses, sql_executor}.execute();
+      (void)TPCCPayment{_num_warehouses, sql_executor}.execute();
       break;
     case 4:
-      (void)TpccStockLevel{_num_warehouses, sql_executor}.execute();
+      (void)TPCCStockLevel{_num_warehouses, sql_executor}.execute();
       break;
     default:
       Fail("Invalid item_id");

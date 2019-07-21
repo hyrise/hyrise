@@ -5,9 +5,9 @@
 
 namespace opossum {
 
-class TpccOrderStatus : public AbstractTpccProcedure {
+class TPCCOrderStatus : public AbstractTPCCProcedure {
  public:
-  TpccOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
+  TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
   [[nodiscard]] bool execute() override;
   char identifier() const override;

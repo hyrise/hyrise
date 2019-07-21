@@ -312,7 +312,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       }
 
       runs_json.push_back(nlohmann::json{{"begin", run_result.begin.count()},
-                                         {"duration", run_result.duration.count()},  // TODO adapt MT benchmarks
+                                         {"duration", run_result.duration.count()},
                                          {"metrics", all_pipeline_metrics_json}});
     }
 

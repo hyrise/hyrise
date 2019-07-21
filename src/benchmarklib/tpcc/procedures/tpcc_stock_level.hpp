@@ -4,9 +4,9 @@
 
 namespace opossum {
 
-class TpccStockLevel : public AbstractTpccProcedure {
+class TPCCStockLevel : public AbstractTPCCProcedure {
  public:
-  TpccStockLevel(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
+  TPCCStockLevel(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
   [[nodiscard]] bool execute() override;
   char identifier() const override;

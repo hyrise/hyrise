@@ -5,8 +5,8 @@
 
 namespace opossum {
 
-TpccPayment::TpccPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTpccProcedure(sql_executor) {
+TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
+    : AbstractTPCCProcedure(sql_executor) {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   _w_id = warehouse_dist(_random_engine);
 
@@ -39,7 +39,7 @@ TpccPayment::TpccPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
   _h_date = std::time(nullptr);
 }
 
-bool TpccPayment::execute() {
+bool TPCCPayment::execute() {
   SQLPipelineStatus pipeline_status;
 
   // Retrieve information about the warehouse
@@ -152,6 +152,6 @@ bool TpccPayment::execute() {
   return true;
 }
 
-char TpccPayment::identifier() const { return 'P'; }
+char TPCCPayment::identifier() const { return 'P'; }
 
 }  // namespace opossum

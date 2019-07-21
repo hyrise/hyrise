@@ -5,8 +5,8 @@
 
 namespace opossum {
 
-TpccDelivery::TpccDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTpccProcedure(sql_executor) {
+TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
+    : AbstractTPCCProcedure(sql_executor) {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   w_id = warehouse_dist(_random_engine);
 
@@ -16,7 +16,7 @@ TpccDelivery::TpccDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_e
   ol_delivery_d = std::time(nullptr);
 }
 
-bool TpccDelivery::execute() {
+bool TPCCDelivery::execute() {
   for (auto d_id = 1; d_id <= 10; ++d_id) {
     // This could be optimized by querying only once and grouping by NO_D_ID - would that be legal?
     const auto new_order_select_pair =
@@ -87,6 +87,6 @@ bool TpccDelivery::execute() {
   return true;
 }
 
-char TpccDelivery::identifier() const { return 'D'; }
+char TPCCDelivery::identifier() const { return 'D'; }
 
 }  // namespace opossum

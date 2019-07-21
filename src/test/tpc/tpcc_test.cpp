@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class TpccTest : public BaseTest {
+class TPCCTest : public BaseTest {
  public:
   static void SetUpTestCase() {
     auto benchmark_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
@@ -66,16 +66,16 @@ class TpccTest : public BaseTest {
   static constexpr auto NUM_WAREHOUSES = 2;
 };
 
-std::unordered_map<std::string, BenchmarkTableInfo> TpccTest::tables;
+std::unordered_map<std::string, BenchmarkTableInfo> TPCCTest::tables;
 
-TEST_F(TpccTest, InitialTables) { verify_table_sizes(initial_sizes); }
+TEST_F(TPCCTest, InitialTables) { verify_table_sizes(initial_sizes); }
 
-TEST_F(TpccTest, Delivery) {
+TEST_F(TPCCTest, Delivery) {
   auto old_transaction_context = TransactionManager::get().new_transaction_context();
   const auto old_time = time(nullptr);
 
   BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
-  auto delivery = TpccDelivery{NUM_WAREHOUSES, sql_executor};
+  auto delivery = TPCCDelivery{NUM_WAREHOUSES, sql_executor};
   EXPECT_TRUE(delivery.execute());
 
   auto new_sizes = initial_sizes;
@@ -171,20 +171,20 @@ TEST_F(TpccTest, Delivery) {
   }
 }
 
-TEST_F(TpccTest, NewOrder) {
+TEST_F(TPCCTest, NewOrder) {
   auto old_transaction_context = TransactionManager::get().new_transaction_context();
   const auto old_order_line_size = static_cast<int>(StorageManager::get().get_table("ORDER_LINE")->row_count());
   const auto old_time = time(nullptr);
 
   BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
-  auto new_order = TpccNewOrder{NUM_WAREHOUSES, sql_executor};
+  auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
   // Generate random NewOrders until we have one without invalid item IDs and where both local and remote order lines
   // occur
-  while (new_order.order_lines.back().ol_i_id == TpccNewOrder::INVALID_ITEM_ID ||
+  while (new_order.order_lines.back().ol_i_id == TPCCNewOrder::INVALID_ITEM_ID ||
          std::find_if(new_order.order_lines.begin(), new_order.order_lines.end(), [&](const auto& order_line) {
            return order_line.ol_supply_w_id != new_order.w_id;
          }) == new_order.order_lines.end()) {
-    new_order = TpccNewOrder{NUM_WAREHOUSES, sql_executor};
+    new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
   }
 
   const auto& order_lines = new_order.order_lines;
@@ -253,6 +253,6 @@ TEST_F(TpccTest, NewOrder) {
   }
 }
 
-TEST_F(TpccTest, NewOrderUnusedOrderId) {}
+TEST_F(TPCCTest, NewOrderUnusedOrderId) {}
 
 }  // namespace opossum
