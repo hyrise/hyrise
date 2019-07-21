@@ -139,7 +139,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   if (const auto& weights = _benchmark_item_runner->weights(); !weights.empty()) {
     auto item_ids_weighted = std::vector<BenchmarkItemID>{};
     for (const auto& selected_item_id : item_ids) {
-      const auto item_weight = weights[selected_item_id];
+      const auto item_weight = weights.at(selected_item_id);
       item_ids_weighted.resize(item_ids_weighted.size() + item_weight, selected_item_id);
     }
     item_ids = item_ids_weighted;
