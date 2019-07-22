@@ -8,14 +8,15 @@
 namespace opossum {
 
 TransactionManager::TransactionManager()
-    : _next_transaction_id{INITIAL_TRANSACTION_ID},
-      _last_commit_id{INITIAL_COMMIT_ID},
-      _last_commit_context{std::make_shared<CommitContext>(INITIAL_COMMIT_ID)},
-      _mutex_active_snapshot_commit_ids{std::mutex{}},
-      _active_snapshot_commit_ids{std::unordered_multiset<CommitID>{}} {}
+    :_next_transaction_id{INITIAL_TRANSACTION_ID},
+     _last_commit_id{INITIAL_COMMIT_ID},
+     _last_commit_context{std::make_shared<CommitContext>(INITIAL_COMMIT_ID)} {}
 
 TransactionManager& TransactionManager::operator=(TransactionManager&& transaction_manager) {
-  return transaction_manager;
+  _next_transaction_id = INITIAL_TRANSACTION_ID;
+  _last_commit_id = INITIAL_COMMIT_ID;
+  _last_commit_context = std::make_shared<CommitContext>(INITIAL_COMMIT_ID);
+  return *this;
 }
 
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }

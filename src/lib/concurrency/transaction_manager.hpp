@@ -51,6 +51,8 @@ class TransactionManager {
   friend class TransactionManagerTest;
 
  public:
+  TransactionManager& operator=(TransactionManager&) = delete;
+
   CommitID last_commit_id() const;
 
   /**

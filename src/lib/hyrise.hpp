@@ -18,9 +18,6 @@ class Hyrise : public Singleton<Hyrise> {
  private:
   Hyrise();
   friend class Singleton;
-
-  //const Hyrise& operator=(const Hyrise&) = delete;
-  //Hyrise& operator=(Hyrise&&) = default;
 };
 
 }  // namespace opossum

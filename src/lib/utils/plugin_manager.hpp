@@ -18,6 +18,7 @@ struct PluginHandleWrapper {
 };
 
 class PluginManager {
+  friend class HyriseTest;
   friend class PluginManagerTest;
   friend class SingletonTest;
 

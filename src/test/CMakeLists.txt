@@ -29,6 +29,7 @@ set(
     import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
+    lib/hyrise_test.cpp
     lib/import_export/csv_parser_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp

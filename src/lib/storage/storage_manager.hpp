@@ -62,7 +62,6 @@ class StorageManager {
 
  protected:
   StorageManager();
-
   friend class Hyrise;
 
   // Tables can currently not be modified concurrently
