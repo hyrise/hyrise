@@ -19,34 +19,41 @@ with open(sys.argv[1]) as json_file:
 
 # Build flat list of {name, begin, duration} entries for every benchmark item run
 data = []
+benchmark_names = []
 for benchmark_json in data_json:
 	name = benchmark_json['name']
+	benchmark_names.append(name)
 	for run_json in benchmark_json['runs']:
 		begin = run_json['begin']
 		duration = run_json['duration']
 		data.append({'name': name, 'begin': begin, 'duration': duration})
 
 fig, ax = plt.subplots()
-
 df = pd.DataFrame(data)
-colors = np.where(df['name'] == 'Delivery','r','-')
-colors[df['name'] == 'New-Order'] = 'g'
-colors[df['name'] == 'Order-Status'] = 'b'
-colors[df['name'] == 'Payment'] = 'c'
-colors[df['name'] == 'Stock-Level'] = 'm'
-df.reset_index().plot(kind='scatter', x='begin', y='duration', c=colors)
 
-handles = [
-	mpatches.Patch(color='r', label='Delivery'),
-	mpatches.Patch(color='g', label='NewOrder'),
-	mpatches.Patch(color='b', label='OrderStatus'),
-	mpatches.Patch(color='c', label='Payment'),
-	mpatches.Patch(color='m', label='StockLevel')
-]
-plt.legend(handles=handles)
+# Set the colors
+name_to_color = {}
+prop_cycle = plt.rcParams['axes.prop_cycle']
+default_colors = prop_cycle.by_key()['color']
 
+name_to_color[benchmark_names[0]] = default_colors[0]
+colors = np.where(df['name'] == benchmark_names[0], default_colors[0], '-')
+for i in range(1, len(benchmark_names)):
+	color = default_colors[i % len(default_colors)]
+	name_to_color[benchmark_names[i]] = color
+	colors[df['name'] == benchmark_names[i]] = color
+
+# Plot
+df.reset_index().plot(kind='scatter', x='begin', y='duration', c=colors, s=.3)
 ax.grid(True)
 
+# Add legend
+handles = []
+for name, color in name_to_color.items():
+	handles.append(mpatches.Patch(label=name, color=color))
+plt.legend(handles=handles)
+
+# Write to file
 basename = sys.argv[1].replace('.json', '')
 plt.savefig(basename + '.pdf')
 plt.savefig(basename + '.png')
