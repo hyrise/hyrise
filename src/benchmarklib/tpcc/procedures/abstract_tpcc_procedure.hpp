@@ -21,9 +21,6 @@ class AbstractTPCCProcedure {
   // Executes the procedure; returns true if it was successful and false if a transaction conflict occurred
   [[nodiscard]] virtual bool execute() = 0;
 
-  // A single character (D/N/O/P/S) used to identify the procedure in result CSVs
-  virtual char identifier() const = 0;
-
  protected:
   static thread_local std::minstd_rand _random_engine;
   static thread_local TPCCRandomGenerator _tpcc_random_generator;
