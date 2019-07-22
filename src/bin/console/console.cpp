@@ -1094,7 +1094,7 @@ bool Console::_handle_rollback() {
 int main(int argc, char** argv) {
   // Make sure the TransactionManager is initialized before the console so that we don't run into destruction order
   // problems (#1635)
-  opossum::Hyrise::get().transaction_manager;
+  opossum::Hyrise::get();
 
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
