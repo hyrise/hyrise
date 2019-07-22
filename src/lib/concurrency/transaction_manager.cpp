@@ -8,9 +8,9 @@
 namespace opossum {
 
 TransactionManager::TransactionManager()
-    :_next_transaction_id{INITIAL_TRANSACTION_ID},
-     _last_commit_id{INITIAL_COMMIT_ID},
-     _last_commit_context{std::make_shared<CommitContext>(INITIAL_COMMIT_ID)} {}
+    : _next_transaction_id{INITIAL_TRANSACTION_ID},
+      _last_commit_id{INITIAL_COMMIT_ID},
+      _last_commit_context{std::make_shared<CommitContext>(INITIAL_COMMIT_ID)} {}
 
 TransactionManager& TransactionManager::operator=(TransactionManager&& transaction_manager) {
   _next_transaction_id = INITIAL_TRANSACTION_ID;

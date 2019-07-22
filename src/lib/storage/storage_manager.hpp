@@ -58,8 +58,6 @@ class StorageManager {
   // For debugging purposes mostly, dump all tables as csv
   void export_all_tables_as_csv(const std::string& path);
 
-  //StorageManager(StorageManager&&) = delete;
-
  protected:
   StorageManager();
   friend class Hyrise;

@@ -1,21 +1,19 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "./utils/plugin_test_utils.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "hyrise.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/plugin_manager.hpp"
-#include "./utils/plugin_test_utils.hpp"
 
 namespace opossum {
 
 class HyriseTest : public BaseTest {
  protected:
-  void SetUp() override {
-    Hyrise::reset();
-  }
+  void SetUp() override { Hyrise::reset(); }
 
   std::unordered_map<PluginName, PluginHandleWrapper>& get_plugins() {
     auto& pm = Hyrise::get().plugin_manager;
@@ -45,7 +43,6 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
   EXPECT_EQ(get_plugins().size(), 0);
   EXPECT_EQ(hyrise.storage_manager.has_table("test_table"), false);
   EXPECT_EQ(hyrise.transaction_manager.last_commit_id(), CommitID{1});
-
 }
 
-}
+}  // namespace opossum
