@@ -238,6 +238,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         result.verification_passed = result.verification_passed.value_or(true) && !any_run_verification_failed;
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
+          if (!_config.sql_metrics) metrics.clear();
           result.runs.push_back({run_start - _benchmark_start, run_end - run_start, std::move(metrics)});
         }
       },
@@ -293,6 +294,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
       // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
       auto all_pipeline_metrics_json = nlohmann::json::array();
+      // metrics can be empty if _config.sql_metrics is false
       for (const auto& pipeline_metrics : run_result.metrics) {
         auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
                                                     {"statements", nlohmann::json::array()}};
@@ -376,7 +378,8 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("sql_metrics", "Track SQL metrics (parse time etc.) for each SQL query", cxxopts::value<bool>()->default_value("false")); // NOLINT
 
   if constexpr (HYRISE_JIT_SUPPORT) {
     cli_options.add_options()

@@ -49,6 +49,4 @@ bool TPCCStockLevel::execute() {
   return true;
 }
 
-char TPCCStockLevel::identifier() const { return 'S'; }
-
 }  // namespace opossum

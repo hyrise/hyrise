@@ -152,6 +152,4 @@ bool TPCCPayment::execute() {
   return true;
 }
 
-char TPCCPayment::identifier() const { return 'P'; }
-
 }  // namespace opossum

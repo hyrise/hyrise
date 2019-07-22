@@ -191,6 +191,4 @@ bool TPCCNewOrder::execute() {
   return true;
 }
 
-char TPCCNewOrder::identifier() const { return 'N'; }
-
 }  // namespace opossum

@@ -10,7 +10,6 @@ class TPCCOrderStatus : public AbstractTPCCProcedure {
   TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
   [[nodiscard]] bool execute() override;
-  char identifier() const override;
 
  protected:
   // Values generated BEFORE the procedure is executed:

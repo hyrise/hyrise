@@ -87,6 +87,4 @@ bool TPCCDelivery::execute() {
   return true;
 }
 
-char TPCCDelivery::identifier() const { return 'D'; }
-
 }  // namespace opossum

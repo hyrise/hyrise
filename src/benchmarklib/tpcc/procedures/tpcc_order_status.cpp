@@ -72,6 +72,4 @@ bool TPCCOrderStatus::execute() {
   return true;
 }
 
-char TPCCOrderStatus::identifier() const { return 'O'; }
-
 }  // namespace opossum
