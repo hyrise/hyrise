@@ -32,6 +32,7 @@ fig, ax = plt.subplots()
 df = pd.DataFrame(data)
 
 # Set the colors
+benchmark_names.sort()  # Sort the benchmarks for a deterministic color mapping
 name_to_color = {}
 prop_cycle = plt.rcParams['axes.prop_cycle']
 default_colors = prop_cycle.by_key()['color']
