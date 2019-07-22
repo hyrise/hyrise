@@ -25,11 +25,10 @@ namespace opossum {
 * TODO(anyone): Choose an appropriate number of clusters.
 **/
 
-bool JoinSortMerge::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                             DataType right_data_type, bool secondary_predicates) {
-  return (predicate_condition != PredicateCondition::NotEquals || join_mode == JoinMode::Inner) &&
-         left_data_type == right_data_type && join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue &&
-         join_mode != JoinMode::AntiNullAsFalse;
+bool JoinSortMerge::supports(const JoinConfiguration config) {
+  return (config.predicate_condition != PredicateCondition::NotEquals || config.join_mode == JoinMode::Inner) &&
+         config.left_data_type == config.right_data_type && config.join_mode != JoinMode::Semi &&
+         config.join_mode != JoinMode::AntiNullAsTrue && config.join_mode != JoinMode::AntiNullAsFalse;
 }
 
 /**
@@ -57,10 +56,10 @@ std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
 void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
-  Assert(supports(_mode, _primary_predicate.predicate_condition,
-                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                  !_secondary_predicates.empty()),
+  Assert(supports({_mode, _primary_predicate.predicate_condition,
+                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
          "JoinSortMerge doesn't support these parameters");
 
   // Check column types
