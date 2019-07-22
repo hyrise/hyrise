@@ -965,8 +965,7 @@ char** Console::_command_completion(const char* text, int start, int end) {
   std::vector<std::string> tokens;
   boost::algorithm::split(tokens, input, boost::is_space());
 
-  // Choose completion function depending on the input. If it starts with "generate",
-  // suggest TPC-C tablenames for completion.
+  // Choose completion function depending on the input.
   const std::string& first_word = tokens[0];
   if (first_word == "visualize") {
     // Completion only for three words, "visualize", and at most two options

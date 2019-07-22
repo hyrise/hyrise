@@ -13,7 +13,7 @@ class BenchmarkConfig;
 
 struct BenchmarkTableInfo {
   BenchmarkTableInfo() = default;
-  explicit BenchmarkTableInfo(std::shared_ptr<Table> table);
+  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& table);
 
   std::shared_ptr<Table> table;
 

@@ -323,7 +323,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto duration_seconds = total_item_duration_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.runs.size()) / duration_seconds;
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item = result.runs.size() > 0 ? total_item_duration_ns / result.runs.size() : std::nanf("");
+    const auto time_per_item = !result.runs.empty() ? total_item_duration_ns / result.runs.size() : std::nanf("");
     benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);

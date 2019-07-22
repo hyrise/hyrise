@@ -42,8 +42,7 @@ class AbstractBenchmarkItemRunner {
   void set_sqlite_wrapper(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper);
 
   // Returns a mapping from item ID to its relative weight in the execution of the benchmark. Relevant for example in
-  // the TPC-C benchmark, where not all transactions are executed equally often. Returns an empty vector if all items
-  // are weighted the same
+  // the TPC-C benchmark, where not all transactions are executed equally often.
   virtual const std::vector<int>& weights() const;
 
  protected:
