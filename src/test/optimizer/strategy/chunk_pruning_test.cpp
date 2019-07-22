@@ -43,8 +43,9 @@ class ChunkPruningTest : public StrategyBaseTest {
     storage_manager.add_table("fixed_string_compressed", load_table("resources/test_data/tbl/string.tbl", 3u));
 
     for (const auto& [name, table] : storage_manager.tables()) {
-      for (const auto& chunk : table->chunks()) {
-        chunk->mark_immutable();
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        table->get_chunk(chunk_id)->mark_immutable();
       }
       generate_chunk_pruning_statistics(table);
     }

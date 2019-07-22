@@ -27,8 +27,6 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const Se
 
 const std::string IndexScan::name() const { return "IndexScan"; }
 
-void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _included_chunk_ids = chunk_ids; }
-
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = input_table_left();
 
@@ -39,14 +37,14 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   std::mutex output_mutex;
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  if (_included_chunk_ids.empty()) {
+  if (included_chunk_ids.empty()) {
     jobs.reserve(_in_table->chunk_count());
     for (auto chunk_id = ChunkID{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
       jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
     }
   } else {
-    jobs.reserve(_included_chunk_ids.size());
-    for (auto chunk_id : _included_chunk_ids) {
+    jobs.reserve(included_chunk_ids.size());
+    for (auto chunk_id : included_chunk_ids) {
       jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
     }
   }
@@ -66,7 +64,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
-  auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
+  auto job_task = std::make_shared<JobTask>([this, chunk_id, &output_mutex]() {
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
     // The output chunk is allocated on the same NUMA node as the input chunk.

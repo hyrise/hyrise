@@ -17,6 +17,7 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/sqlite_add_indices.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 
@@ -119,41 +120,7 @@ int main(int argc, char* argv[]) {
       BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};
 
   if (benchmark_config->verify) {
-    // Add indexes to SQLite. This is a hack until we support CREATE INDEX ourselves and pass that on to SQLite.
-    // Without this, SQLite would never finish.
-
-    std::cout << "- Adding indexes to SQLite" << std::endl;
-    Timer timer;
-
-    // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
-    // schema and copy the data.
-    for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
-      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "} + table_name +  // NOLINT
-                                                         " RENAME TO " + table_name + "_unindexed");
-    }
-
-    // Recreate tables from schema.sql
-    std::ifstream schema_file(query_path + "/schema.sql");
-    std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
-    benchmark_runner.sqlite_wrapper->raw_execute_query(schema_sql);
-
-    // Add foreign keys
-    std::ifstream foreign_key_file(query_path + "/fkindexes.sql");
-    std::string foreign_key_sql((std::istreambuf_iterator<char>(foreign_key_file)), std::istreambuf_iterator<char>());
-    benchmark_runner.sqlite_wrapper->raw_execute_query(foreign_key_sql);
-
-    // Copy over data
-    for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
-      Timer per_table_time;
-      std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
-
-      benchmark_runner.sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "} + table_name +  // NOLINT
-                                                         " SELECT * FROM " + table_name + "_unindexed");
-
-      std::cout << " (" << per_table_time.lap_formatted() << ")" << std::endl;
-    }
-
-    std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")" << std::endl;
+    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner.sqlite_wrapper);
   }
 
   std::cout << "done." << std::endl;
