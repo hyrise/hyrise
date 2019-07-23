@@ -18,7 +18,7 @@ const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
 
 void TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   switch (item_id) {
-    // TODO Do something with failed transactions
+    // TODO Do something with failed transactions. If clients == 1 or scheduler off, assert that we have no aborts
     // TODO Also in the plot script
     case 0:
       (void)TPCCDelivery{_num_warehouses, sql_executor}.execute();

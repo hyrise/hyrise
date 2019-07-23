@@ -502,6 +502,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate() {
+  Assert(!_benchmark_config->cache_binary_tables, "Caching binary tables is not yet supported for TPC-C");
+
   std::vector<std::thread> threads;
   auto item_table = std::async(std::launch::async, &TPCCTableGenerator::generate_items_table, this);
   auto warehouse_table = std::async(std::launch::async, &TPCCTableGenerator::generate_warehouse_table, this);
