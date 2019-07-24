@@ -9,7 +9,7 @@ namespace opossum {
 
 class Hyrise : public Singleton<Hyrise> {
  public:
-  static void reset() { get() = Hyrise{}; };
+  static void reset() { get() = Hyrise{}; }
 
   PluginManager plugin_manager;
   StorageManager storage_manager;
