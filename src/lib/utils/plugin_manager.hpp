@@ -29,8 +29,7 @@ class PluginManager {
   ~PluginManager();
 
  protected:
-  PluginManager();
-
+  PluginManager() = default;
   friend class Hyrise;
 
   const PluginManager& operator=(const PluginManager&) = delete;

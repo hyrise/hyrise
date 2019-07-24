@@ -59,7 +59,7 @@ class StorageManager {
   void export_all_tables_as_csv(const std::string& path);
 
  protected:
-  StorageManager();
+  StorageManager() = default;
   friend class Hyrise;
 
   // Tables can currently not be modified concurrently
