@@ -9,15 +9,11 @@ namespace opossum {
 
 class Hyrise : public Singleton<Hyrise> {
  public:
-  static void reset();
+  static void reset() { get() = Hyrise{}; };
 
   PluginManager plugin_manager;
   StorageManager storage_manager;
   TransactionManager transaction_manager;
-
- private:
-  Hyrise();
-  friend class Singleton;
 };
 
 }  // namespace opossum

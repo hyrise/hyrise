@@ -86,7 +86,6 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
-    hyrise.cpp
     hyrise.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
