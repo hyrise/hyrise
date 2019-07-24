@@ -71,7 +71,7 @@ class TransactionManager {
   friend class Hyrise;
   friend class TransactionContext;
 
-  TransactionManager& operator=(TransactionManager&& transaction_manager);
+  TransactionManager& operator=(TransactionManager&& transaction_manager) noexcept;
 
   std::shared_ptr<CommitContext> _new_commit_context();
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);
