@@ -3,6 +3,7 @@
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "operators/export_binary.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
@@ -41,6 +42,58 @@ void AbstractTableGenerator::generate_and_store() {
   }
   metrics.encoding_duration = timer.lap();
   std::cout << "- Encoding tables done (" << format_duration(metrics.encoding_duration) << ")" << std::endl;
+
+  /**
+   * Create Indices
+   */
+
+  const auto& c_custkey_column_id = ColumnID{0};
+  const auto& c_nationkey_column_id = ColumnID{3};
+  const auto& l_orderkey_column_id = ColumnID{0};
+  const auto& l_partkey_column_id = ColumnID{1};
+  const auto& l_suppkey_column_id = ColumnID{2};
+  const auto& n_nationkey_column_id = ColumnID{0};
+  const auto& n_regionkey_column_id = ColumnID{2};
+  const auto& o_orderkey_column_id = ColumnID{0};
+  const auto& o_custkey_column_id = ColumnID{1};
+  const auto& p_partkey_column_id = ColumnID{0};
+  const auto& ps_partkey_column_id = ColumnID{0};
+  const auto& ps_suppkey_column_id = ColumnID{1};
+  const auto& r_regionkey_column_id = ColumnID{0};
+  const auto& s_suppkey_column_id = ColumnID{0};
+  const auto& s_nationkey_column_id = ColumnID{3};
+
+  const std::vector<ColumnID>& c_custkey_column_ids = {c_custkey_column_id};
+  const std::vector<ColumnID>& c_nationkey_column_ids = {c_nationkey_column_id};
+  const std::vector<ColumnID>& l_orderkey_column_ids = {l_orderkey_column_id};
+  const std::vector<ColumnID>& l_partkey_column_ids = {l_partkey_column_id};
+  const std::vector<ColumnID>& l_suppkey_column_ids = {l_suppkey_column_id};
+  const std::vector<ColumnID>& n_nationkey_column_ids = {n_nationkey_column_id};
+  const std::vector<ColumnID>& n_regionkey_column_ids = {n_regionkey_column_id};
+  const std::vector<ColumnID>& o_orderkey_column_ids = {o_orderkey_column_id};
+  const std::vector<ColumnID>& o_custkey_column_ids = {o_custkey_column_id};
+  const std::vector<ColumnID>& p_partkey_column_ids = {p_partkey_column_id};
+  const std::vector<ColumnID>& ps_partkey_column_ids = {ps_partkey_column_id};
+  const std::vector<ColumnID>& ps_suppkey_column_ids = {ps_suppkey_column_id};
+  const std::vector<ColumnID>& r_regionkey_column_ids = {r_regionkey_column_id};
+  const std::vector<ColumnID>& s_suppkey_column_ids = {s_suppkey_column_id};
+  const std::vector<ColumnID>& s_nationkey_column_ids = {s_nationkey_column_id};
+
+  table_info_by_name["customer"].table->create_index<GroupKeyIndex>(c_custkey_column_ids);
+  table_info_by_name["customer"].table->create_index<GroupKeyIndex>(c_nationkey_column_ids);
+  table_info_by_name["lineitem"].table->create_index<GroupKeyIndex>(l_orderkey_column_ids);
+  table_info_by_name["lineitem"].table->create_index<GroupKeyIndex>(l_partkey_column_ids);
+  table_info_by_name["lineitem"].table->create_index<GroupKeyIndex>(l_suppkey_column_ids);
+  table_info_by_name["nation"].table->create_index<GroupKeyIndex>(n_nationkey_column_ids);
+  table_info_by_name["nation"].table->create_index<GroupKeyIndex>(n_regionkey_column_ids);
+  table_info_by_name["orders"].table->create_index<GroupKeyIndex>(o_orderkey_column_ids);
+  table_info_by_name["orders"].table->create_index<GroupKeyIndex>(o_custkey_column_ids);
+  table_info_by_name["part"].table->create_index<GroupKeyIndex>(p_partkey_column_ids);
+  table_info_by_name["partsupp"].table->create_index<GroupKeyIndex>(ps_partkey_column_ids);
+  table_info_by_name["partsupp"].table->create_index<GroupKeyIndex>(ps_suppkey_column_ids);
+  table_info_by_name["region"].table->create_index<GroupKeyIndex>(r_regionkey_column_ids);
+  table_info_by_name["supplier"].table->create_index<GroupKeyIndex>(s_suppkey_column_ids);
+  table_info_by_name["supplier"].table->create_index<GroupKeyIndex>(s_nationkey_column_ids);
 
   /**
    * Write the Tables into binary files if required

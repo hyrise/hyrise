@@ -304,6 +304,8 @@ set(
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/insert_limit_in_exists_rule.cpp
     optimizer/strategy/insert_limit_in_exists_rule.hpp
+    optimizer/strategy/join_index_placement_rule.cpp
+    optimizer/strategy/join_index_placement_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp

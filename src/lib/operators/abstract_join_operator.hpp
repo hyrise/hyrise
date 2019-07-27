@@ -11,8 +11,6 @@
 
 namespace opossum {
 
-enum class IndexSide { Left, Right };
-
 struct JoinConfiguration {
   JoinMode join_mode;
   PredicateCondition predicate_condition;
