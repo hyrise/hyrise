@@ -357,7 +357,7 @@ TEST_F(JitAggregateTest, UpdateNullableInformationBeforeSpecialization) {
 
   JitAggregate jit_aggregate;
   jit_aggregate.add_aggregate_column("min_a", tuple_entry_a, AggregateFunction::Min);
-  jit_aggregate.add_aggregate_column("count_b", tuple_entry_b, AggregateFunction::Count);
+  jit_aggregate.add_aggregate_column("count_b", tuple_entry_b, AggregateFunction::CountRows);
   jit_aggregate.add_groupby_column("c", tuple_entry_c);
   jit_aggregate.add_groupby_column("d", tuple_entry_d);
 

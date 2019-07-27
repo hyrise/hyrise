@@ -453,6 +453,8 @@ Run create_run(const AggregateHashSortSetup& setup, const size_t group_capacity 
         case AggregateFunction::CountDistinct:
           aggregates[aggregate_idx] = std::make_unique<CountDistinctAggregateRun<SourceColumnDataType>>(group_capacity);
           break;
+        case AggregateFunction::StandardDeviationSample:
+          Fail("Not yet implemented");
       }
     });
   }

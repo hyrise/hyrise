@@ -206,11 +206,11 @@ void AggregateSort::_set_and_write_aggregate_value(
     [[maybe_unused]] const uint64_t unique_value_count) const {
   if constexpr (function == AggregateFunction::CountNonNull) {
     // COUNT(<name>), so exclude null values
-    current_aggregate_value = value_count;
+    current_primary_aggregate = value_count;
   }
   if constexpr (function == AggregateFunction::CountRows) {
     // COUNT(*), so include null values
-    current_aggregate_value = value_count_with_null;
+    current_primary_aggregate = value_count_with_null;
   }
   if constexpr (function == AggregateFunction::Avg && std::is_arithmetic_v<AggregateType>) {  // NOLINT
     // this ignores the case of Avg on strings, but we check in _on_execute() this does not happen

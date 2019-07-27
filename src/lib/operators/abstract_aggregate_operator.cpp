@@ -151,6 +151,10 @@ TableColumnDefinitions AbstractAggregateOperator::_get_output_column_defintions(
             aggregate_data_type =
                 AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AGGREGATE_DATA_TYPE;
             break;
+          case AggregateFunction::StandardDeviationSample:
+            aggregate_data_type =
+                AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AGGREGATE_DATA_TYPE;
+            break;
         }
       });
     } else {

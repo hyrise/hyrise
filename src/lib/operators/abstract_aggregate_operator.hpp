@@ -102,7 +102,8 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::CountRows> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType&, std::optional<AggregateType>& current_aggregate) {};
+    return [](const ColumnDataType&, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {};
   }
 };
 

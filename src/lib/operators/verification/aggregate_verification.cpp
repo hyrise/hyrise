@@ -167,6 +167,8 @@ std::unique_ptr<BaseAggregate> make_aggregate(const Table& table,
                             Fail("AVG(<string column>) not implemented");
                           }
                           break;
+                        case AggregateFunction::StandardDeviationSample:
+                          Fail("STDDEV_SAMPLE() not implemented");
                         case AggregateFunction::CountNonNull:
                           aggregate = std::make_unique<CountNonNullAggregate<SourceColumnDataType>>();
                           break;

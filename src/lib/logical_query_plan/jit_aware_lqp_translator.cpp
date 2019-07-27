@@ -445,7 +445,8 @@ bool JitAwareLQPTranslator::_expression_is_jittable(const std::shared_ptr<Abstra
         case AggregateFunction::Max:
         case AggregateFunction::Sum:
         case AggregateFunction::Avg:
-        case AggregateFunction::Count:
+        case AggregateFunction::CountNonNull:
+        case AggregateFunction::CountRows:
           return true;
         case AggregateFunction::CountDistinct:
         case AggregateFunction::StandardDeviationSample:
