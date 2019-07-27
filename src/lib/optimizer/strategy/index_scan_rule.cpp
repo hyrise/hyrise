@@ -15,7 +15,6 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -40,9 +39,8 @@ void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const
     if (child->type == LQPNodeType::StoredTable) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
-      const auto table = StorageManager::get().get_table(stored_table_node->table_name);
 
-      const auto indexes_statistics = table->indexes_statistics();
+      const auto indexes_statistics = stored_table_node->indexes_statistics();
       for (const auto& index_statistics : indexes_statistics) {
         if (_is_index_scan_applicable(index_statistics, predicate_node)) {
           predicate_node->scan_type = ScanType::IndexScan;
