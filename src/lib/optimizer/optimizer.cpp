@@ -116,7 +116,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // IndexScan crashes when columns are pruned #1762
   // optimizer->add_rule(std::make_unique<IndexScanRule>());
 
-  optimizer->add_rule(std::make_unique<JoinIndexPlacementRule>());
+  // optimizer->add_rule(std::make_unique<JoinIndexPlacementRule>());
 
   return optimizer;
 }
