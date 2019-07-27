@@ -127,8 +127,6 @@ void SQLiteTestRunner::SetUp() {
       StorageManager::get().add_table(table_name, table_cache_entry.table);
     }
   }
-
-  SQLPhysicalPlanCache::get().clear();
 }
 
 std::vector<std::string> SQLiteTestRunner::queries() {

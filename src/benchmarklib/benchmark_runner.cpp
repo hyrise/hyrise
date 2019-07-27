@@ -13,6 +13,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
@@ -32,6 +33,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
       _benchmark_item_runner(std::move(benchmark_item_runner)),
       _table_generator(std::move(table_generator)),
       _context(context) {
+  SQLPipelineBuilder::default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  SQLPipelineBuilder::default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     Topology::use_default_topology(config.cores);
@@ -50,6 +54,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   }
 
   _table_generator->generate_and_store();
+
+  _benchmark_item_runner->on_tables_loaded();
 
   if (_config.verify) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
@@ -123,6 +129,8 @@ void BenchmarkRunner::run() {
 
     Assert(!any_verification_failed, "Verification failed");
   }
+
+  if (CurrentScheduler::is_set()) CurrentScheduler::get()->finish();
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {

@@ -28,6 +28,18 @@ const std::unordered_map<AggregateFunction, std::string> aggregate_function_to_s
     {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
 };
 
+const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
+    make_bimap<AggregateFunction, std::string>({
+        {AggregateFunction::Min, "MIN"},
+        {AggregateFunction::Max, "MAX"},
+        {AggregateFunction::Sum, "SUM"},
+        {AggregateFunction::Avg, "AVG"},
+        {AggregateFunction::CountRows, "COUNT"},
+        {AggregateFunction::CountNonNull, "COUNT"},
+        {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
+        {AggregateFunction::StandardDeviationSample, "STDDEV_SAMP"},
+    });
+
 const boost::bimap<FunctionType, std::string> function_type_to_string =
     make_bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});
 

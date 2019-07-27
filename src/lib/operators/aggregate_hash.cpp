@@ -3,6 +3,7 @@
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <string>
@@ -117,7 +118,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
     */
     if (!position.is_null()) {
       // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-      aggregator(position.value(), result.current_aggregate);
+      aggregator(position.value(), result.current_primary_aggregate, result.current_secondary_aggregates);
 
       // increase value counter
       ++result.aggregate_count;
@@ -403,6 +404,10 @@ void AggregateHash::_aggregate() {
               break;
             case AggregateFunction::CountRows:
               Fail("Handled above");
+            case AggregateFunction::StandardDeviationSample:
+              _aggregate_segment<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>(
+                  chunk_id, column_index, *base_segment, keys_per_chunk);
+              break;
           }
         });
 
@@ -496,10 +501,10 @@ write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
 
   size_t i = 0;
   for (const auto& result : results) {
-    null_values[i] = !result.current_aggregate;
+    null_values[i] = !result.current_primary_aggregate;
 
-    if (result.current_aggregate) {
-      values[i] = *result.current_aggregate;
+    if (result.current_primary_aggregate) {
+      values[i] = *result.current_primary_aggregate;
     }
     ++i;
   }
@@ -554,10 +559,10 @@ std::enable_if_t<func == AggregateFunction::Avg && std::is_arithmetic_v<Aggregat
 
   size_t i = 0;
   for (const auto& result : results) {
-    null_values[i] = !result.current_aggregate;
+    null_values[i] = !result.current_primary_aggregate;
 
-    if (result.current_aggregate) {
-      values[i] = *result.current_aggregate / static_cast<AggregateType>(result.aggregate_count);
+    if (result.current_primary_aggregate) {
+      values[i] = *result.current_primary_aggregate / static_cast<AggregateType>(result.aggregate_count);
     }
     ++i;
   }
@@ -568,6 +573,40 @@ template <typename ColumnDataType, typename AggregateType, AggregateFunction fun
 std::enable_if_t<func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void> write_aggregate_values(
     std::shared_ptr<ValueSegment<AggregateType>> segment,
     const AggregateResults<ColumnDataType, AggregateType>& results) {
+  Fail("Invalid aggregate");
+}
+
+// STDDEV_SAMP writes the calculated standard deviation from current aggregate and the aggregate counter
+template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
+std::enable_if_t<func == AggregateFunction::StandardDeviationSample && std::is_arithmetic_v<AggregateType>, void>
+write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+                       const AggregateResults<ColumnDataType, AggregateType>& results) {
+  DebugAssert(segment->is_nullable(), "Aggregate: Output segment needs to be nullable");
+
+  auto& values = segment->values();
+  auto& null_values = segment->null_values();
+
+  values.resize(results.size());
+  null_values.resize(results.size());
+
+  auto chunk_offset = ChunkOffset{0};
+  for (const auto& result : results) {
+    const auto count = static_cast<AggregateType>(result.aggregate_count);
+
+    if (result.current_primary_aggregate && count > 1) {
+      values[chunk_offset] = *result.current_primary_aggregate;
+    } else {
+      null_values[chunk_offset] = true;
+    }
+    ++chunk_offset;
+  }
+}
+
+// STDDEV_SAMP is not defined for non-arithmetic types. Avoiding compiler errors.
+template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
+std::enable_if_t<func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>, void>
+write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
+                       const AggregateResults<ColumnDataType, AggregateType>& results) {
   Fail("Invalid aggregate");
 }
 
@@ -638,6 +677,9 @@ void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataTy
       break;
     case AggregateFunction::CountDistinct:
       write_aggregate_output<ColumnDataType, AggregateFunction::CountDistinct>(column_index);
+      break;
+    case AggregateFunction::StandardDeviationSample:
+      write_aggregate_output<ColumnDataType, AggregateFunction::StandardDeviationSample>(column_index);
       break;
   }
 }
@@ -748,6 +790,12 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
       case AggregateFunction::CountDistinct:
         context = std::make_shared<AggregateContext<
             ColumnDataType, typename AggregateTraits<ColumnDataType, AggregateFunction::CountDistinct>::AggregateType,
+            AggregateKey>>();
+        break;
+      case AggregateFunction::StandardDeviationSample:
+        context = std::make_shared<AggregateContext<
+            ColumnDataType,
+            typename AggregateTraits<ColumnDataType, AggregateFunction::StandardDeviationSample>::AggregateType,
             AggregateKey>>();
         break;
     }

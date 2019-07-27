@@ -34,6 +34,7 @@ class JitOperatorWrapperTest : public BaseTest {
 
 class MockJitSource : public JitReadTuples {
  public:
+  MOCK_METHOD2(before_specialization, void(const Table&, std::vector<bool>&));
   MOCK_CONST_METHOD3(before_query, void(const Table&, const std::vector<AllTypeVariant>&, JitRuntimeContext&));
   MOCK_METHOD4(before_chunk, bool(const Table&, const ChunkID, const std::vector<AllTypeVariant>&, JitRuntimeContext&));
 
@@ -45,6 +46,7 @@ class MockJitSource : public JitReadTuples {
 
 class MockJitSink : public JitWriteTuples {
  public:
+  MOCK_METHOD2(before_specialization, void(const Table&, std::vector<bool>&));
   MOCK_CONST_METHOD2(before_query, void(Table&, JitRuntimeContext&));
   MOCK_CONST_METHOD2(after_query, void(Table&, JitRuntimeContext&));
   MOCK_CONST_METHOD3(after_chunk, void(const std::shared_ptr<const Table>&, Table&, JitRuntimeContext&));
@@ -52,7 +54,8 @@ class MockJitSink : public JitWriteTuples {
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsAreAdded) {
   auto _operator_1 = std::make_shared<JitReadTuples>();
-  auto _condition_expression = std::make_shared<JitExpression>(JitTupleEntry(DataType::Bool, false, -1));
+  _operator_1->add_temporary_value();
+  auto _condition_expression = std::make_shared<JitExpression>(JitTupleEntry(DataType::Bool, false, 0));
   auto _operator_2 = std::make_shared<JitFilter>(_condition_expression);
   auto _operator_3 = std::make_shared<JitWriteTuples>();
 
@@ -69,7 +72,8 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsAreAdded) {
 
 TEST_F(JitOperatorWrapperTest, JitOperatorsAreConnectedToAChain) {
   auto _operator_1 = std::make_shared<JitReadTuples>();
-  auto _condition_expression = std::make_shared<JitExpression>(JitTupleEntry(DataType::Bool, false, -1));
+  _operator_1->add_temporary_value();
+  auto _condition_expression = std::make_shared<JitExpression>(JitTupleEntry(DataType::Bool, false, 0));
   auto _operator_2 = std::make_shared<JitFilter>(_condition_expression);
   auto _operator_3 = std::make_shared<JitWriteTuples>();
 
@@ -111,6 +115,8 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
 
   {
     testing::InSequence dummy;
+    EXPECT_CALL(*source, before_specialization(testing::Ref(*_int_table), testing::_));
+    EXPECT_CALL(*sink, before_specialization(testing::Ref(*_int_table), testing::_));
     EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_, testing::_));
     EXPECT_CALL(*sink, before_query(testing::_, testing::_));
     EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), ChunkID{0}, testing::_, testing::_));
@@ -146,6 +152,8 @@ TEST_F(JitOperatorWrapperTest, OperatorChecksLimitRowCount) {
 
   {
     testing::InSequence dummy;
+    EXPECT_CALL(*source, before_specialization(testing::Ref(*_int_table), testing::_));
+    EXPECT_CALL(*sink, before_specialization(testing::Ref(*_int_table), testing::_));
     EXPECT_CALL(*source, before_query(testing::Ref(*_int_table), testing::_, testing::_));
     EXPECT_CALL(*sink, before_query(testing::_, testing::_));
     EXPECT_CALL(*source, before_chunk(testing::Ref(*_int_table), ChunkID{0}, testing::_, testing::_));

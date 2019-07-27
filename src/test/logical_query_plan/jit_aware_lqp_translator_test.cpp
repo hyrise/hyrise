@@ -160,11 +160,11 @@ TEST_F(JitAwareLQPTranslatorTest, InputColumnsAreAddedToJitReadTupleAdapter) {
 
   ASSERT_EQ(input_columns[0].column_id, ColumnID{0});
   ASSERT_EQ(input_columns[0].tuple_entry.data_type, DataType::Int);
-  ASSERT_TRUE(input_columns[0].tuple_entry.is_nullable);
+  ASSERT_FALSE(input_columns[0].tuple_entry.guaranteed_non_null);
 
   ASSERT_EQ(input_columns[1].column_id, ColumnID{1});
   ASSERT_EQ(input_columns[1].tuple_entry.data_type, DataType::Float);
-  ASSERT_TRUE(input_columns[1].tuple_entry.is_nullable);
+  ASSERT_FALSE(input_columns[1].tuple_entry.guaranteed_non_null);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
@@ -195,11 +195,11 @@ TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
 
   ASSERT_EQ(input_literals[0].value, AllTypeVariant(1));
   ASSERT_EQ(input_literals[0].tuple_entry.data_type, DataType::Int);
-  ASSERT_FALSE(input_literals[0].tuple_entry.is_nullable);
+  ASSERT_TRUE(input_literals[0].tuple_entry.guaranteed_non_null);
 
   ASSERT_EQ(input_literals[1].value, AllTypeVariant(1.2f));
   ASSERT_EQ(input_literals[1].tuple_entry.data_type, DataType::Float);
-  ASSERT_FALSE(input_literals[1].tuple_entry.is_nullable);
+  ASSERT_TRUE(input_literals[1].tuple_entry.guaranteed_non_null);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, ColumnSubsetIsOutputCorrectly) {

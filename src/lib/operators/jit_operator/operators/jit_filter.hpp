@@ -11,11 +11,13 @@ class JitExpression;
  */
 class JitFilter : public AbstractJittable {
  public:
-  explicit JitFilter(const std::shared_ptr<const JitExpression>& expression);
+  explicit JitFilter(const std::shared_ptr<JitExpression>& expression);
+
+  void before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) override;
 
   std::string description() const final;
 
-  const std::shared_ptr<const JitExpression> expression;
+  const std::shared_ptr<JitExpression> expression;
 
  private:
   void _consume(JitRuntimeContext& context) const final;

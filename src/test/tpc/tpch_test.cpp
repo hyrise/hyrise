@@ -31,11 +31,6 @@ using TPCHTestParam = std::tuple<BenchmarkItemID, bool /* use_jit */, bool /* us
 
 class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
  public:
-  void SetUp() override {
-    SQLLogicalPlanCache::get().clear();
-    SQLPhysicalPlanCache::get().clear();
-  }
-
   // Scale factors chosen so the query
   //   -> actually returns result rows (which some don't for small scale factors)
   //   -> doesn't crush a 16GB dev machine
@@ -68,6 +63,7 @@ TEST_P(TPCHTest, Test) {
   // The scale factor passed to the query generator will be ignored as we only use deterministic queries
   auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
   auto benchmark_item_runner = TPCHBenchmarkItemRunner{config, use_prepared_statements, 1.0f};
+  benchmark_item_runner.on_tables_loaded();
 
   const auto query = get_deterministic_query(benchmark_item_runner, item_idx);
 

@@ -10,13 +10,13 @@ TEST_F(JitExpressionTest, Is_Not_Null) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
-  auto tuple_entry = JitTupleEntry{DataType::Int, true, 0};
+  auto tuple_entry = JitTupleEntry{DataType::Int, false, 0};
   auto result_index = 1;
 
   {
     JitExpression expression(std::make_shared<JitExpression>(tuple_entry), JitExpressionType::IsNull, result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Bool);
-    ASSERT_FALSE(expression.result_entry.is_nullable);
+    ASSERT_TRUE(expression.result_entry.guaranteed_non_null);
 
     tuple_entry.set_is_null(true, context);
     expression.compute_and_store(context);
@@ -29,7 +29,7 @@ TEST_F(JitExpressionTest, Is_Not_Null) {
   {
     JitExpression expression(std::make_shared<JitExpression>(tuple_entry), JitExpressionType::IsNotNull, result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Bool);
-    ASSERT_FALSE(expression.result_entry.is_nullable);
+    ASSERT_TRUE(expression.result_entry.guaranteed_non_null);
 
     tuple_entry.set_is_null(true, context);
     expression.compute_and_store(context);
@@ -47,10 +47,10 @@ TEST_F(JitExpressionTest, Not) {
   auto result_index = 1;
 
   {
-    auto tuple_entry = JitTupleEntry{DataType::Bool, false, 0};
+    auto tuple_entry = JitTupleEntry{DataType::Bool, true, 0};
     JitExpression expression(std::make_shared<JitExpression>(tuple_entry), JitExpressionType::Not, result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Bool);
-    ASSERT_FALSE(expression.result_entry.is_nullable);
+    ASSERT_TRUE(expression.result_entry.guaranteed_non_null);
 
     tuple_entry.set<bool>(true, context);
     expression.compute_and_store(context);
@@ -61,10 +61,10 @@ TEST_F(JitExpressionTest, Not) {
     ASSERT_TRUE(context.tuple.get<bool>(result_index));
   }
   {
-    auto tuple_entry = JitTupleEntry{DataType::Bool, true, 0};
+    auto tuple_entry = JitTupleEntry{DataType::Bool, false, 0};
     JitExpression expression(std::make_shared<JitExpression>(tuple_entry), JitExpressionType::Not, result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Bool);
-    ASSERT_TRUE(expression.result_entry.is_nullable);
+    ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
 
     tuple_entry.set_is_null(true, context);
     expression.compute_and_store(context);
@@ -99,12 +99,12 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
   auto double_value = static_cast<double>(std::rand()) / RAND_MAX;
   auto zero_value = static_cast<int32_t>(0);
 
-  auto int_tuple_entry = JitTupleEntry{DataType::Int, false, 0};
-  auto long_tuple_entry = JitTupleEntry{DataType::Long, false, 1};
-  auto float_tuple_entry = JitTupleEntry{DataType::Float, false, 2};
-  auto double_tuple_entry = JitTupleEntry{DataType::Double, false, 3};
-  auto null_tuple_entry = JitTupleEntry{DataType::Int, true, 4};
-  auto zero_tuple_entry = JitTupleEntry{DataType::Int, true, 5};
+  auto int_tuple_entry = JitTupleEntry{DataType::Int, true, 0};
+  auto long_tuple_entry = JitTupleEntry{DataType::Long, true, 1};
+  auto float_tuple_entry = JitTupleEntry{DataType::Float, true, 2};
+  auto double_tuple_entry = JitTupleEntry{DataType::Double, true, 3};
+  auto null_tuple_entry = JitTupleEntry{DataType::Int, false, 4};
+  auto zero_tuple_entry = JitTupleEntry{DataType::Int, false, 5};
 
   int_tuple_entry.set<int32_t>(int_value, context);
   long_tuple_entry.set<int64_t>(long_value, context);
@@ -117,7 +117,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(int_tuple_entry), JitExpressionType::Addition,
                              std::make_shared<JitExpression>(float_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Float);
-    ASSERT_FALSE(expression.result_entry.is_nullable);
+    ASSERT_TRUE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_EQ(expression.result_entry.get<float>(context), int_value + float_value);
   }
@@ -125,7 +125,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(int_tuple_entry), JitExpressionType::Subtraction,
                              std::make_shared<JitExpression>(double_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Double);
-    ASSERT_FALSE(expression.result_entry.is_nullable);
+    ASSERT_TRUE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_EQ(expression.result_entry.get<double>(context), int_value - double_value);
   }
@@ -133,7 +133,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(long_tuple_entry), JitExpressionType::Multiplication,
                              std::make_shared<JitExpression>(int_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Long);
-    ASSERT_FALSE(expression.result_entry.is_nullable);
+    ASSERT_TRUE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_EQ(expression.result_entry.get<int64_t>(context), long_value * int_value);
   }
@@ -141,7 +141,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(float_tuple_entry), JitExpressionType::Division,
                              std::make_shared<JitExpression>(double_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Double);
-    ASSERT_TRUE(expression.result_entry.is_nullable);
+    ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_EQ(expression.result_entry.get<double>(context), float_value / double_value);
   }
@@ -149,7 +149,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(long_tuple_entry), JitExpressionType::Modulo,
                              std::make_shared<JitExpression>(int_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Long);
-    ASSERT_TRUE(expression.result_entry.is_nullable);
+    ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_EQ(expression.result_entry.get<int64_t>(context), long_value % int_value);
   }
@@ -157,7 +157,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(long_tuple_entry), JitExpressionType::Power,
                              std::make_shared<JitExpression>(double_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Double);
-    ASSERT_FALSE(expression.result_entry.is_nullable);
+    ASSERT_TRUE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_EQ(expression.result_entry.get<double>(context), std::pow(long_value, double_value));
   }
@@ -167,7 +167,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
   {
     JitExpression expression(std::make_shared<JitExpression>(null_tuple_entry), JitExpressionType::Addition,
                              std::make_shared<JitExpression>(null_tuple_entry), result_index);
-    ASSERT_TRUE(expression.result_entry.is_nullable);
+    ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_TRUE(expression.result_entry.is_null(context));
   }
@@ -175,7 +175,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
   {
     JitExpression expression(std::make_shared<JitExpression>(int_tuple_entry), JitExpressionType::Multiplication,
                              std::make_shared<JitExpression>(null_tuple_entry), result_index);
-    ASSERT_TRUE(expression.result_entry.is_nullable);
+    ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_TRUE(expression.result_entry.is_null(context));
   }
@@ -183,7 +183,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
   {
     JitExpression expression(std::make_shared<JitExpression>(null_tuple_entry), JitExpressionType::Power,
                              std::make_shared<JitExpression>(int_tuple_entry), result_index);
-    ASSERT_TRUE(expression.result_entry.is_nullable);
+    ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_TRUE(expression.result_entry.is_null(context));
   }
@@ -194,7 +194,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(float_tuple_entry), JitExpressionType::Division,
                              std::make_shared<JitExpression>(zero_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Float);
-    ASSERT_TRUE(expression.result_entry.is_nullable);
+    ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_TRUE(expression.result_entry.is_null(context));
   }
@@ -203,7 +203,7 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
     JitExpression expression(std::make_shared<JitExpression>(int_tuple_entry), JitExpressionType::Modulo,
                              std::make_shared<JitExpression>(zero_tuple_entry), result_index);
     ASSERT_EQ(expression.result_entry.data_type, DataType::Int);
-    ASSERT_TRUE(expression.result_entry.is_nullable);
+    ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
     expression.compute_and_store(context);
     ASSERT_TRUE(expression.result_entry.is_null(context));
   }
@@ -213,8 +213,8 @@ TEST_F(JitExpressionTest, PredicateOperations) {
   JitRuntimeContext context;
   context.tuple.resize(3);
 
-  auto left_tuple_entry = JitTupleEntry{DataType::Int, false, 0};
-  auto right_tuple_entry = JitTupleEntry{DataType::Int, false, 1};
+  auto left_tuple_entry = JitTupleEntry{DataType::Int, true, 0};
+  auto right_tuple_entry = JitTupleEntry{DataType::Int, true, 1};
   auto result_index = 2;
 
   JitExpression gt_expression(std::make_shared<JitExpression>(left_tuple_entry), JitExpressionType::GreaterThan,
@@ -294,8 +294,8 @@ TEST_F(JitExpressionTest, StringComparison) {
   JitRuntimeContext context;
   context.tuple.resize(3);
 
-  auto left_tuple_entry = JitTupleEntry{DataType::String, false, 0};
-  auto right_tuple_entry = JitTupleEntry{DataType::String, false, 1};
+  auto left_tuple_entry = JitTupleEntry{DataType::String, true, 0};
+  auto right_tuple_entry = JitTupleEntry{DataType::String, true, 1};
   auto result_index = 2;
 
   JitExpression like_expression(std::make_shared<JitExpression>(left_tuple_entry), JitExpressionType::Like,
@@ -327,10 +327,10 @@ TEST_F(JitExpressionTest, NestedExpressions) {
   JitRuntimeContext context;
   context.tuple.resize(10);
 
-  auto a_tuple_entry = JitTupleEntry{DataType::Int, false, 0};
-  auto b_tuple_entry = JitTupleEntry{DataType::Long, false, 1};
-  auto c_tuple_entry = JitTupleEntry{DataType::Float, false, 2};
-  auto d_tuple_entry = JitTupleEntry{DataType::Double, false, 3};
+  auto a_tuple_entry = JitTupleEntry{DataType::Int, true, 0};
+  auto b_tuple_entry = JitTupleEntry{DataType::Long, true, 1};
+  auto c_tuple_entry = JitTupleEntry{DataType::Float, true, 2};
+  auto d_tuple_entry = JitTupleEntry{DataType::Double, true, 3};
 
   // Compute "(A - (B * C)) / (D + B)"
   {
@@ -356,7 +356,7 @@ TEST_F(JitExpressionTest, NestedExpressions) {
       d_tuple_entry.set<double>(d_value, context);
 
       ASSERT_EQ(expression.result_entry.data_type, DataType::Double);
-      ASSERT_TRUE(expression.result_entry.is_nullable);
+      ASSERT_FALSE(expression.result_entry.guaranteed_non_null);
       expression.compute_and_store(context);
       ASSERT_EQ(expression.result_entry.get<double>(context), (a_value - (b_value * c_value)) / (d_value + b_value));
     }
@@ -391,7 +391,7 @@ TEST_F(JitExpressionTest, NestedExpressions) {
       d_tuple_entry.set<double>(d_value, context);
 
       ASSERT_EQ(expression.result_entry.data_type, DataType::Bool);
-      ASSERT_FALSE(expression.result_entry.is_nullable);
+      ASSERT_TRUE(expression.result_entry.guaranteed_non_null);
       expression.compute_and_store(context);
       ASSERT_EQ(expression.result_entry.get<bool>(context),
                 (a_value > b_value && c_value >= d_value) || a_value + b_value < c_value);
