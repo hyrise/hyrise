@@ -40,6 +40,7 @@
 #include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -315,6 +316,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   const auto& primary_join_predicate = join_predicates.front();
   std::vector<OperatorJoinPredicate> secondary_join_predicates(join_predicates.cbegin() + 1, join_predicates.cend());
+
+  if (join_node->index_side){
+      return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode,
+                                         primary_join_predicate, std::vector<OperatorJoinPredicate>{}, *join_node->index_side);
+  }
 
   auto join_operator = std::shared_ptr<AbstractOperator>{};
 

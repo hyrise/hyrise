@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-// TODO(Marcel) we have to do further experiments to find the threshold or
+// TODO(anyone) we have to do further experiments to find the threshold or
 // generally the conditions for using an index join.
 constexpr float INDEX_JOIN_RATIO_THRESHOLD = 0.01f;
 
@@ -85,7 +85,6 @@ bool JoinIndexPlacementRule::_place_join_node_recursively(
         if (!is_join_in_subtrees) {
           const auto applicability_result = _is_index_join_applicable_locally(join_node);
           if (applicability_result.index_side) {
-            std::cout << "USING INDEX JOIN\n";
             join_node->index_side = applicability_result.index_side;
 
             // the JoinNode has no JoinNode as input recursively
