@@ -50,7 +50,6 @@ std::optional<std::pair<PredicateCondition, Output>> lossless_predicate_cast(con
   return std::nullopt;
 }
 
-// Same as lossless_predicate_cast but with runtime types
 std::optional<std::pair<PredicateCondition, AllTypeVariant>> lossless_predicate_variant_cast(
     const PredicateCondition condition, const AllTypeVariant& variant, DataType target_data_type);
 }  // namespace opossum
