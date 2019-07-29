@@ -14,6 +14,8 @@ namespace opossum {
 std::string DuplicateEliminationRule::name() const { return "Duplicate Elimination Rule"; }
 
 void DuplicateEliminationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  _sub_plans.clear();
+  _original_replacement_pairs.clear();
   _eliminate_sub_plan_duplicates_traversal(node);
 
   for (const auto& [original, replacement] : _original_replacement_pairs) {
