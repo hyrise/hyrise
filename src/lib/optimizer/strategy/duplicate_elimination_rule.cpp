@@ -38,10 +38,8 @@ void DuplicateEliminationRule::_eliminate_sub_plan_duplicates_traversal(
   const auto it = std::find_if(_sub_plans.cbegin(), _sub_plans.cend(),
                                [&node](const auto& sub_plan) { return *node == *sub_plan; });
   if (it == _sub_plans.end()) {
-    std::cout << node->description() << "\n";
     _sub_plans.emplace_back(node);
   } else {
-    std::cout << node->description() << "\n";
     _original_replacement_pairs.emplace_back(node, *it);
   }
 }
