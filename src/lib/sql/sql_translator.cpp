@@ -283,11 +283,9 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
 
   // Save mappings: ColumnID -> ColumnName
   std::unordered_map<ColumnID, std::string> column_names;
-  std::cout << "WithDesc: " << desc.alias << std::endl;
   for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
     for (const auto& identifier : with_translator._inflated_select_list_elements[column_id].identifiers) {
       column_names.insert_or_assign(column_id, identifier.column_name);
-      std::cout << "ColumnID: " << column_id << " -> " << identifier.column_name << std::endl;
     }
   }
 
