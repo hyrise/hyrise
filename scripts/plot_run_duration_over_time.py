@@ -2,7 +2,6 @@
 
 # Takes a single benchmark output JSON and plots the duration of item executions over time
 
-# TODO add to requirements.txt
 import json
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
