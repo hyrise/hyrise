@@ -113,7 +113,10 @@ void BenchmarkRunner::run() {
   if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
     for (const auto& item_id : items) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
-      std::cout << "  -> Executed " << _results[item_id].runs.size() << " times" << std::endl;
+      std::cout << "  -> Executed " << _results[item_id].successful_runs.size() << " times" << std::endl;
+      if (!_results[item_id].unsuccessful_runs.empty()) {
+        std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed" << std::endl;
+      }
     }
   }
 
@@ -177,6 +180,10 @@ void BenchmarkRunner::_benchmark_shuffled() {
   }
   _state.set_done();
 
+  for (auto& result : _results) {
+    result.duration = _state.benchmark_duration;
+  }
+
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
   CurrentScheduler::wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
@@ -195,7 +202,8 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     _state = BenchmarkState{_config.max_duration};
 
-    while (_state.keep_running() && result.runs.size() < _config.max_runs) {
+    while (_state.keep_running() &&
+           (result.successful_runs.size() + result.unsuccessful_runs.size()) < _config.max_runs) {
       // We want to only schedule as many items simultaneously as we have simulated clients
       if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         _schedule_item_run(item_id);
@@ -209,11 +217,14 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto duration_of_all_runs_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
-    const auto items_per_second = static_cast<float>(result.runs.size()) / duration_seconds;
+    const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
 
     if (!_config.verify && !_config.enable_visualization) {
-      std::cout << "  -> Executed " << result.runs.size() << " times in " << duration_seconds << " seconds ("
+      std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
                 << items_per_second << " iter/s)" << std::endl;
+      if (!result.unsuccessful_runs.empty()) {
+        std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
+      }
     }
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
@@ -229,7 +240,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
   auto task = std::make_shared<JobTask>(
       [&, item_id]() {
         const auto run_start = std::chrono::steady_clock::now();
-        auto [metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);  // NOLINT
+        auto [success, metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);
         const auto run_end = std::chrono::steady_clock::now();
 
         --_currently_running_clients;
@@ -240,7 +251,13 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
           if (!_config.sql_metrics) metrics.clear();
-          result.runs.push_back({run_start - _benchmark_start, run_end - run_start, std::move(metrics)});
+          const auto item_result =
+              BenchmarkItemRunResult{run_start - _benchmark_start, run_end - run_start, std::move(metrics)};
+          if (success) {
+            result.successful_runs.push_back(item_result);
+          } else {
+            result.unsuccessful_runs.push_back(item_result);
+          }
         }
       },
       SchedulePriority::High);
@@ -254,14 +271,13 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   if (_config.warmup_duration == Duration{0}) return;
 
   const auto& name = _benchmark_item_runner->item_name(item_id);
-  BenchmarkItemResult& result = _results[item_id];
   std::cout << "- Warming up for " << name << std::endl;
 
   Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
   _state = BenchmarkState{_config.warmup_duration};
 
-  while (_state.keep_running() && result.runs.size() < _config.max_runs) {
+  while (_state.keep_running()) {
     // We want to only schedule as many items simultaneously as we have simulated clients
     if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       _schedule_item_run(item_id);
@@ -288,47 +304,55 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto& name = _benchmark_item_runner->item_name(item_id);
     const auto& result = _results.at(item_id);
 
-    auto runs_json = nlohmann::json::array();
-    for (const auto& run_result : result.runs) {
+    const auto runs_to_json = [](auto runs) {
+      auto runs_json = nlohmann::json::array();
+      for (const auto& run_result : runs) {
+        // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
+        auto all_pipeline_metrics_json = nlohmann::json::array();
+        // metrics can be empty if _config.sql_metrics is false
+        for (const auto& pipeline_metrics : run_result.metrics) {
+          auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
+                                                      {"statements", nlohmann::json::array()}};
 
-      // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
-      auto all_pipeline_metrics_json = nlohmann::json::array();
-      // metrics can be empty if _config.sql_metrics is false
-      for (const auto& pipeline_metrics : run_result.metrics) {
-        auto pipeline_metrics_json = nlohmann::json{{"parse_duration", pipeline_metrics.parse_time_nanos.count()},
-                                                    {"statements", nlohmann::json::array()}};
+          for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
+            auto sql_statement_metrics_json =
+                nlohmann::json{{"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
+                               {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
+                               {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
+                               {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
+                               {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
 
-        for (const auto& sql_statement_metrics : pipeline_metrics.statement_metrics) {
-          auto sql_statement_metrics_json =
-              nlohmann::json{{"sql_translation_duration", sql_statement_metrics->sql_translation_duration.count()},
-                             {"optimization_duration", sql_statement_metrics->optimization_duration.count()},
-                             {"lqp_translation_duration", sql_statement_metrics->lqp_translation_duration.count()},
-                             {"plan_execution_duration", sql_statement_metrics->plan_execution_duration.count()},
-                             {"query_plan_cache_hit", sql_statement_metrics->query_plan_cache_hit}};
+            pipeline_metrics_json["statements"].push_back(sql_statement_metrics_json);
+          }
 
-          pipeline_metrics_json["statements"].push_back(sql_statement_metrics_json);
+          all_pipeline_metrics_json.push_back(pipeline_metrics_json);
         }
 
-        all_pipeline_metrics_json.push_back(pipeline_metrics_json);
+        runs_json.push_back(nlohmann::json{{"begin", run_result.begin.count()},
+                                           {"duration", run_result.duration.count()},
+                                           {"metrics", all_pipeline_metrics_json}});
       }
+      return runs_json;
+    };
 
-      runs_json.push_back(nlohmann::json{{"begin", run_result.begin.count()},
-                                         {"duration", run_result.duration.count()},
-                                         {"metrics", all_pipeline_metrics_json}});
-    }
-
-    nlohmann::json benchmark{{"name", name}, {"runs", runs_json}, {"iterations", result.runs.size()}};
+    nlohmann::json benchmark{{"name", name},
+                             {"duration", std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count()},
+                             {"successful_runs", runs_to_json(result.successful_runs)},
+                             {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)},
+                             {"iterations", result.successful_runs.size()}};
 
     // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
     // comparable.
-    const auto reported_item_duration = _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
+    const auto reported_item_duration =
+        _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
     const auto reported_item_duration_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
     const auto duration_seconds = reported_item_duration_ns / 1'000'000'000;
-    const auto items_per_second = static_cast<float>(result.runs.size()) / duration_seconds;
+    const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
     benchmark["items_per_second"] = items_per_second;
-    const auto time_per_item = !result.runs.empty() ? reported_item_duration_ns / result.runs.size() : std::nanf("");
+    const auto time_per_item =
+        !result.successful_runs.empty() ? reported_item_duration_ns / result.successful_runs.size() : std::nanf("");
     benchmark["avg_real_time_per_iteration"] = time_per_item;
 
     benchmarks.push_back(benchmark);
@@ -361,6 +385,11 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   const auto compression_strings_option =
       boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
 
+  // This is not really nice, but as the TPC-C benchmark binary has just a main method and not a class, retrieving this
+  // default value properly would require some major refactoring of how benchmarks interact with the BenchmarkRunner.
+  // At this moment, that does not seem to be worth the effort.
+  const auto default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
+
   // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the
   // newest options. Sadly, there is no way to to get all option keys to do this automatically.
   // clang-format off
@@ -372,8 +401,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
-    // TODO Make shuffled default for TPC-C
-    ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value("Ordered")) // NOLINT
+    ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value(default_mode)) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT

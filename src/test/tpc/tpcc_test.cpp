@@ -1,5 +1,7 @@
 #include "base_test.hpp"
 #include "operators/get_table.hpp"
+#include "operators/insert.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "tpcc/constants.hpp"
 #include "tpcc/procedures/tpcc_delivery.hpp"
@@ -19,7 +21,19 @@ class TPCCTest : public BaseTest {
 
   void SetUp() override {
     for (const auto& [table_name, table_info] : tables) {
-      StorageManager::get().add_table(table_name, table_info.table);  // TODO copy this somehow for test isolation
+      // Copy the data into a new table in order to isolate tests
+      const auto generated_table = table_info.table;
+      auto isolated_table =
+          std::make_shared<Table>(generated_table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
+      StorageManager::get().add_table(table_name, isolated_table);
+
+      auto get_table = std::make_shared<TableWrapper>(generated_table);
+      get_table->execute();
+      auto insert = std::make_shared<Insert>(table_name, get_table);
+      auto transaction_context = TransactionManager::get().new_transaction_context();
+      insert->set_transaction_context(transaction_context);
+      insert->execute();
+      transaction_context->commit();
     }
   }
 

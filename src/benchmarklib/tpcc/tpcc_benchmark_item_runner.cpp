@@ -16,25 +16,20 @@ const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
   return items;
 }
 
-void TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+bool TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   switch (item_id) {
     // TODO Do something with failed transactions. If clients == 1 or scheduler off, assert that we have no aborts
     // TODO Also in the plot script
     case 0:
-      (void)TPCCDelivery{_num_warehouses, sql_executor}.execute();
-      break;
+      return TPCCDelivery{_num_warehouses, sql_executor}.execute();
     case 1:
-      (void)TPCCNewOrder{_num_warehouses, sql_executor}.execute();
-      break;
+      return TPCCNewOrder{_num_warehouses, sql_executor}.execute();
     case 2:
-      (void)TPCCOrderStatus{_num_warehouses, sql_executor}.execute();
-      break;
+      return TPCCOrderStatus{_num_warehouses, sql_executor}.execute();
     case 3:
-      (void)TPCCPayment{_num_warehouses, sql_executor}.execute();
-      break;
+      return TPCCPayment{_num_warehouses, sql_executor}.execute();
     case 4:
-      (void)TPCCStockLevel{_num_warehouses, sql_executor}.execute();
-      break;
+      return TPCCStockLevel{_num_warehouses, sql_executor}.execute();
     default:
       Fail("Invalid item_id");
   }

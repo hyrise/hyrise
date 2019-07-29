@@ -2,7 +2,6 @@
 
 # Takes a single benchmark output JSON and plots the duration of item executions over time
 
-# TODO add to requirements.txt
 import json
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -23,12 +22,13 @@ benchmark_names = []
 for benchmark_json in data_json:
 	name = benchmark_json['name']
 	benchmark_names.append(name)
-	for run_json in benchmark_json['runs']:
-		begin = run_json['begin']
-		duration = run_json['duration']
-		data.append({'name': name, 'begin': begin / 1e9, 'duration': duration})
+	for run_json in benchmark_json['successful_runs']:
+		data.append({'name': name, 'begin': run_json['begin'] / 1e9, 'duration': run_json['duration'], 'success': True})
+	for run_json in benchmark_json['unsuccessful_runs']:
+		data.append({'name': name, 'begin': run_json['begin'] / 1e9, 'duration': run_json['duration'], 'success': False})
 
-df = pd.DataFrame(data)
+
+df = pd.DataFrame(data).reset_index()
 
 # Set the colors
 benchmark_names.sort()  # Sort the benchmarks for a deterministic color mapping
@@ -36,15 +36,20 @@ name_to_color = {}
 prop_cycle = plt.rcParams['axes.prop_cycle']
 default_colors = prop_cycle.by_key()['color']
 
-name_to_color[benchmark_names[0]] = default_colors[0]
-colors = np.where(df['name'] == benchmark_names[0], default_colors[0], '-')
-for i in range(1, len(benchmark_names)):
+fig, ax = plt.subplots()
+for i in range(0, len(benchmark_names)):
+	benchmark_name = benchmark_names[i]
 	color = default_colors[i % len(default_colors)]
-	name_to_color[benchmark_names[i]] = color
-	colors[df['name'] == benchmark_names[i]] = color
+	name_to_color[benchmark_name] = color
 
-# Plot combined graph
-ax = df.reset_index().plot(kind='scatter', x='begin', y='duration', c=colors, s=.3, figsize=(12, 9))
+	filtered_df = df[df['name'] == benchmark_name]
+
+	# Plot into combined graph
+	for success in [True, False]:
+		if not filtered_df[filtered_df['success']==success].empty:
+			filtered_df[filtered_df['success']==success].plot(ax=ax, kind='scatter', x='begin', y='duration', c=color, figsize=(12, 9), s=5, marker=('o' if success else 'x'), linewidth=1)
+
+# Finish combined graph
 ax.set_xlabel('Seconds since start')
 ax.set_ylabel('Execution duration [ns]')
 ax.grid(True, alpha=.3)
@@ -64,7 +69,10 @@ plt.savefig(basename + '.png')
 grouped_df = df.reset_index().groupby('name')
 fig, axes = plt.subplots(nrows=len(benchmark_names), ncols=1, figsize=(12, 3*len(benchmark_names)), sharex=True)
 for (key, ax) in zip(grouped_df.groups.keys(), axes.flatten()):
-	grouped_df.get_group(key).plot(ax=ax, kind='scatter', x='begin', y='duration', s=.6, c=name_to_color[key])
+	filtered_df = grouped_df.get_group(key)
+	for success in [True, False]:
+		if not filtered_df[filtered_df['success']==success].empty:
+			filtered_df[filtered_df['success']==success].plot(ax=ax, kind='scatter', x='begin', y='duration', c=name_to_color[key], s=5, marker=('o' if success else 'x'), linewidth=1)
 	ax.set_title(key)
 	ax.set_xlabel('Seconds since start')
 	ax.set_ylabel('Execution duration [ns]')
