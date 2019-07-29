@@ -181,6 +181,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   _state.set_done();
 
   for (auto& result : _results) {
+    // As the execution of benchmark items is intermingled, we use the total duration for all items
     result.duration = _state.benchmark_duration;
   }
 

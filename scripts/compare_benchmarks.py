@@ -103,7 +103,7 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
         old_unsuccessful_per_second = float(len(old['unsuccessful_runs'])) / (old['duration'] / 1e9)
         new_unsuccessful_per_second = float(len(new['unsuccessful_runs'])) / (new['duration'] / 1e9)
 
-        if len(old['unsuccessful_runs']) > 0.0:
+        if len(old['unsuccessful_runs']) > 0:
             diff_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
         else:
             diff_unsuccessful = float('nan')
