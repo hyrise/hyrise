@@ -29,13 +29,12 @@ enum class OutputColumnOrder { BuildFirstProbeSecond, ProbeFirstBuildSecond, Pro
 
 namespace opossum {
 
-bool JoinHash::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                        DataType right_data_type, bool secondary_predicates) {
+bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
   // Secondary predicates in AntiNullAsTrue are not supported, because implementing them is cumbersome and we couldn't
   // so far determine a case/query where we'd need them.
-  return predicate_condition == PredicateCondition::Equals && join_mode != JoinMode::FullOuter &&
-         (join_mode != JoinMode::AntiNullAsTrue || !secondary_predicates);
+  return config.predicate_condition == PredicateCondition::Equals && config.join_mode != JoinMode::FullOuter &&
+         (config.join_mode != JoinMode::AntiNullAsTrue || !config.secondary_predicates);
 }
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
@@ -107,10 +106,10 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
-  Assert(supports(_mode, _primary_predicate.predicate_condition,
-                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                  !_secondary_predicates.empty()),
+  Assert(supports({_mode, _primary_predicate.predicate_condition,
+                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
          "JoinHash doesn't support these parameters");
 
   std::shared_ptr<const Table> build_input_table;
