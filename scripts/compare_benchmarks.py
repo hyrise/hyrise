@@ -11,14 +11,16 @@ p_value_significance_threshold = 0.001
 min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
 
-def format_diff(diff):
+def format_diff(diff, inverse_colors = False):
     select_color = lambda value, color: color if abs(value) > 0.05 else 'white'
 
     diff -= 1  # adapt to show change in percent
     if diff < 0.0:
-        return colored("{0:.0%}".format(diff), select_color(diff, 'red'))
+        color = 'green' if inverse_colors else 'red'
+        return colored("{0:.0%}".format(diff), select_color(diff, color))
     else:
-        return colored("+{0:.0%}".format(diff), select_color(diff, 'green'))
+        color = 'red' if inverse_colors else 'green'
+        return colored("+{0:.0%}".format(diff), select_color(diff, color))
 
 def geometric_mean(values):
     product = 1
@@ -41,8 +43,8 @@ def get_iteration_durations(iterations):
     return iteration_durations
 
 def calculate_and_format_p_value(old, new):
-    old_durations = [run["duration"] for run in old["runs"]]
-    new_durations = [run["duration"] for run in new["runs"]]
+    old_durations = [run["duration"] for run in old["successful_runs"]]
+    new_durations = [run["duration"] for run in new["successful_runs"]]
 
     p_value = ttest_ind(array('d', old_durations), array('d', new_durations))[1]
     is_significant = p_value < p_value_significance_threshold
@@ -95,7 +97,28 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     diff_formatted = format_diff(diff)
     p_value_formatted = calculate_and_format_p_value(old, new)
 
-    table_data.append([name, str(old['items_per_second']), str(len(old['runs'])), str(new['items_per_second']), str(len(new['runs'])), diff_formatted, p_value_formatted])
+    table_data.append([name, str(old['items_per_second']), str(len(old['successful_runs'])), str(new['items_per_second']), str(len(new['successful_runs'])), diff_formatted, p_value_formatted])
+
+    if (len(old['unsuccessful_runs']) > 0 or len(new['unsuccessful_runs']) > 0):
+        old_unsuccessful_per_second = float(len(old['unsuccessful_runs'])) / (old['duration'] / 1e9)
+        new_unsuccessful_per_second = float(len(new['unsuccessful_runs'])) / (new['duration'] / 1e9)
+
+        if len(old['unsuccessful_runs']) > 0:
+            diff_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
+        else:
+            diff_unsuccessful = float('nan')
+
+        unsuccessful_info = [
+            '  unsucc.:',
+            ' ' + str(old_unsuccessful_per_second),
+            ' ' + str(len(old['unsuccessful_runs'])),
+            ' ' + str(new_unsuccessful_per_second),
+            ' ' + str(len(new['unsuccessful_runs'])),
+            ' ' + format_diff(diff_unsuccessful, True)
+        ]
+
+        unsuccessful_info_colored = [colored(text, attrs=['dark']) for text in unsuccessful_info]
+        table_data.append(unsuccessful_info_colored)
 
 table_data.append(['geometric mean', '', '', '', '', format_diff(geometric_mean(diffs)), ''])
 
