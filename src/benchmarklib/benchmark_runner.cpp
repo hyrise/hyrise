@@ -289,7 +289,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     auto total_item_duration = Duration{0};
     auto runs_json = nlohmann::json::array();
     for (const auto& run_result : result.runs) {
-      total_item_duration += run_result.duration;  // TODO fix this being utterly broken with multiple clients
+      total_item_duration += run_result.duration;
 
       // Convert the SQLPipelineMetrics for each run of the BenchmarkItem into JSON
       auto all_pipeline_metrics_json = nlohmann::json::array();
