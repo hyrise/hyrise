@@ -13,6 +13,7 @@
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
+#include "strategy/duplicate_elimination_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
@@ -113,6 +114,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
+
+  optimizer->add_rule(std::make_unique<DuplicateEliminationRule>());
 
   return optimizer;
 }
