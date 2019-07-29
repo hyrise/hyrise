@@ -25,8 +25,8 @@ std::optional<std::pair<PredicateCondition, Output>> lossless_predicate_cast(con
   if (!is_binary_numeric_predicate_condition(condition)) return std::nullopt;
 
   if constexpr (std::is_same_v<Input, double> && std::is_same_v<Output, float>) {
-    // Non-equal comparisons where the value to compare to is a double that cannot be expressed as a float are an
-    // case that we do not wish to handle for now.
+    // Equal comparisons where the value to compare to is a double that cannot be expressed as a float are a case that
+    // we do not wish to handle for now.
     if (condition == PredicateCondition::Equals) return std::nullopt;
 
     // Let prev(double input) be the largest float that is smaller than input
