@@ -22,7 +22,7 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   const std::vector<BenchmarkItemID>& items() const override;
 
  protected:
-  void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
+  bool _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
 
   struct Query {
     std::string name;
