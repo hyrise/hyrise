@@ -14,6 +14,10 @@ struct BenchmarkItemResult {
   // Stores the detailed information about the runs executed.
   tbb::concurrent_vector<BenchmarkItemRunResult> runs;
 
+  // Stores the execution duration of the item if run in BenchmarkMode::Ordered. `runs/duration` is iterations/s, even
+  // if multiple clients executed the item in parallel. Undefined for BenchmarkMode::Shuffled.
+  Duration duration;
+
   // The *optional* is set if the verification was executed; the *bool* is true if the verification succeeded.
   std::optional<bool> verification_passed;
 };
