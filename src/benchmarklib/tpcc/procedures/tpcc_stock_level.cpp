@@ -24,7 +24,7 @@ bool TPCCStockLevel::execute() {
       _sql_executor.execute(std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} + std::to_string(_w_id) +
                             " AND D_ID = " + std::to_string(_d_id));
   const auto& district_table = district_table_pair.second;
-  Assert(district_table->row_count() == 1, "Did not find district (or found more than one)");
+  Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
   auto first_o_id = district_table->get_value<int32_t>(ColumnID{0}, 0) - 20;
 
   const auto order_line_table_pair = _sql_executor.execute(

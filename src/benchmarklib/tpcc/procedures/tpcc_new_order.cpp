@@ -55,7 +55,7 @@ bool TPCCNewOrder::execute() {
   const auto warehouse_select_pair =
       _sql_executor.execute(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
-  Assert(warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
+  Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
   const auto w_tax = warehouse_table->get_value<float>(ColumnID{0}, 0);
   Assert(w_tax >= 0.f && w_tax <= .2f, "Invalid warehouse tax rate encountered");
 
@@ -64,7 +64,7 @@ bool TPCCNewOrder::execute() {
       _sql_executor.execute(std::string{"SELECT D_TAX, D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} +
                             std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   const auto& district_table = district_select_pair.second;
-  Assert(district_table->row_count() == 1, "Did not find district (or found more than one)");
+  Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
   const auto d_tax = district_table->get_value<float>(ColumnID{0}, 0);
   Assert(d_tax >= 0.f && d_tax <= .2f, "Invalid warehouse tax rate encountered");
   const auto d_next_o_id = district_table->get_value<int32_t>(ColumnID{1}, 0);
@@ -76,7 +76,6 @@ bool TPCCNewOrder::execute() {
       _sql_executor.execute(std::string{"UPDATE \"DISTRICT\" SET D_NEXT_O_ID = "} + std::to_string(d_next_o_id + 1) +
                             " WHERE D_W_ID = " + std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   if (district_update_pair.first != SQLPipelineStatus::Success) {
-    _sql_executor.rollback();
     return false;
   }
 
@@ -85,7 +84,7 @@ bool TPCCNewOrder::execute() {
       std::string{"SELECT C_DISCOUNT, C_LAST, C_CREDIT FROM CUSTOMER WHERE C_W_ID = "} + std::to_string(w_id) +
       " AND C_D_ID = " + std::to_string(d_id) + " AND C_ID = " + std::to_string(c_id));
   const auto& customer_table = customer_select_pair.second;
-  Assert(customer_table->row_count() == 1, "Did not find customer (or found more than one)");
+  Assert(customer_table && customer_table->row_count() == 1, "Did not find customer (or found more than one)");
   const auto c_discount = customer_table->get_value<float>(ColumnID{0}, 0);
   Assert(c_discount >= 0.f && c_discount <= .5f, "Invalid customer discount rate encountered");
   const auto c_last = customer_table->get_value<pmr_string>(ColumnID{1}, 0);
@@ -139,7 +138,7 @@ bool TPCCNewOrder::execute() {
         ", S_DATA, S_YTD, S_ORDER_CNT, S_REMOTE_CNT FROM STOCK WHERE S_I_ID = " + std::to_string(order_line.ol_i_id) +
         " AND S_W_ID = " + std::to_string(order_line.ol_supply_w_id));
     const auto& stock_table = stock_select_pair.second;
-    Assert(stock_table->row_count() == 1, "Did not find stock entry (or found more than one)");
+    Assert(stock_table && stock_table->row_count() == 1, "Did not find stock entry (or found more than one)");
     const auto s_quantity = stock_table->get_value<int32_t>(ColumnID{0}, 0);
     const auto s_dist = stock_table->get_value<pmr_string>(ColumnID{1}, 0);
     const auto s_data = stock_table->get_value<pmr_string>(ColumnID{2}, 0);
@@ -166,7 +165,6 @@ bool TPCCNewOrder::execute() {
         ", S_REMOTE_CNT = " + std::to_string(new_s_remote_cnt) + " WHERE S_I_ID = " +
         std::to_string(order_line.ol_i_id) + " AND S_W_ID = " + std::to_string(order_line.ol_supply_w_id));
     if (stock_update_pair.first != SQLPipelineStatus::Success) {
-      _sql_executor.rollback();
       return false;
     }
 

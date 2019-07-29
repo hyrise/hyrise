@@ -35,7 +35,7 @@ bool TPCCOrderStatus::execute() {
         std::string{"SELECT C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST FROM CUSTOMER WHERE C_W_ID = "} +
         std::to_string(_w_id) + " AND C_D_ID = " + std::to_string(_d_id) +
         " AND C_ID = " + std::to_string(std::get<int32_t>(_customer)));
-    Assert(customer_table->row_count() == 1, "Did not find customer by ID (or found more than one)");
+    Assert(customer_table && customer_table->row_count() == 1, "Did not find customer by ID (or found more than one)");
 
     customer_offset = size_t{0};
     customer_id = std::get<int32_t>(_customer);

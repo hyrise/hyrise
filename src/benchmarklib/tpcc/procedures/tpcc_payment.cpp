@@ -47,7 +47,7 @@ bool TPCCPayment::execute() {
       std::string{"SELECT W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP, W_YTD FROM WAREHOUSE WHERE W_ID = "} +
       std::to_string(_w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
-  Assert(warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
+  Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
   auto w_name = warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
   auto w_ytd = warehouse_table->get_value<float>(ColumnID{6}, 0);
 
@@ -55,6 +55,9 @@ bool TPCCPayment::execute() {
   std::tie(pipeline_status, std::ignore) =
       _sql_executor.execute(std::string{"UPDATE WAREHOUSE SET W_YTD = "} + std::to_string(w_ytd + _h_amount) +
                             " WHERE W_ID = " + std::to_string(_w_id));
+  if (pipeline_status != SQLPipelineStatus::Success) {
+    return false;
+  }
 
   // Retrieve information about the district
   const auto district_select_pair = _sql_executor.execute(
@@ -62,7 +65,7 @@ bool TPCCPayment::execute() {
           "SELECT D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP, D_YTD FROM DISTRICT WHERE D_W_ID = "} +
       std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
   const auto& district_table = district_select_pair.second;
-  Assert(district_table->row_count() == 1, "Did not find district (or found more than one)");
+  Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
   auto d_name = district_table->get_value<pmr_string>(ColumnID{0}, 0);
   auto d_ytd = district_table->get_value<float>(ColumnID{6}, 0);
 
@@ -71,7 +74,6 @@ bool TPCCPayment::execute() {
       _sql_executor.execute(std::string{"UPDATE DISTRICT SET D_YTD = "} + std::to_string(d_ytd + _h_amount) +
                             " WHERE D_W_ID = " + std::to_string(_w_id) + " AND D_ID = " + std::to_string(_d_id));
   if (district_update_pair.first != SQLPipelineStatus::Success) {
-    _sql_executor.rollback();
     return false;
   }
 
@@ -86,7 +88,7 @@ bool TPCCPayment::execute() {
                     "C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_DATA FROM CUSTOMER WHERE C_W_ID = "} +
         std::to_string(_w_id) + " AND C_D_ID = " + std::to_string(_c_d_id) +
         " AND C_ID = " + std::to_string(std::get<int32_t>(_customer)));
-    Assert(customer_table->row_count() == 1, "Did not find customer by ID (or found more than one)");
+    Assert(customer_table && customer_table->row_count() == 1, "Did not find customer by ID (or found more than one)");
 
     customer_offset = size_t{0};
     customer_id = std::get<int32_t>(_customer);
@@ -114,7 +116,6 @@ bool TPCCPayment::execute() {
                             ", C_PAYMENT_CNT = C_PAYMENT_CNT + 1 WHERE C_W_ID = " + std::to_string(_w_id) +
                             " AND C_D_ID = " + std::to_string(_c_d_id) + " AND C_ID = " + std::to_string(customer_id));
   if (customer_update_balance_pair.first != SQLPipelineStatus::Success) {
-    _sql_executor.rollback();
     return false;
   }
 
@@ -134,7 +135,6 @@ bool TPCCPayment::execute() {
         std::string{"UPDATE CUSTOMER SET C_DATA = '"} + new_c_data + "' WHERE C_W_ID = " + std::to_string(_w_id) +
         " AND C_D_ID = " + std::to_string(_c_d_id) + " AND C_ID = " + std::to_string(customer_id));
     if (customer_update_data_pair.first != SQLPipelineStatus::Success) {
-      _sql_executor.rollback();
       return false;
     }
   }
