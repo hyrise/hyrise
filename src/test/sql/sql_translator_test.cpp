@@ -2280,7 +2280,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQuerySimple) {
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQueryAlias) {
-  const auto actual_lqp_alias = compile_query(
+  const auto actual_lqp = compile_query(
       "WITH "
       "wq AS (SELECT a AS x FROM int_int_int) "
       "SELECT * FROM wq WHERE x > 123;");
@@ -2293,13 +2293,13 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAlias) {
       ProjectionNode::make(expression_vector(int_int_int_a),
         stored_table_node_int_int_int));
 
-  const auto expected_lqp_alias =
+  const auto expected_lqp =
     AliasNode::make(expressions, aliases,
       PredicateNode::make(greater_than_(int_int_int_a, value_(123)),
         wq_lqp));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp_alias, expected_lqp_alias);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, WithClauseSingleQueryAliasWhere) {
