@@ -6,8 +6,8 @@
 namespace opossum {
 
 LQPView::LQPView(const std::shared_ptr<AbstractLQPNode>& lqp,
-                 const std::unordered_map<ColumnID, std::string>& column_names)
-    : lqp(lqp), column_names(column_names) {}
+                 std::unordered_map<ColumnID, std::string> column_names = {})
+    : lqp(lqp), column_names(std::move(column_names)) {}
 
 std::shared_ptr<LQPView> LQPView::deep_copy() const {
   return std::make_shared<LQPView>(lqp->deep_copy(), column_names);

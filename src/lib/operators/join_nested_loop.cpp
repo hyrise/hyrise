@@ -73,10 +73,7 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 
 namespace opossum {
 
-bool JoinNestedLoop::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                              DataType right_data_type, bool secondary_predicates) {
-  return true;
-}
+bool JoinNestedLoop::supports(const JoinConfiguration config) { return true; }
 
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
@@ -97,11 +94,11 @@ std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
 void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
-  Assert(supports(_mode, _primary_predicate.predicate_condition,
-                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                  !_secondary_predicates.empty()),
-         "JoinHash doesn't support these parameters");
+  Assert(supports({_mode, _primary_predicate.predicate_condition,
+                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+         "JoinNestedLoop doesn't support these parameters");
 
   PerformanceWarning("Nested Loop Join used");
 

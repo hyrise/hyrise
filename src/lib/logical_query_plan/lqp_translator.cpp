@@ -57,6 +57,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
@@ -64,6 +65,7 @@
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
 #include "sort_node.hpp"
+#include "static_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
@@ -117,6 +119,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Insert:             return _translate_insert_node(node);
     case LQPNodeType::Delete:             return _translate_delete_node(node);
     case LQPNodeType::DummyTable:         return _translate_dummy_table_node(node);
+    case LQPNodeType::StaticTable:        return _translate_static_table_node(node);
     case LQPNodeType::Update:             return _translate_update_node(node);
     case LQPNodeType::Validate:           return _translate_validate_node(node);
     case LQPNodeType::Union:              return _translate_union_node(node);
@@ -215,10 +218,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
-  index_scan->set_included_chunk_ids(indexed_chunks);
-  table_scan->set_excluded_chunk_ids(indexed_chunks);
+  index_scan->included_chunk_ids = indexed_chunks;
+  table_scan->excluded_chunk_ids = indexed_chunks;
 
-  return std::make_shared<UnionPositions>(index_scan, table_scan);
+  return std::make_shared<UnionAll>(index_scan, table_scan);
 }
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
@@ -328,8 +331,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     if (join_operator) return;
 
-    if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
-                               right_data_type, !secondary_join_predicates.empty())) {
+    if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                                right_data_type, !secondary_join_predicates.empty()})) {
       join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
@@ -429,6 +432,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   switch (union_node->union_mode) {
     case UnionMode::Positions:
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
+    case UnionMode::All:
+      return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
   }
   Fail("GCC thinks this is reachable");
 }
@@ -468,8 +473,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
-  return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->column_definitions,
-                                       create_table_node->if_not_exists);
+  const auto input_node = create_table_node->left_input();
+  return std::make_shared<CreateTable>(create_table_node->table_name, create_table_node->if_not_exists,
+                                       translate_node(input_node));
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_static_table_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto static_table_node = std::dynamic_pointer_cast<StaticTableNode>(node);
+  return std::make_shared<TableWrapper>(static_table_node->table);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(

@@ -69,7 +69,11 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ChunkEncoder::encode_all_chunks(table, chunk_encoding_spec);
 
     if (ordered_by) {
-      for (const auto& chunk : table->chunks()) {
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
+        if (!chunk) continue;
+
         chunk->set_ordered_by(ordered_by.value());
       }
     }
@@ -781,7 +785,7 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   auto scan = std::make_shared<TableScan>(
       _int_int_partly_compressed,
       greater_than_equals_(get_column_expression(_int_int_partly_compressed, ColumnID{0}), 0));
-  scan->set_excluded_chunk_ids({ChunkID{0u}});
+  scan->excluded_chunk_ids = {ChunkID{0u}};
   scan->execute();
 
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);

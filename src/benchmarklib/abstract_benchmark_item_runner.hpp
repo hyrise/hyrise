@@ -22,6 +22,9 @@ class AbstractBenchmarkItemRunner {
 
   virtual ~AbstractBenchmarkItemRunner() = default;
 
+  // Allows the benchmark to do whatever it needs to do once the tables have been loaded (e.g., PREPARE statements)
+  virtual void on_tables_loaded();
+
   // Executes a benchmark item and returns information about the SQL statements executed during its execution as well
   // as a bool indicating whether the verification failed.
   std::pair<std::vector<SQLPipelineMetrics>, bool> execute_item(const BenchmarkItemID item_id);
@@ -31,6 +34,9 @@ class AbstractBenchmarkItemRunner {
 
   // Returns the BenchmarkItemIDs of all selected items
   virtual const std::vector<BenchmarkItemID>& items() const = 0;
+
+  // Loads the dedicated expected restuls as tables into _dedicated_expected_results
+  void load_dedicated_expected_results(const std::filesystem::path& expected_results_directory_path);
 
   // Set the SQLite wrapper used for query verification. `nullptr` disables verification. Default is disabled.
   void set_sqlite_wrapper(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper);
@@ -42,6 +48,7 @@ class AbstractBenchmarkItemRunner {
   virtual void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) = 0;
 
   std::shared_ptr<BenchmarkConfig> _config;
+  std::vector<std::shared_ptr<const Table>> _dedicated_expected_results;
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 };
 

@@ -40,7 +40,14 @@ class ValueSegment : public BaseValueSegment {
   const T get(const ChunkOffset chunk_offset) const;
 
   // return the value at a certain position.
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+    // performance critical - not in cpp to help with inlining
+    // Column supports null values and value is null
+    if (is_nullable() && (*_null_values)[chunk_offset]) {
+      return std::nullopt;
+    }
+    return _values[chunk_offset];
+  }
 
   // Add a value to the end of the segment.
   void append(const AllTypeVariant& val) final;

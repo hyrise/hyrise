@@ -21,8 +21,7 @@ namespace opossum {
    */
 class JoinSortMerge : public AbstractJoinOperator {
  public:
-  static bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                       DataType right_data_type, bool secondary_predicates);
+  static bool supports(const JoinConfiguration config);
 
   JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
