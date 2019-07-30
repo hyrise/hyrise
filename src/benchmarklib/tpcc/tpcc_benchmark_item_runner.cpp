@@ -17,22 +17,30 @@ const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
 }
 
 bool TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+  bool successful;
   switch (item_id) {
-    // TODO Do something with failed transactions. If clients == 1 or scheduler off, assert that we have no aborts
-    // TODO Also in the plot script
     case 0:
-      return TPCCDelivery{_num_warehouses, sql_executor}.execute();
+      successful = TPCCDelivery{_num_warehouses, sql_executor}.execute();
+      break;
     case 1:
-      return TPCCNewOrder{_num_warehouses, sql_executor}.execute();
+      successful = TPCCNewOrder{_num_warehouses, sql_executor}.execute();
+      break;
     case 2:
-      return TPCCOrderStatus{_num_warehouses, sql_executor}.execute();
+      successful = TPCCOrderStatus{_num_warehouses, sql_executor}.execute();
+      break;
     case 3:
-      return TPCCPayment{_num_warehouses, sql_executor}.execute();
+      successful = TPCCPayment{_num_warehouses, sql_executor}.execute();
+      break;
     case 4:
-      return TPCCStockLevel{_num_warehouses, sql_executor}.execute();
+      successful = TPCCStockLevel{_num_warehouses, sql_executor}.execute();
+      break;
     default:
       Fail("Invalid item_id");
   }
+  if (_config->clients == 1) {
+    Assert(successful, "TPC-C transactions should always be successful if using a single client");
+  }
+  return successful;
 }
 
 std::string TPCCBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
@@ -55,7 +63,7 @@ std::string TPCCBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) co
 }
 
 const std::vector<int>& TPCCBenchmarkItemRunner::weights() const {
-  // Except for New-Order, the given weights are minimum (see 5.2.3 in the standard). Since New-Order is the transactino
+  // Except for New-Order, the given weights are minimum (see 5.2.3 in the standard). Since New-Order is the transaction
   // being counted, we want it to have the maximum weight possible.
   static const std::vector<int> weights{4, 45, 4, 43, 4};
   return weights;

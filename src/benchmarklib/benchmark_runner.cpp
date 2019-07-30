@@ -335,11 +335,12 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
       return runs_json;
     };
 
-    nlohmann::json benchmark{{"name", name},
-                             {"duration", std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count()},
-                             {"successful_runs", runs_to_json(result.successful_runs)},
-                             {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)},
-                             {"iterations", result.successful_runs.size()}};
+    nlohmann::json benchmark{
+        {"name", name},
+        {"duration", std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count()},
+        {"successful_runs", runs_to_json(result.successful_runs)},
+        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)},
+        {"iterations", result.successful_runs.size()}};
 
     // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not

@@ -6,6 +6,7 @@
 #include "tpcc/constants.hpp"
 #include "tpcc/procedures/tpcc_delivery.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
+#include "tpcc/procedures/tpcc_payment.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 
 namespace opossum {
@@ -27,9 +28,9 @@ class TPCCTest : public BaseTest {
           std::make_shared<Table>(generated_table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
       StorageManager::get().add_table(table_name, isolated_table);
 
-      auto get_table = std::make_shared<TableWrapper>(generated_table);
-      get_table->execute();
-      auto insert = std::make_shared<Insert>(table_name, get_table);
+      auto table_wrapper = std::make_shared<TableWrapper>(generated_table);
+      table_wrapper->execute();
+      auto insert = std::make_shared<Insert>(table_name, table_wrapper);
       auto transaction_context = TransactionManager::get().new_transaction_context();
       insert->set_transaction_context(transaction_context);
       insert->execute();
@@ -267,6 +268,45 @@ TEST_F(TPCCTest, NewOrder) {
   }
 }
 
-TEST_F(TPCCTest, NewOrderUnusedOrderId) {}
+TEST_F(TPCCTest, NewOrderUnusedOrderId) {
+  BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
+  auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
+  // Generate random NewOrders until we have one with an invalid item ID
+  while (new_order.order_lines.back().ol_i_id != TPCCNewOrder::INVALID_ITEM_ID) {
+    new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
+  }
+
+  const auto& order_lines = new_order.order_lines;
+  EXPECT_GE(order_lines.size(), 5);
+  EXPECT_LE(order_lines.size(), 15);
+
+  // TPC-C transactions with simulated user input errors are still counted as successful
+  EXPECT_TRUE(new_order.execute());
+
+  auto new_transaction_context = TransactionManager::get().new_transaction_context();
+
+  // None of the tables should have been visibly modified
+  for (const auto& [table_name, table_info] : tables) {
+    auto get_table = std::make_shared<GetTable>(table_name);
+    get_table->execute();
+    auto validate = std::make_shared<Validate>(get_table);
+    validate->set_transaction_context(new_transaction_context);
+    validate->execute();
+
+    EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), table_info.table);
+  }
+}
+
+TEST_F(TPCCTest, PaymentCustomerById) {
+  BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
+  auto payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
+  // Generate random payments until we have one that identified the customer by ID
+  while (payment.select_customer_by_name) {
+    payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
+  }
+
+  payment.execute();
+}
+
 
 }  // namespace opossum
