@@ -68,7 +68,7 @@ endif()
 
 # Global flags and include directories
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # When generating a dtrace header file, symbols containing dollar-signs are created This file needs to be compiled as well.
 # Hence, the `-Wno-dollar-in-identifier-extension` flag is required.

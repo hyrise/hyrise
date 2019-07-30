@@ -16,6 +16,8 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
           {"store_duration", metrics.store_duration.count()}};
 }
 
+BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& table) : table(table) {}
+
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
 
