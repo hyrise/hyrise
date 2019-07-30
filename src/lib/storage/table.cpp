@@ -160,7 +160,7 @@ uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   if (_type == TableType::References) {
-    // Not written concurrently, since reference tables are not accessed by more than one thread at a time.
+    // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks[chunk_id];
   } else {
     return std::atomic_load(&_chunks[chunk_id]);

@@ -86,7 +86,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     const auto chunk_count = probe_input_table->chunk_count();
     for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
       const auto chunk = probe_input_table->get_chunk(probe_chunk_id);
-      Assert(chunk, "Unexpected nullpointer-chunk.");
+      Assert(chunk, "Did not expect deleted chunk here."); // see #1686
 
       _probe_matches[probe_chunk_id].resize(chunk->size());
     }
@@ -96,7 +96,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     const auto chunk_count = index_input_table->chunk_count();
     for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count; ++index_chunk_id) {
       const auto chunk = index_input_table->get_chunk(index_chunk_id);
-      Assert(chunk, "Unexpected nullpointer-chunk.");
+      Assert(chunk, "Did not expect deleted chunk here."); // see #1686
 
       _index_matches[index_chunk_id].resize(chunk->size());
     }
@@ -119,7 +119,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   const auto chunk_count_index_table = index_input_table->chunk_count();
   for (ChunkID index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_table; ++index_chunk_id) {
     const auto index_chunk = index_input_table->get_chunk(index_chunk_id);
-    Assert(index_chunk, "Unexpected nullpointer-chunk.");
+    Assert(index_chunk, "Did not expect deleted chunk here."); // see #1686
 
     const auto indexes = index_chunk->get_indexes(std::vector<ColumnID>{_primary_predicate.column_ids.second});
     std::shared_ptr<BaseIndex> index = nullptr;
@@ -135,7 +135,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       const auto chunk_count = probe_input_table->chunk_count();
       for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
         const auto chunk = probe_input_table->get_chunk(probe_chunk_id);
-        Assert(chunk, "Unexpected nullpointer-chunk.");
+        Assert(chunk, "Did not expect deleted chunk here."); // see #1686
 
         const auto probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
         segment_with_iterators(*probe_segment, [&](auto it, const auto end) {
@@ -146,13 +146,13 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     } else {
       // Fall back to NestedLoopJoin
       const auto chunk_index = index_input_table->get_chunk(index_chunk_id);
-      Assert(chunk_index, "Unexpected nullpointer-chunk.");
+      Assert(chunk_index, "Did not expect deleted chunk here."); // see #1686
 
       const auto index_segment = chunk_index->get_segment(_adjusted_primary_predicate.column_ids.second);
       const auto chunk_count = probe_input_table->chunk_count();
       for (ChunkID probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
         const auto chunk_probe = probe_input_table->get_chunk(probe_chunk_id);
-        Assert(chunk_probe, "Unexpected nullpointer-chunk.");
+        Assert(chunk_probe, "Did not expect deleted chunk here."); // see #1686
 
         const auto probe_segment = chunk_probe->get_segment(_adjusted_primary_predicate.column_ids.first);
         JoinNestedLoop::JoinParams params{*_probe_pos_list,
@@ -208,7 +208,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     const auto chunk_count = probe_input_table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk_left = probe_input_table->get_chunk(chunk_id);
-      Assert(chunk_left, "Unexpected nullpointer-chunk.");
+      Assert(chunk_left, "Did not expect deleted chunk here."); // see #1686
 
       const auto chunk_size = chunk_left->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
