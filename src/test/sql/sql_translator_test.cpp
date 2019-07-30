@@ -2333,8 +2333,8 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupBy) {
 
   // clang-format off
   const auto wq_lqp =
-      AggregateNode::make(expression_vector(int_int_int_a), expression_vector(sum_(int_int_int_b)),
-                          stored_table_node_int_int_int);
+    AggregateNode::make(expression_vector(int_int_int_a), expression_vector(sum_(int_int_int_b)),
+      stored_table_node_int_int_int);
 
   const auto expected_lqp = wq_lqp;
   // clang-format on
@@ -2353,15 +2353,15 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupByAlias) {
   const auto select_list_expressions = expression_vector(int_int_int_a, sum_b);
   const auto aliases = std::vector<std::string>{"a", "sum"};
   const auto wq_lqp =
-      AliasNode::make(select_list_expressions, aliases,
-                      AggregateNode::make(expression_vector(int_int_int_a), expression_vector(sum_b),
-                                          stored_table_node_int_int_int));
+    AliasNode::make(select_list_expressions, aliases,
+      AggregateNode::make(expression_vector(int_int_int_a), expression_vector(sum_b),
+        stored_table_node_int_int_int));
 
   // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
   const auto expected_lqp =
-      AliasNode::make(select_list_expressions, aliases,
-                      PredicateNode::make(greater_than_(sum_b, value_(10)),
-                                          wq_lqp));
+    AliasNode::make(select_list_expressions, aliases,
+      PredicateNode::make(greater_than_(sum_b, value_(10)),
+        wq_lqp));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
