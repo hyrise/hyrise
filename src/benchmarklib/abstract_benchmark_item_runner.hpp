@@ -27,7 +27,7 @@ class AbstractBenchmarkItemRunner {
 
   // Executes a benchmark item and returns
   // (1) a bool indicating whether the execution was successful (unsuccessful items may be caused, e.g., by
-  //.    transaction conflicts,
+  //     transaction conflicts,
   // (2) information about the SQL statements executed during the items execution,
   // (3) a bool indicating whether the verification failed.
   std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> execute_item(const BenchmarkItemID item_id);
