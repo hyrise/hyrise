@@ -108,7 +108,7 @@ class Console : public Singleton<Console> {
   // Command functions, registered to be called from the Console
   int _exit(const std::string& args);
   int _help(const std::string& args);
-  int _generate_tpch(const std::string& args);
+  int _generate(const std::string& args);
   int _load_table(const std::string& args);
   int _export_table(const std::string& args);
   int _exec_script(const std::string& script_file);

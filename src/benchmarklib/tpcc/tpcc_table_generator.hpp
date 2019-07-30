@@ -27,6 +27,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
  public:
   TPCCTableGenerator(int num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
+  // Convenience constructor for creating a TPCHTableGenerator without a benchmarking context
+  explicit TPCCTableGenerator(int num_warehouses, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+
   std::shared_ptr<Table> generate_item_table();
 
   std::shared_ptr<Table> generate_warehouse_table();

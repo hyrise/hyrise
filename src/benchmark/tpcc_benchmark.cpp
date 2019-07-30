@@ -97,7 +97,7 @@ void check_consistency(const int num_warehouses) {
   std::vector<std::vector<int64_t>> new_order_counts(num_warehouses, std::vector<int64_t>(10));
 
   {
-    // Consistency condition 1 (see 3.3.2.1)
+    std::cout << "  -> Running consistency check 1" << std::endl;  // see 3.3.2.1
     auto pipeline = SQLPipelineBuilder{"SELECT W_ID, MAX(W_YTD), SUM(D_YTD) FROM WAREHOUSE, DISTRICT WHERE W_ID = D_W_ID GROUP BY W_ID"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -111,7 +111,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 2
+    std::cout << "  -> Running consistency check 2" << std::endl;
     for (auto w_id = 1; w_id <= num_warehouses; ++w_id) {
       auto district_pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID - 1 FROM DISTRICT WHERE D_W_ID = "} + std::to_string(w_id) + " ORDER BY D_ID"}
                           .create_pipeline();
@@ -140,7 +140,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 3
+    std::cout << "  -> Running consistency check 3" << std::endl;
     auto new_order_pipeline = SQLPipelineBuilder{"SELECT NO_W_ID, NO_D_ID, MIN(NO_O_ID), MAX(NO_O_ID) FROM NEW_ORDER GROUP BY NO_W_ID, NO_D_ID"}
                         .create_pipeline();
     const auto [new_order_pipeline_status, new_order_table] = new_order_pipeline.get_result_table();
@@ -156,7 +156,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 4
+    std::cout << "  -> Running consistency check 4" << std::endl;
     auto order_pipeline = SQLPipelineBuilder{"SELECT O_W_ID, O_D_ID, SUM(O_OL_CNT) FROM \"ORDER\" GROUP BY O_W_ID, O_D_ID ORDER BY O_W_ID, O_D_ID"}
                         .create_pipeline();
     const auto [order_pipeline_status, order_table] = order_pipeline.get_result_table();
@@ -173,7 +173,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 5
+    std::cout << "  -> Running consistency check 5" << std::endl;
     auto pipeline = SQLPipelineBuilder{"SELECT * FROM \"ORDER\" WHERE O_CARRIER_ID = -1 AND NOT EXISTS (SELECT NO_W_ID FROM NEW_ORDER WHERE O_W_ID = NO_W_ID AND O_D_ID = NO_D_ID AND NO_O_ID = O_ID)"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -181,7 +181,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 6
+    std::cout << "  -> Running consistency check 6" << std::endl;
     auto pipeline = SQLPipelineBuilder{"SELECT O_W_ID, O_D_ID, O_ID, MAX(O_OL_CNT), COUNT(*) FROM \"ORDER\" LEFT JOIN ORDER_LINE ON O_W_ID = OL_W_ID AND O_D_ID = OL_D_ID AND O_ID = OL_O_ID GROUP BY O_W_ID, O_D_ID, O_ID"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -192,7 +192,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 7
+    std::cout << "  -> Running consistency check 7" << std::endl;
     auto pipeline = SQLPipelineBuilder{"SELECT * FROM ORDER_LINE LEFT JOIN \"ORDER\" ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID WHERE OL_DELIVERY_D = -1 AND O_CARRIER_ID <> -1"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -200,7 +200,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 8
+    std::cout << "  -> Running consistency check 8" << std::endl;
     auto pipeline = SQLPipelineBuilder{"SELECT W_ID, MAX(W_YTD), SUM(H_AMOUNT) FROM WAREHOUSE, \"HISTORY\" WHERE W_ID = H_W_ID GROUP BY W_ID"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -214,7 +214,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 9
+    std::cout << "  -> Running consistency check 9" << std::endl;
     auto pipeline = SQLPipelineBuilder{"SELECT D_W_ID, D_ID, MAX(D_YTD), SUM(H_AMOUNT) FROM DISTRICT, \"HISTORY\" WHERE D_W_ID = H_W_ID AND D_ID = H_D_ID GROUP BY D_W_ID, D_ID"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -228,7 +228,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 10
+    std::cout << "  -> Running consistency check 10" << std::endl;
     auto pipeline = SQLPipelineBuilder{"SELECT C_W_ID, C_D_ID, C_ID, MAX(C_BALANCE), (CASE WHEN SUM_OL_AMOUNT IS NULL THEN 0 ELSE SUM_OL_AMOUNT END) AS SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT FROM CUSTOMER LEFT JOIN (SELECT O_W_ID, O_D_ID, O_C_ID, SUM(OL_AMOUNT) FROM \"ORDER\", ORDER_LINE WHERE OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D <> -1 GROUP BY O_W_ID, O_D_ID, O_C_ID) AS sub1(O_W_ID, O_D_ID, O_C_ID, SUM_OL_AMOUNT) ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN (SELECT H_W_ID, H_D_ID, H_C_ID, SUM(H_AMOUNT) FROM \"HISTORY\" GROUP BY H_W_ID, H_D_ID, H_C_ID) AS sub2(H_W_ID, H_D_ID, H_C_ID, SUM_H_AMOUNT) ON H_W_ID = C_W_ID AND H_D_ID = C_D_ID AND H_C_ID = C_ID GROUP BY C_W_ID, C_D_ID, C_ID, SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -243,7 +243,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 11
+    std::cout << "  -> Running consistency check 11" << std::endl;
     auto pipeline = SQLPipelineBuilder{"SELECT D_W_ID, D_ID, (SELECT COUNT(*) FROM \"ORDER\" WHERE O_W_ID = D_W_ID AND O_D_ID = D_ID), (SELECT COUNT(*) FROM NEW_ORDER WHERE NO_W_ID = D_W_ID AND NO_D_ID = D_ID) FROM DISTRICT"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -257,7 +257,7 @@ void check_consistency(const int num_warehouses) {
   }
 
   {
-    // Consistency condition 12
+    std::cout << "  -> Running consistency check 12" << std::endl;
     auto pipeline = SQLPipelineBuilder{"SELECT C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT, SUM(OL_AMOUNT) FROM CUSTOMER LEFT JOIN \"ORDER\" ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN ORDER_LINE ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID WHERE OL_DELIVERY_D <> -1 GROUP BY C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();

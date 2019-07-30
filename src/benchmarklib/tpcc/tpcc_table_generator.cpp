@@ -24,6 +24,9 @@ namespace opossum {
 TPCCTableGenerator::TPCCTableGenerator(int num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _num_warehouses(num_warehouses) {}
 
+TPCCTableGenerator::TPCCTableGenerator(int num_warehouses, uint32_t chunk_size)
+    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _num_warehouses(num_warehouses) {}
+
 std::shared_ptr<Table> TPCCTableGenerator::generate_item_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
 

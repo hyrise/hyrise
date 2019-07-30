@@ -43,6 +43,7 @@
 #include "sql/sql_translator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
+#include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
@@ -123,7 +124,7 @@ Console::Console()
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
-  register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
+  register_command("generate", std::bind(&Console::_generate, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
   register_command("export", std::bind(&Console::_export_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
@@ -380,86 +381,99 @@ int Console::_help(const std::string&) {
   // a non-zero number of spaces or the end of the line.
   auto line_wrap = std::regex{"(.{1,120})(?: +|$)"};
   encoding_options =
-      regex_replace(encoding_options, line_wrap, "$1\n                                                 ");
+      regex_replace(encoding_options, line_wrap, "$1\n                                                    ");
   // Remove the 49 spaces and the new line added at the end
   encoding_options.resize(encoding_options.size() - 50);
 
   // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
-  out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
-  out("                                               The import type is chosen by the type of FILEPATH.\n");
-  out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
-  out("                                               If no table name is specified, the filename without extension is used\n");  // NOLINT
+  out("  generate tpcc [NUM_WAREHOUSES] [CHUNK_SIZE] - Generate all TPC-C tables\n");
+  out("  generate tpch [SCALE_FACTOR]   [CHUNK_SIZE] - Generate all TPC-H tables\n");
+  out("  load FILEPATH [TABLENAME [ENCODING]]       - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
+  out("                                                  The import type is chosen by the type of FILEPATH.\n");
+  out("                                                    Supported types: '.bin', '.csv', '.tbl'\n");
+  out("                                                  If no table name is specified, the filename without extension is used\n");  // NOLINT
   out(encoding_options + "\n");  // NOLINT
-  out("  export TABLENAME FILEPATH               - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
-  out("                                               The export type is chosen by the type of FILEPATH.\n");
-  out("                                                 Supported types: '.bin', '.csv'\n");
-  out("  script SCRIPTFILE                       - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME                         - Fully print the given table (including MVCC data)\n");
-  out("  visualize [options] [SQL]               - Visualize a SQL query\n");
-  out("                                               Options\n");
-  out("                                                - {exec, noexec} Execute the query before visualization.\n");
-  out("                                                                 Default: exec\n");
-  out("                                                - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
-  out("                                                                       unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
-  out("                                                                       Default: pqp\n");
-  out("                                              SQL\n");
-  out("                                                - Optional, a query to visualize. If not specified, the last\n");
-  out("                                                  previously executed query is visualized.\n");
-  out("  begin                                   - Manually create a new transaction (Auto-commit is active unless begin is called)\n");  // NOLINT
-  out("  rollback                                - Roll back a manually created transaction\n");
-  out("  commit                                  - Commit a manually created transaction\n");
-  out("  txinfo                                  - Print information on the current transaction\n");
-  out("  pwd                                     - Print current working directory\n");
-  out("  load_plugin FILE                        - Load and start plugin stored at FILE\n");
-  out("  unload_plugin NAME                      - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT
-  out("  quit                                    - Exit the HYRISE Console\n");
-  out("  help                                    - Show this message\n\n");
-  out("  setting [property] [value]              - Change a runtime setting\n\n");
-  out("           scheduler (on|off)             - Turn the scheduler on (default) or off\n\n");
+  out("  export TABLENAME FILEPATH                  - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
+  out("                                                  The export type is chosen by the type of FILEPATH.\n");
+  out("                                                    Supported types: '.bin', '.csv'\n");
+  out("  script SCRIPTFILE                          - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME                            - Fully print the given table (including MVCC data)\n");
+  out("  visualize [options] [SQL]                  - Visualize a SQL query\n");
+  out("                                                  Options\n");
+  out("                                                   - {exec, noexec} Execute the query before visualization.\n");
+  out("                                                                    Default: exec\n");
+  out("                                                   - {lqp, unoptlqp, pqp, joins} Type of plan to visualize. unoptlqp gives the\n");  // NOLINT
+  out("                                                                          unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
+  out("                                                                          Default: pqp\n");
+  out("                                                 SQL\n");
+  out("                                                   - Optional, a query to visualize. If not specified, the last\n");
+  out("                                                     previously executed query is visualized.\n");
+  out("  begin                                      - Manually create a new transaction (Auto-commit is active unless begin is called)\n");  // NOLINT
+  out("  rollback                                   - Roll back a manually created transaction\n");
+  out("  commit                                     - Commit a manually created transaction\n");
+  out("  txinfo                                     - Print information on the current transaction\n");
+  out("  pwd                                        - Print current working directory\n");
+  out("  load_plugin FILE                           - Load and start plugin stored at FILE\n");
+  out("  unload_plugin NAME                         - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT
+  out("  quit                                       - Exit the HYRISE Console\n");
+  out("  help                                       - Show this message\n\n");
+  out("  setting [property] [value]                 - Change a runtime setting\n\n");
+  out("           scheduler (on|off)                - Turn the scheduler on (default) or off\n\n");
   if constexpr (HYRISE_JIT_SUPPORT) {
-    out("           jit       (on|off)             - Turn just-in-time query compilation on or off (default)\n\n");
+    out("           jit       (on|off)                - Turn just-in-time query compilation on or off (default)\n\n");
   }
   // clang-format on
 
   return Console::ReturnCode::Ok;
 }
 
-int Console::_generate_tpch(const std::string& args) {
+int Console::_generate(const std::string& args) {
   auto input = args;
   boost::algorithm::trim<std::string>(input);
   auto arguments = std::vector<std::string>{};
   boost::algorithm::split(arguments, input, boost::is_space());
 
   // Check whether there are one or two arguments.
-  auto args_valid = !arguments.empty() && arguments.size() <= 2;
-
   // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
   // and that's not actually an argument.
-  auto scale_factor = 1.0f;
-  if (!arguments.empty() && !arguments[0].empty()) {
-    scale_factor = std::stof(arguments[0]);
-  } else {
-    args_valid = false;
-  }
+  auto args_valid = arguments.size() >= 1 && arguments[0] != "" && arguments.size() <= 3;
+
+  const std::string benchmark = arguments[0];
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
-  if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+  if (arguments.size() >= 3) {
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[2]);
   }
 
   if (!args_valid) {
+    // clang-format off
     out("Usage: ");
-    out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
+    out("  generate tpcc [NUM_WAREHOUSES] [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT
+    out("  generate tpch [SCALE_FACTOR]   [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
+    out("                                                Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");
+    // clang-format on
     return ReturnCode::Error;
   }
 
-  out("Generating all TPCH tables (this might take a while) ...\n");
-  TPCHTableGenerator{scale_factor, chunk_size}.generate_and_store();
+  out(std::string{"Generating all "} + benchmark + " tables (this might take a while) ...\n");
+  if (benchmark == "tpcc") {
+    auto num_warehouses = 1;
+    if (arguments.size() >= 2) {
+      num_warehouses = std::stoi(arguments[1]);
+    }
+    TPCCTableGenerator{num_warehouses, chunk_size}.generate_and_store();
+  } else if(benchmark == "tpch") {
+    auto scale_factor = 1.0f;
+    if (arguments.size() >= 2) {
+      scale_factor = std::stof(arguments[1]);
+    }
+    TPCHTableGenerator{scale_factor, chunk_size}.generate_and_store();
+  } else {
+    out("Unknown benchmark\n");
+    return ReturnCode::Error;
+  }
 
   return ReturnCode::Ok;
 }

@@ -59,7 +59,8 @@ bool TPCCOrderStatus::execute() {
                             std::to_string(_w_id) + " AND O_D_ID = " + std::to_string(_d_id) +
                             " AND O_C_ID = " + std::to_string(customer_id) + " ORDER BY O_ID DESC");
   const auto& order_table = order_select_pair.second;
-  Assert(order_table->row_count() == 1, "Did not find order");
+  // Returns multiple orders, we are interested in the latest one
+  Assert(order_table->row_count() >= 1, "Did not find order");
   const auto o_id = order_table->get_value<int32_t>(ColumnID{0}, 0);
 
   // Retrieve order lines

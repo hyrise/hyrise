@@ -79,7 +79,7 @@ SQLIdentifierContextEntry& SQLIdentifierResolver::_find_expression_entry(
     const std::shared_ptr<AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
-  Assert(entry_iter != _entries.end(), "The expression does not exist.");
+  Assert(entry_iter != _entries.end(), std::string{"Expression "} + expression->as_column_name() + " does not exist.");
   return *entry_iter;
 }
 
