@@ -63,7 +63,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   const auto chunk_count_input_table = input_table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
-    Assert(input_chunk, "Did not expect deleted chunk here."); // see #1686
+    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
 
     auto output_segments = Segments{expressions.size()};
 
@@ -102,7 +102,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
-    Assert(input_chunk, "Did not expect deleted chunk here."); // see #1686
+    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
 
     output_chunks[chunk_id] =
         std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());

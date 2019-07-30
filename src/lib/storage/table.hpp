@@ -172,7 +172,7 @@ class Table : private Noncopyable {
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto chunk = std::atomic_load(&_chunks[chunk_id]);
-      Assert(chunk, "Did not expect deleted chunk here."); // see #1686
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
       chunk->create_index<Index>(column_ids);
     }

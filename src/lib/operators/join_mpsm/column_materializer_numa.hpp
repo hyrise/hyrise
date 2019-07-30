@@ -87,7 +87,7 @@ class ColumnMaterializerNUMA {
     const auto chunk_count = input->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input->get_chunk(chunk_id);
-      Assert(chunk, "Did not expect deleted chunk here."); // see #1686
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
       // This allocator is used to ensure that materialized chunks are colocated with the original chunks
       auto alloc = MaterializedValueAllocatorNUMA<T>{chunk->get_allocator()};

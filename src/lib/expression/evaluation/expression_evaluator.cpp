@@ -1529,7 +1529,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
       const auto chunk_count = table->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
-        Assert(chunk, "Did not expect deleted chunk here."); // see #1686
+        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
         const auto& result_segment = *chunk->get_segment(ColumnID{0});
         segment_iterate<Result>(result_segment, [&](const auto& position) {
@@ -1545,7 +1545,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
       const auto chunk_count = table->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
-        Assert(chunk, "Did not expect deleted chunk here."); // see #1686
+        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
         const auto& result_segment = *chunk->get_segment(ColumnID{0});
         segment_iterate<Result>(result_segment, [&](const auto& position) {

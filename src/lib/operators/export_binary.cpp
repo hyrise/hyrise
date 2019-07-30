@@ -167,7 +167,7 @@ void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
 
 void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
   const auto chunk = table.get_chunk(chunk_id);
-  Assert(chunk, "Did not expect deleted chunk here."); // see #1686
+  Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
   const auto context = std::make_shared<ExportContext>(ofstream);
 

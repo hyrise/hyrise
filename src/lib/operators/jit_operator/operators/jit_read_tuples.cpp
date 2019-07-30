@@ -108,7 +108,7 @@ void JitReadTuples::before_specialization(const Table& in_table, std::vector<boo
   if (in_table.chunk_count() == 0) return;
 
   const auto chunk = in_table.get_chunk(ChunkID{0});
-  Assert(chunk, "Did not expect deleted chunk here."); // see #1686
+  Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
   // Remove expressions that use a column where the first segment is not dictionary-encoded
   _value_id_expressions.erase(
