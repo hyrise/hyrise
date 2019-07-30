@@ -31,6 +31,8 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
   const auto mapping_iter = mapping.find(lhs);
   if (mapping_iter != mapping.end()) return;
 
+  // std::cout << "### MAPPING\nlhs:\n" << lhs->description() << "\nrhs:\n" << rhs->description() << "\n";  
+
   mapping[lhs] = rhs;
 
   lqp_create_node_mapping_impl(mapping, lhs->left_input(), rhs->left_input());
@@ -39,9 +41,13 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
 
 std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                        const std::shared_ptr<const AbstractLQPNode>& rhs) {
+  // std::cout << "find structure mismatch\n";
+  // std::cout << "lhs:\n" << lhs->description() << "\n";
+  // std::cout << "rhs:\n" << rhs->description() << "\n";
   if (!lhs && !rhs) return std::nullopt;
   if (!(lhs && rhs) || lhs->type != rhs->type) return LQPMismatch(lhs, rhs);
 
+  // std::cout << "types are equal\n";
   const auto mismatch_left = lqp_find_structure_mismatch(lhs->left_input(), rhs->left_input());
   if (mismatch_left) return mismatch_left;
 

@@ -304,6 +304,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   std::vector<OperatorJoinPredicate> join_predicates;
   join_predicates.reserve(join_node->join_predicates().size());
 
+  std::cout << "join node: " << join_node << "\n";
+
   for (const auto& predicate_expression : join_node->join_predicates()) {
     auto join_predicate =
         OperatorJoinPredicate::from_expression(*predicate_expression, *node->left_input(), *node->right_input());

@@ -26,9 +26,13 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
 
   Assert(abstract_predicate_expression->arguments.size() == 2u, "Expected two arguments");
 
+  // std::cout << "######## LEFT IN LEFT\n";
   const auto left_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[0]);
+  // std::cout << "LEFT IN RIGHT\n";
   const auto left_in_right = right_input.find_column_id(*abstract_predicate_expression->arguments[0]);
+  // std::cout << "RIGHT IN LEFT\n";
   const auto right_in_left = left_input.find_column_id(*abstract_predicate_expression->arguments[1]);
+  // std::cout << "RIGHT IN RIGHT\n";
   const auto right_in_right = right_input.find_column_id(*abstract_predicate_expression->arguments[1]);
 
   auto predicate_condition = abstract_predicate_expression->predicate_condition;

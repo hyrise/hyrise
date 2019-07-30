@@ -79,31 +79,49 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
   return copied_expression;
 }
 
+void expressions_adapt_to_different_lqp(std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                       const LQPNodeMapping& node_mapping, const std::vector<std::shared_ptr<AbstractLQPNode>>& blacklist) {
+  for(auto& expression : expressions){
+    expression_adapt_to_different_lqp(expression, node_mapping, blacklist);
+  }
+}
+
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
-                                       const LQPNodeMapping& node_mapping) {
+                                       const LQPNodeMapping& node_mapping, const std::vector<std::shared_ptr<AbstractLQPNode>>& blacklist) {
   visit_expression(expression, [&](auto& expression_ptr) {
     if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
 
     const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
     Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
 
-    expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
+    const auto& new_expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping, blacklist);
+    if(new_expression_ptr){
+      expression_ptr = new_expression_ptr;
+    }
 
     return ExpressionVisitation::DoNotVisitArguments;
   });
 }
 
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
-                                                                       const LQPNodeMapping& node_mapping) {
+                                                                       const LQPNodeMapping& node_mapping, const std::vector<std::shared_ptr<AbstractLQPNode>>& blacklist) {
   const auto node = lqp_column_expression.column_reference.original_node();
-  const auto node_mapping_iter = node_mapping.find(node);
-  Assert(node_mapping_iter != node_mapping.end(),
-         "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
+  const auto& blacklist_find_result = std::find(blacklist.begin(), blacklist.end(), node);
 
-  LQPColumnReference adapted_column_reference{node_mapping_iter->second,
-                                              lqp_column_expression.column_reference.original_column_id()};
-
-  return std::make_shared<LQPColumnExpression>(adapted_column_reference);
+  if(blacklist_find_result == blacklist.end()){
+    const auto node_mapping_iter = node_mapping.find(node);
+    if(node_mapping_iter == node_mapping.end()){
+      std::cout << "node not found: " << node->description() << ", " << node << "\n";
+    }
+    Assert(node_mapping_iter != node_mapping.end(),
+           "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
+    LQPColumnReference adapted_column_reference{node_mapping_iter->second,
+                                                lqp_column_expression.column_reference.original_column_id()};
+    return std::make_shared<LQPColumnExpression>(adapted_column_reference);
+  } else{
+    std::cout << "found in blacklist: " << node << "\n";
+    return nullptr;
+  }
 }
 
 std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
