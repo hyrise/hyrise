@@ -1,5 +1,3 @@
-#include <boost/container/small_vector.hpp>
-
 #include "abstract_tpcc_procedure.hpp"
 
 namespace opossum {

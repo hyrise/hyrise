@@ -1,4 +1,3 @@
-#include <boost/container/small_vector.hpp>
 #include <variant>
 
 #include "abstract_tpcc_procedure.hpp"

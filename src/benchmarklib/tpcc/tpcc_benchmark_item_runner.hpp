@@ -19,10 +19,6 @@ class TPCCBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   bool _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
 
   const int _num_warehouses;
-
-  // We want deterministic seeds, but since the engine is thread-local, we need to make sure that each thread has its
-  // own seed.
-  std::atomic<unsigned int> _random_seed{0};
 };
 
 }  // namespace opossum
