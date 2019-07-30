@@ -43,7 +43,6 @@
 #include "sql/sql_translator.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpcc/tpcc_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
@@ -124,7 +123,6 @@ Console::Console()
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
-  register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
   register_command("export", std::bind(&Console::_export_table, this, std::placeholders::_1));
@@ -139,13 +137,6 @@ Console::Console()
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
-
-  // Register words specifically for command completion purposes, e.g.
-  // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
-  auto tpcc_generators = TpccTableGenerator::table_generator_functions();
-  for (const auto& generator : tpcc_generators) {
-    _tpcc_commands.push_back(generator.first);
-  }
 }
 
 int Console::read() {
@@ -396,7 +387,6 @@ int Console::_help(const std::string&) {
   // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
-  out("  generate_tpcc [TABLENAME]               - Generate available TPC-C tables, or a specific table if TABLENAME is specified\n");  // NOLINT
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
   out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
   out("                                               The import type is chosen by the type of FILEPATH.\n");
@@ -437,31 +427,6 @@ int Console::_help(const std::string&) {
   return Console::ReturnCode::Ok;
 }
 
-int Console::_generate_tpcc(const std::string& tablename) {
-  auto& storage_manager = StorageManager::get();
-
-  if (tablename.empty() || "ALL" == tablename) {
-    out("Generating TPCC tables (this might take a while) ...\n");
-    auto tables = TpccTableGenerator().generate_all_tables();
-    for (auto& [table_name, table] : tables) {
-      if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
-      storage_manager.add_table(table_name, table);
-    }
-    return ReturnCode::Ok;
-  }
-
-  out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = TpccTableGenerator().generate_table(tablename);
-  if (!table) {
-    out("Error: No TPCC table named \"" + tablename + "\" available.\n");
-    return ReturnCode::Error;
-  }
-
-  if (storage_manager.has_table(tablename)) storage_manager.drop_table(tablename);
-  storage_manager.add_table(tablename, table);
-  return ReturnCode::Ok;
-}
-
 int Console::_generate_tpch(const std::string& args) {
   auto input = args;
   boost::algorithm::trim<std::string>(input);
@@ -494,7 +459,7 @@ int Console::_generate_tpch(const std::string& args) {
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
-  TpchTableGenerator{scale_factor, chunk_size}.generate_and_store();
+  TPCHTableGenerator{scale_factor, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -1000,17 +965,9 @@ char** Console::_command_completion(const char* text, int start, int end) {
   std::vector<std::string> tokens;
   boost::algorithm::split(tokens, input, boost::is_space());
 
-  // Choose completion function depending on the input. If it starts with "generate",
-  // suggest TPC-C tablenames for completion.
+  // Choose completion function depending on the input.
   const std::string& first_word = tokens[0];
-  if (first_word == "generate_tpcc") {
-    // Completion only for two words, "generate_tpcc", and the TABLENAME
-    if (tokens.size() <= 2) {
-      completion_matches = rl_completion_matches(text, &Console::_command_generator_tpcc);
-    }
-    // Turn off filepath completion for TPC-C table generation
-    rl_attempted_completion_over = 1;
-  } else if (first_word == "visualize") {
+  if (first_word == "visualize") {
     // Completion only for three words, "visualize", and at most two options
     if (tokens.size() <= 3) {
       completion_matches = rl_completion_matches(text, &Console::_command_generator_visualize);
@@ -1062,10 +1019,6 @@ char* Console::_command_generator_default(const char* text, int state) {
     commands.push_back(command.first);
   }
   return _command_generator(text, state, commands);
-}
-
-char* Console::_command_generator_tpcc(const char* text, int state) {
-  return _command_generator(text, state, Console::get()._tpcc_commands);
 }
 
 char* Console::_command_generator_visualize(const char* text, int state) {
