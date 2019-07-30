@@ -19,8 +19,6 @@ std::shared_ptr<const AbstractLQPNode> LQPColumnReference::original_node() const
 ColumnID LQPColumnReference::original_column_id() const { return _original_column_id; }
 
 bool LQPColumnReference::operator==(const LQPColumnReference& rhs) const {
-  // std::cout << "colRef==, orig: " << original_node()->description() << ", " << original_node()
-  // << " , rhs: " << rhs.original_node()->description() << ", " << rhs.original_node() << "\n";
   return original_node() == rhs.original_node() && _original_column_id == rhs._original_column_id;
 }
 

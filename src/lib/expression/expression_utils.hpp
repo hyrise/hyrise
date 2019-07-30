@@ -56,20 +56,24 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_d
 std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(const AbstractExpression& expression,
                                                                                const LQPNodeMapping& node_mapping);
 
-/**
- * Makes all column references points to their equivalent in a copied LQP
- */
 void expressions_adapt_to_different_lqp(std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-                                       const LQPNodeMapping& node_mapping, const std::vector<std::shared_ptr<AbstractLQPNode>>& blacklist = {});
+                                        const std::vector<std::shared_ptr<AbstractLQPNode>> stored_table_nodes);
+
+void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
+                                       const std::vector<std::shared_ptr<AbstractLQPNode>> stored_table_nodes);
+
+std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(
+    const LQPColumnExpression& lqp_column_expression,
+    const std::vector<std::shared_ptr<AbstractLQPNode>> stored_table_nodes);
 
 /**
  * Makes all column references points to their equivalent in a copied LQP
  */
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
-                                       const LQPNodeMapping& node_mapping, const std::vector<std::shared_ptr<AbstractLQPNode>>& blacklist = {});
+                                       const LQPNodeMapping& node_mapping);
 
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
-                                                                       const LQPNodeMapping& node_mapping, const std::vector<std::shared_ptr<AbstractLQPNode>>& blacklist = {});
+                                                                       const LQPNodeMapping& node_mapping);
 
 /**
  * Create a comma separated string with the AbstractExpression::as_column_name() of each expression
