@@ -18,7 +18,7 @@ struct BenchmarkItemResult {
   // Stores the execution duration of the item if run in BenchmarkMode::Ordered. `runs/duration` is iterations/s, even
   // if multiple clients executed the item in parallel. For BenchmarkMode::Shuffled, this is the execution duration of
   // the entire benchmark.
-  Duration duration;
+  Duration duration{0};
 
   // The *optional* is set if the verification was executed; the *bool* is true if the verification succeeded.
   std::optional<bool> verification_passed;
