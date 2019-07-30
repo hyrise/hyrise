@@ -18,6 +18,7 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
   c_w_id = w_id;
   c_d_id = d_id;
   if (num_warehouses > 2 && home_warehouse_dist(_random_engine) > 85) {
+    // Choose remote warehouse
     do {
       c_w_id = warehouse_dist(_random_engine);
     } while (c_w_id == w_id);
@@ -99,11 +100,11 @@ bool TPCCPayment::execute() {
                     "C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE, C_DATA FROM CUSTOMER WHERE C_W_ID = "} +
         std::to_string(w_id) + " AND C_D_ID = " + std::to_string(c_d_id) + " AND C_LAST = '" +
         std::string{std::get<pmr_string>(customer)} + "' ORDER BY C_FIRST");
-    Assert(customer_table->row_count() >= 1, "Did not find customer by name");
+    Assert(customer_table && customer_table->row_count() >= 1, "Did not find customer by name");
 
     // Calculate ceil(n/2)
     customer_offset = static_cast<size_t>(
-        std::min(std::ceil(customer_table->row_count() / 2.0), static_cast<double>(customer_table->row_count() - 1)));
+        std::max(0.0, std::min(std::ceil(customer_table->row_count() / 2.0), static_cast<double>(customer_table->row_count() - 1))));
     customer_id = customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }
 

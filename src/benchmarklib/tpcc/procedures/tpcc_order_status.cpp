@@ -59,13 +59,13 @@ bool TPCCOrderStatus::execute() {
                             std::to_string(_w_id) + " AND O_D_ID = " + std::to_string(_d_id) +
                             " AND O_C_ID = " + std::to_string(customer_id) + " ORDER BY O_ID DESC");
   const auto& order_table = order_select_pair.second;
-  Assert(order_table->row_count() >= 1, "Did not find order");
-  auto order_id = order_table->get_value<int32_t>(ColumnID{0}, 0);
+  Assert(order_table->row_count() == 1, "Did not find order");
+  const auto o_id = order_table->get_value<int32_t>(ColumnID{0}, 0);
 
   // Retrieve order lines
   _sql_executor.execute(
       std::string{"SELECT OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT FROM ORDER_LINE WHERE OL_W_ID = "} +
-      std::to_string(_w_id) + " AND OL_D_ID = " + std::to_string(_d_id) + " AND OL_O_ID = " + std::to_string(order_id));
+      std::to_string(_w_id) + " AND OL_D_ID = " + std::to_string(_d_id) + " AND OL_O_ID = " + std::to_string(o_id));
 
   // No need to commit the transaction as we have not modified anything
   _sql_executor.transaction_context = nullptr;

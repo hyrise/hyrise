@@ -26,8 +26,8 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
     order_line.ol_i_id = static_cast<int32_t>(_tpcc_random_generator.nurand(8191, 1, 100'000));
 
     std::uniform_int_distribution<> home_warehouse_dist{1, 100};
-    // 1% chance of remote warehouses (if more than one). 17 is a random, but very good number.
-    auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) != 17;
+    // 1% chance of remote warehouses (if more than one).
+    auto is_home_warehouse = num_warehouses == 1 || home_warehouse_dist(_random_engine) > 1;
     if (is_home_warehouse) {
       order_line.ol_supply_w_id = w_id;
     } else {
@@ -70,6 +70,9 @@ bool TPCCNewOrder::execute() {
   const auto d_next_o_id = district_table->get_value<int32_t>(ColumnID{1}, 0);
   const auto o_id = d_next_o_id;
 
+  // The TPC-C requires D_NEXT_O_ID to have a capacity of 10,000,000, so int is enough. For long runs, we still
+  // might want to change this. Remember to touch all *_O_ID fields.
+  Assert(d_next_o_id < std::numeric_limits<int>::max(), "Reached maximum for D_NEXT_O_ID, consider using LONG");
   // Update the next order ID (D_NEXT_O_ID). This is probably the biggest bottleneck as it leads to a high number of
   // MVCC conflicts.
   const auto district_update_pair =
@@ -105,7 +108,7 @@ bool TPCCNewOrder::execute() {
   Assert(new_order_insert_pair.first == SQLPipelineStatus::Success, "INSERT should not fail");
 
   // Insert row into ORDER
-  // TODO(anyone): add NULL support to O_CARRIER_ID
+  // TODO(anyone): add NULL support to O_CARRIER_ID - also adapt check_consistency in tpcc_benchmark.cpp
   const auto order_insert_pair = _sql_executor.execute(
       std::string{"INSERT INTO \"ORDER\" (O_ID, O_D_ID, O_W_ID, O_C_ID, O_ENTRY_D, O_CARRIER_ID, "
                   "O_OL_CNT, O_ALL_LOCAL) VALUES ("} +

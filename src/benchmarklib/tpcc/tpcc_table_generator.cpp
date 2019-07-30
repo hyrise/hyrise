@@ -24,7 +24,7 @@ namespace opossum {
 TPCCTableGenerator::TPCCTableGenerator(int num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _num_warehouses(num_warehouses) {}
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
+std::shared_ptr<Table> TPCCTableGenerator::generate_item_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
 
   /**
@@ -248,7 +248,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
                             bool is_original = original_ids.find(indices[2]) != original_ids.end();
                             return pmr_string{is_original ? "BC" : "GC"};
                           });
-  _add_column<int>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
+  _add_column<float>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
                    [&](std::vector<size_t>) { return 50000; });
   _add_column<float>(segments_by_chunk, column_definitions, "C_DISCOUNT", cardinalities,
                      [&](std::vector<size_t>) { return _random_gen.random_number(0, 5000) / 10000.f; });
@@ -344,7 +344,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
 
   _add_column<int>(
       segments_by_chunk, column_definitions, "O_CARRIER_ID", cardinalities, [&](std::vector<size_t> indices) {
-        return indices[2] <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT ? _random_gen.random_number(1, 10)
+        return indices[2] + 1 <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT ? _random_gen.random_number(1, 10)
                                                                                    : -1;
       });
   _add_column<int>(segments_by_chunk, column_definitions, "O_OL_CNT", cardinalities,
@@ -505,7 +505,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   Assert(!_benchmark_config->cache_binary_tables, "Caching binary tables is not yet supported for TPC-C");
 
   std::vector<std::thread> threads;
-  auto item_table = std::async(std::launch::async, &TPCCTableGenerator::generate_items_table, this);
+  auto item_table = std::async(std::launch::async, &TPCCTableGenerator::generate_item_table, this);
   auto warehouse_table = std::async(std::launch::async, &TPCCTableGenerator::generate_warehouse_table, this);
   auto stock_table = std::async(std::launch::async, &TPCCTableGenerator::generate_stock_table, this);
   auto district_table = std::async(std::launch::async, &TPCCTableGenerator::generate_district_table, this);

@@ -1,4 +1,5 @@
 #include "tpcc_benchmark_item_runner.hpp"
+
 #include "tpcc/procedures/tpcc_delivery.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
 #include "tpcc/procedures/tpcc_order_status.hpp"

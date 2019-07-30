@@ -38,6 +38,7 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
    * @return    a String representing the last name
    */
   std::string last_name(size_t i) {
+    // TODO verify 2.1.6.1
     const std::string syllables[] = {
         "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
     };

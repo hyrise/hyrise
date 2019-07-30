@@ -28,6 +28,4 @@ class AbstractTPCCProcedure {
   BenchmarkSQLExecutor& _sql_executor;
 };
 
-std::ostream& operator<<(std::ostream& stream, const AbstractTPCCProcedure& procedure);
-
 }  // namespace opossum
