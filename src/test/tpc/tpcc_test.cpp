@@ -305,7 +305,7 @@ TEST_F(TPCCTest, PaymentCustomerById) {
     payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
   }
 
-  payment.execute();
+  EXPECT_TRUE(payment.execute());
 }
 
 // TODO remaining transactions

@@ -373,7 +373,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
-  auto encoding_options = std::string{"                                               Encoding options: "};
+  auto encoding_options = std::string{"                                                 Encoding options: "};
   encoding_options += boost::algorithm::join(
       encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
   // Split the encoding options in lines of 120 and add padding. For each input line, it takes up to 120 characters
@@ -390,17 +390,17 @@ int Console::_help(const std::string&) {
   out("Available commands:\n");
   out("  generate tpcc [NUM_WAREHOUSES] [CHUNK_SIZE] - Generate all TPC-C tables\n");
   out("  generate tpch [SCALE_FACTOR]   [CHUNK_SIZE] - Generate all TPC-H tables\n");
-  out("  load FILEPATH [TABLENAME [ENCODING]]       - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
+  out("  load FILEPATH [TABLENAME [ENCODING]]        - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
   out("                                                  The import type is chosen by the type of FILEPATH.\n");
   out("                                                    Supported types: '.bin', '.csv', '.tbl'\n");
   out("                                                  If no table name is specified, the filename without extension is used\n");  // NOLINT
   out(encoding_options + "\n");  // NOLINT
-  out("  export TABLENAME FILEPATH                  - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
+  out("  export TABLENAME FILEPATH                   - Export table named TABLENAME from storage manager to filepath FILEPATH\n");  // NOLINT
   out("                                                  The export type is chosen by the type of FILEPATH.\n");
   out("                                                    Supported types: '.bin', '.csv'\n");
-  out("  script SCRIPTFILE                          - Execute script specified by SCRIPTFILE\n");
-  out("  print TABLENAME                            - Fully print the given table (including MVCC data)\n");
-  out("  visualize [options] [SQL]                  - Visualize a SQL query\n");
+  out("  script SCRIPTFILE                           - Execute script specified by SCRIPTFILE\n");
+  out("  print TABLENAME                             - Fully print the given table (including MVCC data)\n");
+  out("  visualize [options] [SQL]                   - Visualize a SQL query\n");
   out("                                                  Options\n");
   out("                                                   - {exec, noexec} Execute the query before visualization.\n");
   out("                                                                    Default: exec\n");
@@ -408,21 +408,21 @@ int Console::_help(const std::string&) {
   out("                                                                          unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
   out("                                                                          Default: pqp\n");
   out("                                                 SQL\n");
-  out("                                                   - Optional, a query to visualize. If not specified, the last\n");
-  out("                                                     previously executed query is visualized.\n");
-  out("  begin                                      - Manually create a new transaction (Auto-commit is active unless begin is called)\n");  // NOLINT
-  out("  rollback                                   - Roll back a manually created transaction\n");
-  out("  commit                                     - Commit a manually created transaction\n");
-  out("  txinfo                                     - Print information on the current transaction\n");
-  out("  pwd                                        - Print current working directory\n");
-  out("  load_plugin FILE                           - Load and start plugin stored at FILE\n");
-  out("  unload_plugin NAME                         - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT
-  out("  quit                                       - Exit the HYRISE Console\n");
-  out("  help                                       - Show this message\n\n");
-  out("  setting [property] [value]                 - Change a runtime setting\n\n");
-  out("           scheduler (on|off)                - Turn the scheduler on (default) or off\n\n");
+  out("                                                   Optional, a query to visualize. If not specified, the last\n");
+  out("                                                   previously executed query is visualized.\n");
+  out("  begin                                       - Manually create a new transaction (Auto-commit is active unless begin is called)\n");  // NOLINT
+  out("  rollback                                    - Roll back a manually created transaction\n");
+  out("  commit                                      - Commit a manually created transaction\n");
+  out("  txinfo                                      - Print information on the current transaction\n");
+  out("  pwd                                         - Print current working directory\n");
+  out("  load_plugin FILE                            - Load and start plugin stored at FILE\n");
+  out("  unload_plugin NAME                          - Stop and unload the plugin libNAME.so/dylib (also clears the query cache)\n");  // NOLINT
+  out("  quit                                        - Exit the HYRISE Console\n");
+  out("  help                                        - Show this message\n\n");
+  out("  setting [property] [value]                  - Change a runtime setting\n\n");
+  out("           scheduler (on|off)                 - Turn the scheduler on (default) or off\n\n");
   if constexpr (HYRISE_JIT_SUPPORT) {
-    out("           jit       (on|off)                - Turn just-in-time query compilation on or off (default)\n\n");
+    out("           jit       (on|off)                 - Turn just-in-time query compilation on or off (default)\n\n");
   }
   // clang-format on
 

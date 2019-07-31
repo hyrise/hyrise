@@ -229,16 +229,19 @@ void check_consistency(const int num_warehouses) {
 
   {
     std::cout << "  -> Running consistency check 10" << std::endl;
-    auto pipeline = SQLPipelineBuilder{"SELECT C_W_ID, C_D_ID, C_ID, MAX(C_BALANCE), (CASE WHEN SUM_OL_AMOUNT IS NULL THEN 0 ELSE SUM_OL_AMOUNT END) AS SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT FROM CUSTOMER LEFT JOIN (SELECT O_W_ID, O_D_ID, O_C_ID, SUM(OL_AMOUNT) FROM \"ORDER\", ORDER_LINE WHERE OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D <> -1 GROUP BY O_W_ID, O_D_ID, O_C_ID) AS sub1(O_W_ID, O_D_ID, O_C_ID, SUM_OL_AMOUNT) ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN (SELECT H_W_ID, H_D_ID, H_C_ID, SUM(H_AMOUNT) FROM \"HISTORY\" GROUP BY H_W_ID, H_D_ID, H_C_ID) AS sub2(H_W_ID, H_D_ID, H_C_ID, SUM_H_AMOUNT) ON H_W_ID = C_W_ID AND H_D_ID = C_D_ID AND H_C_ID = C_ID GROUP BY C_W_ID, C_D_ID, C_ID, SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT"}
-                        .create_pipeline();
-    const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() == static_cast<size_t>(num_warehouses * 10 * NUM_CUSTOMERS_PER_DISTRICT), "Lost a customer");
-    for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
-      const auto c_balance = double{table->get_value<float>(ColumnID{3}, row_id)};
-      const auto sum_ol_amount = table->get_value<double>(ColumnID{4}, row_id);
-      const auto sum_h_amount = table->get_value<double>(ColumnID{5}, row_id);
+    std::cout << "  -> Skipped because of #1771" << std::endl;
+    if (false) {
+      auto pipeline = SQLPipelineBuilder{"SELECT C_W_ID, C_D_ID, C_ID, MAX(C_BALANCE), (CASE WHEN SUM_OL_AMOUNT IS NULL THEN 0 ELSE SUM_OL_AMOUNT END) AS SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT FROM CUSTOMER LEFT JOIN (SELECT O_W_ID, O_D_ID, O_C_ID, SUM(OL_AMOUNT) FROM \"ORDER\", ORDER_LINE WHERE OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D <> -1 GROUP BY O_W_ID, O_D_ID, O_C_ID) AS sub1(O_W_ID, O_D_ID, O_C_ID, SUM_OL_AMOUNT) ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN (SELECT H_W_ID, H_D_ID, H_C_ID, SUM(H_AMOUNT) FROM \"HISTORY\" GROUP BY H_W_ID, H_D_ID, H_C_ID) AS sub2(H_W_ID, H_D_ID, H_C_ID, SUM_H_AMOUNT) ON H_W_ID = C_W_ID AND H_D_ID = C_D_ID AND H_C_ID = C_ID GROUP BY C_W_ID, C_D_ID, C_ID, SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT"}
+                          .create_pipeline();
+      const auto [pipeline_status, table] = pipeline.get_result_table();
+      Assert(table && table->row_count() == static_cast<size_t>(num_warehouses * 10 * NUM_CUSTOMERS_PER_DISTRICT), "Lost a customer");
+      for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
+        const auto c_balance = double{table->get_value<float>(ColumnID{3}, row_id)};
+        const auto sum_ol_amount = table->get_value<double>(ColumnID{4}, row_id);
+        const auto sum_h_amount = table->get_value<double>(ColumnID{5}, row_id);
 
-      Assert(floats_near(sum_ol_amount - sum_h_amount, c_balance), "Mismatching amounts for customer");
+        Assert(floats_near(sum_ol_amount - sum_h_amount, c_balance), "Mismatching amounts for customer");
+      }
     }
   }
 
