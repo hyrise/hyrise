@@ -93,7 +93,7 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
     while (true) {
       _nurand_constants_c[255] = random_number(0, 255);
       const auto current_c = _nurand_constants_c.at(255);
-      const auto diff = std::abs(static_cast<long>(current_c - old_c));
+      const auto diff = std::abs(static_cast<long>(current_c - old_c));  // NOLINT
 
       if (current_c != old_c && diff >= 64 && diff <= 120 && diff != 96 && diff != 112) break;
     }
