@@ -11,6 +11,7 @@
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -18,14 +19,31 @@ namespace opossum {
 class GroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_segment = BaseTest::create_dict_segment_by_type<pmr_string>(
-        DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
+    value_segment_str = std::make_shared<ValueSegment<pmr_string>>(true);
+    //  corresponding ValueID
+    value_segment_str->append(NULL_VALUE);  //  0
+    value_segment_str->append("hotel");     //  1
+    value_segment_str->append("delta");     //  2
+    value_segment_str->append("frank");     //  3
+    value_segment_str->append("delta");     //  4
+    value_segment_str->append(NULL_VALUE);  //  5
+    value_segment_str->append(NULL_VALUE);  //  6
+    value_segment_str->append("apple");     //  7
+    value_segment_str->append("charlie");   //  8
+    value_segment_str->append("charlie");   //  9
+    value_segment_str->append("inbox");     // 10
+    value_segment_str->append(NULL_VALUE);  // 11
+
+    dict_segment =
+        encode_and_compress_segment(value_segment_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
+
     index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment}));
 
     index_offsets = &(index->_index_offsets);
     index_postings = &(index->_index_postings);
   }
 
+  std::shared_ptr<ValueSegment<pmr_string>> value_segment_str = nullptr;
   std::shared_ptr<GroupKeyIndex> index = nullptr;
   std::shared_ptr<BaseSegment> dict_segment = nullptr;
 
@@ -39,11 +57,18 @@ class GroupKeyIndexTest : public BaseTest {
 };
 
 TEST_F(GroupKeyIndexTest, IndexOffsets) {
-  auto expected_offsets = std::vector<size_t>{0, 1, 3, 5, 6, 7, 8};
+  auto expected_offsets = std::vector<size_t>{0, 1, 3, 5, 6, 7, 8, 12};
   EXPECT_EQ(expected_offsets, *index_offsets);
 }
 
-TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) { EXPECT_EQ(index->memory_consumption(), 104u); }
+TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
+  // expected memory consumption:
+  //  - `_indexed_segments`, shared pointer         ->   16 bit
+  //  - `_index_offsets`, 8 elements, each 8 bit    ->   64 bit
+  //  - `_index_postings`, 12 elements, each 4 bit  ->   48 bit
+  //  - sum                                         ->  128 bit
+  EXPECT_EQ(index->memory_consumption(), 128u);
+}
 
 TEST_F(GroupKeyIndexTest, IndexPostings) {
   // check if there are no duplicates in postings
@@ -51,8 +76,8 @@ TEST_F(GroupKeyIndexTest, IndexPostings) {
   EXPECT_TRUE(distinct_values.size() == index_postings->size());
 
   // check if the correct postings are present for each value-id
-  auto expected_postings =
-      std::vector<std::unordered_set<ChunkOffset>>{{4}, {5, 6}, {5, 6}, {1, 3}, {1, 3}, {2}, {0}, {7}};
+  auto expected_postings = std::vector<std::unordered_set<ChunkOffset>>{
+      {7}, {8, 9}, {8, 9}, {2, 4}, {2, 4}, {3}, {1}, {10}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}};
 
   for (size_t i = 0; i < index_postings->size(); ++i) {
     EXPECT_EQ(1u, expected_postings[i].count(index_postings->at(i)));

@@ -20,9 +20,9 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   Assert((segments_to_index.size() == 1), "GroupKeyIndex only works with a single segment.");
 
   // 1) Initialize the index structures
-  // 1a) Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position)
+  // 1a) Set the index_offset to size of the dictionary + 2 (plus one for null and plus one to mark the ending position)
   //     and set all offsets to 0
-  _index_offsets = std::vector<size_t>(_indexed_segments->unique_values_count() + 1u, 0u);
+  _index_offsets = std::vector<size_t>(_indexed_segments->unique_values_count() + 2u, 0u);
   // 1b) Set the _index_postings to the size of the attribute vector
   _index_postings = std::vector<ChunkOffset>(_indexed_segments->size());
 
