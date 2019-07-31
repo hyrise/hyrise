@@ -34,8 +34,7 @@ bool TPCCStockLevel::execute() {
   Assert(order_line_table->row_count() == 20, "Did not find latest orders");
 
   std::stringstream ol_i_ids_stream;
-  const auto NUM_ORDERS_PER_WAREHOUSE = static_cast<int>(order_line_table->row_count());
-  for (auto order_line_idx = 0; order_line_idx < NUM_ORDERS_PER_WAREHOUSE; ++order_line_idx) {
+  for (auto order_line_idx = 0; order_line_idx < 20; ++order_line_idx) {
     ol_i_ids_stream << order_line_table->get_value<int32_t>(ColumnID{0}, order_line_idx) << ", ";
   }
   auto ol_i_ids = ol_i_ids_stream.str();

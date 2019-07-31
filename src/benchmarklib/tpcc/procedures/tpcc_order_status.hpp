@@ -18,9 +18,9 @@ class TPCCOrderStatus : public AbstractTPCCProcedure {
   std::variant<pmr_string, int32_t> customer;  // Either a customer's ID or their last name (which is not unique)
 
   // Values calculated WHILE the procedure is executed, exposed for facilitating the tests:
-  int32_t o_id;                // Order ID
-  int32_t o_entry_d;           // Entry date of the order (created by new-order)
-  int32_t o_carrier_id;        // Carrier ID of the order (created by new-order)
+  int32_t o_id{-1};            // Order ID
+  int32_t o_entry_d{-1};       // Entry date of the order (created by new-order)
+  int32_t o_carrier_id{-1};    // Carrier ID of the order (created by new-order)
   int32_t ol_quantity_sum{0};  // Sum of the quantities in the order lines, stored for verification
 };
 

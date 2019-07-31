@@ -148,7 +148,7 @@ bool TPCCNewOrder::execute() {
     const auto s_remote_cnt = stock_table->get_value<int32_t>(ColumnID{4}, 0);
 
     // Calculate the new values for S_QUANTITY, S_YTD, S_ORDER_CNT
-    auto new_s_quantity = s_quantity;
+    auto new_s_quantity = 0;
     if (s_quantity >= order_line.ol_quantity + 10) {
       // Reduce the stock level appropriately if at least 10 items remain in stock
       new_s_quantity = s_quantity - order_line.ol_quantity;

@@ -14,9 +14,9 @@ class AbstractTPCCProcedure {
  public:
   explicit AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor);
 
-  AbstractTPCCProcedure(const AbstractTPCCProcedure& sql_executor);
+  AbstractTPCCProcedure(const AbstractTPCCProcedure& other) = default;
   virtual ~AbstractTPCCProcedure() = default;
-  AbstractTPCCProcedure& operator=(const AbstractTPCCProcedure& sql_executor);
+  AbstractTPCCProcedure& operator=(const AbstractTPCCProcedure& other);
 
   // Executes the procedure; returns true if it was successful and false if a transaction conflict occurred
   [[nodiscard]] virtual bool execute() = 0;

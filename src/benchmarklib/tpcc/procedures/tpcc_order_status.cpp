@@ -26,7 +26,6 @@ TPCCOrderStatus::TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor&
 
 bool TPCCOrderStatus::execute() {
   auto customer_table = std::shared_ptr<const Table>{};
-  auto customer_offset = size_t{};
   auto customer_id = int32_t{};
 
   if (!select_customer_by_name) {
@@ -37,7 +36,6 @@ bool TPCCOrderStatus::execute() {
         " AND C_ID = " + std::to_string(std::get<int32_t>(customer)));
     Assert(customer_table && customer_table->row_count() == 1, "Did not find customer by ID (or found more than one)");
 
-    customer_offset = size_t{0};
     customer_id = std::get<int32_t>(customer);
   } else {
     // Case 2 - Select customer by name
@@ -48,7 +46,7 @@ bool TPCCOrderStatus::execute() {
     Assert(customer_table->row_count() >= 1, "Did not find customer by name");
 
     // Calculate ceil(n/2)
-    customer_offset = static_cast<size_t>(
+    auto customer_offset = static_cast<size_t>(
         std::min(std::ceil(customer_table->row_count() / 2.0), static_cast<double>(customer_table->row_count() - 1)));
     customer_id = customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }

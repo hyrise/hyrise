@@ -12,8 +12,6 @@ AbstractTPCCProcedure::AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor)
   _sql_executor.transaction_context = TransactionManager::get().new_transaction_context();
 }
 
-AbstractTPCCProcedure::AbstractTPCCProcedure(const AbstractTPCCProcedure& other) : _sql_executor(other._sql_executor) {}
-
 AbstractTPCCProcedure& AbstractTPCCProcedure::operator=(const AbstractTPCCProcedure& other) {
   DebugAssert(&_sql_executor == &other._sql_executor,
               "Can only assign AbstractTPCCProcedure if the sql_executors are the same");
