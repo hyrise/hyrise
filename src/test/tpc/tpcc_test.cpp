@@ -410,8 +410,6 @@ TEST_F(TPCCTest, OrderStatusCustomerById) {
   EXPECT_EQ(order_status.ol_quantity_sum, ol_quantity_sum);
 }
 
-TEST_F(TPCCTest, StockLevel) {
-  // TODO
-}
+// The dynamic nature of Stock-Level together with the random table generation makes this transaction hard to test.
 
 }  // namespace opossum

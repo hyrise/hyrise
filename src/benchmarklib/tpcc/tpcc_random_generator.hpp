@@ -27,8 +27,12 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
    * Generates a non-uniform random number based on a formula defined by TPCC
    */
   size_t nurand(size_t a, size_t x, size_t y) {
-    Assert(_nurand_constant_c <= a, "Invalid param: a=" + std::to_string(a));
-    return (((random_number(0, a) | random_number(x, y)) + _nurand_constant_c) % (y - x + 1)) + x;
+    auto c_iter = _nurand_constants_c.find(a);
+    if (c_iter == _nurand_constants_c.end()) {
+      c_iter = _nurand_constants_c[a] = random_number(0, a);
+    }
+    const auto c = c_iter->second;
+    return (((random_number(0, a) | random_number(x, y)) + c) % (y - x + 1)) + x;
   }
 
   /**
@@ -38,7 +42,6 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
    * @return    a String representing the last name
    */
   std::string last_name(size_t i) {
-    // TODO verify 2.1.6.1
     const std::string syllables[] = {
         "BAR", "OUGHT", "ABLE", "PRI", "PRES", "ESE", "ANTI", "CALLY", "ATION", "EING",
     };
@@ -83,7 +86,17 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
     return v;
   }
 
+  // Reset C according to 2.1.6.1
+  void reset_c_for_c_last() {
+    const auto old_c = _nurand_constants_c.at(255);
+    while (const auto current_c = _nurand_constants_c.at(255), diff = std::abs(current_c - old_c);
+           current_c == old_c || diff < 64 || diff > 120 || diff == 96 || diff == 112) {
+      _nurand_constants_c[255] = random_number(0, 255);
+    }
+  }
+
  protected:
-  const size_t _nurand_constant_c = random_number(0, 255);
+  // Holds the constant C (see 2.1.6) for a given A
+  const std::unordered_map<size_t, size_t> _nurand_constants_c;
 };
 }  // namespace opossum

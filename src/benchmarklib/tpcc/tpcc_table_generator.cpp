@@ -273,6 +273,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
     table->append_chunk(segments, mvcc_data);
   }
 
+  _random_gen.reset_c_for_c_last();
+
   return table;
 }
 
