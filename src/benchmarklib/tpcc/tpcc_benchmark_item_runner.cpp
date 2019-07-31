@@ -64,8 +64,8 @@ std::string TPCCBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) co
 }
 
 const std::vector<int>& TPCCBenchmarkItemRunner::weights() const {
-  // Except for New-Order, the given weights are minimum (see 5.2.3 in the standard). Since New-Order is the transaction
-  // being counted, we want it to have the maximum weight possible.
+  // Except for New-Order, the given weights are minimums (see 5.2.3 in the standard). Since New-Order is the
+  // transaction being counted for tpmC, we want it to have the highest weight possible.
   static const std::vector<int> weights{4, 45, 4, 43, 4};
   return weights;
 }
