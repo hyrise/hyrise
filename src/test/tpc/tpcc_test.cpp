@@ -6,6 +6,7 @@
 #include "tpcc/constants.hpp"
 #include "tpcc/procedures/tpcc_delivery.hpp"
 #include "tpcc/procedures/tpcc_new_order.hpp"
+#include "tpcc/procedures/tpcc_order_status.hpp"
 #include "tpcc/procedures/tpcc_payment.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 
@@ -114,6 +115,7 @@ TEST_F(TPCCTest, Delivery) {
               .with_transaction_context(old_transaction_context)
               .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
+      EXPECT_TRUE(table);
       num_order_lines = table->row_count();
       EXPECT_GE(num_order_lines, 5);
       EXPECT_LE(num_order_lines, 15);
@@ -127,6 +129,7 @@ TEST_F(TPCCTest, Delivery) {
                           .with_transaction_context(old_transaction_context)
                           .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
+      EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
       old_c_balance = table->get_value<float>(ColumnID{16}, 0);
       old_c_delivery_cnt = table->get_value<int>(ColumnID{19}, 0);
@@ -140,6 +143,7 @@ TEST_F(TPCCTest, Delivery) {
                              " AND NO_D_ID = " + std::to_string(d_id) + " AND NO_O_ID = 2101"}
               .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
+      EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 0);
     }
 
@@ -151,6 +155,7 @@ TEST_F(TPCCTest, Delivery) {
                                          std::to_string(delivery.w_id) + " AND O_ID = 2101"}
                           .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
+      EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 10);
       EXPECT_EQ(table->get_value<int>(ColumnID{5}, d_id - 1), delivery.o_carrier_id);  // O_CARRIER_ID
 
@@ -164,6 +169,7 @@ TEST_F(TPCCTest, Delivery) {
                              " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = 2101"}
               .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
+      EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), num_order_lines);
       for (auto ol_number = uint64_t{1}; ol_number <= table->row_count(); ++ol_number) {
         EXPECT_EQ(table->get_value<int>(ColumnID{3}, ol_number - 1), ol_number);  // OL_NUMBER
@@ -179,6 +185,7 @@ TEST_F(TPCCTest, Delivery) {
                                          " AND C_ID = " + std::to_string(c_id)}
                           .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
+      EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
       EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), expected_c_balance);
       EXPECT_EQ(table->get_value<int>(ColumnID{1}, 0), old_c_delivery_cnt + 1);
@@ -215,6 +222,7 @@ TEST_F(TPCCTest, NewOrder) {
                         .with_transaction_context(old_transaction_context)
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
+    EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     old_d_next_o_id = table->get_value<int>(ColumnID{0}, 0);
   }
@@ -225,6 +233,7 @@ TEST_F(TPCCTest, NewOrder) {
                                        std::to_string(new_order.w_id) + " AND D_ID = " + std::to_string(new_order.d_id)}
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
+    EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0), old_d_next_o_id + 1);
   }
@@ -297,17 +306,107 @@ TEST_F(TPCCTest, NewOrderUnusedOrderId) {
   }
 }
 
-TEST_F(TPCCTest, PaymentCustomerById) {
+TEST_F(TPCCTest, PaymentCustomerByName) {
+  const auto old_time = time(nullptr);
+
   BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
   auto payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
-  // Generate random payments until we have one that identified the customer by ID
-  while (payment.select_customer_by_name) {
+  // Generate random payments until we have one that identified the customer by name
+  while (!payment.select_customer_by_name) {
     payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
   }
 
   EXPECT_TRUE(payment.execute());
+
+  // Verify that W_YTD is updated
+  pmr_string w_name;
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT W_YTD, W_NAME FROM WAREHOUSE WHERE W_ID = "} +
+                                       std::to_string(payment.w_id)}
+                        .create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    EXPECT_TRUE(table);
+    EXPECT_EQ(table->row_count(), 1);
+    // As all warehouses start with W_YTD = 300'000, this should be the first and only change
+    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), 300'000.0f + payment.h_amount);
+    w_name = table->get_value<pmr_string>(ColumnID{1}, 0);
+  }
+
+  // Verify that D_YTD is updated
+  pmr_string d_name;
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT D_YTD, D_NAME FROM DISTRICT WHERE D_W_ID = "} +
+                                       std::to_string(payment.w_id) + " AND D_ID = " + std::to_string(payment.d_id)}
+                        .create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    EXPECT_TRUE(table);
+    EXPECT_EQ(table->row_count(), 1);
+    // As all districts start with D_YTD = 30'000, this should be the first and only change
+    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), 30'000.0f + payment.h_amount);
+    d_name = table->get_value<pmr_string>(ColumnID{1}, 0);
+  }
+
+  // Verify that the customer is updated
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT FROM CUSTOMER WHERE C_W_ID = "} +
+                                       std::to_string(payment.w_id) + " AND C_D_ID = " + std::to_string(payment.d_id) + " AND C_ID = " + std::to_string(payment.c_id)}
+                        .create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    EXPECT_TRUE(table);
+    EXPECT_EQ(table->row_count(), 1);
+    // Customers start with C_BALANCE = -10, C_YTD_PAYMENT = 10, C_PAYMENT_CNT = 1
+    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), -10.0f - payment.h_amount);
+    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{1}, 0), 10.0f + payment.h_amount);
+    EXPECT_FLOAT_EQ(table->get_value<int>(ColumnID{2}, 0), 2);
+  }
+
+  // We do not test for C_DATA
+
+  // Verify that a new history entry is written
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT H_DATE, H_AMOUNT, H_DATA FROM \"HISTORY\" WHERE H_W_ID = "} +
+                                       std::to_string(payment.w_id) + " AND H_D_ID = " + std::to_string(payment.d_id) + " AND H_C_ID = " + std::to_string(payment.c_id) + " AND H_C_W_ID = " + std::to_string(payment.c_w_id) + " AND H_C_D_ID = " + std::to_string(payment.c_d_id)}
+                        .create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    EXPECT_TRUE(table);
+    EXPECT_GT(table->row_count(), 0);
+
+    const auto row = table->row_count() - 1;
+    EXPECT_GE(table->get_value<int>(ColumnID{0}, row), old_time);
+    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{1}, row), payment.h_amount);
+    EXPECT_EQ(table->get_value<pmr_string>(ColumnID{2}, row), w_name + "    " + d_name);
+  }
 }
 
-// TODO remaining transactions
+TEST_F(TPCCTest, OrderStatusCustomerById) {
+  // We have covered customer selection by name in PaymentCustomerByName
+  // As Order-Status has no externally visible changes, we create a new order and test for correct return values
+
+  BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
+
+  auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
+  EXPECT_TRUE(new_order.execute());
+
+  auto order_status = TPCCOrderStatus{NUM_WAREHOUSES, sql_executor};
+  order_status.w_id = new_order.w_id;
+  order_status.d_id = new_order.d_id;
+  order_status.select_customer_by_name = false;
+  order_status.customer = new_order.c_id;
+  EXPECT_TRUE(order_status.execute());
+
+  EXPECT_EQ(order_status.o_id, new_order.o_id);
+  EXPECT_EQ(order_status.o_entry_d, new_order.o_entry_d);
+  EXPECT_EQ(order_status.o_carrier_id, -1);
+
+  int32_t ol_quantity_sum = 0;
+  for (const auto& order_line : new_order.order_lines) {
+    ol_quantity_sum += order_line.ol_quantity;
+  }
+  EXPECT_EQ(order_status.ol_quantity_sum, ol_quantity_sum);
+}
+
+TEST_F(TPCCTest, StockLevel) {
+  // TODO
+}
 
 }  // namespace opossum

@@ -29,7 +29,10 @@ class TPCCNewOrder : public AbstractTPCCProcedure {
   // Stores a maximum of 15 items (see _ol_cnt). Not using an array because we want size().
   boost::container::small_vector<OrderLine, 15> order_lines;
 
-  int64_t o_entry_d;  // Current datetime
+  int32_t o_entry_d;  // Current datetime
+
+  // Values calculated WHILE the procedure is executed, exposed for facilitating the tests:
+  int32_t o_id;  // Order ID
 };
 
 }  // namespace opossum

@@ -45,7 +45,7 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
     order_lines.back().ol_i_id = INVALID_ITEM_ID;  // A non-existing item ID
   }
 
-  o_entry_d = std::time(nullptr);
+  o_entry_d = static_cast<int32_t>(std::time(nullptr));
 }
 
 bool TPCCNewOrder::execute() {
@@ -66,7 +66,7 @@ bool TPCCNewOrder::execute() {
   const auto d_tax = district_table->get_value<float>(ColumnID{0}, 0);
   Assert(d_tax >= 0.f && d_tax <= .2f, "Invalid warehouse tax rate encountered");
   const auto d_next_o_id = district_table->get_value<int32_t>(ColumnID{1}, 0);
-  const auto o_id = d_next_o_id;
+  o_id = d_next_o_id;
 
   // The TPC-C requires D_NEXT_O_ID to have a capacity of 10,000,000, so int is enough. For long runs, we still
   // might want to change this. Remember to touch all *_O_ID fields.

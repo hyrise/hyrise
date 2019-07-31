@@ -4,7 +4,7 @@
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
-#include "operators/print.hpp"
+#include "operators/print.hpp"  // TODO remove
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpcc/constants.hpp"
 #include "tpcc/tpcc_benchmark_item_runner.hpp"
@@ -230,7 +230,7 @@ void check_consistency(const int num_warehouses) {
   {
     std::cout << "  -> Running consistency check 10" << std::endl;
     std::cout << "  -> Skipped because of #1771" << std::endl;
-    if (false) {
+    if ((false)) {
       auto pipeline = SQLPipelineBuilder{"SELECT C_W_ID, C_D_ID, C_ID, MAX(C_BALANCE), (CASE WHEN SUM_OL_AMOUNT IS NULL THEN 0 ELSE SUM_OL_AMOUNT END) AS SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT FROM CUSTOMER LEFT JOIN (SELECT O_W_ID, O_D_ID, O_C_ID, SUM(OL_AMOUNT) FROM \"ORDER\", ORDER_LINE WHERE OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D <> -1 GROUP BY O_W_ID, O_D_ID, O_C_ID) AS sub1(O_W_ID, O_D_ID, O_C_ID, SUM_OL_AMOUNT) ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN (SELECT H_W_ID, H_D_ID, H_C_ID, SUM(H_AMOUNT) FROM \"HISTORY\" GROUP BY H_W_ID, H_D_ID, H_C_ID) AS sub2(H_W_ID, H_D_ID, H_C_ID, SUM_H_AMOUNT) ON H_W_ID = C_W_ID AND H_D_ID = C_D_ID AND H_C_ID = C_ID GROUP BY C_W_ID, C_D_ID, C_ID, SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT"}
                           .create_pipeline();
       const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -247,21 +247,15 @@ void check_consistency(const int num_warehouses) {
 
   {
     std::cout << "  -> Running consistency check 11" << std::endl;
-    auto pipeline = SQLPipelineBuilder{"SELECT D_W_ID, D_ID, (SELECT COUNT(*) FROM \"ORDER\" WHERE O_W_ID = D_W_ID AND O_D_ID = D_ID), (SELECT COUNT(*) FROM NEW_ORDER WHERE NO_W_ID = D_W_ID AND NO_D_ID = D_ID) FROM DISTRICT"}
-                        .create_pipeline();
-    const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() == static_cast<size_t>(num_warehouses * 10), "Lost a district");
-    for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
-      const auto o_count = table->get_value<int64_t>(ColumnID{2}, row_id);
-      const auto no_count = table->get_value<int64_t>(ColumnID{3}, row_id);
-
-      Assert(o_count - no_count == NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT, "Mismatching YTD for DISTRICT and HISTORY");
-    }
+    std::cout << "  -> Skipped because it only relates to the unmodified database" << std::endl;
+    // The consistency condition as defined in 3.3.2.11 is only valid for the initial state of the database. Once the
+    // new-order and delivery transactions have executed, rows have been added to / deleted from the order and
+    // new_order tables. Thus, we are skipping this check.
   }
 
   {
     std::cout << "  -> Running consistency check 12" << std::endl;
-    auto pipeline = SQLPipelineBuilder{"SELECT C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT, SUM(OL_AMOUNT) FROM CUSTOMER LEFT JOIN \"ORDER\" ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN ORDER_LINE ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID WHERE OL_DELIVERY_D <> -1 GROUP BY C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT"}
+    auto pipeline = SQLPipelineBuilder{"SELECT C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT, (CASE WHEN SUM(OL_AMOUNT) IS NULL THEN 0 ELSE SUM(OL_AMOUNT) END) AS SUM_OL_AMOUNT_NONNULL FROM CUSTOMER LEFT JOIN \"ORDER\" ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN ORDER_LINE ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID AND OL_DELIVERY_D <> -1 GROUP BY C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT"}
                         .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() == static_cast<size_t>(num_warehouses * 10 * NUM_CUSTOMERS_PER_DISTRICT), "Lost a customer");

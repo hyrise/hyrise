@@ -20,7 +20,10 @@ class TPCCPayment : public AbstractTPCCProcedure {
   std::variant<pmr_string, int32_t> customer;  // Either a customer's ID or their last name (which is not unique)
 
   float h_amount;  // The payment amount      [1..5000]
-  int64_t h_date;  // Current datetime
+  int32_t h_date;  // Current datetime
+
+  // Values calculated WHILE the procedure is executed, exposed for facilitating the tests:
+  int32_t c_id;
 };
 
 }  // namespace opossum
