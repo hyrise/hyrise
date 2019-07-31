@@ -210,19 +210,17 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 }
 void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_row_count += count; }
 
-void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
-  DebugAssert(!_cleanup_commit_id, "Cleanup commit ID can only be set once.");
-  _cleanup_commit_id = cleanup_commit_id;
-}
-
 const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
 
 void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
 
-uint64_t Chunk::invalid_row_count() const { return _invalid_row_count.load(); }
+uint64_t Chunk::invalid_row_count() const { return std::atomic_load(&_invalid_row_count); }
 
-std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  return _cleanup_commit_id;
+std::optional<CommitID> Chunk::get_cleanup_commit_id() const { return std::atomic_load(&_cleanup_commit_id); }
+
+void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
+  Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
+  std::atomic_store(&_cleanup_commit_id, {cleanup_commit_id});
 }
 
 }  // namespace opossum

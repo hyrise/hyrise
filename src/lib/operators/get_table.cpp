@@ -76,8 +76,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   if (HYRISE_DEBUG && !transaction_context_is_set()) {
     for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
       const auto chunk = stored_table->get_chunk(chunk_id);
-      DebugAssert(chunk && !chunk->get_cleanup_commit_id(),
-                  "For tables with physically deleted chunks, the transaction context must be set.");
+      DebugAssert(chunk && !chunk->get_cleanup_commit_id().has_value(),
+                  "For TableType::Data tables with deleted chunks, the transaction context must be set.");
     }
   }
 
