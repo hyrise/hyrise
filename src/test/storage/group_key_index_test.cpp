@@ -20,7 +20,7 @@ class GroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     value_segment_str = std::make_shared<ValueSegment<pmr_string>>(true);
-    //  corresponding ValueID
+    //                                          corresponding ValueID
     value_segment_str->append(NULL_VALUE);  //  0
     value_segment_str->append("hotel");     //  1
     value_segment_str->append("delta");     //  2
