@@ -252,7 +252,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
                             return pmr_string{is_original ? "BC" : "GC"};
                           });
   _add_column<float>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
-                   [&](std::vector<size_t>) { return 50000; });
+                     [&](std::vector<size_t>) { return 50000; });
   _add_column<float>(segments_by_chunk, column_definitions, "C_DISCOUNT", cardinalities,
                      [&](std::vector<size_t>) { return _random_gen.random_number(0, 5000) / 10000.f; });
   _add_column<float>(segments_by_chunk, column_definitions, "C_BALANCE", cardinalities,
@@ -345,11 +345,12 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
                    [&](std::vector<size_t>) { return _current_date; });
   // TODO(anybody) -1 should be null
 
-  _add_column<int>(
-      segments_by_chunk, column_definitions, "O_CARRIER_ID", cardinalities, [&](std::vector<size_t> indices) {
-        return indices[2] + 1 <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT ? _random_gen.random_number(1, 10)
-                                                                                   : -1;
-      });
+  _add_column<int>(segments_by_chunk, column_definitions, "O_CARRIER_ID", cardinalities,
+                   [&](std::vector<size_t> indices) {
+                     return indices[2] + 1 <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT
+                                ? _random_gen.random_number(1, 10)
+                                : -1;
+                   });
   _add_column<int>(segments_by_chunk, column_definitions, "O_OL_CNT", cardinalities,
                    [&](std::vector<size_t> indices) { return order_line_counts[indices[0]][indices[1]][indices[2]]; });
   _add_column<int>(segments_by_chunk, column_definitions, "O_ALL_LOCAL", cardinalities,

@@ -132,7 +132,7 @@ TEST_F(TPCCTest, Delivery) {
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
       old_c_balance = table->get_value<float>(ColumnID{16}, 0);
-      old_c_delivery_cnt = table->get_value<int>(ColumnID{19}, 0);
+      old_c_delivery_cnt = table->get_value<int32_t>(ColumnID{19}, 0);
     }
     expected_c_balance = old_c_balance;
 
@@ -157,9 +157,9 @@ TEST_F(TPCCTest, Delivery) {
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 10);
-      EXPECT_EQ(table->get_value<int>(ColumnID{5}, d_id - 1), delivery.o_carrier_id);  // O_CARRIER_ID
+      EXPECT_EQ(table->get_value<int32_t>(ColumnID{5}, d_id - 1), delivery.o_carrier_id);  // O_CARRIER_ID
 
-      c_id = table->get_value<int>(ColumnID{3}, d_id - 1);
+      c_id = table->get_value<int32_t>(ColumnID{3}, d_id - 1);
     }
 
     // Verify the entries in ORDER_LINE:
@@ -172,8 +172,8 @@ TEST_F(TPCCTest, Delivery) {
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), num_order_lines);
       for (auto ol_number = uint64_t{1}; ol_number <= table->row_count(); ++ol_number) {
-        EXPECT_EQ(table->get_value<int>(ColumnID{3}, ol_number - 1), ol_number);  // OL_NUMBER
-        EXPECT_GE(table->get_value<int>(ColumnID{6}, ol_number - 1), old_time);   // OL_DELIVERY_D
+        EXPECT_EQ(table->get_value<int32_t>(ColumnID{3}, ol_number - 1), ol_number);  // OL_NUMBER
+        EXPECT_GE(table->get_value<int32_t>(ColumnID{6}, ol_number - 1), old_time);   // OL_DELIVERY_D
         expected_c_balance += table->get_value<float>(ColumnID{8}, ol_number - 1);
       }
     }
@@ -188,7 +188,7 @@ TEST_F(TPCCTest, Delivery) {
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
       EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), expected_c_balance);
-      EXPECT_EQ(table->get_value<int>(ColumnID{1}, 0), old_c_delivery_cnt + 1);
+      EXPECT_EQ(table->get_value<int32_t>(ColumnID{1}, 0), old_c_delivery_cnt + 1);
     }
   }
 }
@@ -224,7 +224,7 @@ TEST_F(TPCCTest, NewOrder) {
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
-    old_d_next_o_id = table->get_value<int>(ColumnID{0}, 0);
+    old_d_next_o_id = table->get_value<int32_t>(ColumnID{0}, 0);
   }
 
   // Verify updated D_NEXT_O_ID
@@ -235,7 +235,7 @@ TEST_F(TPCCTest, NewOrder) {
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
-    EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0), old_d_next_o_id + 1);
+    EXPECT_EQ(table->get_value<int32_t>(ColumnID{0}, 0), old_d_next_o_id + 1);
   }
 
   auto new_sizes = initial_sizes;
@@ -348,31 +348,36 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
 
   // Verify that the customer is updated
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT FROM CUSTOMER WHERE C_W_ID = "} +
-                                       std::to_string(payment.w_id) + " AND C_D_ID = " + std::to_string(payment.d_id) + " AND C_ID = " + std::to_string(payment.c_id)}
-                        .create_pipeline();
+    auto pipeline =
+        SQLPipelineBuilder{std::string{"SELECT C_BALANCE, C_YTD_PAYMENT, C_PAYMENT_CNT FROM CUSTOMER WHERE C_W_ID = "} +
+                           std::to_string(payment.w_id) + " AND C_D_ID = " + std::to_string(payment.d_id) +
+                           " AND C_ID = " + std::to_string(payment.c_id)}
+            .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     // Customers start with C_BALANCE = -10, C_YTD_PAYMENT = 10, C_PAYMENT_CNT = 1
     EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), -10.0f - payment.h_amount);
     EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{1}, 0), 10.0f + payment.h_amount);
-    EXPECT_FLOAT_EQ(table->get_value<int>(ColumnID{2}, 0), 2);
+    EXPECT_FLOAT_EQ(table->get_value<int32_t>(ColumnID{2}, 0), 2);
   }
 
   // We do not test for C_DATA
 
   // Verify that a new history entry is written
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT H_DATE, H_AMOUNT, H_DATA FROM \"HISTORY\" WHERE H_W_ID = "} +
-                                       std::to_string(payment.w_id) + " AND H_D_ID = " + std::to_string(payment.d_id) + " AND H_C_ID = " + std::to_string(payment.c_id) + " AND H_C_W_ID = " + std::to_string(payment.c_w_id) + " AND H_C_D_ID = " + std::to_string(payment.c_d_id)}
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT H_DATE, H_AMOUNT, H_DATA FROM HISTORY WHERE H_W_ID = "} +
+                                       std::to_string(payment.w_id) + " AND H_D_ID = " + std::to_string(payment.d_id) +
+                                       " AND H_C_ID = " + std::to_string(payment.c_id) +
+                                       " AND H_C_W_ID = " + std::to_string(payment.c_w_id) +
+                                       " AND H_C_D_ID = " + std::to_string(payment.c_d_id)}
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
     EXPECT_GT(table->row_count(), 0);
 
     const auto row = table->row_count() - 1;
-    EXPECT_GE(table->get_value<int>(ColumnID{0}, row), old_time);
+    EXPECT_GE(table->get_value<int32_t>(ColumnID{0}, row), old_time);
     EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{1}, row), payment.h_amount);
     EXPECT_EQ(table->get_value<pmr_string>(ColumnID{2}, row), w_name + "    " + d_name);
   }

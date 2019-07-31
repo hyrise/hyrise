@@ -341,7 +341,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
   ASSERT_NO_THROW(jit_operator_wrapper.execute());
 
   auto result = jit_operator_wrapper.get_output();
-  ASSERT_EQ(result->get_value<int>(ColumnID(0), 1), 48);
+  ASSERT_EQ(result->get_value<int32_t>(ColumnID(0), 1), 48);
 }
 
 }  // namespace opossum

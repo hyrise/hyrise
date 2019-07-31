@@ -102,8 +102,9 @@ bool TPCCPayment::execute() {
     Assert(customer_table && customer_table->row_count() >= 1, "Did not find customer by name");
 
     // Calculate ceil(n/2)
-    customer_offset = static_cast<size_t>(
-        std::max(0.0, std::min(std::ceil(customer_table->row_count() / 2.0), static_cast<double>(customer_table->row_count() - 1))));
+    customer_offset =
+        static_cast<size_t>(std::max(0.0, std::min(std::ceil(customer_table->row_count() / 2.0),
+                                                   static_cast<double>(customer_table->row_count() - 1))));
     c_id = customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }
 
@@ -140,9 +141,8 @@ bool TPCCPayment::execute() {
   }
 
   // Insert into history table
-  // TODO - why is HISTORY a keyword?
   const auto history_insert_pair = _sql_executor.execute(std::string{
-      "INSERT INTO \"HISTORY\" (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, H_DATE, H_AMOUNT) VALUES (" +
+      "INSERT INTO HISTORY (H_C_ID, H_C_D_ID, H_C_W_ID, H_D_ID, H_W_ID, H_DATA, H_DATE, H_AMOUNT) VALUES (" +
       std::to_string(c_id) + ", " + std::to_string(c_d_id) + ", " + std::to_string(c_w_id) + ", " +
       std::to_string(d_id) + ", " + std::to_string(w_id) + ", '" + std::string{w_name + "    " + d_name} + "', '" +
       std::to_string(h_date) + "', " + std::to_string(h_amount) + ")"});

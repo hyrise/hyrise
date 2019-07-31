@@ -408,7 +408,7 @@ int Console::_help(const std::string&) {
   out("                                                                          unoptimized lqp; joins visualized the join graph.\n");  // NOLINT
   out("                                                                          Default: pqp\n");
   out("                                                 SQL\n");
-  out("                                                   Optional, a query to visualize. If not specified, the last\n");
+  out("                                                   Optional, a query to visualize. If not specified, the last\n");  // NOLINT
   out("                                                   previously executed query is visualized.\n");
   out("  begin                                       - Manually create a new transaction (Auto-commit is active unless begin is called)\n");  // NOLINT
   out("  rollback                                    - Roll back a manually created transaction\n");
@@ -452,7 +452,7 @@ int Console::_generate(const std::string& args) {
     out("Usage: ");
     out("  generate tpcc [NUM_WAREHOUSES] [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT
     out("  generate tpch [SCALE_FACTOR]   [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                                Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");
+    out("                                                Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT
     // clang-format on
     return ReturnCode::Error;
   }
@@ -464,7 +464,7 @@ int Console::_generate(const std::string& args) {
       num_warehouses = std::stoi(arguments[1]);
     }
     TPCCTableGenerator{num_warehouses, chunk_size}.generate_and_store();
-  } else if(benchmark == "tpch") {
+  } else if (benchmark == "tpch") {
     auto scale_factor = 1.0f;
     if (arguments.size() >= 2) {
       scale_factor = std::stof(arguments[1]);

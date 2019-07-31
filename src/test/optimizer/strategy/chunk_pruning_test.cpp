@@ -261,7 +261,7 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
   auto result_table = get_table_operator->get_output();
 
   EXPECT_EQ(result_table->chunk_count(), ChunkID{1});
-  EXPECT_EQ(result_table->get_value<int>(ColumnID{0}, 0), 12345);
+  EXPECT_EQ(result_table->get_value<int32_t>(ColumnID{0}, 0), 12345);
 }
 
 TEST_F(ChunkPruningTest, StringPruningTest) {
