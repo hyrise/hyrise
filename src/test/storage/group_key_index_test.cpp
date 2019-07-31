@@ -19,7 +19,7 @@ namespace opossum {
 class GroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    value_segment_str = std::make_shared<ValueSegment<pmr_string>>(true);
+    auto value_segment_str = std::make_shared<ValueSegment<pmr_string>>(true);
     //                                          corresponding ValueID
     value_segment_str->append(NULL_VALUE);  //  0
     value_segment_str->append("hotel");     //  1
@@ -43,7 +43,6 @@ class GroupKeyIndexTest : public BaseTest {
     index_postings = &(index->_index_postings);
   }
 
-  std::shared_ptr<ValueSegment<pmr_string>> value_segment_str = nullptr;
   std::shared_ptr<GroupKeyIndex> index = nullptr;
   std::shared_ptr<BaseSegment> dict_segment = nullptr;
 
