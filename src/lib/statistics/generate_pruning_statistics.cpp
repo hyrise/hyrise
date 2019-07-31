@@ -81,7 +81,8 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
 }
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
 
     if (!chunk || chunk->is_mutable()) {

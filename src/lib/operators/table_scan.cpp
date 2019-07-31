@@ -90,11 +90,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(in_table->chunk_count() - excluded_chunk_set.size());
 
-  for (ChunkID chunk_id{0u}; chunk_id < in_table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = in_table->chunk_count();
+  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     if (excluded_chunk_set.count(chunk_id)) continue;
+    const auto chunk_in = in_table->get_chunk(chunk_id);
+    Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
 
-    auto job_task = std::make_shared<JobTask>([this, chunk_id, &in_table, &output_mutex, &output_chunks]() {
-      const auto chunk_guard = in_table->get_chunk(chunk_id);
+    // chunk_in – Copy by value since copy by reference is not possible due to the limited scope of the for-iteration.
+    auto job_task = std::make_shared<JobTask>([this, chunk_id, chunk_in, &in_table, &output_mutex, &output_chunks]() {
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
       if (matches_out->empty()) return;
@@ -112,8 +115,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        *     (i.e. they share their position list).
        */
       if (in_table->type() == TableType::References) {
-        const auto chunk_in = in_table->get_chunk(chunk_id);
-
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
@@ -155,7 +156,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_chunks.emplace_back(std::make_shared<Chunk>(out_segments, nullptr, chunk_guard->get_allocator()));
+      output_chunks.emplace_back(std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator()));
     });
 
     jobs.push_back(job_task);

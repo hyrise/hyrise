@@ -135,11 +135,13 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 
     auto condition = operator_predicate.predicate_condition;
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-      const auto pruning_statistics = table.get_chunk(chunk_id)->pruning_statistics();
-      if (!pruning_statistics) {
-        continue;
-      }
+    const auto chunk_count = table.chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = table.get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      const auto pruning_statistics = chunk->pruning_statistics();
+      if (!pruning_statistics) continue;
 
       const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
       if (_can_prune(*segment_statistics, condition, *value, value2)) {

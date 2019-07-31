@@ -66,7 +66,7 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
       ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
   auto types = _table->column_data_types();
-  auto chunk = _table->get_chunk(ChunkID{0u});
+  const auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec);
 
@@ -78,7 +78,7 @@ TEST_F(ChunkEncoderTest, LeaveOneSegmentUnencoded) {
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
   auto types = _table->column_data_types();
-  auto chunk = _table->get_chunk(ChunkID{0u});
+  const auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec);
 

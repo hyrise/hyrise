@@ -126,7 +126,7 @@ TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
   auto context = std::make_shared<TransactionContext>(1u, 3u);
 
   auto original_table = StorageManager::get().get_table("int_int_float");
-  auto chunk = original_table->get_chunk(ChunkID{0});
+  const auto chunk = original_table->get_chunk(ChunkID{0});
 
   chunk->set_cleanup_commit_id(CommitID{2u});
 
@@ -217,7 +217,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   auto context2 = std::make_shared<TransactionContext>(1u, 3u);
 
   auto modified_table = StorageManager::get().get_table("int_int_float");
-  auto chunk = modified_table->get_chunk(ChunkID{1});
+  const auto chunk = modified_table->get_chunk(ChunkID{1});
 
   chunk->set_cleanup_commit_id(CommitID{2u});
 
