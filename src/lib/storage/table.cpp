@@ -191,7 +191,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
-         "Supply MvccData to data Tables iff MVCC is enabled.");
+         "Supply MvccData to data Tables, if MVCC is enabled.");
   AssertInput(segments.size() == column_count(), "Input does not have the same number of columns.");
 
 #if HYRISE_DEBUG
