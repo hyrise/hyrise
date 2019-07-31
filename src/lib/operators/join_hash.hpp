@@ -21,8 +21,7 @@ namespace opossum {
  */
 class JoinHash : public AbstractJoinOperator {
  public:
-  static bool supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                       DataType right_data_type, bool secondary_predicates);
+  static bool supports(const JoinConfiguration config);
 
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
            const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
@@ -31,6 +30,9 @@ class JoinHash : public AbstractJoinOperator {
 
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
+
+  template <typename T>
+  static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size);
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -41,7 +43,7 @@ class JoinHash : public AbstractJoinOperator {
   void _on_cleanup() override;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-  const std::optional<size_t> _radix_bits;
+  std::optional<size_t> _radix_bits;
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;

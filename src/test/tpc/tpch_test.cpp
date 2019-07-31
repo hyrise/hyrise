@@ -55,7 +55,7 @@ TEST_P(TPCHTest, Test) {
    */
   const auto scale_factor = scale_factor_by_query.at(tpch_idx);
 
-  TpchTableGenerator{scale_factor, 10'000}.generate_and_store();
+  TPCHTableGenerator{scale_factor, 10'000}.generate_and_store();
 
   SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
                (use_prepared_statements ? " with prepared statements" : " without prepared statements"));
@@ -63,6 +63,7 @@ TEST_P(TPCHTest, Test) {
   // The scale factor passed to the query generator will be ignored as we only use deterministic queries
   auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
   auto benchmark_item_runner = TPCHBenchmarkItemRunner{config, use_prepared_statements, 1.0f};
+  benchmark_item_runner.on_tables_loaded();
 
   const auto query = get_deterministic_query(benchmark_item_runner, item_idx);
 

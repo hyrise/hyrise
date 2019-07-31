@@ -85,8 +85,10 @@ std::shared_ptr<const Table> Print::_on_execute() {
   _out << "|" << std::endl;
 
   // print each chunk
-  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    auto chunk = input_table_left()->get_chunk(chunk_id);
+  const auto chunk_count = input_table_left()->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = input_table_left()->get_chunk(chunk_id);
+    if (!chunk) continue;
 
     if (!has_print_ignore_chunk_boundaries_flag(_flags)) {
       _out << "=== Chunk " << chunk_id << " ===" << std::endl;
@@ -152,8 +154,10 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
-  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    auto chunk = input_table_left()->get_chunk(chunk_id);
+  const auto chunk_count = input_table_left()->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = input_table_left()->get_chunk(chunk_id);
+    if (!chunk) continue;
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {

@@ -84,9 +84,13 @@ class ColumnMaterializerNUMA {
     auto null_rows = std::make_unique<PosList>();
 
     auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
-    for (auto chunk_id = ChunkID{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+    const auto chunk_count = input->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = input->get_chunk(chunk_id);
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
       // This allocator is used to ensure that materialized chunks are colocated with the original chunks
-      auto alloc = MaterializedValueAllocatorNUMA<T>{input->get_chunk(chunk_id)->get_allocator()};
+      auto alloc = MaterializedValueAllocatorNUMA<T>{chunk->get_allocator()};
 
       auto numa_node_id = NodeID{0};  // default NUMA Node, everything is on the same node for non numa systems
 

@@ -46,10 +46,10 @@ class SingleSegmentIndexTest : public BaseTest {
   std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
 };
 
-// List of indices to test
-typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indices */>
-    DerivedIndices;
-TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+// List of indexes to test
+typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indexes */>
+    DerivedIndexes;
+TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(SingleSegmentIndexTest, FullRange) {
   auto begin_int = this->index_int->cbegin();

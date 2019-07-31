@@ -16,6 +16,8 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
           {"store_duration", metrics.store_duration.count()}};
 }
 
+BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& table) : table(table) {}
+
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
 
@@ -46,6 +48,14 @@ void AbstractTableGenerator::generate_and_store() {
    * Write the Tables into binary files if required
    */
   if (_benchmark_config->cache_binary_tables) {
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      const auto& table = table_info.table;
+      if (table->chunk_count() > 1 && table->get_chunk(ChunkID{0})->size() != _benchmark_config->chunk_size) {
+        std::cout << "- WARNING: " << table_name << " was loaded from binary, but has a mismatching chunk size of "
+                  << table->get_chunk(ChunkID{0})->size() << std::endl;
+      }
+    }
+
     std::cout << "- Writing tables into binary files if necessary" << std::endl;
 
     for (auto& [table_name, table_info] : table_info_by_name) {

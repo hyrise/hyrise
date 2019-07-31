@@ -63,8 +63,10 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
-  for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = in_table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
+    Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
 
     Segments output_segments;
     auto pos_list_out = std::make_shared<PosList>();
