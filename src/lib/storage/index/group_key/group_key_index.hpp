@@ -23,20 +23,28 @@ class GroupKeyIndexTest;
  * in the postings list.
  *
  * An example structure along with the corresponding dictionary segment might look like this:
- *    +---+-----------+------------+---------+----------------+
- *    |(i)| Attribute | Dictionary |  Index  | Index Postings |
- *    |   |  Vector   |            | Offsets |                |
- *    +---+-----------+------------+---------+----------------+
- *    | 0 |         4 | apple    ------->  0 ------------>  4 |  ie "apple" can be found at i = 4 in the AV
- *    | 1 |         2 | charlie  ------->  1 ------------>  5 |
- *    | 2 |         3 | delta    ------->  3 ---------|     6 |
- *    | 3 |         2 | frank    ------->  5 -------| |-->  1 |
- *    | 4 |         0 | hotel    ------->  6 -----| |       3 |  ie "delta" can be found at i = 1 and 3
- *    | 5 |         1 | inbox    ------->  7 ---| | |---->  2 |
- *    | 6 |         1 |            |         |  | |------>  0 |
- *    | 7 |         5 |            |         |  |-------->  7 |  ie "inbox" can be found at i = 7 in the AV
- *    +---+-----------+------------+---------+----------------+
- *
+ *   +----+-----------+------------+---------+----------------+
+ *   | (i)| Attribute | Dictionary |  Index  | Index Postings |
+ *   |    |  Vector   |            | Offsets |                |
+ *   +----+-----------+------------+---------+----------------+
+ *   |  0 |         6 | apple    ------->  0 ------------>  7 |  ie "apple" can be found at i = 7 in the AV
+ *   |  1 |         4 | charlie  ------->  1 ------------>  8 |
+ *   |  2 |         2 | delta    ------->  3 ----------|    9 |
+ *   |  3 |         3 | frank    ------->  5 --------| |->  2 |
+ *   |  4 |         2 | hotel    ------->  6 ------| |      4 |  ie "delta" can be found at i = 2 and 4
+ *   |  5 |         6 | inbox    ------->  7 ----| | |--->  3 |
+ *   |  6 |         6 |            | (x¹)  8 --| | |----->  1 |
+ *   |  7 |         0 |            | (x²) 12 | | |-------> 10 |  ie "inbox" can be found at i = 10 in the AV
+ *   |  8 |         1 |            |         | |-------|    0 |
+ *   |  9 |         1 |            |         |         |    5 |
+ *   | 10 |         5 |            |         |         |    6 |
+ *   | 11 |         6 |            |         |         |-> 11 |  ie null can be found at i = 0, 5, 6 and 11
+ *   +----+-----------+------------+---------+----------------+
+ * 
+ * Null is represented in the Attribute Vector by a ValueID which is the highest available
+ * ValueID in the dictionary + 1, i.e. ValieID{6} in this example.
+ * x¹: Starting offset for null values in the postings list.
+ * x²: Mark for the ending position.
  * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey-Index
  */
 class GroupKeyIndex : public BaseIndex {
