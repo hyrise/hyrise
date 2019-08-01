@@ -22,8 +22,10 @@ void DuplicateEliminationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& 
 
   for (const auto& [original, replacement] : _original_replacement_pairs) {
     for (const auto& output : original->outputs()) {
-      const auto& input_side = original->get_input_side(output);
-      output->set_input(input_side, replacement);
+      if(original->type != LQPNodeType::Validate && original->type != LQPNodeType::StoredTable){
+        const auto& input_side = original->get_input_side(output);
+        output->set_input(input_side, replacement);
+      }
     }
   }
 
