@@ -21,8 +21,13 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 
   // 1) Initialize the index structures
   // 1a) Set the index_offset to size of the dictionary + 2 (plus one for null and plus one to mark the ending position)
-  //     and set all offsets to 0
-  _index_offsets = std::vector<size_t>(_indexed_segments->unique_values_count() + 2u, 0u);
+  //     and set all offsets to 0.
+  //     Using `_index_offsets`, we want to count the occurences of each ValueID of the attribute vector (AV).
+  //     The ValueID for null in an AV is the highest available ValueID in the dictionary + 1.
+  //     `unique_values_count` returns the size of dictionary which does not store a ValueID for null.
+  //     Therefore we have `unique_values_count` + 1 (for null) ValueIDs for which we want to count the occurrences.
+  _index_offsets = std::vector<size_t>(
+      _indexed_segments->unique_values_count() + 1u /*for null*/ + 1u /*to mark the ending position */, 0u);
   // 1b) Set the _index_postings to the size of the attribute vector
   _index_postings = std::vector<ChunkOffset>(_indexed_segments->size());
 
