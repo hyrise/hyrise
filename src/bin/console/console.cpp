@@ -438,7 +438,7 @@ int Console::_generate(const std::string& args) {
   // Check whether there are one or two arguments.
   // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
   // and that's not actually an argument.
-  auto args_valid = arguments.size() >= 1 && arguments[0] != "" && arguments.size() <= 3;
+  auto args_valid = !arguments.empty() && !arguments[0].empty() && arguments.size() <= 3;
 
   const std::string benchmark = arguments[0];
 
