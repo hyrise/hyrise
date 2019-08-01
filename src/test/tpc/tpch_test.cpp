@@ -55,7 +55,7 @@ TEST_P(TPCHTest, Test) {
    */
   const auto scale_factor = scale_factor_by_query.at(tpch_idx);
 
-  TpchTableGenerator{scale_factor, 10'000}.generate_and_store();
+  TPCHTableGenerator{scale_factor, 10'000}.generate_and_store();
 
   SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
                (use_prepared_statements ? " with prepared statements" : " without prepared statements"));

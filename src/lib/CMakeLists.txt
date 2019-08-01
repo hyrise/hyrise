@@ -566,6 +566,8 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/lossless_predicate_cast.cpp
+    utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
     utils/null_streambuf.cpp
     utils/null_streambuf.hpp

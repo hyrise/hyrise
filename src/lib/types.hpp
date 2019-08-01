@@ -213,6 +213,9 @@ enum class PredicateCondition {
 // @return whether the PredicateCondition takes exactly two arguments
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
 
+// @return whether the PredicateCondition takes exactly two arguments and is not one of LIKE or IN
+bool is_binary_numeric_predicate_condition(const PredicateCondition predicate_condition);
+
 bool is_between_predicate_condition(PredicateCondition predicate_condition);
 
 bool is_lower_inclusive_between(PredicateCondition predicate_condition);
@@ -224,6 +227,12 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
 
 // ">" becomes "<=" etc.
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
+
+// Split up, e.g., BetweenUpperExclusive into {GreaterThanEquals, LessThan}
+std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const PredicateCondition predicate_condition);
+
+// Join, e.g., {GreaterThanEquals, LessThan} into BetweenUpperExclusive
+PredicateCondition conditions_to_between(const PredicateCondition lower, const PredicateCondition upper);
 
 // Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
 // AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is

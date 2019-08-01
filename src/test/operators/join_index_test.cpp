@@ -73,7 +73,7 @@ class JoinIndexTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      auto chunk = table->get_chunk(chunk_id);
+      const auto chunk = table->get_chunk(chunk_id);
 
       std::vector<ColumnID> columns{1};
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {

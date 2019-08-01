@@ -104,7 +104,7 @@ class IterablesTest : public BaseTest {
 };
 
 TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -121,7 +121,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -137,7 +137,7 @@ TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
-  auto chunk = table_with_null->get_chunk(ChunkID{0u});
+  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -154,7 +154,7 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
-  auto chunk = table_with_null->get_chunk(ChunkID{0u});
+  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -172,7 +172,7 @@ TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
 TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
@@ -191,7 +191,7 @@ TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
 TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
@@ -209,7 +209,7 @@ TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
 TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
 
-  auto chunk = table_strings->get_chunk(ChunkID{0u});
+  const auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
@@ -225,7 +225,7 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
 TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
 
-  auto chunk = table_strings->get_chunk(ChunkID{0u});
+  const auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
@@ -291,7 +291,7 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
 }
 
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -306,7 +306,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
-  auto chunk = table_with_null->get_chunk(ChunkID{0u});
+  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);

@@ -1526,8 +1526,12 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     if (table->column_is_nullable(ColumnID{0})) {
       result_nulls.resize(table->row_count());
 
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-        const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
+        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+        const auto& result_segment = *chunk->get_segment(ColumnID{0});
         segment_iterate<Result>(result_segment, [&](const auto& position) {
           if (position.is_null()) {
             result_nulls[chunk_offset] = true;
@@ -1538,8 +1542,12 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
         });
       }
     } else {
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-        const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
+        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+        const auto& result_segment = *chunk->get_segment(ColumnID{0});
         segment_iterate<Result>(result_segment, [&](const auto& position) {
           result_values[chunk_offset] = position.value();
           ++chunk_offset;

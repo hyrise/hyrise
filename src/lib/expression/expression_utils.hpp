@@ -67,7 +67,7 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractLQPNode>> stored_table_nodes);
 
 /**
- * Makes all column references points to their equivalent in a copied LQP
+ * Makes all column references point to their equivalent in a copied LQP
  */
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping);

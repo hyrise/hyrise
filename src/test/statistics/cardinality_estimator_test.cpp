@@ -789,7 +789,7 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   EXPECT_EQ(estimator.estimate_cardinality(create_prepared_plan_lqp), 0.0f);
 
   const auto lqp_view = std::make_shared<LQPView>(
-      node_a, std::unordered_map<ColumnID, std::vector<std::string>>{{ColumnID{0}, {"x"}}, {ColumnID{1}, {"y"}}});
+      node_a, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, "x"}, {ColumnID{1}, "y"}});
   const auto create_view_lqp = CreateViewNode::make("v", lqp_view, false);
   EXPECT_EQ(estimator.estimate_cardinality(create_view_lqp), 0.0f);
 

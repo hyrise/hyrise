@@ -29,6 +29,9 @@ class ColumnBetweenTableScanImpl : public AbstractDereferencedColumnTableScanImp
 
   std::string description() const override;
 
+  const AllTypeVariant left_value;
+  const AllTypeVariant right_value;
+
  protected:
   void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                    const std::shared_ptr<const PosList>& position_filter) const override;
@@ -39,9 +42,6 @@ class ColumnBetweenTableScanImpl : public AbstractDereferencedColumnTableScanImp
   // Optimized scan on DictionarySegments
   void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
                                 const std::shared_ptr<const PosList>& position_filter) const;
-
-  const AllTypeVariant _left_value;
-  const AllTypeVariant _right_value;
 };
 
 }  // namespace opossum

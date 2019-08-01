@@ -88,7 +88,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkDataInputTable) {
   jit_write_references.after_chunk(input_table, *output_table, context);
 
   // Chunk contains one row.
-  auto output_chunk = output_table->get_chunk(ChunkID{0});
+  const auto output_chunk = output_table->get_chunk(ChunkID{0});
   ASSERT_EQ(output_chunk->size(), 1u);
 
   // PosLists of both segments are the same
@@ -128,7 +128,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputSamePosList) {
     jit_write_references.after_chunk(input_table, *output_table, context);
 
     // Chunk contains one row.
-    auto output_chunk = output_table->get_chunk(ChunkID{0});
+    const auto output_chunk = output_table->get_chunk(ChunkID{0});
     ASSERT_EQ(output_chunk->size(), 1u);
 
     // PosLists are same
@@ -149,7 +149,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputSamePosList) {
     jit_write_references.after_chunk(input_table, *output_table, context);
 
     // PosList guarantees single chunk
-    auto output_chunk = output_table->get_chunk(ChunkID{1});
+    const auto output_chunk = output_table->get_chunk(ChunkID{1});
     auto reference_segment_a = std::dynamic_pointer_cast<ReferenceSegment>(output_chunk->get_segment(ColumnID{0}));
     ASSERT_TRUE(reference_segment_a->pos_list()->references_single_chunk());
   }
@@ -186,7 +186,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
     jit_write_references.after_chunk(input_table, *output_table, context);
 
     // Chunk contains one row.
-    auto output_chunk = output_table->get_chunk(ChunkID{0});
+    const auto output_chunk = output_table->get_chunk(ChunkID{0});
     ASSERT_EQ(output_chunk->size(), 1u);
 
     // PosLists are different
@@ -207,7 +207,7 @@ TEST_F(JitWriteReferenceTest, AfterChunkReferenceTableInputDifferentPosLists) {
     jit_write_references.after_chunk(input_table, *output_table, context);
 
     // PosList guarantees single chunk
-    auto output_chunk = output_table->get_chunk(ChunkID{1});
+    const auto output_chunk = output_table->get_chunk(ChunkID{1});
     auto reference_segment_a = std::dynamic_pointer_cast<ReferenceSegment>(output_chunk->get_segment(ColumnID{0}));
     ASSERT_TRUE(reference_segment_a->pos_list()->references_single_chunk());
   }

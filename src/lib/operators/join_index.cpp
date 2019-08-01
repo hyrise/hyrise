@@ -76,9 +76,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                 !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type(), _index_side}),
       "JoinIndex doesn't support these parameters");
 
-  std::shared_ptr<const Table> probe_input_table;
-  std::shared_ptr<const Table> index_input_table;
-
   if (_index_side == IndexSide::Left) {
     _probe_input_table = input_table_right();
     _index_input_table = input_table_left();
@@ -103,14 +100,22 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                    (is_semi_or_anti_join && _index_side == IndexSide::Left);
 
   if (track_probe_matches) {
-    for (ChunkID probe_chunk_id{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
-      _probe_matches[probe_chunk_id].resize(_probe_input_table->get_chunk(probe_chunk_id)->size());
+    const auto chunk_count = _probe_input_table->chunk_count();
+    for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
+      const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+      _probe_matches[probe_chunk_id].resize(chunk->size());
     }
   }
 
   if (track_index_matches) {
-    for (ChunkID index_chunk_id{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
-      _index_matches[index_chunk_id].resize(_index_input_table->get_chunk(index_chunk_id)->size());
+    const auto chunk_count = _index_input_table->chunk_count();
+    for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count; ++index_chunk_id) {
+      const auto chunk = _index_input_table->get_chunk(index_chunk_id);
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+      _index_matches[index_chunk_id].resize(chunk->size());
     }
   }
 
@@ -130,11 +135,15 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   if (_mode == JoinMode::Inner && _index_input_table->type() == TableType::References &&
       _secondary_predicates.empty()) {  // INNER REFERENCE JOIN
     // Scan all chunks for index input
-    for (ChunkID index_chunk_id{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
-      const auto& index_chunk = _index_input_table->get_chunk(index_chunk_id);
+    const auto chunk_count_index_input_table = _index_input_table->chunk_count();
+    for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
+      const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
+      Assert(index_chunk, "Did not expect deleted chunk here.");  // see #1686
+
       if (index_chunk->size() == 0) {
         continue;
       }
+
       const auto& reference_segment =
           std::dynamic_pointer_cast<ReferenceSegment>(index_chunk->segments()[_primary_predicate.column_ids.second]);
       Assert(reference_segment != nullptr,
@@ -148,7 +157,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       }
 
       if (reference_segment_pos_list->references_single_chunk()) {
-        const auto& index_data_table_chunk = index_data_table->get_chunk((*reference_segment_pos_list)[0].chunk_id);
+        const auto index_data_table_chunk = index_data_table->get_chunk((*reference_segment_pos_list)[0].chunk_id);
+        Assert(index_data_table_chunk, "Did not expect deleted chunk here.");  // see #1686
         const auto& indexes = index_data_table_chunk->get_indexes(index_data_table_column_ids);
 
         if (!indexes.empty()) {
@@ -157,9 +167,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           const auto& index = indexes.front();
 
           // Scan all chunks from the probe side input
-          for (ChunkID probe_chunk_id{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
-            const auto& probe_segment = _probe_input_table->get_chunk(probe_chunk_id)
-                                            ->get_segment(_adjusted_primary_predicate.column_ids.first);
+          const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
+          for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
+            const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
+            Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+            const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
             segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
               _reference_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index,
                                                        reference_segment_pos_list);
@@ -177,8 +190,11 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
     // Scan all chunks for index input
-    for (ChunkID index_chunk_id{0}; index_chunk_id < _index_input_table->chunk_count(); ++index_chunk_id) {
-      const auto& index_chunk = _index_input_table->get_chunk(index_chunk_id);
+    const auto chunk_count_index_input_table = _index_input_table->chunk_count();
+    for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
+      const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
+      Assert(index_chunk, "Did not expect deleted chunk here.");  // see #1686
+
       const auto& indexes =
           index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
 
@@ -188,9 +204,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         const auto& index = indexes.front();
 
         // Scan all chunks from the probe side input
-        for (ChunkID probe_chunk_id{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
-          const auto& probe_segment =
-              _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
+        const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
+        for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
+          const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
+          Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+          const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
           segment_with_iterators(*probe_segment, [&](auto probe_iter, const auto probe_end) {
             _data_join_two_segments_using_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
           });
@@ -238,12 +257,18 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   PerformanceWarning("Fallback nested loop used.");
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
 
-  const auto& index_segment =
-      _index_input_table->get_chunk(index_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.second);
+  const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
+  Assert(index_chunk, "Did not expect deleted chunk here.");  // see #1686
+
+  const auto& index_segment = index_chunk->get_segment(_adjusted_primary_predicate.column_ids.second);
   const auto& index_pos_list_size_pre_fallback = _index_pos_list->size();
-  for (ChunkID probe_chunk_id{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
-    const auto& probe_segment =
-        _probe_input_table->get_chunk(probe_chunk_id)->get_segment(_adjusted_primary_predicate.column_ids.first);
+
+  const auto chunk_count = _probe_input_table->chunk_count();
+  for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
+    const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+    const auto& probe_segment = chunk->get_segment(_adjusted_primary_predicate.column_ids.first);
     JoinNestedLoop::JoinParams params{*_probe_pos_list,
                                       *_index_pos_list,
                                       _probe_matches[probe_chunk_id],
@@ -402,7 +427,8 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   // For Full Outer and Left Join we need to add all unmatched rows for the probe side
   if ((_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
-    for (ChunkID probe_chunk_id{0}; probe_chunk_id < _probe_input_table->chunk_count(); ++probe_chunk_id) {
+    const auto chunk_count = _probe_input_table->chunk_count();
+    for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count; ++probe_chunk_id) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _probe_matches[probe_chunk_id].size(); ++chunk_offset) {
         if (!_probe_matches[probe_chunk_id][chunk_offset]) {
           _probe_pos_list->emplace_back(RowID{probe_chunk_id, chunk_offset});
@@ -415,7 +441,8 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   // For Full Outer and Right Join we need to add all unmatched rows for the index side.
   if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter) {
-    for (ChunkID chunk_id{0}; chunk_id < _index_matches.size(); ++chunk_id) {
+    const auto chunk_count = _index_matches.size();
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       for (ChunkOffset chunk_offset{0}; chunk_offset < _index_matches[chunk_id].size(); ++chunk_offset) {
         if (!_index_matches[chunk_id][chunk_offset]) {
           _index_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
@@ -433,8 +460,12 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-    for (ChunkID chunk_id{0}; chunk_id < _probe_input_table->chunk_count(); ++chunk_id) {
-      const auto chunk_size = _probe_input_table->get_chunk(chunk_id)->size();
+    const auto chunk_count = _probe_input_table->chunk_count();
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = _probe_input_table->get_chunk(chunk_id);
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+      const auto chunk_size = chunk->size();
       for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
           _probe_pos_list->emplace_back(chunk_id, chunk_offset);
@@ -447,7 +478,8 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
 void JoinIndex::_write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
                                        std::shared_ptr<PosList> pos_list) {
   // Add segments from table to output chunk
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
+  const auto column_count = input_table->column_count();
+  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
     std::shared_ptr<BaseSegment> segment;
 
     if (input_table->type() == TableType::References) {
@@ -456,8 +488,10 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
 
         ChunkID current_chunk_id{0};
 
-        auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
-            input_table->get_chunk(ChunkID{0})->get_segment(column_id));
+        const auto first_chunk_input_table = input_table->get_chunk(ChunkID{0});
+        Assert(first_chunk_input_table, "Did not expect deleted chunk here.");  // see #1686
+        auto reference_segment =
+            std::static_pointer_cast<const ReferenceSegment>(first_chunk_input_table->get_segment(column_id));
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (ChunkOffset pos_list_offset{0}; pos_list_offset < pos_list->size(); ++pos_list_offset) {
@@ -472,8 +506,10 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
             if (row.chunk_id != current_chunk_id) {
               current_chunk_id = row.chunk_id;
 
-              reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
-                  input_table->get_chunk(current_chunk_id)->get_segment(column_id));
+              const auto chunk = input_table->get_chunk(current_chunk_id);
+              Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+              reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(column_id));
             }
             new_pos_list->push_back((*reference_segment->pos_list())[row.chunk_offset]);
           }
