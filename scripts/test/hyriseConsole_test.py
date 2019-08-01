@@ -15,7 +15,7 @@ def initialize():
 		sys.exit(1)
 
 	build_dir = sys.argv[1]
-	console = pexpect.spawn(build_dir + "/hyriseConsole", timeout=300, dimensions=(200, 64))
+	console = pexpect.spawn(build_dir + "/hyriseConsole", timeout=60, dimensions=(200, 64))
 	return console
 
 def close_console(console):
@@ -44,7 +44,7 @@ def main():
 	console.expect("Execution info:")
 
 	# Test TPCH generation
-	console.sendline("generate_tpch 0.001")
+	console.sendline("generate tpch 0.001")
 	console.expect("Generating tables done")
 
 	# Test TPCH tables
