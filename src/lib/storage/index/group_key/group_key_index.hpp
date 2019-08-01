@@ -89,7 +89,7 @@ class GroupKeyIndex : public BaseIndex {
 
  private:
   const std::shared_ptr<const BaseDictionarySegment> _indexed_segments;
-  std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
+  std::vector<ChunkOffset> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };
 }  // namespace opossum

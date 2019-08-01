@@ -51,22 +51,22 @@ class GroupKeyIndexTest : public BaseTest {
    * private scope. In order to minimize the friend classes of CompositeGroupKeyIndex the fixture
    * is used as proxy. Since the variables are set in setup() references are not possible.
    */
-  std::vector<std::size_t>* index_offsets;
+  std::vector<ChunkOffset>* index_offsets;
   std::vector<ChunkOffset>* index_postings;
 };
 
 TEST_F(GroupKeyIndexTest, IndexOffsets) {
-  auto expected_offsets = std::vector<size_t>{0, 1, 3, 5, 6, 7, 8, 12};
+  auto expected_offsets = std::vector<ChunkOffset>{0, 1, 3, 5, 6, 7, 8, 12};
   EXPECT_EQ(expected_offsets, *index_offsets);
 }
 
 TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   // expected memory consumption:
-  //  - `_indexed_segments`, shared pointer          ->   16 byte
-  //  - `_index_offsets`, 8 elements, each 8 byte    ->   64 byte
-  //  - `_index_postings`, 12 elements, each 4 byte  ->   48 byte
-  //  - sum                                          ->  128 byte
-  EXPECT_EQ(index->memory_consumption(), 128u);
+  //  - `_indexed_segments`, shared pointer          ->  16 byte
+  //  - `_index_offsets`, 8 elements, each 4 byte    ->  32 byte
+  //  - `_index_postings`, 12 elements, each 4 byte  ->  48 byte
+  //  - sum                                          ->  96 byte
+  EXPECT_EQ(index->memory_consumption(), 96u);
 }
 
 TEST_F(GroupKeyIndexTest, IndexPostings) {

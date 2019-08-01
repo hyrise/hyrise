@@ -26,7 +26,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   //     The ValueID for null in an AV is the highest available ValueID in the dictionary + 1.
   //     `unique_values_count` returns the size of dictionary which does not store a ValueID for null.
   //     Therefore we have `unique_values_count` + 1 (for null) ValueIDs for which we want to count the occurrences.
-  _index_offsets = std::vector<size_t>(
+  _index_offsets = std::vector<ChunkOffset>(
       _indexed_segments->unique_values_count() + 1u /*for null*/ + 1u /*to mark the ending position */, 0u);
   // 1b) Set the _index_postings to the size of the attribute vector
   _index_postings = std::vector<ChunkOffset>(_indexed_segments->size());
@@ -45,7 +45,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 
   // 4) Create the postings
   // 4a) Copy _index_offsets to use it as a write counter
-  auto index_offset_copy = std::vector<size_t>(_index_offsets);
+  auto index_offset_copy = std::vector<ChunkOffset>(_index_offsets);
 
   // 4b) Iterate once again over the attribute vector to obtain the write-offsets
   resolve_compressed_vector_type(*_indexed_segments->attribute_vector(), [&](auto& attribute_vector) {
@@ -103,7 +103,7 @@ std::vector<std::shared_ptr<const BaseSegment>> GroupKeyIndex::_get_indexed_segm
 
 size_t GroupKeyIndex::_memory_consumption() const {
   size_t bytes = sizeof(_indexed_segments);
-  bytes += sizeof(std::size_t) * _index_offsets.size();
+  bytes += sizeof(ChunkOffset) * _index_offsets.size();
   bytes += sizeof(ChunkOffset) * _index_postings.size();
   return bytes;
 }
