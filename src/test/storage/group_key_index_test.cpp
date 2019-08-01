@@ -62,10 +62,10 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
 
 TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   // expected memory consumption:
-  //  - `_indexed_segments`, shared pointer         ->   16 bit
-  //  - `_index_offsets`, 8 elements, each 8 bit    ->   64 bit
-  //  - `_index_postings`, 12 elements, each 4 bit  ->   48 bit
-  //  - sum                                         ->  128 bit
+  //  - `_indexed_segments`, shared pointer          ->   16 byte
+  //  - `_index_offsets`, 8 elements, each 8 byte    ->   64 byte
+  //  - `_index_postings`, 12 elements, each 4 byte  ->   48 byte
+  //  - sum                                          ->  128 byte
   EXPECT_EQ(index->memory_consumption(), 128u);
 }
 
