@@ -258,8 +258,7 @@ TYPED_TEST(JoinIndexTest, OuterJoin) {
                          "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
-/* currently disabled because it breaks with AdaptiveRadixTreeIndex */
-TYPED_TEST(JoinIndexTest, DISABLED_OuterJoinWithNull /* #670 */) {
+TYPED_TEST(JoinIndexTest, OuterJoinWithNull) {
   this->test_join_output(this->_table_wrapper_m, this->_table_wrapper_n,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::FullOuter,
                          "resources/test_data/tbl/join_operators/int_outer_join_null.tbl", 1);
