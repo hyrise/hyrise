@@ -535,4 +535,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
        {"NEW_ORDER", BenchmarkTableInfo{new_order_table.get()}}});
 }
 
+thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT
+
 }  // namespace opossum

@@ -68,7 +68,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
                               OrderLineCounts order_line_counts,
                               const std::function<T(std::vector<size_t>)>& generator_function);
 
-  TPCCRandomGenerator _random_gen;
+  static thread_local TPCCRandomGenerator _random_gen;
 
   /**
    * In TPCC and TPCH table sizes are usually defined relatively to each other.
