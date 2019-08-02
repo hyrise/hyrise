@@ -18,6 +18,8 @@ void DuplicateEliminationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& 
   _remaining_stored_table_nodes.clear();
   _sub_plans.clear();
 
+  _print_traversal(node);
+
   _find_sub_plan_duplicates_traversal(node);
 
   for (const auto& [original, replacement] : _original_replacement_pairs) {
@@ -30,6 +32,15 @@ void DuplicateEliminationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& 
   }
 
   _adapt_expressions_traversal(node);
+
+}
+
+void DuplicateEliminationRule::_print_traversal(const std::shared_ptr<AbstractLQPNode>& node) const {
+  if(node){
+    std::cout << node->description() << ", " << node << "\n";
+    _print_traversal(node->left_input());
+    _print_traversal(node->right_input());
+  }
 }
 
 void DuplicateEliminationRule::_find_sub_plan_duplicates_traversal(const std::shared_ptr<AbstractLQPNode>& node) const {

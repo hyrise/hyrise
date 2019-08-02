@@ -24,6 +24,7 @@ class DuplicateEliminationRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
+  void _print_traversal(const std::shared_ptr<AbstractLQPNode>& node) const;
   void _find_sub_plan_duplicates_traversal(const std::shared_ptr<AbstractLQPNode>& node) const;
   void _adapt_expressions_traversal(const std::shared_ptr<AbstractLQPNode>& node) const;
   mutable std::vector<std::shared_ptr<AbstractLQPNode>> _remaining_stored_table_nodes;
