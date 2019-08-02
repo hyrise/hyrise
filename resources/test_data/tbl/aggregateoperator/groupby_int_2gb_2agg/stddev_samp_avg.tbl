@@ -1,5 +1,5 @@
 a|b|STDDEV_SAMP(c)|AVG(d)
-int|float|double_null|double
+int|float|double_null|double_null
 12345|456.7|2.82842|20.35
 12345|457.7|2.12132|32.95
 123|458.7|0.0|3

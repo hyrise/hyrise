@@ -27,15 +27,19 @@ class GroupKeyIndexTest;
  *    |(i)| Attribute | Dictionary |  Index  | Index Postings |
  *    |   |  Vector   |            | Offsets |                |
  *    +---+-----------+------------+---------+----------------+
- *    | 0 |         4 | apple    ------->  0 ------------>  4 |  ie "apple" can be found at i = 4 in the AV
- *    | 1 |         2 | charlie  ------->  1 ------------>  5 |
- *    | 2 |         3 | delta    ------->  3 ---------|     6 |
- *    | 3 |         2 | frank    ------->  5 -------| |-->  1 |
- *    | 4 |         0 | hotel    ------->  6 -----| |       3 |  ie "delta" can be found at i = 1 and 3
- *    | 5 |         1 | inbox    ------->  7 ---| | |---->  2 |
- *    | 6 |         1 |            |         |  | |------>  0 |
- *    | 7 |         5 |            |         |  |-------->  7 |  ie "inbox" can be found at i = 7 in the AV
+ *    | 0 |         4 | apple    ------->  0 -------------> 4 |  ie "apple" can be found at i = 4 in the AV
+ *    | 1 |         2 | charlie  ------->  1 -------------> 5 |
+ *    | 2 |         3 | delta    ------->  3 ----------|    6 |
+ *    | 3 |         2 | frank    ------->  5 --------| |--> 1 |
+ *    | 4 |         0 | hotel    ------->  6 ------| |      3 |  ie "delta" can be found at i = 1 and 3
+ *    | 5 |         1 | (NULL)   ------->  7 ----| | |----> 2 |
+ *    | 6 |         1 |            |       8 --| | |------> 0 |
+ *    | 7 |         5 |            |         | | |--------> 7 |  ie NULL can be found at i = 7 in the AV
+ *    | 8 |           |            |         | -----------> - |  marks the end
  *    +---+-----------+------------+---------+----------------+
+ *
+ * The attribute vector stores NULL values using the dictionary size as the value ID. I.e., the dictionary contains
+ * NULL as a virtual last value.
  *
  * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey-Index
  */

@@ -61,7 +61,7 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     _insert->set_transaction_context(context);
     _insert->execute();
   }
-  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
+  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }
 
 std::shared_ptr<AbstractOperator> CreateTable::_on_deep_copy(

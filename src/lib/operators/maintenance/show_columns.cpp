@@ -31,9 +31,9 @@ void ShowColumns::_on_set_parameters(const std::unordered_map<ParameterID, AllTy
 
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("column_name", DataType::String);
-  column_definitions.emplace_back("column_type", DataType::String);
-  column_definitions.emplace_back("is_nullable", DataType::Int);
+  column_definitions.emplace_back("column_name", DataType::String, false);
+  column_definitions.emplace_back("column_type", DataType::String, false);
+  column_definitions.emplace_back("is_nullable", DataType::Int, false);
   auto out_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   const auto table = StorageManager::get().get_table(_table_name);

@@ -614,7 +614,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
           nulls.resize(result_size);
 
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-            if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
+            if (when->value(chunk_offset) /* && !when->is_null(chunk_offset)*/) {
               values[chunk_offset] = to_value<Result>(then_result.value(chunk_offset));
               nulls[chunk_offset] = then_result.is_null(chunk_offset);
             } else {
@@ -1362,6 +1362,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
 
     } else {
       segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+        DebugAssert(!position.is_null(), "Encountered NULL value in non-nullable column");
         values[chunk_offset] = position.value();
         ++chunk_offset;
       });
