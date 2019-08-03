@@ -233,6 +233,7 @@ SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT id_int_int_i
 
 -- COUNT(*)
 -- SELECT COUNT(*) FROM mixed; (#1741)
+SELECT COUNT(*) FROM mixed
 SELECT COUNT(*) FROM mixed GROUP BY a;
 SELECT a, COUNT(*) FROM mixed GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
