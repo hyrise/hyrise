@@ -235,8 +235,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         // COUNT(*)
         DebugAssert(aggregate_expression->aggregate_function == AggregateFunction::Count,
                     "Only the aggregate function COUNT can have no arguments");
-        // JitAggregate requires one value for each aggregate function. If no column is specified, a constant value is
-        // used.
+        // JitAggregate requires one value for each aggregate function. Since COUNT(*) does not specify a value, a
+        // constant value is used.
         auto constant_value = read_tuples->add_literal_value(AllTypeVariant{0});
         aggregate->add_aggregate_column(aggregate_expression->as_column_name(), constant_value,
                                         aggregate_expression->aggregate_function);
