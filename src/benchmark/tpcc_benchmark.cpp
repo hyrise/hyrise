@@ -84,6 +84,7 @@ int main(int argc, char* argv[]) {
 namespace {
 template <typename T>
 bool floats_near(T a, T b) {
+  if (a == b) return true;
   // Tolerate 0.1% discrepancy due to float variations
   return std::max(a, b) / std::min(a, b) <= 1.001;
 }
