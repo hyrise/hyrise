@@ -28,13 +28,12 @@ bool TPCCStockLevel::execute() {
   auto first_o_id = district_table->get_value<int32_t>(ColumnID{0}, 0) - 20;
 
   const auto order_line_table_pair =
-      _sql_executor.execute(std::string{"SELECT OL_I_ID FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(w_id) +
+      _sql_executor.execute(std::string{"SELECT DISTINCT OL_I_ID FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(w_id) +
                             " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID >= " + std::to_string(first_o_id));
   const auto& order_line_table = order_line_table_pair.second;
-  Assert(order_line_table->row_count() == 20, "Did not find latest orders");
 
   std::stringstream ol_i_ids_stream;
-  for (auto order_line_idx = 0; order_line_idx < 20; ++order_line_idx) {
+  for (auto order_line_idx = 0; order_line_idx < order_line_table->row_count(); ++order_line_idx) {
     ol_i_ids_stream << order_line_table->get_value<int32_t>(ColumnID{0}, order_line_idx) << ", ";
   }
   auto ol_i_ids = ol_i_ids_stream.str();
