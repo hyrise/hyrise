@@ -34,7 +34,7 @@ const AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset
 
   if (row_id.is_null()) return NULL_VALUE;
 
-  auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
+  const auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
   return (*chunk->get_segment(_referenced_column_id))[row_id.chunk_offset];
 }

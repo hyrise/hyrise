@@ -57,6 +57,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
@@ -203,9 +204,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto table = StorageManager::get().get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
 
-  for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = table->chunk_count();
+  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
       indexed_chunks.emplace_back(chunk_id);
     }
   }
@@ -217,10 +219,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
-  index_scan->set_included_chunk_ids(indexed_chunks);
-  table_scan->set_excluded_chunk_ids(indexed_chunks);
+  index_scan->included_chunk_ids = indexed_chunks;
+  table_scan->excluded_chunk_ids = indexed_chunks;
 
-  return std::make_shared<UnionPositions>(index_scan, table_scan);
+  return std::make_shared<UnionAll>(index_scan, table_scan);
 }
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
@@ -330,8 +332,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     if (join_operator) return;
 
-    if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
-                               right_data_type, !secondary_join_predicates.empty())) {
+    if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                                right_data_type, !secondary_join_predicates.empty()})) {
       join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
@@ -431,6 +433,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   switch (union_node->union_mode) {
     case UnionMode::Positions:
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
+    case UnionMode::All:
+      return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
   }
   Fail("GCC thinks this is reachable");
 }

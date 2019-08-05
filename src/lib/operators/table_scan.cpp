@@ -35,6 +35,7 @@
 #include "table_scan/column_vs_value_table_scan_impl.hpp"
 #include "table_scan/expression_evaluator_table_scan_impl.hpp"
 #include "utils/assert.hpp"
+#include "utils/lossless_predicate_cast.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -42,8 +43,6 @@ namespace opossum {
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
-
-void TableScan::set_excluded_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _excluded_chunk_ids = chunk_ids; }
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 
@@ -83,7 +82,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   std::mutex output_mutex;
 
-  const auto excluded_chunk_set = std::unordered_set<ChunkID>{_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend()};
+  const auto excluded_chunk_set = std::unordered_set<ChunkID>{excluded_chunk_ids.cbegin(), excluded_chunk_ids.cend()};
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
   output_chunks.reserve(in_table->chunk_count() - excluded_chunk_set.size());
@@ -91,11 +90,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(in_table->chunk_count() - excluded_chunk_set.size());
 
-  for (ChunkID chunk_id{0u}; chunk_id < in_table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = in_table->chunk_count();
+  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     if (excluded_chunk_set.count(chunk_id)) continue;
+    const auto chunk_in = in_table->get_chunk(chunk_id);
+    Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
 
-    auto job_task = std::make_shared<JobTask>([this, chunk_id, &in_table, &output_mutex, &output_chunks]() {
-      const auto chunk_guard = in_table->get_chunk(chunk_id);
+    // chunk_in – Copy by value since copy by reference is not possible due to the limited scope of the for-iteration.
+    auto job_task = std::make_shared<JobTask>([this, chunk_id, chunk_in, &in_table, &output_mutex, &output_chunks]() {
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
       if (matches_out->empty()) return;
@@ -113,8 +115,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
        *     (i.e. they share their position list).
        */
       if (in_table->type() == TableType::References) {
-        const auto chunk_in = in_table->get_chunk(chunk_id);
-
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
         for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
@@ -156,7 +156,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       std::lock_guard<std::mutex> lock(output_mutex);
-      output_chunks.emplace_back(std::make_shared<Chunk>(out_segments, nullptr, chunk_guard->get_allocator()));
+      output_chunks.emplace_back(std::make_shared<Chunk>(out_segments, nullptr, chunk_in->get_allocator()));
     });
 
     jobs.push_back(job_task);
@@ -214,7 +214,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
 
   if (const auto binary_predicate_expression =
           std::dynamic_pointer_cast<BinaryPredicateExpression>(resolved_predicate)) {
-    const auto predicate_condition = binary_predicate_expression->predicate_condition;
+    auto predicate_condition = binary_predicate_expression->predicate_condition;
 
     const auto left_operand = binary_predicate_expression->left_operand();
     const auto right_operand = binary_predicate_expression->right_operand();
@@ -226,10 +226,31 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
     auto right_value = expression_get_value_or_parameter(*right_operand);
 
     if (left_value && right_column_expression) {
-      left_value = lossless_variant_cast(*left_value, right_column_expression->data_type());
+      // Try to cast the value to the type of the column. This might require adjusting the predicate (see
+      // lossless_predicate_cast.hpp for details).
+
+      // lossless_predicate_variant_cast considers the input value to be the right-side value, so we need to flip the
+      // condition twice.
+      const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(
+          flip_predicate_condition(predicate_condition), *left_value, right_column_expression->data_type());
+      if (adjusted_predicate_and_value) {
+        predicate_condition = flip_predicate_condition(adjusted_predicate_and_value->first);
+        left_value = adjusted_predicate_and_value->second;
+      } else {
+        // Incompatible types
+        left_value = std::nullopt;
+      }
     }
     if (right_value && left_column_expression) {
-      right_value = lossless_variant_cast(*right_value, left_column_expression->data_type());
+      // Same for the other side - no flip needed
+      const auto adjusted_predicate_and_value =
+          lossless_predicate_variant_cast(predicate_condition, *right_value, left_column_expression->data_type());
+      if (adjusted_predicate_and_value) {
+        predicate_condition = adjusted_predicate_and_value->first;
+        right_value = adjusted_predicate_and_value->second;
+      } else {
+        right_value = std::nullopt;
+      }
     }
 
     const auto is_like_predicate =
@@ -269,24 +290,42 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() const {
   }
 
   if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
+    auto predicate_condition = between_expression->predicate_condition;
     const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
+
+    auto [lower_condition, upper_condition] = between_to_conditions(predicate_condition);
 
     auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
     if (lower_bound_value) {
-      lower_bound_value = lossless_variant_cast(*lower_bound_value, left_column->data_type());
+      const auto adjusted_predicate_and_value =
+          lossless_predicate_variant_cast(lower_condition, *lower_bound_value, left_column->data_type());
+      if (adjusted_predicate_and_value) {
+        lower_condition = adjusted_predicate_and_value->first;
+        lower_bound_value = adjusted_predicate_and_value->second;
+      } else {
+        lower_bound_value = std::nullopt;
+      }
     }
 
     auto upper_bound_value = expression_get_value_or_parameter(*between_expression->upper_bound());
     if (upper_bound_value) {
-      upper_bound_value = lossless_variant_cast(*upper_bound_value, left_column->data_type());
+      const auto adjusted_predicate_and_value =
+          lossless_predicate_variant_cast(upper_condition, *upper_bound_value, left_column->data_type());
+      if (adjusted_predicate_and_value) {
+        upper_condition = adjusted_predicate_and_value->first;
+        upper_bound_value = adjusted_predicate_and_value->second;
+      } else {
+        upper_bound_value = std::nullopt;
+      }
     }
+
+    predicate_condition = conditions_to_between(lower_condition, upper_condition);
 
     // Predicate pattern: <column> BETWEEN <value-of-type-x> AND <value-of-type-x>
     if (left_column && lower_bound_value && upper_bound_value &&
         lower_bound_value->type() == upper_bound_value->type()) {
       return std::make_unique<ColumnBetweenTableScanImpl>(input_table_left(), left_column->column_id,
-                                                          *lower_bound_value, *upper_bound_value,
-                                                          between_expression->predicate_condition);
+                                                          *lower_bound_value, *upper_bound_value, predicate_condition);
     }
   }
 

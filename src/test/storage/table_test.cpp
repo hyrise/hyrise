@@ -122,7 +122,7 @@ TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
   t->append({4, "Hello,"});
   t->append({6, "world"});
 
-  auto chunk = t->get_chunk(ChunkID{0});
+  const auto chunk = t->get_chunk(ChunkID{0});
 
   const auto values = std::vector<CommitID>{1u, 2u};
 

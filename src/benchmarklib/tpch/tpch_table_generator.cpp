@@ -52,13 +52,13 @@ const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_stri
 const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 // clang-format on
 
-std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable>> tpch_table_to_dbgen_id = {
-    {opossum::TpchTable::Part, PART},     {opossum::TpchTable::PartSupp, PSUPP}, {opossum::TpchTable::Supplier, SUPP},
-    {opossum::TpchTable::Customer, CUST}, {opossum::TpchTable::Orders, ORDER},   {opossum::TpchTable::LineItem, LINE},
-    {opossum::TpchTable::Nation, NATION}, {opossum::TpchTable::Region, REGION}};
+std::unordered_map<opossum::TPCHTable, std::underlying_type_t<opossum::TPCHTable>> tpch_table_to_dbgen_id = {
+    {opossum::TPCHTable::Part, PART},     {opossum::TPCHTable::PartSupp, PSUPP}, {opossum::TPCHTable::Supplier, SUPP},
+    {opossum::TPCHTable::Customer, CUST}, {opossum::TPCHTable::Orders, ORDER},   {opossum::TPCHTable::LineItem, LINE},
+    {opossum::TPCHTable::Nation, NATION}, {opossum::TPCHTable::Region, REGION}};
 
 template <typename DSSType, typename MKRetType, typename... Args>
-DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), opossum::TpchTable table,
+DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), opossum::TPCHTable table,
                       Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
@@ -109,18 +109,18 @@ void dbgen_cleanup() {
 
 namespace opossum {
 
-std::unordered_map<TpchTable, std::string> tpch_table_names = {
-    {TpchTable::Part, "part"},         {TpchTable::PartSupp, "partsupp"}, {TpchTable::Supplier, "supplier"},
-    {TpchTable::Customer, "customer"}, {TpchTable::Orders, "orders"},     {TpchTable::LineItem, "lineitem"},
-    {TpchTable::Nation, "nation"},     {TpchTable::Region, "region"}};
+std::unordered_map<TPCHTable, std::string> tpch_table_names = {
+    {TPCHTable::Part, "part"},         {TPCHTable::PartSupp, "partsupp"}, {TPCHTable::Supplier, "supplier"},
+    {TPCHTable::Customer, "customer"}, {TPCHTable::Orders, "orders"},     {TPCHTable::LineItem, "lineitem"},
+    {TPCHTable::Nation, "nation"},     {TPCHTable::Region, "region"}};
 
-TpchTableGenerator::TpchTableGenerator(float scale_factor, uint32_t chunk_size)
+TPCHTableGenerator::TPCHTableGenerator(float scale_factor, uint32_t chunk_size)
     : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor(scale_factor) {}
 
-TpchTableGenerator::TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
+TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
-std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate() {
+std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
 
@@ -174,7 +174,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t row_idx = 0; row_idx < customer_count; row_idx++) {
-    auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TpchTable::Customer);
+    auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
     customer_builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
                                 convert_money(customer.acctbal), customer.mktsegment, customer.comment);
   }
@@ -184,7 +184,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
-    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l);
+    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
 
     order_builder.append_row(order.okey, order.custkey, pmr_string(1, order.orderstatus),
                              convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
@@ -206,7 +206,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
-    const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part);
+    const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TPCHTable::Part);
 
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
                             convert_money(part.retailprice), part.comment);
@@ -222,7 +222,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t supplier_idx = 0; supplier_idx < supplier_count; ++supplier_idx) {
-    const auto supplier = call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TpchTable::Supplier);
+    const auto supplier = call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TPCHTable::Supplier);
 
     supplier_builder.append_row(supplier.suppkey, supplier.name, supplier.address, supplier.nation_code, supplier.phone,
                                 convert_money(supplier.acctbal), supplier.comment);
@@ -233,7 +233,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t nation_idx = 0; nation_idx < nation_count; ++nation_idx) {
-    const auto nation = call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TpchTable::Nation);
+    const auto nation = call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TPCHTable::Nation);
     nation_builder.append_row(nation.code, nation.text, nation.join, nation.comment);
   }
 
@@ -242,7 +242,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpchTableGenerator::generate
    */
 
   for (size_t region_idx = 0; region_idx < region_count; ++region_idx) {
-    const auto region = call_dbgen_mk<code_t>(region_idx + 1, mk_region, TpchTable::Region);
+    const auto region = call_dbgen_mk<code_t>(region_idx + 1, mk_region, TPCHTable::Region);
     region_builder.append_row(region.code, region.text, region.comment);
   }
 

@@ -7,9 +7,15 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "logical_query_plan/lqp_translator.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/print.hpp"
+#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
@@ -41,12 +47,12 @@ class OperatorsIndexScanTest : public BaseTest {
     _column_ids = std::vector<ColumnID>{ColumnID{0u}};
 
     for (const auto& chunk_id : _chunk_ids) {
-      auto chunk = int_int_7->get_chunk(chunk_id);
+      const auto chunk = int_int_7->get_chunk(chunk_id);
       chunk->template create_index<DerivedIndex>(_column_ids);
     }
 
     for (const auto& chunk_id : _chunk_ids_partly_compressed) {
-      auto chunk = int_int_5->get_chunk(chunk_id);
+      const auto chunk = int_int_5->get_chunk(chunk_id);
       chunk->template create_index<DerivedIndex>(_column_ids);
     }
 
@@ -54,6 +60,12 @@ class OperatorsIndexScanTest : public BaseTest {
     _int_int->execute();
     _int_int_small_chunk = std::make_shared<TableWrapper>(std::move(int_int_5));
     _int_int_small_chunk->execute();
+
+    const auto partially_indexed_table = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 7);
+    ChunkEncoder::encode_all_chunks(partially_indexed_table);
+    const auto second_chunk = partially_indexed_table->get_chunk(ChunkID{1});
+    second_chunk->template create_index<DerivedIndex>(std::vector<ColumnID>{ColumnID{0}});
+    StorageManager::get().add_table("index_test_table", partially_indexed_table);
   }
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
@@ -213,7 +225,7 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
     auto scan = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_column_ids,
                                             test.first, right_values, right_values2);
 
-    scan->set_included_chunk_ids({ChunkID{0}, ChunkID{2}});
+    scan->included_chunk_ids = {ChunkID{0}, ChunkID{2}};
 
     scan->execute();
 
@@ -255,6 +267,45 @@ TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
   auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, SegmentIndexType::Invalid, this->_column_ids,
                                                    PredicateCondition::GreaterThan, right_values);
   EXPECT_THROW(scan->execute(), std::logic_error);
+}
+
+TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
+  // We want to make sure that all chunks are covered even if they have been added after SQL translation
+
+  const auto stored_table_node = StoredTableNode::make("index_test_table");
+  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("a"), 4), stored_table_node);
+  predicate_node->scan_type = ScanType::IndexScan;
+
+  const auto pqp = LQPTranslator{}.translate_node(predicate_node);
+
+  // Test correct LQP-Translation. For some reason, only GroupKeyIndexes are currently used.
+  if (this->_index_type != SegmentIndexType::GroupKey) return;
+  const auto indexed_chunks = std::vector<ChunkID>{ChunkID{1}};
+
+  auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);
+  ASSERT_TRUE(union_op);
+  auto index_scan = std::dynamic_pointer_cast<IndexScan>(union_op->mutable_input_left());
+  ASSERT_TRUE(index_scan);
+  EXPECT_EQ(index_scan->included_chunk_ids, indexed_chunks);
+  auto table_scan = std::dynamic_pointer_cast<TableScan>(union_op->mutable_input_right());
+  ASSERT_TRUE(table_scan);
+  EXPECT_EQ(table_scan->excluded_chunk_ids, indexed_chunks);
+  auto get_table = std::dynamic_pointer_cast<GetTable>(table_scan->mutable_input_left());
+  ASSERT_TRUE(get_table);
+
+  // Add values:
+  const auto table = StorageManager::get().get_table("index_test_table");
+  table->append({4, 5});
+  EXPECT_EQ(table->chunk_count(), 3);
+
+  // Test correct execution:
+  get_table->execute();
+  table_scan->execute();
+  index_scan->execute();
+  union_op->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(union_op->get_output(),
+                            load_table("resources/test_data/tbl/int_int_shuffled_appended_and_filtered.tbl", 10));
 }
 
 }  // namespace opossum
