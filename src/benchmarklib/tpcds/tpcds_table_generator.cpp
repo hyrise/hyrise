@@ -45,6 +45,8 @@ using namespace opossum;  // NOLINT
 using tpcds_key_t = int32_t;
 
 void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
+  // setting some values that were intended by dsdgen to be passed via command line
+
   auto scale_factor_string = std::string{"SCALE"};
   auto scale_factor_value_string = std::to_string(scale_factor);
   set_int(scale_factor_string.data(), scale_factor_value_string.data());
@@ -88,6 +90,7 @@ TpcdsRow call_dbgen_mk(ds_key_t index) {
   return tpcds_row;
 }
 
+// get starting index and row count for a table, see third_party/tpcds-kit/tools/driver.c:549
 std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   auto k_row_count = ds_key_t{};
   auto k_first_row = ds_key_t{};
@@ -166,14 +169,12 @@ std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& ad
                                     : std::optional{pmr_string{address.street_name1} + " " + address.street_name2};
 }
 
-// mapping types used by tpcds-dbgen as follows:
+// mapping types used by tpcds-dbgen as follows (according to create table statements in tpcds.sql):
 // ds_key_t -> tpcds_key_t
 // int -> int32_t
 // char*, char[], bool, date (ds_key_t as date_id), time (ds_key_t as time_id) -> pmr_string
 // decimal, float -> float
 // ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
-
-// the types are derived from create table statements in tpcds.sql
 
 // clang-format off
 const auto call_center_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT

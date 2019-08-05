@@ -344,8 +344,6 @@ target_compile_definitions(dsdgen PUBLIC -DLINUX)
 target_link_libraries(dsdgen m)
 
 # build tpcds_dbgen library
-set(MACHINE LINUX)
-
 add_library(tpcds_dbgen
   STATIC
   ${TPCDS_KIT_DIR}/address.c
@@ -448,5 +446,5 @@ target_include_directories(tpcds_dbgen
 target_compile_definitions(
   tpcds_dbgen
   PUBLIC
-  -D${MACHINE}
+  -DLINUX
   -DWITH_CLEANUP_FUNCTION)

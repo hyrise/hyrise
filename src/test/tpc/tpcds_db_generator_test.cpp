@@ -74,82 +74,39 @@ TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
  * Then check whether the row count is correct for all tables.
  */
 
-  EXPECT_FALSE(StorageManager::get().has_table("call_center"));
-  EXPECT_FALSE(StorageManager::get().has_table("catalog_page"));
-  EXPECT_FALSE(StorageManager::get().has_table("catalog_returns"));
-  EXPECT_FALSE(StorageManager::get().has_table("catalog_sales"));
-  EXPECT_FALSE(StorageManager::get().has_table("customer"));
-  EXPECT_FALSE(StorageManager::get().has_table("customer_address"));
-  EXPECT_FALSE(StorageManager::get().has_table("customer_demographics"));
-  EXPECT_FALSE(StorageManager::get().has_table("date"));
-  EXPECT_FALSE(StorageManager::get().has_table("household_demographics"));
-  EXPECT_FALSE(StorageManager::get().has_table("income_band"));
-  EXPECT_FALSE(StorageManager::get().has_table("inventory"));
-  EXPECT_FALSE(StorageManager::get().has_table("item"));
-  EXPECT_FALSE(StorageManager::get().has_table("promotion"));
-  EXPECT_FALSE(StorageManager::get().has_table("reason"));
-  EXPECT_FALSE(StorageManager::get().has_table("ship_mode"));
-  EXPECT_FALSE(StorageManager::get().has_table("store"));
-  EXPECT_FALSE(StorageManager::get().has_table("store_returns"));
-  EXPECT_FALSE(StorageManager::get().has_table("store_sales"));
-  EXPECT_FALSE(StorageManager::get().has_table("time"));
-  EXPECT_FALSE(StorageManager::get().has_table("warehouse"));
-  EXPECT_FALSE(StorageManager::get().has_table("web_page"));
-  EXPECT_FALSE(StorageManager::get().has_table("web_returns"));
-  EXPECT_FALSE(StorageManager::get().has_table("web_sales"));
-  EXPECT_FALSE(StorageManager::get().has_table("web_site"));
+  // std::pair is only necessary on the first param for std::map template parameter deduction
+  const auto expected_sizes = std::map{std::pair{"call_center", 6},
+                                       {"catalog_page", 11718},
+                                       {"catalog_returns", 144201},
+                                       {"catalog_sales", 1440060},
+                                       {"customer", 100000},
+                                       {"customer_address", 50000},
+                                       {"customer_demographics", 1920800},
+                                       {"date", 73049},
+                                       {"household_demographics", 7200},
+                                       {"income_band", 20},
+                                       {"inventory", 11745000},
+                                       {"item", 18000},
+                                       {"promotion", 300},
+                                       {"reason", 35},
+                                       {"ship_mode", 20},
+                                       {"store", 12},
+                                       {"store_returns", 288324},
+                                       {"store_sales", 2879434},
+                                       {"time", 86400},
+                                       {"warehouse", 5},
+                                       {"web_page", 60},
+                                       {"web_returns", 71746},
+                                       {"web_sales", 719620},
+                                       {"web_site", 30}};
+
+  EXPECT_EQ(StorageManager::get().tables().size(), 0);
 
   TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
 
-  EXPECT_TRUE(StorageManager::get().has_table("call_center"));
-  EXPECT_TRUE(StorageManager::get().has_table("catalog_page"));
-  EXPECT_TRUE(StorageManager::get().has_table("catalog_returns"));
-  EXPECT_TRUE(StorageManager::get().has_table("catalog_sales"));
-  EXPECT_TRUE(StorageManager::get().has_table("customer"));
-  EXPECT_TRUE(StorageManager::get().has_table("customer_address"));
-  EXPECT_TRUE(StorageManager::get().has_table("customer_demographics"));
-  EXPECT_TRUE(StorageManager::get().has_table("date"));
-  EXPECT_TRUE(StorageManager::get().has_table("household_demographics"));
-  EXPECT_TRUE(StorageManager::get().has_table("income_band"));
-  EXPECT_TRUE(StorageManager::get().has_table("inventory"));
-  EXPECT_TRUE(StorageManager::get().has_table("item"));
-  EXPECT_TRUE(StorageManager::get().has_table("promotion"));
-  EXPECT_TRUE(StorageManager::get().has_table("reason"));
-  EXPECT_TRUE(StorageManager::get().has_table("ship_mode"));
-  EXPECT_TRUE(StorageManager::get().has_table("store"));
-  EXPECT_TRUE(StorageManager::get().has_table("store_returns"));
-  EXPECT_TRUE(StorageManager::get().has_table("store_sales"));
-  EXPECT_TRUE(StorageManager::get().has_table("time"));
-  EXPECT_TRUE(StorageManager::get().has_table("warehouse"));
-  EXPECT_TRUE(StorageManager::get().has_table("web_page"));
-  EXPECT_TRUE(StorageManager::get().has_table("web_returns"));
-  EXPECT_TRUE(StorageManager::get().has_table("web_sales"));
-  EXPECT_TRUE(StorageManager::get().has_table("web_site"));
-
-  EXPECT_EQ(StorageManager::get().get_table("call_center")->row_count(), 6);
-  EXPECT_EQ(StorageManager::get().get_table("catalog_page")->row_count(), 11718);
-  EXPECT_EQ(StorageManager::get().get_table("catalog_returns")->row_count(), 144201);
-  EXPECT_EQ(StorageManager::get().get_table("catalog_sales")->row_count(), 1440060);
-  EXPECT_EQ(StorageManager::get().get_table("customer")->row_count(), 100000);
-  EXPECT_EQ(StorageManager::get().get_table("customer_address")->row_count(), 50000);
-  EXPECT_EQ(StorageManager::get().get_table("customer_demographics")->row_count(), 1920800);
-  EXPECT_EQ(StorageManager::get().get_table("date")->row_count(), 73049);
-  EXPECT_EQ(StorageManager::get().get_table("household_demographics")->row_count(), 7200);
-  EXPECT_EQ(StorageManager::get().get_table("income_band")->row_count(), 20);
-  EXPECT_EQ(StorageManager::get().get_table("inventory")->row_count(), 11745000);
-  EXPECT_EQ(StorageManager::get().get_table("item")->row_count(), 18000);
-  EXPECT_EQ(StorageManager::get().get_table("promotion")->row_count(), 300);
-  EXPECT_EQ(StorageManager::get().get_table("reason")->row_count(), 35);
-  EXPECT_EQ(StorageManager::get().get_table("ship_mode")->row_count(), 20);
-  EXPECT_EQ(StorageManager::get().get_table("store")->row_count(), 12);
-  EXPECT_EQ(StorageManager::get().get_table("store_returns")->row_count(), 288324);
-  EXPECT_EQ(StorageManager::get().get_table("store_sales")->row_count(), 2879434);
-  EXPECT_EQ(StorageManager::get().get_table("time")->row_count(), 86400);
-  EXPECT_EQ(StorageManager::get().get_table("warehouse")->row_count(), 5);
-  EXPECT_EQ(StorageManager::get().get_table("web_page")->row_count(), 60);
-  EXPECT_EQ(StorageManager::get().get_table("web_returns")->row_count(), 71746);
-  EXPECT_EQ(StorageManager::get().get_table("web_sales")->row_count(), 719620);
-  EXPECT_EQ(StorageManager::get().get_table("web_site")->row_count(), 30);
+  for (const auto [name, size] : expected_sizes) {
+    EXPECT_EQ(StorageManager::get().get_table(name)->row_count(), size);
+  }
 
   StorageManager::reset();
 }

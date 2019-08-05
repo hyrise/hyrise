@@ -144,11 +144,10 @@ class TableBuilder {
 
   template <typename... Types>
   void append_row(Types&&... new_values) {
-    _row_count++;
     auto values_tuple = boost::hana::make_tuple(std::forward<Types>(new_values)...);
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(_value_vectors) == boost::hana::size(values_tuple));
 
-    // Create tuples ([&values0, &null_values0, value0], [&values1, &null_values1, value1], ...)
+    // Create tuples ([&values0, &null_values0, new_value0], [&values1, &null_values1, new_value1], ...)
     auto value_vectors_and_null_value_vectors_and_values = boost::hana::zip_with(
         [](auto& values, auto& null_values, auto&& value) {
           return boost::hana::make_tuple(std::reference_wrapper(values), std::reference_wrapper(null_values),
@@ -178,6 +177,8 @@ class TableBuilder {
       }
     });
 
+    _row_count++;
+
     // The reason why we can't put the for_each lambda's code into zip_with's lambda is the following:
     // boost::hana's higher order functions (like zip_with) do not guarantee the order of execution of a passed
     // function f or even the number of executions of f. Therefore it should only be used with pure functions (no side
@@ -193,6 +194,8 @@ class TableBuilder {
  private:
   std::shared_ptr<Table> _table;
   ChunkOffset _estimated_rows_per_chunk;
+
+  // _table->row_count() only counts completed chunks but we want the total number of rows added to this table builder
   size_t _row_count;
 
   boost::hana::tuple<std::vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
