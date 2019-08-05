@@ -33,7 +33,7 @@ bool TPCCStockLevel::execute() {
   const auto& order_line_table = order_line_table_pair.second;
 
   std::stringstream ol_i_ids_stream;
-  for (auto order_line_idx = 0; order_line_idx < order_line_table->row_count(); ++order_line_idx) {
+  for (auto order_line_idx = size_t{0}; order_line_idx < order_line_table->row_count(); ++order_line_idx) {
     ol_i_ids_stream << order_line_table->get_value<int32_t>(ColumnID{0}, order_line_idx) << ", ";
   }
   auto ol_i_ids = ol_i_ids_stream.str();
