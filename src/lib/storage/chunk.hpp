@@ -190,7 +190,9 @@ class Chunk : private Noncopyable {
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
   mutable std::atomic_uint64_t _invalid_row_count = 0;
-  std::atomic<std::optional<CommitID>> _cleanup_commit_id{std::nullopt};
+
+  // Default value of zero means "not set"
+  std::atomic_uint32_t _cleanup_commit_id{0};
 };
 
 }  // namespace opossum

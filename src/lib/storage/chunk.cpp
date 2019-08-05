@@ -1,3 +1,5 @@
+#include "chunk.hpp"
+
 #include <algorithm>
 #include <iterator>
 #include <limits>
@@ -8,7 +10,6 @@
 #include <vector>
 
 #include "base_segment.hpp"
-#include "chunk.hpp"
 #include "index/base_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
@@ -216,11 +217,17 @@ void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) {
 
 uint64_t Chunk::invalid_row_count() const { return std::atomic_load(&_invalid_row_count); }
 
-std::optional<CommitID> Chunk::get_cleanup_commit_id() const { return std::atomic_load(&_cleanup_commit_id); }
+std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
+  if (_cleanup_commit_id == 0) {
+    // Cleanup-Commit-ID is not yet set
+    return std::nullopt;
+  }
+  return std::optional<CommitID>{_cleanup_commit_id};
+}
 
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
-  std::atomic_store(&_cleanup_commit_id, {cleanup_commit_id});
+  _cleanup_commit_id = cleanup_commit_id;
 }
 
 }  // namespace opossum
