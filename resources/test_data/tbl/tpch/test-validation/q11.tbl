@@ -1,5 +1,5 @@
 ps_partkey|value
-int|double
+int|double_null
 1376|1.32712e+07
 788|9.49865e+06
 1071|9.38826e+06

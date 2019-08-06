@@ -1,4 +1,4 @@
 supp_nation|cust_nation|l_year|revenue
-string|string|string|double
+string|string|string_null|double_null
 FRANCE|GERMANY|199|571931
 GERMANY|FRANCE|199|1.00026e+06
