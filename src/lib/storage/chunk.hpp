@@ -193,6 +193,7 @@ class Chunk : private Noncopyable {
 
   // Default value of zero means "not set"
   std::atomic_uint32_t _cleanup_commit_id{0};
+  static_assert(std::is_same<uint32_t, CommitID>::value, "Type of _cleanup_commit_id does not match type of CommitID.");
 };
 
 }  // namespace opossum
