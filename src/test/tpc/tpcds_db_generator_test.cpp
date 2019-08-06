@@ -32,7 +32,7 @@ TEST(TpcdsTableGeneratorTest, FirstRowsAndRowCounts) {
   // Run generation twice to make sure no global state (of which tpcds_dbgen has plenty :( ) from the
   //  first generation process carried over into the second
   for (auto i = 1; i <= 2; i++) {
-    std::cout << "TableContentsFirstRows pass " << i << std::endl;
+    SCOPED_TRACE("FirstRowsAndRowCounts iteration " + std::to_string(i));
     const auto table_generator = TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 305);  // seed 305 includes Mrs. Null
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_call_center(rows_to_check), load_csv("call_center.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_catalog_page(rows_to_check), load_csv("catalog_page.csv"));
@@ -103,6 +103,7 @@ TEST(TpcdsTableGeneratorTest, FirstRowsAndRowCounts) {
   TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
 
   for (const auto& [name, size] : expected_sizes) {
+    SCOPED_TRACE("checking table " + std::string{name});
     EXPECT_EQ(StorageManager::get().get_table(name)->row_count(), size);
   }
 

@@ -34,6 +34,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
+  // max_rows is used to limit the number of rows generated in tests
   std::shared_ptr<Table> generate_call_center(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_catalog_page(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_catalog_sales_and_returns(

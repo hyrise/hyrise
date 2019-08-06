@@ -55,7 +55,7 @@ set(
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
-add_definitions (-DPATH_TO_TPCDS_IDX=\"${CMAKE_SOURCE_DIR}/third_party/tpcds-kit/tools/tpcds.idx\")
+add_definitions (-DPATH_TO_TPCDS_IDX=\"${CMAKE_SOURCE_DIR}/resources/benchmark/tpcds/tpcds.idx\")
 
 target_link_libraries(
     hyriseBenchmarkLib

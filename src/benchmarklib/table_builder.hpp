@@ -159,6 +159,8 @@ class TableBuilder {
     boost::hana::for_each(value_vectors_and_null_value_vectors_and_values, [](auto& values_and_null_values_and_value) {
       auto& values = values_and_null_values_and_value[boost::hana::llong_c<0>].get();
       auto& null_values = values_and_null_values_and_value[boost::hana::llong_c<1>].get();
+
+      // the type of optional_or_value is either std::optional<T> or just T, hence the variable name
       auto& optional_or_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
 
       constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
