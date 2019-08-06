@@ -60,8 +60,8 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
     auto n_seed = get_int(rng_seed_string.data());
     auto skip = INT_MAX / MAX_COLUMN;
     for (auto i = 0; i < MAX_COLUMN; i++) {
-      Streams[i].nInitialSeed = nSeed + skip * i;
-      Streams[i].nSeed = nSeed + skip * i;
+      Streams[i].nInitialSeed = n_seed + skip * i;
+      Streams[i].nSeed = n_seed + skip * i;
       Streams[i].nUsed = 0;
     }
   }

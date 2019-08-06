@@ -19,7 +19,7 @@ std::shared_ptr<Table> load_csv(const std::string& file_name) {
 
 namespace opossum {
 
-TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
+TEST(TpcdsTableGeneratorTest, FirstRowsAndRowCounts) {
   /**
    * Check whether the data that TpcdsTableGenerator generates is the exact same that dsdgen generates.
    * Since dsdgen does not support very small scale factors only generate and check first rows for each table.
@@ -66,9 +66,7 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
     EXPECT_TABLE_EQ_ORDERED(web_returns_table, load_csv("web_returns.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_site(rows_to_check), load_csv("web_site.csv"));
   }
-}
 
-TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
   /**
  * Check whether all TPC-DS tables are created by the TpcdsTableGenerator and added to the StorageManager.
  * Then check whether the row count is correct for all tables.
