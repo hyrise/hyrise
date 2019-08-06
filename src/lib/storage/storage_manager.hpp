@@ -27,7 +27,7 @@ class StorageManager : public Singleton<StorageManager> {
    */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
   void drop_table(const std::string& name);
-  std::shared_ptr<Table> get_table(const std::string& name) const;
+  std::shared_ptr<Table> get_table(const std::string& name);
   bool has_table(const std::string& name) const;
   std::vector<std::string> table_names() const;
   const std::map<std::string, std::shared_ptr<Table>>& tables() const;
@@ -68,7 +68,7 @@ class StorageManager : public Singleton<StorageManager> {
   StorageManager(StorageManager&&) = delete;
 
  protected:
-  StorageManager() {}
+  StorageManager();
 
   friend class Singleton;
 

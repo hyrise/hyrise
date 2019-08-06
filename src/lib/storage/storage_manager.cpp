@@ -13,8 +13,13 @@
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
+#include "utils/meta_table_manager.hpp"
 
 namespace opossum {
+
+StorageManager::StorageManager() : Singleton<StorageManager>() {
+  MetaTableManager::get().update_all(*this);
+}
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
@@ -33,7 +38,11 @@ void StorageManager::drop_table(const std::string& name) {
   Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
-std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
+std::shared_ptr<Table> StorageManager::get_table(const std::string& name) {
+  if (name.find("meta_") == 0) {  // TODO faster algo?
+    MetaTableManager::get().update(*this, name.substr(5));
+  }
+
   const auto iter = _tables.find(name);
   Assert(iter != _tables.end(), "No such table named '" + name + "'");
 
