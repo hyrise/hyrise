@@ -253,6 +253,10 @@ void Insert::_on_rollback_records() {
       mvcc_data->begin_cids[chunk_offset] = 0u;
       mvcc_data->tids[chunk_offset] = 0u;
     }
+
+    // Update stats
+    auto invalid_row_count = target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
+    target_chunk->increase_invalid_row_count(invalid_row_count);
   }
 }
 
