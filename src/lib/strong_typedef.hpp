@@ -29,10 +29,10 @@
       t = other;                                                                                                  \
       return *this;                                                                                               \
     }                                                                                                             \
-    operator const T&() const { return t; }                                                                       \
-    operator T&() { return t; }                                                                                   \
-    bool operator==(const D& other) const { return t == other.t; }                                                \
-    bool operator<(const D& other) const { return t < other.t; }                                                  \
+    inline operator const T&() const noexcept  { return t; }                                                      \
+    inline operator T&() noexcept { return t; }                                                                   \
+    inline bool operator==(const D& other) const noexcept { return t == other.t; }                                \
+    inline bool operator<(const D& other) const noexcept { return t < other.t; }                                  \
   };                                                                                                              \
                                                                                                                   \
   inline std::ostream& operator<<(std::ostream& stream, const D& value) { return stream << value.t; }             \
