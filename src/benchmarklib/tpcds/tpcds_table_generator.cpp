@@ -57,7 +57,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
 
   // init_rand from genrand.c, adapted
   {
-    auto nSeed = get_int(rng_seed_string.data());
+    auto n_seed = get_int(rng_seed_string.data());
     auto skip = INT_MAX / MAX_COLUMN;
     for (auto i = 0; i < MAX_COLUMN; i++) {
       Streams[i].nInitialSeed = nSeed + skip * i;
@@ -101,12 +101,12 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
 
   if (k_first_row != 1) {
     row_skip(table_id, static_cast<int>(k_first_row - 1));
-    if (tdefs.flags & FL_PARENT) {
+    if (tdefs.flags & FL_PARENT) {  // NOLINT
       row_skip(tdefs.nParam, static_cast<int>(k_first_row - 1));
     }
   }
 
-  if (tdefs.flags & FL_SMALL) {
+  if (tdefs.flags & FL_SMALL) {  // NOLINT
     resetCountCount();
   }
 
@@ -439,9 +439,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
     {
       mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + i, 0);
-      int nLineitems;
-      genrand_integer(&nLineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
-      for (auto j = 1; j <= nLineitems; j++) {
+      int n_lineitems;
+      genrand_integer(&n_lineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
+      for (auto j = 1; j <= n_lineitems; j++) {
         int was_returned = 0;
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
@@ -857,9 +857,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     {
       mk_w_store_sales_master(&store_sales, store_sales_first + i, 0);
 
-      int nLineitems;
-      genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
-      for (auto j = 1; j <= nLineitems; j++) {
+      int n_lineitems;
+      genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
+      for (auto j = 1; j <= n_lineitems; j++) {
         int was_returned = 0;
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
@@ -1015,9 +1015,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     {
       mk_w_web_sales_master(&web_sales, web_sales_first + i, 0);
 
-      int nLineitems;
-      genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
-      for (auto j = 1; j <= nLineitems; j++) {
+      int n_lineitems;
+      genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
+      for (auto j = 1; j <= n_lineitems; j++) {
         int was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 
