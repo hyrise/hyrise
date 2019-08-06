@@ -190,13 +190,13 @@ BinID EqualDistinctCountHistogram<T>::_next_bin_for_value(const T& value) const 
 }
 
 template <typename T>
-T EqualDistinctCountHistogram<T>::bin_minimum(const BinID index) const {
+const T& EqualDistinctCountHistogram<T>::bin_minimum(const BinID index) const {
   DebugAssert(index < _bin_minima.size(), "Index is not a valid bin.");
   return _bin_minima[index];
 }
 
 template <typename T>
-T EqualDistinctCountHistogram<T>::bin_maximum(const BinID index) const {
+const T& EqualDistinctCountHistogram<T>::bin_maximum(const BinID index) const {
   DebugAssert(index < _bin_maxima.size(), "Index is not a valid bin.");
   return _bin_maxima[index];
 }
