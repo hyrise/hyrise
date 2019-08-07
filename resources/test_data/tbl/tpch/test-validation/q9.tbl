@@ -1,5 +1,5 @@
 nation|o_year|sum_profit
-string|string|double
+string|string_null|double_null
 ALGERIA|199|2.68951e+06
 ARGENTINA|199|1.02251e+06
 BRAZIL|199|1.10774e+06

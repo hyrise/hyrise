@@ -79,9 +79,9 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& e
       std::cout << "- Verification failed: Hyrise's actual result is not empty, but the expected result is ("
                 << timer.lap_formatted() << ")"
                 << "\n";
-    } else if (const auto table_difference_message =
-                   check_table_equal(actual_result_table, expected_result_table, OrderSensitivity::No,
-                                     TypeCmpMode::Lenient, FloatComparisonMode::RelativeDifference)) {
+    } else if (const auto table_difference_message = check_table_equal(
+                   actual_result_table, expected_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
+                   FloatComparisonMode::RelativeDifference, IgnoreNullable::Yes)) {
       any_verification_failed = true;
       if (description) {
         std::cout << *description << "\n";

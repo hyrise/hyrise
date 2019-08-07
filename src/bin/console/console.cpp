@@ -738,16 +738,22 @@ int Console::_visualize(const std::string& input) {
     } break;
   }
 
-  auto ret = system("./scripts/planviz/is_iterm2.sh");
+  auto scripts_dir = std::string{"./scripts/"};
+  auto ret = system((scripts_dir + "planviz/is_iterm2.sh 2>/dev/null").c_str());
   if (ret != 0) {
-    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};  // NOLINT
+    // Try in parent directory
+    scripts_dir = std::string{"."} + scripts_dir;
+    ret = system((scripts_dir + "planviz/is_iterm2.sh").c_str());
+  }
+  if (ret != 0) {
+    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
     msg += img_filename + "\n";
     out(msg);
 
     return ReturnCode::Ok;
   }
 
-  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + img_filename;
+  auto cmd = scripts_dir + "/planviz/imgcat.sh " + img_filename;
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
 

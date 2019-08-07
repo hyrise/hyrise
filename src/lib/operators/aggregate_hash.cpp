@@ -623,7 +623,8 @@ void AggregateHash::_write_groupby_output(PosList& pos_list) {
   // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
   for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
-                                            input_table->column_data_type(column_id));
+                                            input_table->column_data_type(column_id),
+                                            input_table->column_is_nullable(column_id));
 
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;

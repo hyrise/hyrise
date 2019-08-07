@@ -1,5 +1,5 @@
 a|SUM(b)
-int|double
+int|double_null
 12345|914.4
 123|458.7
 12|350.7
