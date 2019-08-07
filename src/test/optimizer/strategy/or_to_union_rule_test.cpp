@@ -160,6 +160,33 @@ TEST_F(OrToUnionRuleTest, ThreeExistsToUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(OrToUnionRuleTest, SelectColumn) {
+  // SELECT * FROM a WHERE 1 OR 3 > 2
+
+  // clang-format off
+  const auto input_lqp =
+  ProjectionNode::make(expression_vector(a_a),
+    PredicateNode::make(or_(value_(1), greater_than_(value_(3), value_(2))),
+      node_a));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(a_a),
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(value_(1),
+        node_a),
+      PredicateNode::make(greater_than_(value_(3), value_(2)),
+        node_a)));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(OrToUnionRuleTest, OptimizeTPCDS35) {
   // Optimize a simplified and pre-optimized part of TPC-H 35, as the OrToUnionRule would receive it
   //  select *

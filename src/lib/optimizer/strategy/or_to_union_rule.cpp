@@ -35,12 +35,13 @@ void OrToUnionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const
     if (flat_disjunction.size() == 2) { // TODO(jj): also for > 2
       const auto union_node = UnionNode::make(UnionMode::Positions);
       const auto left_input = node->left_input();
-      std::cout << "NODE 1\n" << *node << "\n\n";
+      std::cout << "Input node\n" << *node << "\n\n";
       lqp_replace_node(node, union_node);
-      std::cout << "NODE 2\n" << *node << "\n\n";
       union_node->set_left_input(PredicateNode::make(flat_disjunction[0], left_input));
       union_node->set_right_input(PredicateNode::make(flat_disjunction[1], left_input));
+      std::cout << "Union Node before\n" << *union_node << "\n\n";
       _apply_to_inputs(union_node);
+      std::cout << "Union Node after\n" << *union_node << "\n\n";
     } else {
       _apply_to_inputs(node);
     }
