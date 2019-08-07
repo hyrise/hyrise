@@ -1146,39 +1146,6 @@ TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredic
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, TwoExistsToSemiJoint) {
-  // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b = a.b) OR EXISTS (SELECT * FROM c WHERE c.b = a.b)
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
-
-  // clang-format off
-  const auto subquery_lqp_a =
-  PredicateNode::make(equals_(b_b, parameter),
-                      node_b);
-
-  const auto subquery_a = lqp_subquery_(subquery_lqp_a, std::make_pair(ParameterID{0}, a_b));
-
-  const auto subquery_lqp_b =
-  PredicateNode::make(equals_(d_b, parameter),
-                      node_d);
-
-  const auto subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, a_b));
-
-  const auto input_lqp =
-  PredicateNode::make(or_(exists_(subquery_a), exists_(subquery_b)),
-                      node_a);
-
-  const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, or_(equals_(a_b, b_b), equals_(a_b, d_b)),
-                 node_a,
-                 node_b);
-  // clang-format on
-
-  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH17) {
   // Optimize a pre-optimized LQP version of TPC-H 17, as the SubqueryToJoinRule would receive it
 
