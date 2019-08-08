@@ -20,16 +20,19 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
+constexpr int HEADER_SIZE = 3;
+
 using Matrix = std::vector<std::vector<AllTypeVariant>>;
 
 Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
   // initialize matrix with table sizes, including column names/types
-  Matrix header(2, std::vector<AllTypeVariant>(table->column_count()));
+  Matrix header(HEADER_SIZE, std::vector<AllTypeVariant>(table->column_count()));
 
   // set column names/types
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     header[0][column_id] = pmr_string{table->column_name(column_id)};
     header[1][column_id] = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+    header[2][column_id] = pmr_string{table->column_is_nullable(column_id) ? "NULL" : "NOT NULL"};
   }
 
   // set values
@@ -63,8 +66,8 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
     if (highlight) {
       coloring = highlight_color_bg;
     }
-    if (row_id >= 2) {
-      stream << coloring << std::setw(4) << std::to_string(row_id - 2) << ANSI_COLOR_RESET;
+    if (row_id >= HEADER_SIZE) {
+      stream << coloring << std::setw(4) << std::to_string(row_id - HEADER_SIZE) << ANSI_COLOR_RESET;
     } else {
       stream << coloring << std::setw(4) << "    " << ANSI_COLOR_RESET;
     }
@@ -120,13 +123,15 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
   expected_table->append_chunk(pmr_vector<std::shared_ptr<BaseSegment>>{expected_segment});
 
   // If check_table_equal returns something other than std::nullopt, a difference has been found.
-  return !check_table_equal(actual_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode);
+  return !check_table_equal(actual_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode,
+                            IgnoreNullable::Yes);
 }
 
 std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
                                              const std::shared_ptr<const Table>& expected_table,
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
-                                             FloatComparisonMode float_comparison_mode) {
+                                             FloatComparisonMode float_comparison_mode,
+                                             IgnoreNullable ignore_nullable) {
   if (!opossum_table && expected_table) return "No 'actual' table given";
   if (opossum_table && !expected_table) return "No 'expected' table given";
   if (!opossum_table && !expected_table) return "No 'expected' table and no 'actual' table given";
@@ -139,8 +144,8 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   // sort if order does not matter
   if (order_sensitivity == OrderSensitivity::No) {
     // skip header when sorting
-    std::sort(opossum_matrix.begin() + 2, opossum_matrix.end());
-    std::sort(expected_matrix.begin() + 2, expected_matrix.end());
+    std::sort(opossum_matrix.begin() + HEADER_SIZE, opossum_matrix.end());
+    std::sort(expected_matrix.begin() + HEADER_SIZE, expected_matrix.end());
   }
 
   const auto print_table_comparison = [&](const std::string& error_type, const std::string& error_msg,
@@ -170,9 +175,12 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
 
   //  - column names and types
   DataType left_column_type, right_column_type;
+  bool left_column_is_nullable, right_column_is_nullable;
   for (auto column_id = ColumnID{0}; column_id < expected_table->column_count(); ++column_id) {
     left_column_type = opossum_table->column_data_type(column_id);
+    left_column_is_nullable = opossum_table->column_is_nullable(column_id);
     right_column_type = expected_table->column_data_type(column_id);
+    right_column_is_nullable = expected_table->column_is_nullable(column_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     if (type_cmp_mode == TypeCmpMode::Lenient) {
       if (left_column_type == DataType::Double) {
@@ -206,6 +214,16 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
       print_table_comparison(error_type, error_msg, {{1, column_id}});
       return stream.str();
     }
+
+    if (ignore_nullable == IgnoreNullable::No && left_column_is_nullable != right_column_is_nullable) {
+      const std::string error_type = "Column NULLable mismatch (column " + std::to_string(column_id) + ")";
+      const std::string error_msg = std::string{"Actual column is "} + (left_column_is_nullable ? "" : "NOT ") +
+                                    "NULL\n" + std::string{"Expected column is "} +
+                                    (right_column_is_nullable ? "" : "NOT ") + "NULL";
+
+      print_table_comparison(error_type, error_msg, {{2, column_id}});
+      return stream.str();
+    }
   }
 
   // compare content of tables
@@ -222,8 +240,8 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   // sort if order does not matter
   if (order_sensitivity == OrderSensitivity::No) {
     // skip header when sorting
-    std::sort(opossum_matrix.begin() + 2, opossum_matrix.end());
-    std::sort(expected_matrix.begin() + 2, expected_matrix.end());
+    std::sort(opossum_matrix.begin() + HEADER_SIZE, opossum_matrix.end());
+    std::sort(expected_matrix.begin() + HEADER_SIZE, expected_matrix.end());
   }
 
   bool has_error = false;
@@ -237,7 +255,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   };
 
   // Compare each cell, skipping header
-  for (auto row_id = size_t{2}; row_id < opossum_matrix.size(); row_id++)
+  for (auto row_id = size_t{HEADER_SIZE}; row_id < opossum_matrix.size(); row_id++)
     for (auto column_id = ColumnID{0}; column_id < opossum_matrix[row_id].size(); column_id++) {
       if (variant_is_null(opossum_matrix[row_id][column_id]) || variant_is_null(expected_matrix[row_id][column_id])) {
         highlight_if(!(variant_is_null(opossum_matrix[row_id][column_id]) &&
@@ -273,7 +291,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
     const std::string error_type = "Cell data mismatch";
     std::string error_msg = "Mismatched cells (row,column): ";
     for (auto cell : mismatched_cells) {
-      error_msg += "(" + std::to_string(cell.first - 2) + "," + std::to_string(cell.second) + ") ";
+      error_msg += "(" + std::to_string(cell.first - HEADER_SIZE) + "," + std::to_string(cell.second) + ") ";
     }
 
     print_table_comparison(error_type, error_msg, mismatched_cells);

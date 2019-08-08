@@ -15,8 +15,8 @@ namespace opossum {
 class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    column_definitions.emplace_back("column_1", DataType::Int);
-    column_definitions.emplace_back("column_2", DataType::String);
+    column_definitions.emplace_back("column_1", DataType::Int, false);
+    column_definitions.emplace_back("column_2", DataType::String, false);
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 

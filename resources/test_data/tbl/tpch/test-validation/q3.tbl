@@ -1,5 +1,5 @@
 l_orderkey|revenue|o_orderdate|o_shippriority
-int|double|string|int
+int|double_null|string|int
 47714|267011|1995-03-11|0
 22276|266352|1995-01-29|0
 32965|263768|1995-02-25|0
