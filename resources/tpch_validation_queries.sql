@@ -214,7 +214,7 @@ SELECT sum(l_extendedprice*l_discount) AS REVENUE FROM lineitem WHERE l_shipdate
 --    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
 --  4. implicit type conversions for arithmetic operations are not supported
 --    a. changed 1 to 1.0 explicitly
-SELECT supp_nation, cust_nation, l_year, SUM(volume) as revenue FROM (SELECT n1.n_name as supp_nation, n2.n_name as cust_nation, SUBSTR(l_shipdate, 0, 4) as l_year, l_extendedprice * (1.0 - l_discount) as volume FROM supplier, lineitem, orders, customer, nation n1, nation n2 WHERE s_suppkey = l_suppkey AND o_orderkey = l_orderkey AND c_custkey = o_custkey AND s_nationkey = n1.n_nationkey AND c_nationkey = n2.n_nationkey AND ((n1.n_name = 'IRAN' AND n2.n_name = 'IRAQ') OR (n1.n_name = 'IRAQ' AND n2.n_name = 'IRAN')) AND l_shipdate BETWEEN '1995-01-01' AND '1996-12-31') as shipping GROUP BY supp_nation, cust_nation, l_year ORDER BY supp_nation, cust_nation, l_year;
+SELECT supp_nation, cust_nation, l_year, SUM(volume) as revenue FROM (SELECT n1.n_name as supp_nation, n2.n_name as cust_nation, SUBSTR(l_shipdate, 1, 4) as l_year, l_extendedprice * (1.0 - l_discount) as volume FROM supplier, lineitem, orders, customer, nation n1, nation n2 WHERE s_suppkey = l_suppkey AND o_orderkey = l_orderkey AND c_custkey = o_custkey AND s_nationkey = n1.n_nationkey AND c_nationkey = n2.n_nationkey AND ((n1.n_name = 'IRAN' AND n2.n_name = 'IRAQ') OR (n1.n_name = 'IRAQ' AND n2.n_name = 'IRAN')) AND l_shipdate BETWEEN '1995-01-01' AND '1996-12-31') as shipping GROUP BY supp_nation, cust_nation, l_year ORDER BY supp_nation, cust_nation, l_year;
 
 
 -- TPC-H 8
@@ -263,7 +263,7 @@ SELECT supp_nation, cust_nation, l_year, SUM(volume) as revenue FROM (SELECT n1.
 --    a. use strings as data type for now
 --  3. Extract is not supported
 --    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
-SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share FROM (SELECT SUBSTR(o_orderdate, 0, 4) as o_year, l_extendedprice * (1-l_discount) as volume, n2.n_name as nation FROM "part", supplier, lineitem, orders, customer, nation n1, nation n2, region WHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND o_custkey = c_custkey AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND r_name = 'AMERICA' AND s_nationkey = n2.n_nationkey AND o_orderdate between '1995-01-01' AND '1996-12-31' AND p_type = 'ECONOMY ANODIZED STEEL') as all_nations GROUP BY o_year ORDER BY o_year;
+SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share FROM (SELECT SUBSTR(o_orderdate, 1, 4) as o_year, l_extendedprice * (1-l_discount) as volume, n2.n_name as nation FROM "part", supplier, lineitem, orders, customer, nation n1, nation n2, region WHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND o_custkey = c_custkey AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND r_name = 'AMERICA' AND s_nationkey = n2.n_nationkey AND o_orderdate between '1995-01-01' AND '1996-12-31' AND p_type = 'ECONOMY ANODIZED STEEL') as all_nations GROUP BY o_year ORDER BY o_year;
 
 
 -- TPC-H 9
@@ -298,7 +298,7 @@ SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(vol
 --    a. Use SUBSTR instead
 --  3. implicit type conversions for arithmetic operations are not supported
 --    a. changed 1 to 1.0 explicitly
-SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, SUBSTR(o_orderdate, 0, 4) as o_year, l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount FROM part, supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name like '%green%') as profit GROUP BY nation, o_year ORDER BY nation, o_year DESC;
+SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, SUBSTR(o_orderdate, 1, 4) as o_year, l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount FROM part, supplier, lineitem, partsupp, orders, nation WHERE s_suppkey = l_suppkey AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey AND s_nationkey = n_nationkey AND p_name like '%green%') as profit GROUP BY nation, o_year ORDER BY nation, o_year DESC;
 
 
 -- TPC-H 10
