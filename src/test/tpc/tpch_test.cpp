@@ -58,7 +58,7 @@ TEST_P(TPCHTest, Test) {
   TPCHTableGenerator{scale_factor, 10'000}.generate_and_store();
 
   SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
-               (use_prepared_statements ? " with prepared statements" : " without prepared statements"));
+               (use_prepared_statements ? "with prepared statements" : "without prepared statements"));
 
   // The scale factor passed to the query generator will be ignored as we only use deterministic queries
   auto config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
@@ -95,13 +95,14 @@ TEST_P(TPCHTest, Test) {
 
   /**
    * Test the results. These files are previous results of a known-to-be-good (i.e., validated with SQLite) execution
-   * of the tests.
+   * of the tests. We have also validated the results against the validation set provided in the TPC-H toolkit, but do
+   * not include it in the tests as its execution with ASan/memcheck on a debug build takes way too long.
    */
 
   auto expected_table =
       load_table(std::string("resources/test_data/tbl/tpch/test-validation/q") + std::to_string(tpch_idx) + ".tbl");
 
-  EXPECT_TABLE_EQ(result_table, expected_table, OrderSensitivity::No, TypeCmpMode::Lenient,
+  EXPECT_TABLE_EQ(result_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);
 }
 
