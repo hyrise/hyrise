@@ -201,7 +201,8 @@ class ExpressionEvaluator final {
   // do not have to be executed multiple times by different evaluators
   const std::shared_ptr<const UncorrelatedSubqueryResults> _uncorrelated_subquery_results;
 
-  // Some expressions can be reused, either in the same column (SELECT (a+3)*(a+3)), or across columns (TPC-H Q1)
+  // Some expressions can be reused, either in the same result column (SELECT (a+3)*(a+3)), or across columns
+  // (TPC-H Q1)
   ConstExpressionUnorderedMap<std::shared_ptr<BaseExpressionResult>> _evaluated_expressions;
 };
 

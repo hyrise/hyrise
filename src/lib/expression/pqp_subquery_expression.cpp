@@ -43,11 +43,15 @@ std::string PQPSubqueryExpression::as_column_name() const {
 }
 
 bool PQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
-  Fail("Can't compare PQPSubqueryExpressions");
+  const auto& other = static_cast<const PQPSubqueryExpression&>(expression);
+  return pqp == other.pqp && parameters == parameters;
 }
 
 size_t PQPSubqueryExpression::_on_hash() const {
-  Fail("PQPSubqueryExpressions can't, shouldn't and shouldn't need to be hashed");
+  size_t hash{0};
+  boost::hash_combine(hash, boost::hash_range(parameters.cbegin(), parameters.cend()));
+  boost::hash_combine(hash, pqp->type());  // TODO(anyone): Not a full hash. Implement and use a hash of PQPs?
+  return hash;
 }
 
 bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
