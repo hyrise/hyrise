@@ -191,7 +191,8 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
   });
 }
 
-bool operator<(const SegmentPosition<int>&, const SegmentPosition<int>&) {
+template<typename T>
+bool operator<(const SegmentPosition<T>&, const SegmentPosition<T>&) {
   // Fake comparator needed by is_heap
   return false;
 }
