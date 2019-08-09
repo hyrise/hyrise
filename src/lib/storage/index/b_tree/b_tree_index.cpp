@@ -11,7 +11,7 @@ size_t BTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffse
 }
 
 BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
-    : BaseIndex{get_index_type_of<BTreeIndex>()}, _indexed_segments(segments_to_index[0]) {
+    : AbstractIndex{get_index_type_of<BTreeIndex>()}, _indexed_segments(segments_to_index[0]) {
   Assert((segments_to_index.size() == 1), "BTreeIndex only works with a single segment.");
   _impl =
       make_shared_by_data_type<BaseBTreeIndexImpl, BTreeIndexImpl>(_indexed_segments->data_type(), _indexed_segments);

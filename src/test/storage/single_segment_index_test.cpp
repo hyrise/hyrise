@@ -40,9 +40,9 @@ class SingleSegmentIndexTest : public BaseTest {
     return result;
   }
 
-  std::shared_ptr<BaseIndex> index_int = nullptr;
+  std::shared_ptr<AbstractIndex> index_int = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_int = nullptr;
-  std::shared_ptr<BaseIndex> index_str = nullptr;
+  std::shared_ptr<AbstractIndex> index_str = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
 };
 

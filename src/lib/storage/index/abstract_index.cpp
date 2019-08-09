@@ -1,4 +1,4 @@
-#include "base_index.hpp"
+#include "abstract_index.hpp"
 
 #include <memory>
 #include <vector>
@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-size_t BaseIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count, ChunkOffset distinct_count,
+size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count, ChunkOffset distinct_count,
                                               uint32_t value_bytes) {
   switch (type) {
     case SegmentIndexType::GroupKey:
@@ -26,9 +26,9 @@ size_t BaseIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOffset
   }
 }
 
-BaseIndex::BaseIndex(const SegmentIndexType type) : _type{type} {}
+AbstractIndex::AbstractIndex(const SegmentIndexType type) : _type{type} {}
 
-bool BaseIndex::is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
+bool AbstractIndex::is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
   auto indexed_segments = _get_indexed_segments();
   if (segments.size() > indexed_segments.size()) return false;
   if (segments.empty()) return false;
@@ -39,26 +39,26 @@ bool BaseIndex::is_index_for(const std::vector<std::shared_ptr<const BaseSegment
   return true;
 }
 
-BaseIndex::Iterator BaseIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator AbstractIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert((_get_indexed_segments().size() >= values.size()),
-              "BaseIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
+              "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _lower_bound(values);
 }
 
-BaseIndex::Iterator BaseIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator AbstractIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert((_get_indexed_segments().size() >= values.size()),
-              "BaseIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
+              "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _upper_bound(values);
 }
 
-BaseIndex::Iterator BaseIndex::cbegin() const { return _cbegin(); }
+AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }
 
-BaseIndex::Iterator BaseIndex::cend() const { return _cend(); }
+AbstractIndex::Iterator AbstractIndex::cend() const { return _cend(); }
 
-SegmentIndexType BaseIndex::type() const { return _type; }
+SegmentIndexType AbstractIndex::type() const { return _type; }
 
-size_t BaseIndex::memory_consumption() const { return _memory_consumption(); }
+size_t AbstractIndex::memory_consumption() const { return _memory_consumption(); }
 
 }  // namespace opossum

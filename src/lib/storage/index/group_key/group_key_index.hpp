@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -47,13 +47,13 @@ class GroupKeyIndexTest;
  * x²: Mark for the ending position.
  * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey-Index
  */
-class GroupKeyIndex : public BaseIndex {
+class GroupKeyIndex : public AbstractIndex {
   friend class GroupKeyIndexTest;
 
  public:
   /**
    * Predicts the memory consumption in bytes of creating this index.
-   * See BaseIndex::estimate_memory_consumption()
+   * See AbstractIndex::estimate_memory_consumption()
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 

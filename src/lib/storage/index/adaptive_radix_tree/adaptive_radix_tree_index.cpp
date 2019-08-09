@@ -9,7 +9,7 @@
 
 #include "adaptive_radix_tree_nodes.hpp"
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -22,7 +22,7 @@ size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count
 }
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
-    : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
+    : AbstractIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _indexed_segment(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
   Assert(static_cast<bool>(_indexed_segment), "AdaptiveRadixTree only works with dictionary segments for now");
   Assert((segments_to_index.size() == 1), "AdaptiveRadixTree only works with a single segment");
@@ -43,7 +43,7 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
   _root = _bulk_insert(pairs_to_insert);
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   assert(values.size() == 1);
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
@@ -52,7 +52,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTy
   return _root->lower_bound(BinaryComparable(value_id), 0);
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   assert(values.size() == 1);
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
@@ -62,9 +62,9 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTy
   }
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offsets.cbegin(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offsets.cbegin(); }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
@@ -75,7 +75,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
 }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
-    const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth, BaseIndex::Iterator& it) {
+    const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth, AbstractIndex::Iterator& it) {
   // This is the anchor of the recursion: if all values have the same key, create a leaf.
   if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
         return values.front().first == pair.first;
