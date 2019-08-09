@@ -2,6 +2,7 @@
 
 #include <boost/container/small_vector.hpp>
 #include <boost/lexical_cast.hpp>
+#include <uninitialized_vector.hpp>
 
 #include "bytell_hash_map.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -12,7 +13,6 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
-#include "uninitialized_vector.hpp"
 
 /*
   This file includes the functions that cover the main steps of our hash join implementation
@@ -152,7 +152,11 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
   size_t offset = 0;
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     chunk_offsets[chunk_id] = offset;
-    offset += table->get_chunk(chunk_id)->size();
+
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+    offset += chunk->size();
   }
   return chunk_offsets;
 }
@@ -183,12 +187,18 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(in_table->chunk_count());
 
-  for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
+  const auto chunk_count = in_table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    if (!in_table->get_chunk(chunk_id)) continue;
+
+    jobs.emplace_back(std::make_shared<JobTask>([&, in_table, chunk_id]() {
+      const auto chunk_in = in_table->get_chunk(chunk_id);
+      if (!chunk_in) return;
+
       // Get information from work queue
       auto output_offset = chunk_offsets[chunk_id];
       auto output_iterator = elements->begin() + output_offset;
-      auto segment = in_table->get_chunk(chunk_id)->get_segment(column_id);
+      auto segment = chunk_in->get_segment(column_id);
 
       [[maybe_unused]] auto null_value_bitvector_iterator = null_value_bitvector->begin();
       if constexpr (retain_null_values) {
@@ -754,7 +764,7 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
     // Iterate over every chunk and add the chunks segment with column_id to pos_list_ptrs
     for (ChunkID chunk_id{0}; chunk_id < input_chunks_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);
-      if (!chunk) continue;
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
       const auto& ref_segment_uncasted = chunk->segments()[column_id];
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);

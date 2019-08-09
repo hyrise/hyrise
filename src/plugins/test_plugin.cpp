@@ -8,7 +8,7 @@ const std::string TestPlugin::description() const { return "This is the Hyrise T
 
 void TestPlugin::start() {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("col_1", DataType::Int);
+  column_definitions.emplace_back("col_1", DataType::Int, false);
   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   sm.add_table("DummyTable", table);

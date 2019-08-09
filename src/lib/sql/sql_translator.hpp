@@ -13,6 +13,7 @@
 #include "parameter_id_allocator.hpp"
 #include "sql_identifier_resolver.hpp"
 #include "sql_identifier_resolver_proxy.hpp"
+#include "storage/lqp_view.hpp"
 
 namespace opossum {
 
@@ -99,14 +100,18 @@ class SQLTranslator final {
    *                                                in correlated subqueries
    * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
    *                                                for each encountered parameter
+   * @param with_descriptions                       Contains a mapping of LQPs and associated WITH aliases, which
+   *                                                already got evaluated
    */
   SQLTranslator(const UseMvcc use_mvcc,
                 const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy,
-                const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator);
+                const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+                const std::unordered_map<std::string, std::shared_ptr<LQPView>>& with_descriptions);
 
   std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
   std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
 
+  void _translate_hsql_with_description(hsql::WithDescription& desc);
   TableSourceState _translate_table_ref(const hsql::TableRef& hsql_table_ref);
   TableSourceState _translate_table_origin(const hsql::TableRef& hsql_table_ref);
   std::shared_ptr<AbstractLQPNode> _translate_stored_table(
@@ -170,6 +175,7 @@ class SQLTranslator final {
   std::shared_ptr<SQLIdentifierResolverProxy> _external_sql_identifier_resolver_proxy;
   std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
+  std::unordered_map<std::string, std::shared_ptr<LQPView>> _with_descriptions;
 
   // "Inflated" because all wildcards will be inflated to the expressions they actually represent
   std::vector<SelectListElement> _inflated_select_list_elements;

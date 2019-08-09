@@ -129,7 +129,11 @@ class Table : private Noncopyable {
     Assert(column_id < column_count(), "column_id invalid");
 
     size_t row_counter = 0u;
-    for (auto& chunk : _chunks) {
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto chunk = std::atomic_load(&_chunks[chunk_id]);
+      if (!chunk) continue;
+
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
@@ -165,7 +169,11 @@ class Table : private Noncopyable {
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
     SegmentIndexType index_type = get_index_type_of<Index>();
 
-    for (auto& chunk : _chunks) {
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto chunk = std::atomic_load(&_chunks[chunk_id]);
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
       chunk->create_index<Index>(column_ids);
     }
     IndexStatistics index_statistics = {column_ids, name, index_type};
@@ -182,7 +190,16 @@ class Table : private Noncopyable {
   const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
+
+  /**
+   * To prevent data races for TableType::Data tables, we must access _chunks atomically.
+   * This is due to the existence of the MvccDeletePlugin, which might modify shared pointers from a separate thread.
+   *
+   * With C++20 we will get std::atomic<std::shared_ptr<T>>, which allows us to omit the std::atomic_load() and
+   * std::atomic_store() function calls.
+   */
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
+
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexStatistics> _indexes;

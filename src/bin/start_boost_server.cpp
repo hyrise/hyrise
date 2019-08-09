@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
 
   // Generate TPC-H data with given scale factor
   if (const auto scale_factor = parsed_options["generate_tpch"].as<float>(); scale_factor != 0.f){
-    opossum::TpchTableGenerator{scale_factor}.generate_and_store();
+    opossum::TPCHTableGenerator{scale_factor}.generate_and_store();
   }
 
   if constexpr (HYRISE_NUMA_SUPPORT) {

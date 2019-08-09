@@ -51,20 +51,20 @@ class SQLPipelineStatementTest : public BaseTest {
     StorageManager::get().add_table("table_int", _table_int);
 
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("a", DataType::Int);
-    column_definitions.emplace_back("b", DataType::Float);
-    column_definitions.emplace_back("bb", DataType::Float);
+    column_definitions.emplace_back("a", DataType::Int, false);
+    column_definitions.emplace_back("b", DataType::Float, false);
+    column_definitions.emplace_back("bb", DataType::Float, false);
     _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
 
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
 
-    _int_float_column_definitions.emplace_back("a", DataType::Int);
-    _int_float_column_definitions.emplace_back("b", DataType::Float);
+    _int_float_column_definitions.emplace_back("a", DataType::Int, false);
+    _int_float_column_definitions.emplace_back("b", DataType::Float, false);
 
-    _int_int_int_column_definitions.emplace_back("a", DataType::Int);
-    _int_int_int_column_definitions.emplace_back("b", DataType::Int);
-    _int_int_int_column_definitions.emplace_back("c", DataType::Int);
+    _int_int_int_column_definitions.emplace_back("a", DataType::Int, false);
+    _int_int_int_column_definitions.emplace_back("b", DataType::Int, false);
+    _int_int_int_column_definitions.emplace_back("c", DataType::Int, false);
 
     _select_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_select_query_a, _select_parse_result.get());

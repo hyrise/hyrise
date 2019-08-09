@@ -73,7 +73,7 @@ class JoinIndexTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      auto chunk = table->get_chunk(chunk_id);
+      const auto chunk = table->get_chunk(chunk_id);
 
       std::vector<ColumnID> columns{1};
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
@@ -90,7 +90,8 @@ class JoinIndexTest : public BaseTest {
                                const std::shared_ptr<const AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
                                const std::string& file_name, size_t chunk_size, bool using_index = true,
-                               const IndexSide index_side = IndexSide::Right) {
+                               const IndexSide index_side = IndexSide::Right,
+                               const bool single_chunk_reference_guarantee = true) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -102,14 +103,24 @@ class JoinIndexTest : public BaseTest {
     join->execute();
 
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
+
+    std::shared_ptr<const AbstractOperator> index_side_input;
+    if (index_side == IndexSide::Left) {
+      index_side_input = left;
+    } else {
+      index_side_input = right;
+    }
+
     const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join->performance_data());
-    if (using_index && right->get_output()->type() == TableType::Data) {
-      // We can't execute the index join on referencing tables
-      EXPECT_EQ(performance_data.chunks_scanned_with_index, static_cast<size_t>(right->get_output()->chunk_count()));
+    if (using_index && (index_side_input->get_output()->type() == TableType::Data ||
+                        (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
+      EXPECT_EQ(performance_data.chunks_scanned_with_index,
+                static_cast<size_t>(index_side_input->get_output()->chunk_count()));
       EXPECT_EQ(performance_data.chunks_scanned_without_index, 0);
     } else {
       EXPECT_EQ(performance_data.chunks_scanned_with_index, 0);
-      EXPECT_EQ(performance_data.chunks_scanned_without_index, static_cast<size_t>(right->get_output()->chunk_count()));
+      EXPECT_EQ(performance_data.chunks_scanned_without_index,
+                static_cast<size_t>(index_side_input->get_output()->chunk_count()));
     }
   }
 
@@ -443,7 +454,27 @@ TYPED_TEST(JoinIndexTest, JoinOnDictAndReferenceSegment) {
                          JoinMode::Inner, "resources/test_data/tbl/join_operators/int_inner_join_neq.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeft) {
+TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
+  // scan that returns all rows
+  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
+  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_b->execute();
+  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_c->execute();
+
+  auto join = std::make_shared<JoinIndex>(
+      scan_a, scan_b, JoinMode::Inner, OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  join->execute();
+
+  // Referencing single chunk guarantee is not given since the left input of the index join is also an index join
+  // and the IndexSide is left. The execution of the index join does not provide single chunk reference guarantee.
+  this->test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
+                         "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_left.tbl", 1, true,
+                         IndexSide::Left, false);
+}
+
+TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftIndexRight) {
   // scan that returns all rows
   auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -457,10 +488,11 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeft) {
   join->execute();
 
   this->test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
-                         "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_left.tbl", 1);
+                         "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_left.tbl", 1, true,
+                         IndexSide::Right, true);
 }
 
-TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRight) {
+TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexLeft) {
   // scan that returns all rows
   auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -474,7 +506,28 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRight) {
   join->execute();
 
   this->test_join_output(scan_c, join, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
-                         "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_right.tbl", 1);
+                         "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_right.tbl", 1, true,
+                         IndexSide::Left, true);
+}
+
+TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceRightIndexRight) {
+  // scan that returns all rows
+  auto scan_a = this->create_table_scan(this->_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
+  auto scan_b = this->create_table_scan(this->_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_b->execute();
+  auto scan_c = this->create_table_scan(this->_table_wrapper_h, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_c->execute();
+
+  auto join = std::make_shared<JoinIndex>(
+      scan_a, scan_b, JoinMode::Inner, OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  join->execute();
+
+  // Referencing single chunk guarantee is not given since the right input of the index join is also an index join
+  // and the IndexSide is right. The execution of the index join does not provide single chunk reference guarantee.
+  this->test_join_output(scan_c, join, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner,
+                         "resources/test_data/tbl/join_operators/int_inner_multijoin_ref_ref_ref_right.tbl", 1, true,
+                         IndexSide::Right, false);
 }
 
 TYPED_TEST(JoinIndexTest, MultiJoinOnReferenceLeftFiltered) {
@@ -505,7 +558,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
                          "resources/test_data/tbl/join_operators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
+TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns all rows
   auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
@@ -514,16 +567,41 @@ TYPED_TEST(JoinIndexTest, RightJoinRefSegment) {
                          JoinMode::Right, "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinRefSegment) {
+TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
+  // scan that returns all rows
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
+
+  EXPECT_THROW(
+      this->test_join_output(scan_a, this->_table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                             JoinMode::Right, "resources/test_data/tbl/join_operators/int_right_join_equals.tbl", 1,
+                             true, IndexSide::Left),
+      std::logic_error);
+}
+
+TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns all rows
   auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                         JoinMode::Left, "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1);
+                         JoinMode::Left, "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1, true,
+                         IndexSide::Left);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {
+TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
+  // scan that returns all rows
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_b->execute();
+
+  EXPECT_THROW(
+      this->test_join_output(this->_table_wrapper_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                             JoinMode::Left, "resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1, true,
+                             IndexSide::Right),
+      std::logic_error);
+}
+
+TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
   // scan that returns no rows
   auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
@@ -532,13 +610,38 @@ TYPED_TEST(JoinIndexTest, RightJoinEmptyRefSegment) {
                          JoinMode::Right, "resources/test_data/tbl/join_operators/int_join_empty.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefSegment) {
+TYPED_TEST(JoinIndexTest, RightJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
+  // scan that returns no rows
+  auto scan_a = this->create_table_scan(this->_table_wrapper_a, ColumnID{0}, PredicateCondition::Equals, 0);
+  scan_a->execute();
+
+  EXPECT_THROW(
+      this->test_join_output(scan_a, this->_table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                             JoinMode::Right, "resources/test_data/tbl/join_operators/int_join_empty.tbl", 1, true,
+                             IndexSide::Left),
+      std::logic_error);
+}
+
+TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsLeft) {
   // scan that returns no rows
   auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();
 
   this->test_join_output(this->_table_wrapper_b, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
-                         JoinMode::Left, "resources/test_data/tbl/join_operators/int_join_empty_left.tbl", 1);
+                         JoinMode::Left, "resources/test_data/tbl/join_operators/int_join_empty_left.tbl", 1, true,
+                         IndexSide::Left);
+}
+
+TYPED_TEST(JoinIndexTest, LeftJoinPruneInputIsEmptyRefIndexInputIsDataIndexSideIsRight) {
+  // scan that returns no rows
+  auto scan_b = this->create_table_scan(this->_table_wrapper_b, ColumnID{0}, PredicateCondition::Equals, 0);
+  scan_b->execute();
+
+  EXPECT_THROW(
+      this->test_join_output(this->_table_wrapper_b, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals},
+                             JoinMode::Left, "resources/test_data/tbl/join_operators/int_join_empty_left.tbl", 1, true,
+                             IndexSide::Right),
+      std::logic_error);
 }
 
 }  // namespace opossum

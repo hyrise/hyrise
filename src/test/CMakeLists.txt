@@ -130,7 +130,6 @@ set(
     optimizer/strategy/strategy_base_test.hpp
     optimizer/strategy/subquery_to_join_rule_test.cpp
     scheduler/scheduler_test.cpp
-    server/buffer_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
     server/postgres_wire_handler_test.cpp
@@ -190,6 +189,7 @@ set(
     testing_assert.hpp
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
+    utils/lossless_predicate_cast_test.cpp
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp

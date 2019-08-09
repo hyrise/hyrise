@@ -12,6 +12,9 @@ namespace opossum {
 class BenchmarkConfig;
 
 struct BenchmarkTableInfo {
+  BenchmarkTableInfo() = default;
+  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& table);
+
   std::shared_ptr<Table> table;
 
   // Set if the table has a binary/textual file path associated with it. E.g., if the table was loaded from such a file

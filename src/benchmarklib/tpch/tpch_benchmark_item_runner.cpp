@@ -56,9 +56,16 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
 
 const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const { return _items; }
 
-void TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   const auto sql = _build_query(item_id);
-  sql_executor.execute(sql);
+  std::shared_ptr<const Table> expected_result_table = nullptr;
+  if (!_dedicated_expected_results.empty()) {
+    expected_result_table = _dedicated_expected_results[item_id];
+  }
+
+  const auto [status, table] = sql_executor.execute(sql, expected_result_table);
+  Assert(status == SQLPipelineStatus::Success, "TPC-H items should not fail");
+  return true;
 }
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {

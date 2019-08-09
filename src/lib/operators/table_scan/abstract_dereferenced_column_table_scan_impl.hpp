@@ -29,6 +29,8 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
 
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
+  const PredicateCondition predicate_condition;
+
  protected:
   void _scan_reference_segment(const ReferenceSegment& segment, const ChunkID chunk_id, PosList& matches) const;
 
@@ -41,7 +43,6 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
 
   const std::shared_ptr<const Table> _in_table;
   const ColumnID _column_id;
-  const PredicateCondition _predicate_condition;
 };
 
 }  // namespace opossum

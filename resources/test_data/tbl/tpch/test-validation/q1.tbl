@@ -1,5 +1,5 @@
 l_returnflag|l_linestatus|sum_qty|sum_base_price|sum_disc_price|sum_charge|avg_qty|avg_price|avg_disc|count_order
-string|string|double|double|double|double|double|double|double|long
+string|string|double_null|double_null|double_null|double_null|double_null|double_null|double_null|long
 A|F|380456|5.32348e+08|5.05822e+08|5.26166e+08|25.5752|35785.7|0.0500813|14876
 N|F|8971|1.23848e+07|1.17983e+07|1.22825e+07|25.7787|35588.5|0.0477586|348
 N|O|742802|1.0415e+09|9.89738e+08|1.02942e+09|25.455|35691.1|0.0499311|29181
