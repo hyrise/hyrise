@@ -21,10 +21,10 @@ namespace opossum {
 class OperatorTaskTest : public BaseTest {
  protected:
   void SetUp() override {
-    _test_table_a = load_table("src/test/tables/int_float.tbl", 2);
+    _test_table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _test_table_a);
 
-    _test_table_b = load_table("src/test/tables/int_float2.tbl", 2);
+    _test_table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _test_table_b);
   }
 
@@ -52,7 +52,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
-  auto expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
+  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 
   // Check that everything was properly cleaned up
@@ -62,8 +62,9 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
 TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   auto gt_a = std::make_shared<GetTable>("table_a");
   auto gt_b = std::make_shared<GetTable>("table_b");
-  auto join = std::make_shared<JoinHash>(gt_a, gt_b, JoinMode::Inner, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-                                         PredicateCondition::Equals);
+  auto join = std::make_shared<JoinHash>(
+      gt_a, gt_b, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
 
   auto tasks = OperatorTask::make_tasks_from_operator(join, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
@@ -71,7 +72,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
-  auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
+  auto expected_result = load_table("resources/test_data/tbl/join_operators/int_inner_join.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
 
   // Check that everything was properly cleaned up

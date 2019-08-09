@@ -59,7 +59,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::State& state) {
   // Add some benchmark-specific setup here
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     std::vector<size_t> result;
     benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
     const auto size = _vec.size();
@@ -78,7 +78,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
   // Add some benchmark-specific setup here
 
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     std::vector<size_t> result;
     benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
     // pre-allocate result vector

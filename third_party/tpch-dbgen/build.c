@@ -65,9 +65,7 @@ extern adhoc_t  adhocs[];
 #define TEXT(avg, sd, tgt)  dbg_text(tgt, (int)(avg * V_STR_LOW),(int)(avg * V_STR_HGH), sd)
 static void gen_phone PROTO((DSS_HUGE ind, char *target, long seed));
 
-/**
- * Made public so we can free the allocated memory later
- */
+// HYRISE: Made public so we can free the allocated memory later
 char **asc_date = NULL;
 
 DSS_HUGE
@@ -151,7 +149,7 @@ mk_sparse(DSS_HUGE i, DSS_HUGE * ok, long seq)
 }
 
 long
-mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
+mk_order(DSS_HUGE index, order_t * o, long upd_num)
 {
 	DSS_HUGE        lcnt;
 	DSS_HUGE        rprice;
@@ -190,7 +188,8 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 
 
 	RANDOM(tmp_date, O_ODATE_MIN, O_ODATE_MAX, O_ODATE_SD);
-	strcpy(o->odate, asc_date[tmp_date - STARTDATE]);
+	// HYRISE: We know that dates are always yyyy-mm-dd + \0.
+	memcpy(o->odate, asc_date[tmp_date - STARTDATE], 11);
 
 	pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
 	RANDOM(clk_num, 1, MAX((scale * O_CLRK_SCL), O_CLRK_SCL), O_CLRK_SD);
@@ -241,10 +240,10 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 		RANDOM(r_date, L_RDTE_MIN, L_RDTE_MAX, L_RDTE_SD);
 		r_date += s_date;
 
-
-		strcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE]);
-		strcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE]);
-		strcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE]);
+    // HYRISE: We know that dates are always yyyy-mm-dd + \0.
+		memcpy(o->l[lcnt].sdate, asc_date[s_date - STARTDATE], 11);
+		memcpy(o->l[lcnt].cdate, asc_date[c_date - STARTDATE], 11);
+		memcpy(o->l[lcnt].rdate, asc_date[r_date - STARTDATE], 11);
 
 
 		if (julian(r_date) <= CURRENTDATE)
@@ -273,7 +272,7 @@ mk_order(DSS_HUGE index, order_t * o, long upd_num, float scale)
 }
 
 long
-mk_part(DSS_HUGE index, part_t * p, float scale)
+mk_part(DSS_HUGE index, part_t * p)
 {
 	DSS_HUGE        temp;
 	long            snum;

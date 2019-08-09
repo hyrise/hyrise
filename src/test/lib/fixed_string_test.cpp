@@ -26,7 +26,7 @@ TEST_F(FixedStringTest, Constructors) {
   auto str2 = FixedString(str1);
   EXPECT_EQ(str2, "foo");
 
-  if (IS_DEBUG) {
+  if (HYRISE_DEBUG) {
     EXPECT_THROW(str1 = FixedString(&charvector2[0], 6u), std::exception);
   } else {
     str1 = FixedString(&charvector2[0], 6u);
@@ -96,7 +96,7 @@ TEST_F(FixedStringTest, Swap) {
   EXPECT_EQ(fixed_string, "foo");
 }
 
-TEST_F(FixedStringTest, Print) {
+TEST_F(FixedStringTest, OutputToStream) {
   std::stringstream sstream;
   sstream << fixed_string1;
   EXPECT_EQ(sstream.str().find("foo"), 0u);

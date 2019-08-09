@@ -126,7 +126,7 @@ extern seed_t Seed[];
  * value; otherwise return the default supplied
  */
 char     *
- env_config(char *var, char *dflt)
+env_config(char *var, char *dflt)
 {
    static char *evar;
 
@@ -230,7 +230,9 @@ pick_str(distribution *s, int c, char *target)
     RANDOM(j, 1, s->list[s->count - 1].weight, c);
     while (s->list[i].weight < j)
         i++;
-    strcpy(target, s->list[i].text);
+    // HYRISE: Avoid redundantly obtaining the length of a string
+    if (!s->list[i].len) s->list[i].len = strlen(s->list[i].text);
+    memcpy(target, s->list[i].text, s->list[i].len + 1);
     return(i);
 }
 
@@ -290,7 +292,7 @@ julian(long date)
 * should be rewritten to allow multiple dists in a file
 */
 void
-read_dist(char *path, char *name, distribution *target, const char * realname)
+read_dist(char *path, char *name, distribution *target)
 {
 FILE     *fp;
 char      line[256],
@@ -335,7 +337,7 @@ long      weight,
             if (!dssncasecmp(line, "END", 3))
                 {
                 fclose(fp);
-                goto over;
+                return;
                 }
             }
 
@@ -370,22 +372,6 @@ long      weight,
         }
 	target->permute = (long *)NULL;
     fclose(fp);
-
-over:
-  printf("set_member %s_list[] = {\n", realname);
-  for (size_t i=0;i<target->count;++i) {
-    printf("  {%i, \"%s\"},\n", (int)target->list[i].weight, target->list[i].text);
-  }
-  printf("};\n");
-
-  printf("distribution %s = {\n", realname);
-  printf("  %i,\n", target->count);
-  printf("  %i,\n", target->max);
-  printf("  %s_list,\n", realname);
-  printf("  NULL\n");
-  printf("};\n");
-
-
 
     return;
 }

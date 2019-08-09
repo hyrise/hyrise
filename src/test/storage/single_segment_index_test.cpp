@@ -25,7 +25,7 @@ class SingleSegmentIndexTest : public BaseTest {
     dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
     index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int}));
 
-    dict_segment_str = BaseTest::create_dict_segment_by_type<std::string>(
+    dict_segment_str = BaseTest::create_dict_segment_by_type<pmr_string>(
         DataType::String, {"hello", "world", "test", "foo", "bar", "foo"});
     index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_str}));
   }
@@ -46,10 +46,10 @@ class SingleSegmentIndexTest : public BaseTest {
   std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
 };
 
-// List of indices to test
-typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indices */>
-    DerivedIndices;
-TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndices);
+// List of indexes to test
+typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indexes */>
+    DerivedIndexes;
+TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(SingleSegmentIndexTest, FullRange) {
   auto begin_int = this->index_int->cbegin();
@@ -172,7 +172,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
 }
 
 TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
-  if (!IS_DEBUG) return;
+  if (!HYRISE_DEBUG) GTEST_SKIP();
   auto vs_int = std::make_shared<ValueSegment<int>>();
   vs_int->append(4);
 

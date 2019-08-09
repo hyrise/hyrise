@@ -12,8 +12,9 @@
 namespace opossum {
 
 const boost::bimap<JitExpressionType, std::string> jit_expression_type_to_string =
-    make_bimap<JitExpressionType, std::string>({{JitExpressionType::Addition, "+"},
-                                                {JitExpressionType::Column, "<COLUMN>"},
+    make_bimap<JitExpressionType, std::string>({{JitExpressionType::Column, "<COLUMN>"},
+                                                {JitExpressionType::Value, "<VALUE>"},
+                                                {JitExpressionType::Addition, "+"},
                                                 {JitExpressionType::Subtraction, "-"},
                                                 {JitExpressionType::Multiplication, "*"},
                                                 {JitExpressionType::Division, "/"},

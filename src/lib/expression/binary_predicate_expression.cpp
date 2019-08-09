@@ -13,7 +13,7 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition pr
                                                      const std::shared_ptr<AbstractExpression>& left_operand,
                                                      const std::shared_ptr<AbstractExpression>& right_operand)
     : AbstractPredicateExpression(predicate_condition, {left_operand, right_operand}) {
-#if IS_DEBUG
+#if HYRISE_DEBUG
   const auto valid_predicate_conditions = {PredicateCondition::Equals,      PredicateCondition::NotEquals,
                                            PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
                                            PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
@@ -37,7 +37,7 @@ std::string BinaryPredicateExpression::as_column_name() const {
   std::stringstream stream;
 
   stream << _enclose_argument_as_column_name(*left_operand()) << " ";
-  stream << predicate_condition_to_string.left.at(predicate_condition) << " ";
+  stream << predicate_condition << " ";
   stream << _enclose_argument_as_column_name(*right_operand());
 
   return stream.str();

@@ -128,7 +128,7 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::RowDescription);
 
   // Int16 Specifies the number of fields in a row (can be zero).
-  PostgresWireHandler::write_value(*output_packet, htons(row_description.size()));
+  PostgresWireHandler::write_value(*output_packet, htons(static_cast<uint16_t>(row_description.size())));
 
   /* FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
    *
@@ -163,10 +163,12 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
     PostgresWireHandler::write_value(*output_packet, htonl(0u));  // no object id
     PostgresWireHandler::write_value(*output_packet, htons(0u));  // no attribute number
 
-    PostgresWireHandler::write_value(*output_packet, htonl(column_description.object_id));   // object id of type
-    PostgresWireHandler::write_value(*output_packet, htons(column_description.type_width));  // regular int
-    PostgresWireHandler::write_value(*output_packet, htonl(-1));                             // no modifier
-    PostgresWireHandler::write_value(*output_packet, htons(0u));                             // text format
+    PostgresWireHandler::write_value(*output_packet,
+                                     htonl(static_cast<uint32_t>(column_description.object_id)));  // object id of type
+    PostgresWireHandler::write_value(*output_packet,
+                                     htons(static_cast<uint16_t>(column_description.type_width)));  // regular int
+    PostgresWireHandler::write_value(*output_packet, htonl(-1));                                    // no modifier
+    PostgresWireHandler::write_value(*output_packet, htons(0u));                                    // text format
   }
 
   return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
@@ -197,11 +199,11 @@ boost::future<void> ClientConnection::send_data_row(const std::vector<std::strin
   */
 
   // Number of columns in row
-  PostgresWireHandler::write_value(*output_packet, htons(row_strings.size()));
+  PostgresWireHandler::write_value(*output_packet, htons(static_cast<uint16_t>(row_strings.size())));
 
   for (const auto& value_string : row_strings) {
     // Size of string representation of value, NOT of value type's size
-    PostgresWireHandler::write_value(*output_packet, htonl(value_string.length()));
+    PostgresWireHandler::write_value(*output_packet, htonl(static_cast<uint32_t>(value_string.length())));
 
     // Text mode means that all values are sent as non-terminated strings
     PostgresWireHandler::write_string(*output_packet, value_string, false);
@@ -248,7 +250,7 @@ boost::future<uint64_t> ClientConnection::_send_bytes_async(const std::shared_pt
 
   if (_response_buffer.size() + packet_size > _max_response_size) {
     // We have to flush before we can actually process the data
-    return _flush_async() >> then >> [=](uint64_t) { return _send_bytes_async(packet, flush); };
+    return _flush_async() >> then >> [this, packet, flush](uint64_t) { return _send_bytes_async(packet, flush); };
   }
 
   _response_buffer.insert(_response_buffer.end(), packet->data.begin(), packet->data.end());
@@ -263,7 +265,7 @@ boost::future<uint64_t> ClientConnection::_send_bytes_async(const std::shared_pt
 
 boost::future<uint64_t> ClientConnection::_flush_async() {
   return _socket.async_send(boost::asio::buffer(_response_buffer), boost::asio::use_boost_future) >> then >>
-         [=](uint64_t sent_bytes) {
+         [this](uint64_t sent_bytes) {
            // If this fails, the connection may be closed but the server will keep running.
            Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
            _response_buffer.clear();

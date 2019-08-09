@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "memory/numa_memory_resource.hpp"
 #include "types.hpp"
-#include "utils/numa_memory_resource.hpp"
 #include "utils/singleton.hpp"
 
 namespace boost {
@@ -28,10 +28,10 @@ struct TopologyCpu final {
 struct TopologyNode final {
   explicit TopologyNode(std::vector<TopologyCpu>&& cpus) : cpus(std::move(cpus)) {}
 
-  void print(std::ostream& stream = std::cout, size_t indent = 0) const;
-
   std::vector<TopologyCpu> cpus;
 };
+
+std::ostream& operator<<(std::ostream& stream, const TopologyNode& topology_node);
 
 /**
  * Topology is a singleton that encapsulates the Machine Architecture, i.e. how many Nodes/Cores there are.
@@ -79,17 +79,16 @@ class Topology final : public Singleton<Topology> {
    */
   static void use_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
-  const std::vector<TopologyNode>& nodes();
+  const std::vector<TopologyNode>& nodes() const;
 
   size_t num_cpus() const;
 
   boost::container::pmr::memory_resource* get_memory_resource(int node_id);
 
-  void print(std::ostream& stream = std::cout, size_t indent = 0) const;
-
  private:
   Topology();
 
+  friend std::ostream& operator<<(std::ostream& stream, const Topology& topology);
   friend class Singleton;
 
   void _init_default_topology(uint32_t max_num_cores = 0);
@@ -101,11 +100,15 @@ class Topology final : public Singleton<Topology> {
   void _create_memory_resources();
 
   std::vector<TopologyNode> _nodes;
-  size_t _num_cpus{0};
+  uint32_t _num_cpus{0};
   bool _fake_numa_topology{false};
+  bool _filtered_by_affinity{false};
 
   static const int _number_of_hardware_nodes;
 
   std::vector<NUMAMemoryResource> _memory_resources;
 };
+
+std::ostream& operator<<(std::ostream& stream, const Topology& topology);
+
 }  // namespace opossum

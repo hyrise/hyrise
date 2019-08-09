@@ -55,8 +55,8 @@ class OperatorsExportBinaryTest : public BaseTest {
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("FirstColumn", DataType::Int);
-  column_definitions.emplace_back("SecondColumn", DataType::String);
+  column_definitions.emplace_back("FirstColumn", DataType::Int, false);
+  column_definitions.emplace_back("SecondColumn", DataType::String, false);
 
   table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -65,12 +65,12 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/TwoColumnsNoValues.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/TwoColumnsNoValues.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Float);
+  column_definitions.emplace_back("a", DataType::Float, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({5.5f});
@@ -83,12 +83,12 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/SingleChunkSingleFloatColumn.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/SingleChunkSingleFloatColumn.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Float);
+  column_definitions.emplace_back("a", DataType::Float, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   table->append({5.5f});
@@ -101,12 +101,12 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/MultipleChunkSingleFloatColumn.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/MultipleChunkSingleFloatColumn.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({"This"});
@@ -120,12 +120,12 @@ TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringValueSegment.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/StringValueSegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({"This"});
@@ -141,12 +141,12 @@ TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/StringDictionarySegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({"This"});
@@ -162,16 +162,16 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/StringDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/StringDictionarySegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
@@ -186,16 +186,16 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueSegment.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesValueSegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
@@ -213,16 +213,16 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesDictionarySegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
@@ -239,19 +239,19 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesMixColumn.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesMixColumn.bin", filename));
 }
 
 // A table with reference segments is materialized while exporting. The content of the export file should not be
 // different from a exported table with ValueSegments and the same content.
-// They only differ in the table's chunk size. The result table of a scan has no chunk size limit.
+// It assumes that the TableScan produces one output segment per input segment.
 TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
@@ -270,12 +270,12 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueSegmentMaxChunkSize.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesValueSegmentMaxChunkSize.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
@@ -291,12 +291,12 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsValueSegment.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/EmptyStringsValueSegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
@@ -314,7 +314,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/EmptyStringsDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/EmptyStringsDictionarySegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
@@ -325,13 +325,13 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
 
-  table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
-  table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
+  table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
+  table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
   table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
-  table->append({4, 4.4f, 400, opossum::NULL_VALUE, 4.44});
-  table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
+  table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
+  table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -340,7 +340,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesNullValues.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesNullValues.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
@@ -351,13 +351,13 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   column_definitions.emplace_back("d", DataType::String, true);
   column_definitions.emplace_back("e", DataType::Double, true);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
 
-  table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
-  table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
+  table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
+  table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
   table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
-  table->append({4, 4.4f, 400, opossum::NULL_VALUE, 4.44});
-  table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
+  table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
+  table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
@@ -368,7 +368,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionaryNullValues.bin", filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesDictionaryNullValues.bin", filename));
 }
 
 }  // namespace opossum

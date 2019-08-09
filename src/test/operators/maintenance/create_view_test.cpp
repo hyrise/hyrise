@@ -28,7 +28,7 @@ TEST_F(CreateViewTest, OperatorName) {
   const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
   const auto view = std::make_shared<LQPView>(view_lqp, std::unordered_map<ColumnID, std::string>{});
 
-  auto cv = std::make_shared<CreateView>("view_name", view);
+  auto cv = std::make_shared<CreateView>("view_name", view, false);
 
   EXPECT_EQ(cv->name(), "CreateView");
 }
@@ -37,7 +37,7 @@ TEST_F(CreateViewTest, DeepCopy) {
   const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
   const auto view = std::make_shared<LQPView>(view_lqp, std::unordered_map<ColumnID, std::string>{});
 
-  auto cv = std::make_shared<CreateView>("view_name", view);
+  auto cv = std::make_shared<CreateView>("view_name", view, false);
 
   cv->execute();
   EXPECT_NE(cv->get_output(), nullptr);
@@ -46,19 +46,40 @@ TEST_F(CreateViewTest, DeepCopy) {
   EXPECT_EQ(copy->get_output(), nullptr);
 }
 
-TEST_F(CreateViewTest, CanCreateViews) {
+TEST_F(CreateViewTest, Execute) {
   const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
   const auto view_in = std::make_shared<LQPView>(view_lqp, std::unordered_map<ColumnID, std::string>{});
 
-  auto cv = std::make_shared<CreateView>("view_name", view_in);
+  auto cv = std::make_shared<CreateView>("view_name", view_in, false);
   cv->execute();
 
-  EXPECT_EQ(cv->get_output()->row_count(), 0u) << "CreateView returned non-empty table";
+  EXPECT_EQ(cv->get_output()->row_count(), 0u);
 
-  EXPECT_TRUE(StorageManager::get().has_view("view_name")) << "View was not added";
+  EXPECT_TRUE(StorageManager::get().has_view("view_name"));
 
   auto view_out = StorageManager::get().get_view("view_name");
   EXPECT_EQ(view_out->lqp->type, LQPNodeType::Mock);
+
+  auto cv_2 = std::make_shared<CreateView>("view_name", view_in, false);
+  EXPECT_ANY_THROW(cv_2->execute());
+}
+
+TEST_F(CreateViewTest, ExecuteWithIfNotExists) {
+  const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  const auto view_in = std::make_shared<LQPView>(view_lqp, std::unordered_map<ColumnID, std::string>{});
+
+  auto cv = std::make_shared<CreateView>("view_name", view_in, true);
+  cv->execute();
+
+  EXPECT_EQ(cv->get_output()->row_count(), 0u);
+
+  EXPECT_TRUE(StorageManager::get().has_view("view_name"));
+
+  auto view_out = StorageManager::get().get_view("view_name");
+  EXPECT_EQ(view_out->lqp->type, LQPNodeType::Mock);
+
+  auto cv_2 = std::make_shared<CreateView>("view_name", view_in, true);
+  EXPECT_NO_THROW(cv_2->execute());
 }
 
 }  // namespace opossum

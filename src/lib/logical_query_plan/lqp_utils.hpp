@@ -7,10 +7,17 @@
 #include <unordered_set>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 
 namespace opossum {
 
-class AbstractLQPNode;
 class AbstractExpression;
 enum class LQPInputSide;
 
@@ -49,15 +56,42 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
 std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
- * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes
+ * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes. It traverses the LQP from the
+ * begin node until it reaches the end node if set or an LQP node which is a not a Predicate, Union, Projection, Sort,
+ * Validate or Limit node. The end node is necessary if a certain Predicate should not be part of the created expression
+ * (e.g., the jit-aware LQP translator uses it to prevent that non-jittable Predicate nodes are added to the boolean
+ * expression used to create jittable expressions). Subsequent Predicate nodes are turned into a LogicalExpression with
+ * AND. UnionNodes into a LogicalExpression with OR. Projection, Sort, Validate or Limit LQP nodes are ignored during
+ * the traversal.
+ *
+ *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression
+ *
+ *       Sort (begin node)                                                  Predicate C       Predicate D
+ *             |                                                                   \             /
+ *           Union                                                                   --- AND ---       Predicate E
+ *         /       \                                                                       \              /
+ *  Predicate D     |                                                        Predicate B     ---  OR  ---
+ *        |      Predicate E                                                        \             /
+ *  Predicate C  ´  |                                                                 --- AND ---
+ *         \       /                                                                       |
+ *        Projection                                                               returned expression
+ *             |
+ *        Predicate B
+ *             |
+ *   Predicate A (end node)
+ *             |
+ *       Stored Table
+ *
  * @return      the expression, or nullptr if no expression could be created
  */
-std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std::shared_ptr<AbstractLQPNode>& lqp);
+std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
+    const std::shared_ptr<AbstractLQPNode>& begin,
+    const std::optional<const std::shared_ptr<AbstractLQPNode>>& end = std::nullopt);
 
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
- * Calls the passed @param visitor on each node of the @param lqp.
+ * Calls the passed @param visitor on each node of the @param lqp. This will NOT visit subqueries.
  * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
  * as well.
  * Each node is visited exactly once.
@@ -86,8 +120,8 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
 }
 
 /**
- * @return The node @param lqp as well as the root nodes of all LQPs in subselects and, recursively, LQPs in their
- *         subselects
+ * @return The node @param lqp as well as the root nodes of all LQPs in subqueries and, recursively, LQPs in their
+ *         subqueries
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
 

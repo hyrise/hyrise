@@ -22,7 +22,7 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   void SetUp() override {
     // we want to custom-build the index, but we have to create an index with a non-empty segment.
     // Therefore we build an index and reset the root.
-    dict_segment1 = create_dict_segment_by_type<std::string>(DataType::String, {"test"});
+    dict_segment1 = create_dict_segment_by_type<pmr_string>(DataType::String, {"test"});
     index1 = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment1}));
     index1->_root = nullptr;
     index1->_chunk_offsets.clear();

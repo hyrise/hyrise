@@ -18,6 +18,7 @@ namespace opossum {
  */
 class JitRTTIHelper {
  private:
+  virtual ~JitRTTIHelper() = default;
   virtual void _() const {}
 };
 
@@ -31,7 +32,7 @@ class JitCodeSpecializer {
   // The runtime_this parameter is a JitRuntimePointer to the first pointer argument of this function. For member
   // functions this is the implicit "this" parameter.
   // The function is only specialized and the LLVM module with the specialized function is returned.
-  std::shared_ptr<llvm::Module> specialize_function(
+  std::unique_ptr<llvm::Module> specialize_function(
       const std::string& root_function_name,
       const std::shared_ptr<const JitRuntimePointer>& runtime_this = std::make_shared<JitRuntimePointer>(),
       const bool two_passes = false);
@@ -48,7 +49,7 @@ class JitCodeSpecializer {
       const std::shared_ptr<const JitRuntimePointer>& runtime_this = std::make_shared<JitRuntimePointer>(),
       const bool two_passes = false) {
     auto module = specialize_function(root_function_name, runtime_this, two_passes);
-    _compiler.add_module(module);
+    _compiler.add_module(std::move(module));
     return _compiler.find_symbol<T>(_specialized_root_function_name);
   }
 

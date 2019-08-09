@@ -7,6 +7,7 @@
 #include <boost/type_traits/has_nothrow_copy.hpp>
 
 #include <functional>
+#include <iostream>
 #include <limits>
 
 /*
@@ -33,6 +34,9 @@
     bool operator==(const D& other) const { return t == other.t; }                                                \
     bool operator<(const D& other) const { return t < other.t; }                                                  \
   };                                                                                                              \
+                                                                                                                  \
+  inline std::ostream& operator<<(std::ostream& stream, const D& value) { return stream << value.t; }             \
+                                                                                                                  \
   } /* NOLINT */                                                                                                  \
                                                                                                                   \
   namespace std {                                                                                                 \

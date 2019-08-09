@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <iostream>
 #include <string>
 
 #include "types.hpp"
@@ -12,9 +13,12 @@ namespace opossum {
 struct OperatorPerformanceData : public Noncopyable {
   virtual ~OperatorPerformanceData() = default;
 
-  std::chrono::microseconds walltime{0};
+  std::chrono::nanoseconds walltime{0};
 
-  virtual std::string to_string(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
+  virtual void output_to_stream(std::ostream& stream,
+                                DescriptionMode description_mode = DescriptionMode::SingleLine) const;
 };
+
+std::ostream& operator<<(std::ostream& stream, const OperatorPerformanceData& performance_data);
 
 }  // namespace opossum

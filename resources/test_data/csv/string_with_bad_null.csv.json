@@ -1,0 +1,9 @@
+{
+    "columns": [
+        {
+            "name": "a",
+            "type": "string",
+            "nullable": true
+        }
+    ]
+}

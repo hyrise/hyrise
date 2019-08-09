@@ -1,9 +1,0 @@
-load src/test/tables/tpch/sf-0.001/customer.tbl customer
-load src/test/tables/tpch/sf-0.001/lineitem.tbl lineitem
-load src/test/tables/tpch/sf-0.001/nation.tbl nation
-load src/test/tables/tpch/sf-0.001/orders.tbl orders
-load src/test/tables/tpch/sf-0.001/part.tbl part
-load src/test/tables/tpch/sf-0.001/partsupp.tbl partsupp
-load src/test/tables/tpch/sf-0.001/region.tbl region
-load src/test/tables/tpch/sf-0.001/supplier.tbl supplier
-    

@@ -86,7 +86,7 @@ class ServerSessionTest : public BaseTest {
 
   std::shared_ptr<SQLPipeline> _create_working_sql_pipeline() {
     // We don't mock the SQL Pipeline, so we have to provide a query that executes successfully
-    auto t = load_table("src/test/tables/int.tbl", 10);
+    auto t = load_table("resources/test_data/tbl/int.tbl", 10);
     StorageManager::get().add_table("foo", t);
     return std::make_shared<SQLPipeline>(SQLPipelineBuilder{"SELECT * FROM foo;"}.create_pipeline());
   }
@@ -114,7 +114,7 @@ TEST_F(ServerSessionTest, SessionPerformsStartup) {
 
   // Expect that the session sends out an authentication response and an initial ReadyForQuery
   EXPECT_CALL(*_connection, send_auth());
-  EXPECT_CALL(*_connection, send_parameter_status(_, _));
+  EXPECT_CALL(*_connection, send_parameter_status(_, _)).Times(2);
   EXPECT_CALL(*_connection, send_ready_for_query());
 
   // Actually run the session: googlemock will record which Connection methods are called in which order
@@ -149,7 +149,7 @@ TEST_F(ServerSessionTest, SessionDeniesSslRequestDuringStartup) {
   EXPECT_CALL(*_connection, receive_startup_packet_body(_));
 
   EXPECT_CALL(*_connection, send_auth());
-  EXPECT_CALL(*_connection, send_parameter_status(_, _));
+  EXPECT_CALL(*_connection, send_parameter_status(_, _)).Times(2);
   EXPECT_CALL(*_connection, send_ready_for_query());
 
   _session->start().wait();
@@ -261,10 +261,10 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
 
   // The session creates a SQLPipeline using a scheduled task (we're providing a 'real' SQLPipeline in the result)
   auto sql_pipeline = _create_working_sql_pipeline();
-  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
-  create_pipeline_result->sql_pipeline = sql_pipeline;
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+  auto parse_server_prepared_plan_result =
+      std::make_unique<PreparedPlan>(sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_plan_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 
@@ -277,11 +277,10 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
   // The session schedules a task to derive a Query Plan from the SQL Pipeline
-  const auto placeholder_plan = sql_pipeline->get_query_plans().front();
-  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
+  const auto placeholder_plan = sql_pipeline->get_physical_plans().front();
 
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(placeholder_plan->deep_copy()))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::BindComplete));
 
@@ -295,7 +294,7 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
 
   // The session executes the SQLPipeline using another scheduled task
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table()))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table().second))));
 
   // It sends the row data (one message per row)
   EXPECT_CALL(*_connection, send_data_row(_)).Times(3);
@@ -357,9 +356,11 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedStatement) {
       .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
 
   // For this test, we don't actually have to set the SQL Pipeline in the result
-  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+  auto sql_pipeline = _create_working_sql_pipeline();
+  auto parse_server_prepared_plan_result =
+      std::make_unique<PreparedPlan>(sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_plan_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 
@@ -368,8 +369,10 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedStatement) {
   EXPECT_CALL(*_connection, receive_parse_packet_body(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
 
-  EXPECT_CALL(*_connection,
-              send_error("Named prepared statements must be explicitly closed before they can be redefined."));
+  EXPECT_CALL(
+      *_connection,
+      send_error(
+          "Invalid input error: Named prepared statements must be explicitly closed before they can be redefined."));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
   EXPECT_CALL(*_connection, receive_packet_header());
@@ -389,7 +392,7 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenBindingUnknownNamedStatement) {
   EXPECT_CALL(*_connection, receive_bind_packet_body(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
-  EXPECT_CALL(*_connection, send_error("The specified statement does not exist."));
+  EXPECT_CALL(*_connection, send_error("Invalid input error: The specified statement does not exist."));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
   EXPECT_CALL(*_connection, receive_packet_header());
@@ -412,10 +415,10 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
       .WillOnce(Return(ByMove(boost::make_ready_future(parse_packet))));
 
   auto sql_pipeline = _create_working_sql_pipeline();
-  auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
-  create_pipeline_result->sql_pipeline = sql_pipeline;
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
+  auto parse_server_prepared_plan_result =
+      std::make_unique<PreparedPlan>(sql_pipeline->get_optimized_logical_plans().front(), std::vector<ParameterID>{});
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ParseServerPreparedStatementTask>>()))
+      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(parse_server_prepared_plan_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
 
@@ -427,11 +430,10 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
   EXPECT_CALL(*_connection, receive_bind_packet_body(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
-  const auto placeholder_plan = sql_pipeline->get_query_plans().front();
-  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
+  const auto placeholder_plan = sql_pipeline->get_physical_plans().front();
 
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
+      .WillOnce(Return(ByMove(boost::make_ready_future(placeholder_plan->deep_copy()))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::BindComplete));
 
@@ -440,7 +442,8 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
   EXPECT_CALL(*_connection, receive_bind_packet_body(42))
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
-  EXPECT_CALL(*_connection, send_error("Named portals must be explicitly closed before they can be redefined."));
+  EXPECT_CALL(*_connection,
+              send_error("Invalid input error: Named portals must be explicitly closed before they can be redefined."));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
   EXPECT_CALL(*_connection, receive_packet_header());

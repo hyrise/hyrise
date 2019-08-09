@@ -11,16 +11,13 @@
 
 namespace opossum {
 
-ImportCsv::ImportCsv(const std::string& filename, const std::optional<std::string>& tablename,
-                     const std::optional<CsvMeta>& csv_meta)
+ImportCsv::ImportCsv(const std::string& filename, const ChunkOffset chunk_size,
+                     const std::optional<std::string>& tablename, const std::optional<CsvMeta>& csv_meta)
     : AbstractReadOnlyOperator(OperatorType::ImportCsv),
       _filename(filename),
+      _chunk_size(chunk_size),
       _tablename(tablename),
       _csv_meta(csv_meta) {}
-
-ImportCsv::ImportCsv(const std::string& filename, const std::optional<CsvMeta>& csv_meta,
-                     const std::optional<std::string>& tablename)
-    : ImportCsv(filename, tablename, csv_meta) {}
 
 const std::string ImportCsv::name() const { return "ImportCSV"; }
 
@@ -36,7 +33,7 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
 
   std::shared_ptr<Table> table;
   CsvParser parser;
-  table = parser.parse(_filename, _csv_meta);
+  table = parser.parse(_filename, _csv_meta, _chunk_size);
 
   if (_tablename) {
     StorageManager::get().add_table(*_tablename, table);
@@ -48,7 +45,7 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
 std::shared_ptr<AbstractOperator> ImportCsv::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<ImportCsv>(_filename, _tablename, _csv_meta);
+  return std::make_shared<ImportCsv>(_filename, _chunk_size, _tablename, _csv_meta);
 }
 
 void ImportCsv::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

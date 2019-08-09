@@ -32,17 +32,16 @@ class JitCompiler {
  protected:
   using ObjectLayer = llvm::orc::RTDyldObjectLinkingLayer;
   using CompileLayer = llvm::orc::IRCompileLayer<ObjectLayer, llvm::orc::SimpleCompiler>;
-  using ModuleHandle = CompileLayer::ModuleHandleT;
 
  public:
   JitCompiler();
   ~JitCompiler();
 
   // Adds a module to the LLVM just-in-time compiler and compiles it to machine code immediately
-  ModuleHandle add_module(const std::shared_ptr<llvm::Module>& module);
+  llvm::orc::VModuleKey add_module(std::unique_ptr<llvm::Module> module);
 
   // Removes a module from the LLVM just-in-time compiler and cleans up all related resources
-  void remove_module(const ModuleHandle& handle);
+  void remove_module(llvm::orc::VModuleKey module_key);
 
   // Locates a symbol in one of the modules previously added to the JIT by its MANGLED name
   template <typename T>
@@ -72,14 +71,16 @@ class JitCompiler {
   }
 
   // Checks LLVM error codes and fails on actual errors
-  void _handle_error(llvm::Error error);
+  static void _handle_error(llvm::Error error);
 
   const std::unique_ptr<llvm::TargetMachine> _target_machine;
   const llvm::DataLayout _data_layout;
+  llvm::orc::ExecutionSession _execution_session;
+  std::shared_ptr<llvm::orc::SymbolResolver> _resolver;
   ObjectLayer _object_layer;
   CompileLayer _compile_layer;
   llvm::orc::LocalCXXRuntimeOverrides _cxx_runtime_overrides;
-  std::vector<ModuleHandle> _modules;
+  std::vector<llvm::orc::VModuleKey> _modules;
 };
 
 }  // namespace opossum

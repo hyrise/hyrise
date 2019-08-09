@@ -20,9 +20,6 @@ constexpr auto NUMBER_OF_CHUNKS = size_t{50};
 constexpr auto TABLE_SIZE_SMALL = size_t{1'000};
 constexpr auto TABLE_SIZE_MEDIUM = size_t{100'000};
 constexpr auto TABLE_SIZE_BIG = size_t{10'000'000};
-}  // namespace
-
-namespace opossum {
 
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
@@ -32,19 +29,24 @@ void clear_cache() {
   }
   clear.resize(0);
 }
+}  // namespace
+
+namespace opossum {
 
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<TableGenerator>();
 
   ColumnDataDistribution config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
-  const auto chunk_size = static_cast<ChunkID>(number_of_rows / NUMBER_OF_CHUNKS);
+  const auto chunk_size = static_cast<ChunkID::base_type>(number_of_rows / NUMBER_OF_CHUNKS);
   Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table");
 
   auto table = table_generator->generate_table(std::vector<ColumnDataDistribution>{config}, number_of_rows, chunk_size,
                                                EncodingType::Dictionary);
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
+  const auto chunk_count = table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id});
@@ -62,14 +64,12 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
                   std::shared_ptr<TableWrapper> table_wrapper_right) {
   clear_cache();
 
-  auto warm_up =
-      std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                          std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+  auto warm_up = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
+                                     OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
   warm_up->execute();
-  while (state.KeepRunning()) {
-    auto join =
-        std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
-                            std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  for (auto _ : state) {
+    auto join = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
+                                    OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
     join->execute();
   }
 

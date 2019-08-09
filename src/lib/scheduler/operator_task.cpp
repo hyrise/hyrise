@@ -91,7 +91,7 @@ void OperatorTask::_on_execute() {
    */
   auto rw_operator = std::dynamic_pointer_cast<AbstractReadWriteOperator>(_op);
   if (rw_operator && rw_operator->execute_failed()) {
-    Assert(context != nullptr, "Read/Write operator cannot have been executed without a context.");
+    Assert(context, "Read/Write operator cannot have been executed without a context.");
 
     context->rollback();
   }
@@ -102,7 +102,7 @@ void OperatorTask::_on_execute() {
   if (_cleanup_temporaries == CleanupTemporaries::Yes) {
     for (const auto& weak_predecessor : predecessors()) {
       const auto predecessor = std::dynamic_pointer_cast<OperatorTask>(weak_predecessor.lock());
-      DebugAssert(predecessor != nullptr, "predecessor of OperatorTask is not an OperatorTask itself");
+      DebugAssert(predecessor, "predecessor of OperatorTask is not an OperatorTask itself");
       auto previous_operator_still_needed = false;
 
       for (const auto& successor : predecessor->successors()) {

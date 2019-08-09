@@ -1,16 +1,24 @@
 if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_definitions(-DIS_DEBUG=1)
+    set(HYRISE_DEBUG 1)
 else()
-    add_definitions(-DIS_DEBUG=0)
+    set(HYRISE_DEBUG 0)
 endif()
 
-# Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang
-# ENABLE_JIT_SUPPORT is OFF on MacOS by default as JIT does not work with -O2 and -O3 on MacOS
-CMAKE_DEPENDENT_OPTION(ENABLE_JIT_SUPPORT "Build with JIT support" OFF APPLE ON)
-if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+add_definitions(-DHYRISE_DEBUG=${HYRISE_DEBUG})
+
+# Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang 7.*
+# ENABLE_JIT_SUPPORT is OFF on MacOS by default as JIT compilation currently fails on MacOS because the specialized code
+# contains asm code on MacOS which the JIT compiler cannot handle
+if (APPLE)
+    option(ENABLE_JIT_SUPPORT "Build with JIT support" OFF)
+else()
+    option(ENABLE_JIT_SUPPORT "Build with JIT support" ON)
+endif()
+
+if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7 OR NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
     set(ENABLE_JIT_SUPPORT OFF)
-elseif (APPLE AND NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    message(FATAL_ERROR "Jit only works on MacOS with CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}.")
+elseif (APPLE AND ENABLE_JIT_SUPPORT)
+    message(WARNING "Jit does not work on MacOS (see https://github.com/hyrise/hyrise/issues/1569 for details).")
 endif()
 
 if (${ENABLE_JIT_SUPPORT})
@@ -19,6 +27,12 @@ if (${ENABLE_JIT_SUPPORT})
 else()
     add_definitions(-DHYRISE_JIT_SUPPORT=0)
     MESSAGE(STATUS "Building without JIT support")
+
+    # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
+    if(DEFINED CI_BUILD AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        message(FATAL_ERROR "-DCI_BUILD=ON was set, but LLVM was not found.")
+    endif()
+
 endif()
 
 # Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
@@ -35,7 +49,7 @@ else()
     MESSAGE(STATUS "Building without NUMA support")
 endif()
 
-# Enable coverage if requested   - this is only operating on Hyrise's source (src/) so we don't check coverage of
+# Enable coverage if requested - this is only operating on Hyrise's source (src/) so we don't check coverage of
 # third_party stuff
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
@@ -52,46 +66,53 @@ if (${ENABLE_COVERAGE})
     endif()
 endif()
 
-# This will be used by the DebugAssert macro to output
-# a file path relative to CMAKE_SOURCE_DIR
-string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
-if (CMAKE_CXX_COMPILER_LAUNCHER)
-    if (${CMAKE_CXX_COMPILER_LAUNCHER} STREQUAL "ccache")
-        string(LENGTH "" SOURCE_PATH_SIZE)
-    endif()
-endif()
-add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
-
 # Global flags and include directories
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
+
 # When generating a dtrace header file, symbols containing dollar-signs are created This file needs to be compiled as well.
 # Hence, the `-Wno-dollar-in-identifier-extension` flag is required.
-add_compile_options(-std=c++17 -pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension)
+add_compile_options(-pthread -Wall -Wextra -pedantic -Werror -Wno-unused-parameter -Wno-dollar-in-identifier-extension -Wno-unknown-pragmas)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    add_compile_options(-Weverything -Wshadow-all -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-documentation -Wno-padded -Wno-global-constructors -Wno-sign-conversion -Wno-exit-time-destructors -Wno-shadow-field-in-constructor -Wno-switch-enum -Wno-weak-vtables -Wno-double-promotion -Wno-covered-switch-default -Wno-unused-macros -Wno-newline-eof -Wno-missing-variable-declarations -Wno-weak-template-vtables -Wno-missing-prototypes -Wno-float-equal -Wno-return-std-move-in-c++11 -Wno-unreachable-code-break -Wno-undefined-func-template -Wno-unknown-warning-option -Wno-pass-failed)
+endif()
+
+include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
 
 include_directories(
-    ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
-    ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
-    ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
-    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
-    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
-    ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
 
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugin/
 
-    ${TBB_INCLUDE_DIR}
     ${Boost_INCLUDE_DIRS}
 )
 
+# Include these libraries as system libraries to silence some warnings caused by -Weverything
+include_directories(
+    SYSTEM
+    ${TBB_INCLUDE_DIR}
+    ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
+    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree
+    ${PROJECT_SOURCE_DIR}/third_party/cqf/include
+    ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
+    ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
+    ${PROJECT_SOURCE_DIR}/third_party/json
+    ${PROJECT_SOURCE_DIR}/third_party/lz4
+    ${PROJECT_SOURCE_DIR}/third_party/zstd
+    ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
+)
+
 if (${ENABLE_JIT_SUPPORT})
-    include_directories(${LLVM_INCLUDE_DIR})
+    include_directories(SYSTEM ${LLVM_INCLUDE_DIR})
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
-    include_directories(${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
-    include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
+    include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
+    include_directories(SYSTEM ${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")

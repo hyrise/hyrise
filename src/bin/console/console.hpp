@@ -7,8 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "operators/print.hpp"
 #include "sql/sql_pipeline.hpp"
-#include "sql/sql_query_plan.hpp"
+#include "sql/sql_plan_cache.hpp"
 #include "storage/table.hpp"
 #include "utils/singleton.hpp"
 
@@ -17,9 +18,7 @@ namespace opossum {
 class TransactionContext;
 
 /*
- * SQL REPL Console for Opossum, built on GNU readline. https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
- * Can load TPCC tables via "generate TABLENAME" command, and can execute SQL statements based on
- * opossum::SqlQueryTranslator.
+ * SQL REPL Console for Hyrise, built on GNU readline. https://cnswww.cns.cwru.edu/php/chet/readline/rltop.html
  */
 class Console : public Singleton<Console> {
  public:
@@ -75,7 +74,7 @@ class Console : public Singleton<Console> {
    * @param output The output table.
    * @param flags  Flags for the Print operator.
    */
-  void out(const std::shared_ptr<const Table>& table, uint32_t flags = 0);
+  void out(const std::shared_ptr<const Table>& table, PrintFlags flags = PrintFlags::None);
 
   /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).
@@ -109,7 +108,6 @@ class Console : public Singleton<Console> {
   // Command functions, registered to be called from the Console
   int _exit(const std::string& args);
   int _help(const std::string& args);
-  int _generate_tpcc(const std::string& tablename);
   int _generate_tpch(const std::string& args);
   int _load_table(const std::string& args);
   int _export_table(const std::string& args);
@@ -137,21 +135,26 @@ class Console : public Singleton<Console> {
 
   // GNU readline interface to our commands
   static char** _command_completion(const char* text, int start, int end);
-  static char* _command_generator(const char* text, int state);
-  static char* _command_generator_tpcc(const char* text, int state);
+  static char* _command_generator(const char* text, int state, const std::vector<std::string>& commands);
+  static char* _command_generator_default(const char* text, int state);
+  static char* _command_generator_visualize(const char* text, int state);
+  static char* _command_generator_setting(const char* text, int state);
+  static char* _command_generator_setting_scheduler(const char* text, int state);
 
   std::string _prompt;
   std::string _multiline_input;
   std::string _history_file;
   RegisteredCommands _commands;
-  std::vector<std::string> _tpcc_commands;
   std::ostream _out;
   std::ofstream _log;
   bool _verbose;
+  bool _pagination_active;
+  bool _use_jit;
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
-  std::shared_ptr<PreparedStatementCache> _prepared_statements;
+  std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
+  std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 };
 
 }  // namespace opossum

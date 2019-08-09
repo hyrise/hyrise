@@ -15,7 +15,7 @@ namespace opossum {
 // About NOLINT: These function names map to corresponding LLVM names and are exempt from the Hyrise naming policy
 struct SpecializationContext {
   std::string root_function_name;
-  std::shared_ptr<llvm::Module> module;
+  std::unique_ptr<llvm::Module> module;
   llvm::Function* root_function;
   // Maps values from the source function to the target function during function cloning
   llvm::ValueToValueMapTy llvm_value_map;

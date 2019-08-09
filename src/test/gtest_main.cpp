@@ -1,33 +1,35 @@
 #include <gtest/gtest.h>
-#include "base_test.hpp"
 
+#include <filesystem>
+
+#include "base_test.hpp"
 #include "utils/assert.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
 
 std::string opossum::test_data_path;  // NOLINT
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
-  Assert(!filesystem::exists(opossum::test_data_path),
+  Assert(!std::filesystem::exists(opossum::test_data_path),
          "Cannot create directory for test data: \"" + opossum::test_data_path + "\" already exists.");
 
   if (prefix) {
-    Assert(filesystem::exists("./" + *prefix),
+    Assert(std::filesystem::exists("./" + *prefix),
            "Cannot create directory for test data because \"" + *prefix + "\" does not exist");
   }
 
-  filesystem::create_directory(opossum::test_data_path);
+  std::filesystem::create_directory(opossum::test_data_path);
 }
 
 void remove_test_data_directory() {
-  if (filesystem::exists(opossum::test_data_path)) {
-    filesystem::remove_all(opossum::test_data_path);
+  if (std::filesystem::exists(opossum::test_data_path)) {
+    std::filesystem::remove_all(opossum::test_data_path);
   }
 }
 
 int main(int argc, char** argv) {
-  Assert(filesystem::exists("src/test/tables"),
-         "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
+  Assert(std::filesystem::exists("resources/test_data/tbl"),
+         "Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise "
+         "repository?");
 
   opossum::PerformanceWarningDisabler pwd;
   ::testing::InitGoogleTest(&argc, argv);

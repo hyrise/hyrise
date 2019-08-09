@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "storage/reference_segment.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -33,15 +32,16 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables must have same number of columns");
 
-  auto output = std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References);
-
   // 1. We create a set of all right input rows as concatenated strings.
 
   auto right_input_row_set = std::unordered_set<std::string>(input_table_right()->row_count());
 
   // Iterating over all chunks and for each chunk over all segments
-  for (ChunkID chunk_id{0}; chunk_id < input_table_right()->chunk_count(); chunk_id++) {
-    auto chunk = input_table_right()->get_chunk(chunk_id);
+  const auto chunk_count_right = input_table_right()->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count_right; chunk_id++) {
+    const auto chunk = input_table_right()->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
     // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
     for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); column_id++) {
@@ -64,9 +64,14 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // 2. Now we check for each chunk of the left input which rows can be added to the output
 
+  std::vector<std::shared_ptr<Chunk>> output_chunks;
+  output_chunks.reserve(input_table_left()->chunk_count());
+
   // Iterating over all chunks and for each chunk over all segment
-  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); chunk_id++) {
+  const auto chunk_count_left = input_table_left()->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count_left; chunk_id++) {
     const auto in_chunk = input_table_left()->get_chunk(chunk_id);
+    Assert(in_chunk, "Did not expect deleted chunk here.");  // see #1686
 
     Segments output_segments;
 
@@ -76,8 +81,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); column_id++) {
       const auto base_segment = in_chunk->get_segment(column_id);
       // temporary variables needed to create the reference segment
-      const auto referenced_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
-          input_table_left()->get_chunk(chunk_id)->get_segment(column_id));
+      const auto referenced_segment =
+          std::dynamic_pointer_cast<const ReferenceSegment>(in_chunk->get_segment(column_id));
       auto out_column_id = column_id;
       auto out_referenced_table = input_table_left();
       std::shared_ptr<const PosList> in_pos_list;
@@ -119,7 +124,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // we check if the recently created row_string is contained in the left_input_row_set
       auto search = right_input_row_set.find(row_string);
       if (search == right_input_row_set.end()) {
-        for (auto pos_list_pair : out_pos_list_map) {
+        for (const auto& pos_list_pair : out_pos_list_map) {
           if (pos_list_pair.first) {
             pos_list_pair.second->emplace_back((*pos_list_pair.first)[chunk_offset]);
           } else {
@@ -131,15 +136,16 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // Only add chunk if it would contain any tuples
     if (!output_segments.empty() && output_segments[0]->size() > 0) {
-      output->append_chunk(output_segments);
+      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
     }
   }
 
-  return output;
+  return std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References,
+                                 std::move(output_chunks));
 }
 
 void Difference::_append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value) {
-  const auto string_value = type_cast_variant<std::string>(value);
+  const auto string_value = boost::lexical_cast<std::string>(value);
   const auto length = static_cast<uint32_t>(string_value.length());
 
   // write value as string

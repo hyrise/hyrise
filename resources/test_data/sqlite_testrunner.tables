@@ -1,0 +1,7 @@
+resources/test_data/tbl/sqlite/mixed_types_100.tbl mixed
+resources/test_data/tbl/sqlite/mixed_types_null_100.tbl mixed_null
+resources/test_data/tbl/sqlite/id_int_int_int_50.tbl id_int_int_int_50
+resources/test_data/tbl/sqlite/id_int_int_int_100.tbl id_int_int_int_100
+resources/test_data/tbl/sqlite/int_date.tbl int_date
+
+resources/test_data/tbl/tpch/sf-0.001/customer.tbl tpch_customer

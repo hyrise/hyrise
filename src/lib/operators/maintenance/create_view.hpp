@@ -13,9 +13,12 @@ class LQPView;
 // maintenance operator for the "CREATE VIEW" sql statement
 class CreateView : public AbstractReadOnlyOperator {
  public:
-  CreateView(const std::string& view_name, const std::shared_ptr<LQPView>& view);
+  CreateView(const std::string& view_name, const std::shared_ptr<LQPView>& view, bool if_not_exists);
 
   const std::string name() const override;
+
+  const std::string& view_name() const;
+  bool if_not_exists() const;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -28,5 +31,6 @@ class CreateView : public AbstractReadOnlyOperator {
  private:
   const std::string _view_name;
   const std::shared_ptr<LQPView> _view;
+  const bool _if_not_exists;
 };
 }  // namespace opossum

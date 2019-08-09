@@ -29,9 +29,17 @@ std::shared_ptr<const Table> Product::_on_execute() {
   }
 
   auto output = std::make_shared<Table>(column_definitions, TableType::References);
+  auto chunk_count_left_table = input_table_left()->chunk_count();
+  auto chunk_count_right_table = input_table_right()->chunk_count();
 
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
+    const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
+    Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
+      const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
+      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+
       _add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
     }
   }
@@ -90,7 +98,8 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
         pos_list_out->reserve(chunk_left->size() * chunk_right->size());
         for (size_t i = 0; i < chunk_left->size() * chunk_right->size(); ++i) {
           // size_t is sufficient here, because ChunkOffset::max is 2^32 and (2^32 * 2^32 = 2^64)
-          ChunkOffset offset = is_left_side ? (i / chunk_right->size()) : (i % chunk_right->size());
+          auto offset = is_left_side ? static_cast<ChunkOffset>(i / chunk_right->size())
+                                     : static_cast<ChunkOffset>(i % chunk_right->size());
           if (pos_list_in) {
             pos_list_out->emplace_back((*pos_list_in)[offset]);
           } else {
@@ -106,6 +115,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
 
   output->append_chunk(output_segments);
 }
+
 std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {

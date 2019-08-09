@@ -5,6 +5,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -17,12 +18,12 @@ namespace opossum {
 class UnionPositionsTest : public BaseTest {
  public:
   void SetUp() override {
-    _table_10_ints = load_table("src/test/tables/10_ints.tbl", 3);
+    _table_10_ints = load_table("resources/test_data/tbl/10_ints.tbl", 3);
     StorageManager::get().add_table("10_ints", _table_10_ints);
 
-    _table_int_float4 = load_table("src/test/tables/int_float4.tbl", 3);
+    _table_int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 3);
     StorageManager::get().add_table("int_float4", _table_int_float4);
-    StorageManager::get().add_table("int_int", load_table("src/test/tables/int_int.tbl", 2));
+    StorageManager::get().add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, false, "");
     _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, false, "");
@@ -72,7 +73,7 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/10_ints_exclusive_ranges.tbl", Chunk::MAX_SIZE));
+                            load_table("resources/test_data/tbl/10_ints_exclusive_ranges.tbl"));
 }
 
 TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
@@ -106,8 +107,7 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("resources/test_data/tbl/int_float2.tbl"));
   EXPECT_EQ(table_scan_a_op->get_output(), union_unique_op->get_output());
 }
 
@@ -124,8 +124,7 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
 
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float2.tbl", Chunk::MAX_SIZE));
+  EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("resources/test_data/tbl/int_float2.tbl"));
   EXPECT_EQ(table_scan_b_op->get_output(), union_unique_op->get_output());
 }
 
@@ -145,7 +144,7 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
   _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float4_overlapping_ranges.tbl", Chunk::MAX_SIZE));
+                            load_table("resources/test_data/tbl/int_float4_overlapping_ranges.tbl"));
 }
 
 TEST_F(UnionPositionsTest, MultipleReferencedTables) {
@@ -184,13 +183,15 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
   auto get_table_b_op = std::make_shared<GetTable>("int_int");
   auto get_table_c_op = std::make_shared<GetTable>("int_float4");
   auto get_table_d_op = std::make_shared<GetTable>("int_int");
-  auto join_a = std::make_shared<JoinNestedLoop>(get_table_a_op, get_table_b_op, JoinMode::Inner,
-                                                 std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
-  auto join_b = std::make_shared<JoinNestedLoop>(get_table_c_op, get_table_d_op, JoinMode::Inner,
-                                                 std::make_pair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  auto join_a =
+      std::make_shared<JoinNestedLoop>(get_table_a_op, get_table_b_op, JoinMode::Inner,
+                                       OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  auto join_b =
+      std::make_shared<JoinNestedLoop>(get_table_c_op, get_table_d_op, JoinMode::Inner,
+                                       OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
-  auto table_scan_a_op = std::make_shared<TableScan>(
-      join_a, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Float, false, ""), 2));
+  auto table_scan_a_op =
+      std::make_shared<TableScan>(join_a, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Int, false, ""), 2));
   auto table_scan_b_op = std::make_shared<TableScan>(join_b, less_than_(_float_column_1_non_nullable, 457.0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
@@ -198,7 +199,7 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
                 table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
-                            load_table("src/test/tables/int_float4_int_int_union_positions.tbl", Chunk::MAX_SIZE));
+                            load_table("resources/test_data/tbl/int_float4_int_int_union_positions.tbl"));
 
   /**
    * Additionally check that segment 0 and 1 have the same pos list and that segment 2 and 3 have the same pos list to
@@ -283,15 +284,15 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto segment_right_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Int);
-  column_definitions.emplace_back("b", DataType::Float);
-  column_definitions.emplace_back("c", DataType::Int);
-  auto table_left = std::make_shared<Table>(column_definitions, TableType::References, 3);
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, false);
+  column_definitions.emplace_back("c", DataType::Int, false);
+  auto table_left = std::make_shared<Table>(column_definitions, TableType::References);
 
   table_left->append_chunk(Segments({segment_left_0_0, segment_left_0_1, segment_left_0_2}));
   table_left->append_chunk(Segments({segment_left_1_0, segment_left_1_1, segment_left_1_2}));
 
-  auto table_right = std::make_shared<Table>(column_definitions, TableType::References, 4);
+  auto table_right = std::make_shared<Table>(column_definitions, TableType::References);
 
   table_right->append_chunk(Segments({segment_right_0_0, segment_right_0_1, segment_right_0_2}));
   table_right->append_chunk(Segments({segment_right_1_0, segment_right_1_1, segment_right_1_2}));
@@ -302,9 +303,8 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
   _execute_all({table_wrapper_left_op, table_wrapper_right_op, set_union_op});
 
-  EXPECT_TABLE_EQ_UNORDERED(
-      set_union_op->get_output(),
-      load_table("src/test/tables/union_positions_multiple_shuffled_pos_list.tbl", Chunk::MAX_SIZE));
+  EXPECT_TABLE_EQ_UNORDERED(set_union_op->get_output(),
+                            load_table("resources/test_data/tbl/union_positions_multiple_shuffled_pos_list.tbl"));
 }
 
 }  // namespace opossum

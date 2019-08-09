@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "expression/between_expression.hpp"
+
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -25,8 +27,6 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const Se
 
 const std::string IndexScan::name() const { return "IndexScan"; }
 
-void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _included_chunk_ids = chunk_ids; }
-
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = input_table_left();
 
@@ -37,15 +37,21 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   std::mutex output_mutex;
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  if (_included_chunk_ids.empty()) {
+  if (included_chunk_ids.empty()) {
     jobs.reserve(_in_table->chunk_count());
-    for (auto chunk_id = ChunkID{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
+    const auto chunk_count = _in_table->chunk_count();
+    for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = _in_table->get_chunk(chunk_id);
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
       jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
     }
   } else {
-    jobs.reserve(_included_chunk_ids.size());
-    for (auto chunk_id : _included_chunk_ids) {
-      jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
+    jobs.reserve(included_chunk_ids.size());
+    for (auto chunk_id : included_chunk_ids) {
+      if (_in_table->get_chunk(chunk_id)) {
+        jobs.push_back(_create_job_and_schedule(chunk_id, output_mutex));
+      }
     }
   }
 
@@ -64,13 +70,12 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
-  auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
-    const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
-
+  auto job_task = std::make_shared<JobTask>([this, chunk_id, &output_mutex]() {
+    // The output chunk is allocated on the same NUMA node as the input chunk.
     const auto chunk = _in_table->get_chunk(chunk_id);
-    // The output chunk is allocated on the same NUMA node as the input chunk. Also, the ChunkAccessCounter is
-    // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
-    // original chunk.
+    if (!chunk) return;
+
+    const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
     Segments segments;
 
@@ -80,7 +85,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);
-    _out_table->append_chunk(segments, chunk->get_allocator(), chunk->access_counter());
+    _out_table->append_chunk(segments, nullptr, chunk->get_allocator());
   });
 
   job_task->schedule();
@@ -93,7 +98,7 @@ void IndexScan::_validate_input() {
 
   Assert(_left_column_ids.size() == _right_values.size(),
          "Count mismatch: left column IDs and right values don’t have same size.");
-  if (_predicate_condition == PredicateCondition::Between) {
+  if (is_between_predicate_condition(_predicate_condition)) {
     Assert(_left_column_ids.size() == _right_values2.size(),
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
@@ -107,11 +112,11 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto range_begin = BaseIndex::Iterator{};
   auto range_end = BaseIndex::Iterator{};
 
-  const auto chunk = _in_table->get_chunk_with_access_counting(chunk_id);
+  const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = PosList{};
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
-  Assert(index != nullptr, "Index of specified type not found for segment (vector).");
+  Assert(index, "Index of specified type not found for segment (vector).");
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {
@@ -152,17 +157,41 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_end = index->cend();
       break;
     }
-    case PredicateCondition::Between: {
+    case PredicateCondition::BetweenInclusive: {
       range_begin = index->lower_bound(_right_values);
       range_end = index->upper_bound(_right_values2);
+      break;
+    }
+    case PredicateCondition::BetweenLowerExclusive: {
+      range_begin = index->upper_bound(_right_values);
+      range_end = index->upper_bound(_right_values2);
+      break;
+    }
+    case PredicateCondition::BetweenUpperExclusive: {
+      range_begin = index->lower_bound(_right_values);
+      range_end = index->lower_bound(_right_values2);
+      break;
+    }
+    case PredicateCondition::BetweenExclusive: {
+      range_begin = index->upper_bound(_right_values);
+      range_end = index->lower_bound(_right_values2);
       break;
     }
     default:
       Fail("Unsupported comparison type encountered");
   }
 
-  matches_out.reserve(matches_out.size() + std::distance(range_begin, range_end));
-  std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
+  DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
+  matches_out.guarantee_single_chunk();
+
+  const auto current_matches_size = matches_out.size();
+  const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
+  matches_out.resize(final_matches_size);
+
+  for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
+    matches_out[matches_position] = RowID{chunk_id, *range_begin};
+    range_begin++;
+  }
 
   return matches_out;
 }

@@ -1,4 +1,5 @@
 #include "base_test.hpp"
+#include "operators/jit_operator/operators/jit_expression.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"
 
 namespace opossum {
@@ -38,9 +39,10 @@ TEST_F(JitFilterTest, FiltersTuplesAccordingToCondition) {
   JitRuntimeContext context;
   context.tuple.resize(1);
 
-  JitTupleValue condition_value{DataType::Bool, true, 0};
+  JitTupleEntry condition_tuple_entry{DataType::Bool, false, 0};
+  auto condition_expression = std::make_shared<JitExpression>(condition_tuple_entry);
   auto source = std::make_shared<MockSource>();
-  auto filter = std::make_shared<JitFilter>(condition_value);
+  auto filter = std::make_shared<JitFilter>(condition_expression);
   auto sink = std::make_shared<MockSink>();
 
   // Link operators to pipeline
@@ -48,24 +50,49 @@ TEST_F(JitFilterTest, FiltersTuplesAccordingToCondition) {
   filter->set_next_operator(sink);
 
   // Condition variables with a NULL value should be filtered out
-  condition_value.set_is_null(false, context);
-  condition_value.set<bool>(false, context);
+  condition_tuple_entry.set_is_null(false, context);
+  condition_tuple_entry.set<bool>(false, context);
   sink->reset();
   source->emit(context);
   ASSERT_FALSE(sink->consume_was_called());
 
   // FALSE condition variables should be filtered out
-  condition_value.set_is_null(false, context);
-  condition_value.set<bool>(true, context);
+  condition_tuple_entry.set_is_null(false, context);
+  condition_tuple_entry.set<bool>(true, context);
   sink->reset();
   source->emit(context);
   ASSERT_TRUE(sink->consume_was_called());
 
   // Only condition variables with TRUE should pass
-  condition_value.set_is_null(true, context);
+  condition_tuple_entry.set_is_null(true, context);
   sink->reset();
   source->emit(context);
   ASSERT_FALSE(sink->consume_was_called());
+}
+
+TEST_F(JitFilterTest, UpdateNullableInformationBeforeSpecialization) {
+  // The nullable information of the filter expression must be updated before specialization
+
+  // Create tuple entry without setting the correct nullable information
+  JitTupleEntry bool_tuple_entry{DataType::Bool, false, 0};
+
+  auto bool_expression = std::make_shared<JitExpression>(bool_tuple_entry);
+  auto not_expression = std::make_shared<JitExpression>(bool_expression, JitExpressionType::Not, 1);
+
+  JitFilter jit_filter(not_expression);
+
+  EXPECT_FALSE(jit_filter.expression->result_entry.guaranteed_non_null);
+
+  // Update nullable information
+  auto input_table = Table::create_dummy_table(TableColumnDefinitions{});
+  bool unused_value = false;
+  std::vector<bool> tuple_non_nullable_information{true, unused_value};
+  jit_filter.before_specialization(*input_table, tuple_non_nullable_information);
+
+  // Nullable information is updated in the result entry ...
+  EXPECT_TRUE(jit_filter.expression->result_entry.guaranteed_non_null);
+  // ... and the tuple_non_nullable_information vector
+  EXPECT_TRUE(tuple_non_nullable_information[1]);
 }
 
 }  // namespace opossum

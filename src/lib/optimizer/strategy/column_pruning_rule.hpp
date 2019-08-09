@@ -22,11 +22,11 @@ class AbstractLQPNode;
 class ColumnPruningRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
 
  private:
   static ExpressionUnorderedSet _collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp);
-  static bool _prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
+  static void _prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
                                          const ExpressionUnorderedSet& referenced_columns);
   static void _prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
                                             const ExpressionUnorderedSet& referenced_columns);

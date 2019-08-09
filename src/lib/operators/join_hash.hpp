@@ -1,6 +1,9 @@
 #pragma once
 
+#include <optional>
+
 #include "abstract_join_operator.hpp"
+#include "operator_join_predicate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -18,11 +21,18 @@ namespace opossum {
  */
 class JoinHash : public AbstractJoinOperator {
  public:
+  static bool supports(const JoinConfiguration config);
+
   JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-           const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+           const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+           const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
            const std::optional<size_t>& radix_bits = std::nullopt);
 
   const std::string name() const override;
+  const std::string description(DescriptionMode description_mode) const override;
+
+  template <typename T>
+  static size_t calculate_radix_bits(const size_t build_relation_size, const size_t probe_relation_size);
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -33,10 +43,12 @@ class JoinHash : public AbstractJoinOperator {
   void _on_cleanup() override;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
-  const std::optional<size_t> _radix_bits;
+  std::optional<size_t> _radix_bits;
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;
+  template <typename LeftType, typename RightType>
+  friend class JoinHashImpl;
 };
 
 }  // namespace opossum

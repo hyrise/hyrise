@@ -7,6 +7,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -23,6 +24,9 @@ namespace {
  */
 thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
 }  // namespace
+
+// The sleep time was determined experimentally
+static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
 
 namespace opossum {
 
@@ -68,9 +72,13 @@ void Worker::_work() {
       }
     }
 
-    // Sleep if there is no ready task in our queue and work stealing was not successful.
+    // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
+    // own queue or returns after timer exceeded (whatever occurs first).
     if (!work_stealing_successful) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      {
+        std::unique_lock<std::mutex> unique_lock(_queue->lock);
+        _queue->new_task.wait_for(unique_lock, WORKER_SLEEP_TIME);
+      }
       return;
     }
   }

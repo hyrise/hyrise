@@ -13,7 +13,7 @@ namespace opossum {
 
 namespace {
 
-bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
+bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
                     const MvccData& mvcc_data) {
   const auto row_tid = mvcc_data.tids[chunk_offset].load();
   const auto begin_cid = mvcc_data.begin_cids[chunk_offset];
@@ -23,7 +23,7 @@ bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset c
 
 }  // namespace
 
-bool Validate::is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
+bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
                               const CommitID begin_cid, const CommitID end_cid) {
   // Taken from: https://github.com/hyrise/hyrise-v1/blob/master/docs/documentation/queryexecution/tx.rst
   // auto own_insert = (our_tid == row_tid) && !(snapshot_commit_id >= begin_cid) && !(snapshot_commit_id >= end_cid);
@@ -52,16 +52,21 @@ std::shared_ptr<const Table> Validate::_on_execute() {
 }
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
-  DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
+  DebugAssert(transaction_context, "Validate requires a valid TransactionContext.");
+  DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
   const auto in_table = input_table_left();
-  auto output = std::make_shared<Table>(in_table->column_definitions(), TableType::References);
+
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
+  output_chunks.reserve(in_table->chunk_count());
 
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
-  for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = in_table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
+    Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
 
     Segments output_segments;
     auto pos_list_out = std::make_shared<PosList>();
@@ -77,13 +82,32 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       referenced_table = ref_segment_in->referenced_table();
       DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
-      for (auto row_id : *ref_segment_in->pos_list()) {
-        const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+      const auto& pos_list_in = *ref_segment_in->pos_list();
+      if (pos_list_in.references_single_chunk() && !pos_list_in.empty()) {
+        // Fast path - we are looking at a single referenced chunk and thus need to get the MVCC data vector only once.
 
+        pos_list_out->guarantee_single_chunk();
+
+        const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
-          pos_list_out->emplace_back(row_id);
+        for (auto row_id : pos_list_in) {
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            pos_list_out->emplace_back(row_id);
+          }
+        }
+
+      } else {
+        // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
+
+        for (auto row_id : pos_list_in) {
+          const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+
+          auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
+
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            pos_list_out->emplace_back(row_id);
+          }
         }
       }
 
@@ -101,6 +125,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       referenced_table = in_table;
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
+      pos_list_out->guarantee_single_chunk();
 
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
@@ -118,10 +143,11 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     }
 
     if (!pos_list_out->empty() > 0) {
-      output->append_chunk(output_segments);
+      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
     }
   }
-  return output;
+
+  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
 }  // namespace opossum

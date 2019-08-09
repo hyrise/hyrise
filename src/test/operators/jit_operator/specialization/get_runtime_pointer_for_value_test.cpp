@@ -55,7 +55,7 @@ class GetRuntimePointerForValueTest : public BaseTest {
   void assert_address_eq(const std::shared_ptr<const JitRuntimePointer>& runtime_pointer,
                          const uint64_t expected_address) const {
     auto known_runtime_pointer = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(runtime_pointer);
-    ASSERT_NE(known_runtime_pointer, nullptr);
+    ASSERT_TRUE(known_runtime_pointer);
     ASSERT_TRUE(known_runtime_pointer->is_valid());
     ASSERT_EQ(known_runtime_pointer->address(), expected_address);
   }

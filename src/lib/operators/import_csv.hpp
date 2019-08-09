@@ -29,11 +29,9 @@ class ImportCsv : public AbstractReadOnlyOperator {
    * @param tablename     Optional. Name of the table to store/look up in the StorageManager.
    * @param meta          Optional. A specific meta config, to override the given .json file.
    */
-  explicit ImportCsv(const std::string& filename, const std::optional<std::string>& tablename = std::nullopt,
+  explicit ImportCsv(const std::string& filename, const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
+                     const std::optional<std::string>& tablename = std::nullopt,
                      const std::optional<CsvMeta>& csv_meta = std::nullopt);
-
-  explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta>& csv_meta,
-                     const std::optional<std::string>& tablename = std::nullopt);
 
   const std::string name() const override;
 
@@ -49,6 +47,9 @@ class ImportCsv : public AbstractReadOnlyOperator {
  private:
   // Path to the input file
   const std::string _filename;
+
+  const ChunkOffset _chunk_size;
+
   // Name for adding the table to the StorageManager
   const std::optional<std::string> _tablename;
   // CSV meta information

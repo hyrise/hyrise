@@ -1,0 +1,17 @@
+{
+    "config": {
+      "reject_null_strings": false
+    },
+    "columns": [
+        {
+            "name": "a",
+            "type": "int",
+            "nullable": true	     	
+        },
+        {
+            "name": "b",
+            "type": "string",
+            "nullable": true  	
+        }
+    ]
+}

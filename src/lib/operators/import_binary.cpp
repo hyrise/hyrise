@@ -26,6 +26,24 @@ ImportBinary::ImportBinary(const std::string& filename, const std::optional<std:
 
 const std::string ImportBinary::name() const { return "ImportBinary"; }
 
+std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
+  std::ifstream file;
+  file.open(filename, std::ios::binary);
+
+  Assert(file.is_open(), "ImportBinary: Could not open file " + filename);
+
+  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+  std::shared_ptr<Table> table;
+  ChunkID chunk_count;
+  std::tie(table, chunk_count) = _read_header(file);
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    _import_chunk(file, table);
+  }
+
+  return table;
+}
+
 template <typename T>
 pmr_vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<T> values(count);
@@ -35,7 +53,7 @@ pmr_vector<T> ImportBinary::_read_values(std::ifstream& file, const size_t count
 
 // specialized implementation for string values
 template <>
-pmr_vector<std::string> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
+pmr_vector<pmr_string> ImportBinary::_read_values(std::ifstream& file, const size_t count) {
   return _read_string_values(file, count);
 }
 
@@ -47,16 +65,16 @@ pmr_vector<bool> ImportBinary::_read_values(std::ifstream& file, const size_t co
   return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
 }
 
-pmr_vector<std::string> ImportBinary::_read_string_values(std::ifstream& file, const size_t count) {
+pmr_vector<pmr_string> ImportBinary::_read_string_values(std::ifstream& file, const size_t count) {
   const auto string_lengths = _read_values<size_t>(file, count);
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
 
-  pmr_vector<std::string> values(count);
+  pmr_vector<pmr_string> values(count);
   size_t start = 0;
 
   for (size_t i = 0; i < count; ++i) {
-    values[i] = std::string(buffer.data() + start, buffer.data() + start + string_lengths[i]);
+    values[i] = pmr_string(buffer.data() + start, buffer.data() + start + string_lengths[i]);
     start += string_lengths[i];
   }
 
@@ -75,19 +93,7 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
     return StorageManager::get().get_table(*_tablename);
   }
 
-  std::ifstream file;
-  file.open(_filename, std::ios::binary);
-
-  Assert(file.is_open(), "ImportBinary: Could not find file " + _filename);
-
-  file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-
-  std::shared_ptr<Table> table;
-  ChunkID chunk_count;
-  std::tie(table, chunk_count) = _read_header(file);
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    _import_chunk(file, table);
-  }
+  const auto table = read_binary(_filename);
 
   if (_tablename) {
     StorageManager::get().add_table(*_tablename, table);
@@ -108,14 +114,15 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   const auto chunk_size = _read_value<ChunkOffset>(file);
   const auto chunk_count = _read_value<ChunkID>(file);
   const auto column_count = _read_value<ColumnID>(file);
-  const auto data_types = _read_values<std::string>(file, column_count);
+  const auto column_data_types = _read_values<pmr_string>(file, column_count);
   const auto column_nullables = _read_values<bool>(file, column_count);
   const auto column_names = _read_string_values(file, column_count);
 
   TableColumnDefinitions output_column_definitions;
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
-    const auto data_type = data_type_to_string.right.at(data_types[column_id]);
-    output_column_definitions.emplace_back(column_names[column_id], data_type, column_nullables[column_id]);
+    const auto data_type = data_type_to_string.right.at(std::string{column_data_types[column_id]});
+    output_column_definitions.emplace_back(std::string{column_names[column_id]}, data_type,
+                                           column_nullables[column_id]);
   }
 
   auto table = std::make_shared<Table>(output_column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
@@ -131,7 +138,9 @@ void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
     output_segments.push_back(
         _import_segment(file, row_count, table->column_data_type(column_id), table->column_is_nullable(column_id)));
   }
-  table->append_chunk(output_segments);
+
+  const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
+  table->append_chunk(output_segments, mvcc_data);
 }
 
 std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, ChunkOffset row_count,

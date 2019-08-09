@@ -50,7 +50,7 @@ class ResolveConditionTest : public BaseTest {
     _switch_instruction_fn = _repository->get_function("_Z18switch_instructionRK10SomeStruct");
     _switch_instruction = llvm::dyn_cast<llvm::SwitchInst>(_switch_instruction_fn->getEntryBlock().getTerminator());
 
-    _specialization_context.module = _repository->module();
+    _specialization_context.module = std::move(_repository->_module);
   }
 
   std::shared_ptr<JitRepository> _repository;
@@ -67,7 +67,7 @@ TEST_F(ResolveConditionTest, BranchConditionsAreResolved) {
   {
     // No runtime information is set in the specialization context. Thus the resolution of the condition must fail.
     const auto resolved_condition = ResolveCondition(_branch_instruction->getCondition(), _specialization_context);
-    ASSERT_EQ(resolved_condition, nullptr);
+    ASSERT_FALSE(resolved_condition);
   }
   {
     // Create runtime information (i.e., an instance of the SomeStruct parameter).
@@ -82,7 +82,7 @@ TEST_F(ResolveConditionTest, BranchConditionsAreResolved) {
 
     // The condition should now be replaced by a "false" constant (which is represented as a 1-bit integer in LLVM),
     // since the resolved expression "s.a + s.b > 5" = "1 + 2 > 5" is false.
-    ASSERT_NE(resolved_condition, nullptr);
+    ASSERT_TRUE(resolved_condition);
     ASSERT_EQ(resolved_condition->getType(), llvm::Type::getInt1Ty(*_repository->llvm_context()));
     const auto resolved_int_condition = llvm::dyn_cast<llvm::ConstantInt>(resolved_condition);
     ASSERT_TRUE(resolved_int_condition->isZero());
@@ -95,7 +95,7 @@ TEST_F(ResolveConditionTest, BranchConditionsAreResolved) {
         std::make_shared<JitConstantRuntimePointer>(&runtime_parameter);
 
     const auto resolved_condition = ResolveCondition(_branch_instruction->getCondition(), _specialization_context);
-    ASSERT_NE(resolved_condition, nullptr);
+    ASSERT_TRUE(resolved_condition);
     ASSERT_EQ(resolved_condition->getType(), llvm::Type::getInt1Ty(*_repository->llvm_context()));
     const auto resolved_int_condition = llvm::dyn_cast<llvm::ConstantInt>(resolved_condition);
     ASSERT_TRUE(resolved_int_condition->isOne());
@@ -112,14 +112,14 @@ TEST_F(ResolveConditionTest, UnresolvableBranchConditionsAreNotResolved) {
 
   const auto resolved_condition =
       ResolveCondition(_branch_instruction_failing->getCondition(), _specialization_context);
-  ASSERT_EQ(resolved_condition, nullptr);
+  ASSERT_FALSE(resolved_condition);
 }
 
 TEST_F(ResolveConditionTest, SwitchConditionsAreResolved) {
   {
     // No runtime information is set in the specialization context. Thus the resolution of the condition must fail.
     const auto resolved_condition = ResolveCondition(_switch_instruction->getCondition(), _specialization_context);
-    ASSERT_EQ(resolved_condition, nullptr);
+    ASSERT_FALSE(resolved_condition);
   }
   {
     // Create runtime information (i.e., an instance of the SomeStruct parameter).
@@ -134,7 +134,7 @@ TEST_F(ResolveConditionTest, SwitchConditionsAreResolved) {
     const auto resolved_condition = ResolveCondition(_switch_instruction->getCondition(), _specialization_context);
 
     // The condition should now be replaced by an integer constant with the correct value from the runtime parameter.
-    ASSERT_NE(resolved_condition, nullptr);
+    ASSERT_TRUE(resolved_condition);
     ASSERT_EQ(resolved_condition->getType(), llvm::Type::getInt32Ty(*_repository->llvm_context()));
     const auto resolved_int_condition = llvm::dyn_cast<llvm::ConstantInt>(resolved_condition);
     const auto resolved_condition_value =

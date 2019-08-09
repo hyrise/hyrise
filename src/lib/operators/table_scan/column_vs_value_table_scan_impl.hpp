@@ -2,10 +2,11 @@
 
 #include <functional>
 #include <memory>
+#include <tuple>
 #include <utility>
 #include <vector>
 
-#include "abstract_single_column_table_scan_impl.hpp"
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -21,21 +22,27 @@ namespace opossum {
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
  *   enables us to detect if all or none of the values in the segment satisfy the expression.
  */
-class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
+class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
  public:
   ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                              const PredicateCondition& predicate_condition, const AllTypeVariant& value);
 
   std::string description() const override;
 
+  const AllTypeVariant value;
+
  protected:
   void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                    const std::shared_ptr<const PosList>& position_filter) const override;
 
-  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
-  void _scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+                             const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
+                                const std::shared_ptr<const PosList>& position_filter) const;
+
+  void _scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+                            const std::shared_ptr<const PosList>& position_filter,
+                            const OrderByMode order_by_mode) const;
 
   /**
    * @defgroup Methods used for handling dictionary segments
@@ -74,8 +81,6 @@ class ColumnVsValueTableScanImpl : public AbstractSingleColumnTableScanImpl {
     }
   }
   /**@}*/
-
-  const AllTypeVariant _value;
 };
 
 }  // namespace opossum

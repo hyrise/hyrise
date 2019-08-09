@@ -6,6 +6,8 @@ add_executable(
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
+    micro_benchmark_utils.cpp
+    micro_benchmark_utils.hpp
     operators/aggregate_benchmark.cpp
     operators/difference_benchmark.cpp
     operators/join_benchmark.cpp
@@ -14,9 +16,10 @@ add_executable(
     operators/sort_benchmark.cpp
     operators/sql_benchmark.cpp
     operators/table_scan_benchmark.cpp
+    operators/table_scan_sorted_benchmark.cpp
     operators/union_all_benchmark.cpp
-    statistics/generate_table_statistics_benchmark.cpp
-    tpch_db_generator_benchmark.cpp
+    tpch_data_micro_benchmark.cpp
+    tpch_table_generator_benchmark.cpp
 )
 
 target_link_libraries(
@@ -34,6 +37,8 @@ add_executable(
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
+    micro_benchmark_utils.cpp
+    micro_benchmark_utils.hpp
 )
 target_link_libraries(
     hyriseBenchmarkPlayground
@@ -48,8 +53,6 @@ add_executable(
     hyriseBenchmarkFileBased
 
     file_based_benchmark.cpp
-    file_based_query_generator.cpp
-    file_based_query_generator.hpp
 )
 
 target_link_libraries(
@@ -63,6 +66,31 @@ target_link_libraries(
 add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
 target_link_libraries(
     hyriseBenchmarkTPCH
+
+    hyrise
+    hyriseBenchmarkLib
+)
+
+# Configure hyriseBenchmarkTPCDS
+add_executable(hyriseBenchmarkTPCDS tpcds_benchmark.cpp)
+target_link_libraries(
+    hyriseBenchmarkTPCDS
+
+    hyrise
+    hyriseBenchmarkLib
+)
+
+add_dependencies(hyriseBenchmarkTPCDS dsdgen)
+
+# Configure hyriseBenchmarkJoinOrder
+add_executable(
+    hyriseBenchmarkJoinOrder
+
+    join_order_benchmark.cpp
+)
+
+target_link_libraries(
+    hyriseBenchmarkJoinOrder
 
     hyrise
     hyriseBenchmarkLib

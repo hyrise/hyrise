@@ -74,12 +74,6 @@ class AbstractReadWriteOperator : public AbstractOperator {
   virtual void _on_commit_records(const CommitID commit_id) = 0;
 
   /**
-   * Called immediately after commit_records().
-   * This is the place to do any work after modifying operators were successful, e.g. updating statistics.
-   */
-  virtual void _finish_commit() {}
-
-  /**
    * Called by rollback_records.
    */
   virtual void _on_rollback_records() = 0;

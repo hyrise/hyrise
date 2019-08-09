@@ -33,24 +33,37 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   /**
    * Evaluate the _row_count_expression to determine the actual number of rows to "Limit" the output to
    */
-  const auto num_rows_expression_result =
-      ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
-  Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
-  Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+  auto num_rows = size_t{};
 
-  const auto signed_num_rows = num_rows_expression_result->value(0);
-  Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+  resolve_data_type(_row_count_expression->data_type(), [&](const auto data_type_t) {
+    using LimitDataType = typename decltype(data_type_t)::type;
 
-  const auto num_rows = static_cast<size_t>(signed_num_rows);
+    if constexpr (std::is_integral_v<LimitDataType>) {
+      const auto num_rows_expression_result =
+          ExpressionEvaluator{}.evaluate_expression_to_result<LimitDataType>(*_row_count_expression);
+      Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
+      Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+
+      const auto signed_num_rows = num_rows_expression_result->value(0);
+      Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+
+      num_rows = static_cast<size_t>(signed_num_rows);
+    } else {
+      Fail("Non-integral types not allowed in Limit");
+    }
+  });
 
   /**
    * Perform the actual limitting
    */
-  auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
 
   ChunkID chunk_id{0};
-  for (size_t i = 0; i < num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
+  const auto chunk_count = input_table->chunk_count();
+  for (size_t i = 0; i < num_rows && chunk_id < chunk_count; chunk_id++) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
+    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
+
     Segments output_segments;
 
     size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), num_rows - i);
@@ -79,10 +92,10 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     }
 
     i += output_chunk_row_count;
-    output_table->append_chunk(output_segments);
+    output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
   }
 
-  return output_table;
+  return std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
 void Limit::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

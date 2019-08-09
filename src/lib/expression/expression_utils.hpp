@@ -8,7 +8,6 @@
 
 #include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "parameter_expression.hpp"
 
 namespace opossum {
 
@@ -58,7 +57,7 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
                                                                                const LQPNodeMapping& node_mapping);
 
 /**
- * Makes all column references points to their equivalent in a copied LQP
+ * Makes all column references point to their equivalent in a copied LQP
  */
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping);
@@ -110,7 +109,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs);
  * @return Checks whether the expression can be evaluated by the ExpressionEvaluator on top of a specified LQP (i.e.,
  *         all required LQPColumnExpressions are available from this LQP).
  *         To check if an expression is available in a form ready to be used by a scan/join,
- *         use `Operator*Predicate::from_expression(...) != nullptr`.
+ *         use `Operator*Predicate::from_expression(...)`.
  */
 bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
 
@@ -135,7 +134,7 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
                                 const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
 /**
- * Traverse the expression(s) for subselects and set the transaction context in them
+ * Traverse the expression(s) for subqueries and set the transaction context in them
  */
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
                                         const std::weak_ptr<TransactionContext>& transaction_context);
@@ -145,7 +144,7 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
 bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
 
 /**
- * @return  The value of a ParameterExpression or ValueExpression
+ * @return  The value of a CorrelatedParameterExpression or ValueExpression
  *          std::nullopt for other expression types
  */
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression);

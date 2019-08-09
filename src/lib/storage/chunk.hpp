@@ -13,10 +13,8 @@
 #include <string>
 #include <vector>
 
-#include "index/segment_index_type.hpp"
-
 #include "all_type_variant.hpp"
-#include "chunk_access_counter.hpp"
+#include "index/segment_index_type.hpp"
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
@@ -27,9 +25,11 @@ namespace opossum {
 
 class BaseIndex;
 class BaseSegment;
-class ChunkStatistics;
+class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
+using Indexes = pmr_vector<std::shared_ptr<BaseIndex>>;
+using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
  * A Chunk is a horizontal partition of a table.
@@ -43,9 +43,13 @@ class Chunk : private Noncopyable {
   // The last chunk offset is reserved for NULL as used in ReferenceSegments.
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-  Chunk(const Segments& segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-        const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
+  // The default chunk size was determined to give the best performance for single-threaded TPC-H, SF1. By all means,
+  // feel free to re-evaluate this. This is only relevant for chunks that contain data. Chunks that contain reference
+  // segments do not use the table's max_chunk_size at all.
+  static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
+
+  Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
 
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
@@ -80,7 +84,6 @@ class Chunk : private Noncopyable {
   const Segments& segments() const;
 
   bool has_mvcc_data() const;
-  bool has_access_counter() const;
 
   /**
    * The locking pointer locks the MVCC data non-exclusively
@@ -91,15 +94,13 @@ class Chunk : private Noncopyable {
    *
    * @return a locking ptr to the MVCC data
    */
-  SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock();
-  SharedScopedLockingPtr<const MvccData> get_scoped_mvcc_data_lock() const;
+  SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
-  void set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data);
 
-  std::vector<std::shared_ptr<BaseIndex>> get_indices(
+  std::vector<std::shared_ptr<BaseIndex>> get_indexes(
       const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
-  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<BaseIndex>> get_indexes(const std::vector<ColumnID>& column_ids) const;
 
   std::shared_ptr<BaseIndex> get_index(const SegmentIndexType index_type,
                                        const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
@@ -118,7 +119,7 @@ class Chunk : private Noncopyable {
                 "All segments must be part of the chunk.");
 
     auto index = std::make_shared<Index>(segments_to_index);
-    _indices.emplace_back(index);
+    _indexes.emplace_back(index);
     return index;
   }
 
@@ -132,20 +133,52 @@ class Chunk : private Noncopyable {
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
-  std::shared_ptr<ChunkAccessCounter> access_counter() const { return _access_counter; }
-
   bool references_exactly_one_table() const;
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
-  std::shared_ptr<ChunkStatistics> statistics() const;
-
-  void set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics);
+  /**
+   * To perform Chunk pruning, a Chunk can be associated with statistics.
+   * @{
+   */
+  const std::optional<ChunkPruningStatistics>& pruning_statistics() const;
+  void set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics);
+  /** @} */
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this chunk and its segments
    */
   size_t estimate_memory_usage() const;
+
+  /**
+   * If a chunk is sorted in any way, the order (Ascending/Descending/AscendingNullsFirst/AscendingNullsLast) and
+   * the ColumnID of the segment by which it is sorted will be returned.
+   * This is currently only taken advantage of in the ColumnVsValueScan. See #1519 for more details.
+   */
+  const std::optional<std::pair<ColumnID, OrderByMode>>& ordered_by() const;
+  void set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by);
+
+  /**
+   * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
+   */
+  uint64_t invalid_row_count() const { return _invalid_row_count.load(); }
+
+  /**
+     * Atomically increases the counter of deleted/invalidated rows within this chunk.
+     * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
+     */
+  void increase_invalid_row_count(uint64_t count) const;
+
+  /**
+      * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
+      * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
+      * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
+      * have to look at this chunk anymore.
+      * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
+      */
+  const std::optional<CommitID>& get_cleanup_commit_id() const { return _cleanup_commit_id; }
+
+  void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
  private:
   std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
@@ -154,10 +187,12 @@ class Chunk : private Noncopyable {
   PolymorphicAllocator<Chunk> _alloc;
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
-  std::shared_ptr<ChunkAccessCounter> _access_counter;
-  pmr_vector<std::shared_ptr<BaseIndex>> _indices;
-  std::shared_ptr<ChunkStatistics> _statistics;
+  Indexes _indexes;
+  std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
+  std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
+  mutable std::atomic_uint64_t _invalid_row_count = 0;
+  std::optional<CommitID> _cleanup_commit_id;
 };
 
 }  // namespace opossum

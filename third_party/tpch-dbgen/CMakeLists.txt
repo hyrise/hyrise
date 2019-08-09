@@ -17,6 +17,7 @@ add_library(tpch_dbgen
     speed_seed.c
     text.c
     permute.c
+    print.c
     rng64.c
     shared.h
     )

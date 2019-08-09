@@ -23,7 +23,7 @@ class Validate : public AbstractReadOnlyOperator {
   const std::string name() const override;
 
   // MVCC evaluation logic is exposed so that JitValidate can also use it
-  static bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
+  static bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
                              const CommitID begin_cid, const CommitID end_cid);
 
  protected:

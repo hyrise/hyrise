@@ -4,10 +4,12 @@
 #include <utility>
 #include <vector>
 
+#include "sorted_segment_search.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/segment_iterate.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -18,66 +20,72 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id,
                                                        const PredicateCondition& predicate_condition,
                                                        const AllTypeVariant& value)
-    : AbstractSingleColumnTableScanImpl{in_table, column_id, predicate_condition}, _value{value} {}
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition}, value{value} {
+  Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(value),
+         "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "
+         "ExpressionEvaluatorTableScanImpl.");
+}
 
-std::string ColumnVsValueTableScanImpl::description() const { return "LiteralTableScan"; }
+std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsValue"; }
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
-  // early outs for specific NULL semantics
-  if (variant_is_null(_value)) {
-    /**
-     * Comparing anything with NULL (without using IS [NOT] NULL) will result in NULL.
-     * Therefore, these scans will always return an empty position list.
-     */
-    return;
+  const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
+  if (ordered_by && ordered_by->first == _column_id) {
+    _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
+  } else {
+    // Select optimized or generic scanning implementation based on segment type
+    if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+      _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
+    } else {
+      _scan_generic_segment(segment, chunk_id, matches, position_filter);
+    }
   }
-
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    _scan_segment(typed_segment, chunk_id, matches, position_filter);
-  });
 }
 
-void ColumnVsValueTableScanImpl::_scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                                               const std::shared_ptr<const PosList>& position_filter) const {
-  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
-    if constexpr (std::is_same_v<decltype(typed_segment), const ReferenceSegment&>) {
-      Fail("Expected ReferenceSegments to be handled before calling this method");
-    } else {
-      using ColumnDataType = typename decltype(type)::type;
-      auto typed_value = type_cast_variant<ColumnDataType>(_value);
+void ColumnVsValueTableScanImpl::_scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                       PosList& matches,
+                                                       const std::shared_ptr<const PosList>& position_filter) const {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
+    // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
+    // DictionarySegments are handled in _scan_dictionary_segment()
+    // ReferenceSegments are handled via position_filter
+    if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
+                  !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
+      using ColumnDataType = typename decltype(it)::ValueType;
 
-      auto segment_iterable = create_iterable_from_segment(typed_segment);
+      const auto typed_value = boost::get<ColumnDataType>(value);
 
-      with_comparator(_predicate_condition, [&](auto predicate_comparator) {
-        auto comparator = [predicate_comparator, typed_value](const auto& iterator_value) {
-          return predicate_comparator(iterator_value.value(), typed_value);
+      with_comparator(predicate_condition, [&](auto predicate_comparator) {
+        auto comparator = [predicate_comparator, typed_value](const auto& position) {
+          return predicate_comparator(position.value(), typed_value);
         };
-        segment_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-          _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-        });
+        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
       });
+    } else {
+      Fail("Dictionary- and ReferenceSegments have their own code paths and should be handled there");
     }
   });
 }
 
-void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
-                                               PosList& matches,
-                                               const std::shared_ptr<const PosList>& position_filter) const {
-  /*
-   * ValueID value_id; // left value id
-   * Variant value; // right value
+void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
+                                                          PosList& matches,
+                                                          const std::shared_ptr<const PosList>& position_filter) const {
+  /**
+   * ValueID search_vid;              // left value id
+   * AllTypeVariant search_vid_value; // dict.value_by_value_id(search_vid)
+   * Variant value;                  // right value
    *
    * A ValueID value_id from the attribute vector is included in the result iff
    *
-   * Operator           |  Condition
-   * value_id == value  |  dict.value_by_value_id(dict.lower_bound(value)) == value && value_id == dict.lower_bound(value)
-   * value_id != value  |  dict.value_by_value_id(dict.lower_bound(value)) != value || value_id != dict.lower_bound(value)
-   * value_id <  value  |  value_id < dict.lower_bound(value)
-   * value_id <= value  |  value_id < dict.upper_bound(value)
-   * value_id >  value  |  value_id >= dict.upper_bound(value)
-   * value_id >= value  |  value_id >= dict.lower_bound(value)
+   * Operator         |  Condition
+   * column == value  |  dict.value_by_value_id(dict.lower_bound(value)) == value && value_id == dict.lower_bound(value)
+   * column != value  |  dict.value_by_value_id(dict.lower_bound(value)) != value || value_id != dict.lower_bound(value)
+   * column <  value  |  value_id < dict.lower_bound(value)
+   * column <= value  |  value_id < dict.upper_bound(value)
+   * column >  value  |  value_id >= dict.upper_bound(value)
+   * column >= value  |  value_id >= dict.lower_bound(value)
    */
 
   const auto search_value_id = _get_search_value_id(segment);
@@ -85,13 +93,13 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
   /**
    * Early Outs
    *
-   * Operator          | All                                   | None
-   * value_id == value | !None && unique_values_count == 1     | search_vid == dict.upper_bound(value)
-   * value_id != value | search_vid == dict.upper_bound(value) | !All && unique_values_count == 1
-   * value_id <  value | search_vid == INVALID_VALUE_ID        | search_vid == 0
-   * value_id <= value | search_vid == INVALID_VALUE_ID        | search_vid == 0
-   * value_id >  value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
-   * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
+   * Operator        | All rows match if:                                     | No rows match if:
+   * column == value | search_vid_value == value && unique_values_count == 1  | search_vid_value != value
+   * column != value | search_vid_value != value                              | search_vid_value == value && unique_values_count == 1
+   * column <  value | search_vid == INVALID_VALUE_ID                         | search_vid == 0
+   * column <= value | search_vid == INVALID_VALUE_ID                         | search_vid == 0
+   * column >  value | search_vid == 0                                        | search_vid == INVALID_VALUE_ID
+   * column >= value | search_vid == 0                                        | search_vid == INVALID_VALUE_ID
    */
 
   auto iterable = create_iterable_from_attribute_vector(segment);
@@ -99,7 +107,8 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
   if (_value_matches_all(segment, search_value_id)) {
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<false>(always_true, it, end, chunk_id, matches);
+      // Matches all, so include all rows except those with NULLs in the result.
+      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
     });
 
     return;
@@ -109,35 +118,81 @@ void ColumnVsValueTableScanImpl::_scan_segment(const BaseDictionarySegment& segm
     return;
   }
 
-  _with_operator_for_dict_segment_scan(_predicate_condition, [&](auto predicate_comparator) {
-    auto comparator = [predicate_comparator, search_value_id](const auto& iterator_value) {
-      return predicate_comparator(iterator_value.value(), search_value_id);
+  _with_operator_for_dict_segment_scan(predicate_condition, [&](auto predicate_comparator) {
+    auto comparator = [predicate_comparator, search_value_id](const auto& position) {
+      return predicate_comparator(position.value(), search_value_id);
     };
     iterable.with_iterators(position_filter, [&](auto it, auto end) {
-      if (_predicate_condition == PredicateCondition::GreaterThan ||
-          _predicate_condition == PredicateCondition::GreaterThanEquals) {
-        // For GreaterThan(Equals), INVALID_VALUE_ID would compare greater than the search_value_id, even though the
-        // value is NULL. Thus, we need to check for is_null as well.
-        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
-      } else {
-        // No need for NULL checks here, because INVALID_VALUE_ID is always greater.
+      // dictionary.size() represents a NULL in the AttributeVector. For some PredicateConditions, we can
+      // avoid explicitly checking for it, since the condition (e.g., LessThan) would never return true for
+      // dictionary.size() anyway.
+      if (predicate_condition == PredicateCondition::Equals ||
+          predicate_condition == PredicateCondition::LessThanEquals ||
+          predicate_condition == PredicateCondition::LessThan) {
         _scan_with_iterators<false>(comparator, it, end, chunk_id, matches);
+      } else {
+        _scan_with_iterators<true>(comparator, it, end, chunk_id, matches);
       }
     });
   });
 }
 
+void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment, const ChunkID chunk_id,
+                                                      PosList& matches,
+                                                      const std::shared_ptr<const PosList>& position_filter,
+                                                      const OrderByMode order_by_mode) const {
+  resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
+    using ColumnDataType = typename decltype(type)::type;
+
+    if constexpr (std::is_same_v<std::decay_t<decltype(typed_segment)>, ReferenceSegment>) {
+      Fail("Expected ReferenceSegments to be handled before calling this method");
+    } else {
+      auto segment_iterable = create_iterable_from_segment(typed_segment);
+      segment_iterable.with_iterators(position_filter, [&](auto segment_begin, auto segment_end) {
+        auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, order_by_mode, predicate_condition,
+                                                         boost::get<ColumnDataType>(value));
+
+        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
+          size_t output_idx = matches.size();
+
+          matches.resize(matches.size() + std::distance(begin, end));
+
+          /**
+           * If the range of matches consists of continuous ChunkOffsets we can speed up the writing
+           * by calculating the offsets based on the first offset instead of calling chunk_offset()
+           * for every match.
+           * ChunkOffsets in position_filter are not necessarily continuous. The same is true for
+           * NotEquals because the result might consist of 2 ranges.
+           */
+          if (position_filter || predicate_condition == PredicateCondition::NotEquals) {
+            for (; begin != end; ++begin) {
+              matches[output_idx++] = RowID(chunk_id, begin->chunk_offset());
+            }
+          } else {
+            const auto first_offset = begin->chunk_offset();
+            const auto distance = std::distance(begin, end);
+
+            for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
+              matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
+            }
+          }
+        });
+      });
+    }
+  });
+}
+
 ValueID ColumnVsValueTableScanImpl::_get_search_value_id(const BaseDictionarySegment& segment) const {
-  switch (_predicate_condition) {
+  switch (predicate_condition) {
     case PredicateCondition::Equals:
     case PredicateCondition::NotEquals:
     case PredicateCondition::LessThan:
     case PredicateCondition::GreaterThanEquals:
-      return segment.lower_bound(_value);
+      return segment.lower_bound(value);
 
     case PredicateCondition::LessThanEquals:
     case PredicateCondition::GreaterThan:
-      return segment.upper_bound(_value);
+      return segment.upper_bound(value);
 
     default:
       Fail("Unsupported comparison type encountered");
@@ -146,12 +201,13 @@ ValueID ColumnVsValueTableScanImpl::_get_search_value_id(const BaseDictionarySeg
 
 bool ColumnVsValueTableScanImpl::_value_matches_all(const BaseDictionarySegment& segment,
                                                     const ValueID search_value_id) const {
-  switch (_predicate_condition) {
+  switch (predicate_condition) {
     case PredicateCondition::Equals:
-      return search_value_id != segment.upper_bound(_value) && segment.unique_values_count() == size_t{1u};
+      return search_value_id != INVALID_VALUE_ID && segment.value_of_value_id(search_value_id) == value &&
+             segment.unique_values_count() == size_t{1u};
 
     case PredicateCondition::NotEquals:
-      return search_value_id == segment.upper_bound(_value);
+      return search_value_id == INVALID_VALUE_ID || segment.value_of_value_id(search_value_id) != value;
 
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
@@ -168,12 +224,13 @@ bool ColumnVsValueTableScanImpl::_value_matches_all(const BaseDictionarySegment&
 
 bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment& segment,
                                                      const ValueID search_value_id) const {
-  switch (_predicate_condition) {
+  switch (predicate_condition) {
     case PredicateCondition::Equals:
-      return search_value_id == segment.upper_bound(_value);
+      return search_value_id == INVALID_VALUE_ID || value != segment.value_of_value_id(search_value_id);
 
     case PredicateCondition::NotEquals:
-      return search_value_id == segment.upper_bound(_value) && segment.unique_values_count() == size_t{1u};
+      return search_value_id != INVALID_VALUE_ID && value == segment.value_of_value_id(search_value_id) &&
+             segment.unique_values_count() == size_t{1u};
 
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals:
@@ -185,7 +242,6 @@ bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment
 
     default:
       Fail("Unsupported comparison type encountered");
-      return false;
   }
 }
 

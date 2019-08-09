@@ -8,7 +8,6 @@
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "storage/chunk.hpp"
 #include "types.hpp"
 
@@ -20,9 +19,9 @@ struct SQLPipelineMetrics {
 
   // This is different from the other measured times as we only get this for all statements at once
   std::chrono::nanoseconds parse_time_nanos{0};
-
-  std::string to_string() const;
 };
+
+std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics);
 
 /**
  * The SQLPipeline represents the flow from the basic SQL string (containing one or more statements) to the result
@@ -36,11 +35,14 @@ class SQLPipeline : public Noncopyable {
   // Prefer using the SQLPipelineBuilder interface for constructing SQLPipelines conveniently
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
               const std::shared_ptr<LQPTranslator>& lqp_translator, const std::shared_ptr<Optimizer>& optimizer,
-              const std::shared_ptr<PreparedStatementCache>& prepared_statements,
-              const CleanupTemporaries cleanup_temporaries);
+              const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
+              const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache, const CleanupTemporaries cleanup_temporaries);
+
+  // Returns the original SQL string
+  const std::string get_sql() const;
 
   // Returns the SQL string for each statement.
-  const std::vector<std::string>& get_sql_strings();
+  const std::vector<std::string>& get_sql_per_statement();
 
   // Returns the parsed SQL string for each statement.
   const std::vector<std::shared_ptr<hsql::SQLParserResult>>& get_parsed_sql_statements();
@@ -52,17 +54,23 @@ class SQLPipeline : public Noncopyable {
   const std::vector<std::shared_ptr<AbstractLQPNode>>& get_optimized_logical_plans();
 
   // Returns the Physical Plans for each statement.
-  // The plans are either retrieved from the SQLPlanCache or, if unavailable, translated from the optimized LQPs
-  const std::vector<std::shared_ptr<SQLQueryPlan>>& get_query_plans();
+  // The plans are either retrieved from the SQLPhysicalPlanCache or, if unavailable, translated from the optimized LQPs
+  const std::vector<std::shared_ptr<AbstractOperator>>& get_physical_plans();
 
   // Returns all tasks for each statement that need to be executed for this query.
   const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
 
-  // Executes all tasks, waits for them to finish, and returns the resulting tables
-  const std::vector<std::shared_ptr<const Table>>& get_result_tables();
+  // Executes all tasks, waits for them to finish, and returns
+  //   - {Success, tables}     if the statement was successful
+  //   - {RolledBack, tables}  if the transaction failed. There might be tables included if no explicit transaction
+  //                           context was provided and statements auto-committed
+  // The transaction status is somewhat redundant, as it could also be retrieved from the transaction_context. We
+  // explicitly return it as part of get_result_table(s) to force the caller to take the possibility of a failed
+  // transaction into account.
+  std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> get_result_tables();
 
   // Shorthand for `get_result_tables().back()`
-  std::shared_ptr<const Table> get_result_table();
+  std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> get_result_table();
 
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
   std::shared_ptr<TransactionContext> transaction_context() const;
@@ -76,9 +84,14 @@ class SQLPipeline : public Noncopyable {
   // another uses it)
   bool requires_execution() const;
 
-  const SQLPipelineMetrics& metrics();
+  SQLPipelineMetrics& metrics();
+
+  const std::shared_ptr<SQLPhysicalPlanCache> pqp_cache;
+  const std::shared_ptr<SQLLogicalPlanCache> lqp_cache;
 
  private:
+  std::string _sql;
+
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
 
   const std::shared_ptr<TransactionContext> _transaction_context;
@@ -89,12 +102,12 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::shared_ptr<hsql::SQLParserResult>> _parsed_sql_statements;
   std::vector<std::shared_ptr<AbstractLQPNode>> _unoptimized_logical_plans;
   std::vector<std::shared_ptr<AbstractLQPNode>> _optimized_logical_plans;
-  std::vector<std::shared_ptr<SQLQueryPlan>> _query_plans;
+  std::vector<std::shared_ptr<AbstractOperator>> _physical_plans;
   std::vector<std::vector<std::shared_ptr<OperatorTask>>> _tasks;
   std::vector<std::shared_ptr<const Table>> _result_tables;
 
-  // Indicates whether get_result_table() has been run successfully
-  bool _pipeline_was_executed{false};
+  // Indicates whether get_result_table() has been run yet and whether the execution was successful
+  SQLPipelineStatus _pipeline_status{SQLPipelineStatus::NotExecuted};
 
   // Indicates whether translating a statement in the pipeline requires the execution of a previous statement
   // e.g. CREATE VIEW foo AS SELECT * FROM bar; SELECT * FROM foo;

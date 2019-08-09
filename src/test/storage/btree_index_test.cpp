@@ -19,17 +19,17 @@ class BTreeIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     values = {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"};
-    segment = std::make_shared<ValueSegment<std::string>>(values);
+    segment = std::make_shared<ValueSegment<pmr_string>>(values);
     sorted = {"apple", "charlie", "charlie", "delta", "delta", "frank", "hotel", "inbox"};
     index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
     chunk_offsets = &(index->_impl->_chunk_offsets);
   }
 
-  std::vector<std::string> values;
-  std::vector<std::string> sorted;
+  std::vector<pmr_string> values;
+  std::vector<pmr_string> sorted;
   std::shared_ptr<BTreeIndex> index = nullptr;
-  std::shared_ptr<ValueSegment<std::string>> segment = nullptr;
+  std::shared_ptr<ValueSegment<pmr_string>> segment = nullptr;
 
   /**
    * Use pointers to inner data structures of BTreeIndex in order to bypass the
@@ -66,85 +66,85 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 }
 
 // The following tests contain switches for different implementations of the stdlib.
-// Short String Optimization (SSO) stores strings of a certain size in the std::string object itself.
+// Short String Optimization (SSO) stores strings of a certain size in the pmr_string object itself.
 // Only strings exceeding this size (15 for libstdc++ and 22 for libc++) are stored on the heap.
 
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
   values = {"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
-  segment = std::make_shared<ValueSegment<std::string>>(values);
+  segment = std::make_shared<ValueSegment<pmr_string>>(values);
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
-// Index memory consumption depends on implementation of std::string.
+// Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
   // libstdc++:
+  //   840 (reported by cpp_btree implementation)
+  // +  24 std::vector<ChunkOffset> object overhead
+  // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
+  // =  908
+  EXPECT_EQ(index->memory_consumption(), 908u);
+#else
+  // libc++:
   //   848 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
   // =  916
   EXPECT_EQ(index->memory_consumption(), 916u);
-#else
-  // libc++:
-  //   808 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
-  // =  876
-  EXPECT_EQ(index->memory_consumption(), 876u);
 #endif
 }
 
 TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
-  ASSERT_GE(std::string("").capacity(), 7u)
+  ASSERT_GE(pmr_string("").capacity(), 7u)
       << "Short String Optimization (SSO) is expected to hold at least 7 characters";
 
-// Index memory consumption depends on implementation of std::string.
+// Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
   // libstdc++:
+  //   841 (reported by cpp_btree implementation)
+  // +  24 std::vector<ChunkOffset> object overhead
+  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
+  // =  896
+  EXPECT_EQ(index->memory_consumption(), 896u);
+#else
+  // libc++:
   //   264 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
   // =  320
   EXPECT_EQ(index->memory_consumption(), 320u);
-#else
-  // libc++:
-  //   248 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // =  304
-  EXPECT_EQ(index->memory_consumption(), 304u);
 #endif
 }
 
 TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
-  ASSERT_LE(std::string("").capacity(), 22u)
+  ASSERT_LE(pmr_string("").capacity(), 22u)
       << "Short String Optimization (SSO) is expected to hold at maximum 22 characters";
 
   values = {"hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
             "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
-  segment = std::make_shared<ValueSegment<std::string>>(values);
+  segment = std::make_shared<ValueSegment<pmr_string>>(values);
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
-// Index memory consumption depends on implementation of std::string.
+// Index memory consumption depends on implementation of pmr_string.
 #ifdef __GLIBCXX__
   // libstdc++:
+  //    576 (reported by cpp_btree implementation)
+  // +   24 std::vector<ChunkOffset> object overhead
+  // +   32 number of elements (8) * sizeof(ChunkOffset) (4)
+  // +   20 "appleappleappleapple"
+  // +   21 "charliecharliecharlie"
+  // +   20 "deltadeltadeltadelta"
+  // +   20 "frankfrankfrankfrank"
+  // +   20 "inboxinboxinboxinbox"
+  // +   25 "hotelhotelhotelhotelhotel"
+  // =   446
+  EXPECT_EQ(index->memory_consumption(), 1022u);
+#else
+  // libc++ Only one string exceeds the reserved space (22 characters) for small strings:
   //   264 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // +  20 "appleappleappleapple"
-  // +  21 "charliecharliecharlie"
-  // +  20 "deltadeltadeltadelta"
-  // +  20 "frankfrankfrankfrank"
-  // +  20 "inboxinboxinboxinbox"
   // +  25 "hotelhotelhotelhotelhotel"
-  // =  446
-  EXPECT_EQ(index->memory_consumption(), 446u);
-#else
-  // libc++ Only one string exceeds the reserved space (22 characters) for small strings:
-  //   248 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead
-  // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // +  25 "hotelhotelhotelhotelhotel"
-  // =  329
-  EXPECT_EQ(index->memory_consumption(), 329u);
+  // =  345
+  EXPECT_EQ(index->memory_consumption(), 345u);
 #endif
 }
 

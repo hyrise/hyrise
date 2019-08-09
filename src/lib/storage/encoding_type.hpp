@@ -11,13 +11,19 @@
 #include <cstdint>
 
 #include "all_type_variant.hpp"
+#include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 
 namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference };
+enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4 };
+
+inline static std::vector<EncodingType> encoding_type_enum_values{
+    EncodingType::Unencoded,        EncodingType::Dictionary,
+    EncodingType::RunLength,        EncodingType::FixedStringDictionary,
+    EncodingType::FrameOfReference, EncodingType::LZ4};
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -31,8 +37,9 @@ constexpr auto supported_data_types_for_encoding_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Unencoded>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
-    hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<std::string>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t, int64_t>));
+    hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, hana::tuple_t<pmr_string>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::LZ4>, data_types));
 
 /**
  * @return an integral constant implicitly convertible to bool
@@ -47,5 +54,17 @@ constexpr auto encoding_supports_data_type(SegmentEncodingType encoding_type, Co
 
 // Version for when EncodingType and DataType are only known at runtime
 bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type);
+
+struct SegmentEncodingSpec {
+  constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
+  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
+  constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
+      : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
+
+  EncodingType encoding_type;
+  std::optional<VectorCompressionType> vector_compression_type;
+};
+
+using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
 }  // namespace opossum

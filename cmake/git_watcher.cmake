@@ -173,8 +173,9 @@ function(CheckGit _working_dir _state_changed)
     GetGitStateSimple(${_working_dir} current_state)
 
 
-    # Check if the state has changed compared to the backup.
-    if(EXISTS "${git_state_file}")
+    # Check if the state has changed compared to the backup or needs to be
+    # regenerated after make clean.
+    if(EXISTS "${git_state_file}" AND EXISTS "${post_configure_file}")
         file(READ "${git_state_file}" OLD_HEAD_CONTENTS)
         if(OLD_HEAD_CONTENTS STREQUAL current_state)
             set(${_state_changed} "false" PARENT_SCOPE)

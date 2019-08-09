@@ -24,18 +24,18 @@ class DropViewTest : public BaseTest {
     const auto view_lqp = StoredTableNode::make("first_table");
     const auto view = std::make_shared<LQPView>(view_lqp, std::unordered_map<ColumnID, std::string>{});
 
-    sm.add_lqp_view("view_name", view);
+    sm.add_view("view_name", view);
   }
 };
 
 TEST_F(DropViewTest, OperatorName) {
-  auto dv = std::make_shared<DropView>("view_name");
+  auto dv = std::make_shared<DropView>("view_name", false);
 
   EXPECT_EQ(dv->name(), "DropView");
 }
 
 TEST_F(DropViewTest, DeepCopy) {
-  auto dv = std::make_shared<DropView>("view_name");
+  auto dv = std::make_shared<DropView>("view_name", false);
 
   dv->execute();
   EXPECT_NE(dv->get_output(), nullptr);
@@ -44,15 +44,28 @@ TEST_F(DropViewTest, DeepCopy) {
   EXPECT_EQ(copy->get_output(), nullptr);
 }
 
-TEST_F(DropViewTest, CanDropViews) {
-  EXPECT_TRUE(StorageManager::get().has_view("view_name")) << "View not found";
-
-  auto dv = std::make_shared<DropView>("view_name");
+TEST_F(DropViewTest, Execute) {
+  auto dv = std::make_shared<DropView>("view_name", false);
   dv->execute();
 
-  EXPECT_EQ(dv->get_output()->row_count(), 0u) << "DropView returned non-empty table";
+  EXPECT_EQ(dv->get_output()->row_count(), 0u);
 
-  EXPECT_FALSE(StorageManager::get().has_view("view_name")) << "View was not removed";
+  EXPECT_FALSE(StorageManager::get().has_view("view_name"));
+}
+
+TEST_F(DropViewTest, ExecuteWithIfExists) {
+  auto dv_1 = std::make_shared<DropView>("view_name", true);
+  dv_1->execute();
+
+  EXPECT_EQ(dv_1->get_output()->row_count(), 0u);
+
+  EXPECT_FALSE(StorageManager::get().has_view("view_name"));
+
+  auto dv_2 = std::make_shared<DropView>("view_name", true);
+
+  EXPECT_NO_THROW(dv_2->execute());
+
+  EXPECT_FALSE(StorageManager::get().has_view("view_name"));
 }
 
 }  // namespace opossum

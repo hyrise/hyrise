@@ -22,25 +22,20 @@ struct MvccData {
   pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
   pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
-  explicit MvccData(const size_t size);
+  explicit MvccData(const size_t size, CommitID begin_commit_id);
 
   size_t size() const;
 
   /**
-   * Compacts the internal representation of
-   * the mvcc data in order to reduce fragmentation
-   * Locks mvcc data exclusively in order to do so
+   * Compacts the internal representation of the mvcc data in order to reduce fragmentation.
+   * Locks mvcc data exclusively in order to do so.
    */
   void shrink();
 
   /**
    * Grows mvcc data by the given delta
-   *
-   * @param begin_cid value all new begin_cids will be set to
    */
-  void grow_by(size_t delta, CommitID begin_cid);
-
-  void print(std::ostream& stream = std::cout) const;
+  void grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id);
 
  private:
   /**
@@ -54,5 +49,7 @@ struct MvccData {
 
   size_t _size{0};
 };
+
+std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);
 
 }  // namespace opossum

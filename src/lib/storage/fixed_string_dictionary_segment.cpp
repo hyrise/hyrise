@@ -6,7 +6,6 @@
 
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -16,7 +15,7 @@ template <typename T>
 FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
     const std::shared_ptr<const FixedStringVector>& dictionary,
     const std::shared_ptr<const BaseCompressedVector>& attribute_vector, const ValueID null_value_id)
-    : BaseDictionarySegment(data_type_from_type<std::string>()),
+    : BaseDictionarySegment(data_type_from_type<pmr_string>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
@@ -28,7 +27,7 @@ const AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffs
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
-  if (!typed_value.has_value()) {
+  if (!typed_value) {
     return NULL_VALUE;
   }
   return *typed_value;
@@ -36,6 +35,8 @@ const AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffs
 
 template <typename T>
 const std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+  DebugAssert(chunk_offset < size(), "ChunkOffset out of bounds.");
+
   const auto value_id = _decompressor->get(chunk_offset);
   if (value_id == _null_value_id) {
     return std::nullopt;
@@ -44,7 +45,7 @@ const std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const Ch
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<std::string>> FixedStringDictionarySegment<T>::dictionary() const {
+std::shared_ptr<const pmr_vector<pmr_string>> FixedStringDictionarySegment<T>::dictionary() const {
   return _dictionary->dictionary();
 }
 
@@ -75,7 +76,7 @@ size_t FixedStringDictionarySegment<T>::estimate_memory_usage() const {
 }
 
 template <typename T>
-CompressedVectorType FixedStringDictionarySegment<T>::compressed_vector_type() const {
+std::optional<CompressedVectorType> FixedStringDictionarySegment<T>::compressed_vector_type() const {
   return _attribute_vector->type();
 }
 
@@ -88,27 +89,33 @@ template <typename T>
 ValueID FixedStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast_variant<std::string>(value);
+  const auto typed_value = boost::get<pmr_string>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
-  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
 template <typename T>
 ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = type_cast_variant<std::string>(value);
+  const auto typed_value = boost::get<pmr_string>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
-  return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
 template <typename T>
-size_t FixedStringDictionarySegment<T>::unique_values_count() const {
-  return _dictionary->size();
+AllTypeVariant FixedStringDictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
+  DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
+  return _dictionary->get_string_at(value_id);
+}
+
+template <typename T>
+ValueID::base_type FixedStringDictionarySegment<T>::unique_values_count() const {
+  return static_cast<ValueID::base_type>(_dictionary->size());
 }
 
 template <typename T>
@@ -121,6 +128,6 @@ const ValueID FixedStringDictionarySegment<T>::null_value_id() const {
   return _null_value_id;
 }
 
-template class FixedStringDictionarySegment<std::string>;
+template class FixedStringDictionarySegment<pmr_string>;
 
 }  // namespace opossum

@@ -7,9 +7,9 @@
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
-#include "lqp_select_expression.hpp"
+#include "lqp_subquery_expression.hpp"
 #include "operators/abstract_operator.hpp"
-#include "pqp_select_expression.hpp"
+#include "pqp_subquery_expression.hpp"
 #include "value_expression.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -121,7 +121,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   Assert(lhs != DataType::Null || rhs != DataType::Null, "Can't deduce common type if both sides are NULL");
   Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings");
 
-  // Long+NULL -> Long; NULL+Long -> Long; NULL+NULL -> NULL
+  // Long+NULL -> Long; NULL+Long -> Long
   if (lhs == DataType::Null) return rhs;
   if (rhs == DataType::Null) return lhs;
 
@@ -183,17 +183,17 @@ std::shared_ptr<AbstractExpression> inflate_logical_expressions(
 void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression,
                                const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   visit_expression(expression, [&](auto& sub_expression) {
-    if (sub_expression->type == ExpressionType::Parameter) {
-      auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
-      const auto value_iter = parameters.find(parameter_expression->parameter_id);
+    if (auto correlated_parameter_expression =
+            std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
+      const auto value_iter = parameters.find(correlated_parameter_expression->parameter_id);
       if (value_iter != parameters.end()) {
-        parameter_expression->set_value(value_iter->second);
+        correlated_parameter_expression->set_value(value_iter->second);
       }
       return ExpressionVisitation::DoNotVisitArguments;
 
-    } else if (const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-               pqp_select_expression) {
-      pqp_select_expression->pqp->set_parameters(parameters);
+    } else if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+               pqp_subquery_expression) {
+      pqp_subquery_expression->pqp->set_parameters(parameters);
       return ExpressionVisitation::DoNotVisitArguments;
 
     } else {
@@ -212,11 +212,11 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
                                         const std::weak_ptr<TransactionContext>& transaction_context) {
   visit_expression(expression, [&](auto& sub_expression) {
-    if (sub_expression->type != ExpressionType::PQPSelect) return ExpressionVisitation::VisitArguments;
+    if (sub_expression->type != ExpressionType::PQPSubquery) return ExpressionVisitation::VisitArguments;
 
-    const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-    Assert(pqp_select_expression, "Expected a PQPSelectExpression here")
-        pqp_select_expression->pqp->set_transaction_context_recursively(transaction_context);
+    const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+    Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here");
+    pqp_subquery_expression->pqp->set_transaction_context_recursively(transaction_context);
 
     return ExpressionVisitation::DoNotVisitArguments;
   });
@@ -233,11 +233,7 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
   auto placeholder_found = false;
 
   visit_expression(expression, [&](const auto& sub_expression) {
-    const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
-    if (parameter_expression) {
-      placeholder_found |= parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder;
-    }
-
+    placeholder_found |= std::dynamic_pointer_cast<PlaceholderExpression>(sub_expression) != nullptr;
     return ExpressionVisitation::VisitArguments;
   });
 
@@ -245,10 +241,9 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
 }
 
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {
-  if (expression.type == ExpressionType::Parameter) {
-    const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
-    DebugAssert(parameter_expression.value(), "ParameterExpression doesn't have a value set");
-    return *parameter_expression.value();
+  if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
+    DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression doesn't have a value set");
+    return *correlated_parameter_expression->value();
   } else if (expression.type == ExpressionType::Value) {
     return static_cast<const ValueExpression&>(expression).value;
   } else {

@@ -126,10 +126,7 @@ row_stop(int t)	\
 	for (i=0; i <= MAX_STREAM; i++)
 		if ((Seed[i].table == t) || (Seed[i].table == tdefs[t].child))
 			{
-				/**
-				 * HYRISE: commented out because set_seeds is considered false for us.
-				 */
-
+		    // HYRISE: commented out because set_seeds is considered false for us.
 //			if (set_seeds && (Seed[i].usage > Seed[i].boundary))
 //				{
 //				fprintf(stderr, "\nSEED CHANGE: seed[%d].usage = %ld\n",

@@ -10,17 +10,18 @@ void CreatePipelineTask::_on_execute() {
   auto result = std::make_unique<CreatePipelineResult>();
 
   try {
-    result->sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{_sql}.create_pipeline());
-  } catch (const std::exception& exception) {
-    // Try LOAD file_name table_name
     if (_allow_load_table && _is_load_table()) {
+      // Try LOAD file_name table_name
       result->load_table = std::make_pair(_file_name, _table_name);
     } else {
-      // Setting the exception this way ensures that the details are preserved in the futures
-      // Important: std::current_exception apparently does not work
-      // (exceptions are not correctly being re-thrown when 'get'ing the future)
-      return _promise.set_exception(boost::current_exception());
+      result->sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{_sql}.create_pipeline());
     }
+  } catch (...) {
+    // Setting the exception this way ensures that the details are preserved in the futures
+    // Important: std::current_exception apparently does not work
+    // (exceptions are not correctly being re-thrown when 'get'ing the future)
+    _promise.set_exception(boost::current_exception());
+    return;
   }
 
   _promise.set_value(std::move(result));

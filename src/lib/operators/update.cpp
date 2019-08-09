@@ -20,118 +20,38 @@ Update::Update(const std::string& table_to_update_name, const std::shared_ptr<Ab
     : AbstractReadWriteOperator(OperatorType::Update, fields_to_update_op, update_values_op),
       _table_to_update_name{table_to_update_name} {}
 
-Update::~Update() = default;
-
 const std::string Update::name() const { return "Update"; }
 
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
-  if (_input_left->get_output()->empty()) return nullptr;  // Subsequent code relies on there being at least one chunk
-
-  DebugAssert((_execution_input_valid(context)), "Input to Update isn't valid");
-
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
-  // 1. Create insert_table with ReferenceSegments that contain all rows that should be updated
-  TableColumnDefinitions insert_table_column_definitions;
-  for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-    insert_table_column_definitions.emplace_back(table_to_update->column_name(column_id),
-                                                 table_to_update->column_data_type(column_id));
-  }
+  // 0. Validate input
+  DebugAssert(context, "Update needs a transaction context");
+  DebugAssert(input_table_left()->row_count() == input_table_right()->row_count(),
+              "Update required identical layouts from its input tables");
+  DebugAssert(input_table_left()->column_data_types() == input_table_right()->column_data_types(),
+              "Update required identical layouts from its input tables");
 
-  auto insert_table = std::make_shared<Table>(insert_table_column_definitions, TableType::References);
+  // 1. Delete obsolete data with the Delete operator.
+  //    Delete doesn't accept empty input data
+  if (input_table_left()->row_count() > 0) {
+    _delete = std::make_shared<Delete>(_input_left);
+    _delete->set_transaction_context(context);
+    _delete->execute();
 
-  auto current_row_in_left_chunk = 0u;
-  auto current_pos_list = std::shared_ptr<const PosList>();
-  auto current_left_chunk_id = ChunkID{0};
-
-  for (ChunkID chunk_id{0}; chunk_id < input_table_right()->chunk_count(); ++chunk_id) {
-    // Build poslists for mixed chunk numbers and sizes.
-    auto pos_list = std::make_shared<PosList>();
-    for (auto i = 0u; i < input_table_right()->get_chunk(chunk_id)->size(); ++i) {
-      if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
-        current_row_in_left_chunk = 0u;
-        current_pos_list = std::static_pointer_cast<const ReferenceSegment>(
-                               input_table_left()->get_chunk(current_left_chunk_id)->get_segment(ColumnID{0}))
-                               ->pos_list();
-        current_left_chunk_id++;
-      }
-
-      pos_list->emplace_back((*current_pos_list)[current_row_in_left_chunk]);
-      current_row_in_left_chunk++;
-    }
-
-    // Add ReferenceSegments with built poslist.
-    Segments insert_table_segments;
-    for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-      insert_table_segments.push_back(std::make_shared<ReferenceSegment>(table_to_update, column_id, pos_list));
-    }
-
-    insert_table->append_chunk(insert_table_segments);
-  }
-
-  // 2. Replace the columns to update in insert_table with the updated data from input_table_right
-  const auto left_chunk = input_table_left()->get_chunk(ChunkID{0});
-  for (ChunkID chunk_id{0}; chunk_id < insert_table->chunk_count(); ++chunk_id) {
-    auto insert_chunk = insert_table->get_chunk(chunk_id);
-    auto right_chunk = input_table_right()->get_chunk(chunk_id);
-
-    for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-      auto right_segment = right_chunk->get_segment(column_id);
-
-      auto left_segment = std::dynamic_pointer_cast<const ReferenceSegment>(left_chunk->get_segment(column_id));
-
-      insert_chunk->replace_segment(left_segment->referenced_column_id(), right_segment);
+    if (_delete->execute_failed()) {
+      _mark_as_failed();
+      return nullptr;
     }
   }
 
-  // 3. call delete on old data.
-  _delete = std::make_shared<Delete>(_table_to_update_name, _input_left);
-
-  _delete->set_transaction_context(context);
-
-  _delete->execute();
-
-  if (_delete->execute_failed()) {
-    _mark_as_failed();
-    return nullptr;
-  }
-
-  // 4. call insert using insert_table.
-  auto helper_operator = std::make_shared<TableWrapper>(insert_table);
-  helper_operator->execute();
-
-  _insert = std::make_shared<Insert>(_table_to_update_name, helper_operator);
+  // 2. Insert new data with the Insert operator.
+  _insert = std::make_shared<Insert>(_table_to_update_name, _input_right);
   _insert->set_transaction_context(context);
-
   _insert->execute();
+  // Insert cannot fail in the MVCC sense, no check necessary
 
   return nullptr;
-}
-
-/**
- * input_table_left must be a table with at least one chunk, containing at least one ReferenceSegment
- * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
- * must match the count and types in input_table_right.
- */
-bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
-  if (context == nullptr) return false;
-
-  if (input_table_left()->column_count() != input_table_right()->column_count()) return false;
-
-  if (input_table_left()->chunk_count() == 0) return false;
-
-  const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
-
-  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    const auto chunk = input_table_left()->get_chunk(chunk_id);
-
-    if (!chunk->references_exactly_one_table()) return false;
-
-    const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
-    if (table_to_update != first_segment->referenced_table()) return false;
-  }
-
-  return true;
 }
 
 std::shared_ptr<AbstractOperator> Update::_on_deep_copy(

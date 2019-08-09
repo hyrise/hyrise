@@ -10,7 +10,12 @@ namespace opossum {
 
 TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {}
 
-bool TaskQueue::empty() const { return _num_tasks == 0; }
+bool TaskQueue::empty() const {
+  for (const auto& queue : _queues) {
+    if (!queue.empty()) return false;
+  }
+  return true;
+}
 
 NodeID TaskQueue::node_id() const { return _node_id; }
 
@@ -23,14 +28,13 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, uint32_t priorit
   task->set_node_id(_node_id);
   _queues[priority].push(task);
 
-  _num_tasks++;
+  new_task.notify_one();
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::pull() {
   std::shared_ptr<AbstractTask> task;
   for (auto& queue : _queues) {
     if (queue.try_pop(task)) {
-      _num_tasks--;
       return task;
     }
   }
@@ -42,7 +46,6 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
   for (auto& queue : _queues) {
     if (queue.try_pop(task)) {
       if (task->is_stealable()) {
-        _num_tasks--;
         return task;
       } else {
         queue.push(task);

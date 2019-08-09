@@ -22,27 +22,49 @@ namespace opossum {
 struct SumUpWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
+    auto distance = end - begin;
+
     _sum = 0u;
 
     for (; begin != end; ++begin) {
+      --distance;
+
       _accessed_offsets.emplace_back(begin->chunk_offset());
 
       if (begin->is_null()) continue;
 
       _sum += begin->value();
     }
+
+    ASSERT_EQ(distance, 0);
   }
 
   uint32_t& _sum;
   std::vector<ChunkOffset>& _accessed_offsets;
 };
 
+struct CountNullsWithIterator {
+  template <typename Iterator>
+  void operator()(Iterator begin, Iterator end) const {
+    _nulls = 0u;
+
+    for (; begin != end; ++begin) {
+      _accessed_offsets.emplace_back(begin->chunk_offset());
+
+      if (begin->is_null()) _nulls++;
+    }
+  }
+
+  uint32_t& _nulls;
+  std::vector<ChunkOffset>& _accessed_offsets;
+};
+
 struct SumUp {
   template <typename T>
-  void operator()(const T& value) const {
-    if (value.is_null()) return;
+  void operator()(const T& position) const {
+    if (position.is_null()) return;
 
-    _sum += value.value();
+    _sum += position.value();
   }
 
   uint32_t& _sum;
@@ -60,15 +82,15 @@ struct AppendWithIterator {
     }
   }
 
-  std::string& _concatenate;
+  pmr_string& _concatenate;
 };
 
 class IterablesTest : public BaseTest {
  protected:
   void SetUp() override {
-    table = load_table("src/test/tables/int_float6.tbl", Chunk::MAX_SIZE);
-    table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_SIZE);
-    table_strings = load_table("src/test/tables/string.tbl", Chunk::MAX_SIZE);
+    table = load_table("resources/test_data/tbl/int_float6.tbl");
+    table_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
+    table_strings = load_table("resources/test_data/tbl/string.tbl");
 
     position_filter = std::make_shared<PosList>(
         PosList{{ChunkID{0}, ChunkOffset{0}}, {ChunkID{0}, ChunkOffset{2}}, {ChunkID{0}, ChunkOffset{3}}});
@@ -82,7 +104,7 @@ class IterablesTest : public BaseTest {
 };
 
 TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -99,7 +121,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -115,7 +137,7 @@ TEST_F(IterablesTest, ValueSegmentReferencedIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
-  auto chunk = table_with_null->get_chunk(ChunkID{0u});
+  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -132,7 +154,7 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
-  auto chunk = table_with_null->get_chunk(ChunkID{0u});
+  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -150,7 +172,7 @@ TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
 TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
@@ -169,7 +191,7 @@ TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
 TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto dict_segment = std::dynamic_pointer_cast<const DictionarySegment<int>>(segment);
@@ -187,14 +209,14 @@ TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
 TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
 
-  auto chunk = table_strings->get_chunk(ChunkID{0u});
+  const auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
 
-  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
+  auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*dict_segment};
 
-  auto concatenate = std::string();
+  auto concatenate = pmr_string();
   iterable.with_iterators(AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxwwwyyyuuutttzzz");
@@ -203,27 +225,27 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
 TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
 
-  auto chunk = table_strings->get_chunk(ChunkID{0u});
+  const auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
-  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(segment);
+  auto dict_segment = std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment);
 
-  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_segment};
+  auto iterable = DictionarySegmentIterable<pmr_string, FixedStringVector>{*dict_segment};
 
-  auto concatenate = std::string();
+  auto concatenate = pmr_string();
   iterable.with_iterators(position_filter, AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxyyyuuu");
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
-  auto pos_list =
-      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+  auto pos_list = PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
+                          RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
 
   auto reference_segment =
       std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  auto iterable = ReferenceSegmentIterable<int>{*reference_segment};
+  auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::No>{*reference_segment};
 
   auto sum = uint32_t{0};
   auto accessed_offsets = std::vector<ChunkOffset>{};
@@ -231,37 +253,45 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 
   EXPECT_EQ(sum, 24'825u);
   EXPECT_EQ(accessed_offsets,
-            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}, ChunkOffset{4}}));
 }
 
-TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsReadingParallel) {
-  // Ensure that two independant reference segment iterators referencing one chunk use the correct accessor after they
-  // have been created with the function: <IterableClass>.with_iterators(<Callback>)
+TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
+  auto pos_list = PosList{NULL_ROW_ID, NULL_ROW_ID};
+  pos_list.guarantee_single_chunk();
 
-  const auto table = load_table("src/test/tables/int_int.tbl", Chunk::MAX_SIZE);
+  auto reference_segment =
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
 
-  auto pos_list = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, 0u}});
-  pos_list->guarantee_single_chunk();
+  auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::No>{*reference_segment};
 
-  auto reference_segment_a = std::make_unique<ReferenceSegment>(table, ColumnID{0u}, pos_list);
-  auto reference_segment_b = std::make_unique<ReferenceSegment>(table, ColumnID{1u}, pos_list);
+  auto nulls_found = uint32_t{0};
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(CountNullsWithIterator{nulls_found, accessed_offsets});
 
-  // Iterators are stored in the lambda context to hide their actual type
-  std::function<int()> dereference_iterator_a;
-  std::function<int()> dereference_iterator_b;
+  EXPECT_EQ(nulls_found, 2u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
+}
 
-  ReferenceSegmentIterable<int>{*reference_segment_a}.with_iterators(
-      [&](auto it, auto end) { dereference_iterator_a = [=]() { return (*it).value(); }; });
-  ReferenceSegmentIterable<int>{*reference_segment_b}.with_iterators(
-      [&](auto it, auto end) { dereference_iterator_b = [=]() { return (*it).value(); }; });
+TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased) {
+  auto pos_list = PosList{NULL_ROW_ID, NULL_ROW_ID};
+  pos_list.guarantee_single_chunk();
 
-  // Check values of dereferenced iterators after both iterators have been created
-  EXPECT_EQ(dereference_iterator_a(), 12345);
-  EXPECT_EQ(dereference_iterator_b(), 1);
+  auto reference_segment =
+      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
+
+  auto iterable = ReferenceSegmentIterable<int, EraseReferencedSegmentType::Yes>{*reference_segment};
+
+  auto nulls_found = uint32_t{0};
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(CountNullsWithIterator{nulls_found, accessed_offsets});
+
+  EXPECT_EQ(nulls_found, 2u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
-  auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);
@@ -276,7 +306,7 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
-  auto chunk = table_with_null->get_chunk(ChunkID{0u});
+  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
 
   auto segment = chunk->get_segment(ColumnID{0u});
   auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(segment);

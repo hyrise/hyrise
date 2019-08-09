@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "join_mpsm/radix_cluster_sort_numa.hpp"
-#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -21,7 +20,7 @@
 #include "storage/value_segment.hpp"
 
 // A cluster is a chunk of values which agree on their last bits
-STRONG_TYPEDEF(size_t, ClusterID);
+STRONG_TYPEDEF(uint32_t, ClusterID);
 
 /**
    * This class is the entry point to the Multi Phase Sort Merge Join, which is a variant of the Sort Merge Join
@@ -37,26 +36,35 @@ STRONG_TYPEDEF(size_t, ClusterID);
 **/
 
 namespace opossum {
-JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
-                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                   const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op)
-    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, column_ids, op) {
-  // Validate the parameters
-  DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
-  DebugAssert(left != nullptr, "The left input operator is null.");
-  DebugAssert(right != nullptr, "The right input operator is null.");
-  DebugAssert(op == PredicateCondition::Equals, "Only Equi joins are supported by MPSM join.");
+
+bool JoinMPSM::supports(const JoinConfiguration config) {
+  return config.predicate_condition == PredicateCondition::Equals && config.left_data_type == config.right_data_type &&
+         config.join_mode != JoinMode::Semi && config.join_mode != JoinMode::AntiNullAsTrue &&
+         config.join_mode != JoinMode::AntiNullAsFalse && !config.secondary_predicates;
 }
 
+JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
+                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                   const OperatorJoinPredicate& primary_predicate,
+                   const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, secondary_predicates) {}
+
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
+  Assert(supports({_mode, _primary_predicate.predicate_condition,
+                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+         "JoinMPSM doesn't support these parameters");
+
   // Check column types
-  const auto& left_column_type = input_table_left()->column_data_type(_column_ids.first);
-  DebugAssert(left_column_type == input_table_right()->column_data_type(_column_ids.second),
+  const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);
+  DebugAssert(left_column_type == input_table_right()->column_data_type(_primary_predicate.column_ids.second),
               "Left and right column types do not match. The mpsm join requires matching column types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinMPSMImpl>(
-      left_column_type, *this, _column_ids.first, _column_ids.second, _predicate_condition, _mode);
+      left_column_type, *this, _primary_predicate.column_ids.first, _primary_predicate.column_ids.second,
+      _primary_predicate.predicate_condition, _mode);
 
   return _impl->_on_execute();
 }
@@ -66,7 +74,7 @@ void JoinMPSM::_on_cleanup() { _impl.reset(); }
 std::shared_ptr<AbstractOperator> JoinMPSM::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
+  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _primary_predicate);
 }
 
 void JoinMPSM::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -153,7 +161,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table, F action) {
       for (auto cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        const auto current_cluster = (*table)[end.partition]._materialized_segments[cluster];
+        const auto current_cluster = (*table)[end.partition].materialized_segments[cluster];
         size_t start_index = 0;
         // For the end index we need to find out how long the cluster is on this partition
         size_t end_index = current_cluster->size();
@@ -176,7 +184,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   ClusterID _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     const size_t numa_nodes = Topology::get().nodes().size();
-    return static_cast<ClusterID>(std::pow(2, std::floor(std::log2(numa_nodes))));
+    return ClusterID{static_cast<ClusterID::base_type>(std::pow(2, std::floor(std::log2(numa_nodes))))};
   }
 
   /**
@@ -186,10 +194,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     DebugAssert(table->size() > 0, "table has no chunks");
     auto end_positions = std::vector<TablePosition>{table->size()};
     for (auto& partition : (*table)) {
-      auto last_cluster = partition._materialized_segments.size() - 1;
-      auto node_id = partition._node_id;
+      auto last_cluster = partition.materialized_segments.size() - 1;
+      auto node_id = partition.node_id;
       end_positions[node_id] =
-          TablePosition(node_id, last_cluster, partition._materialized_segments[last_cluster]->size());
+          TablePosition(node_id, last_cluster, partition.materialized_segments[last_cluster]->size());
     }
 
     return end_positions;
@@ -214,7 +222,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
         // Since we step multiple times over the left chunk
         // we need to memorize the joined rows for the left and outer case
-        if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+        if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
           for (auto joined_id = left_run.start.index; joined_id < left_run.end.index; ++joined_id) {
             left_joined[joined_id] = true;
           }
@@ -226,7 +234,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
         // but we could hit an equal when stepping again over the left side
         break;
       case ComparisonResult::Greater:
-        if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
+        if (_mode == JoinMode::Right || _mode == JoinMode::FullOuter) {
           _emit_left_null_combinations(partition_number, cluster_number, right_run);
         }
         break;
@@ -258,7 +266,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Emits all combinations of row ids from the left table range and a NULL value on the right side to the join output.
   **/
   void _emit_right_null_combinations(NodeID output_partition, ClusterID output_cluster,
-                                     std::shared_ptr<MaterializedSegment<T>> left_chunk,
+                                     std::shared_ptr<MaterializedSegmentNUMA<T>> left_chunk,
                                      std::vector<bool> left_joined) {
     for (auto entry_id = size_t{0}; entry_id < left_joined.size(); ++entry_id) {
       if (!left_joined[entry_id]) {
@@ -280,7 +288,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Determines the length of the run starting at start_index in the values vector.
   * A run is a series of the same value.
   **/
-  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegment<T>> values) {
+  size_t _run_length(size_t start_index, std::shared_ptr<MaterializedSegmentNUMA<T>> values) {
     if (start_index >= values->size()) {
       return 0;
     }
@@ -320,16 +328,16 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     _output_pos_lists_left[left_node_id][left_cluster_id] = std::make_shared<PosList>();
 
-    std::shared_ptr<MaterializedSegment<T>> left_cluster =
-        (*_sorted_left_table)[left_node_id]._materialized_segments[left_cluster_id];
+    std::shared_ptr<MaterializedSegmentNUMA<T>> left_cluster =
+        (*_sorted_left_table)[left_node_id].materialized_segments[left_cluster_id];
 
     auto left_joined = std::vector<bool>(left_cluster->size(), false);
 
     for (auto right_node_id = NodeID{0}; right_node_id < static_cast<NodeID>(_cluster_count); ++right_node_id) {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
-      std::shared_ptr<MaterializedSegment<T>> right_cluster =
-          (*_sorted_right_table)[right_node_id]._materialized_segments[right_cluster_id];
+      std::shared_ptr<MaterializedSegmentNUMA<T>> right_cluster =
+          (*_sorted_right_table)[right_node_id].materialized_segments[right_cluster_id];
 
       auto left_run_start = size_t{0};
       auto right_run_start = size_t{0};
@@ -376,7 +384,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       }
     }
 
-    if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
+    if (_mode == JoinMode::Left || _mode == JoinMode::FullOuter) {
       _emit_right_null_combinations(left_node_id, left_cluster_id, left_cluster, left_joined);
     }
   }
@@ -487,11 +495,11 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Executes the MPSMJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
-    auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
-    auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
-    auto radix_clusterer =
-        RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(), _mpsm_join._column_ids,
-                                include_null_left, include_null_right, _cluster_count);
+    auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
+    auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+    auto radix_clusterer = RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(),
+                                                   _mpsm_join._primary_predicate.column_ids, include_null_left,
+                                                   include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
@@ -526,13 +534,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _add_output_segments(output_segments, _mpsm_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_column_definitions = concatenated(_mpsm_join.input_table_left()->column_definitions(),
-                                                  _mpsm_join.input_table_right()->column_definitions());
-    auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
-
-    output_table->append_chunk(output_segments);
-
-    return output_table;
+    return _mpsm_join._build_output_table({std::make_shared<Chunk>(std::move(output_segments))});
   }
 };
 

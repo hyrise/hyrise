@@ -8,14 +8,17 @@
 #include "all_type_variant.hpp"
 
 namespace opossum {
-std::string to_string(const AllParameterVariant& x) {
-  if (is_parameter_id(x)) {
-    return std::string("Placeholder #") + std::to_string(boost::get<ParameterID>(x));
-  } else if (is_column_id(x)) {
-    return std::string("Column #") + std::to_string(boost::get<ColumnID>(x));
+
+std::ostream& operator<<(std::ostream& stream, const AllParameterVariant& variant) {
+  if (is_parameter_id(variant)) {
+    stream << "Placeholder #" << boost::get<ParameterID>(variant);
+  } else if (is_column_id(variant)) {
+    stream << "Column #" << boost::get<ColumnID>(variant);
   } else {
-    return boost::lexical_cast<std::string>(x);
+    stream << boost::get<AllTypeVariant>(variant);
   }
+
+  return stream;
 }
 
 }  // namespace opossum

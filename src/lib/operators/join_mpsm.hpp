@@ -17,14 +17,14 @@ namespace opossum {
    *
    * As with most operators, we do not guarantee a stable operation with regards to positions -
    * i.e., your sorting order might be disturbed.
-   *
-   * Note: MPSMJoin does not support null values in the input at the moment.
-   * Note: Outer joins are only implemented for the equi-join case, i.e. the "=" operator.
 **/
 class JoinMPSM : public AbstractJoinOperator {
  public:
+  static bool supports(const JoinConfiguration config);
+
   JoinMPSM(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-           const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op);
+           const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+           const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
   const std::string name() const override;
 
@@ -38,6 +38,8 @@ class JoinMPSM : public AbstractJoinOperator {
 
   template <typename T>
   class JoinMPSMImpl;
+  template <typename T>
+  friend class JoinMPSMImpl;
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
 };

@@ -5,12 +5,8 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
-#include "utils/format_bytes.hpp"
 
 namespace opossum {
-
-class AbstractSegmentVisitor;
-class SegmentVisitorContext;
 
 // BaseSegment is the abstract super class for all segment types,
 // e.g., ValueSegment, ReferenceSegment

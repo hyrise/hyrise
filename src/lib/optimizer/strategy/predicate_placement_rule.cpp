@@ -1,7 +1,7 @@
 #include "predicate_placement_rule.hpp"
 #include "all_parameter_variant.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
@@ -15,7 +15,7 @@ namespace opossum {
 
 std::string PredicatePlacementRule::name() const { return "Predicate Placement Rule"; }
 
-bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 
@@ -23,9 +23,6 @@ bool PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes);
 
   _pull_up_traversal(root_node, LQPInputSide::Left);
-
-  // No easy way to tell whether the plan changed
-  return false;
 }
 
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
@@ -38,7 +35,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(input_node);
 
-      if (!_is_expensive_predicate(predicate_node->predicate)) {
+      if (!_is_expensive_predicate(predicate_node->predicate())) {
         push_down_nodes.emplace_back(predicate_node);
         lqp_remove_node(predicate_node);
         _push_down_traversal(current_node, input_side, push_down_nodes);
@@ -54,12 +51,14 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
       auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
 
-      // It is safe to move predicates down past Inner, Cross, Semi and Anti Joins
+      // It is safe to move predicates down past Inner, Cross, Semi, AntiNullAsTrue and AntiNullAsFalse Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Anti) {
+          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
+          join_node->join_mode == JoinMode::AntiNullAsFalse) {
         for (const auto& push_down_node : push_down_nodes) {
-          const auto move_to_left = expression_evaluable_on_lqp(push_down_node->predicate, *join_node->left_input());
-          const auto move_to_right = expression_evaluable_on_lqp(push_down_node->predicate, *join_node->right_input());
+          const auto move_to_left = expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->left_input());
+          const auto move_to_right =
+              expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->right_input());
 
           if (!move_to_left && !move_to_right) {
             _insert_nodes(current_node, input_side, {push_down_node});
@@ -119,7 +118,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
   // Expensive PredicateNodes become candidates for a PullUp, but only IFF they have exactly one output connection.
   // If they have more, we cannot move them.
   if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(input_node);
-      predicate_node && _is_expensive_predicate(predicate_node->predicate) && predicate_node->output_count() == 1) {
+      predicate_node && _is_expensive_predicate(predicate_node->predicate()) && predicate_node->output_count() == 1) {
     candidate_nodes.emplace_back(predicate_node);
     lqp_remove_node(predicate_node);
   }
@@ -135,9 +134,10 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
 
-      // It is safe to move predicates up past Inner, Cross, Semi and Anti Joins
+      // It is safe to move predicates down past Inner, Cross, Semi, AntiNullAsTrue and AntiNullAsFalse Joins
       if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Anti) {
+          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
+          join_node->join_mode == JoinMode::AntiNullAsFalse) {
         return candidate_nodes;
       } else {
         _insert_nodes(current_node, input_side, candidate_nodes);
@@ -154,7 +154,7 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
       auto blocked_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
 
       for (const auto& candidate_node : candidate_nodes) {
-        if (expression_evaluable_on_lqp(candidate_node->predicate, *current_node)) {
+        if (expression_evaluable_on_lqp(candidate_node->predicate(), *current_node)) {
           pull_up_nodes.emplace_back(candidate_node);
         } else {
           blocked_nodes.emplace_back(candidate_node);
@@ -193,20 +193,20 @@ void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode
 
 bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate) {
   /**
-   * We (heuristically) consider a predicate to be expensive if it contains a correlated subselect. Otherwise, we
+   * We (heuristically) consider a predicate to be expensive if it contains a correlated subquery. Otherwise, we
    * consider it to be cheap
    */
-  auto predicate_contains_correlated_subselect = false;
+  auto predicate_contains_correlated_subquery = false;
   visit_expression(predicate, [&](const auto& sub_expression) {
-    if (const auto select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-        select_expression && !select_expression->arguments.empty()) {
-      predicate_contains_correlated_subselect = true;
+    if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
+        subquery_expression && !subquery_expression->arguments.empty()) {
+      predicate_contains_correlated_subquery = true;
       return ExpressionVisitation::DoNotVisitArguments;
     } else {
       return ExpressionVisitation::VisitArguments;
     }
   });
-  return predicate_contains_correlated_subselect;
+  return predicate_contains_correlated_subquery;
 }
 
 }  // namespace opossum

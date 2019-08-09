@@ -23,6 +23,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
  public:
   explicit ExportBinary(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename);
 
+  static void write_binary(const Table& table, const std::string& filename);
+
   /**
    * Executes the export operator
    * @return The table that was also the input
@@ -60,7 +62,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param table The table that is to be exported
    * @param ofstream The output stream for exporting
    */
-  static void _write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream);
+  static void _write_header(const Table& table, std::ofstream& ofstream);
 
   /**
    * Writes the contents of the chunk into the given ofstream.
@@ -78,7 +80,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param chunkId The id of the chunk that is to be worked on now
    *
    */
-  static void _write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream, const ChunkID& chunk_id);
+  static void _write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id);
 
   template <typename T>
   class ExportBinaryVisitor;

@@ -37,8 +37,8 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
  protected:
   void SetUp() override {
     _bit_size = GetParam();
-    _min = 1ul << (_bit_size - 1u);
-    _max = (1ul << _bit_size) - 1u;
+    _min = static_cast<uint32_t>(1ul << (_bit_size - 1u));
+    _max = static_cast<uint32_t>((1ul << _bit_size) - 1u);
   }
 
   pmr_vector<uint32_t> generate_sequence(size_t count) {
@@ -75,9 +75,8 @@ auto formatter = [](const ::testing::TestParamInfo<uint8_t> info) {
 INSTANTIATE_TEST_CASE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), formatter);
 
 TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
-  const auto sequence = generate_sequence(4'200);
+  const auto sequence = generate_sequence(420);
   const auto compressed_sequence_base = compress(sequence);
-
   auto compressed_sequence = dynamic_cast<const SimdBp128Vector*>(compressed_sequence_base.get());
   EXPECT_NE(compressed_sequence, nullptr);
 
@@ -90,7 +89,7 @@ TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
 }
 
 TEST_P(SimdBp128Test, DecompressSequenceUsingDecompressor) {
-  const auto sequence = generate_sequence(4'200);
+  const auto sequence = generate_sequence(420);
   const auto compressed_sequence = compress(sequence);
 
   auto decompressor = compressed_sequence->create_base_decompressor();
@@ -101,6 +100,20 @@ TEST_P(SimdBp128Test, DecompressSequenceUsingDecompressor) {
   for (; seq_it != seq_end; seq_it++, index++) {
     EXPECT_EQ(*seq_it, decompressor->get(index));
   }
+}
+
+TEST_P(SimdBp128Test, CompressEmptySequence) {
+  const auto sequence = generate_sequence(0);
+  const auto compressed_sequence_base = compress(sequence);
+
+  ASSERT_EQ(compressed_sequence_base->size(), 0u);
+  ASSERT_EQ(compressed_sequence_base->data_size(), 0u);
+
+  auto compressed_sequence = dynamic_cast<const SimdBp128Vector*>(compressed_sequence_base.get());
+  EXPECT_NE(compressed_sequence, nullptr);
+
+  auto decompressor = compressed_sequence->create_base_decompressor();
+  ASSERT_EQ(decompressor->size(), 0u);
 }
 
 }  // namespace opossum

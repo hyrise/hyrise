@@ -1,5 +1,6 @@
 #include "sql_identifier_resolver_proxy.hpp"
 
+#include "expression/correlated_parameter_expression.hpp"
 #include "parameter_id_allocator.hpp"
 #include "sql_identifier_resolver.hpp"
 
@@ -27,7 +28,7 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolverProxy::resolve_identifi
       parameter_id = expression_iter->second;
     }
 
-    return std::make_shared<ParameterExpression>(parameter_id, *expression);
+    return std::make_shared<CorrelatedParameterExpression>(parameter_id, *expression);
   } else {
     if (_outer_context_proxy) return _outer_context_proxy->resolve_identifier_relaxed(identifier);
   }

@@ -17,13 +17,10 @@ namespace opossum {
 
 class BTreeIndexTest;
 
-class BaseBTreeIndexImpl {
+class BaseBTreeIndexImpl : public Noncopyable {
   friend BTreeIndexTest;
 
  public:
-  BaseBTreeIndexImpl() = default;
-  BaseBTreeIndexImpl(BaseBTreeIndexImpl&&) = default;
-  BaseBTreeIndexImpl& operator=(BaseBTreeIndexImpl&&) = default;
   virtual ~BaseBTreeIndexImpl() = default;
 
   using Iterator = std::vector<ChunkOffset>::const_iterator;
@@ -46,15 +43,7 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   friend BTreeIndexTest;
 
  public:
-  BTreeIndexImpl() = delete;
-  ~BTreeIndexImpl() = default;
   explicit BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index);
-
-  BTreeIndexImpl(const BTreeIndexImpl&) = delete;
-  BTreeIndexImpl& operator=(const BTreeIndexImpl&) = delete;
-
-  BTreeIndexImpl(BTreeIndexImpl&&) = default;
-  BTreeIndexImpl& operator=(BTreeIndexImpl&&) = default;
 
   size_t memory_consumption() const override;
 

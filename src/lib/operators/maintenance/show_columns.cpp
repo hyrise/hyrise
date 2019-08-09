@@ -31,27 +31,27 @@ void ShowColumns::_on_set_parameters(const std::unordered_map<ParameterID, AllTy
 
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("column_name", DataType::String);
-  column_definitions.emplace_back("column_type", DataType::String);
-  column_definitions.emplace_back("is_nullable", DataType::Int);
+  column_definitions.emplace_back("column_name", DataType::String, false);
+  column_definitions.emplace_back("column_type", DataType::String, false);
+  column_definitions.emplace_back("is_nullable", DataType::Int, false);
   auto out_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   const auto table = StorageManager::get().get_table(_table_name);
   Segments segments;
 
   const auto& column_names = table->column_names();
-  const auto vs_names = std::make_shared<ValueSegment<std::string>>(
-      tbb::concurrent_vector<std::string>(column_names.begin(), column_names.end()));
+  const auto vs_names = std::make_shared<ValueSegment<pmr_string>>(
+      tbb::concurrent_vector<pmr_string>(column_names.begin(), column_names.end()));
   segments.push_back(vs_names);
 
   const auto& column_types = table->column_data_types();
 
-  auto data_types = tbb::concurrent_vector<std::string>{};
+  auto column_types_as_string = tbb::concurrent_vector<pmr_string>{};
   for (const auto column_type : column_types) {
-    data_types.push_back(data_type_to_string.left.at(column_type));
+    column_types_as_string.push_back(pmr_string{data_type_to_string.left.at(column_type)});
   }
 
-  const auto vs_types = std::make_shared<ValueSegment<std::string>>(std::move(data_types));
+  const auto vs_types = std::make_shared<ValueSegment<pmr_string>>(std::move(column_types_as_string));
   segments.push_back(vs_types);
 
   const auto& column_nullables = table->columns_are_nullable();

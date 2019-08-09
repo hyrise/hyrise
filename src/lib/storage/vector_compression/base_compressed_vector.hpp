@@ -53,7 +53,8 @@ class BaseCompressedVector : private Noncopyable {
  * by CompressedVector::cbegin() and CompressedVector::cend()
  */
 template <typename Derived>
-using BaseCompressedVectorIterator = boost::iterator_facade<Derived, uint32_t, boost::forward_traversal_tag, uint32_t>;
+using BaseCompressedVectorIterator =
+    boost::iterator_facade<Derived, uint32_t, boost::random_access_traversal_tag, uint32_t>;
 
 /**
  * @brief Implements the non-virtual interface of all vectors

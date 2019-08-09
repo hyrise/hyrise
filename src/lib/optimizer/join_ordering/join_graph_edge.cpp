@@ -8,11 +8,13 @@ JoinGraphEdge::JoinGraphEdge(const JoinGraphVertexSet& vertex_set,
                              const std::vector<std::shared_ptr<AbstractExpression>>& predicates)
     : vertex_set(vertex_set), predicates(predicates) {}
 
-void JoinGraphEdge::print(std::ostream& stream) const {
-  stream << "Vertices: " << vertex_set << "; " << predicates.size() << " predicates" << std::endl;
-  for (const auto& predicate : predicates) {
-    stream << predicate->as_column_name();
-    stream << std::endl;
+std::ostream& operator<<(std::ostream& stream, const JoinGraphEdge& join_graph_edge) {
+  stream << "Vertices: " << join_graph_edge.vertex_set << "; " << join_graph_edge.predicates.size() << " predicates"
+         << std::endl;
+  for (const auto& predicate : join_graph_edge.predicates) {
+    stream << predicate->as_column_name() << std::endl;
   }
+  return stream;
 }
+
 }  // namespace opossum

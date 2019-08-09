@@ -8,14 +8,21 @@
 #include "expression_result_views.hpp"
 #include "null_value.hpp"
 #include "storage/create_iterable_from_segment.hpp"
-#include "storage/segment_iterables/segment_iterator_values.hpp"
+#include "storage/segment_iterables/segment_positions.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 class BaseExpressionResult {
  public:
+  BaseExpressionResult() = default;
   virtual ~BaseExpressionResult() = default;
+  BaseExpressionResult(const BaseExpressionResult&) = default;
+  BaseExpressionResult(BaseExpressionResult&&) = default;
+  BaseExpressionResult& operator=(const BaseExpressionResult&) = default;
+  BaseExpressionResult& operator=(BaseExpressionResult&&) = default;
+
+  virtual AllTypeVariant value_as_variant(const size_t idx) const = 0;
 };
 
 /**
@@ -67,6 +74,10 @@ class ExpressionResult : public BaseExpressionResult {
   const T& value(const size_t idx) const {
     DebugAssert(size() == 1 || idx < size(), "Invalid ExpressionResult access");
     return values[std::min(idx, values.size() - 1)];
+  }
+
+  AllTypeVariant value_as_variant(const size_t idx) const final {
+    return is_null(idx) ? AllTypeVariant{NullValue{}} : AllTypeVariant{value(idx)};
   }
 
   bool is_null(const size_t idx) const {

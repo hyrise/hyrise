@@ -339,6 +339,7 @@ _CPP_HEADERS = frozenset([
     'condition_variable',
     'deque',
     'exception',
+    'filesystem',
     'forward_list',
     'fstream',
     'functional',
@@ -366,6 +367,7 @@ _CPP_HEADERS = frozenset([
     'regex',
     'scoped_allocator',
     'set',
+    'shared_mutex',
     'sstream',
     'stack',
     'stdexcept',
@@ -383,6 +385,7 @@ _CPP_HEADERS = frozenset([
     'unordered_set',
     'utility',
     'valarray',
+    'variant',
     'vector',
     # 17.6.1.2 C++ headers for C library facilities
     'cassert',

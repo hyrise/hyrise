@@ -1,7 +1,9 @@
 #include "topology.hpp"
 
 #if HYRISE_NUMA_SUPPORT
+
 #include <numa.h>
+
 #endif
 
 #include <algorithm>
@@ -12,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-#include "utils/numa_memory_resource.hpp"
+#include "memory/numa_memory_resource.hpp"
 
 namespace opossum {
 
@@ -24,17 +26,17 @@ const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 
 Topology::Topology() { _init_default_topology(); }
 
-void TopologyNode::print(std::ostream& stream, size_t indent) const {
-  for (size_t i = 0; i < indent; ++i) stream << " ";
-  stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
-  for (size_t cpu_idx = 0; cpu_idx < cpus.size(); ++cpu_idx) {
-    for (size_t i = 0; i < indent; ++i) stream << " ";
-    stream << cpus[cpu_idx].cpu_id;
-    if (cpu_idx + 1 < cpus.size()) {
+std::ostream& operator<<(std::ostream& stream, const TopologyNode& topology_node) {
+  stream << "Number of Node CPUs: " << topology_node.cpus.size() << ", CPUIDs: [";
+  for (size_t cpu_idx = 0; cpu_idx < topology_node.cpus.size(); ++cpu_idx) {
+    stream << topology_node.cpus[cpu_idx].cpu_id;
+    if (cpu_idx + 1 < topology_node.cpus.size()) {
       stream << ", ";
     }
   }
   stream << "]";
+
+  return stream;
 }
 
 void Topology::use_default_topology(uint32_t max_num_cores) { Topology::get()._init_default_topology(max_num_cores); }
@@ -69,23 +71,32 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
 
   auto max_node = numa_max_node();
   auto num_configured_cpus = static_cast<CpuID>(numa_num_configured_cpus());
-  auto cpu_bitmask = numa_allocate_cpumask();
+
+  // We take the CPU affinity (set, e.g., by numactl) of our process into account.
+  // Otherwise, we would always start with the first CPU, even if a specific NUMA node was selected.
+  auto affinity_cpu_bitmask = numa_allocate_cpumask();
+  numa_sched_getaffinity(0, affinity_cpu_bitmask);
+
+  auto this_node_cpu_bitmask = numa_allocate_cpumask();
   auto core_count = uint32_t{0};
 
   for (auto node_id = 0; node_id <= max_node; node_id++) {
     if (max_num_cores == 0 || core_count < max_num_cores) {
       auto cpus = std::vector<TopologyCpu>();
 
-      numa_node_to_cpus(node_id, cpu_bitmask);
+      numa_node_to_cpus(node_id, this_node_cpu_bitmask);
 
       for (CpuID cpu_id{0}; cpu_id < num_configured_cpus; ++cpu_id) {
-        if (numa_bitmask_isbitset(cpu_bitmask, cpu_id)) {
+        const auto cpu_is_part_of_node = numa_bitmask_isbitset(this_node_cpu_bitmask, cpu_id);
+        const auto cpu_is_part_of_affinity = numa_bitmask_isbitset(affinity_cpu_bitmask, cpu_id);
+        if (cpu_is_part_of_node && cpu_is_part_of_affinity) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
             cpus.emplace_back(TopologyCpu(cpu_id));
             _num_cpus++;
           }
           core_count++;
         }
+        if (!cpu_is_part_of_affinity) _filtered_by_affinity = true;
       }
 
       TopologyNode node(std::move(cpus));
@@ -95,7 +106,8 @@ void Topology::_init_numa_topology(uint32_t max_num_cores) {
 
   _create_memory_resources();
 
-  numa_free_cpumask(cpu_bitmask);
+  numa_free_cpumask(affinity_cpu_bitmask);
+  numa_free_cpumask(this_node_cpu_bitmask);
 #endif
 }
 
@@ -105,7 +117,7 @@ void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
 
   _num_cpus = std::thread::hardware_concurrency();
   if (max_num_cores != 0) {
-    _num_cpus = std::min<uint32_t>(_num_cpus, max_num_cores);
+    _num_cpus = std::min(_num_cpus, max_num_cores);
   }
 
   auto cpus = std::vector<TopologyCpu>();
@@ -153,24 +165,13 @@ void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t worke
   _create_memory_resources();
 }
 
-const std::vector<TopologyNode>& Topology::nodes() { return _nodes; }
+const std::vector<TopologyNode>& Topology::nodes() const { return _nodes; }
 
 size_t Topology::num_cpus() const { return _num_cpus; }
 
 boost::container::pmr::memory_resource* Topology::get_memory_resource(int node_id) {
   DebugAssert(node_id >= 0 && node_id < static_cast<int>(_nodes.size()), "node_id is out of bounds");
   return &_memory_resources[static_cast<size_t>(node_id)];
-}
-
-void Topology::print(std::ostream& stream, size_t indent) const {
-  for (size_t i = 0; i < indent; ++i) stream << " ";
-  stream << "Number of CPUs: " << _num_cpus << std::endl;
-  for (size_t node_idx = 0; node_idx < _nodes.size(); ++node_idx) {
-    for (size_t i = 0; i < indent; ++i) stream << " ";
-    stream << "Node #" << node_idx << " - ";
-    _nodes[node_idx].print(stream);
-    stream << std::endl;
-  }
 }
 
 void Topology::_clear() {
@@ -180,7 +181,7 @@ void Topology::_clear() {
 }
 
 void Topology::_create_memory_resources() {
-  for (auto node_id = size_t{0}; node_id < _nodes.size(); node_id++) {
+  for (auto node_id = int{0}; node_id < static_cast<int>(_nodes.size()); ++node_id) {
     auto memsource_name = std::stringstream();
     memsource_name << "numa_" << std::setw(3) << std::setfill('0') << node_id;
 
@@ -189,6 +190,20 @@ void Topology::_create_memory_resources() {
     auto system_node_id = _fake_numa_topology ? node_id % _number_of_hardware_nodes : node_id;
     _memory_resources.emplace_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
   }
+}
+
+std::ostream& operator<<(std::ostream& stream, const Topology& topology) {
+  stream << "Number of CPUs: " << topology.num_cpus() << std::endl;
+  if (topology._filtered_by_affinity) {
+    stream << "Available CPUs / nodes were filtered by externally set CPU affinity (e.g., numactl)." << std::endl;
+  }
+  for (size_t node_idx = 0; node_idx < topology.nodes().size(); ++node_idx) {
+    stream << "Node #" << node_idx << " - ";
+    stream << topology.nodes()[node_idx];
+    stream << std::endl;
+  }
+
+  return stream;
 }
 
 }  // namespace opossum

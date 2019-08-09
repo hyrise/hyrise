@@ -10,7 +10,26 @@ namespace opossum {
 JitCompiler::JitCompiler()
     : _target_machine{llvm::EngineBuilder().selectTarget()},
       _data_layout{_target_machine->createDataLayout()},
-      _object_layer{[]() { return std::make_shared<llvm::SectionMemoryManager>(); }},
+      _resolver{createLegacyLookupResolver(
+          _execution_session,
+          [&](const std::string& name) -> llvm::JITSymbol {
+            // We first try to locate symbols in the modules added to the JIT, then in runtime overrides and finally in
+            // the running process.
+            if (auto compile_layer_symbol = _compile_layer.findSymbol(name, true)) {
+              return compile_layer_symbol;
+            } else if (auto runtime_override_symbol = _cxx_runtime_overrides.searchOverrides(name)) {
+              return runtime_override_symbol;
+            } else {
+              return llvm::JITSymbol(llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name),
+                                     llvm::JITSymbolFlags::Exported);
+            }
+          },
+          [](llvm::Error error) { _handle_error(std::move(error)); })},
+      _object_layer{_execution_session,
+                    [&](llvm::orc::VModuleKey module_key) {
+                      return llvm::orc::RTDyldObjectLinkingLayer::Resources{
+                          std::make_shared<llvm::SectionMemoryManager>(), _resolver};
+                    }},
       _compile_layer{_object_layer, llvm::orc::SimpleCompiler(*_target_machine)},
       _cxx_runtime_overrides{[this](const std::string& symbol) { return _mangle(symbol); }} {
   // Make exported symbols of the current process available to the JIT
@@ -22,33 +41,17 @@ JitCompiler::~JitCompiler() {
   _cxx_runtime_overrides.runDestructors();
 }
 
-JitCompiler::ModuleHandle JitCompiler::add_module(const std::shared_ptr<llvm::Module>& module) {
-  const auto resolver = llvm::orc::createLambdaResolver(
-      [&](const std::string& name) -> llvm::JITSymbol {
-        // We first try to locate symbols in the modules added to the JIT, then in runtime overrides and finally in
-        // the running process.
-        if (auto symbol = _compile_layer.findSymbol(name, true)) {
-          return symbol;
-        } else if (auto symbol = _cxx_runtime_overrides.searchOverrides(name)) {
-          return symbol;
-        } else {
-          return llvm::JITSymbol(llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name),
-                                 llvm::JITSymbolFlags::Exported);
-        }
-      },
-      [](const std::string& name) {
-        return llvm::JITSymbol(llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name),
-                               llvm::JITSymbolFlags::Exported);
-      });
-
-  const auto handle = _handle_error(_compile_layer.addModule(module, resolver));
-  _modules.push_back(handle);
-  return handle;
+llvm::orc::VModuleKey JitCompiler::add_module(std::unique_ptr<llvm::Module> module) {
+  // Add the module to the JIT with a new VModuleKey.
+  auto module_key = _execution_session.allocateVModule();
+  _handle_error(_compile_layer.addModule(module_key, std::move(module)));
+  _modules.push_back(module_key);
+  return module_key;
 }
 
-void JitCompiler::remove_module(const JitCompiler::ModuleHandle& handle) {
-  _modules.erase(std::find(_modules.cbegin(), _modules.cend(), handle));
-  _handle_error(_compile_layer.removeModule(handle));
+void JitCompiler::remove_module(llvm::orc::VModuleKey module_key) {
+  _modules.erase(std::find(_modules.cbegin(), _modules.cend(), module_key));
+  _handle_error(_compile_layer.removeModule(module_key));
 }
 
 const llvm::DataLayout& JitCompiler::data_layout() const { return _data_layout; }

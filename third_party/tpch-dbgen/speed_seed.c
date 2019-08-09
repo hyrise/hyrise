@@ -56,6 +56,8 @@
 
 /*  _tal long RandSeed = "Random^SeedFromTimestamp" (void); */
 
+char lnoise[4] = {'|', '/', '-', '\\' };
+
 #define ADVANCE_STREAM(stream_id, num_calls) \
 	advanceStream(stream_id, num_calls, 0)
 #define ADVANCE_STREAM64(stream_id, num_calls) \
@@ -65,8 +67,6 @@ long name_bits[MAX_COLOR / BITS_PER_LONG];
 extern seed_t Seed[];
 void fakeVStr(int nAvg, long nSeed, DSS_HUGE nCount);
 void NthElement (DSS_HUGE N, DSS_HUGE *StartSeed);
-
-static char lnoise[4] = {'|', '/', '-', '\\' };
 
 void 
 advanceStream(int nStream, DSS_HUGE nCalls, int bUse64Bit)

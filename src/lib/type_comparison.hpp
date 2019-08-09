@@ -1,9 +1,10 @@
 #pragma once
 
-#include <boost/lexical_cast.hpp>
 #include <functional>
 #include <string>
 #include <type_traits>
+
+#include "boost/lexical_cast.hpp"
 
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -89,9 +90,10 @@ std::enable_if_t<std::is_arithmetic_v<R> && is_lex_castable_v<L> && !std::is_ari
   return boost::lexical_cast<R>(l) > r;
 }
 
-// Function that calls a given functor with the correct std comparator
+// Function that calls a given functor with the correct std comparator. The light version is not instantiated for
+// > and >=, reducing the number of instantiated templates by a third.
 template <typename Functor>
-void with_comparator(const PredicateCondition predicate_condition, const Functor& func) {
+void with_comparator_light(const PredicateCondition predicate_condition, const Functor& func) {
   switch (predicate_condition) {
     case PredicateCondition::Equals:
       return func(std::equal_to<void>{});
@@ -104,6 +106,56 @@ void with_comparator(const PredicateCondition predicate_condition, const Functor
 
     case PredicateCondition::LessThanEquals:
       return func(std::less_equal<void>{});
+
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
+      Fail("Operator should have been flipped");
+
+    default:
+      Fail("Unsupported operator");
+  }
+}
+
+// Function that calls a functor with a functor that decides whether a value matches a Between-PredicateCondition.
+// This function cannot be integrated into with_comparator, because the created function takes 3 instead of 2
+// parameters.
+template <typename Functor>
+void with_between_comparator(const PredicateCondition predicate_condition, const Functor& func) {
+  switch (predicate_condition) {
+    case PredicateCondition::BetweenInclusive:
+      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+        return value >= lower_value && value <= upper_value;
+      });
+
+    case PredicateCondition::BetweenLowerExclusive:
+      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+        return value > lower_value && value <= upper_value;
+      });
+
+    case PredicateCondition::BetweenUpperExclusive:
+      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+        return value >= lower_value && value < upper_value;
+      });
+
+    case PredicateCondition::BetweenExclusive:
+      return func([](const auto& value, const auto& lower_value, const auto& upper_value) {
+        return value > lower_value && value < upper_value;
+      });
+
+    default:
+      Fail("PredicateCondition is not a Between-PredicateCondition");
+  }
+}
+
+// Function that calls a given functor with the correct std comparator
+template <typename Functor>
+void with_comparator(const PredicateCondition predicate_condition, const Functor& func) {
+  switch (predicate_condition) {
+    case PredicateCondition::Equals:
+    case PredicateCondition::NotEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
+      return with_comparator_light(predicate_condition, func);
 
     case PredicateCondition::GreaterThan:
       return func(std::greater<void>{});

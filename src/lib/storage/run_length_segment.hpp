@@ -43,7 +43,18 @@ class RunLengthSegment : public BaseEncodedSegment {
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+    // performance critical - not in cpp to help with inlining
+    const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
+    const auto index = std::distance(_end_positions->cbegin(), end_position_it);
+
+    const auto is_null = (*_null_values)[index];
+    if (is_null) {
+      return std::nullopt;
+    }
+
+    return (*_values)[index];
+  }
 
   size_t size() const final;
 
@@ -59,6 +70,7 @@ class RunLengthSegment : public BaseEncodedSegment {
    */
 
   EncodingType encoding_type() const final;
+  std::optional<CompressedVectorType> compressed_vector_type() const final;
 
   /**@}*/
 

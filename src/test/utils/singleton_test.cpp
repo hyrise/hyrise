@@ -37,10 +37,10 @@ TEST_F(SingletonTest, SingleInstanceAcrossTranslationUnits) {
   auto& pm = PluginManager::get();
 
   // The TestPlugin also holds a reference to the StorageManager.
-  pm.load_plugin(build_dylib_path("libTestPlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   auto& plugins = get_plugins();
 
-  auto test_plugin = static_cast<TestPlugin*>(plugins["TestPlugin"].plugin);
+  auto test_plugin = static_cast<TestPlugin*>(plugins["hyriseTestPlugin"].plugin);
 
   EXPECT_EQ(&sm, &test_plugin->sm);
 }

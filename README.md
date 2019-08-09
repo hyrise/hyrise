@@ -1,5 +1,6 @@
-[![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise/hyrise/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/Hyrise%2Fhyrise/activity/)
+[![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise/hyrise/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/hyrise%2Fhyrise/activity/)
 [![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
+[![CodeFactor](https://www.codefactor.io/repository/github/hyrise/hyrise/badge)](https://www.codefactor.io/repository/github/hyrise/hyrise)
 
 # Welcome to Hyrise
 
@@ -9,7 +10,7 @@ Papers that were published before October 2017 were based on the previous versio
 
 # Getting started
 
-*Have a look at our [contributor guidelines](CONTRIBUTING.md)*
+*Have a look at our [contributor guidelines](CONTRIBUTING.md)*.
 
 You can find definitions of most of the terms and abbreviations used in the code in the [glossary](GLOSSARY.md). If you cannot find something that you are looking for, feel free to open an issue.
 
@@ -17,7 +18,7 @@ The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guid
 
 ## Native Setup
 You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS High Sierra and Ubuntu 18.04 (apt-get).
+The install script was tested under macOS High Sierra and Ubuntu 19.04 (apt-get).
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
@@ -44,7 +45,10 @@ Subsequent calls to CMake, e.g., when adding files to the build will not be nece
 
 ### Compiler choice
 CMake will default to your system's default compiler.
-To use a different one, call like `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory.
+To use a different one, call `cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..` in a clean build directory. See [dependencies](DEPENDENCIES.md) for supported compiler versions.
+
+### ccache
+For development, we strongly suggest to use [ccache](https://ccache.samba.org/), which reduces the time needed for recompiles significantly. Especially when switching branches, this can reduce the time to recompile from several minutes to one or less. To use ccache, simply add `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache` to your cmake call.
 
 ### Build
 Simply call `make -j*`, where `*` denotes the number of threads to use.
@@ -95,30 +99,45 @@ Contact: firstname.lastname@hpi.de
 
 ## Contributors
 
--	Yannick  Bäumer
--	Lawrence Benson
--	Timo     Djürken
--	Fabian   Dumke
--	Moritz   Eyssen
--	Martin   Fischer
--	Pedro    Flemming
--	Johannes Frohnhofen
--	Adrian   Holfter
--	Sven     Ihde
--	Michael  Janke
--	Max      Jendruk
--	Marvin   Keller
--	Sven     Lehmann
--	Jan      Mattfeld
--	Arne     Mayer
--	Torben   Meyer
--	Leander  Neiß
--	David    Schumann
--	Arthur   Silber
--	Daniel   Stolpe
--	Jonathan Striebel
--	Nils     Thamm
--	Carsten  Walther
--	Lukas    Wenzel
--	Fabian   Wiebe
--	Tim      Zimmermann
+-   Yannick   Bäumer
+-   Lawrence  Benson
+-   Timo      Djürken
+-   Fabian    Dumke
+-   Moritz    Eyssen
+-   Martin    Fischer
+-   Christian Flach
+-   Pedro     Flemming
+-   Mathias   Flüggen
+-   Johannes  Frohnhofen
+-   Pascal    Führlich
+-   Adrian    Holfter
+-   Sven      Ihde
+-   Jonathan  Janetzki
+-   Michael   Janke
+-   Max       Jendruk
+-   Marvin    Keller
+-   Mirko     Krause
+-   Eva       Krebs
+-   Sven      Lehmann
+-   Tom       Lichtenstein
+-   Alexander Löser
+-   Jan       Mattfeld
+-   Arne      Mayer
+-   Julian    Menzler
+-   Torben    Meyer
+-   Leander   Neiß
+-   Hendrik   Rätz
+-   Alexander Riese
+-   Johannes  Schneider
+-   David     Schumann
+-   Simon     Siegert
+-   Arthur    Silber
+-   Daniel    Stolpe
+-   Jonathan  Striebel
+-   Nils      Thamm
+-   Carsten   Walther
+-   Marcel    Weisgut
+-   Lukas     Wenzel
+-   Fabian    Wiebe
+-   Tim       Zimmermann
+

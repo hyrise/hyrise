@@ -5,10 +5,15 @@
 #include <string>
 #include <vector>
 
+#include "boost/lexical_cast.hpp"
+
 #include "storage/table.hpp"
 
 #include "constant_mappings.hpp"
+#include "resolve_type.hpp"
 #include "string_utils.hpp"
+
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
@@ -60,13 +65,16 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
       if (table->column_is_nullable(column_id) && string_values[column_id] == "null") {
         variant_values[column_id] = NULL_VALUE;
       } else {
-        variant_values[column_id] = AllTypeVariant{std::move(string_values[column_id])};
+        resolve_data_type(table->column_data_type(column_id), [&](auto data_type_t) {
+          using ColumnDataType = typename decltype(data_type_t)::type;
+          variant_values[column_id] = AllTypeVariant{boost::lexical_cast<ColumnDataType>(string_values[column_id])};
+        });
       }
     }
 
     table->append(variant_values);
 
-    auto chunk = table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1));
+    const auto chunk = table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1));
     auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
     mvcc_data->begin_cids.back() = 0;
   }

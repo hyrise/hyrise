@@ -1,0 +1,88 @@
+{
+   <sqlite3-malloc-possible>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   ...
+   obj:*libsqlite3.so.*
+   ...
+}
+
+{
+   <sqlite3-malloc-definite>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   ...
+   obj:*libsqlite3.so.*
+   ...
+}
+
+{
+   <sqlite3-realloc>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:realloc
+   ...
+   obj:*libsqlite3.so.*
+   ...
+}
+
+{
+   <gtest_says_to_ignore_this_1>
+   Memcheck:Value8
+   ...
+   fun:*PrintByteSegmentInObjectTo*
+   ...
+}
+
+{
+   <gtest_says_to_ignore_this_2>
+   Memcheck:Cond
+   ...
+   fun:*PrintByteSegmentInObjectTo*
+   ...
+}
+
+{
+   <pgasus_topology_hwloc>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   obj:*libhwloc.so*
+   fun:hwloc_topology_init
+   fun:*Topology*
+}
+
+{
+   <jit_runtime_pointer_are_able_to_handle_invalid_pointers_themselves>
+   Memcheck:Param
+   write(buf)
+   fun:__libc_write
+   fun:write
+   fun:_ZNK7opossum*RuntimePointer8is_validEv
+}
+
+# LLVM code results in some false positives for uninitialized value(s) used for jmps, moves and other operations: https://blog.regehr.org/archives/1450
+# The same problem is still unanswered on stackoverflow: https://stackoverflow.com/q/49700482/10329940
+{
+   <Conditional_jump_or_move_depends_on_uninitialised_value_in_llvm_lib>
+   Memcheck:Cond
+   obj:*libLLVM*
+   ...
+   fun:_ZN7opossum*JitCodeSpecializer*specialize_and_compile_function*
+}
+{
+   <Use_of_uninitialised_value_of_size_8_in_llvm_lib>
+   Memcheck:Value8
+   obj:*libLLVM*
+   ...
+   fun:_ZN7opossum*JitCodeSpecializer*specialize_and_compile_function*
+}
+
+# This is a false positive when evaluating if a particular std::optional is set:
+{
+   <False_positive_optional>
+   Memcheck:Cond
+   fun:_ZN7opossum14encode_segmentENS_12EncodingTypeENS_6detail8DataTypeERKSt10shared_ptrIKNS_16BaseValueSegmentEESt8optionalINS_21VectorCompressionTypeEE
+}

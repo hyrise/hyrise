@@ -13,20 +13,17 @@ namespace opossum {
  */
 class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public BaseNonQueryNode {
  public:
-  CreateViewNode(const std::string& view_name, const std::shared_ptr<LQPView>& view);
+  CreateViewNode(const std::string& view_name, const std::shared_ptr<LQPView>& view, bool if_not_exists);
 
   std::string description() const override;
 
-  std::string view_name() const;
-  std::shared_ptr<LQPView> view() const;
+  const std::string view_name;
+  const std::shared_ptr<LQPView> view;
+  const bool if_not_exists;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
-
- private:
-  const std::string _view_name;
-  const std::shared_ptr<LQPView> _view;
 };
 
 }  // namespace opossum

@@ -1,7 +1,6 @@
 #include <memory>
 
-#include "gtest/gtest.h"
-
+#include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -15,23 +14,26 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class JoinGraphBuilderTest : public ::testing::Test {
+class JoinGraphBuilderTest : public BaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "b");
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "c");
+    node_a = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
+    node_b = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "b");
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
+    a_c = node_a->get_column("c");
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
+    b_c = node_a->get_column("c");
     c_a = node_c->get_column("a");
-    c_b = node_c->get_column("b");
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b;
+  LQPColumnReference a_a, a_b, a_c, b_a, b_b, b_c, c_a;
 };
 
 TEST_F(JoinGraphBuilderTest, None) {
@@ -308,6 +310,38 @@ TEST_F(JoinGraphBuilderTest, BuildAllInLQP) {
   EXPECT_EQ(join_graphs.at(0).vertices.at(1), node_c);
   EXPECT_EQ(join_graphs.at(1).vertices.at(0), node_a);
   EXPECT_EQ(join_graphs.at(1).vertices.at(1), node_b);
+}
+
+TEST_F(JoinGraphBuilderTest, MultiPredicateJoin) {
+  const auto join_predicates =
+      expression_vector(equals_(a_a, b_a), greater_than_(a_b, b_b), less_than_equals_(a_c, b_c));
+
+  // clang-format off
+  const auto full_outer_join_node =
+  JoinNode::make(JoinMode::FullOuter, join_predicates,
+    node_a,
+    node_b);
+
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, join_predicates,
+    node_a,
+    full_outer_join_node);
+  // clang-format on
+
+  const auto join_graph = JoinGraphBuilder()(lqp);
+
+  ASSERT_TRUE(join_graph);
+
+  ASSERT_EQ(join_graph->vertices.size(), 2u);
+  EXPECT_EQ(join_graph->vertices.at(0), node_a);
+  EXPECT_EQ(join_graph->vertices.at(1), full_outer_join_node);
+
+  ASSERT_EQ(join_graph->edges.size(), 1u);
+
+  ASSERT_EQ(join_graph->edges.at(0).predicates.size(), 3u);
+  EXPECT_EQ(*join_graph->edges.at(0).predicates.at(0), *equals_(a_a, b_a));
+  EXPECT_EQ(*join_graph->edges.at(0).predicates.at(1), *greater_than_(a_b, b_b));
+  EXPECT_EQ(*join_graph->edges.at(0).predicates.at(2), *less_than_equals_(a_c, b_c));
 }
 
 }  // namespace opossum

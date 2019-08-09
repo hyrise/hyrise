@@ -35,7 +35,7 @@ class JoinNodeTest : public ::testing::Test {
 
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
-    _anti_join_node = JoinNode::make(JoinMode::Anti, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
@@ -53,11 +53,13 @@ class JoinNodeTest : public ::testing::Test {
 
 TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_join_node->description(), "[Join] Mode: Cross"); }
 
-TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner a = y"); }
+TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner [a = y]"); }
 
-TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Join] Mode: Semi a = y"); }
+TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Join] Mode: Semi [a = y]"); }
 
-TEST_F(JoinNodeTest, DescriptionAntiJoin) { EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: Anti a = y"); }
+TEST_F(JoinNodeTest, DescriptionAntiJoin) {
+  EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: AntiNullAsTrue [a = y]");
+}
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_join_node->column_expressions().size(), 5u);
@@ -104,6 +106,91 @@ TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
   EXPECT_EQ(*_anti_join_node->column_expressions().at(0), *lqp_column_(_t_a_a));
   EXPECT_EQ(*_anti_join_node->column_expressions().at(1), *lqp_column_(_t_a_b));
   EXPECT_EQ(*_anti_join_node->column_expressions().at(2), *lqp_column_(_t_a_c));
+}
+
+TEST_F(JoinNodeTest, NodeExpressions) {
+  ASSERT_EQ(_inner_join_node->node_expressions.size(), 1u);
+  EXPECT_EQ(*_inner_join_node->node_expressions.at(0u), *equals_(_t_a_a, _t_b_y));
+  ASSERT_EQ(_join_node->node_expressions.size(), 0u);
+}
+
+TEST_F(JoinNodeTest, IsColumnNullableWithoutOuterJoin) {
+  // Test that for LQPs without (Left,Right)Outer Joins, lqp_column_is_nullable() is equivalent to
+  // expression.is_nullable()
+
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(add_(_t_a_a, null_()), _t_b_x),
+    ProjectionNode::make(expression_vector(_t_a_a, _t_a_b, add_(_t_a_a, null_())),
+     _mock_node_a),
+    _mock_node_b);
+  // clang-format on
+
+  EXPECT_FALSE(lqp->is_column_nullable(ColumnID{0}));
+  EXPECT_FALSE(lqp->is_column_nullable(ColumnID{1}));
+  EXPECT_TRUE(lqp->is_column_nullable(ColumnID{2}));
+  EXPECT_FALSE(lqp->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp->is_column_nullable(ColumnID{4}));
+}
+
+TEST_F(JoinNodeTest, IsColumnNullableWithOuterJoin) {
+  // Test that columns on the "null-supplying" side of an outer join are always nullable.
+  // Test that is_null_(<nullable>) is never nullable
+
+  // clang-format off
+  const auto lqp_left_join_basic =
+  JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
+    _mock_node_a,
+    _mock_node_b);
+  // clang-format on
+
+  EXPECT_FALSE(lqp_left_join_basic->is_column_nullable(ColumnID{0}));
+  EXPECT_FALSE(lqp_left_join_basic->is_column_nullable(ColumnID{1}));
+  EXPECT_FALSE(lqp_left_join_basic->is_column_nullable(ColumnID{2}));
+  EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{3}));
+  EXPECT_TRUE(lqp_left_join_basic->is_column_nullable(ColumnID{4}));
+
+  // clang-format off
+  const auto lqp_left_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+    JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+
+  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{0}));
+  EXPECT_TRUE(lqp_left_join->is_column_nullable(ColumnID{1}));
+  EXPECT_TRUE(lqp_left_join->is_column_nullable(ColumnID{2}));
+  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp_left_join->is_column_nullable(ColumnID{4}));
+
+  // clang-format off
+  const auto lqp_right_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+    JoinNode::make(JoinMode::Right, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+
+  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{0}));
+  EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{1}));
+  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{2}));
+  EXPECT_TRUE(lqp_right_join->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp_right_join->is_column_nullable(ColumnID{4}));
+
+  // clang-format off
+  const auto lqp_full_join =
+  ProjectionNode::make(expression_vector(_t_a_a, _t_b_x, add_(_t_a_a, _t_b_x), add_(_t_a_a, 3), is_null_(add_(_t_a_a, _t_b_x))),  // NOLINT
+    JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b));
+  // clang-format on
+
+  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{0}));
+  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{1}));
+  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{2}));
+  EXPECT_TRUE(lqp_full_join->is_column_nullable(ColumnID{3}));
+  EXPECT_FALSE(lqp_full_join->is_column_nullable(ColumnID{4}));
 }
 
 }  // namespace opossum

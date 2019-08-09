@@ -10,7 +10,7 @@ IsNullExpression::IsNullExpression(const PredicateCondition predicate_condition,
                                    const std::shared_ptr<AbstractExpression>& operand)
     : AbstractPredicateExpression(predicate_condition, {operand}) {
   Assert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
-         "IsNullExpression only supports PredicateCondition::IsNull and PredicateCondition::IsNotNull")
+         "IsNullExpression only supports PredicateCondition::IsNull and PredicateCondition::IsNotNull");
 }
 
 const std::shared_ptr<AbstractExpression>& IsNullExpression::operand() const { return arguments[0]; }
@@ -32,5 +32,10 @@ std::string IsNullExpression::as_column_name() const {
 }
 
 ExpressionPrecedence IsNullExpression::_precedence() const { return ExpressionPrecedence::UnaryPredicate; }
+
+bool IsNullExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  // IS NULL always returns a boolean value, never NULL
+  return false;
+}
 
 }  // namespace opossum

@@ -7,7 +7,6 @@
 
 #include "fixed_string.hpp"
 #include "fixed_string_vector_iterator.hpp"
-#include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -23,26 +22,28 @@ class FixedStringVector {
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <class Iter>
-  FixedStringVector(Iter first, Iter last, size_t string_length, size_t amount_values) : _string_length(string_length) {
+  FixedStringVector(Iter first, Iter last, const size_t string_length) : _string_length(string_length) {
+    const auto value_count = std::distance(first, last);
     // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null
     // pointers. In order to avoid this, we insert a null terminator to the vector by using resize.
     if (_string_length == 0) {
       _chars.resize(1u);
+      _size = value_count;
     } else {
-      _chars.reserve(_string_length * amount_values);
+      _chars.reserve(_string_length * value_count);
       _iterator_push_back(first, last);
     }
   }
 
   // Add a string to the end of the vector
-  void push_back(const std::string& string);
+  void push_back(const pmr_string& string);
 
   // Return the value at a certain position.
   FixedString operator[](const size_t pos);
 
   FixedString at(const size_t pos);
 
-  const std::string get_string_at(const size_t pos) const;
+  const pmr_string get_string_at(const size_t pos) const;
 
   // Make the FixedStringVector of FixedStrings iterable in different ways
   FixedStringIterator<false> begin() noexcept;
@@ -81,11 +82,12 @@ class FixedStringVector {
   size_t data_size() const;
 
   // Return the underlying dictionary as a vector of string
-  std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
+  std::shared_ptr<const pmr_vector<pmr_string>> dictionary() const;
 
  protected:
   const size_t _string_length;
   pmr_vector<char> _chars;
+  size_t _size = 0;
 
   template <class Iter>
   void _iterator_push_back(Iter first, Iter last) {

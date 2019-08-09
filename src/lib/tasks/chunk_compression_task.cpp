@@ -22,12 +22,12 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
 void ChunkCompressionTask::_on_execute() {
   auto table = StorageManager::get().get_table(_table_name);
 
-  Assert(table != nullptr, "Table does not exist.");
+  Assert(table, "Table does not exist.");
 
   for (auto chunk_id : _chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
-
-    auto chunk = table->get_chunk(chunk_id);
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
     DebugAssert(_chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");
@@ -42,6 +42,9 @@ bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chu
   auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   for (const auto begin_cid : mvcc_data->begin_cids) {
+    // TODO(anybody) Reading the non-atomic begin_cid (which is written to in Insert without a write lock) is likely UB
+    //               When activating the ChunkCompressionTask, please look for a different means of determining whether
+    //               all Inserts to a Chunk finished.
     if (begin_cid == MvccData::MAX_COMMIT_ID) return false;
   }
 

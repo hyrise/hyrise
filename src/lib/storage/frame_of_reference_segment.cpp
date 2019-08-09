@@ -37,20 +37,10 @@ const AllTypeVariant FrameOfReferenceSegment<T, U>::operator[](const ChunkOffset
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
-  if (!typed_value.has_value()) {
+  if (!typed_value) {
     return NULL_VALUE;
   }
   return *typed_value;
-}
-
-template <typename T, typename U>
-const std::optional<T> FrameOfReferenceSegment<T, U>::get_typed_value(const ChunkOffset chunk_offset) const {
-  if (_null_values[chunk_offset]) {
-    return std::nullopt;
-  }
-  const auto minimum = _block_minima[chunk_offset / block_size];
-  const auto value = static_cast<T>(_decompressor->get(chunk_offset)) + minimum;
-  return value;
 }
 
 template <typename T, typename U>
@@ -83,11 +73,12 @@ EncodingType FrameOfReferenceSegment<T, U>::encoding_type() const {
 }
 
 template <typename T, typename U>
-CompressedVectorType FrameOfReferenceSegment<T, U>::compressed_vector_type() const {
+std::optional<CompressedVectorType> FrameOfReferenceSegment<T, U>::compressed_vector_type() const {
   return _offset_values->type();
 }
 
 template class FrameOfReferenceSegment<int32_t>;
-template class FrameOfReferenceSegment<int64_t>;
+// int64_t disabled for now, as vector compression cannot handle 64 bit values - also in reference_segment_iterable.hpp
+// template class FrameOfReferenceSegment<int64_t>;
 
 }  // namespace opossum

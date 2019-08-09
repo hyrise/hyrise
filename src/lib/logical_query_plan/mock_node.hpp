@@ -26,30 +26,39 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {});
 
-  LQPColumnReference get_column(const std::string& name) const;
+  LQPColumnReference get_column(const std::string& column_name) const;
 
   const ColumnDefinitions& column_definitions() const;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  bool is_column_nullable(const ColumnID column_id) const override;
+
+  /**
+   * @defgroup ColumnIDs to be pruned from the mocked Table.
+   * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique
+   * @{
+   */
+  void set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids);
+  const std::vector<ColumnID>& pruned_column_ids() const;
+  /** @} */
 
   std::string description() const override;
 
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
+  const std::shared_ptr<TableStatistics>& table_statistics() const;
+  void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
 
-  void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
+  std::optional<std::string> name;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 
  private:
-  std::optional<std::string> _name;
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
 
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;
+  std::vector<ColumnID> _pruned_column_ids;
 };
 }  // namespace opossum

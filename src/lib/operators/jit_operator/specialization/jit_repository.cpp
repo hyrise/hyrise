@@ -26,8 +26,6 @@ llvm::Function* JitRepository::get_vtable_entry(const std::string& class_name, c
 
 std::shared_ptr<llvm::LLVMContext> JitRepository::llvm_context() const { return _llvm_context; }
 
-std::shared_ptr<llvm::Module> JitRepository::module() const { return _module; }
-
 std::mutex& JitRepository::specialization_mutex() { return _specialization_mutex; }
 
 JitRepository::JitRepository() : JitRepository(std::string(&jit_llvm_bundle, jit_llvm_bundle_size)) {}

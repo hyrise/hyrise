@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include "resolve_type.hpp"
-#include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -37,23 +36,10 @@ template <typename T>
 const AllTypeVariant RunLengthSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   const auto typed_value = get_typed_value(chunk_offset);
-  if (!typed_value.has_value()) {
+  if (!typed_value) {
     return NULL_VALUE;
   }
   return *typed_value;
-}
-
-template <typename T>
-const std::optional<T> RunLengthSegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
-  const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
-  const auto index = std::distance(_end_positions->cbegin(), end_position_it);
-
-  const auto is_null = (*_null_values)[index];
-  if (is_null) {
-    return std::nullopt;
-  }
-
-  return (*_values)[index];
 }
 
 template <typename T>
@@ -87,6 +73,11 @@ size_t RunLengthSegment<T>::estimate_memory_usage() const {
 template <typename T>
 EncodingType RunLengthSegment<T>::encoding_type() const {
   return EncodingType::RunLength;
+}
+
+template <typename T>
+std::optional<CompressedVectorType> RunLengthSegment<T>::compressed_vector_type() const {
+  return std::nullopt;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(RunLengthSegment);

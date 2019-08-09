@@ -31,16 +31,6 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
 }
 
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
-  if (json.find("chunk_size") != json.end()) {
-    auto chunk_size = json.at("chunk_size");
-    Assert(static_cast<double>(chunk_size) == static_cast<size_t>(chunk_size),
-           "CSV meta file, chunk_size must be an integer.");
-    Assert(static_cast<int64_t>(chunk_size) > 0, "CSV meta file, chunk_size must greater than 0.");
-    meta.chunk_size = chunk_size;
-  }
-
-  assign_if_exists(meta.auto_compress, json, "auto_compress");
-
   // Apply only parts of the ParseConfig that are provided, use default values otherwise
   ParseConfig config{};
   if (json.find("config") != json.end()) {
@@ -52,6 +42,7 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
     assign_if_exists(config.escape, config_json, "escape");
     assign_if_exists(config.delimiter_escape, config_json, "delimiter_escape");
     assign_if_exists(config.reject_quoted_nonstrings, config_json, "reject_quoted_nonstrings");
+    assign_if_exists(config.reject_null_strings, config_json, "reject_null_strings");
     assign_if_exists(config.rfc_mode, config_json, "rfc_mode");
   }
 
@@ -76,6 +67,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
                                          {"escape", std::string(1, meta.config.escape)},
                                          {"delimiter_escape", std::string(1, meta.config.delimiter_escape)},
                                          {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
+                                         {"reject_null_strings", meta.config.reject_null_strings},
                                          {"rfc_mode", meta.config.rfc_mode}};
 
   auto columns = nlohmann::json::parse("[]");
@@ -84,14 +76,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
         nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
 
-  if (meta.chunk_size == Chunk::MAX_SIZE) {
-    json = nlohmann::json{{"auto_compress", meta.auto_compress}, {"config", config}, {"columns", columns}};
-  } else {
-    json = nlohmann::json{{"chunk_size", meta.chunk_size},
-                          {"auto_compress", meta.auto_compress},
-                          {"config", config},
-                          {"columns", columns}};
-  }
+  json = nlohmann::json{{"config", config}, {"columns", columns}};
 }
 
 bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
@@ -100,14 +85,13 @@ bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
 
 bool operator==(const ParseConfig& left, const ParseConfig& right) {
   return std::tie(left.delimiter, left.separator, left.quote, left.escape, left.delimiter_escape,
-                  left.reject_quoted_nonstrings,
-                  left.rfc_mode) == std::tie(right.delimiter, right.separator, right.quote, right.escape,
-                                             right.delimiter_escape, right.reject_quoted_nonstrings, right.rfc_mode);
+                  left.reject_quoted_nonstrings, left.reject_null_strings, left.rfc_mode) ==
+         std::tie(right.delimiter, right.separator, right.quote, right.escape, right.delimiter_escape,
+                  right.reject_quoted_nonstrings, right.reject_null_strings, right.rfc_mode);
 }
 
 bool operator==(const CsvMeta& left, const CsvMeta& right) {
-  return std::tie(left.chunk_size, left.auto_compress, left.config, left.columns) ==
-         std::tie(right.chunk_size, right.auto_compress, right.config, right.columns);
+  return std::tie(left.config, left.columns) == std::tie(right.config, right.columns);
 }
 
 }  // namespace opossum

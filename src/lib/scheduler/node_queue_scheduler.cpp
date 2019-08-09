@@ -20,7 +20,7 @@ namespace opossum {
 NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
-  if (IS_DEBUG && _active) {
+  if (HYRISE_DEBUG && _active) {
     // We cannot throw an exception because destructors are noexcept by default.
     std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
     std::exit(EXIT_FAILURE);
@@ -50,11 +50,7 @@ void NodeQueueScheduler::begin() {
   }
 }
 
-void NodeQueueScheduler::finish() {
-  /**
-   * Periodically count all finished tasks and when this number matches the number of scheduled tasks, it is safe to
-   * shut down
-   */
+void NodeQueueScheduler::wait_for_all_tasks() {
   while (true) {
     uint64_t num_finished_tasks = 0;
     for (auto& worker : _workers) {
@@ -65,10 +61,14 @@ void NodeQueueScheduler::finish() {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+}
+
+void NodeQueueScheduler::finish() {
+  wait_for_all_tasks();
 
   // All queues SHOULD be empty by now
-  if (IS_DEBUG) {
-    for ([[gnu::unused]] auto& queue : _queues) {
+  if (HYRISE_DEBUG) {
+    for ([[maybe_unused]] auto& queue : _queues) {
       DebugAssert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
     }
   }

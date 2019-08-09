@@ -7,11 +7,12 @@ namespace opossum {
 
 class DropTableNode : public EnableMakeForLQPNode<DropTableNode>, public BaseNonQueryNode {
  public:
-  explicit DropTableNode(const std::string& table_name);
+  DropTableNode(const std::string& table_name, bool if_exists);
 
   std::string description() const override;
 
   const std::string table_name;
+  const bool if_exists;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

@@ -40,7 +40,7 @@ RUN_TEST () {
 echo -e "Starting to run server tests...\n"
 
 # TEST 1: load table
-RUN_TEST "LOAD TABLE" "LOAD src/test/tables/int.tbl foo;"
+RUN_TEST "LOAD TABLE" "LOAD resources/test_data/tbl/int.tbl foo;"
 
 # TEST 2: simple select statement
 RUN_TEST "SIMPLE QUERY" "SELECT * FROM foo LIMIT 2;"

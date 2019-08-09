@@ -7,15 +7,15 @@
 #include <string>
 #include <vector>
 
-#include "benchmark_utilities/random_generator.hpp"
+#include "random_generator.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-class TpccRandomGenerator : public opossum::RandomGenerator {
+class TPCCRandomGenerator : public opossum::RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic
-  explicit TpccRandomGenerator(uint32_t seed = 42) : opossum::RandomGenerator(seed) {}
+  explicit TPCCRandomGenerator(uint32_t seed = 42) : opossum::RandomGenerator(seed) {}
 
   /**
    * Generates a random zip code as defined by TPCC

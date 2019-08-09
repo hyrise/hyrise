@@ -12,6 +12,7 @@
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
+#include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
@@ -27,17 +28,21 @@ class OperatorsDeleteTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_name = "table_a";
-    _table = load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE);
+    _table2_name = "table_b";
+    _table = load_table("resources/test_data/tbl/int_float.tbl");
+    _table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
+
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     StorageManager::get().add_table(_table_name, _table);
-    _gt = std::make_shared<GetTable>(_table_name);
+    StorageManager::get().add_table(_table2_name, _table2);
 
+    _gt = std::make_shared<GetTable>(_table_name);
     _gt->execute();
   }
 
-  std::string _table_name;
+  std::string _table_name, _table2_name;
   std::shared_ptr<GetTable> _gt;
-  std::shared_ptr<Table> _table;
+  std::shared_ptr<Table> _table, _table2;
 
   void helper(bool commit);
 };
@@ -46,11 +51,11 @@ void OperatorsDeleteTest::helper(bool commit) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // Selects two out of three rows.
-  auto table_scan = create_table_scan(_gt, ColumnID{1}, PredicateCondition::GreaterThan, "456.7");
+  auto table_scan = create_table_scan(_gt, ColumnID{1}, PredicateCondition::GreaterThan, 456.7f);
 
   table_scan->execute();
 
-  auto delete_op = std::make_shared<Delete>(_table_name, table_scan);
+  auto delete_op = std::make_shared<Delete>(table_scan);
   delete_op->set_transaction_context(transaction_context);
 
   delete_op->execute();
@@ -61,24 +66,13 @@ void OperatorsDeleteTest::helper(bool commit) {
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(2u),
             transaction_context->transaction_id());
 
-  // Table has three rows initially.
-  ASSERT_NE(_table->table_statistics(), nullptr);
-  EXPECT_EQ(_table->table_statistics()->row_count(), 3u);
-
   auto expected_end_cid = CommitID{0u};
   if (commit) {
     transaction_context->commit();
     expected_end_cid = transaction_context->commit_id();
-
-    // Delete successful, one row left.
-    EXPECT_EQ(_table->table_statistics()->row_count(), 3u);
-    EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 1u);
   } else {
     transaction_context->rollback();
     expected_end_cid = MvccData::MAX_COMMIT_ID;
-
-    // Delete rolled back, three rows left.
-    EXPECT_EQ(_table->table_statistics()->row_count(), 3u);
   }
 
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);
@@ -111,10 +105,10 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_EQ(table_scan1->get_output()->chunk_count(), 1u);
   EXPECT_EQ(table_scan1->get_output()->get_chunk(ChunkID{0})->column_count(), 2u);
 
-  auto delete_op1 = std::make_shared<Delete>(_table_name, table_scan1);
+  auto delete_op1 = std::make_shared<Delete>(table_scan1);
   delete_op1->set_transaction_context(t1_context);
 
-  auto delete_op2 = std::make_shared<Delete>(_table_name, table_scan2);
+  auto delete_op2 = std::make_shared<Delete>(table_scan2);
   delete_op2->set_transaction_context(t2_context);
 
   delete_op1->execute();
@@ -137,6 +131,35 @@ TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result->get_output());
 }
 
+TEST_F(OperatorsDeleteTest, EmptyDelete) {
+  auto tx_context_modification = TransactionManager::get().new_transaction_context();
+
+  auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "112233");
+
+  table_scan->execute();
+
+  EXPECT_EQ(table_scan->get_output()->chunk_count(), 0u);
+
+  auto delete_op = std::make_shared<Delete>(table_scan);
+  delete_op->set_transaction_context(tx_context_modification);
+
+  delete_op->execute();
+
+  EXPECT_FALSE(delete_op->execute_failed());
+
+  // MVCC commit.
+  tx_context_modification->commit();
+
+  // Get validated table which should be the original one
+  auto tx_context_verification = TransactionManager::get().new_transaction_context();
+  auto validate = std::make_shared<Validate>(_gt);
+  validate->set_transaction_context(tx_context_verification);
+
+  validate->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), _gt->get_output());
+}
+
 TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   auto t1_context = TransactionManager::get().new_transaction_context();
   auto t2_context = TransactionManager::get().new_transaction_context();
@@ -150,7 +173,7 @@ TEST_F(OperatorsDeleteTest, UpdateAfterDeleteFails) {
   validate1->execute();
   validate2->execute();
 
-  auto delete_op = std::make_shared<Delete>(_table_name, validate1);
+  auto delete_op = std::make_shared<Delete>(validate1);
   delete_op->set_transaction_context(t1_context);
 
   delete_op->execute();
@@ -176,10 +199,10 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
   // For that purpose, we run the insert, delete, scan routine twice, once where we abort the transaction (inserted
   // and deleted value 456.7), and once where we commit it (inserted and deleted value 457.7)
 
-  for (const auto value : {456.7, 457.7}) {
+  for (const auto value : {456.7f, 457.7f}) {
     auto context = TransactionManager::get().new_transaction_context();
 
-    auto values_to_insert = load_table("src/test/tables/int_float3.tbl", Chunk::MAX_SIZE);
+    auto values_to_insert = load_table("resources/test_data/tbl/int_float3.tbl");
     auto table_name_for_insert = "bla";
     StorageManager::get().add_table(table_name_for_insert, values_to_insert);
     auto insert_get_table = std::make_shared<GetTable>(table_name_for_insert);
@@ -197,7 +220,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     table_scan1->execute();
     EXPECT_EQ(table_scan1->get_output()->row_count(), 2);
 
-    auto delete_op = std::make_shared<Delete>(_table_name, table_scan1);
+    auto delete_op = std::make_shared<Delete>(table_scan1);
     delete_op->set_transaction_context(context);
     delete_op->execute();
 
@@ -212,7 +235,7 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     table_scan2->execute();
     EXPECT_EQ(table_scan2->get_output()->row_count(), 0);
 
-    if (value == 456.7) {
+    if (value == 456.7f) {
       context->rollback();
     } else {
       context->commit();
@@ -231,12 +254,89 @@ TEST_F(OperatorsDeleteTest, DeleteOwnInsert) {
     validate1->set_transaction_context(context);
     validate1->execute();
 
-    auto expected_result = load_table("src/test/tables/int_float_deleted.tbl", Chunk::MAX_SIZE);
+    auto expected_result = load_table("resources/test_data/tbl/int_float_deleted.tbl");
 
     EXPECT_TABLE_EQ_UNORDERED(validate1->get_output(), expected_result);
 
     context->rollback();
   }
+}
+
+// This test uses the transaction context after its already been committed on behalf of every
+// read/write operator and the read only operators Validate and GetTable
+TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
+  auto t1_context = TransactionManager::get().new_transaction_context();
+
+  auto validate1 = std::make_shared<Validate>(_gt);
+  validate1->set_transaction_context(t1_context);
+  validate1->execute();
+
+  auto delete_op = std::make_shared<Delete>(validate1);
+  delete_op->set_transaction_context(t1_context);
+  delete_op->execute();
+
+  t1_context->commit();
+
+  auto delete_op2 = std::make_shared<Delete>(validate1);
+  delete_op->set_transaction_context(t1_context);
+
+  EXPECT_THROW(delete_op->execute(), std::logic_error);
+}
+
+TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto get_table = std::make_shared<GetTable>(_table_name);
+  get_table->execute();
+
+  const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 10000);
+  table_scan->execute();
+
+  auto t1_context = TransactionManager::get().new_transaction_context();
+  auto delete_op1 = std::make_shared<Delete>(table_scan);
+  delete_op1->set_transaction_context(t1_context);
+  // This one works and deletes some rows
+  delete_op1->execute();
+  t1_context->commit();
+
+  auto t2_context = TransactionManager::get().new_transaction_context();
+  auto delete_op2 = std::make_shared<Delete>(table_scan);
+  delete_op2->set_transaction_context(t2_context);
+  // This one should fail because the rows should have been filtered out by a validate and should not be visible
+  // to the delete operator in the first place.
+  EXPECT_THROW(delete_op2->execute(), std::logic_error);
+  t2_context->rollback();
+}
+
+TEST_F(OperatorsDeleteTest, PrunedInputTable) {
+  // Test that the input table of Delete can reference either a stored table or a pruned version of a stored table
+  // (i.e., a table containing a subset of the chunks of the stored table)
+
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+
+  // Create the values_to_delete table via Chunk pruning and a Table Scan
+  const auto get_table_op = std::make_shared<GetTable>("table_b", std::vector{ChunkID{1}}, std::vector<ColumnID>{});
+  get_table_op->execute();
+
+  const auto table_scan = create_table_scan(get_table_op, ColumnID{0}, PredicateCondition::LessThan, 5);
+  table_scan->execute();
+
+  const auto delete_op = std::make_shared<Delete>(table_scan);
+  delete_op->set_transaction_context(transaction_context);
+  delete_op->execute();
+  EXPECT_FALSE(delete_op->execute_failed());
+
+  transaction_context->commit();
+
+  const auto expected_end_cid = transaction_context->commit_id();
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(1u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(1u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->get_scoped_mvcc_data_lock()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->get_scoped_mvcc_data_lock()->end_cids.at(1u), expected_end_cid);
 }
 
 }  // namespace opossum

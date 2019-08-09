@@ -88,7 +88,7 @@ void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
  * Results look comparable to this
  *
  * [0] [Cross Join]
- *  \_[1] [Cross Join]2
+ *  \_[1] [Cross Join]
  *  |  \_[2] [Predicate] a = 42
  *  |  |  \_[3] [Cross Join]
  *  |  |     \_[4] [MockTable]

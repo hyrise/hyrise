@@ -25,6 +25,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ShowTablesNode::column_e
   return *_column_expressions;
 }
 
+bool ShowTablesNode::is_column_nullable(const ColumnID column_id) const { return false; }
+
 bool ShowTablesNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   return true;
 }

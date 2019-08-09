@@ -13,7 +13,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Sort)(benchmark::State& state) {
 
   auto warm_up = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0} /* "a" */, OrderByMode::Ascending);
   warm_up->execute();
-  while (state.KeepRunning()) {
+  for (auto _ : state) {
     auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0} /* "a" */, OrderByMode::Ascending);
     sort->execute();
   }

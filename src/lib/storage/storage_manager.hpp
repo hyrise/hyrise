@@ -3,10 +3,12 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
 #include "lqp_view.hpp"
+#include "prepared_plan.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
 
@@ -19,41 +21,40 @@ class AbstractLQPNode;
 // by mapping table names to table instances.
 class StorageManager : public Singleton<StorageManager> {
  public:
-  // adds a table to the storage manager
+  /**
+   * @defgroup Manage Tables
+   * @{
+   */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
-
-  // removes the table from the storage manger
   void drop_table(const std::string& name);
-
-  // returns the table instance with the given name
   std::shared_ptr<Table> get_table(const std::string& name) const;
-
-  // returns whether the storage manager holds a table with the given name
   bool has_table(const std::string& name) const;
-
-  // returns a list of all table names
   std::vector<std::string> table_names() const;
-
-  // returns a map from table name to table
   const std::map<std::string, std::shared_ptr<Table>>& tables() const;
+  /** @} */
 
-  // adds a view to the storage manager
-  void add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view);
-
-  // removes the view from the storage manger
-  void drop_lqp_view(const std::string& name);
-
-  // returns the view instance with the given name
+  /**
+   * @defgroup Manage SQL VIEWs
+   * @{
+   */
+  void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
+  void drop_view(const std::string& name);
   std::shared_ptr<LQPView> get_view(const std::string& name) const;
-
-  // returns whether the storage manager holds a table with the given name
   bool has_view(const std::string& name) const;
-
-  // returns a list of all view names
   std::vector<std::string> view_names() const;
+  const std::map<std::string, std::shared_ptr<LQPView>>& views() const;
+  /** @} */
 
-  // prints information about all tables in the storage manager (name, #columns, #rows, #chunks)
-  void print(std::ostream& out = std::cout) const;
+  /**
+   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements
+   * @{
+   */
+  void add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
+  std::shared_ptr<PreparedPlan> get_prepared_plan(const std::string& name) const;
+  bool has_prepared_plan(const std::string& name) const;
+  void drop_prepared_plan(const std::string& name);
+  const std::map<std::string, std::shared_ptr<PreparedPlan>>& prepared_plans() const;
+  /** @} */
 
   // deletes the entire StorageManager and creates a new one, used especially in tests
   // This can lead to a lot of issues if there are still running tasks / threads that
@@ -74,7 +75,16 @@ class StorageManager : public Singleton<StorageManager> {
   const StorageManager& operator=(const StorageManager&) = delete;
   StorageManager& operator=(StorageManager&&) = default;
 
+  // Tables can currently not be modified concurrently
   std::map<std::string, std::shared_ptr<Table>> _tables;
+
+  // The map of views is locked because views are created dynamically, e.g., in TPC-H 15
   std::map<std::string, std::shared_ptr<LQPView>> _views;
+  mutable std::unique_ptr<std::shared_mutex> _view_mutex = std::make_unique<std::shared_mutex>();
+
+  std::map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans;
 };
+
+std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
+
 }  // namespace opossum

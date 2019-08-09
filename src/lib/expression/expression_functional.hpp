@@ -9,6 +9,7 @@
 #include "binary_predicate_expression.hpp"
 #include "case_expression.hpp"
 #include "cast_expression.hpp"
+#include "correlated_parameter_expression.hpp"
 #include "exists_expression.hpp"
 #include "extract_expression.hpp"
 #include "function_expression.hpp"
@@ -17,10 +18,10 @@
 #include "list_expression.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
-#include "lqp_select_expression.hpp"
-#include "parameter_expression.hpp"
+#include "lqp_subquery_expression.hpp"
+#include "placeholder_expression.hpp"
 #include "pqp_column_expression.hpp"
-#include "pqp_select_expression.hpp"
+#include "pqp_subquery_expression.hpp"
 #include "unary_minus_expression.hpp"
 #include "value_expression.hpp"
 
@@ -100,11 +101,11 @@ struct binary final {
   }
 };
 
-template <typename E>
+template <auto t, typename E>
 struct ternary final {
   template <typename A, typename B, typename C>
   std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) const {
-    return std::make_shared<E>(to_expression(a), to_expression(b), to_expression(c));
+    return std::make_shared<E>(t, to_expression(a), to_expression(b), to_expression(c));
   }
 };
 
@@ -120,6 +121,7 @@ inline detail::unary<AggregateFunction::Min, AggregateExpression> min_;
 inline detail::unary<AggregateFunction::Avg, AggregateExpression> avg_;
 inline detail::unary<AggregateFunction::Count, AggregateExpression> count_;
 inline detail::unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct_;
+inline detail::unary<AggregateFunction::StandardDeviationSample, AggregateExpression> standard_deviation_sample_;
 
 inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
 inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul_;
@@ -137,42 +139,50 @@ inline detail::binary<PredicateCondition::GreaterThan, BinaryPredicateExpression
 inline detail::binary<LogicalOperator::And, LogicalExpression> and_;
 inline detail::binary<LogicalOperator::Or, LogicalExpression> or_;
 
-inline detail::ternary<BetweenExpression> between_;
-inline detail::ternary<CaseExpression> case_;
+inline detail::ternary<PredicateCondition::BetweenInclusive, BetweenExpression> between_inclusive_;
+inline detail::ternary<PredicateCondition::BetweenLowerExclusive, BetweenExpression> between_lower_exclusive_;
+inline detail::ternary<PredicateCondition::BetweenUpperExclusive, BetweenExpression> between_upper_exclusive_;
+inline detail::ternary<PredicateCondition::BetweenExclusive, BetweenExpression> between_exclusive_;
 
 template <typename... Args>
-std::shared_ptr<LQPSelectExpression> lqp_select_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
-                                                 Args&&... parameter_id_expression_pairs) {
+std::shared_ptr<LQPSubqueryExpression> lqp_subquery_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
+                                                     Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
-    // Correlated subselect
-    return std::make_shared<LQPSelectExpression>(
+    // Correlated subquery
+    return std::make_shared<LQPSubqueryExpression>(
         lqp, std::vector<ParameterID>{{parameter_id_expression_pairs.first...}},
         std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(parameter_id_expression_pairs.second)...}});
   } else {
     // Not correlated
-    return std::make_shared<LQPSelectExpression>(lqp, std::vector<ParameterID>{},
-                                                 std::vector<std::shared_ptr<AbstractExpression>>{});
+    return std::make_shared<LQPSubqueryExpression>(lqp, std::vector<ParameterID>{},
+                                                   std::vector<std::shared_ptr<AbstractExpression>>{});
   }
 }
 
 template <typename... Args>
-std::shared_ptr<PQPSelectExpression> pqp_select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                                 const bool nullable, Args&&... parameter_id_column_id_pairs) {
+std::shared_ptr<PQPSubqueryExpression> pqp_subquery_(const std::shared_ptr<AbstractOperator>& pqp,
+                                                     const DataType data_type, const bool nullable,
+                                                     Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
-    // Correlated subselect
-    return std::make_shared<PQPSelectExpression>(
+    // Correlated subquery
+    return std::make_shared<PQPSubqueryExpression>(
         pqp, data_type, nullable,
         std::vector<std::pair<ParameterID, ColumnID>>{
             {std::make_pair(parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
   } else {
     // Not correlated
-    return std::make_shared<PQPSelectExpression>(pqp, data_type, nullable);
+    return std::make_shared<PQPSubqueryExpression>(pqp, data_type, nullable);
   }
 }
 
 template <typename... Args>
 std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... args) {
   return std::vector<std::shared_ptr<AbstractExpression>>({to_expression(args)...});
+}
+
+template <typename A, typename B, typename C>
+std::shared_ptr<CaseExpression> case_(const A& a, const B& b, const C& c) {
+  return std::make_shared<CaseExpression>(to_expression(a), to_expression(b), to_expression(c));
 }
 
 template <typename String, typename Start, typename Length>
@@ -201,23 +211,23 @@ std::shared_ptr<InExpression> not_in_(const V& v, const S& s) {
   return std::make_shared<InExpression>(PredicateCondition::NotIn, to_expression(v), to_expression(s));
 }
 
-std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& select_expression);
-std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpression>& select_expression);
+std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& subquery_expression);
+std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpression>& subquery_expression);
 
 template <typename F>
 std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_component, const F& from) {
   return std::make_shared<ExtractExpression>(datetime_component, to_expression(from));
 }
 
-std::shared_ptr<ParameterExpression> uncorrelated_parameter_(const ParameterID parameter_id);
+std::shared_ptr<PlaceholderExpression> placeholder_(const ParameterID parameter_id);
 std::shared_ptr<LQPColumnExpression> lqp_column_(const LQPColumnReference& column_reference);
 std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const DataType data_type,
                                                  const bool nullable, const std::string& column_name);
 
 template <typename ReferencedExpression>
-std::shared_ptr<ParameterExpression> correlated_parameter_(const ParameterID parameter_id,
-                                                           const ReferencedExpression& referenced) {
-  return std::make_shared<ParameterExpression>(parameter_id, *to_expression(referenced));
+std::shared_ptr<CorrelatedParameterExpression> correlated_parameter_(const ParameterID parameter_id,
+                                                                     const ReferencedExpression& referenced) {
+  return std::make_shared<CorrelatedParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
 std::shared_ptr<AggregateExpression> count_star_();

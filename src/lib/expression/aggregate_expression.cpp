@@ -42,7 +42,7 @@ std::string AggregateExpression::as_column_name() const {
   } else if (aggregate_function == AggregateFunction::Count && !argument()) {
     stream << "COUNT(*)";
   } else {
-    stream << aggregate_function_to_string.left.at(aggregate_function) << "(";
+    stream << aggregate_function << "(";
     if (argument()) stream << argument()->as_column_name();
     stream << ")";
   }
@@ -82,16 +82,14 @@ DataType AggregateExpression::data_type() const {
       case AggregateFunction::Sum:
         aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Sum>::AGGREGATE_DATA_TYPE;
         break;
+      case AggregateFunction::StandardDeviationSample:
+        aggregate_data_type =
+            AggregateTraits<AggregateDataType, AggregateFunction::StandardDeviationSample>::AGGREGATE_DATA_TYPE;
+        break;
     }
   });
 
   return aggregate_data_type;
-}
-
-bool AggregateExpression::is_nullable() const {
-  // Aggregates except the COUNTs will return NULL when executed on an empty group -
-  // thus they are always nullable
-  return aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct;
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {
@@ -99,5 +97,11 @@ bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) 
 }
 
 size_t AggregateExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(aggregate_function)); }
+
+bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an
+  // empty group - thus they are always nullable
+  return aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct;
+}
 
 }  // namespace opossum

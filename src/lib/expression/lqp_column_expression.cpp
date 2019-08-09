@@ -52,20 +52,6 @@ DataType LQPColumnExpression::data_type() const {
   }
 }
 
-bool LQPColumnExpression::is_nullable() const {
-  if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
-    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
-    const auto table = StorageManager::get().get_table(stored_table_node->table_name);
-    return table->column_is_nullable(column_reference.original_column_id());
-
-  } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
-    return false;  // MockNodes do not support NULLs
-
-  } else {
-    Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
-  }
-}
-
 bool LQPColumnExpression::requires_computation() const { return false; }
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
@@ -75,5 +61,11 @@ bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) 
 }
 
 size_t LQPColumnExpression::_on_hash() const { return std::hash<LQPColumnReference>{}(column_reference); }
+
+bool LQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  Fail(
+      "Should not be called. This should have been forwarded to StoredTable/MockNode by "
+      "AbstractExpression::is_nullable_on_lqp()");
+}
 
 }  // namespace opossum

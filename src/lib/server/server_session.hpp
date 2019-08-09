@@ -40,9 +40,8 @@ class ServerSessionImpl : public std::enable_shared_from_this<ServerSessionImpl<
   std::shared_ptr<TTaskRunner> _task_runner;
 
   std::shared_ptr<TransactionContext> _transaction;
-  std::unordered_map<std::string, std::shared_ptr<SQLPipeline>> _prepared_statements;
-  // TODO(lawben): The type of _portals will change when prepared statements are supported in the SQLPipeline
-  std::unordered_map<std::string, std::pair<hsql::StatementType, std::shared_ptr<SQLQueryPlan>>> _portals;
+
+  std::unordered_map<std::string, std::shared_ptr<AbstractOperator>> _portals;
 };
 
 // The corresponding template instantiation takes place in the .cpp

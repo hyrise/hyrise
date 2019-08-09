@@ -16,6 +16,7 @@ class ShowTablesNode : public EnableMakeForLQPNode<ShowTablesNode>, public Abstr
   std::string description() const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  bool is_column_nullable(const ColumnID column_id) const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

@@ -4,7 +4,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "expression/parameter_expression.hpp"
+#include "expression/correlated_parameter_expression.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 
@@ -42,6 +42,6 @@ inline bool is_column_id(const AllParameterVariant& variant) { return (variant.t
 // Function to check if AllParameterVariant is a ParameterID
 inline bool is_parameter_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ParameterID)); }
 
-std::string to_string(const AllParameterVariant& x);
+std::ostream& operator<<(std::ostream& stream, const AllParameterVariant& variant);
 
 }  // namespace opossum

@@ -21,7 +21,7 @@ bool to_bool(const NullValue& value) { return false; }
 // Cast a value/NULL into another type
 template <typename T, typename V>
 T to_value(const V& v) {
-  return v;
+  return static_cast<T>(v);
 }
 template <typename T>
 T to_value(const NullValue& v) {
@@ -82,9 +82,8 @@ struct STLComparisonFunctorWrapper {
         std::is_same_v<int32_t, Result> &&
         // LeftIsString -> RightIsNullOrString
         // RightIsString -> LeftIsNullOrString
-        (!std::is_same_v<std::string, ArgA> ||
-         (std::is_same_v<NullValue, ArgB> || std::is_same_v<std::string, ArgB>)) &&
-        (!std::is_same_v<std::string, ArgB> || (std::is_same_v<NullValue, ArgA> || std::is_same_v<std::string, ArgA>));
+        (!std::is_same_v<pmr_string, ArgA> || (std::is_same_v<NullValue, ArgB> || std::is_same_v<pmr_string, ArgB>)) &&
+        (!std::is_same_v<pmr_string, ArgB> || (std::is_same_v<NullValue, ArgA> || std::is_same_v<pmr_string, ArgA>));
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -102,8 +101,6 @@ struct STLComparisonFunctorWrapper {
 
 using EqualsEvaluator = STLComparisonFunctorWrapper<std::equal_to>;
 using NotEqualsEvaluator = STLComparisonFunctorWrapper<std::not_equal_to>;
-using GreaterThanEvaluator = STLComparisonFunctorWrapper<std::greater>;
-using GreaterThanEqualsEvaluator = STLComparisonFunctorWrapper<std::greater_equal>;
 using LessThanEvaluator = STLComparisonFunctorWrapper<std::less>;
 using LessThanEqualsEvaluator = STLComparisonFunctorWrapper<std::less_equal>;
 
@@ -115,8 +112,8 @@ template <template <typename T> typename Functor>
 struct STLArithmeticFunctorWrapper {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
-                                  !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value =
+        !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -125,7 +122,7 @@ struct STLArithmeticFunctorWrapper {
                   std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
-      result = Functor<std::common_type_t<ArgA, ArgB>>{}(a, b);
+      result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(a, b));
     }
   }
 };
@@ -139,8 +136,8 @@ using MultiplicationEvaluator = STLArithmeticFunctorWrapper<std::multiplies>;
 struct ModuloEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
-                                  !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value =
+        !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -157,9 +154,9 @@ struct ModuloEvaluator {
         result_null = true;
       } else {
         if constexpr (std::is_integral_v<ArgA> && std::is_integral_v<ArgB>) {
-          result_value = a_value % b_value;
+          result_value = static_cast<Result>(a_value % b_value);
         } else {
-          result_value = fmod(a_value, b_value);
+          result_value = static_cast<Result>(fmod(a_value, b_value));
         }
       }
     }
@@ -170,8 +167,8 @@ struct ModuloEvaluator {
 struct DivisionEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
-                                  !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value =
+        !std::is_same_v<pmr_string, Result> && !std::is_same_v<pmr_string, ArgA> && !std::is_same_v<pmr_string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -186,7 +183,7 @@ struct DivisionEvaluator {
       if (b_value == 0) {
         result_null = true;
       } else {
-        result_value = a_value / b_value;
+        result_value = static_cast<Result>(a_value / b_value);
       }
     }
   }
@@ -195,8 +192,8 @@ struct DivisionEvaluator {
 struct CaseEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value = (std::is_same_v<std::string, ArgA> == std::is_same_v<std::string, ArgB>)&&(
-        std::is_same_v<std::string, ArgA> == std::is_same_v<std::string, Result>);
+    static constexpr bool value = (std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, ArgB>)&&(
+        std::is_same_v<pmr_string, ArgA> == std::is_same_v<pmr_string, Result>);
   };
 
   template <typename Result, typename ArgA, typename ArgB>

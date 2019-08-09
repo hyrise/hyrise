@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_single_column_table_scan_impl.hpp"
+#include "abstract_dereferenced_column_table_scan_impl.hpp"
 #include "boost/variant.hpp"
 #include "expression/evaluation/like_matcher.hpp"
 
@@ -20,7 +20,7 @@ class Table;
 /**
  * @brief Implements a column scan using the LIKE operator
  *
- * - The only supported type is std::string.
+ * - The only supported type is pmr_string.
  * - Value segments are scanned sequentially
  * - For dictionary segments, we check the values in the dictionary and store the matches in a vector
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
@@ -29,10 +29,10 @@ class Table;
  * Performance Notes: Uses std::regex as a slow fallback and resorts to much faster Pattern matchers for special cases,
  *                    e.g., StartsWithPattern. 
  */
-class ColumnLikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
+class ColumnLikeTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
  public:
   ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                          const PredicateCondition predicate_condition, const std::string& pattern);
+                          const PredicateCondition predicate_condition, const pmr_string& pattern);
 
   std::string description() const override;
 
@@ -40,16 +40,16 @@ class ColumnLikeTableScanImpl : public AbstractSingleColumnTableScanImpl {
   void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                    const std::shared_ptr<const PosList>& position_filter) const override;
 
-  void _scan_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
-  void _scan_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
-                     const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_generic_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
+                             const std::shared_ptr<const PosList>& position_filter) const;
+  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, PosList& matches,
+                                const std::shared_ptr<const PosList>& position_filter) const;
 
   /**
    * Used for dictionary segments
    * @returns number of matches and the result of each dictionary entry
    */
-  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary) const;
+  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<pmr_string>& dictionary) const;
 
   const LikeMatcher _matcher;
 

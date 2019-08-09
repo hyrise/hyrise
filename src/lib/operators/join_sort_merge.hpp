@@ -1,11 +1,13 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "abstract_join_operator.hpp"
+#include "operator_join_predicate.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -16,16 +18,15 @@ namespace opossum {
    *
    * As with most operators, we do not guarantee a stable operation with regards to positions -
    * i.e., your sorting order might be disturbed.
-   *
-   * Note: SortMergeJoin does not support null values in the input at the moment.
-   * Note: Cross joins are not supported. Use the product operator instead.
-   * Note: Outer joins are only implemented for the equi-join case, i.e. the "=" operator.
    */
 class JoinSortMerge : public AbstractJoinOperator {
  public:
+  static bool supports(const JoinConfiguration config);
+
   JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                const ColumnIDPair& column_ids, const PredicateCondition op);
+                const OperatorJoinPredicate& primary_predicate,
+                const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
   const std::string name() const override;
 
@@ -39,6 +40,8 @@ class JoinSortMerge : public AbstractJoinOperator {
 
   template <typename T>
   class JoinSortMergeImpl;
+  template <typename T>
+  friend class JoinSortMergeImpl;
 
   std::unique_ptr<AbstractJoinOperatorImpl> _impl;
 };

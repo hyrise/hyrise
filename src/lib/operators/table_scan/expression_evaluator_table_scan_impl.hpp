@@ -24,7 +24,7 @@ class ExpressionEvaluatorTableScanImpl : public AbstractTableScanImpl {
  private:
   std::shared_ptr<const Table> _in_table;
   std::shared_ptr<AbstractExpression> _expression;
-  std::shared_ptr<ExpressionEvaluator::UncorrelatedSelectResults> _uncorrelated_select_results;
+  std::shared_ptr<ExpressionEvaluator::UncorrelatedSubqueryResults> _uncorrelated_subquery_results;
 };
 
 }  // namespace opossum

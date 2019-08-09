@@ -34,10 +34,10 @@ struct JoinGraphEdge final {
   explicit JoinGraphEdge(const JoinGraphVertexSet& vertex_set,
                          const std::vector<std::shared_ptr<AbstractExpression>>& predicates = {});
 
-  void print(std::ostream& stream = std::cout) const;
-
   JoinGraphVertexSet vertex_set;
   std::vector<std::shared_ptr<AbstractExpression>> predicates;
 };
+
+std::ostream& operator<<(std::ostream& stream, const JoinGraphEdge& join_graph_edge);
 
 }  // namespace opossum

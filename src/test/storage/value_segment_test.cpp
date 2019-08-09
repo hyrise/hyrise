@@ -12,7 +12,7 @@ namespace opossum {
 class StorageValueSegmentTest : public BaseTest {
  protected:
   ValueSegment<int> vs_int;
-  ValueSegment<std::string> vs_str;
+  ValueSegment<pmr_string> vs_str;
   ValueSegment<double> vs_double;
 };
 
@@ -31,20 +31,6 @@ TEST_F(StorageValueSegmentTest, AddValueOfSameType) {
 
   vs_double.append(3.14);
   EXPECT_EQ(vs_double.size(), 1u);
-}
-
-TEST_F(StorageValueSegmentTest, AddValueOfDifferentType) {
-  vs_int.append(3.14);
-  EXPECT_EQ(vs_int.size(), 1u);
-  EXPECT_THROW(vs_int.append("Hi"), std::exception);
-
-  vs_str.append(3);
-  vs_str.append(4.44);
-  EXPECT_EQ(vs_str.size(), 2u);
-
-  vs_double.append(4);
-  EXPECT_EQ(vs_double.size(), 1u);
-  EXPECT_THROW(vs_double.append("Hi"), std::exception);
 }
 
 TEST_F(StorageValueSegmentTest, RetrieveValue) {
@@ -70,7 +56,7 @@ TEST_F(StorageValueSegmentTest, AppendNullValueWhenNotNullable) {
 
 TEST_F(StorageValueSegmentTest, AppendNullValueWhenNullable) {
   auto vs_int = ValueSegment<int>{true};
-  auto vs_str = ValueSegment<std::string>{true};
+  auto vs_str = ValueSegment<pmr_string>{true};
   auto vs_double = ValueSegment<double>{true};
 
   EXPECT_TRUE(vs_int.is_nullable());
@@ -84,7 +70,7 @@ TEST_F(StorageValueSegmentTest, AppendNullValueWhenNullable) {
 
 TEST_F(StorageValueSegmentTest, ArraySubscriptOperatorReturnsNullValue) {
   auto vs_int = ValueSegment<int>{true};
-  auto vs_str = ValueSegment<std::string>{true};
+  auto vs_str = ValueSegment<pmr_string>{true};
   auto vs_double = ValueSegment<double>{true};
 
   vs_int.append(NULL_VALUE);
@@ -110,7 +96,7 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
   vs_int.append(2);
 
   const auto short_str = "Hello";
-  const auto longer_str = std::string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
+  const auto longer_str = pmr_string{"HelloWorldHaveANiceDayWithSunshineAndGoodCofefe"};
 
   vs_str.append(short_str);
   vs_str.append(longer_str);
@@ -119,7 +105,7 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
 
   EXPECT_EQ(empty_usage_int + sizeof(int) * 2, vs_int.estimate_memory_usage());
   EXPECT_EQ(empty_usage_double + sizeof(double), vs_double.estimate_memory_usage());
-  EXPECT_GE(vs_str.estimate_memory_usage(), empty_usage_str + 2 * sizeof(std::string));
+  EXPECT_GE(vs_str.estimate_memory_usage(), empty_usage_str + 2 * sizeof(pmr_string));
 }
 
 }  // namespace opossum

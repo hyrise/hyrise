@@ -94,7 +94,7 @@ typedef struct
 }               order_t;
 
 /* order.c */
-long	mk_order	PROTO((DSS_HUGE index, order_t * o, long upd_num, float scale));
+long	mk_order	PROTO((DSS_HUGE index, order_t * o, long upd_num));
 int		pr_order	PROTO((order_t * o, int mode));
 int		ld_order	PROTO((order_t * o, int mode));
 void	mk_sparse	PROTO((DSS_HUGE index, DSS_HUGE *ok, long seq));
@@ -127,7 +127,7 @@ typedef struct
 }               part_t;
 
 /* parts.c */
-long mk_part   PROTO((DSS_HUGE index, part_t * p, float scale));
+long mk_part   PROTO((DSS_HUGE index, part_t * p));
 int ld_part    PROTO((part_t * part, int mode));
 
 typedef struct

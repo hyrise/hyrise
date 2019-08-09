@@ -108,4 +108,10 @@ TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {
   EXPECT_EQ(context_2->phase(), TransactionPhase::Committed);
 }
 
+TEST_F(TransactionContextTest, CommitWithFailedOperator) {
+  auto context = manager().new_transaction_context();
+  context->rollback();
+  EXPECT_ANY_THROW(context->commit());
+}
+
 }  // namespace opossum

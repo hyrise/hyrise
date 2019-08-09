@@ -10,12 +10,12 @@
 namespace opossum {
 
 class AbstractExpression;
-class TableStatistics;
 
 enum class LQPNodeType {
   Aggregate,
   Alias,
   CreateTable,
+  CreatePreparedPlan,
   CreateView,
   Delete,
   DropView,
@@ -30,6 +30,7 @@ enum class LQPNodeType {
   ShowColumns,
   ShowTables,
   Sort,
+  StaticTable,
   StoredTable,
   Update,
   Union,
@@ -47,9 +48,10 @@ struct LQPOutputRelation {
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 
-class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, public Noncopyable {
+class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
-  explicit AbstractLQPNode(const LQPNodeType node_type);
+  AbstractLQPNode(const LQPNodeType node_type,
+                  const std::vector<std::shared_ptr<AbstractExpression>>& node_expressions = {});
   virtual ~AbstractLQPNode();
 
   /**
@@ -61,7 +63,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
    * @defgroup Access the outputs/inputs
    *
    * The outputs are implicitly set and removed in set_left_input()/set_right_input()/set_input().
-   * Design decision: If you delete a node, you explicitly need to call remove_output() on its input.
    *
    * set_input() is a shorthand for set_left_input() or set_right_input(), useful if the side is a runtime value.
    * @{
@@ -125,14 +126,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
 
   /**
-   * @return    All expressions that this node USES (and doesn't just forward)
-   *            (e.g., predicates, projections, ...).
-   *            Intended, e.g., for the optimizer to have ONE function to call recursively on a plan and see ALL
-   *            expressions used in that plan
-   */
-  virtual std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const;
-
-  /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
    */
   std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
@@ -142,28 +135,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
    */
   ColumnID get_column_id(const AbstractExpression& expression) const;
 
-  // @{
   /**
-   * These functions provide access to statistics for this particular node.
-   *
-   * AbstractLQPNode::derive_statistics_from() calculates new statistics for this node as they would appear if
-   * left_input and right_input WERE its inputs. This works for the actual inputs of this node during the lazy
-   * initialization in get_statistics() as well as e.g. in an optimizer rule
-   * that tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes
-   * that shall be reordered with the same reference node.
-   *
-   * Inheriting nodes are free to override AbstractLQPNode::derive_statistics_from().
+   * @return whether the output column at @param column_id is nullable
    */
-  const std::shared_ptr<TableStatistics> get_statistics();
-  virtual std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const;
-  // @}
-
-  /**
-   * Prints this node and all its descendants (including all Subqueries) formatted as a tree
-   */
-  void print(std::ostream& out = std::cout) const;
+  virtual bool is_column_nullable(const ColumnID column_id) const;
 
   /**
    * Perform a deep equality check
@@ -173,8 +148,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
 
   const LQPNodeType type;
 
+  /**
+   * Expressions used by this node; semantics depend on the actual node type.
+   * E.g., for the PredicateNode, this will be a single predicate expression; for a ProjectionNode it holds one
+   * expression for each column.
+   *
+   * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the expressions
+   * (e.g. column names in the AliasNode, OrderByModes in the SortNode) gets adjusted accordingly.
+   */
+  std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
+
  protected:
-  void _print_impl(std::ostream& out) const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
@@ -194,5 +178,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pu
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
 };
+
+std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);
 
 }  // namespace opossum

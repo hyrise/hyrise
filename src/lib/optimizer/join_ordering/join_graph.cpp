@@ -84,24 +84,25 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_join_predicates
   return predicates;
 }
 
-void JoinGraph::print(std::ostream& stream) const {
+std::ostream& operator<<(std::ostream& stream, const JoinGraph& join_graph) {
   stream << "==== Vertices ====" << std::endl;
-  if (vertices.empty()) {
+  if (join_graph.vertices.empty()) {
     stream << "<none>" << std::endl;
   } else {
-    for (const auto& vertex : vertices) {
+    for (const auto& vertex : join_graph.vertices) {
       stream << vertex->description() << std::endl;
     }
   }
   stream << "===== Edges ======" << std::endl;
-  if (edges.empty()) {
+  if (join_graph.edges.empty()) {
     stream << "<none>" << std::endl;
   } else {
-    for (const auto& edge : edges) {
-      edge.print(stream);
+    for (const auto& edge : join_graph.edges) {
+      stream << edge;
     }
   }
-  std::cout << std::endl;
+
+  return stream;
 }
 
 }  // namespace opossum

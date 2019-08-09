@@ -15,8 +15,8 @@ namespace opossum {
 class MaterializeTest : public EncodingTest {
  public:
   void SetUp() override {
-    _data_table = load_table_with_encoding("src/test/tables/int_float.tbl", 2);
-    _data_table_with_nulls = load_table_with_encoding("src/test/tables/int_float_with_null.tbl", 2);
+    _data_table = load_table_with_encoding("resources/test_data/tbl/int_float.tbl", 2);
+    _data_table_with_nulls = load_table_with_encoding("resources/test_data/tbl/int_float_with_null.tbl", 2);
 
     const auto table_wrapper = std::make_shared<TableWrapper>(_data_table);
     table_wrapper->execute();
@@ -151,8 +151,9 @@ TEST_P(MaterializeTest, MaterializeNullsTwoSegments) {
   EXPECT_EQ(expected, nulls);
 }
 
-INSTANTIATE_TEST_CASE_P(MaterializeTestInstances, MaterializeTest,
-                        ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
-                                            std::end(all_segment_encoding_specs)), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(
+    MaterializeTestInstances, MaterializeTest,
+    ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
+                        std::end(all_segment_encoding_specs)), );  // NOLINT(whitespace/parens)  // NOLINT
 
 }  // namespace opossum

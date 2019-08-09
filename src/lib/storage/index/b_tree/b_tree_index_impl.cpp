@@ -1,8 +1,7 @@
 #include "b_tree_index_impl.hpp"
 
-#include "resolve_type.hpp"
-#include "storage/create_iterable_from_segment.hpp"
 #include "storage/index/base_index.hpp"
+#include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -16,12 +15,12 @@ BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  return lower_bound(type_cast_variant<DataType>(values[0]));
+  return lower_bound(boost::get<DataType>(values[0]));
 }
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  return upper_bound(type_cast_variant<DataType>(values[0]));
+  return upper_bound(boost::get<DataType>(values[0]));
 }
 
 template <typename DataType>
@@ -65,12 +64,9 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
   std::vector<std::pair<ChunkOffset, DataType>> values;
 
   // Materialize
-  resolve_segment_type<DataType>(*segment, [&](const auto& typed_segment) {
-    auto iterable_left = create_iterable_from_segment<DataType>(typed_segment);
-    iterable_left.for_each([&](const auto& value) {
-      if (value.is_null()) return;
-      values.push_back(std::make_pair(value.chunk_offset(), value.value()));
-    });
+  segment_iterate<DataType>(*segment, [&](const auto& position) {
+    if (position.is_null()) return;
+    values.push_back(std::make_pair(position.chunk_offset(), position.value()));
   });
 
   // Sort
@@ -95,13 +91,13 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
 
 template <typename DataType>
 void BTreeIndexImpl<DataType>::_add_to_heap_memory_usage(const DataType&) {
-  // Except for std::string (see below), no supported data type uses heap allocations
+  // Except for pmr_string (see below), no supported data type uses heap allocations
 }
 
 template <>
-void BTreeIndexImpl<std::string>::_add_to_heap_memory_usage(const std::string& value) {
+void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string& value) {
   // Track only strings that are longer than the reserved stack space for short string optimization (SSO)
-  static const auto short_string_threshold = std::string("").capacity();
+  static const auto short_string_threshold = pmr_string("").capacity();
   if (value.size() > short_string_threshold) {
     _heap_bytes_used += value.size();
   }

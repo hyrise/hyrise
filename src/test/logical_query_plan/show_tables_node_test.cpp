@@ -28,4 +28,6 @@ TEST_F(ShowTablesNodeTest, Description) { EXPECT_EQ(_show_tables_node->descripti
 TEST_F(ShowTablesNodeTest, Equals) { EXPECT_EQ(*_show_tables_node, *_show_tables_node); }
 TEST_F(ShowTablesNodeTest, Copy) { EXPECT_EQ(*_show_tables_node->deep_copy(), *_show_tables_node); }
 
+TEST_F(ShowTablesNodeTest, NodeExpressions) { ASSERT_EQ(_show_tables_node->node_expressions.size(), 0u); }
+
 }  // namespace opossum

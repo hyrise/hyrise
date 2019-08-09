@@ -57,7 +57,7 @@ class CompositeGroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     _segment_int = create_dict_segment_by_type<int32_t>(DataType::Int, {2, 1, 0, 1, 0, 3, 2, 3});
-    _segment_str = create_dict_segment_by_type<std::string>(
+    _segment_str = create_dict_segment_by_type<pmr_string>(
         DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
     _index_int_str = std::make_shared<CompositeGroupKeyIndex>(

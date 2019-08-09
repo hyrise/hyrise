@@ -1,9 +1,6 @@
 #include "join_nested_loop.hpp"
 
-#include <map>
 #include <memory>
-#include <numeric>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -11,77 +8,24 @@
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
+#include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
+#include "utils/ignore_unused_variable.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace {
 
-/*
- * This is a Nested Loop Join implementation completely based on iterables.
- * It supports all current join and predicate conditions, as well as NULL values.
- * Because this is a Nested Loop Join, the performance is going to be far inferior to JoinHash and JoinSortMerge,
- * so only use this for testing or benchmarking purposes.
- */
+using namespace opossum;  // NOLINT
 
-JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
-                               const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, column_ids, predicate_condition) {}
-
-const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
-
-std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
-    const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _column_ids,
-                                          _predicate_condition);
-}
-
-void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
-std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
-  PerformanceWarning("Nested Loop Join used");
-
-  _create_table_structure();
-
-  _perform_join();
-
-  return _output_table;
-}
-
-void JoinNestedLoop::_create_table_structure() {
-  _left_in_table = _input_left->get_output();
-  _right_in_table = _input_right->get_output();
-
-  _left_column_id = _column_ids.first;
-  _right_column_id = _column_ids.second;
-
-  const bool left_may_produce_null = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
-  const bool right_may_produce_null = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
-
-  TableColumnDefinitions output_column_definitions;
-
-  // Preparing output table by adding segments from left table
-  for (ColumnID column_id{0}; column_id < _left_in_table->column_count(); ++column_id) {
-    const auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(column_id));
-    output_column_definitions.emplace_back(_left_in_table->column_name(column_id),
-                                           _left_in_table->column_data_type(column_id), nullable);
+void __attribute__((noinline))
+process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
+  // Write out a pair of matching row_ids - except for Semi/Anti joins, who build their output from params.left_matches
+  // after all pairs were compared
+  if (params.write_pos_lists) {
+    params.pos_list_left.emplace_back(left_row_id);
+    params.pos_list_right.emplace_back(right_row_id);
   }
-
-  // Preparing output table by adding segments from right table
-  for (ColumnID column_id{0}; column_id < _right_in_table->column_count(); ++column_id) {
-    const auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(column_id));
-    output_column_definitions.emplace_back(_right_in_table->column_name(column_id),
-                                           _right_in_table->column_data_type(column_id), nullable);
-  }
-
-  _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
-}
-
-void JoinNestedLoop::_process_match(RowID left_row_id, RowID right_row_id, JoinNestedLoop::JoinParams& params) {
-  params.pos_list_left.emplace_back(left_row_id);
-  params.pos_list_right.emplace_back(right_row_id);
 
   if (params.track_left_matches) {
     params.left_matches[left_row_id.chunk_offset] = true;
@@ -93,155 +37,308 @@ void JoinNestedLoop::_process_match(RowID left_row_id, RowID right_row_id, JoinN
 }
 
 // inner join loop that joins two segments via their iterators
+// __attribute__((noinline)) to reduce compile time. As the hotloop is within this function, no performance
+// loss expected
 template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-void JoinNestedLoop::_join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                              RightIterator right_begin, RightIterator right_end,
-                                              const ChunkID chunk_id_left, const ChunkID chunk_id_right,
-                                              JoinNestedLoop::JoinParams& params) {
-  // for (; left_it != left_end; ++left_it) {
-  //   const auto left_value = *left_it;
-  //   if (left_value.is_null()) continue;
+void __attribute__((noinline))
+join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+                        RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
+                        const ChunkID chunk_id_right, const JoinNestedLoop::JoinParams& params) {
+  for (; left_it != left_end; ++left_it) {
+    const auto left_value = *left_it;
 
-  //   for (auto right_it = right_begin; right_it != right_end; ++right_it) {
-  //     const auto right_value = *right_it;
-  //     if (right_value.is_null()) continue;
+    const auto left_row_id = RowID{chunk_id_left, left_value.chunk_offset()};
 
-  //     if (func(left_value.value(), right_value.value())) {
-  //       _process_match(RowID{chunk_id_left, left_value.chunk_offset()},
-  //                      RowID{chunk_id_right, right_value.chunk_offset()}, params);
-  //     }
-  //   }
-  // }
+    for (auto right_it = right_begin; right_it != right_end; ++right_it) {
+      const auto right_value = *right_it;
+      const auto right_row_id = RowID{chunk_id_right, right_value.chunk_offset()};
+
+      // AntiNullAsTrue is the only join mode where NULLs in any operand lead to a match. For all other
+      // join modes, any NULL in the predicate results in a non-match.
+      if (params.mode == JoinMode::AntiNullAsTrue) {
+        if ((left_value.is_null() || right_value.is_null() || func(left_value.value(), right_value.value())) &&
+            params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          process_match(left_row_id, right_row_id, params);
+        }
+      } else {
+        if ((!left_value.is_null() && !right_value.is_null() && func(left_value.value(), right_value.value())) &&
+            params.secondary_predicate_evaluator.satisfies_all_predicates(left_row_id, right_row_id)) {
+          process_match(left_row_id, right_row_id, params);
+        }
+      }
+    }
+  }
+}
+}  // namespace
+
+namespace opossum {
+
+bool JoinNestedLoop::supports(const JoinConfiguration config) { return true; }
+
+JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
+                               const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                               const OperatorJoinPredicate& primary_predicate,
+                               const std::vector<OperatorJoinPredicate>& secondary_predicates)
+    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, primary_predicate, secondary_predicates) {
+  // TODO(moritz) incorporate into supports()?
 }
 
-void JoinNestedLoop::_join_two_untyped_segments(const std::shared_ptr<const BaseSegment>& segment_left,
-                                                const std::shared_ptr<const BaseSegment>& segment_right,
-                                                const ChunkID chunk_id_left, const ChunkID chunk_id_right,
-                                                JoinNestedLoop::JoinParams& params) {
-  // resolve_data_and_segment_type(*segment_left, [&](auto left_type, auto& typed_left_segment) {
-  //   resolve_data_and_segment_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
-  //     using LeftType = typename decltype(left_type)::type;
-  //     using RightType = typename decltype(right_type)::type;
+const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 
-  //     // make sure that we do not compile invalid versions of these lambdas
-  //     constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
-  //     constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
-
-  //     constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
-  //     constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
-
-  //     // clang-format off
-  //     if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
-  //       auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_segment);
-  //       auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
-
-  //       iterable_left.with_iterators([&](auto left_it, auto left_end) {
-  //         iterable_right.with_iterators([&](auto right_it, auto right_end) {
-  //           with_comparator(params.predicate_condition, [&](auto comparator) {
-  //             _join_two_typed_segments(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
-  //                                     chunk_id_right, params);
-  //           });
-  //         });
-  //       });
-  //     }
-  //     // clang-format on
-  //   });
-  // });
+std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<JoinNestedLoop>(copied_input_left, copied_input_right, _mode, _primary_predicate);
 }
 
-void JoinNestedLoop::_perform_join() {
-  auto left_table = _left_in_table;
-  auto right_table = _right_in_table;
+void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-  auto left_column_id = _left_column_id;
-  auto right_column_id = _right_column_id;
+std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
+  Assert(supports({_mode, _primary_predicate.predicate_condition,
+                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+         "JoinNestedLoop doesn't support these parameters");
+
+  PerformanceWarning("Nested Loop Join used");
+
+  auto left_table = input_table_left();
+  auto right_table = input_table_right();
+
+  auto left_column_id = _primary_predicate.column_ids.first;
+  auto right_column_id = _primary_predicate.column_ids.second;
+
+  auto maybe_flipped_predicate_condition = _primary_predicate.predicate_condition;
+  auto maybe_flipped_secondary_predicates = _secondary_predicates;
 
   if (_mode == JoinMode::Right) {
     // for Right Outer we swap the tables so we have the outer on the "left"
-    left_table = _right_in_table;
-    right_table = _left_in_table;
+    std::swap(left_table, right_table);
+    std::swap(left_column_id, right_column_id);
+    maybe_flipped_predicate_condition = flip_predicate_condition(_primary_predicate.predicate_condition);
 
-    left_column_id = _right_column_id;
-    right_column_id = _left_column_id;
+    for (auto& secondary_predicate : maybe_flipped_secondary_predicates) {
+      secondary_predicate.flip();
+    }
   }
 
-  _pos_list_left = std::make_shared<PosList>();
-  _pos_list_right = std::make_shared<PosList>();
+  // Track pairs of matching RowIDs
+  const auto pos_list_left = std::make_shared<PosList>();
+  const auto pos_list_right = std::make_shared<PosList>();
 
-  _is_outer_join = (_mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::Outer);
+  const auto is_outer_join = _mode == JoinMode::Left || _mode == JoinMode::Right || _mode == JoinMode::FullOuter;
+  const auto is_semi_or_anti_join =
+      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
+  const auto track_left_matches = is_outer_join || is_semi_or_anti_join;
+  const auto track_right_matches = _mode == JoinMode::FullOuter;
+
+  auto left_matches_by_chunk = std::vector<std::vector<bool>>(left_table->chunk_count());
+
+  auto right_matches_by_chunk = std::vector<std::vector<bool>>(right_table->chunk_count());
+  const auto chunk_count_right = right_table->chunk_count();
+  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
+    const auto chunk_right = right_table->get_chunk(chunk_id_right);
+    Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+
+    right_matches_by_chunk[chunk_id_right].resize(chunk_right->size());
+  }
+
+  auto secondary_predicate_evaluator =
+      MultiPredicateJoinEvaluator{*left_table, *right_table, _mode, maybe_flipped_secondary_predicates};
 
   // Scan all chunks from left input
-  _right_matches.resize(right_table->chunk_count());
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
-    auto segment_left = left_table->get_chunk(chunk_id_left)->get_segment(left_column_id);
+  const auto chunk_count_left = left_table->chunk_count();
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left; ++chunk_id_left) {
+    const auto chunk_left = left_table->get_chunk(chunk_id_left);
+    Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
 
-    // for Outer joins, remember matches on the left side
+    auto segment_left = chunk_left->get_segment(left_column_id);
+
     std::vector<bool> left_matches;
 
-    if (_is_outer_join) {
+    if (track_left_matches) {
       left_matches.resize(segment_left->size());
     }
 
-    // Scan all chunks for right input
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
-      _right_matches[chunk_id_right].resize(segment_right->size());
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
+      const auto chunk_right = right_table->get_chunk(chunk_id_right);
+      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
 
-      const auto track_right_matches = (_mode == JoinMode::Outer);
-      JoinParams params{*_pos_list_left, *_pos_list_right,    left_matches, _right_matches[chunk_id_right],
-                        _is_outer_join,  track_right_matches, _mode,        _predicate_condition};
-      _join_two_untyped_segments(segment_left, segment_right, chunk_id_left, chunk_id_right, params);
+      const auto segment_right = chunk_right->get_segment(right_column_id);
+
+      JoinParams params{*pos_list_left,
+                        *pos_list_right,
+                        left_matches,
+                        right_matches_by_chunk[chunk_id_right],
+                        track_left_matches,
+                        track_right_matches,
+                        _mode,
+                        maybe_flipped_predicate_condition,
+                        secondary_predicate_evaluator,
+                        !is_semi_or_anti_join};
+      _join_two_untyped_segments(*segment_left, *segment_right, chunk_id_left, chunk_id_right, params);
     }
 
-    if (_is_outer_join) {
-      // add unmatched rows on the left for Left and Full Outer joins
+    if (is_outer_join) {
+      // Add unmatched rows on the left for Left and Full Outer joins
       for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
         if (!left_matches[chunk_offset]) {
-          _pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
-          _pos_list_right->emplace_back(NULL_ROW_ID);
+          pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
+          pos_list_right->emplace_back(NULL_ROW_ID);
+        }
+      }
+    }
+
+    left_matches_by_chunk[chunk_id_left] = std::move(left_matches);
+  }
+
+  // For Full Outer we need to add all unmatched rows for the right side.
+  // Unmatched rows on the left side are already added in the main loop above
+  if (_mode == JoinMode::FullOuter) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
+      const auto chunk_right = right_table->get_chunk(chunk_id_right);
+      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+
+      const auto chunk_size = chunk_right->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        if (!right_matches_by_chunk[chunk_id_right][chunk_offset]) {
+          pos_list_left->emplace_back(NULL_ROW_ID);
+          pos_list_right->emplace_back(chunk_id_right, chunk_offset);
         }
       }
     }
   }
 
-  // For Full Outer we need to add all unmatched rows for the right side.
-  // Unmatched rows on the left side are already added in the main loop above
-  if (_mode == JoinMode::Outer) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
+  // Write PosLists for Semi/Anti Joins, which so far haven't written any results to the PosLists
+  // We use `left_matches_by_chunk` to determine whether a tuple from the left side found a match.
+  if (is_semi_or_anti_join) {
+    const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-      resolve_data_and_segment_type(*segment_right, [&](auto right_type, auto& typed_right_segment) {
-        using RightType = typename decltype(right_type)::type;
-
-        auto iterable_right = create_iterable_from_segment<RightType>(typed_right_segment);
-
-        iterable_right.for_each([&](const auto& right_value) {
-          const auto row_id = RowID{chunk_id_right, right_value.chunk_offset()};
-          if (!_right_matches[chunk_id_right][row_id.chunk_offset]) {
-            _pos_list_left->emplace_back(NULL_ROW_ID);
-            _pos_list_right->emplace_back(row_id);
-          }
-        });
-      });
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_left; ++chunk_id) {
+      const auto chunk_left = left_table->get_chunk(chunk_id);
+      Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+      const auto chunk_size = chunk_left->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+        if (left_matches_by_chunk[chunk_id][chunk_offset] ^ invert) {
+          pos_list_left->emplace_back(chunk_id, chunk_offset);
+        }
+      }
     }
   }
 
-  // write output chunks
+  // Write output Chunk based on the PosList(s) we created during the Join
   Segments segments;
 
-  if (_mode == JoinMode::Right) {
-    _write_output_chunks(segments, right_table, _pos_list_right);
-    _write_output_chunks(segments, left_table, _pos_list_left);
+  if (is_semi_or_anti_join) {
+    _write_output_chunk(segments, left_table, pos_list_left);
   } else {
-    _write_output_chunks(segments, left_table, _pos_list_left);
-    _write_output_chunks(segments, right_table, _pos_list_right);
+    if (_mode == JoinMode::Right) {
+      _write_output_chunk(segments, right_table, pos_list_right);
+      _write_output_chunk(segments, left_table, pos_list_left);
+    } else {
+      _write_output_chunk(segments, left_table, pos_list_left);
+      _write_output_chunk(segments, right_table, pos_list_right);
+    }
   }
 
-  _output_table->append_chunk(segments);
+  return _build_output_table({std::make_shared<Chunk>(std::move(segments))});
 }
 
-void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_ptr<const Table>& input_table,
-                                          const std::shared_ptr<PosList>& pos_list) {
+void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_left,
+                                                const BaseSegment& base_segment_right, const ChunkID chunk_id_left,
+                                                const ChunkID chunk_id_right, JoinNestedLoop::JoinParams& params) {
+  /**
+   * This function dispatches `join_two_typed_segments()`.
+   *
+   * To reduce compile time, we erase the types of Segments and the PredicateCondition/comparator if
+   * `base_segment_left.data_type() != base_segment_left.data_type()` or `LeftSegmentType != RightSegmentType`. This is
+   * the "SLOW PATH".
+   * If data types and segment types are the same, we take the "FAST PATH", where only the SegmentType of left segment
+   * is erased and inlining optimization can be performed by the compiler for the inner loop.
+   *
+   * Having this SLOW PATH and erasing the SegmentType even for the FAST PATH are essential for keeping the compile time
+   * of the JoinNestedLoop reasonably low.
+   */
+
+  /**
+   * FAST PATH
+   */
+  if (base_segment_left.data_type() == base_segment_right.data_type()) {
+    auto fast_path_taken = false;
+
+    resolve_data_and_segment_type(base_segment_left, [&](const auto data_type_t, const auto& segment_left) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      using LeftSegmentType = std::decay_t<decltype(segment_left)>;
+
+      if (const auto* segment_right = dynamic_cast<const LeftSegmentType*>(&base_segment_right)) {
+        const auto iterable_left = create_any_segment_iterable<ColumnDataType>(segment_left);
+        const auto iterable_right = create_iterable_from_segment<ColumnDataType>(*segment_right);
+
+        iterable_left.with_iterators([&](auto left_begin, const auto& left_end) {
+          iterable_right.with_iterators([&](auto right_begin, const auto& right_end) {
+            with_comparator(params.predicate_condition, [&](auto comparator) {
+              join_two_typed_segments(comparator, left_begin, left_end, right_begin, right_end, chunk_id_left,
+                                      chunk_id_right, params);
+            });
+          });
+        });
+
+        fast_path_taken = true;
+      }
+    });
+
+    if (fast_path_taken) {
+      return;
+    }
+  }
+
+  /**
+   * SLOW PATH
+   */
+  // clang-format off
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, const auto left_end) {  // NOLINT
+    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it, const auto right_end) {  // NOLINT
+      using LeftType = typename std::decay_t<decltype(left_it)>::ValueType;
+      using RightType = typename std::decay_t<decltype(right_it)>::ValueType;
+
+      // make sure that we do not compile invalid versions of these lambdas
+      constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, pmr_string>{});
+      constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, pmr_string>{});
+
+      constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
+      constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
+
+      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
+        // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
+        const auto left_it_copy = left_it;
+        const auto left_end_copy = left_end;
+        const auto right_it_copy = right_it;
+        const auto right_end_copy = right_end;
+        const auto params_copy = params;
+        const auto chunk_id_left_copy = chunk_id_left;
+        const auto chunk_id_right_copy = chunk_id_right;
+
+        // Erase the `predicate_condition` into a std::function<>
+        auto erased_comparator = std::function<bool(const LeftType&, const RightType&)>{};
+        with_comparator(params_copy.predicate_condition, [&](auto comparator) { erased_comparator = comparator; });
+
+        join_two_typed_segments(erased_comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
+                                       chunk_id_left_copy, chunk_id_right_copy, params_copy);
+      } else {
+        // gcc complains without these
+        ignore_unused_variable(right_end);
+        ignore_unused_variable(left_end);
+
+        Fail("Cannot join String with non-String column");
+      }
+    });
+  });
+  // clang-format on
+}
+
+void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
+                                         const std::shared_ptr<PosList>& pos_list) {
   // Add segments from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseSegment> segment;
@@ -251,7 +348,7 @@ void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_
         auto new_pos_list = std::make_shared<PosList>();
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
-        for (const auto row : *pos_list) {
+        for (const auto& row : *pos_list) {
           if (row.is_null()) {
             new_pos_list->push_back(NULL_ROW_ID);
           } else {
@@ -280,15 +377,6 @@ void JoinNestedLoop::_write_output_chunks(Segments& segments, const std::shared_
 
     segments.push_back(segment);
   }
-}
-
-void JoinNestedLoop::_on_cleanup() {
-  _output_table.reset();
-  _left_in_table.reset();
-  _right_in_table.reset();
-  _pos_list_left.reset();
-  _pos_list_right.reset();
-  _right_matches.clear();
 }
 
 }  // namespace opossum

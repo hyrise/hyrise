@@ -18,10 +18,10 @@ namespace opossum {
 class ChunkCompressionTaskTest : public BaseTest {};
 
 TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
-  auto table = load_table("src/test/tables/compression_input.tbl", 12u);
+  auto table = load_table("resources/test_data/tbl/compression_input.tbl", 12u);
   StorageManager::get().add_table("table", table);
 
-  auto table_dict = load_table("src/test/tables/compression_input.tbl", 3u);
+  auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", 3u);
   StorageManager::get().add_table("table_dict", table_dict);
 
   auto compression_task1 = std::make_unique<ChunkCompressionTask>("table_dict", ChunkID{0});
@@ -34,12 +34,11 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   auto compression_task3 = std::make_unique<ChunkCompressionTask>("table_dict", ChunkID{3});
   compression_task3->execute();
 
-  ASSERT_TRUE(check_table_equal(table, table_dict, OrderSensitivity::No, TypeCmpMode::Strict,
-                                FloatComparisonMode::AbsoluteDifference));
+  EXPECT_TABLE_EQ_UNORDERED(table, table_dict);
 
   constexpr auto chunk_count = 4u;
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto chunk = table_dict->get_chunk(chunk_id);
+    const auto chunk = table_dict->get_chunk(chunk_id);
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       auto segment = chunk->get_segment(column_id);
@@ -51,7 +50,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
 }
 
 TEST_F(ChunkCompressionTaskTest, DictionarySize) {
-  auto table_dict = load_table("src/test/tables/compression_input.tbl", 6u);
+  auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", 6u);
   StorageManager::get().add_table("table_dict", table_dict);
 
   auto compression = std::make_unique<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
@@ -64,7 +63,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   auto dictionary_sizes = std::array<std::vector<size_t>, chunk_count>{{{3u, 3u}, {2u, 3u}}};
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto chunk = table_dict->get_chunk(chunk_id);
+    const auto chunk = table_dict->get_chunk(chunk_id);
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       auto segment = chunk->get_segment(column_id);
 
@@ -77,7 +76,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
 }
 
 TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
-  auto table = load_table("src/test/tables/compression_input.tbl", 6u);
+  auto table = load_table("resources/test_data/tbl/compression_input.tbl", 6u);
   StorageManager::get().add_table("table_insert", table);
 
   auto gt1 = std::make_shared<GetTable>("table_insert");

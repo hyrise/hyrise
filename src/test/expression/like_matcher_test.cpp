@@ -12,7 +12,7 @@ class LikeMatcherTest : public ::testing::Test {
  public:
   bool match(const std::string& value, const std::string& pattern) const {
     auto result = false;
-    LikeMatcher{pattern}.resolve(false, [&](const auto& matcher) { result = matcher(value); });
+    LikeMatcher{pmr_string{pattern}}.resolve(false, [&](const auto& matcher) { result = matcher(pmr_string{value}); });
     return result;
   }
 };
@@ -25,13 +25,13 @@ TEST_F(LikeMatcherTest, PatternToTokens) {
 
   ASSERT_EQ(tokens_b.size(), 9u);
   EXPECT_EQ(tokens_b.at(0), LikeMatcher::PatternToken(LikeMatcher::Wildcard::AnyChars));
-  EXPECT_EQ(tokens_b.at(1), LikeMatcher::PatternToken("abc"s));
+  EXPECT_EQ(tokens_b.at(1), LikeMatcher::PatternToken(pmr_string{"abc"}));
   EXPECT_EQ(tokens_b.at(2), LikeMatcher::PatternToken(LikeMatcher::Wildcard::AnyChars));
   EXPECT_EQ(tokens_b.at(3), LikeMatcher::PatternToken(LikeMatcher::Wildcard::SingleChar));
-  EXPECT_EQ(tokens_b.at(4), LikeMatcher::PatternToken("def"s));
+  EXPECT_EQ(tokens_b.at(4), LikeMatcher::PatternToken(pmr_string{"def"}));
   EXPECT_EQ(tokens_b.at(5), LikeMatcher::PatternToken(LikeMatcher::Wildcard::SingleChar));
   EXPECT_EQ(tokens_b.at(6), LikeMatcher::PatternToken(LikeMatcher::Wildcard::SingleChar));
-  EXPECT_EQ(tokens_b.at(7), LikeMatcher::PatternToken("Hello"s));
+  EXPECT_EQ(tokens_b.at(7), LikeMatcher::PatternToken(pmr_string{"Hello"}));
   EXPECT_EQ(tokens_b.at(8), LikeMatcher::PatternToken(LikeMatcher::Wildcard::AnyChars));
 }
 

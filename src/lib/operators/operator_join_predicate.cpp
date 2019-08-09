@@ -2,6 +2,7 @@
 
 #include "expression/abstract_predicate_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 
 namespace opossum {
 
@@ -47,5 +48,18 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
 OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& column_ids,
                                              const PredicateCondition predicate_condition)
     : column_ids(column_ids), predicate_condition(predicate_condition) {}
+
+void OperatorJoinPredicate::flip() {
+  std::swap(column_ids.first, column_ids.second);
+  predicate_condition = flip_predicate_condition(predicate_condition);
+}
+
+bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
+  return std::tie(l.column_ids, l.predicate_condition) < std::tie(r.column_ids, r.predicate_condition);
+}
+
+bool operator==(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
+  return std::tie(l.column_ids, l.predicate_condition) == std::tie(r.column_ids, r.predicate_condition);
+}
 
 }  // namespace opossum

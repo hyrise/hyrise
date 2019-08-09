@@ -12,6 +12,8 @@ function(add_plugin)
 
     add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
 
+    add_dependencies(${PARSED_ARGS_NAME} hyrise)
+
     foreach(dep ${PARSED_ARGS_DEPS})
         add_dependencies(${PARSED_ARGS_NAME} ${dep})
     endforeach(dep)
@@ -19,13 +21,13 @@ function(add_plugin)
     # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            target_link_libraries(${PARSED_ARGS_NAME} PRIVATE "-undefined dynamic_lookup")
+            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
         endif()
     endif()
 endfunction(add_plugin)
 
-add_plugin(NAME TestPlugin SRCS test_plugin.cpp test_plugin.hpp)
-add_plugin(NAME TestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
+add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
+add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes

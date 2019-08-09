@@ -33,17 +33,17 @@ namespace opossum {
 class OperatorDeepCopyTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
-    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
-    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float3.tbl", 2));
-    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int3.tbl", 2));
+    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", 2));
+    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", 2));
+    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int3.tbl", 2));
 
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
     _table_wrapper_c->execute();
     _table_wrapper_d->execute();
 
-    _test_table = load_table("src/test/tables/int_float.tbl", 2);
+    _test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
     StorageManager::get().add_table("aNiceTestTable", _test_table);
   }
 
@@ -56,15 +56,17 @@ class DeepCopyTestJoin : public OperatorDeepCopyTest {};
 
 // here we define all Join types
 using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
-TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes);
+TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_left_join.tbl", 1);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1);
   EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
   // build and execute join
-  auto join = std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
-                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+  auto join =
+      std::make_shared<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b, JoinMode::Left,
+                                  OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
   EXPECT_NE(join, nullptr) << "Could not build Join";
   join->execute();
   EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
@@ -81,7 +83,7 @@ TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyDifference) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 2);
 
   // build and execute difference
   auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_c);
@@ -114,7 +116,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyGetTable) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyLimit) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_int3_limit_1.tbl", 1);
 
   // build and execute limit
   auto limit = std::make_shared<Limit>(_table_wrapper_d, to_expression(int64_t{1}));
@@ -132,7 +134,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyLimit) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopySort) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 1);
 
   // build and execute sort
   auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, OrderByMode::Ascending, 2u);
@@ -150,7 +152,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopySort) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
 
   // build and execute table scan
   auto scan = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
@@ -180,17 +182,19 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
   EXPECT_EQ(copied_pqp->input_left()->input_left(), copied_pqp->input_right()->input_left());
 }
 
-TEST_F(OperatorDeepCopyTest, Subselect) {
-  // Due to the nested structure of the subselect, it makes sense to keep this more high level than the other tests in
+TEST_F(OperatorDeepCopyTest, Subquery) {
+  // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
   // this suite. The test is very confusing and error-prone with explicit operators as above.
-  const auto table = load_table("src/test/tables/int_int_int.tbl", 2);
+  const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
   StorageManager::get().add_table("table_3int", table);
 
-  const std::string subselect_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
-  const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
+  const std::string subquery_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
+  const TableColumnDefinitions column_definitions = {
+      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
 
-  auto sql_pipeline = SQLPipelineBuilder{subselect_query}.disable_mvcc().create_pipeline_statement();
-  const auto first_result = sql_pipeline.get_result_table();
+  auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline_statement();
+  const auto [pipeline_status, first_result] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 
   // Quick sanity check to see that the original query is correct
   auto expected_first = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -199,8 +203,8 @@ TEST_F(OperatorDeepCopyTest, Subselect) {
 
   SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
-  const auto copied_plan = sql_pipeline.get_query_plan()->deep_copy();
-  const auto tasks = copied_plan.create_tasks();
+  const auto copied_plan = sql_pipeline.get_physical_plan()->deep_copy();
+  const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan, CleanupTemporaries::Yes);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   const auto copied_result = tasks.back()->get_operator()->get_output();

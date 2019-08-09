@@ -9,6 +9,7 @@
 
 #include "storage/reference_segment.hpp"
 #include "storage/segment_accessor.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 
 namespace opossum {
@@ -53,7 +54,7 @@ class Sort::SortImplMaterializeOutput {
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
-  std::shared_ptr<const Table> execute() {
+  std::shared_ptr<Table> execute() {
     // First we create a new table as the output
     auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 
@@ -92,11 +93,11 @@ class Sort::SortImplMaterializeOutput {
 
         auto segment_ptr_and_accessor_by_chunk_id =
             std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseSegment>,
-                                                  std::shared_ptr<BaseSegmentAccessor<ColumnDataType>>>>();
+                                                  std::shared_ptr<AbstractSegmentAccessor<ColumnDataType>>>>();
         segment_ptr_and_accessor_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
-          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
+          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
 
           auto& segment_ptr_and_typed_ptr_pair = segment_ptr_and_accessor_by_chunk_id[chunk_id];
           auto& base_segment = segment_ptr_and_typed_ptr_pair.first;
@@ -110,13 +111,13 @@ class Sort::SortImplMaterializeOutput {
           // If the input segment is not a ReferenceSegment, we can take a fast(er) path
           if (accessor) {
             const auto typed_value = accessor->access(chunk_offset);
-            const auto is_null = !typed_value.has_value();
+            const auto is_null = !typed_value;
             value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
             value_segment_null_vector.push_back(is_null);
           } else {
             const auto value = (*base_segment)[chunk_offset];
             const auto is_null = variant_is_null(value);
-            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : type_cast_variant<ColumnDataType>(value));
+            value_segment_value_vector.push_back(is_null ? ColumnDataType{} : boost::get<ColumnDataType>(value));
             value_segment_null_vector.push_back(is_null);
           }
 
@@ -200,7 +201,14 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     // full and create the next one. Each chunk is filled row by row.
     auto materialization = std::make_shared<SortImplMaterializeOutput<SortColumnType>>(_table_in, _row_id_value_vector,
                                                                                        _output_chunk_size);
-    return materialization->execute();
+    auto output = materialization->execute();
+
+    const auto chunk_count = output->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      output->get_chunk(chunk_id)->set_ordered_by(std::make_pair(_column_id, _order_by_mode));
+    }
+
+    return output;
   }
 
   // completely materializes the sort column to create a vector of RowID-Value pairs
@@ -210,21 +218,19 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
     auto& null_value_rows = *_null_value_rows;
 
-    for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
-      auto chunk = _table_in->get_chunk(chunk_id);
+    const auto chunk_count = _table_in->chunk_count();
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = _table_in->get_chunk(chunk_id);
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
       auto base_segment = chunk->get_segment(_column_id);
 
-      resolve_segment_type<SortColumnType>(*base_segment, [&](auto& typed_segment) {
-        auto iterable = create_iterable_from_segment<SortColumnType>(typed_segment);
-
-        iterable.for_each([&](const auto& value) {
-          if (value.is_null()) {
-            null_value_rows.emplace_back(RowID{chunk_id, value.chunk_offset()}, SortColumnType{});
-          } else {
-            row_id_value_vector.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
-          }
-        });
+      segment_iterate<SortColumnType>(*base_segment, [&](const auto& position) {
+        if (position.is_null()) {
+          null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
+        } else {
+          row_id_value_vector.emplace_back(RowID{chunk_id, position.chunk_offset()}, position.value());
+        }
       });
     }
   }

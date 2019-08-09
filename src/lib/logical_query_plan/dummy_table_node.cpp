@@ -18,6 +18,10 @@ const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::column_e
   return _column_expressions;
 }
 
+bool DummyTableNode::is_column_nullable(const ColumnID column_id) const {
+  Fail("DummyTable does not output any columns");
+}
+
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<DummyTableNode>();
 }

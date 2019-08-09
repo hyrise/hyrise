@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -8,7 +9,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "utils/filesystem.hpp"
 
 namespace opossum {
 
@@ -16,8 +16,8 @@ class StorageManagerTest : public BaseTest {
  protected:
   void SetUp() override {
     auto& sm = StorageManager::get();
-    auto t1 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
-    auto t2 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 4);
+    auto t1 = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
+    auto t2 = std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Int, false}}, TableType::Data, 4);
 
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);
@@ -28,8 +28,8 @@ class StorageManagerTest : public BaseTest {
     const auto v2_lqp = StoredTableNode::make("second_table");
     const auto v2 = std::make_shared<LQPView>(v2_lqp, std::unordered_map<ColumnID, std::string>{});
 
-    sm.add_lqp_view("first_view", std::move(v1));
-    sm.add_lqp_view("second_view", std::move(v2));
+    sm.add_view("first_view", std::move(v1));
+    sm.add_view("second_view", std::move(v2));
   }
 };
 
@@ -72,8 +72,8 @@ TEST_F(StorageManagerTest, AddViewTwice) {
   const auto v1 = std::make_shared<LQPView>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
 
   auto& sm = StorageManager::get();
-  EXPECT_THROW(sm.add_lqp_view("first_table", v1), std::exception);
-  EXPECT_THROW(sm.add_lqp_view("first_view", v1), std::exception);
+  EXPECT_THROW(sm.add_view("first_table", v1), std::exception);
+  EXPECT_THROW(sm.add_view("first_view", v1), std::exception);
 }
 
 TEST_F(StorageManagerTest, GetView) {
@@ -85,9 +85,9 @@ TEST_F(StorageManagerTest, GetView) {
 
 TEST_F(StorageManagerTest, DropView) {
   auto& sm = StorageManager::get();
-  sm.drop_lqp_view("first_view");
+  sm.drop_view("first_view");
   EXPECT_THROW(sm.get_view("first_view"), std::exception);
-  EXPECT_THROW(sm.drop_lqp_view("first_view"), std::exception);
+  EXPECT_THROW(sm.drop_view("first_view"), std::exception);
 }
 
 TEST_F(StorageManagerTest, ResetView) {
@@ -116,17 +116,17 @@ TEST_F(StorageManagerTest, ListViewNames) {
   EXPECT_EQ(view_names[1], "second_view");
 }
 
-TEST_F(StorageManagerTest, Print) {
+TEST_F(StorageManagerTest, OutputToStream) {
   auto& sm = StorageManager::get();
-  sm.add_table("third_table", load_table("src/test/tables/int_int2.tbl", 2));
+  sm.add_table("third_table", load_table("resources/test_data/tbl/int_int2.tbl", 2));
 
   std::ostringstream output;
-  sm.print(output);
+  output << sm;
   auto output_string = output.str();
 
   EXPECT_TRUE(output_string.find("===== Tables =====") != std::string::npos);
-  EXPECT_TRUE(output_string.find("==== table >> first_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
-  EXPECT_TRUE(output_string.find("==== table >> second_table << (0 columns, 0 rows in 0 chunks)") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> first_table << (1 columns, 0 rows in 0 chunks)") != std::string::npos);
+  EXPECT_TRUE(output_string.find("==== table >> second_table << (1 columns, 0 rows in 0 chunks)") != std::string::npos);
   EXPECT_TRUE(output_string.find("==== table >> third_table << (2 columns, 4 rows in 2 chunks)") != std::string::npos);
 
   EXPECT_TRUE(output_string.find("===== Views ======") != std::string::npos);
@@ -143,13 +143,13 @@ TEST_F(StorageManagerTest, ExportTables) {
   sm.drop_table("second_table");
 
   // add a non-empty table
-  sm.add_table("third_table", load_table("src/test/tables/int_float.tbl"));
+  sm.add_table("third_table", load_table("resources/test_data/tbl/int_float.tbl"));
 
   sm.export_all_tables_as_csv(opossum::test_data_path);
 
   const std::string filename = opossum::test_data_path + "/third_table.csv";
-  EXPECT_TRUE(filesystem::exists(filename));
-  filesystem::remove(filename);
+  EXPECT_TRUE(std::filesystem::exists(filename));
+  std::filesystem::remove(filename);
 }
 
 }  // namespace opossum

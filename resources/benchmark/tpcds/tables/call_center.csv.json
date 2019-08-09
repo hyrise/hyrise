@@ -1,0 +1,168 @@
+{
+  "columns": [
+    {
+      "name": "cc_call_center_sk",
+      "type": "int",
+      "nullable": false
+    },
+    {
+      "name": "cc_call_center_id",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "cc_rec_start_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_rec_end_date",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_closed_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cc_open_date_sk",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cc_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_class",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_employees",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cc_sq_ft",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cc_hours",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_manager",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_mkt_id",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cc_mkt_class",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_mkt_desc",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_market_manager",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_division",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cc_division_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_company",
+      "type": "int",
+      "nullable": true
+    },
+    {
+      "name": "cc_company_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_street_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_street_name",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_street_type",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_suite_number",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_city",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_county",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_state",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_zip",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_country",
+      "type": "string",
+      "nullable": true
+    },
+    {
+      "name": "cc_gmt_offset",
+      "type": "float",
+      "nullable": true
+    },
+    {
+      "name": "cc_tax_percentage",
+      "type": "float",
+      "nullable": true
+    }
+  ],
+  "config": {
+    "delimiter": "\n",
+    "delimiter_escape": "\\",
+    "escape": "\"",
+    "quote": "\"",
+    "reject_quoted_nonstrings": true,
+    "rfc_mode": true,
+    "separator": "|"
+  }
+}

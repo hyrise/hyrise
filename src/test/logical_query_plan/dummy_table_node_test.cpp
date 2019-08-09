@@ -25,4 +25,6 @@ TEST_F(DummyTableNodeTest, Equals) {
 
 TEST_F(DummyTableNodeTest, Copy) { EXPECT_EQ(*_dummy_table_node->deep_copy(), *DummyTableNode::make()); }
 
+TEST_F(DummyTableNodeTest, NodeExpressions) { ASSERT_EQ(_dummy_table_node->node_expressions.size(), 0u); }
+
 }  // namespace opossum

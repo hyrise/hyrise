@@ -22,7 +22,5 @@ class UnionAll : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-
-  std::shared_ptr<Table> _output;
 };
 }  // namespace opossum

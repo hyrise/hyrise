@@ -34,14 +34,16 @@ std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(
 void AliasOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> AliasOperator::_on_execute() {
+  const auto& input_table = *input_table_left();
+
   /**
    * Generate the new TableColumnDefinitions, that is, setting the new names for the columns
    */
   auto output_column_definitions = std::vector<TableColumnDefinition>{};
-  output_column_definitions.reserve(input_table_left()->column_count());
+  output_column_definitions.reserve(input_table.column_count());
 
-  for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto& input_column_definition = input_table_left()->column_definitions()[_column_ids[column_id]];
+  for (auto column_id = ColumnID{0}; column_id < input_table.column_count(); ++column_id) {
+    const auto& input_column_definition = input_table.column_definitions()[_column_ids[column_id]];
 
     output_column_definitions.emplace_back(_aliases[column_id], input_column_definition.data_type,
                                            input_column_definition.nullable);
@@ -50,24 +52,25 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   /**
    * Generate the output table, forwarding segments from the input chunks and ordering them according to _column_ids
    */
-  const auto output_table =
-      std::make_shared<Table>(output_column_definitions, input_table_left()->type(),
-                              input_table_left()->max_chunk_size(), input_table_left()->has_mvcc());
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{input_table.chunk_count()};
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
-    const auto input_chunk = input_table_left()->get_chunk(chunk_id);
+  const auto chunk_count = input_table.chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto input_chunk = input_table.get_chunk(chunk_id);
+    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
 
     auto output_segments = Segments{};
-    output_segments.reserve(input_table_left()->column_count());
+    output_segments.reserve(input_table.column_count());
 
     for (const auto& column_id : _column_ids) {
       output_segments.emplace_back(input_chunk->get_segment(column_id));
     }
 
-    output_table->append_chunk(output_segments, input_chunk->get_allocator(), input_chunk->access_counter());
+    output_chunks[chunk_id] = std::make_shared<Chunk>(std::move(output_segments), input_chunk->mvcc_data());
   }
 
-  return output_table;
+  return std::make_shared<Table>(output_column_definitions, input_table.type(), std::move(output_chunks),
+                                 input_table.has_mvcc());
 }
 
 }  // namespace opossum

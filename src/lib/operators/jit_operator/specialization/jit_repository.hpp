@@ -38,16 +38,16 @@ class JitRepository : public Singleton<JitRepository> {
   llvm::Function* get_vtable_entry(const std::string& class_name, const size_t index) const;
 
   std::shared_ptr<llvm::LLVMContext> llvm_context() const;
-  std::shared_ptr<llvm::Module> module() const;
   std::mutex& specialization_mutex();
 
  private:
   JitRepository();
 
   friend class Singleton;
+  friend class ResolveConditionTest;
 
   std::shared_ptr<llvm::LLVMContext> _llvm_context;
-  std::shared_ptr<llvm::Module> _module;
+  std::unique_ptr<llvm::Module> _module;
   std::unordered_map<std::string, llvm::Function*> _functions;
   std::unordered_map<std::string, std::vector<llvm::Function*>> _vtables;
   std::mutex _specialization_mutex;

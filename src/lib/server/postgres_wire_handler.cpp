@@ -78,7 +78,7 @@ BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
   for (auto i = 0; i < num_parameter_values; ++i) {
     auto parameter_value_length = ntohl(read_value<int32_t>(packet));
     auto x = read_values<char>(packet, parameter_value_length);
-    const std::string x_str(x.begin(), x.end());
+    const pmr_string x_str(x.begin(), x.end());
     parameter_values.emplace_back(x_str);
   }
 
@@ -130,7 +130,7 @@ void PostgresWireHandler::write_output_packet_size(OutputPacket& packet) {
       "Cannot update the packet size of a packet which is less than NetworkIMessageType + dummy size (i.e. 5 bytes)");
 
   // - 1 because the message type byte does not contribute to the total size
-  auto total_bytes = htonl(data.size() - 1);
+  auto total_bytes = htonl(static_cast<uint32_t>(data.size() - 1));
   auto size_chars = reinterpret_cast<char*>(&total_bytes);
 
   // The size starts at byte position 1

@@ -1,26 +1,17 @@
 #include <dlfcn.h>
 
+#include <filesystem>
+
 #include "storage/storage_manager.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
-#include "utils/filesystem.hpp"
 
 #include "plugin_manager.hpp"
 
 namespace opossum {
 
 bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
-  // This should work as soon as we support gcc-8 or gcc-8 supports us (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740)
-  // for ([[maybe_unused]] auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
-  //   if (plugin_handle_wrapper.plugin == plugin) {
-  //     return true;
-  //   }
-  // }
-
-  // return false;
-
-  for (const auto& p : _plugins) {
-    auto plugin_handle_wrapper = p.second;
+  for (auto& [_, plugin_handle_wrapper] : _plugins) {
     if (plugin_handle_wrapper.plugin == plugin) {
       return true;
     }
@@ -29,10 +20,10 @@ bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
   return false;
 }
 
-void PluginManager::load_plugin(const filesystem::path& path) {
+void PluginManager::load_plugin(const std::filesystem::path& path) {
   const auto name = plugin_name_from_path(path);
 
-  Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name  " + name + " already exists.");
+  Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name " + name + " already exists.");
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   Assert(plugin_handle, "Loading plugin failed: " + dlerror());
@@ -61,9 +52,9 @@ void PluginManager::reset() { get() = PluginManager(); }
 
 void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin = _plugins.find(name);
-  if (plugin != _plugins.cend()) {
-    _unload_erase_plugin(plugin);
-  }
+  Assert(plugin != _plugins.cend(), "Unloading plugin failed: A plugin with name " + name + " does not exist.");
+
+  _unload_erase_plugin(plugin);
 }
 
 const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(

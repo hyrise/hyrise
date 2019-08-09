@@ -33,8 +33,6 @@ std::string PQPColumnExpression::as_column_name() const { return _column_name; }
 
 DataType PQPColumnExpression::data_type() const { return _data_type; }
 
-bool PQPColumnExpression::is_nullable() const { return _nullable; }
-
 bool PQPColumnExpression::requires_computation() const { return false; }
 
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
@@ -44,5 +42,9 @@ bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) 
 }
 
 size_t PQPColumnExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(column_id)); }
+
+bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  Fail("Nullability 'on lqp' should never be queried from a PQPColumn");
+}
 
 }  // namespace opossum

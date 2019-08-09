@@ -149,7 +149,7 @@ std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorAr
  *
  *   resolve_data_type(data_type, [&](auto type) {
  *     using ColumnDataType = typename decltype(type)::type;
- *     const auto var = type_cast_variant<ColumnDataType>(variant_from_elsewhere);
+ *     const auto var = boost::get<ColumnDataType>(variant_from_elsewhere);
  *     process_variant(var);
  *
  *     process_type(type);
@@ -259,16 +259,6 @@ constexpr DataType data_type_from_type() {
 
     return data_type;
   });
-}
-
-/**
- * This function returns the DataType of an AllTypeVariant
- *
- * Note: DataType and AllTypeVariant are defined in a way such that
- *       the indices in DataType and AllTypeVariant match.
- */
-inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
-  return static_cast<DataType>(all_type_variant.which());
 }
 
 }  // namespace opossum

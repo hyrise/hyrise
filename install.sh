@@ -15,9 +15,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             exit 1
         fi
 
-        # Needed for proper building under macOS
-        xcode-select --install
-
         brew --version 2>/dev/null || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
         echo "Installing dependencies (this may take a while)..."
@@ -25,7 +22,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for formula in boost cmake tbb pkg-config readline ncurses sqlite3 parallel libpq; do
+            for formula in boost cmake tbb graphviz pkg-config readline ncurses sqlite3 parallel libpq autoconf; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue
@@ -36,7 +33,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
             done
 
-            if ! brew install llvm --with-toolchain; then
+            if ! brew install llvm; then
                 echo "Error during llvm/clang installation."
                 exit 1
             fi
@@ -54,7 +51,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-6.0 libclang-6.0-dev clang-tidy-6.0 clang-format-6.0 gcovr python2.7 gcc-7 llvm llvm-6.0-tools libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev &
+                sudo apt-get install --no-install-recommends -y clang-7 libclang-7-dev clang-tidy-7 clang-format-7 gcovr python2.7 python-pexpect python-glob2 graphviz gcc-8 g++-8 llvm llvm-7-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev autoconf &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
@@ -68,8 +65,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-6.0 60 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-6.0 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-6.0
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60 --slave /usr/bin/g++ g++ /usr/bin/g++-8
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7 70 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-7 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-7
             else
                 echo "Error during installation."
                 exit 1

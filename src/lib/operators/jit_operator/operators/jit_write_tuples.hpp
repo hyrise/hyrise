@@ -16,7 +16,7 @@ class BaseJitSegmentWriter {
 
 struct JitOutputColumn {
   std::string column_name;
-  JitTupleValue tuple_value;
+  JitTupleEntry tuple_entry;
 };
 
 /* JitWriteTuples must be the last operator in any chain of jit operators.
@@ -31,9 +31,9 @@ class JitWriteTuples : public AbstractJittableSink {
    * All ValueSegments have BaseValueSegment as their template-free super class. This allows us to store shared pointers
    * to all output segments in vector in the runtime context.
    * We then use JitSegmentWriter instances to access these segments. JitSegmentWriters are templated with the
-   * type of ValueSegment they are accessing. They are initialized with an output_index and a tuple value.
+   * type of ValueSegment they are accessing. They are initialized with an output_index and a tuple entry.
    * When requested to store a value, they will access the column from the runtime context corresponding to their
-   * output_index and copy the value from their JitTupleValue.
+   * output_index and copy the value from their JitTupleEntry.
    *
    * All segment writers have a common template-free base class. That allows us to store the segment writers in a
    * vector as well and access all types of segments with a single interface.
@@ -41,36 +41,51 @@ class JitWriteTuples : public AbstractJittableSink {
   template <typename ValueSegment, typename DataType, bool Nullable>
   class JitSegmentWriter : public BaseJitSegmentWriter {
    public:
-    JitSegmentWriter(const std::shared_ptr<ValueSegment>& segment, const JitTupleValue& tuple_value)
-        : _segment{segment}, _tuple_value{tuple_value} {}
+    JitSegmentWriter(const std::shared_ptr<ValueSegment>& segment, const size_t tuple_index)
+        : _segment{segment}, _tuple_index{tuple_index} {}
 
-    // Reads the value from the _tuple_value and appends it to the output ValueSegment.
+    // Reads the value from the _tuple_entry and appends it to the output ValueSegment.
     void write_value(JitRuntimeContext& context) const {
-      _segment->values().push_back(context.tuple.get<DataType>(_tuple_value.tuple_index()));
+      _segment->values().push_back(context.tuple.get<DataType>(_tuple_index));
       // clang-format off
       if constexpr (Nullable) {
-        _segment->null_values().push_back(context.tuple.is_null(_tuple_value.tuple_index()));
+        _segment->null_values().push_back(context.tuple.is_null(_tuple_index));
       }
       // clang-format on
     }
 
    private:
-    std::shared_ptr<ValueSegment> _segment;
-    const JitTupleValue _tuple_value;
+    const std::shared_ptr<ValueSegment> _segment;
+    const size_t _tuple_index;
   };
 
  public:
   std::string description() const final;
 
-  std::shared_ptr<Table> create_output_table(const ChunkOffset input_table_chunk_size) const final;
-  void before_query(Table& out_table, JitRuntimeContext& context) const override;
-  void after_chunk(Table& out_table, JitRuntimeContext& context) const override;
+  void before_specialization(const Table& in_table, std::vector<bool>& tuple_non_nullable_information) override;
 
-  void add_output_column(const std::string& column_name, const JitTupleValue& value);
+  // Is called by the JitOperatorWrapper.
+  // Creates an empty output table with appropriate column definitions.
+  std::shared_ptr<Table> create_output_table(const Table& in_table) const final;
+
+  // Is called by the JitOperatorWrapper before any tuple is consumed.
+  // This is used to initialize the JitSegmentWriters for the first chunk.
+  void before_query(Table& out_table, JitRuntimeContext& context) const override;
+
+  // Is called by the JitOperatorWrapper after all tuples of one chunk have been consumed.
+  // This is used to append the created chunk to the output table and prepare the JitSegmentWriters for the next chunk.
+  void after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
+                   JitRuntimeContext& context) const override;
+
+  // Is called by the jit-aware LQP translator.
+  // This is used to define which columns are in the output table.
+  // The order in which the columns are added defines the order of the columns in the output table.
+  void add_output_column_definition(const std::string& column_name, const JitTupleEntry& tuple_entry);
 
   std::vector<JitOutputColumn> output_columns() const;
 
  private:
+  // Add tuple values to the corresponding value segments in the output chunk.
   void _consume(JitRuntimeContext& context) const final;
 
   void _create_output_chunk(JitRuntimeContext& context) const;

@@ -9,15 +9,23 @@
 
 namespace opossum {
 
+class BaseSegmentAccessor {
+ public:
+  BaseSegmentAccessor() = default;
+  BaseSegmentAccessor(const BaseSegmentAccessor&) = default;
+  BaseSegmentAccessor(BaseSegmentAccessor&&) = default;
+
+  virtual ~BaseSegmentAccessor() {}
+};
+
 /**
  * This is the base class for all SegmentAccessor types.
  * It provides the common interface to access individual values of a segment.
  */
 template <typename T>
-class BaseSegmentAccessor {
+class AbstractSegmentAccessor : public BaseSegmentAccessor {
  public:
   virtual const std::optional<T> access(ChunkOffset offset) const = 0;
-  virtual ~BaseSegmentAccessor() {}
 };
 
 }  // namespace opossum

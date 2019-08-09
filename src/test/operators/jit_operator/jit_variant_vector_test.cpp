@@ -39,9 +39,9 @@ TEST_F(JitVariantVectorTest, GetAndSet) {
   }
   {
     const auto index = static_cast<int32_t>(std::rand()) % 10;
-    const auto value_in = std::string("some string");
-    vector.set<std::string>(index, value_in);
-    const auto value_out = vector.get<std::string>(index);
+    const auto value_in = pmr_string("some string");
+    vector.set<pmr_string>(index, value_in);
+    const auto value_out = vector.get<pmr_string>(index);
     EXPECT_EQ(value_in, value_out);
   }
   {
@@ -93,11 +93,11 @@ TEST_F(JitVariantVectorTest, GetVector) {
     EXPECT_EQ(vector.get_vector<int32_t>()[index], value);
   }
   {
-    const auto value = std::string("1234");
+    const auto value = pmr_string("1234");
     const auto index = 6;
-    vector.set<std::string>(index, value);
-    EXPECT_EQ(vector.get_vector<std::string>().size(), vector_size);
-    EXPECT_EQ(vector.get_vector<std::string>()[index], value);
+    vector.set<pmr_string>(index, value);
+    EXPECT_EQ(vector.get_vector<pmr_string>().size(), vector_size);
+    EXPECT_EQ(vector.get_vector<pmr_string>()[index], value);
   }
 }
 
@@ -110,7 +110,7 @@ TEST_F(JitVariantVectorTest, GrowByOneAddsElementToCorrectInternalVector) {
     EXPECT_EQ(vector.get_vector<int64_t>().size(), 0u);
     EXPECT_EQ(vector.get_vector<float>().size(), 0u);
     EXPECT_EQ(vector.get_vector<double>().size(), 0u);
-    EXPECT_EQ(vector.get_vector<std::string>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<pmr_string>().size(), 0u);
   }
   {
     JitVariantVector vector;
@@ -120,17 +120,17 @@ TEST_F(JitVariantVectorTest, GrowByOneAddsElementToCorrectInternalVector) {
     EXPECT_EQ(vector.get_vector<int64_t>().size(), 0u);
     EXPECT_EQ(vector.get_vector<float>().size(), 0u);
     EXPECT_EQ(vector.get_vector<double>().size(), 1u);
-    EXPECT_EQ(vector.get_vector<std::string>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<pmr_string>().size(), 0u);
   }
   {
     JitVariantVector vector;
-    vector.grow_by_one<std::string>(JitVariantVector::InitialValue::Zero);
+    vector.grow_by_one<pmr_string>(JitVariantVector::InitialValue::Zero);
     EXPECT_EQ(vector.get_vector<bool>().size(), 0u);
     EXPECT_EQ(vector.get_vector<int32_t>().size(), 0u);
     EXPECT_EQ(vector.get_vector<int64_t>().size(), 0u);
     EXPECT_EQ(vector.get_vector<float>().size(), 0u);
     EXPECT_EQ(vector.get_vector<double>().size(), 0u);
-    EXPECT_EQ(vector.get_vector<std::string>().size(), 1u);
+    EXPECT_EQ(vector.get_vector<pmr_string>().size(), 1u);
   }
 }
 

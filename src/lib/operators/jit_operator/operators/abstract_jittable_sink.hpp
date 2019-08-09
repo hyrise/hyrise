@@ -18,8 +18,8 @@ class AbstractJittableSink : public AbstractJittable {
  public:
   virtual ~AbstractJittableSink() = default;
 
-  // This function is responsible to create the output table with appropriate column definitions.
-  virtual std::shared_ptr<Table> create_output_table(const ChunkOffset input_table_chunk_size) const = 0;
+  // This function is responsible to create an empty output table with appropriate column definitions.
+  virtual std::shared_ptr<Table> create_output_table(const Table& in_table) const = 0;
 
   // This function is called by the JitOperatorWrapper after all operators in the chain have been connected and just
   // before the execution of the pipeline starts (i.e. _execute() is called on the first operator for the first Chunk).
@@ -32,7 +32,8 @@ class AbstractJittableSink : public AbstractJittable {
 
   // This function is called by the JitOperatorWrapper after each Chunk that has been pushed through the pipeline.
   // It is used to create a new chunk in the output table for each input chunk.
-  virtual void after_chunk(Table& out_table, JitRuntimeContext& context) const {}
+  virtual void after_chunk(const std::shared_ptr<const Table>& in_table, Table& out_table,
+                           JitRuntimeContext& context) const {}
 };
 
 }  // namespace opossum
