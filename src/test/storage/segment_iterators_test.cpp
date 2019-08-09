@@ -191,6 +191,11 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
   });
 }
 
+bool operator<(const SegmentPosition<int>&, const SegmentPosition<int>&) {
+  // Fake comparator needed by is_heap
+  return false;
+}
+
 INSTANTIATE_TEST_CASE_P(
     SegmentIteratorsTestInstances, SegmentIteratorsTest,
     ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
