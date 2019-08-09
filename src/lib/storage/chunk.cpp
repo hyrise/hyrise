@@ -108,7 +108,7 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector
 }
 
 std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                            const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
+                                                const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
   auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
   });
@@ -117,7 +117,7 @@ std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_typ
 }
 
 std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                            const std::vector<ColumnID>& column_ids) const {
+                                                const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
   return get_index(index_type, segments);
 }

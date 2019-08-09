@@ -32,7 +32,7 @@ BTreeIndex::Iterator BTreeIndex::_cbegin() const { return _impl->cbegin(); }
 BTreeIndex::Iterator BTreeIndex::_cend() const { return _impl->cend(); }
 
 BTreeIndex::Iterator BTreeIndex::_null_cbegin() const {
- 	// TODO(anyone)
+  // TODO(anyone)
   Fail("Not yet implemented.");
 }
 

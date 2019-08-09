@@ -81,7 +81,7 @@ class AdaptiveRadixTreeIndex : public AbstractIndex {
   Iterator _cend() const final;
 
   Iterator _null_cbegin() const final;
-  
+
   Iterator _null_cend() const final;
 
   std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values);

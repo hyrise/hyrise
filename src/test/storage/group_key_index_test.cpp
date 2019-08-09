@@ -83,4 +83,19 @@ TEST_F(GroupKeyIndexTest, IndexPostings) {
   }
 }
 
+TEST_F(GroupKeyIndexTest, IteratorBeginEnd) {
+  EXPECT_EQ(index->cbegin(), index_postings->cbegin());
+  EXPECT_EQ(index->cend(), index_postings->cbegin() + 8u);
+  EXPECT_EQ(index->null_cbegin(), index_postings->cbegin() + 8u);
+  EXPECT_EQ(index->null_cend(), index_postings->cend());
+  EXPECT_EQ(index->lower_bound({"inbox"}), index_postings->cbegin() + 7u);
+  EXPECT_EQ(index->upper_bound({"inbox"}), index_postings->cbegin() + 8u);
+  EXPECT_EQ(index->lower_bound({"hyrise"}), index_postings->cbegin() + 7u);
+  EXPECT_EQ(index->upper_bound({"hyrise"}), index_postings->cbegin() + 7u);
+  EXPECT_EQ(index->lower_bound({"lamp"}), index_postings->cbegin() + 8u);
+  EXPECT_EQ(index->upper_bound({"lamp"}), index_postings->cbegin() + 8u);
+  EXPECT_EQ(index->lower_bound({NULL_VALUE}), index_postings->cbegin() + 8u);
+  EXPECT_EQ(index->upper_bound({NULL_VALUE}), index_postings->cend());
+}
+
 }  // namespace opossum

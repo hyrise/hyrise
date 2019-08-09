@@ -135,7 +135,7 @@ class AbstractIndex : private Noncopyable {
    *
    * @return An Iterator on the position of the first element equal to null.
    */
-  Iterator null_cend() const; 
+  Iterator null_cend() const;
 
   SegmentIndexType type() const;
 

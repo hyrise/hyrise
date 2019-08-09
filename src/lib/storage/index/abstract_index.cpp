@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count, ChunkOffset distinct_count,
-                                              uint32_t value_bytes) {
+size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count,
+                                                  ChunkOffset distinct_count, uint32_t value_bytes) {
   switch (type) {
     case SegmentIndexType::GroupKey:
       return GroupKeyIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
@@ -40,15 +40,17 @@ bool AbstractIndex::is_index_for(const std::vector<std::shared_ptr<const BaseSeg
 }
 
 AbstractIndex::Iterator AbstractIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  DebugAssert((_get_indexed_segments().size() >= values.size()),
-              "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
+  DebugAssert(
+      (_get_indexed_segments().size() >= values.size()),
+      "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _lower_bound(values);
 }
 
 AbstractIndex::Iterator AbstractIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  DebugAssert((_get_indexed_segments().size() >= values.size()),
-              "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
+  DebugAssert(
+      (_get_indexed_segments().size() >= values.size()),
+      "AbstractIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _upper_bound(values);
 }

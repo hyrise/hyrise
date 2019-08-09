@@ -21,25 +21,29 @@ class GroupKeyIndexTest;
  * It uses two structures, one being a postings list containing record positions (ie ChunkOffsets)
  * in the attribute vector. The other structure is an index offset, mapping value-ids to offsets
  * in the postings list.
+ * For null values, an additional structure is used for storing the record positions.
+ * Since this structure only contains null value positions, a further structure for mapping value-ids to
+ * offsets isn't needed. 
  *
  * An example structure along with the corresponding dictionary segment might look like this:
- *   +----+-----------+------------+---------+----------------+
- *   | (i)| Attribute | Dictionary |  Index  | Index Postings |
- *   |    |  Vector   |            | Offsets |                |
- *   +----+-----------+------------+---------+----------------+
- *   |  0 |         6 | apple    ------->  0 ------------>  7 |  ie "apple" can be found at i = 7 in the AV
- *   |  1 |         4 | charlie  ------->  1 ------------>  8 |
- *   |  2 |         2 | delta    ------->  3 ----------|    9 |
- *   |  3 |         3 | frank    ------->  5 --------| |->  2 |
- *   |  4 |         2 | hotel    ------->  6 ------| |      4 |  ie "delta" can be found at i = 2 and 4
- *   |  5 |         6 | inbox    ------->  7 ----| | |--->  3 |
- *   |  6 |         6 |            | (x¹)  8 --| | |----->  1 |
- *   |  7 |         0 |            | (x²) 12 | | |-------> 10 |  ie "inbox" can be found at i = 10 in the AV
- *   |  8 |         1 |            |         | |-------|    0 |
- *   |  9 |         1 |            |         |         |    5 |
- *   | 10 |         5 |            |         |         |    6 |
- *   | 11 |         6 |            |         |         |-> 11 |  ie null can be found at i = 0, 5, 6 and 11
- *   +----+-----------+------------+---------+----------------+
+ *  +----+-----------+------------+---------+----------------+
+ *  | (i)| Attribute | Dictionary |  Index  | Index Postings |
+ *  |    |  Vector   |            | Offsets |                |
+ *  +----+-----------+------------+---------+----------------+
+ *  |  0 |         6 | apple    ------->  0 ------------>  7 |  ie "apple" can be found at i = 7 in the AV
+ *  |  1 |         4 | charlie  ------->  1 ------------>  8 |
+ *  |  2 |         2 | delta    ------->  3 ----------|    9 |
+ *  |  3 |         3 | frank    ------->  5 --------| |->  2 |
+ *  |  4 |         2 | hotel    ------->  6 ------| |      4 |  ie "delta" can be found at i = 2 and 4
+ *  |  5 |         6 | inbox    ------->  7 ----| | |--->  3 |
+ *  |  6 |         6 |            | (x¹)  8 --| | |----->  1 |
+ *  |  7 |         0 |            | (x²) 12 | | |-------> 10 |  ie "inbox" can be found at i = 10 in the AV
+ *  |  8 |         1 |            |         | |-------|    0 |
+ *  |  9 |         1 |            |         |         |    5 |
+ *  | 10 |         5 |            |         |         |    6 |
+ *  | 11 |         6 |            |         |         |-> 11 |  ie null can be found at i = 0, 5, 6 and 11
+ *  +----+-----------+------------+---------+----------------+
+ *
  * 
  * Null is represented in the Attribute Vector by a ValueID which is the highest available
  * ValueID in the dictionary + 1, i.e. ValieID{6} in this example.
@@ -77,7 +81,7 @@ class GroupKeyIndex : public AbstractIndex {
   Iterator _cend() const final;
 
   Iterator _null_cbegin() const final;
-  
+
   Iterator _null_cend() const final;
 
   /**
@@ -92,8 +96,10 @@ class GroupKeyIndex : public AbstractIndex {
   size_t _memory_consumption() const final;
 
  private:
-  const std::shared_ptr<const BaseDictionarySegment> _indexed_segments;
+  const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
+  ValueID null_value_id;
+  ChunkOffset null_count;
   std::vector<ChunkOffset> _index_offsets;   // maps value-ids to offsets in _index_postings
-  std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
+  std::vector<ChunkOffset> _index_postings;  // record positions in the attribute vector
 };
 }  // namespace opossum
