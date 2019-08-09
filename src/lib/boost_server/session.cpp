@@ -82,15 +82,15 @@ void Session::_handle_simple_query() {
   if (StorageManager::get().has_prepared_plan("")) StorageManager::get().drop_prepared_plan("");
   _portals.erase("");
 
-  auto sql_pipeline = execute_pipeline(query);
-  const auto [status, result_table] = sql_pipeline->get_result_table();
+  const auto [result_table, query_type] = execute_pipeline(query);
+
   auto row_description = build_row_description(result_table);
   auto row_count = 0u;
   if (!row_description.empty()) {
     _postgres_handler.send_row_description(row_description);
     row_count = send_query_response(result_table, _postgres_handler);
   }
-  _postgres_handler.command_complete(build_command_complete_message(sql_pipeline->get_physical_plans().front(), row_count));
+  _postgres_handler.command_complete(build_command_complete_message(query_type, row_count));
   _postgres_handler.send_ready_for_query();
 }
 

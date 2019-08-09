@@ -82,19 +82,13 @@ uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler
   return table->row_count();
 }
 
-std::shared_ptr<SQLPipeline> execute_pipeline(const std::string& sql) {
-  // auto sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{sql}.with_mvcc(UseMvcc::No).create_pipeline());
+std::pair<std::shared_ptr<const Table>, std::shared_ptr<const AbstractOperator>>  execute_pipeline(const std::string& sql) {
   auto sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
-  sql_pipeline->get_result_table();
-  return sql_pipeline;
+  const auto [pipeline_status, result_table] = sql_pipeline->get_result_table();
 
-  // auto task = std::make_shared<PipelineExecutionTask>(sql);
-  // CurrentScheduler::schedule_and_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
-  // auto sql_pipeline = task->get_sql_pipeline();
-  // if (sql_pipeline->failed_pipeline_statement()) {
-  //   // TODO(toni): error handling
-  // }
-  // return sql_pipeline;
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Server cannot handle failed transactions yet");
+
+  return {result_table, sql_pipeline->get_physical_plans().front()};
 }
 
 std::string build_command_complete_message(std::shared_ptr<const AbstractOperator> root_operator_type, const uint64_t row_count) {

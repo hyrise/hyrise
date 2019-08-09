@@ -31,7 +31,7 @@ NetworkMessageType PostgresHandler::get_packet_type() { return _read_buffer.get_
 
 std::string PostgresHandler::read_query_packet() {
   // TODO(toni): refactor
-  auto query_length = _read_buffer.get_value<uint32_t>() - 4u;
+  const auto query_length = _read_buffer.get_value<uint32_t>() - 4u;
   return _read_buffer.get_string(query_length);
 }
 
@@ -42,8 +42,9 @@ void PostgresHandler::ssl_deny() {
 }
 
 void PostgresHandler::handle_startup_packet_body(const uint32_t size) {
-  // As of now, we don't do anything with the startup packet body. It contains authentication data and the database
-  // name the user desires to connect to. Let's read this information from the network device as a string and throw it away.
+  // As of now, we don't do anything with the startup packet body. It contains authentication data and the
+  // database name the user desires to connect to. Hence, read this information from the network device as one string
+  // and throw it away.
   _read_buffer.get_string(size, false);
 }
 

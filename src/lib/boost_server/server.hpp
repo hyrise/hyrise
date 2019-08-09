@@ -22,7 +22,7 @@ class Server {
  private:
   void _accept_new_session();
 
-  void _start_session(boost::system::error_code error);
+  void _start_session();
 
   boost::asio::io_service _io_service;
   boost::asio::ip::tcp::socket _socket;
