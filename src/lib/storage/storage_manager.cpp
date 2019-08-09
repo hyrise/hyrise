@@ -17,9 +17,7 @@
 
 namespace opossum {
 
-StorageManager::StorageManager() : Singleton<StorageManager>() {
-  MetaTableManager::get().update_all(*this);
-}
+StorageManager::StorageManager() : Singleton<StorageManager>() { MetaTableManager::get().update_all(*this); }
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
