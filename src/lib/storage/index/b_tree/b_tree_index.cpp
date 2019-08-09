@@ -31,6 +31,16 @@ BTreeIndex::Iterator BTreeIndex::_cbegin() const { return _impl->cbegin(); }
 
 BTreeIndex::Iterator BTreeIndex::_cend() const { return _impl->cend(); }
 
+BTreeIndex::Iterator BTreeIndex::_null_cbegin() const {
+ 	// TODO(anyone)
+  Fail("Not yet implemented.");
+}
+
+BTreeIndex::Iterator BTreeIndex::_null_cend() const {
+  // TODO(anyone)
+  Fail("Not yet implemented.");
+}
+
 std::vector<std::shared_ptr<const BaseSegment>> BTreeIndex::_get_indexed_segments() const {
   return {_indexed_segments};
 }

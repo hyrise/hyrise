@@ -76,6 +76,10 @@ class GroupKeyIndex : public AbstractIndex {
 
   Iterator _cend() const final;
 
+  Iterator _null_cbegin() const final;
+  
+  Iterator _null_cend() const final;
+
   /**
    *
    * @returns an iterator pointing to the the first ChunkOffset in the postings-vector

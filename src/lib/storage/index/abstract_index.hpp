@@ -119,6 +119,24 @@ class AbstractIndex : private Noncopyable {
    */
   Iterator cend() const;
 
+  /**
+   * Returns an Iterator to the position of the first element equal to null.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all null values.
+   * Calls _null_cbegin() of the most derived class.
+   *
+   * @return An Iterator on the position of the first element equal to null.
+   */
+  Iterator null_cbegin() const;
+
+  /**
+   * Returns an Iterator past the position of the last element equal to null.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all null values.
+   * Calls _null_cend() of the most derived class.
+   *
+   * @return An Iterator on the position of the first element equal to null.
+   */
+  Iterator null_cend() const; 
+
   SegmentIndexType type() const;
 
   /**
@@ -135,6 +153,8 @@ class AbstractIndex : private Noncopyable {
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
+  virtual Iterator _null_cbegin() const = 0;
+  virtual Iterator _null_cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
 

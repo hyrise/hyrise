@@ -80,6 +80,16 @@ GroupKeyIndex::Iterator GroupKeyIndex::_cbegin() const { return _index_postings.
 
 GroupKeyIndex::Iterator GroupKeyIndex::_cend() const { return _index_postings.cend(); }
 
+GroupKeyIndex::Iterator GroupKeyIndex::_null_cbegin() const {
+  // TODO(anyone)
+  Fail("Not yet implemented.");
+}
+
+GroupKeyIndex::Iterator GroupKeyIndex::_null_cend() const {
+  // TODO(anyone)
+  Fail("Not yet implemented.");
+}
+
 /**
    *
    * @returns an iterator pointing to the the first ChunkOffset in the postings-vector

@@ -113,6 +113,16 @@ AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _positi
 
 AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
+AbstractIndex::Iterator CompositeGroupKeyIndex::_null_cbegin() const {
+  // TODO(anyone)
+  Fail("Not yet implemented.");
+}
+
+AbstractIndex::Iterator CompositeGroupKeyIndex::_null_cend() const {
+  // TODO(anyone)
+  Fail("Not yet implemented.");
+}
+
 AbstractIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);
   return _get_position_iterator_for_key(composite_key);

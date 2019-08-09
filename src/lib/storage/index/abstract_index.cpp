@@ -57,6 +57,10 @@ AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }
 
 AbstractIndex::Iterator AbstractIndex::cend() const { return _cend(); }
 
+AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _null_cbegin(); }
+
+AbstractIndex::Iterator AbstractIndex::null_cend() const { return _null_cend(); }
+
 SegmentIndexType AbstractIndex::type() const { return _type; }
 
 size_t AbstractIndex::memory_consumption() const { return _memory_consumption(); }

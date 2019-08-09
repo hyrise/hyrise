@@ -66,6 +66,16 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_
 
 AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_null_cbegin() const {
+  // TODO(anyone)
+  Fail("Not yet implemented.");
+}
+
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_null_cend() const {
+  // TODO(anyone)
+  Fail("Not yet implemented.");
+}
+
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
   DebugAssert(!(values.empty()), "Index on empty segment is not defined");
