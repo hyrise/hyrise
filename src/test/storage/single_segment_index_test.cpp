@@ -10,6 +10,7 @@
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
@@ -47,9 +48,132 @@ class SingleSegmentIndexTest : public BaseTest {
 };
 
 // List of indexes to test
-typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indexes */>
+typedef ::testing::Types<AdaptiveRadixTreeIndex, BTreeIndex, CompositeGroupKeyIndex,
+                         GroupKeyIndex /* add further indexes */>
     DerivedIndexes;
 TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
+
+/*
+  bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
+  
+  | Characteristic   |       Block 1  |        Block 2 |
+  |------------------|----------------|----------------|
+  |[A] index empty   |           true |          false |
+  |[B] seg. empty    |           true |          false |
+  |[C] seg. coverage |           true |          false |
+  |[D] seg. type     |  Dict. Segment |
+
+  Base Choice: 
+    A2, B2, C1, D1
+  Further derived combinations:
+    A2, B2, C2, D1
+   (A2, B1, C2, D1) --infeasible-----+
+    A1, B1, C1, D1 <--alternative--<-+
+   (A1, B2, C2, D1) --infeasible-----+
+*/
+
+TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
+  EXPECT_TRUE(this->index_int->is_index_for({this->dict_segment_int}));
+  EXPECT_TRUE(this->index_str->is_index_for({this->dict_segment_str}));
+
+  EXPECT_FALSE(this->index_int->is_index_for({this->dict_segment_str}));
+  EXPECT_FALSE(this->index_str->is_index_for({this->dict_segment_int}));
+  EXPECT_FALSE(this->index_str->is_index_for({this->dict_segment_str, this->dict_segment_int}));
+  EXPECT_FALSE(this->index_str->is_index_for({}));
+  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
+
+/*
+  Iterator lower_bound(const std::vector<AllTypeVariant>& values) const;
+  Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
+  Iterator cbegin() const;
+  Iterator cend() const;
+  Iterator null_cbegin() const;
+  Iterator null_cend() const;
+
+  | Characteristic      |       Block 1  |        Block 2 |        Block 3 |          Block 4 | Block 5 |
+  |---------------------|----------------|----------------|----------------|------------------|---------|
+  |[A] value data type  |            Int |           Long |          Float |           Double |  String |     
+  |[B] value type       |           null | smallest value | largest value  | non-edge value   |    none |
+  |                     |                | in segment     | in segment     | (either smallest |
+  |                     |                |                |                | nor largest)     |
+  |[C] value is in seg. |           true |          false |
+  |[D] values is empty  |           true |          false |
+
+  Base Choice:
+    A4, B4, C1, D2
+  Further derived combinations:
+   (A4, B4, C1, D1) --infeasible----+
+    A4, B5, C2, D1 <--alternative-<-+
+    A4, B4, C2, D2                  |
+    A4, B1, C1, D2                  |
+    A4, B2, C1, D2                  |
+    A4, B3, C1, D2                  |
+    A4, B5, C1, D2 --infeasible-----+
+    A1, B4, C1, D2
+    A2, B4, C1, D2
+    A3, B4, C1, D2
+    A5, B4, C1, D2
+
+*/
+
+TYPED_TEST(SingleSegmentIndexTest, LowerBoundTest) {
+  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
+
+TYPED_TEST(SingleSegmentIndexTest, UpperBoundTest) {
+  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
+
+TYPED_TEST(SingleSegmentIndexTest, CBeginTest) {
+  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
+
+TYPED_TEST(SingleSegmentIndexTest, CEndTest) {
+  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
+
+TYPED_TEST(SingleSegmentIndexTest, NullCBeginTest) {
+  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
+
+TYPED_TEST(SingleSegmentIndexTest, NullCEndTest) {
+  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
+
+TYPED_TEST(SingleSegmentIndexTest, SegmentIndexTypeTest) {
+  if constexpr (std::is_same_v<TypeParam, AdaptiveRadixTreeIndex>) {
+    EXPECT_EQ(this->index_int->type(), SegmentIndexType::AdaptiveRadixTree);
+  } else if constexpr (std::is_same_v<TypeParam, BTreeIndex>) {
+    EXPECT_EQ(this->index_int->type(), SegmentIndexType::BTree);
+  } else if constexpr (std::is_same_v<TypeParam, CompositeGroupKeyIndex>) {
+    EXPECT_EQ(this->index_int->type(), SegmentIndexType::CompositeGroupKey);
+  } else if constexpr (std::is_same_v<TypeParam, GroupKeyIndex>) {
+    EXPECT_EQ(this->index_int->type(), SegmentIndexType::GroupKey);
+  }
+}
+
+/*
+  size_t memory_consumption() const;
+  
+  |    Characteristic               | Block 1 | Block 2 |
+  |---------------------------------|---------|---------|
+  |[A] index is empty               |    true |   false |
+  |[B] index has null positions     |    true |   false |
+  |[C] index has non-null positions |    true |   false |
+  
+  Base Choice:
+    A2, B1, C1
+  Further derived combinations:
+    A2, B1, C2
+    A2, B2, C1
+   (A1, B1, C1) --infeasible---+
+    A1, B2, C2 <-alternative-<-+
+*/
+
+TYPED_TEST(SingleSegmentIndexTest, MemoryConsumptionTest) {
+  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
 
 TYPED_TEST(SingleSegmentIndexTest, FullRange) {
   auto begin_int = this->index_int->cbegin();
@@ -159,16 +283,6 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenBegin) {
   auto result = std::set<std::size_t>(begin, end);
   auto expected = std::set<std::size_t>{2, 7};
   EXPECT_EQ(expected, result);
-}
-
-TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
-  EXPECT_TRUE(this->index_int->is_index_for({this->dict_segment_int}));
-  EXPECT_TRUE(this->index_str->is_index_for({this->dict_segment_str}));
-
-  EXPECT_FALSE(this->index_int->is_index_for({this->dict_segment_str}));
-  EXPECT_FALSE(this->index_str->is_index_for({this->dict_segment_int}));
-  EXPECT_FALSE(this->index_str->is_index_for({this->dict_segment_str, this->dict_segment_int}));
-  EXPECT_FALSE(this->index_str->is_index_for({}));
 }
 
 TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
