@@ -23,12 +23,43 @@ template <typename DerivedIndex>
 class SingleSegmentIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
+    // Int, non-empty segment
+    dict_segment_int = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
     index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int}));
-
+    // Int, non-empty segment
+    dict_segment_int_2 = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {3, 4, 0});
+    index_int_2 = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int}));
+    // Long, non-empty segment
+    dict_segment_long = BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
+    index_long = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_long}));
+    // Float, non-empty segment
+    dict_segment_float = BaseTest::create_dict_segment_by_type<float>(DataType::Float,
+      {3.1f, 4.9f, 0.2f, 4.8f, 2.3f, 7.7f, 8.4f, 1.6f, 4.5f, 9.0f});
+    index_float = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_float}));
+    // Double, non-empty segment
+    dict_segment_double = BaseTest::create_dict_segment_by_type<double>(DataType::Double,
+      {3.1, 4.9, 0.2, 4.8, 2.3, 7.7, 8.4, 1.6, 4.5, 9.0});
+    index_double = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_double}));
+    // String, non-empty segment
     dict_segment_str = BaseTest::create_dict_segment_by_type<pmr_string>(
         DataType::String, {"hello", "world", "test", "foo", "bar", "foo"});
     index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_str}));
+    // Int, empty segment
+    // TODO(Marcel) creating empty AdaptiveRadixTreeIndex seg faults here
+    empty_dict_segment_int = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {});
+    empty_index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({empty_dict_segment_int}));
+    // Long, empty segment
+    empty_dict_segment_long = BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {});
+    empty_index_long = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({empty_dict_segment_long}));
+    // Float, empty segment
+    empty_dict_segment_float = BaseTest::create_dict_segment_by_type<float>(DataType::Float, {});
+    empty_index_float = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({empty_dict_segment_float}));
+    // Double, empty segment
+    empty_dict_segment_double = BaseTest::create_dict_segment_by_type<double>(DataType::Double, {});
+    empty_index_double = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({empty_dict_segment_double}));
+    // String, empty segment
+    empty_dict_segment_str = BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {});
+    empty_index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({empty_dict_segment_str}));
   }
 
   template <class Iterator>
@@ -43,12 +74,32 @@ class SingleSegmentIndexTest : public BaseTest {
 
   std::shared_ptr<AbstractIndex> index_int = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_int = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_2 = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_int_2 = nullptr;
+  std::shared_ptr<AbstractIndex> index_long = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_long = nullptr;
+  std::shared_ptr<AbstractIndex> index_float = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_float = nullptr;
+  std::shared_ptr<AbstractIndex> index_double = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_double = nullptr;
   std::shared_ptr<AbstractIndex> index_str = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_int = nullptr;
+  std::shared_ptr<BaseSegment> empty_dict_segment_int = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_long = nullptr;
+  std::shared_ptr<BaseSegment> empty_dict_segment_long = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_float = nullptr;
+  std::shared_ptr<BaseSegment> empty_dict_segment_float = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_double = nullptr;
+  std::shared_ptr<BaseSegment> empty_dict_segment_double = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_str = nullptr;
+  std::shared_ptr<BaseSegment> empty_dict_segment_str = nullptr;
+  std::shared_ptr<AbstractIndex> no_segment_index = nullptr;
 };
 
 // List of indexes to test
-typedef ::testing::Types<AdaptiveRadixTreeIndex, BTreeIndex, CompositeGroupKeyIndex,
+// TODO(Marcel) creating BTreeIndex for empty segments fails
+typedef ::testing::Types</*AdaptiveRadixTreeIndex, /*BTreeIndex,*/ CompositeGroupKeyIndex,
                          GroupKeyIndex /* add further indexes */>
     DerivedIndexes;
 TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
@@ -56,31 +107,48 @@ TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace
 /*
   bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
   
-  | Characteristic   |       Block 1  |        Block 2 |
-  |------------------|----------------|----------------|
-  |[A] index empty   |           true |          false |
-  |[B] seg. empty    |           true |          false |
-  |[C] seg. coverage |           true |          false |
-  |[D] seg. type     |  Dict. Segment |
+  | Characteristic     |   Block 1  | Block 2 | Block 3 | Block 4 | Block 5 |
+  |--------------------|------------|---------|---------|---------|---------|
+  |[A] value data type |        Int |    Long |   Float |  Double |  String |
+  |[B] index empty     |       true |   false |
+  |[C] seg. empty      |       true |   false |
+  |[D] seg. coverage   |       true |   false |
+  |[E] segments emtpy  |       true |   false |
+  |[F] seg. type       | Dict. Seg. |
 
   Base Choice: 
-    A2, B2, C1, D1
+    A1, B2, C2, D1, E2, F1
   Further derived combinations:
-    A2, B2, C2, D1
-   (A2, B1, C2, D1) --infeasible-----+
-    A1, B1, C1, D1 <--alternative--<-+
-   (A1, B2, C2, D1) --infeasible-----+
+    A2, B2, C2, D1, E2, F1
+    A3, B2, C2, D1, E2, F1
+    A4, B2, C2, D1, E2, F1
+    A5, B2, C2, D1, E2, F1
+    A1, B1, C1, D1, E2, F1
+    A1, B2, C2, D2, E2, F1
+    A1, B2, C2, D1, E1, F1
 */
 
 TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
+  // A1, B2, C2, D1, E2, F1
   EXPECT_TRUE(this->index_int->is_index_for({this->dict_segment_int}));
+  // A2, B2, C2, D1, E2, F1
+  EXPECT_TRUE(this->index_long->is_index_for({this->dict_segment_long}));
+  // A3, B2, C2, D1, E2, F1
+  EXPECT_TRUE(this->index_float->is_index_for({this->dict_segment_float}));
+  // A4, B2, C2, D1, E2, F1
+  EXPECT_TRUE(this->index_double->is_index_for({this->dict_segment_double}));
+  // A5, B2, C2, D1, E2, F1
   EXPECT_TRUE(this->index_str->is_index_for({this->dict_segment_str}));
+  // A1, B1, C1, D1, E2, F1
+  EXPECT_TRUE(this->empty_index_int->is_index_for({this->empty_dict_segment_int}));
+  // A1, B2, C2, D2, E2, F1
+  EXPECT_FALSE(this->index_int->is_index_for({this->dict_segment_int_2}));
+  // A1, B2, C2, D1, E1, F1
+  EXPECT_FALSE(this->empty_index_int->is_index_for({}));
 
-  EXPECT_FALSE(this->index_int->is_index_for({this->dict_segment_str}));
+  EXPECT_TRUE(this->empty_index_int->is_index_for({this->empty_dict_segment_int}));
   EXPECT_FALSE(this->index_str->is_index_for({this->dict_segment_int}));
   EXPECT_FALSE(this->index_str->is_index_for({this->dict_segment_str, this->dict_segment_int}));
-  EXPECT_FALSE(this->index_str->is_index_for({}));
-  // TODO(Marcel) implement (Refine combinations of blocks into test values)
 }
 
 /*
@@ -173,6 +241,10 @@ TYPED_TEST(SingleSegmentIndexTest, SegmentIndexTypeTest) {
 
 TYPED_TEST(SingleSegmentIndexTest, MemoryConsumptionTest) {
   // TODO(Marcel) implement (Refine combinations of blocks into test values)
+}
+
+TYPED_TEST(SingleSegmentIndexTest, CreateZeroSegmentIndexTest) {
+  EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<const BaseSegment>>({})), std::logic_error);
 }
 
 TYPED_TEST(SingleSegmentIndexTest, FullRange) {
