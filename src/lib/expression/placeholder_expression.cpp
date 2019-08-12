@@ -28,8 +28,9 @@ bool PlaceholderExpression::requires_computation() const { return false; }
 DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
 
 bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {
-  const auto* parameter_expression_rhs = dynamic_cast<const PlaceholderExpression*>(&expression);
-
+  DebugAssert(dynamic_cast<const PlaceholderExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
+  const auto* parameter_expression_rhs = static_cast<const PlaceholderExpression*>(&expression);
   return parameter_expression_rhs && parameter_id == parameter_expression_rhs->parameter_id;
 }
 

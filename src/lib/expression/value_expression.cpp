@@ -37,6 +37,8 @@ std::string ValueExpression::as_column_name() const {
 DataType ValueExpression::data_type() const { return data_type_from_all_type_variant(value); }
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const ValueExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
   const auto& value_expression = static_cast<const ValueExpression&>(expression);
 
   /**

@@ -33,7 +33,11 @@ std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
 
 DataType ExistsExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
 
-bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
+bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const ExistsExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
+  return true;
+}
 
 size_t ExistsExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
 

@@ -25,7 +25,11 @@ std::string UnaryMinusExpression::as_column_name() const {
 
 DataType UnaryMinusExpression::data_type() const { return argument()->data_type(); }
 
-bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
+bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const UnaryMinusExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
+  return true;
+}
 
 size_t UnaryMinusExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
 

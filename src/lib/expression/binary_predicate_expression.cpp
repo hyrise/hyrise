@@ -44,8 +44,10 @@ std::string BinaryPredicateExpression::as_column_name() const {
 }
 
 bool BinaryPredicateExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const AbstractPredicateExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
   const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
-  Assert(binary_predicate_expression, "Expected binary predicate");
+  if (!binary_predicate_expression) return false;
   return predicate_condition == binary_predicate_expression->predicate_condition;
 }
 

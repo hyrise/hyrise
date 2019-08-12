@@ -52,7 +52,9 @@ void CorrelatedParameterExpression::set_value(const std::optional<AllTypeVariant
 }
 
 bool CorrelatedParameterExpression::_shallow_equals(const AbstractExpression& expression) const {
-  const auto* parameter_expression_rhs = dynamic_cast<const CorrelatedParameterExpression*>(&expression);
+  DebugAssert(dynamic_cast<const CorrelatedParameterExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
+  const auto* parameter_expression_rhs = static_cast<const CorrelatedParameterExpression*>(&expression);
 
   return parameter_expression_rhs && parameter_id == parameter_expression_rhs->parameter_id &&
          _referenced_expression_info == parameter_expression_rhs->_referenced_expression_info &&

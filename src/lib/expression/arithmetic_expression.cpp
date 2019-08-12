@@ -57,6 +57,8 @@ std::string ArithmeticExpression::as_column_name() const {
 }
 
 bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const ArithmeticExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
   return arithmetic_operator == static_cast<const ArithmeticExpression&>(expression).arithmetic_operator;
 }
 

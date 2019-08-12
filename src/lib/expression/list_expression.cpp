@@ -24,7 +24,11 @@ std::string ListExpression::as_column_name() const {
   return std::string("(") + expression_column_names(arguments) + ")";
 }
 
-bool ListExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
+bool ListExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const ListExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
+  return true;
+}
 
 size_t ListExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
 

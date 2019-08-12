@@ -50,6 +50,9 @@ DataType ExtractExpression::data_type() const {
 std::shared_ptr<AbstractExpression> ExtractExpression::from() const { return arguments[0]; }
 
 bool ExtractExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const ExtractExpression*>(&expression),
+              "Different expression type should have been caught out by AbstractExpression::operator==");
+
   const auto& other_extract_expression = static_cast<const ExtractExpression&>(expression);
   return other_extract_expression.datetime_component == datetime_component;
 }
