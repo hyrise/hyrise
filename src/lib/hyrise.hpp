@@ -10,7 +10,6 @@ namespace opossum {
 
 class Hyrise : public Singleton<Hyrise> {
  public:
-
   // Resets the Hyrise state by deleting the Plugin-, Storage-, and TransactionManager
   // and creating new ones. This is used especially in tests and can lead to a lot of
   // issues if there are still running tasks / threads that want to access a resource.
