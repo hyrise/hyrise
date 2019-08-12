@@ -66,7 +66,7 @@ bool LQPSubqueryExpression::is_correlated() const { return !arguments.empty(); }
 
 bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPSubqueryExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& subquery_expression = static_cast<const LQPSubqueryExpression&>(expression);
   return *lqp == *subquery_expression.lqp && parameter_ids == subquery_expression.parameter_ids;
 }

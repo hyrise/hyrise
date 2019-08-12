@@ -94,7 +94,7 @@ DataType AggregateExpression::data_type() const {
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const AggregateExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   return aggregate_function == static_cast<const AggregateExpression&>(expression).aggregate_function;
 }
 

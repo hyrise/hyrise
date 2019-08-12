@@ -15,7 +15,7 @@ DataType AbstractPredicateExpression::data_type() const { return ExpressionEvalu
 
 bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const AbstractPredicateExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   return predicate_condition == static_cast<const AbstractPredicateExpression&>(expression).predicate_condition;
 }
 
