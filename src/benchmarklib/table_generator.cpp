@@ -12,8 +12,6 @@
 #include "boost/math/distributions/skew_normal.hpp"
 #include "boost/math/distributions/uniform.hpp"
 
-#include "tbb/concurrent_vector.h"
-
 #include "scheduler/topology.hpp"
 
 #include "storage/chunk.hpp"

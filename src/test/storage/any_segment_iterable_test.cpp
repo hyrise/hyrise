@@ -46,10 +46,10 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<BaseSegment> float_segment;
   std::shared_ptr<BaseSegment> string_segment;
 
-  inline static std::vector<int32_t> int_values;
-  inline static std::vector<float> float_values;
-  inline static std::vector<pmr_string> string_values;
-  inline static std::vector<bool> null_values;
+  inline static pmr_string<int32_t> int_values;
+  inline static pmr_string<float> float_values;
+  inline static pmr_string<pmr_string> string_values;
+  inline static pmr_string<bool> null_values;
   inline static std::shared_ptr<PosList> position_filter;
 };
 
