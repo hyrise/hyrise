@@ -47,7 +47,7 @@ class TransactionContext;
  * which represents the current global visibility of records.
  * The TransactionManager is thread-safe.
  */
-class TransactionManager {
+class TransactionManager : public Noncopyable {
   friend class TransactionManagerTest;
 
  public:
@@ -67,6 +67,7 @@ class TransactionManager {
 
  private:
   TransactionManager();
+  ~TransactionManager();
 
   friend class Hyrise;
   friend class TransactionContext;

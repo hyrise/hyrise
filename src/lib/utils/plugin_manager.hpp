@@ -17,7 +17,7 @@ struct PluginHandleWrapper {
   AbstractPlugin* plugin;
 };
 
-class PluginManager {
+class PluginManager : public Noncopyable {
   friend class HyriseTest;
   friend class PluginManagerTest;
   friend class SingletonTest;

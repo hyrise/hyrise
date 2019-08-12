@@ -18,7 +18,7 @@ class AbstractLQPNode;
 
 // The StorageManager is a singleton that maintains all tables
 // by mapping table names to table instances.
-class StorageManager {
+class StorageManager : public Noncopyable {
  public:
   /**
    * @defgroup Manage Tables
