@@ -120,8 +120,7 @@ void Delete::_on_rollback_records() {
 
       // unlock all rows locked in _on_execute
       const auto result =
-          referenced_chunk->mvcc_data()->tids[row_id.chunk_offset].compare_exchange_strong(expected,
-                                                                                                           0u);
+          referenced_chunk->mvcc_data()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop

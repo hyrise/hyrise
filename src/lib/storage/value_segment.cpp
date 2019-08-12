@@ -31,9 +31,7 @@ ValueSegment<T>::ValueSegment(pmr_vector<T>&& values)
 
 template <typename T>
 ValueSegment<T>::ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_values)
-    : BaseValueSegment(data_type_from_type<T>()),
-      _values(std::move(values)),
-      _null_values(std::move(null_values)) {
+    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values)), _null_values(std::move(null_values)) {
   DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
 }
 

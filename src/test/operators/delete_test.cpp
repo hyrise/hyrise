@@ -60,11 +60,9 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   delete_op->execute();
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(0u),
-            transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(0u), transaction_context->transaction_id());
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(2u),
-            transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(2u), transaction_context->transaction_id());
 
   auto expected_end_cid = CommitID{0u};
   if (commit) {

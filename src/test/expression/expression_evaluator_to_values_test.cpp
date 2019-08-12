@@ -72,8 +72,7 @@ class ExpressionEvaluatorToValuesTest : public ::testing::Test {
 
     Segments segments;
     segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{}));
-    segments.emplace_back(
-        std::make_shared<ValueSegment<float>>(pmr_vector<float>{}, pmr_vector<bool>{}));
+    segments.emplace_back(std::make_shared<ValueSegment<float>>(pmr_vector<float>{}, pmr_vector<bool>{}));
     segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(pmr_vector<pmr_string>{}));
     table_empty->append_chunk(segments);
 

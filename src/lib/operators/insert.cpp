@@ -130,7 +130,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       {
         auto& tids = target_chunk->mvcc_data()->tids;
         const auto transaction_id = context->transaction_id();
-        for (auto target_chunk_offset = target_chunk->size(); target_chunk_offset < target_chunk->size() + num_rows_for_target_chunk; ++target_chunk_offset) {
+        for (auto target_chunk_offset = target_chunk->size();
+             target_chunk_offset < target_chunk->size() + num_rows_for_target_chunk; ++target_chunk_offset) {
           tids[target_chunk_offset].store(transaction_id, std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_seq_cst);
