@@ -196,16 +196,14 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
         expected_column_type = DataType::Int;
       }
 
-      if (expected_column_type == DataType::Int) {
-        bool all_null = true;
-        for (auto row_id = size_t{HEADER_SIZE}; row_id < expected_matrix.size(); row_id++) {
-          if (!variant_is_null(expected_matrix[row_id][column_id])) {
-            all_null = false;
-            break;
-          }
+      bool all_null = true;
+      for (auto row_id = size_t{HEADER_SIZE}; row_id < expected_matrix.size(); row_id++) {
+        if (!variant_is_null(expected_matrix[row_id][column_id])) {
+          all_null = false;
+          break;
         }
-        if (all_null) expected_column_type = actual_column_type;
       }
+      if (all_null) expected_column_type = actual_column_type;
     }
 
     if (!boost::iequals(actual_table->column_name(column_id), expected_table->column_name(column_id))) {
