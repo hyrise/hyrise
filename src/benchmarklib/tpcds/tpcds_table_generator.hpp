@@ -28,9 +28,9 @@ namespace opossum {
 class TpcdsTableGenerator final : public AbstractTableGenerator {
  public:
   explicit TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
-                               int rng_seed = 19620718);
+                               int rng_seed = 19620718, bool cleanup_after_generate = true);
   TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                      int rng_seed = 19620718);
+                      int rng_seed = 19620718, bool cleanup_after_generate = true);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
@@ -60,5 +60,9 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_web_sales_and_returns(
       ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+
+ private:
+  bool cleanup_after_generate;
 };
+
 }  // namespace opossum

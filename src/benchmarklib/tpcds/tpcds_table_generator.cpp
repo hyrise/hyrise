@@ -255,14 +255,17 @@ const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_
 
 namespace opossum {
 
-TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
-    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)) {
+TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed,
+                                         bool cleanup_after_generate)
+    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)),
+      cleanup_after_generate{cleanup_after_generate} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
 TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
-                                         const std::shared_ptr<BenchmarkConfig>& benchmark_config, int rng_seed)
-    : AbstractTableGenerator(benchmark_config) {
+                                         const std::shared_ptr<BenchmarkConfig>& benchmark_config, int rng_seed,
+                                         bool cleanup_after_generate)
+    : AbstractTableGenerator(benchmark_config), cleanup_after_generate{cleanup_after_generate} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
@@ -341,7 +344,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   table_info_by_name["web_site"].table = generate_web_site();
   std::cout << "web_site table generated" << std::endl;
 
-  tpcds_cleanup();
+  if (cleanup_after_generate) {
+    tpcds_cleanup();
+  }
 
   return table_info_by_name;
 }
