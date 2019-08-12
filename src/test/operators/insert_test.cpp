@@ -10,7 +10,6 @@
 #include "expression/expression_functional.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
-#include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
@@ -148,8 +147,6 @@ TEST_F(OperatorsInsertTest, Rollback) {
   auto context1 = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context1);
   ins->execute();
-
-  Print::print(t, PrintFlags::Mvcc);
 
   const auto check = [&]() {
     auto gt2 = std::make_shared<GetTable>(t_name);
