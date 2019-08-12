@@ -43,7 +43,7 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
 // Compares two tables for equality
 // @return  A human-readable description of the table-mismatch, if any
 //          std::nullopt if the Tables are the same
-std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
+std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& actual_table,
                                              const std::shared_ptr<const Table>& expected_table,
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
                                              FloatComparisonMode float_comparison_mode, IgnoreNullable ignore_nullable);
