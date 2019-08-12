@@ -88,7 +88,7 @@ class DictionarySegment : public BaseDictionarySegment {
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
-  const ValueID _null_value_id;
+  const ValueID _null_value_id;  // TODO get rid of this?
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };
 

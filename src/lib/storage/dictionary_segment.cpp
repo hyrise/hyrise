@@ -53,17 +53,15 @@ size_t DictionarySegment<T>::size() const {
 template <typename T>
 std::shared_ptr<BaseSegment> DictionarySegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
-  auto new_attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(new_attribute_vector_ptr));
-  auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};
-  auto new_dictionary_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<DictionarySegment<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr,
-                                                    _null_value_id);
+  auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
+  auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, alloc);
+  return std::make_shared<DictionarySegment<T>>(std::move(new_dictionary), std::move(new_attribute_vector),
+                                                _null_value_id);
 }
 
 template <typename T>
 size_t DictionarySegment<T>::estimate_memory_usage() const {
-  return sizeof(*this) + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
+  return sizeof(*this) + _dictionary->capacity() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
          _attribute_vector->data_size();
 }
 

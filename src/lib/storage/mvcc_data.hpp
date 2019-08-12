@@ -19,8 +19,8 @@ struct MvccData {
   static constexpr CommitID MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 
   pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-  pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added  // TODO get rid of it here, too
-  pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
+  pmr_concurrent_vector<CommitID> begin_cids;  ///< commit id when record was added  // TODO get rid of it here, too
+  pmr_concurrent_vector<CommitID> end_cids;    ///< commit id when record was deleted
 
   explicit MvccData(const size_t size, CommitID begin_commit_id);
 

@@ -51,23 +51,21 @@ size_t RunLengthSegment<T>::size() const {
 template <typename T>
 std::shared_ptr<BaseSegment> RunLengthSegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_values = pmr_vector<T>{*_values, alloc};
-  auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
-  auto new_end_positions = pmr_vector<ChunkOffset>{*_end_positions, alloc};
+  auto new_values = std::make_shared<pmr_vector<T>>(*_values, alloc);
+  auto new_null_values = std::make_shared<pmr_vector<bool>>(*_null_values, alloc);
+  auto new_end_positions = std::make_shared<pmr_vector<ChunkOffset>>(*_end_positions, alloc);
 
-  auto new_values_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_values));
-  auto new_null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(new_null_values));
-  auto new_end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(alloc, std::move(new_end_positions));
-  return std::allocate_shared<RunLengthSegment<T>>(alloc, new_values_ptr, new_null_values_ptr, new_end_positions_ptr);
+  return std::make_shared<RunLengthSegment<T>>(new_values, new_null_values, new_end_positions);
 }
 
 template <typename T>
 size_t RunLengthSegment<T>::estimate_memory_usage() const {
-  static const auto bits_per_byte = 8u;
+  const auto null_values_size = _null_values->capacity() % CHAR_BIT ? _null_values->capacity() / CHAR_BIT + 1
+                                                                    : _null_values->capacity() / CHAR_BIT;
 
-  return sizeof(*this) + _values->size() * sizeof(typename decltype(_values)::element_type::value_type) +
-         _null_values->size() / bits_per_byte +
-         _end_positions->size() * sizeof(typename decltype(_end_positions)::element_type::value_type);
+  return sizeof(*this) + _values->capacity() * sizeof(typename decltype(_values)::element_type::value_type) +
+         null_values_size +
+         _end_positions->capacity() * sizeof(typename decltype(_end_positions)::element_type::value_type);
 }
 
 template <typename T>

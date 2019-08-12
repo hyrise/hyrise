@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
 #include <memory>
 
 #include "gtest/gtest.h"
@@ -30,6 +32,15 @@ class EncodingTest : public ::testing::TestWithParam<SegmentEncodingSpec> {
     return table;
   }
 };
+
+inline std::string all_segment_encoding_specs_formatter(
+    const testing::TestParamInfo<EncodingTest::ParamType>& param_info) {
+  std::stringstream stringstream;
+  stringstream << param_info.param;
+  auto string = stringstream.str();
+  boost::remove_erase_if(string, boost::is_any_of("() -"));
+  return string;
+}
 
 const SegmentEncodingSpec all_segment_encoding_specs[]{
     {EncodingType::Unencoded},

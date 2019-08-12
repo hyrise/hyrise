@@ -38,8 +38,8 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   Segments segments;
 
   const auto& column_names = table->column_names();
-  const auto vs_names = std::make_shared<ValueSegment<pmr_string>>(
-      pmr_vector<pmr_string>(column_names.begin(), column_names.end()));
+  const auto vs_names =
+      std::make_shared<ValueSegment<pmr_string>>(pmr_vector<pmr_string>(column_names.begin(), column_names.end()));
   segments.push_back(vs_names);
 
   const auto& column_types = table->column_data_types();
@@ -53,8 +53,8 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   segments.push_back(vs_types);
 
   const auto& column_nullables = table->columns_are_nullable();
-  const auto vs_nullables = std::make_shared<ValueSegment<int32_t>>(
-      pmr_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
+  const auto vs_nullables =
+      std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
   segments.push_back(vs_nullables);
 
   out_table->append_chunk(segments);

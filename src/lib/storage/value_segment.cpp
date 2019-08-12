@@ -31,9 +31,7 @@ ValueSegment<T>::ValueSegment(pmr_vector<T>&& values)
 
 template <typename T>
 ValueSegment<T>::ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_values)
-    : BaseValueSegment(data_type_from_type<T>()),
-      _values(std::move(values)),
-      _null_values(std::move(null_values)) {
+    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values)), _null_values(std::move(null_values)) {
   DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
 }
 
@@ -131,14 +129,13 @@ std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const Polymor
 
 template <typename T>
 size_t ValueSegment<T>::estimate_memory_usage() const {
-  size_t bool_size = 0u;
+  size_t null_values_size = 0u;
   if (_null_values) {
-    bool_size = _null_values->size() * sizeof(bool);
-    // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
-    bool_size = _null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
+    null_values_size = _null_values->capacity() % CHAR_BIT ? _null_values->capacity() / CHAR_BIT + 1
+                                                           : _null_values->capacity() / CHAR_BIT;
   }
 
-  return sizeof(*this) + _values.size() * sizeof(T) + bool_size;
+  return sizeof(*this) + _values.capacity() * sizeof(T) + null_values_size;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);

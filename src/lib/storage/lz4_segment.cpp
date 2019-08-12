@@ -410,24 +410,23 @@ std::shared_ptr<BaseSegment> LZ4Segment<T>::copy_using_allocator(const Polymorph
 
   if (_string_offsets) {
     auto new_string_offsets = *_string_offsets ? (*_string_offsets)->copy_using_allocator(alloc) : nullptr;
-    return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
-                                            std::move(new_dictionary), std::move(new_string_offsets), _block_size,
-                                            _last_block_size, _compressed_size, _num_elements);
+    return std::make_shared<LZ4Segment>(std::move(new_lz4_blocks), std::move(new_null_values),
+                                        std::move(new_dictionary), std::move(new_string_offsets), _block_size,
+                                        _last_block_size, _compressed_size, _num_elements);
   } else {
-    return std::allocate_shared<LZ4Segment>(alloc, std::move(new_lz4_blocks), std::move(new_null_values),
-                                            std::move(new_dictionary), _block_size, _last_block_size, _compressed_size,
-                                            _num_elements);
+    return std::make_shared<LZ4Segment>(std::move(new_lz4_blocks), std::move(new_null_values),
+                                        std::move(new_dictionary), _block_size, _last_block_size, _compressed_size,
+                                        _num_elements);
   }
 }
 
 template <typename T>
 size_t LZ4Segment<T>::estimate_memory_usage() const {
   // The null value vector is only stored if there is at least 1 null value in the segment.
-  auto bool_size = size_t{0u};
+  auto null_values_size = size_t{0u};
   if (_null_values) {
-    bool_size = _null_values->size() * sizeof(bool);
-    // Integer ceiling, since sizeof(bool) equals 1 but boolean vectors are optimized.
-    bool_size = _null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
+    null_values_size = _null_values->capacity() % CHAR_BIT ? _null_values->capacity() / CHAR_BIT + 1
+                                                           : _null_values->capacity() / CHAR_BIT;
   }
 
   // The overhead of storing each block in a separate vector.
@@ -441,7 +440,7 @@ size_t LZ4Segment<T>::estimate_memory_usage() const {
   if (_string_offsets && *_string_offsets) {
     offset_size = (*_string_offsets)->data_size();
   }
-  return sizeof(*this) + _compressed_size + bool_size + offset_size + _dictionary.size() + block_vector_size;
+  return sizeof(*this) + _compressed_size + null_values_size + offset_size + _dictionary.size() + block_vector_size;
 }
 
 template <typename T>
