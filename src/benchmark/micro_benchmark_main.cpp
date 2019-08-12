@@ -30,10 +30,6 @@
  * before the end of main().
  *
  *
- * ---> But similar things could happen anytime you call, e.g. Hyrise::get().storage_manager before calling
- * get_default_memory_resource() <---
- *
- *
  * NOTE: One might think that Tests suffer from the same problem, since they both come from google - but they don't
  * seem to be keeping the fixtures around and instead create and destroy them when running the tests.
  */
