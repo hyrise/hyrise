@@ -1,5 +1,6 @@
 #pragma once
 
+#include "boost/container/pmr/memory_resource.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/plugin_manager.hpp"
@@ -20,6 +21,20 @@ class Hyrise : public Singleton<Hyrise> {
   PluginManager plugin_manager;
   StorageManager storage_manager;
   TransactionManager transaction_manager;
+
+ private:
+  Hyrise() {
+    // The default_memory_resource must be initialized before Plugin-, Storage-, and
+    // TransactionManager so that it is the last object to be destructed. This prevents
+    // e.g. the StorageManager destructor to deallocate a table that is already
+    // destructed by the default_memory_resource destructor.
+    boost::container::pmr::get_default_resource();
+
+    plugin_manager = PluginManager{};
+    storage_manager = StorageManager{};
+    transaction_manager = TransactionManager{};
+  }
+  friend class Singleton;
 };
 
 }  // namespace opossum
