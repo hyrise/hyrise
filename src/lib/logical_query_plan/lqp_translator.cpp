@@ -101,6 +101,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 
   const auto pqp = _translate_by_node_type(node->type, node);
   _operator_by_lqp_node.emplace(node, pqp);
+
   return pqp;
 }
 

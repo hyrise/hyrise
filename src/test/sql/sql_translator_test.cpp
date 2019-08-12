@@ -752,8 +752,8 @@ TEST_F(SQLTranslatorTest, WhereExists) {
 }
 
 TEST_F(SQLTranslatorTest, WhereNotExists) {
-  const auto actual_lqp =
-      compile_query("SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
+  const auto actual_lqp = compile_query(
+      "SELECT * FROM int_float WHERE NOT EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
 
   // clang-format off
   const auto parameter_int_float_a = correlated_parameter_(ParameterID{0}, int_float_a);

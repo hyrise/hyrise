@@ -43,8 +43,11 @@ std::string PQPSubqueryExpression::as_column_name() const {
 }
 
 bool PQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
+  // For deep copies of this expression, the PQP is recreated. As such, the copy is considered unequal to its origin.
+  // This is for safety reasons - false negatives are probably easier to spot than false positives. This might change
+  // in the future.
   DebugAssert(dynamic_cast<const PQPSubqueryExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& other = static_cast<const PQPSubqueryExpression&>(expression);
   return pqp == other.pqp && parameters == parameters;
 }

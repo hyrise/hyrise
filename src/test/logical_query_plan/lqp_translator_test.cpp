@@ -790,7 +790,9 @@ TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, "SUBQUERY");
+  // As subquery columns without an explicit alias get the LQP/PQP address as their name, we need to retrieve it first.
+  const auto column_name = subquery_a->as_column_name();
+  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, column_name);
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(subquery_in_temporary_column, 3));
 }

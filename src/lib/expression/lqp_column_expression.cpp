@@ -57,7 +57,7 @@ bool LQPColumnExpression::requires_computation() const { return false; }
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPColumnExpression*>(&expression),
               "Different expression type should have been caught out by AbstractExpression::operator==");
-  const auto& lqp_column_expression = static_cast<const LQPColumnExpression>(expression);
+  const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(expression);
   return column_reference == lqp_column_expression.column_reference;
 }
 

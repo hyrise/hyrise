@@ -37,11 +37,10 @@ bool PQPColumnExpression::requires_computation() const { return false; }
 
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const PQPColumnExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(expression);
-  return column_id == pqp_column_expression.column_id && _data_type ==
-             pqp_column_expression.column_id && _nullable == pqp_column_expression._nullable &&
-             _column_name == pqp_column_expression._column_name;
+  return column_id == pqp_column_expression.column_id && _data_type == pqp_column_expression._data_type &&
+         _nullable == pqp_column_expression._nullable && _column_name == pqp_column_expression._column_name;
 }
 
 size_t PQPColumnExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(column_id)); }

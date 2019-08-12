@@ -277,129 +277,145 @@ TEST_F(ExpressionTest, IsNullable) {
 }
 
 TEST_F(ExpressionTest, EqualsAndHash) {
-  std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  std::vector<std::pair<int, std::shared_ptr<AbstractExpression>>> expressions;
 
   // AggregateExpression
-  expressions.push_back(count_(5));
-  expressions.push_back(count_(null_()));
-  expressions.push_back(lqp_column_(a));
+  expressions.emplace_back(__LINE__, count_(5));
+  expressions.emplace_back(__LINE__, count_(null_()));
+  expressions.emplace_back(__LINE__, sum_(lqp_column_(a)));
 
   // ArithmeticExpression
-  expressions.push_back(sub_(5, 3));
-  expressions.push_back(add_(5, 3));
-  expressions.push_back(mul_(5, 3));
-  expressions.push_back(mod_(5, 3));
-  expressions.push_back(div_(5, 3));
+  expressions.emplace_back(__LINE__, sub_(5, 3));
+  expressions.emplace_back(__LINE__, add_(5, 3));
+  expressions.emplace_back(__LINE__, mul_(5, 3));
+  expressions.emplace_back(__LINE__, mod_(5, 3));
+  expressions.emplace_back(__LINE__, div_(5, 3));
 
   // BetweenExpression
-  expressions.push_back(between_inclusive_(5, 3, 4));
-  expressions.push_back(between_inclusive_(5, 4, 4));
-  expressions.push_back(between_exclusive_(5, 3, 4));
+  expressions.emplace_back(__LINE__, between_inclusive_(5, 3, 4));
+  expressions.emplace_back(__LINE__, between_inclusive_(5, 4, 4));
+  expressions.emplace_back(__LINE__, between_exclusive_(5, 3, 4));
 
   // BinaryPredicateExpression
-  expressions.push_back(less_than_(5, 3));
-  expressions.push_back(less_than_equals_(5, 3));
-  expressions.push_back(greater_than_equals_(5, 3));
-  expressions.push_back(greater_than_(5, 3));
-  expressions.push_back(equals_(5, 3));
-  expressions.push_back(not_equals_(5, 3));
+  expressions.emplace_back(__LINE__, less_than_(5, 3));
+  expressions.emplace_back(__LINE__, less_than_equals_(5, 3));
+  expressions.emplace_back(__LINE__, greater_than_equals_(5, 3));
+  expressions.emplace_back(__LINE__, greater_than_(5, 3));
+  expressions.emplace_back(__LINE__, equals_(5, 3));
+  expressions.emplace_back(__LINE__, not_equals_(5, 3));
 
   // CaseExpression
-  expressions.push_back(case_(1, 3, case_(0, 2, 1)));
-  expressions.push_back(case_(1, 5, case_(0, 2, 1)));
+  expressions.emplace_back(__LINE__, case_(1, 3, case_(0, 2, 1)));
+  expressions.emplace_back(__LINE__, case_(1, 5, case_(0, 2, 1)));
 
   // CastExpression
-  expressions.push_back(cast_("36", DataType::Float));
-  expressions.push_back(cast_("35", DataType::Float));
-  expressions.push_back(cast_("35", DataType::Int));
+  expressions.emplace_back(__LINE__, cast_("36", DataType::Float));
+  expressions.emplace_back(__LINE__, cast_("35", DataType::Float));
+  expressions.emplace_back(__LINE__, cast_("35", DataType::Int));
 
   // CorrelatedParameterExpression
-  expressions.push_back(correlated_parameter_(ParameterID{0}, a));
-  expressions.push_back(correlated_parameter_(ParameterID{1}, a));
-  expressions.push_back(correlated_parameter_(ParameterID{1}, b));
+  expressions.emplace_back(__LINE__, correlated_parameter_(ParameterID{0}, a));
+  expressions.emplace_back(__LINE__, correlated_parameter_(ParameterID{1}, a));
+  expressions.emplace_back(__LINE__, correlated_parameter_(ParameterID{1}, b));
 
   // ExistsExpression
-  expressions.push_back(exists_(lqp_subquery_(int_float_node)));
-  expressions.push_back(not_exists_(lqp_subquery_(int_float_node)));
-  expressions.push_back(not_exists_(lqp_subquery_(int_float_node_nullable)));
+  expressions.emplace_back(__LINE__, exists_(lqp_subquery_(int_float_node)));
+  expressions.emplace_back(__LINE__, not_exists_(lqp_subquery_(int_float_node)));
+  expressions.emplace_back(__LINE__, not_exists_(lqp_subquery_(int_float_node_nullable)));
 
   // ExtractExpression
-  expressions.push_back(extract_(DatetimeComponent::Month, "1993-03-04"));
-  expressions.push_back(extract_(DatetimeComponent::Month, "2019-03-04"));
-  expressions.push_back(extract_(DatetimeComponent::Year, "2019-03-04"));
+  expressions.emplace_back(__LINE__, extract_(DatetimeComponent::Month, "1993-03-04"));
+  expressions.emplace_back(__LINE__, extract_(DatetimeComponent::Month, "2019-03-04"));
+  expressions.emplace_back(__LINE__, extract_(DatetimeComponent::Year, "2019-03-04"));
 
   // FunctionExpression
-  expressions.push_back(substr_("Hello", 1, 2));
-  expressions.push_back(substr_("Hello", 2, 2));
-  expressions.push_back(concat_("Hello", "World"));
+  expressions.emplace_back(__LINE__, substr_("Hello", 1, 2));
+  expressions.emplace_back(__LINE__, substr_("Hello", 2, 2));
+  expressions.emplace_back(__LINE__, concat_("Hello", "World"));
 
   // InExpression
-  expressions.push_back(in_(5, list_(1, 2, 3)));
-  expressions.push_back(in_(6, list_(1, 2, 3)));
-  expressions.push_back(not_in_(5, list_(1, 2, 3)));
-  expressions.push_back(in_(5, lqp_subquery_(int_float_node)));
+  expressions.emplace_back(__LINE__, in_(5, list_(1, 2, 3)));
+  expressions.emplace_back(__LINE__, in_(6, list_(1, 2, 3)));
+  expressions.emplace_back(__LINE__, not_in_(5, list_(1, 2, 3)));
+  expressions.emplace_back(__LINE__, in_(5, lqp_subquery_(int_float_node)));
 
   // IsNullExpression
-  expressions.push_back(is_null_(1));
-  expressions.push_back(is_null_(2));
-  expressions.push_back(is_not_null_(1));
+  expressions.emplace_back(__LINE__, is_null_(1));
+  expressions.emplace_back(__LINE__, is_null_(2));
+  expressions.emplace_back(__LINE__, is_not_null_(1));
 
   // ListExpression
-  expressions.push_back(list_(1));
-  expressions.push_back(list_(1, 2));
-  expressions.push_back(list_(2, 3));
+  expressions.emplace_back(__LINE__, list_(1));
+  expressions.emplace_back(__LINE__, list_(1, 2));
+  expressions.emplace_back(__LINE__, list_(2, 3));
 
   // LogicalExpression
-  expressions.push_back(and_(1, 0));
-  expressions.push_back(and_(1, 1));
-  expressions.push_back(or_(1, 0));
+  expressions.emplace_back(__LINE__, and_(1, 0));
+  expressions.emplace_back(__LINE__, and_(1, 1));
+  expressions.emplace_back(__LINE__, or_(1, 0));
 
   // LQPColumnExpression
-  expressions.push_back(lqp_column_(a));
-  expressions.push_back(lqp_column_(b));
+  expressions.emplace_back(__LINE__, lqp_column_(a));
+  expressions.emplace_back(__LINE__, lqp_column_(b));
 
   // LQPSubqueryExpression
-  expressions.push_back(lqp_subquery_(int_float_node));
-  expressions.push_back(lqp_subquery_(int_float_node_nullable));
-  expressions.push_back(lqp_subquery_(int_float_node, std::make_pair(ParameterID{0}, a)));
-  expressions.push_back(lqp_subquery_(int_float_node, std::make_pair(ParameterID{1}, a)));
-  expressions.push_back(lqp_subquery_(int_float_node, std::make_pair(ParameterID{1}, b)));
+  expressions.emplace_back(__LINE__, lqp_subquery_(int_float_node));
+  expressions.emplace_back(__LINE__, lqp_subquery_(int_float_node_nullable));
+  expressions.emplace_back(__LINE__, lqp_subquery_(int_float_node, std::make_pair(ParameterID{0}, a)));
+  expressions.emplace_back(__LINE__, lqp_subquery_(int_float_node, std::make_pair(ParameterID{1}, a)));
+  expressions.emplace_back(__LINE__, lqp_subquery_(int_float_node, std::make_pair(ParameterID{1}, b)));
 
   // PlaceholderExpression
-  expressions.push_back(placeholder_(ParameterID{0}));
-  expressions.push_back(placeholder_(ParameterID{1}));
+  expressions.emplace_back(__LINE__, placeholder_(ParameterID{0}));
+  expressions.emplace_back(__LINE__, placeholder_(ParameterID{1}));
 
   // PQPColumnExpression
-  expressions.push_back(pqp_column_(ColumnID{0}, DataType::Float, false, "a + b"));
-  expressions.push_back(pqp_column_(ColumnID{1}, DataType::Float, false, "a + b"));
-  expressions.push_back(pqp_column_(ColumnID{1}, DataType::Int, false, "a + b"));
-  expressions.push_back(pqp_column_(ColumnID{1}, DataType::Int, true, "a + b"));
-  expressions.push_back(pqp_column_(ColumnID{1}, DataType::Int, true, "alias"));
+  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{0}, DataType::Float, false, "a + b"));
+  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Float, false, "a + b"));
+  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, false, "a + b"));
+  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, true, "a + b"));
+  expressions.emplace_back(__LINE__, pqp_column_(ColumnID{1}, DataType::Int, true, "alias"));
 
   // PQPSubqueryExpression
-  expressions.push_back(pqp_subquery_(int_float_node, DataType::Int, false));
-  expressions.push_back(pqp_subquery_(int_float_node_nullable, DataType::Int, false));
-  expressions.push_back(pqp_subquery_(int_float_node_nullable, DataType::Float, false));
-  expressions.push_back(pqp_subquery_(int_float_node_nullable, DataType::Float, true));
-  expressions.push_back(
-      pqp_subquery_(int_float_node_nullable, DataType::Float, true, std::make_pair(ParameterID{0}, a)));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("a"), DataType::Int, false));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Int, false));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, false));
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, true));
+  const auto parameter = std::make_pair(ParameterID{0}, ColumnID{0});
+  expressions.emplace_back(__LINE__, pqp_subquery_(std::make_shared<GetTable>("b"), DataType::Float, true, parameter));
 
   // UnaryMinusExpression
-  expressions.push_back(unary_minus_(3));
-  expressions.push_back(unary_minus_(4));
+  expressions.emplace_back(__LINE__, unary_minus_(3));
+  expressions.emplace_back(__LINE__, unary_minus_(4));
 
   // ValueExpression
-  expressions.push_back(value_(3));
-  expressions.push_back(value_(3.0f));
-  expressions.push_back(value_(3.25));
-  expressions.push_back(null_());
+  expressions.emplace_back(__LINE__, value_(3));
+  expressions.emplace_back(__LINE__, value_(3.0f));
+  expressions.emplace_back(__LINE__, value_(3.25));
+  expressions.emplace_back(__LINE__, null_());
 
   for (auto first_iter = expressions.begin(); first_iter != expressions.end(); ++first_iter) {
-    EXPECT_EQ(*first_iter, *first_iter);
-    EXPECT_EQ(first_iter->hash(), first_iter->hash());
+    const auto& [first_line, first_expression] = *first_iter;
+    SCOPED_TRACE(std::string{"First expression from line "} + std::to_string(first_line));
+
+    EXPECT_EQ(*first_expression, *first_expression);
+    EXPECT_EQ(first_expression->hash(), first_expression->hash());
+
+    std::shared_ptr<AbstractExpression> deep_copy;
+    if (!std::dynamic_pointer_cast<PQPSubqueryExpression>(first_expression)) {
+      deep_copy = first_expression->deep_copy();
+      EXPECT_EQ(*first_expression, *deep_copy);
+      EXPECT_EQ(first_expression->hash(), deep_copy->hash());
+    }
 
     for (auto second_iter = first_iter + 1; second_iter != expressions.end(); ++second_iter) {
-      EXPECT_NE(*first_iter, *second_iter);
+      const auto& [second_line, second_expression] = *second_iter;
+      SCOPED_TRACE(std::string{"Second expression from line "} + std::to_string(second_line));
+      EXPECT_NE(*first_expression, *(second_expression));
+      EXPECT_NE(*second_expression, *(first_expression));
+      if (deep_copy) {
+        EXPECT_NE(*(second_expression), *deep_copy);
+      }
     }
   }
 }
