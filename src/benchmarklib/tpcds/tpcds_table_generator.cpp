@@ -293,7 +293,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   table_info_by_name["customer_demographics"].table = generate_customer_demographics();
   std::cout << "customer_demographics table generated" << std::endl;
 
-  table_info_by_name["date"].table = generate_date();
+  table_info_by_name["date_dim"].table = generate_date();
   std::cout << "date table generated" << std::endl;
 
   table_info_by_name["household_demographics"].table = generate_household_demographics();
@@ -326,7 +326,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   table_info_by_name["store_sales"].table = store_sales_and_returns.first;
   table_info_by_name["store_returns"].table = store_sales_and_returns.second;
 
-  table_info_by_name["time"].table = generate_time();
+  table_info_by_name["time_dim"].table = generate_time();
   std::cout << "time table generated" << std::endl;
 
   table_info_by_name["warehouse"].table = generate_warehouse();
