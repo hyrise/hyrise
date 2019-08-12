@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-#include "hyrise.hpp"
 #include "types.hpp"
 #include "utils/singleton.hpp"
 

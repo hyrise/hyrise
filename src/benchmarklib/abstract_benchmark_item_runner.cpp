@@ -3,7 +3,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include "benchmark_sql_executor.hpp"
-#include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/load_table.hpp"
 

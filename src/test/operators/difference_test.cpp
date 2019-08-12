@@ -8,7 +8,6 @@
 
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "hyrise.hpp"
 #include "operators/difference.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"

@@ -6,7 +6,6 @@
 
 #include "boost/variant.hpp"
 
-#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"

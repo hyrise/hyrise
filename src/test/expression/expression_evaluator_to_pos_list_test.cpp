@@ -16,7 +16,6 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
-#include "hyrise.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"

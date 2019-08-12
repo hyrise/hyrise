@@ -4,7 +4,6 @@
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
-#include "hyrise.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_segment.hpp"

@@ -2,7 +2,6 @@
 
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_functional.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"

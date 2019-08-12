@@ -2,7 +2,6 @@
 
 #include <filesystem>
 
-#include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
 

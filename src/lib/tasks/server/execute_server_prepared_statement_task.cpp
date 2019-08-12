@@ -1,7 +1,6 @@
 #include "execute_server_prepared_statement_task.hpp"
 
 #include "concurrency/transaction_context.hpp"
-#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"

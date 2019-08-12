@@ -5,7 +5,6 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "hyrise.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/print.hpp"

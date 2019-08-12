@@ -1,7 +1,6 @@
 #include "bind_server_prepared_statement_task.hpp"
 
 #include "expression/value_expression.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

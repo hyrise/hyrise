@@ -10,7 +10,6 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "hyrise.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/aggregate_sort.hpp"

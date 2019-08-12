@@ -8,7 +8,6 @@
 #include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"

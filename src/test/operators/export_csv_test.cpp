@@ -7,7 +7,6 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "hyrise.hpp"
 #include "import_export/csv_meta.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_scan.hpp"

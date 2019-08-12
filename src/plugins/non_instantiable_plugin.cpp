@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "hyrise.hpp"
 #include "storage/table.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/singleton.hpp"

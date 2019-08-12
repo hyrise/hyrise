@@ -8,7 +8,6 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"

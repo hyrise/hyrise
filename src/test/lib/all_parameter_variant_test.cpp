@@ -3,7 +3,6 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
 #include "all_parameter_variant.hpp"

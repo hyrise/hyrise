@@ -7,7 +7,6 @@
 
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
-#include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/mock_node.hpp"
