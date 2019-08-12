@@ -25,16 +25,6 @@ struct MvccData {
   // Creates MVCC data that supports a maximum of `size` rows. If the underlying chunk has less rows, the extra rows
   // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
   explicit MvccData(const size_t size, CommitID begin_commit_id);
-
- private:
-  /**
-   * @brief Mutex used to manage access to MVCC data
-   *
-   * Exclusively locked in shrink()
-   * Locked for shared ownership when MVCC data of a Chunk are accessed
-   * via the get_scoped_mvcc_data_lock() getters
-   */
-  std::shared_mutex _mutex;  // TODO get rid of this
 };
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);

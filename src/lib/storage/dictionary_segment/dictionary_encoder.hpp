@@ -94,12 +94,11 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
           std::make_shared<FixedStringVector>(temp_dictionary->cbegin(), temp_dictionary->cend(), max_string_length);
       const auto compressed_attribute_vector = create_compressed_attribute_vector(fixed_string_dictionary);
       return std::allocate_shared<FixedStringDictionarySegment<T>>(allocator, fixed_string_dictionary,
-                                                                   compressed_attribute_vector, ValueID{null_value_id});
+                                                                   compressed_attribute_vector);
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary
       const auto compressed_attribute_vector = create_compressed_attribute_vector(temp_dictionary);
-      return std::allocate_shared<DictionarySegment<T>>(allocator, temp_dictionary, compressed_attribute_vector,
-                                                        ValueID{null_value_id});
+      return std::allocate_shared<DictionarySegment<T>>(allocator, temp_dictionary, compressed_attribute_vector);
     }
   }
 

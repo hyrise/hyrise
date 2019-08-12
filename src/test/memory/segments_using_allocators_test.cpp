@@ -39,7 +39,8 @@ class SegmentsUsingAllocatorsTest : public EncodingTest {
   std::shared_ptr<ValueSegment<int>> empty_original_segment;
 };
 
-// TODO test strings
+// TODO(md): test strings
+// TODO(md): make sure encoding uses same resource
 
 TEST_P(SegmentsUsingAllocatorsTest, MigrateSegment) {
   auto resource = SimpleTrackingMemoryResource{};

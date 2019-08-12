@@ -202,12 +202,11 @@ std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_segment(s
                                                                                ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);
-  const auto null_value_id = dictionary_size;
   auto dictionary = std::make_shared<pmr_vector<T>>(_read_values<T>(file, dictionary_size));
 
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
-  return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector, null_value_id);
+  return std::make_shared<DictionarySegment<T>>(dictionary, attribute_vector);
 }
 
 }  // namespace opossum
