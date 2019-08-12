@@ -113,13 +113,6 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   if (!chunk->pruning_statistics()) {
     generate_chunk_pruning_statistics(chunk);
   }
-
-  if (chunk->has_mvcc_data()) {
-    // MvccData::shrink() will acquire a write lock itself
-    // Calling shrink() after the vectors have already been shrinked (e.g., when reencoding),
-    // takes less than one millisecond. Thus the check if already shrunk is not necessary.
-    chunk->mvcc_data()->shrink();
-  }
 }
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,

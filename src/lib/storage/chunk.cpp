@@ -27,7 +27,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
   const auto is_reference_chunk =
       !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
 
-  DebugAssert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
+  DebugAssert(!_mvcc_data || _mvcc_data->tids.size() >= chunk_size, "Invalid MvccData size");
   for (const auto& segment : _segments) {
     DebugAssert(
         !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
@@ -53,8 +53,10 @@ void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>
 void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
-  // Do this first to ensure that the first thing to exist in a row is the MVCC data.
-  if (has_mvcc_data()) get_scoped_mvcc_data_lock()->grow_by(1u, INVALID_TRANSACTION_ID, CommitID{0});
+  if (has_mvcc_data()) {
+    // Make the row visible
+    mvcc_data()->begin_cids[size()] = CommitID{0};
+  }
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_segments.size() == values.size()),
@@ -85,12 +87,6 @@ uint32_t Chunk::size() const {
 }
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
-
-SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
-  DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
-
-  return {*_mvcc_data, _mvcc_data->_mutex};
-}
 
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
