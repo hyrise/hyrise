@@ -36,7 +36,7 @@ std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {
 
 bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const CaseExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   return true;
 }
 

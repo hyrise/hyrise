@@ -38,7 +38,7 @@ DataType ValueExpression::data_type() const { return data_type_from_all_type_var
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const ValueExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& value_expression = static_cast<const ValueExpression&>(expression);
 
   /**

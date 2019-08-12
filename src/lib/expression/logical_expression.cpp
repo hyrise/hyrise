@@ -44,7 +44,7 @@ DataType LogicalExpression::data_type() const { return ExpressionEvaluator::Data
 
 bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LogicalExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   return logical_operator == static_cast<const LogicalExpression&>(expression).logical_operator;
 }
 

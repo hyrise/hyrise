@@ -26,7 +26,7 @@ std::string ListExpression::as_column_name() const {
 
 bool ListExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const ListExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   return true;
 }
 

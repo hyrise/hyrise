@@ -55,7 +55,7 @@ DataType FunctionExpression::data_type() const {
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const FunctionExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
 
   const auto& function_expression = static_cast<const FunctionExpression&>(expression);
   return function_type == function_expression.function_type &&

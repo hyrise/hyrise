@@ -35,7 +35,7 @@ DataType ExistsExpression::data_type() const { return ExpressionEvaluator::DataT
 
 bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const ExistsExpression*>(&expression),
-              "Different expression type should have been caught out by AbstractExpression::operator==");
+              "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& other_exists_expression = static_cast<const ExistsExpression&>(expression);
   return exists_expression_type == other_exists_expression.exists_expression_type;
 }
