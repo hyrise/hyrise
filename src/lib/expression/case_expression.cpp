@@ -40,6 +40,4 @@ bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const
   return true;
 }
 
-size_t CaseExpression::_shallow_hash() const { return AbstractExpression::_shallow_hash(); }
-
 }  // namespace opossum

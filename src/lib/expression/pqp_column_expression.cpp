@@ -39,7 +39,7 @@ bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) 
   DebugAssert(dynamic_cast<const PQPColumnExpression*>(&expression),
               "Different expression type should have been caught out by AbstractExpression::operator==");
   const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(expression);
-  return column_id == pqp_column_expression.column_id && _data_type =
+  return column_id == pqp_column_expression.column_id && _data_type ==
              pqp_column_expression.column_id && _nullable == pqp_column_expression._nullable &&
              _column_name == pqp_column_expression._column_name;
 }

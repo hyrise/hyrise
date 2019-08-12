@@ -31,7 +31,7 @@ bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression
   DebugAssert(dynamic_cast<const PlaceholderExpression*>(&expression),
               "Different expression type should have been caught out by AbstractExpression::operator==");
   const auto& parameter_expression_rhs = static_cast<const PlaceholderExpression&>(expression);
-  return parameter_expression_rhs && parameter_id == parameter_expression_rhs.parameter_id;
+  return parameter_id == parameter_expression_rhs.parameter_id;
 }
 
 size_t PlaceholderExpression::_shallow_hash() const {
