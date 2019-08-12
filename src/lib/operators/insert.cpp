@@ -124,12 +124,17 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           ChunkRange{target_chunk_id, target_chunk->size(),
                      static_cast<ChunkOffset>(target_chunk->size() + num_rows_for_target_chunk)});
 
-      // Grow MVCC vectors and mark new (but still empty) rows as being under modification by current transaction.
+      // Mark new (but still empty) rows as being under modification by current transaction.
       // Do so before resizing the Segments, because the resize of `Chunk::_segments.front()` is what releases the
       // new row count.
       {
-        auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
-        mvcc_data->grow_by(num_rows_for_target_chunk, context->transaction_id(), MvccData::MAX_COMMIT_ID);
+        auto& tids = target_chunk->mvcc_data()->tids;
+        const auto transaction_id = context->transaction_id();
+        for (auto target_chunk_offset = target_chunk->size();
+             target_chunk_offset < target_chunk->size() + num_rows_for_target_chunk; ++target_chunk_offset) {
+          tids[target_chunk_offset].store(transaction_id, std::memory_order_relaxed);
+        }
+        std::atomic_thread_fence(std::memory_order_seq_cst);
       }
 
       // Grow data Segments.
@@ -151,7 +156,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           // Cannot guarantee resize without reallocation. The ValueSegment should have been allocated with the target
           // table's max chunk size reserved.
           Assert(value_segment->values().capacity() >= new_size, "ValueSegment too small");
-
           value_segment->values().resize(new_size);
 
           if (value_segment->is_nullable()) {
@@ -215,7 +219,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 void Insert::_on_commit_records(const CommitID cid) {
   for (const auto& target_chunk_range : _target_chunk_ranges) {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
-    auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
+    auto mvcc_data = target_chunk->mvcc_data();
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
@@ -228,7 +232,7 @@ void Insert::_on_commit_records(const CommitID cid) {
 void Insert::_on_rollback_records() {
   for (const auto& target_chunk_range : _target_chunk_ranges) {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
-    auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
+    auto mvcc_data = target_chunk->mvcc_data();
 
     /**
      * !!! Crucial comment, PLEASE READ AND _UNDERSTAND_ before altering any of the following code !!!

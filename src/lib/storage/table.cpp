@@ -135,7 +135,7 @@ void Table::append_mutable_chunk() {
 
   std::shared_ptr<MvccData> mvcc_data;
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_data = std::make_shared<MvccData>(0, CommitID{0});
+    mvcc_data = std::make_shared<MvccData>(_max_chunk_size, MvccData::MAX_COMMIT_ID);
   }
 
   append_chunk(segments, mvcc_data);

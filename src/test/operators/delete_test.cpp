@@ -60,11 +60,9 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   delete_op->execute();
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(0u),
-            transaction_context->transaction_id());
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(2u),
-            transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(0u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(2u), transaction_context->transaction_id());
 
   auto expected_end_cid = CommitID{0u};
   if (commit) {
@@ -75,15 +73,15 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = MvccData::MAX_COMMIT_ID;
   }
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(1u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(2u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->end_cids.at(0u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->end_cids.at(1u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->end_cids.at(2u), expected_end_cid);
 
   auto expected_tid = commit ? transaction_context->transaction_id() : 0u;
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(0u), expected_tid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids.at(2u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(0u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(1u), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->tids.at(2u), expected_tid);
 }
 
 TEST_F(OperatorsDeleteTest, ExecuteAndCommit) { helper(true); }
@@ -329,14 +327,14 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   transaction_context->commit();
 
   const auto expected_end_cid = transaction_context->commit_id();
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(0u), expected_end_cid);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(1u), expected_end_cid);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(1u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->get_scoped_mvcc_data_lock()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->get_scoped_mvcc_data_lock()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->get_scoped_mvcc_data_lock()->end_cids.at(1u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->end_cids.at(0u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->end_cids.at(1u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->end_cids.at(1u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->end_cids.at(2u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->end_cids.at(0u), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->end_cids.at(1u), expected_end_cid);
 }
 
 }  // namespace opossum

@@ -17,10 +17,10 @@ void LoadServerFileTask::_on_execute() {
     const std::string& extension = file_parts.back();
 
     if (extension == "csv") {
-      auto importer = std::make_shared<ImportCsv>(_file_name, Chunk::MAX_SIZE, _table_name);
+      auto importer = std::make_shared<ImportCsv>(_file_name, Chunk::DEFAULT_SIZE, _table_name);
       importer->execute();
     } else if (extension == "tbl") {
-      const auto table = load_table(_file_name, Chunk::MAX_SIZE);
+      const auto table = load_table(_file_name, Chunk::DEFAULT_SIZE);
       StorageManager::get().add_table(_table_name, table);
     } else if (extension == "bin") {
       auto importer = std::make_shared<ImportBinary>(_file_name, _table_name);

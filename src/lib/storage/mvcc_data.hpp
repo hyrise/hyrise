@@ -18,24 +18,13 @@ struct MvccData {
   // The last commit id is reserved for uncommitted changes
   static constexpr CommitID MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 
-  pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
-  pmr_concurrent_vector<CommitID> begin_cids;  ///< commit id when record was added  // TODO get rid of it here, too
-  pmr_concurrent_vector<CommitID> end_cids;    ///< commit id when record was deleted
+  pmr_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
+  pmr_vector<CommitID> begin_cids;                  ///< commit id when record was added
+  pmr_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
+  // Creates MVCC data that supports a maximum of `size` rows. If the underlying chunk has less rows, the extra rows
+  // here are ignored. This is to avoid resizing the vectors, which would cause reallocations and require locking.
   explicit MvccData(const size_t size, CommitID begin_commit_id);
-
-  size_t size() const;
-
-  /**
-   * Compacts the internal representation of the mvcc data in order to reduce fragmentation.
-   * Locks mvcc data exclusively in order to do so.
-   */
-  void shrink();
-
-  /**
-   * Grows mvcc data by the given delta
-   */
-  void grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id);
 
  private:
   /**
@@ -45,9 +34,7 @@ struct MvccData {
    * Locked for shared ownership when MVCC data of a Chunk are accessed
    * via the get_scoped_mvcc_data_lock() getters
    */
-  std::shared_mutex _mutex;
-
-  size_t _size{0};
+  std::shared_mutex _mutex;  // TODO get rid of this
 };
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);

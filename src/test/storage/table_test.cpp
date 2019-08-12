@@ -116,44 +116,6 @@ TEST_F(StorageTableTest, GetRows) {
   EXPECT_TRUE(variant_is_null(rows.at(3u).at(1u)));
 }
 
-TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
-  t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-
-  t->append({4, "Hello,"});
-  t->append({6, "world"});
-
-  const auto chunk = t->get_chunk(ChunkID{0});
-
-  const auto values = std::vector<CommitID>{1u, 2u};
-
-  {
-    // acquiring mvcc_data locks them
-    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
-
-    mvcc_data->tids[0u] = values[0u];
-    mvcc_data->tids[1u] = values[1u];
-    mvcc_data->begin_cids[0u] = values[0u];
-    mvcc_data->begin_cids[1u] = values[1u];
-    mvcc_data->end_cids[0u] = values[0u];
-    mvcc_data->end_cids[1u] = values[1u];
-  }
-
-  const auto previous_size = chunk->size();
-
-  chunk->mvcc_data()->shrink();
-
-  ASSERT_EQ(previous_size, chunk->size());
-  ASSERT_TRUE(chunk->has_mvcc_data());
-
-  auto new_mvcc_data = chunk->get_scoped_mvcc_data_lock();
-
-  for (auto i = 0u; i < chunk->size(); ++i) {
-    EXPECT_EQ(new_mvcc_data->tids[i], values[i]);
-    EXPECT_EQ(new_mvcc_data->begin_cids[i], values[i]);
-    EXPECT_EQ(new_mvcc_data->end_cids[i], values[i]);
-  }
-}
-
 TEST_F(StorageTableTest, EmplaceChunk) {
   EXPECT_EQ(t->chunk_count(), 0u);
 

@@ -19,7 +19,6 @@
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
-#include "utils/scoped_locking_ptr.hpp"
 
 namespace opossum {
 
@@ -41,6 +40,7 @@ using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatisti
 class Chunk : private Noncopyable {
  public:
   // The last chunk offset is reserved for NULL as used in ReferenceSegments.
+  // TODO get rid of this?
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
   // The default chunk size was determined to give the best performance for single-threaded TPC-H, SF1. By all means,
@@ -84,17 +84,6 @@ class Chunk : private Noncopyable {
   const Segments& segments() const;
 
   bool has_mvcc_data() const;
-
-  /**
-   * The locking pointer locks the MVCC data non-exclusively
-   * and unlocks them on destruction
-   *
-   * For improved performance, it is best to call this function
-   * once and retain the reference as long as needed.
-   *
-   * @return a locking ptr to the MVCC data
-   */
-  SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
 
