@@ -148,6 +148,20 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
 }
 
+TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
+  stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  generate_mock_statistics(1'000'000);
+
+  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
+  predicate_node_0->set_left_input(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+}
+
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 

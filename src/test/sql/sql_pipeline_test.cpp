@@ -45,9 +45,9 @@ class SQLPipelineTest : public BaseTest {
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
 
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("a", DataType::Int);
-    column_definitions.emplace_back("b", DataType::Float);
-    column_definitions.emplace_back("bb", DataType::Float);
+    column_definitions.emplace_back("a", DataType::Int, false);
+    column_definitions.emplace_back("b", DataType::Float, false);
+    column_definitions.emplace_back("bb", DataType::Float, false);
     _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});

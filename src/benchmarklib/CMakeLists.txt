@@ -5,8 +5,6 @@ set(
 
     tpcc/constants.hpp
     tpcc/defines.hpp
-    tpcc/helper.hpp
-    tpcc/helper.cpp
     tpcc/tpcc_random_generator.hpp
     tpcc/tpcc_table_generator.cpp
     tpcc/tpcc_table_generator.hpp
@@ -18,7 +16,6 @@ set(
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
 
-    abstract_benchmark_table_generator.hpp
     abstract_table_generator.cpp
     abstract_table_generator.hpp
     abstract_benchmark_item_runner.hpp
@@ -27,6 +24,8 @@ set(
     benchmark_config.hpp
     benchmark_item_result.cpp
     benchmark_item_result.hpp
+    benchmark_item_run_result.cpp
+    benchmark_item_run_result.hpp
     benchmark_runner.cpp
     benchmark_runner.hpp
     benchmark_sql_executor.cpp

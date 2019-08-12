@@ -16,7 +16,7 @@ class JoinHashStepsTest : public BaseTest {
     _table_size_zero_one = 1'000;
 
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("a", DataType::Int);
+    column_definitions.emplace_back("a", DataType::Int, false);
     _table_zero_one = std::make_shared<Table>(column_definitions, TableType::Data, _table_size_zero_one);
     for (auto i = size_t{0}; i < _table_size_zero_one; ++i) {
       _table_zero_one->append({static_cast<int>(i % 2)});

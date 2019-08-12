@@ -30,7 +30,7 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
   EXPECT_EQ(get_plugins().size(), 1);
 
   EXPECT_EQ(hyrise.storage_manager.has_table("test_table"), false);
-  const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data);
+  const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
   hyrise.storage_manager.add_table("test_table", table);
   EXPECT_EQ(hyrise.storage_manager.has_table("test_table"), true);
 

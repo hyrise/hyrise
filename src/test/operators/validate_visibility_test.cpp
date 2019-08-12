@@ -17,8 +17,8 @@ class OperatorsValidateVisibilityTest : public BaseTest {
  protected:
   void SetUp() override {
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("a", DataType::Int);
-    column_definitions.emplace_back("b", DataType::Int);
+    column_definitions.emplace_back("a", DataType::Int, false);
+    column_definitions.emplace_back("b", DataType::Int, false);
     t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
     t->append({123, 456});
 

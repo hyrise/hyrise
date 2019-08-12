@@ -48,12 +48,12 @@ class OperatorsIndexScanTest : public BaseTest {
     _column_ids = std::vector<ColumnID>{ColumnID{0u}};
 
     for (const auto& chunk_id : _chunk_ids) {
-      auto chunk = int_int_7->get_chunk(chunk_id);
+      const auto chunk = int_int_7->get_chunk(chunk_id);
       chunk->template create_index<DerivedIndex>(_column_ids);
     }
 
     for (const auto& chunk_id : _chunk_ids_partly_compressed) {
-      auto chunk = int_int_5->get_chunk(chunk_id);
+      const auto chunk = int_int_5->get_chunk(chunk_id);
       chunk->template create_index<DerivedIndex>(_column_ids);
     }
 

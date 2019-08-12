@@ -37,8 +37,17 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
       if (!_is_expensive_predicate(predicate_node->predicate())) {
         push_down_nodes.emplace_back(predicate_node);
+
+        // As predicate_node might be the input to multiple nodes, remember those nodes before we untie predicate_node
+        const auto output_relations = predicate_node->output_relations();
+
         lqp_remove_node(predicate_node);
         _push_down_traversal(current_node, input_side, push_down_nodes);
+
+        // Restore the output relationships
+        for (const auto& [output_node, output_side] : output_relations) {
+          output_node->set_input(output_side, current_node->input(input_side));
+        }
       } else {
         _push_down_traversal(input_node, input_side, push_down_nodes);
       }

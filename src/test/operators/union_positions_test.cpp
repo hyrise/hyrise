@@ -284,9 +284,9 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto segment_right_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Int);
-  column_definitions.emplace_back("b", DataType::Float);
-  column_definitions.emplace_back("c", DataType::Int);
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, false);
+  column_definitions.emplace_back("c", DataType::Int, false);
   auto table_left = std::make_shared<Table>(column_definitions, TableType::References);
 
   table_left->append_chunk(Segments({segment_left_0_0, segment_left_0_1, segment_left_0_2}));

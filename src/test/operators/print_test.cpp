@@ -18,8 +18,8 @@ class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("column_1", DataType::Int);
-    column_definitions.emplace_back("column_2", DataType::String);
+    column_definitions.emplace_back("column_1", DataType::Int, true);
+    column_definitions.emplace_back("column_2", DataType::String, false);
     _t = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size);
     Hyrise::get().storage_manager.add_table(_table_name, _t);
 
@@ -190,7 +190,7 @@ TEST_F(OperatorsPrintTest, MVCCFlag) {
       "=== Columns\n"
       "|column_1|column_2||        MVCC        |\n"
       "|     int|  string||_BEGIN|_END  |_TID  |\n"
-      "|not null|not null||      |      |      |\n";
+      "|    null|not null||      |      |      |\n";
 
   EXPECT_EQ(output.str(), expected_output);
   EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
@@ -244,7 +244,7 @@ TEST_F(OperatorsPrintTest, DirectInstantiations) {
       "=== Columns\n"
       "|column_1|column_2|\n"
       "|     int|  string|\n"
-      "|not null|not null|\n";
+      "|    null|not null|\n";
 
   std::ostringstream output_ss_op_inst;
   Print::print(_gt, PrintFlags::None, output_ss_op_inst);
@@ -319,7 +319,7 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
       "=== Columns\n"
       "|column_1|column_2|\n"
       "|     int|  string|\n"
-      "|not null|not null|\n"
+      "|    null|not null|\n"
       "=== Chunk 0 ===\n"
       "Empty chunk.\n";
 

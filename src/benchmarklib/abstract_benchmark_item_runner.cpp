@@ -40,7 +40,7 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
 
 void AbstractBenchmarkItemRunner::on_tables_loaded() {}
 
-std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
+std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
     const BenchmarkItemID item_id) {
   std::optional<std::string> visualize_prefix;
   if (_config->enable_visualization) {
@@ -50,12 +50,17 @@ std::pair<std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::ex
   }
 
   BenchmarkSQLExecutor sql_executor(_config->enable_jit, _sqlite_wrapper, visualize_prefix);
-  _on_execute_item(item_id, sql_executor);
-  return {std::move(sql_executor.metrics), sql_executor.any_verification_failed};
+  auto success = _on_execute_item(item_id, sql_executor);
+  return {success, std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }
 
 void AbstractBenchmarkItemRunner::set_sqlite_wrapper(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper) {
   _sqlite_wrapper = sqlite_wrapper;
+}
+
+const std::vector<int>& AbstractBenchmarkItemRunner::weights() const {
+  static const std::vector<int> empty_vector;
+  return empty_vector;
 }
 
 }  // namespace opossum

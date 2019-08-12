@@ -43,7 +43,7 @@ using namespace opossum;  // NOLINT
  */
 
 int main(int argc, char* argv[]) {
-  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPCH Benchmark");
+  auto cli_options = BenchmarkRunner::get_basic_cli_options("TPC-H Benchmark");
 
   // clang-format off
   cli_options.add_options()
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
   if (CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
     const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
-    scale_factor = json_config.value("scale", 0.1f);
+    scale_factor = json_config.value("scale", 1.f);
     comma_separated_queries = json_config.value("queries", std::string(""));
 
     config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
@@ -133,6 +133,6 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
-  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TpchTableGenerator>(scale_factor, config), context)
+  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context)
       .run();
 }

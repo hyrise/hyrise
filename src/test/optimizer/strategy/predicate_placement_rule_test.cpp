@@ -12,6 +12,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "testing_assert.hpp"
@@ -123,13 +124,43 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
   PredicateNode::make(greater_than_(_a_a, _a_b),
     SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
       _table_a));
-  // clang-format on
 
-  // clang-format off
   const auto expected_lqp =
   SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
     PredicateNode::make(greater_than_(_a_a, _a_b),
       _table_a));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, DiamondPushdownTest) {
+  // Regression test: If the predicate cannot be pushed down and is effectively re-inserted at the same position, make
+  // sure that its outputs are correctly restored.
+  // clang-format off
+  const auto input_sub_lqp =
+  PredicateNode::make(greater_than_(_a_a, 1),
+    ValidateNode::make(
+      _table_a));
+
+  const auto input_lqp =
+  UpdateNode::make("int_float",
+    input_sub_lqp,
+    ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
+      input_sub_lqp));
+
+  const auto expected_sub_lqp =
+  PredicateNode::make(greater_than_(_a_a, 1),
+    ValidateNode::make(
+      _table_a));
+
+  const auto expected_lqp =
+  UpdateNode::make("int_float",
+    expected_sub_lqp,
+    ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
+      expected_sub_lqp));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

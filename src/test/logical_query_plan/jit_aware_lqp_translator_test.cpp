@@ -543,7 +543,7 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
 
   ASSERT_EQ(aggregate_columns[5].column_name, "COUNT(*)");
   ASSERT_EQ(aggregate_columns[5].function, AggregateFunction::Count);
-  ASSERT_EQ(aggregate_columns[5].tuple_entry.tuple_index, 0u);
+  ASSERT_EQ(aggregate_columns[5].tuple_entry.tuple_index, 3u);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {

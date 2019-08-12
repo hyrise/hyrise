@@ -179,8 +179,9 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
     }
   }
 
-  const auto table_comparison_msg = check_table_equal(result_table, sqlite_result_table, order_sensitivity,
-                                                      TypeCmpMode::Lenient, FloatComparisonMode::RelativeDifference);
+  const auto table_comparison_msg =
+      check_table_equal(result_table, sqlite_result_table, order_sensitivity, TypeCmpMode::Lenient,
+                        FloatComparisonMode::RelativeDifference, IgnoreNullable::Yes);
 
   if (table_comparison_msg) {
     FAIL() << "Query failed: " << *table_comparison_msg << std::endl;
