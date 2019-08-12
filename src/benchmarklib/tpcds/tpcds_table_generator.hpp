@@ -30,7 +30,8 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   explicit TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                int rng_seed = 19620718, bool cleanup_after_generate = true);
   TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                      int rng_seed = 19620718, bool cleanup_after_generate = true);
+                      std::optional<std::filesystem::path> path_to_cache = {}, int rng_seed = 19620718,
+                      bool cleanup_after_generate = true);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
@@ -42,7 +43,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::shared_ptr<Table> generate_customer_address(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_customer(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_customer_demographics(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
-  std::shared_ptr<Table> generate_date(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_date_dim(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_household_demographics(
       ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_income_band(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
@@ -54,7 +55,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::shared_ptr<Table> generate_store(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_store_sales_and_returns(
       ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
-  std::shared_ptr<Table> generate_time(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
+  std::shared_ptr<Table> generate_time_dim(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_warehouse(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::shared_ptr<Table> generate_web_page(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_web_sales_and_returns(
@@ -63,6 +64,9 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
 
  private:
   bool cleanup_after_generate;
+  std::optional<std::filesystem::path> path_to_cache;
+
+  std::shared_ptr<Table> generate_table(const std::string& table_name);
 };
 
 }  // namespace opossum

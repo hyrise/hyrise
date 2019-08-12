@@ -41,3 +41,5 @@ cmake-build-*
 # llvm coverage information
 default.profdata
 default.profraw
+
+resources/benchmark/cached_binary_tables

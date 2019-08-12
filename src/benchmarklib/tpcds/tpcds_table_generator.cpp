@@ -37,6 +37,7 @@ extern "C" {
 }
 
 #include <benchmark_config.hpp>
+#include <operators/import_binary.hpp>
 #include <table_builder.hpp>
 
 namespace {
@@ -263,20 +264,43 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chun
 }
 
 TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
-                                         const std::shared_ptr<BenchmarkConfig>& benchmark_config, int rng_seed,
+                                         const std::shared_ptr<BenchmarkConfig>& benchmark_config,
+                                         std::optional<std::filesystem::path> path_to_cache, int rng_seed,
                                          bool cleanup_after_generate)
-    : AbstractTableGenerator(benchmark_config), cleanup_after_generate{cleanup_after_generate} {
+    : AbstractTableGenerator(benchmark_config),
+      cleanup_after_generate{cleanup_after_generate},
+      path_to_cache{std::move(path_to_cache)} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
 
-  table_info_by_name["call_center"].table = generate_call_center();
-  std::cout << "call_center table generated" << std::endl;
-
-  table_info_by_name["catalog_page"].table = generate_catalog_page();
-  std::cout << "catalog_page table generated" << std::endl;
+  // TODO(pascal): enable caching for sales and returns
+  for (const auto& table_name :
+       {"call_center", "catalog_page",
+        // "catalog_returns",
+        // "catalog_sales",
+        "customer_address", "customer", "customer_demographics", "date_dim", "household_demographics", "income_band",
+        "inventory", "item", "promotion", "reason", "ship_mode", "store",
+        // "store_returns",
+        // "store_sales",
+        "time_dim", "warehouse", "web_page",
+        // "web_returns",
+        // "web_sales",
+        "web_site"}) {
+    table_info_by_name[table_name] = BenchmarkTableInfo{};
+    auto& table_info = table_info_by_name[table_name];
+    table_info.binary_file_path = path_to_cache.value_or("") / (std::string{table_name} + ".bin");
+    if (path_to_cache.has_value() && std::filesystem::is_regular_file(table_info.binary_file_path.value())) {
+      std::cout << "loading " << table_name << " table from cache..." << std::endl;
+      table_info.table = ImportBinary::read_binary(table_info.binary_file_path.value());
+      table_info.loaded_from_binary = true;
+    } else {
+      std::cout << "generating " << table_name << " table..." << std::endl;
+      table_info.table = generate_table(table_name);
+    }
+  }
 
   auto catalog_sales_and_returns = generate_catalog_sales_and_returns();
   std::cout << "catalog_sales table generated" << std::endl;
@@ -284,56 +308,11 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   table_info_by_name["catalog_sales"].table = catalog_sales_and_returns.first;
   table_info_by_name["catalog_returns"].table = catalog_sales_and_returns.second;
 
-  table_info_by_name["customer"].table = generate_customer();
-  std::cout << "customer table generated" << std::endl;
-
-  table_info_by_name["customer_address"].table = generate_customer_address();
-  std::cout << "customer_address table generated" << std::endl;
-
-  table_info_by_name["customer_demographics"].table = generate_customer_demographics();
-  std::cout << "customer_demographics table generated" << std::endl;
-
-  table_info_by_name["date_dim"].table = generate_date();
-  std::cout << "date table generated" << std::endl;
-
-  table_info_by_name["household_demographics"].table = generate_household_demographics();
-  std::cout << "household_demographics table generated" << std::endl;
-
-  table_info_by_name["income_band"].table = generate_income_band();
-  std::cout << "income_band table generated" << std::endl;
-
-  table_info_by_name["inventory"].table = generate_inventory();
-  std::cout << "inventory table generated" << std::endl;
-
-  table_info_by_name["item"].table = generate_item();
-  std::cout << "item table generated" << std::endl;
-
-  table_info_by_name["promotion"].table = generate_promotion();
-  std::cout << "promotion table generated" << std::endl;
-
-  table_info_by_name["reason"].table = generate_reason();
-  std::cout << "reason table generated" << std::endl;
-
-  table_info_by_name["ship_mode"].table = generate_ship_mode();
-  std::cout << "ship_mode table generated" << std::endl;
-
-  table_info_by_name["store"].table = generate_store();
-  std::cout << "store table generated" << std::endl;
-
   auto store_sales_and_returns = generate_store_sales_and_returns();
   std::cout << "store_sales table generated" << std::endl;
   std::cout << "store_returns table generated" << std::endl;
   table_info_by_name["store_sales"].table = store_sales_and_returns.first;
   table_info_by_name["store_returns"].table = store_sales_and_returns.second;
-
-  table_info_by_name["time_dim"].table = generate_time();
-  std::cout << "time table generated" << std::endl;
-
-  table_info_by_name["warehouse"].table = generate_warehouse();
-  std::cout << "warehouse table generated" << std::endl;
-
-  table_info_by_name["web_page"].table = generate_web_page();
-  std::cout << "web_page table generated" << std::endl;
 
   auto web_sales_and_returns = generate_web_sales_and_returns();
   std::cout << "web_sales table generated" << std::endl;
@@ -341,14 +320,53 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   table_info_by_name["web_sales"].table = web_sales_and_returns.first;
   table_info_by_name["web_returns"].table = web_sales_and_returns.second;
 
-  table_info_by_name["web_site"].table = generate_web_site();
-  std::cout << "web_site table generated" << std::endl;
-
   if (cleanup_after_generate) {
     tpcds_cleanup();
   }
 
   return table_info_by_name;
+}
+
+std::shared_ptr<Table> TpcdsTableGenerator::generate_table(const std::string& table_name) {
+  if (table_name == "call_center") {
+    return generate_call_center();
+  } else if (table_name == "catalog_page") {
+    return generate_catalog_page();
+  } else if (table_name == "customer_address") {
+    return generate_customer_address();
+  } else if (table_name == "customer") {
+    return generate_customer();
+  } else if (table_name == "customer_demographics") {
+    return generate_customer_demographics();
+  } else if (table_name == "date_dim") {
+    return generate_date_dim();
+  } else if (table_name == "household_demographics") {
+    return generate_household_demographics();
+  } else if (table_name == "income_band") {
+    return generate_income_band();
+  } else if (table_name == "inventory") {
+    return generate_inventory();
+  } else if (table_name == "item") {
+    return generate_item();
+  } else if (table_name == "promotion") {
+    return generate_promotion();
+  } else if (table_name == "reason") {
+    return generate_reason();
+  } else if (table_name == "ship_mode") {
+    return generate_ship_mode();
+  } else if (table_name == "store") {
+    return generate_store();
+  } else if (table_name == "time_dim") {
+    return generate_time_dim();
+  } else if (table_name == "warehouse") {
+    return generate_warehouse();
+  } else if (table_name == "web_page") {
+    return generate_web_page();
+  } else if (table_name == "web_site") {
+    return generate_web_site();
+  } else {
+    Assert(false, "unexpected table name: " + table_name);
+  }
 }
 
 std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_rows) const {
@@ -614,7 +632,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_demographics(ds_ke
   return customer_demographics_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_date(ds_key_t max_rows) const {
+std::shared_ptr<Table> TpcdsTableGenerator::generate_date_dim(ds_key_t max_rows) const {
   auto [date_first, date_count] = prepare_for_table(DATE);
   date_count = std::min(date_count, max_rows);
 
@@ -927,7 +945,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
   return {store_sales_builder.finish_table(), store_returns_builder.finish_table()};
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_time(ds_key_t max_rows) const {
+std::shared_ptr<Table> TpcdsTableGenerator::generate_time_dim(ds_key_t max_rows) const {
   auto [time_first, time_count] = prepare_for_table(TIME);
   time_count = std::min(time_count, max_rows);
 

@@ -44,7 +44,7 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_customer(rows_to_check), load_csv("customer.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_customer_demographics(rows_to_check),
                             load_csv("customer_demographics.csv"));
-    EXPECT_TABLE_EQ_ORDERED(table_generator.generate_date(rows_to_check), load_csv("date_dim.csv"));
+    EXPECT_TABLE_EQ_ORDERED(table_generator.generate_date_dim(rows_to_check), load_csv("date_dim.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_household_demographics(rows_to_check),
                             load_csv("household_demographics.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_income_band(rows_to_check), load_csv("income_band.csv"));
@@ -58,7 +58,7 @@ TEST(TpcdsTableGeneratorTest, TableContentsFirstRows) {
         table_generator.generate_store_sales_and_returns(rows_to_check);
     EXPECT_TABLE_EQ_ORDERED(store_sales_table, load_csv("store_sales.csv"));
     EXPECT_TABLE_EQ_ORDERED(store_returns_table, load_csv("store_returns.csv"));
-    EXPECT_TABLE_EQ_ORDERED(table_generator.generate_time(rows_to_check), load_csv("time_dim.csv"));
+    EXPECT_TABLE_EQ_ORDERED(table_generator.generate_time_dim(rows_to_check), load_csv("time_dim.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_warehouse(rows_to_check), load_csv("warehouse.csv"));
     EXPECT_TABLE_EQ_ORDERED(table_generator.generate_web_page(rows_to_check), load_csv("web_page.csv"));
     const auto [web_sales_table, web_returns_table] = table_generator.generate_web_sales_and_returns(rows_to_check);

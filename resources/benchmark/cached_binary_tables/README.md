@@ -1,0 +1,1 @@
+Cached binary tables are stored here when a benchmark is run with --cache_binary_tables.
