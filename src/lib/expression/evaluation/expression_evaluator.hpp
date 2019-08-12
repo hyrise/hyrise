@@ -203,7 +203,7 @@ class ExpressionEvaluator final {
 
   // Some expressions can be reused, either in the same result column (SELECT (a+3)*(a+3)), or across columns
   // (TPC-H Q1)
-  ConstExpressionUnorderedMap<std::shared_ptr<BaseExpressionResult>> _evaluated_expressions;
+  ConstExpressionUnorderedMap<std::shared_ptr<BaseExpressionResult>> _cached_expression_results;
 };
 
 }  // namespace opossum

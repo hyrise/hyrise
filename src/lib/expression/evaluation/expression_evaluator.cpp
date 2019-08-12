@@ -152,9 +152,10 @@ template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expression_to_result(
     const AbstractExpression& expression) {
   // First, look in the cache
-  auto& evaluated_expression = _evaluated_expressions[expression.shared_from_this()];
-  if (evaluated_expression != nullptr) {
-    return std::static_pointer_cast<ExpressionResult<Result>>(evaluated_expression);
+  const auto expression_ptr = expression.shared_from_this();
+  const auto cached_result_iter = _cached_expression_results.find(expression.shared_from_this());
+  if (cached_result_iter != _cached_expression_results.end()) {
+    return std::static_pointer_cast<ExpressionResult<Result>>(cached_result_iter->second);
   }
 
   // Ok, we have to actually work...
@@ -229,7 +230,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
   }
 
   // Store the result in the cache
-  evaluated_expression = result;
+  _cached_expression_results.insert(cached_result_iter, {expression_ptr, result});
 
   return std::static_pointer_cast<ExpressionResult<Result>>(result);
 }
