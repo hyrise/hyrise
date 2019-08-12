@@ -110,7 +110,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
     auto loop_count =
         std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
-    tbb::concurrent_vector<T> data;
+    pmr_vector<T> data;
     data.reserve(chunk_size);
 
     /**

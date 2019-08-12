@@ -36,7 +36,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc)
-    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::MAX_SIZE} : std::nullopt,
+    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc) {
   _chunks = {chunks.begin(), chunks.end()};
 
@@ -129,7 +129,7 @@ void Table::append_mutable_chunk() {
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable));
+      segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(column_definition.nullable, _max_chunk_size));
     });
   }
 

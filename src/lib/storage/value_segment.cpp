@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "abstract_segment_visitor.hpp"
+#include "chunk.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -16,14 +17,12 @@
 namespace opossum {
 
 template <typename T>
-ValueSegment<T>::ValueSegment(bool nullable) : BaseValueSegment(data_type_from_type<T>()) {
-  if (nullable) _null_values = pmr_vector<bool>();
-}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(const PolymorphicAllocator<T>& alloc, bool nullable)
-    : BaseValueSegment(data_type_from_type<T>()), _values(alloc) {
-  if (nullable) _null_values = pmr_vector<bool>(alloc);
+ValueSegment<T>::ValueSegment(bool nullable, ChunkOffset capacity) : BaseValueSegment(data_type_from_type<T>()) {
+  _values.reserve(capacity);
+  if (nullable) {
+    _null_values = pmr_vector<bool>();
+    _null_values->reserve(capacity);
+  }
 }
 
 template <typename T>

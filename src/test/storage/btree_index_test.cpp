@@ -19,15 +19,15 @@ class BTreeIndexTest : public BaseTest {
  protected:
   void SetUp() override {
     values = {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"};
-    segment = std::make_shared<ValueSegment<pmr_string>>(values);
+    segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values));
     sorted = {"apple", "charlie", "charlie", "delta", "delta", "frank", "hotel", "inbox"};
     index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
     chunk_offsets = &(index->_impl->_chunk_offsets);
   }
 
-  std::vector<pmr_string> values;
-  std::vector<pmr_string> sorted;
+  pmr_vector<pmr_string> values;
+  pmr_vector<pmr_string> sorted;
   std::shared_ptr<BTreeIndex> index = nullptr;
   std::shared_ptr<ValueSegment<pmr_string>> segment = nullptr;
 
@@ -70,8 +70,8 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 // Only strings exceeding this size (15 for libstdc++ and 22 for libc++) are stored on the heap.
 
 TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortString) {
-  values = {"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(values);
+  values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
+  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values));
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.
@@ -118,9 +118,9 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   ASSERT_LE(pmr_string("").capacity(), 22u)
       << "Short String Optimization (SSO) is expected to hold at maximum 22 characters";
 
-  values = {"hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
+  values = pmr_vector<pmr_string>{"hotelhotelhotelhotelhotel", "deltadeltadeltadelta",  "frankfrankfrankfrank",  "deltadeltadeltadelta",
             "appleappleappleapple",      "charliecharliecharlie", "charliecharliecharlie", "inboxinboxinboxinbox"};
-  segment = std::make_shared<ValueSegment<pmr_string>>(values);
+  segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values));
   index = std::make_shared<BTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
 // Index memory consumption depends on implementation of pmr_string.

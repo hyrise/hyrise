@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "base_value_segment.hpp"
+#include "chunk.hpp"
 
 namespace opossum {
 
@@ -14,8 +15,7 @@ namespace opossum {
 template <typename T>
 class ValueSegment : public BaseValueSegment {
  public:
-  explicit ValueSegment(bool nullable = false);
-  explicit ValueSegment(const PolymorphicAllocator<T>& alloc, bool nullable = false);
+  explicit ValueSegment(bool nullable = false, ChunkOffset capacity = Chunk::DEFAULT_SIZE);
 
   // Create a ValueSegment with the given values.
   explicit ValueSegment(pmr_vector<T>&& values);

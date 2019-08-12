@@ -190,8 +190,8 @@ class TableBuilder {
   std::shared_ptr<Table> _table;
   size_t _estimated_rows_per_chunk;
 
-  boost::hana::tuple<std::vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
-  boost::hana::tuple<table_builder::OptionalConstexpr<std::vector<bool>, (table_builder::is_optional<DataTypes>())>...>
+  boost::hana::tuple<pmr_vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
+  boost::hana::tuple<table_builder::OptionalConstexpr<pmr_vector<bool>, (table_builder::is_optional<DataTypes>())>...>
       _null_value_vectors;
 
   size_t _current_chunk_row_count() const { return _value_vectors[boost::hana::llong_c<0>].size(); }
@@ -214,7 +214,7 @@ class TableBuilder {
       if constexpr (std::decay_t<decltype(null_values)>::has_value) {  // column is nullable
         segments.emplace_back(std::make_shared<ValueSegment<T>>(std::move(values), std::move(null_values.value())));
 
-        null_values.value() = std::vector<bool>{};
+        null_values.value() = pmr_vector<bool>{};
         null_values.value().reserve(_estimated_rows_per_chunk);
       } else {
         segments.emplace_back(std::make_shared<ValueSegment<T>>(std::move(values)));

@@ -46,7 +46,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment() { return create_int_value_segment(row_count()); }
 
   std::shared_ptr<ValueSegment<int32_t>> create_int_value_segment(size_t row_count) {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
+    auto values = pmr_vector<int32_t>(row_count);
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
@@ -63,8 +63,8 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 
   std::shared_ptr<ValueSegment<int32_t>> create_int_with_null_value_segment(size_t row_count) {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_vector<int32_t>(row_count);
+    auto null_values = pmr_vector<bool>(row_count);
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
@@ -144,7 +144,7 @@ INSTANTIATE_TEST_CASE_P(
     formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});
   auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
@@ -268,7 +268,7 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntSegmentWithShuffledChunkOf
 }
 
 TEST_P(EncodedSegmentTest, SequentiallyReadEmptyIntSegment) {
-  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});
+  auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});
   auto base_encoded_segment = this->encode_segment(value_segment, DataType::Int);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());

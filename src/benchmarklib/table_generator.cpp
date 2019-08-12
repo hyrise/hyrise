@@ -80,7 +80,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
 
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
-    const size_t chunk_size, std::optional<EncodingType> encoding_type, const bool numa_distribute_chunks) {
+    const size_t chunk_size, std::optional<EncodingType> encoding_type) {
   Assert(chunk_size != 0, "cannot generate table with chunk size 0");
   const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
@@ -106,30 +106,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
   pseudorandom_engine.seed(rd());
 
-  // Base allocators if we don't use multiple NUMA nodes
-  auto allocator_ptr_base_segment = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{};
-  auto allocator_value_segment_int = PolymorphicAllocator<ValueSegment<int>>{};
-  auto allocator_chunk = PolymorphicAllocator<Chunk>{};
-  auto allocator_int = PolymorphicAllocator<int>{};
-#if HYRISE_NUMA_SUPPORT
-  auto node_id = 0;
-#endif
-
   for (ChunkID chunk_index{0}; chunk_index < num_chunks; ++chunk_index) {
-#if HYRISE_NUMA_SUPPORT
-    if (numa_distribute_chunks) {
-      auto memory_resource = Topology::get().get_memory_resource(node_id);
-      node_id = (node_id + 1) % Topology::get().nodes().size();
-
-      // create allocators for the node
-      allocator_ptr_base_segment = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{memory_resource};
-      allocator_value_segment_int = PolymorphicAllocator<ValueSegment<int>>{memory_resource};
-      allocator_chunk = PolymorphicAllocator<Chunk>{memory_resource};
-      allocator_int = PolymorphicAllocator<int>{memory_resource};
-    }
-#endif
-
-    auto segments = Segments(allocator_ptr_base_segment);
+    auto segments = Segments{};
     for (ColumnID column_index{0}; column_index < num_columns; ++column_index) {
       const auto& column_data_distribution = column_data_distributions[column_index];
 
@@ -176,13 +154,12 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       }
 
       // add values to segment, reset value vector
-      segments.push_back(std::allocate_shared<ValueSegment<int>>(
-          allocator_value_segment_int, std::move(value_vectors[column_index]), allocator_int));
+      segments.push_back(std::make_shared<ValueSegment<int>>(std::move(value_vectors[column_index])));
       value_vectors[column_index] = pmr_vector<int>(chunk_size);
 
       // add full chunk to table
       if (column_index == num_columns - 1) {
-        table->append_chunk(segments, nullptr, allocator_chunk);
+        table->append_chunk(segments);
       }
     }
   }
