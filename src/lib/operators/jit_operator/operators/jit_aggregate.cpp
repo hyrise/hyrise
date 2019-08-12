@@ -127,7 +127,7 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
       // We then create a ValueSegment of the appropriate data type from these values. Since value segments use a
       // pmr_concurrent_vector internally, this operation copies all values to a new vector of this type.
       // However, using this type of vector within the operator in the first place is also suboptimal, since the
-      // pmr_concurrent_vector performs a lot of synchronization. It is thus better to use the faster std::vector and
+      // pmr_concurrent_vector performs a lot of synchronization. It is thus better to use the faster std::vector and  // TODO
       // perform a single copy in the end.
       auto& values = context.hashmap.columns[column.hashmap_entry.column_index].template get_vector<ColumnDataType>();
       if (column.hashmap_entry.guaranteed_non_null) {

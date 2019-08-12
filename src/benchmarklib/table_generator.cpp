@@ -27,7 +27,7 @@ namespace opossum {
 
 std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
                                                       std::optional<EncodingType> encoding_type) {
-  std::vector<tbb::concurrent_vector<int>> value_vectors;
+  std::vector<pmr_vector<int>> value_vectors;
   auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
   /*
    * Generate table layout with enumerated column names (i.e., "column_1", "column_2", ...)
@@ -37,7 +37,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   for (size_t i = 0; i < _num_columns; i++) {
     auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
     column_definitions.emplace_back(column_name, DataType::Int, false);
-    value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
+    value_vectors.emplace_back(pmr_vector<int>(vector_size));
   }
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
   std::default_random_engine engine;
@@ -51,7 +51,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
       Segments segments;
       for (size_t j = 0; j < _num_columns; j++) {
         segments.push_back(std::make_shared<ValueSegment<int>>(std::move(value_vectors[j])));
-        value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
+        value_vectors[j] = pmr_vector<int>(vector_size);
       }
       table->append_chunk(segments);
     }
@@ -88,14 +88,14 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
   // create result table and container for vectors holding the generated values for the columns
-  std::vector<tbb::concurrent_vector<int>> value_vectors;
+  std::vector<pmr_vector<int>> value_vectors;
 
   // add column definitions and initialize each value vector
   TableColumnDefinitions column_definitions;
   for (size_t column = 1; column <= num_columns; ++column) {
     auto column_name = "column_" + std::to_string(column);
     column_definitions.emplace_back(column_name, DataType::Int, false);
-    value_vectors.emplace_back(tbb::concurrent_vector<int>(chunk_size));
+    value_vectors.emplace_back(pmr_vector<int>(chunk_size));
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
 
@@ -180,7 +180,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       // add values to segment, reset value vector
       segments.push_back(std::allocate_shared<ValueSegment<int>>(
           allocator_value_segment_int, std::move(value_vectors[column_index]), allocator_int));
-      value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
+      value_vectors[column_index] = pmr_vector<int>(chunk_size);
 
       // add full chunk to table
       if (column_index == num_columns - 1) {
