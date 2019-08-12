@@ -75,7 +75,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   for (auto chunk_index = 0u; chunk_index < table_size / CHUNK_SIZE; ++chunk_index) {
     const auto first = values.cbegin() + CHUNK_SIZE * chunk_index;
     const auto last = values.cbegin() + CHUNK_SIZE * (chunk_index + 1);
-    const auto value_segment = std::make_shared<ValueSegment<Type>>(std::vector(first, last));
+    const auto value_segment = std::make_shared<ValueSegment<Type>>(pmr_vector(first, last));
     table->append_chunk({value_segment});
   }
 
