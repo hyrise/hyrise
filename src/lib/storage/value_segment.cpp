@@ -17,51 +17,24 @@ namespace opossum {
 
 template <typename T>
 ValueSegment<T>::ValueSegment(bool nullable) : BaseValueSegment(data_type_from_type<T>()) {
-  if (nullable) _null_values = pmr_concurrent_vector<bool>();
+  if (nullable) _null_values = pmr_vector<bool>();
 }
 
 template <typename T>
 ValueSegment<T>::ValueSegment(const PolymorphicAllocator<T>& alloc, bool nullable)
     : BaseValueSegment(data_type_from_type<T>()), _values(alloc) {
-  if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
+  if (nullable) _null_values = pmr_vector<bool>(alloc);
 }
 
 template <typename T>
-ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values), alloc) {}
+ValueSegment<T>::ValueSegment(pmr_vector<T>&& values)
+    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values)) {}
 
 template <typename T>
-ValueSegment<T>::ValueSegment(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
-                              const PolymorphicAllocator<T>& alloc)
+ValueSegment<T>::ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_values)
     : BaseValueSegment(data_type_from_type<T>()),
-      _values(std::move(values), alloc),
-      _null_values({std::move(null_values), alloc}) {
-  DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
-}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(const std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()), _values(values, alloc) {}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(std::vector<T>&& values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()), _values(std::move(values), alloc) {}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(const std::vector<T>& values, std::vector<bool>& null_values,
-                              const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()),
-      _values(values, alloc),
-      _null_values(pmr_concurrent_vector<bool>(null_values, alloc)) {
-  DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
-}
-
-template <typename T>
-ValueSegment<T>::ValueSegment(std::vector<T>&& values, std::vector<bool>&& null_values,
-                              const PolymorphicAllocator<T>& alloc)
-    : BaseValueSegment(data_type_from_type<T>()),
-      _values(std::move(values), alloc),
-      _null_values(pmr_concurrent_vector<bool>(std::move(null_values), alloc)) {
+      _values(std::move(values)),
+      _null_values(std::move(null_values)) {
   DebugAssert(values.size() == null_values.size(), "The number of values and null values should be equal");
 }
 
@@ -113,12 +86,12 @@ void ValueSegment<T>::reserve(const size_t capacity) {
 }
 
 template <typename T>
-const pmr_concurrent_vector<T>& ValueSegment<T>::values() const {
+const pmr_vector<T>& ValueSegment<T>::values() const {
   return _values;
 }
 
 template <typename T>
-pmr_concurrent_vector<T>& ValueSegment<T>::values() {
+pmr_vector<T>& ValueSegment<T>::values() {
   return _values;
 }
 
@@ -128,14 +101,14 @@ bool ValueSegment<T>::is_nullable() const {
 }
 
 template <typename T>
-const pmr_concurrent_vector<bool>& ValueSegment<T>::null_values() const {
+const pmr_vector<bool>& ValueSegment<T>::null_values() const {
   DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
 
   return *_null_values;
 }
 
 template <typename T>
-pmr_concurrent_vector<bool>& ValueSegment<T>::null_values() {
+pmr_vector<bool>& ValueSegment<T>::null_values() {
   DebugAssert(is_nullable(), "This ValueSegment does not support null values.");
 
   return *_null_values;
@@ -148,13 +121,12 @@ size_t ValueSegment<T>::size() const {
 
 template <typename T>
 std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  pmr_concurrent_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
-                                                        // (clang-tidy reports slicing that comes from tbb)
+  pmr_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
   if (is_nullable()) {
-    pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
-    return std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values), std::move(new_null_values));
+    pmr_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
+    return std::make_shared<ValueSegment<T>>(std::move(new_values), std::move(new_null_values));
   } else {
-    return std::allocate_shared<ValueSegment<T>>(alloc, std::move(new_values));
+    return std::make_shared<ValueSegment<T>>(std::move(new_values));
   }
 }
 

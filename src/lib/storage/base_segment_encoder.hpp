@@ -136,13 +136,9 @@ class SegmentEncoder : public BaseSegmentEncoder {
     static_assert(decltype(supports(data_type_c))::value);
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*base_segment);
 
-    // Obtain allocator of given input segment. Currently, only ValueSegments store the used allocator.
-    // TODO(anyone): obtain allocator for all types of segment, when available.
-    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<ColumnDataType>>(base_segment);
-    const auto segment_allocator =
-        value_segment ? value_segment->values().get_allocator() : PolymorphicAllocator<ColumnDataType>();
+    // TODO: allocate on same node
 
-    return _self()._on_encode(iterable, segment_allocator);
+    return _self()._on_encode(iterable, PolymorphicAllocator<ColumnDataType>{});
   }
   /**@}*/
 

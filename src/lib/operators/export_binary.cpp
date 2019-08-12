@@ -62,7 +62,7 @@ void export_string_values(std::ofstream& ofstream, const std::vector<pmr_string,
 
 template <typename T, typename Alloc>
 void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
-  ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
+  ofstream.write(reinterpret_cast<const char*>(&values[0]), values.size() * sizeof(T));
 }
 
 // specialized implementation for string values
@@ -76,31 +76,8 @@ void export_values(std::ofstream& ofstream, const std::vector<pmr_string>& value
 }
 
 // specialized implementation for bool values
-template <>
-void export_values(std::ofstream& ofstream, const std::vector<bool>& values) {
-  // Cast to fixed-size format used in binary file
-  const auto writable_bools = std::vector<BoolAsByteType>(values.begin(), values.end());
-  export_values(ofstream, writable_bools);
-}
-
-template <typename T>
-void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<T>& values) {
-  // TODO(all): could be faster if we directly write the values into the stream without prior conversion
-  const auto value_block = std::vector<T>{values.begin(), values.end()};
-  ofstream.write(reinterpret_cast<const char*>(value_block.data()), value_block.size() * sizeof(T));
-}
-
-// specialized implementation for string values
-template <>
-void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<pmr_string>& values) {
-  // TODO(all): could be faster if we directly write the values into the stream without prior conversion
-  const auto value_block = std::vector<pmr_string>{values.begin(), values.end()};
-  export_string_values(ofstream, value_block);
-}
-
-// specialized implementation for bool values
-template <>
-void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<bool>& values) {
+template <typename Alloc>
+void export_values(std::ofstream& ofstream, const std::vector<bool, Alloc>& values) {
   // Cast to fixed-size format used in binary file
   const auto writable_bools = std::vector<BoolAsByteType>(values.begin(), values.end());
   export_values(ofstream, writable_bools);

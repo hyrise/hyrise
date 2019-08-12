@@ -187,16 +187,13 @@ std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
 template <typename T>
 std::shared_ptr<ValueSegment<T>> ImportBinary::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool is_nullable) {
-  // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
-  // needed
   if (is_nullable) {
-    const auto nullables = _read_values<bool>(file, row_count);
-    const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()},
-                                             tbb::concurrent_vector<bool>{nullables.begin(), nullables.end()});
+    auto nullables = _read_values<bool>(file, row_count);
+    auto values = _read_values<T>(file, row_count);
+    return std::make_shared<ValueSegment<T>>(std::move(values), std::move(nullables));
   } else {
-    const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
+    auto values = _read_values<T>(file, row_count);
+    return std::make_shared<ValueSegment<T>>(std::move(values));
   }
 }
 

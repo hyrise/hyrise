@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -41,12 +39,12 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
 
   const auto& column_names = table->column_names();
   const auto vs_names = std::make_shared<ValueSegment<pmr_string>>(
-      tbb::concurrent_vector<pmr_string>(column_names.begin(), column_names.end()));
+      pmr_vector<pmr_string>(column_names.begin(), column_names.end()));
   segments.push_back(vs_names);
 
   const auto& column_types = table->column_data_types();
 
-  auto column_types_as_string = tbb::concurrent_vector<pmr_string>{};
+  auto column_types_as_string = pmr_vector<pmr_string>{};
   for (const auto column_type : column_types) {
     column_types_as_string.push_back(pmr_string{data_type_to_string.left.at(column_type)});
   }
@@ -56,7 +54,7 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
 
   const auto& column_nullables = table->columns_are_nullable();
   const auto vs_nullables = std::make_shared<ValueSegment<int32_t>>(
-      tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
+      pmr_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
   segments.push_back(vs_nullables);
 
   out_table->append_chunk(segments);

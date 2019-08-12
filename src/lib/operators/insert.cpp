@@ -148,6 +148,10 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
           const auto new_size = old_size + num_rows_for_target_chunk;
 
+          // Cannot guarantee resize without reallocation. The ValueSegment should have been allocated with the target
+          // table's max chunk size reserved.
+          Assert(value_segment->values().capacity() >= new_size, "ValueSegment too small");
+
           value_segment->values().resize(new_size);
 
           if (value_segment->is_nullable()) {

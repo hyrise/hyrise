@@ -65,6 +65,8 @@ struct SegmentEncodingSpec {
   std::optional<VectorCompressionType> vector_compression_type;
 };
 
+std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
+
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
 }  // namespace opossum

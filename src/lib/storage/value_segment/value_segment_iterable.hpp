@@ -55,7 +55,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
-    using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
+    using ValueIterator = typename pmr_vector<T>::const_iterator;
 
    public:
     explicit NonNullIterator(const ValueIterator begin_value_it, const ValueIterator value_it)
@@ -94,8 +94,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
-    using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
-    using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
+    using ValueIterator = typename pmr_vector<T>::const_iterator;
+    using NullValueIterator = pmr_vector<bool>::const_iterator;
 
    public:
     explicit Iterator(const ValueIterator begin_value_it, const ValueIterator value_it,
@@ -142,7 +142,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
-    using ValueVectorIterator = typename pmr_concurrent_vector<T>::const_iterator;
+    using ValueVectorIterator = typename pmr_vector<T>::const_iterator;
 
    public:
     explicit NonNullPointAccessIterator(ValueVectorIterator values_begin_it,
@@ -171,8 +171,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
-    using ValueVectorIterator = typename pmr_concurrent_vector<T>::const_iterator;
-    using NullValueVectorIterator = typename pmr_concurrent_vector<bool>::const_iterator;
+    using ValueVectorIterator = typename pmr_vector<T>::const_iterator;
+    using NullValueVectorIterator = typename pmr_vector<bool>::const_iterator;
 
    public:
     explicit PointAccessIterator(ValueVectorIterator values_begin_it, NullValueVectorIterator null_values_begin_it,

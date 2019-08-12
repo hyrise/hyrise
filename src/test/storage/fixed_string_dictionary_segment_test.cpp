@@ -79,27 +79,6 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
   EXPECT_EQ((*dict)[2], "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
 }
 
-TEST_F(StorageFixedStringDictionarySegmentTest, CopyUsingAlloctor) {
-  vs_str->append("Bill");
-  vs_str->append("Steve");
-  vs_str->append("Alexander");
-
-  auto segment =
-      encode_and_compress_segment(vs_str, DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
-  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
-
-  auto alloc = dict_segment->dictionary()->get_allocator();
-  auto base_segment = dict_segment->copy_using_allocator(alloc);
-  auto dict_segment_copy = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(base_segment);
-
-  EXPECT_EQ(dict_segment->dictionary()->get_allocator(), dict_segment_copy->dictionary()->get_allocator());
-  auto dict = dict_segment_copy->dictionary();
-
-  EXPECT_EQ((*dict)[0], "Alexander");
-  EXPECT_EQ((*dict)[1], "Bill");
-  EXPECT_EQ((*dict)[2], "Steve");
-}
-
 TEST_F(StorageFixedStringDictionarySegmentTest, LowerUpperBound) {
   vs_str->append("A");
   vs_str->append("C");

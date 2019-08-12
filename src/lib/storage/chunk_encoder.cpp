@@ -63,8 +63,8 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
     // the data vectors for a ValueSegment. If another encoding is requested, the segment
     // encoding utitilies are used (which create and call the according encoder).
     if (encoding_spec.encoding_type == EncodingType::Unencoded) {
-      pmr_concurrent_vector<ColumnDataType> values;
-      pmr_concurrent_vector<bool> null_values;
+      pmr_vector<ColumnDataType> values;
+      pmr_vector<bool> null_values;
 
       auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
       iterable.with_iterators([&](auto it, auto end) {
