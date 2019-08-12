@@ -49,7 +49,7 @@ bool ValueExpression::_shallow_equals(const AbstractExpression& expression) cons
   return value == value_expression.value;
 }
 
-size_t ValueExpression::_on_hash() const { return std::hash<AllTypeVariant>{}(value); }
+size_t ValueExpression::_shallow_hash() const { return std::hash<AllTypeVariant>{}(value); }
 
 bool ValueExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   return value.type() == typeid(NullValue);

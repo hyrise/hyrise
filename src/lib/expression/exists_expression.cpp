@@ -36,10 +36,11 @@ DataType ExistsExpression::data_type() const { return ExpressionEvaluator::DataT
 bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const ExistsExpression*>(&expression),
               "Different expression type should have been caught out by AbstractExpression::operator==");
-  return true;
+  const auto& other_exists_expression = static_cast<const ExistsExpression&>(expression);
+  return exists_expression_type == other_exists_expression.exists_expression_type;
 }
 
-size_t ExistsExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
+size_t ExistsExpression::_shallow_hash() const { return exists_expression_type == ExistsExpressionType::Exists; }
 
 bool ExistsExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const { return false; }
 

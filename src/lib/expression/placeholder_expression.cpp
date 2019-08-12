@@ -30,11 +30,11 @@ DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType
 bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const PlaceholderExpression*>(&expression),
               "Different expression type should have been caught out by AbstractExpression::operator==");
-  const auto* parameter_expression_rhs = static_cast<const PlaceholderExpression*>(&expression);
-  return parameter_expression_rhs && parameter_id == parameter_expression_rhs->parameter_id;
+  const auto& parameter_expression_rhs = static_cast<const PlaceholderExpression&>(expression);
+  return parameter_expression_rhs && parameter_id == parameter_expression_rhs.parameter_id;
 }
 
-size_t PlaceholderExpression::_on_hash() const {
+size_t PlaceholderExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<ParameterID::base_type>(parameter_id));
 }
 

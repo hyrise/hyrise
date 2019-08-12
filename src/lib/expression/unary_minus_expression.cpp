@@ -31,6 +31,4 @@ bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression)
   return true;
 }
 
-size_t UnaryMinusExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
-
 }  // namespace opossum

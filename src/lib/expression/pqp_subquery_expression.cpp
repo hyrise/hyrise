@@ -49,10 +49,10 @@ bool PQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression
   return pqp == other.pqp && parameters == parameters;
 }
 
-size_t PQPSubqueryExpression::_on_hash() const {
+size_t PQPSubqueryExpression::_shallow_hash() const {
   size_t hash{0};
   boost::hash_combine(hash, boost::hash_range(parameters.cbegin(), parameters.cend()));
-  boost::hash_combine(hash, pqp->type());  // TODO(anyone): Not a full hash. Implement and use a hash of PQPs?
+  boost::hash_combine(hash, pqp->type());  // TODO(anyone): Not a full hash. Implement and use a hash of/on PQPs?
   return hash;
 }
 

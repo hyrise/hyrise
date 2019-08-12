@@ -100,7 +100,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    * Override to hash data fields in derived types. No override needed if derived expression has no
    * data members.
    */
-  virtual size_t _on_hash() const;
+  virtual size_t _shallow_hash() const;
 
   virtual bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const;
 

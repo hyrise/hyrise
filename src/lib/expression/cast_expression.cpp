@@ -30,7 +30,7 @@ bool CastExpression::_shallow_equals(const AbstractExpression& expression) const
   return _data_type == other_cast_expression._data_type;
 }
 
-size_t CastExpression::_on_hash() const {
+size_t CastExpression::_shallow_hash() const {
   // Hashing an enum class is a pain
   using DataTypeUnderlyingType = std::underlying_type_t<DataType>;
   return std::hash<DataTypeUnderlyingType>{}(static_cast<DataTypeUnderlyingType>(_data_type));

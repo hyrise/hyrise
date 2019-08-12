@@ -276,4 +276,132 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_TRUE(mod_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
 }
 
+TEST_F(ExpressionTest, EqualsAndHash) {
+  std::vector<std::shared_ptr<AbstractExpression>> expressions;
+
+  // AggregateExpression
+  expressions.push_back(count_(5));
+  expressions.push_back(count_(null_()));
+  expressions.push_back(lqp_column_(a));
+
+  // ArithmeticExpression
+  expressions.push_back(sub_(5, 3));
+  expressions.push_back(add_(5, 3));
+  expressions.push_back(mul_(5, 3));
+  expressions.push_back(mod_(5, 3));
+  expressions.push_back(div_(5, 3));
+
+  // BetweenExpression
+  expressions.push_back(between_inclusive_(5, 3, 4));
+  expressions.push_back(between_inclusive_(5, 4, 4));
+  expressions.push_back(between_exclusive_(5, 3, 4));
+
+  // BinaryPredicateExpression
+  expressions.push_back(less_than_(5, 3));
+  expressions.push_back(less_than_equals_(5, 3));
+  expressions.push_back(greater_than_equals_(5, 3));
+  expressions.push_back(greater_than_(5, 3));
+  expressions.push_back(equals_(5, 3));
+  expressions.push_back(not_equals_(5, 3));
+
+  // CaseExpression
+  expressions.push_back(case_(1, 3, case_(0, 2, 1)));
+  expressions.push_back(case_(1, 5, case_(0, 2, 1)));
+
+  // CastExpression
+  expressions.push_back(cast_("36", DataType::Float));
+  expressions.push_back(cast_("35", DataType::Float));
+  expressions.push_back(cast_("35", DataType::Int));
+
+  // CorrelatedParameterExpression
+  expressions.push_back(correlated_parameter_(ParameterID{0}, a));
+  expressions.push_back(correlated_parameter_(ParameterID{1}, a));
+  expressions.push_back(correlated_parameter_(ParameterID{1}, b));
+
+  // ExistsExpression
+  expressions.push_back(exists_(lqp_subquery_(int_float_node)));
+  expressions.push_back(not_exists_(lqp_subquery_(int_float_node)));
+  expressions.push_back(not_exists_(lqp_subquery_(int_float_node_nullable)));
+
+  // ExtractExpression
+  expressions.push_back(extract_(DatetimeComponent::Month, "1993-03-04"));
+  expressions.push_back(extract_(DatetimeComponent::Month, "2019-03-04"));
+  expressions.push_back(extract_(DatetimeComponent::Year, "2019-03-04"));
+
+  // FunctionExpression
+  expressions.push_back(substr_("Hello", 1, 2));
+  expressions.push_back(substr_("Hello", 2, 2));
+  expressions.push_back(concat_("Hello", "World"));
+
+  // InExpression
+  expressions.push_back(in_(5, list_(1, 2, 3)));
+  expressions.push_back(in_(6, list_(1, 2, 3)));
+  expressions.push_back(not_in_(5, list_(1, 2, 3)));
+  expressions.push_back(in_(5, lqp_subquery_(int_float_node)));
+
+  // IsNullExpression
+  expressions.push_back(is_null_(1));
+  expressions.push_back(is_null_(2));
+  expressions.push_back(is_not_null_(1));
+
+  // ListExpression
+  expressions.push_back(list_(1));
+  expressions.push_back(list_(1, 2));
+  expressions.push_back(list_(2, 3));
+
+  // LogicalExpression
+  expressions.push_back(and_(1, 0));
+  expressions.push_back(and_(1, 1));
+  expressions.push_back(or_(1, 0));
+
+  // LQPColumnExpression
+  expressions.push_back(lqp_column_(a));
+  expressions.push_back(lqp_column_(b));
+
+  // LQPSubqueryExpression
+  expressions.push_back(lqp_subquery_(int_float_node));
+  expressions.push_back(lqp_subquery_(int_float_node_nullable));
+  expressions.push_back(lqp_subquery_(int_float_node, std::make_pair(ParameterID{0}, a)));
+  expressions.push_back(lqp_subquery_(int_float_node, std::make_pair(ParameterID{1}, a)));
+  expressions.push_back(lqp_subquery_(int_float_node, std::make_pair(ParameterID{1}, b)));
+
+  // PlaceholderExpression
+  expressions.push_back(placeholder_(ParameterID{0}));
+  expressions.push_back(placeholder_(ParameterID{1}));
+
+  // PQPColumnExpression
+  expressions.push_back(pqp_column_(ColumnID{0}, DataType::Float, false, "a + b"));
+  expressions.push_back(pqp_column_(ColumnID{1}, DataType::Float, false, "a + b"));
+  expressions.push_back(pqp_column_(ColumnID{1}, DataType::Int, false, "a + b"));
+  expressions.push_back(pqp_column_(ColumnID{1}, DataType::Int, true, "a + b"));
+  expressions.push_back(pqp_column_(ColumnID{1}, DataType::Int, true, "alias"));
+
+  // PQPSubqueryExpression
+  expressions.push_back(pqp_subquery_(int_float_node, DataType::Int, false));
+  expressions.push_back(pqp_subquery_(int_float_node_nullable, DataType::Int, false));
+  expressions.push_back(pqp_subquery_(int_float_node_nullable, DataType::Float, false));
+  expressions.push_back(pqp_subquery_(int_float_node_nullable, DataType::Float, true));
+  expressions.push_back(
+      pqp_subquery_(int_float_node_nullable, DataType::Float, true, std::make_pair(ParameterID{0}, a)));
+
+  // UnaryMinusExpression
+  expressions.push_back(unary_minus_(3));
+  expressions.push_back(unary_minus_(4));
+
+  // ValueExpression
+  expressions.push_back(value_(3));
+  expressions.push_back(value_(3.0f));
+  expressions.push_back(value_(3.25));
+  expressions.push_back(null_());
+
+  for (auto first_iter = expressions.begin(); first_iter != expressions.end(); ++first_iter) {
+    EXPECT_EQ(*first_iter, *first_iter);
+    EXPECT_EQ(first_iter->hash(), first_iter->hash());
+
+    for (auto second_iter = first_iter + 1; second_iter != expressions.end(); ++second_iter) {
+      EXPECT_NE(*first_iter, *second_iter);
+    }
+  }
+}
+
 }  // namespace opossum
