@@ -409,7 +409,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
-  AssertInput(!std::string_view{delete_statement.tableName}.starts_with(MetaTableManager::META_PREFIX), "Cannot update meta tables");
+  AssertInput(!std::string_view{delete_statement.tableName}.starts_with(MetaTableManager::META_PREFIX),
+              "Cannot update meta tables");
   Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
@@ -1058,15 +1059,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
       return StoredTableNode::make("meta_tables");
-    case hsql::ShowType::kShowColumns:
-      {
-        // TODO This hard-codes some information like the meta table name and that it stores the documented table's name
-        // in the first column. Do we want to change this? If yes, how?
-        const auto stored_table_node = StoredTableNode::make("meta_columns");
-        const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
-        const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column, value_(show_statement.name));
-        return PredicateNode::make(predicate, stored_table_node);
-      }
+    case hsql::ShowType::kShowColumns: {
+      // TODO This hard-codes some information like the meta table name and that it stores the documented table's name
+      // in the first column. Do we want to change this? If yes, how?
+      const auto stored_table_node = StoredTableNode::make("meta_columns");
+      const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
+      const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
+                                                                         value_(show_statement.name));
+      return PredicateNode::make(predicate, stored_table_node);
+    }
     default:
       FailInput("hsql::ShowType is not supported.");
   }
