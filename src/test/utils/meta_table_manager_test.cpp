@@ -7,10 +7,6 @@
 namespace opossum {
 
 class MetaTableManagerTest : public BaseTest {
- public:
-  void update() {
-    SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
-  }
 };
 
 TEST_F(MetaTableManagerTest, TableBasedMetaData) {
@@ -25,8 +21,8 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
     const auto int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
     const auto int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
     ChunkEncoder::encode_chunk(int_int_int_null->get_chunk(ChunkID{0}), int_int_int_null->column_data_types(),
-                               {{EncodingType::Dictionary},
-                                {EncodingType::RunLength, VectorCompressionType::SimdBp128},
+                               {{EncodingType::RunLength},
+                                {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                                 {EncodingType::Unencoded}});
 
     if (storage_manager.has_table("int_int")) storage_manager.drop_table("int_int");
@@ -41,7 +37,9 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
       EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
     }
 
-    update();
+    // Update the tables
+    SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
+    SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}.create_pipeline().get_result_table();
 
     {
       const auto meta_table = storage_manager.get_table(prefix + meta_table_name);

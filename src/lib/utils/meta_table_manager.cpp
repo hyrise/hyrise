@@ -94,6 +94,7 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table(const StorageMa
       TableColumnDefinitions{{"table", DataType::String, false},       {"chunk_id", DataType::Int, false},
                              {"column_id", DataType::Int, false},      {"column_name", DataType::String, false},
                              {"column_type", DataType::String, false}, {"encoding", DataType::String, true}};
+  // Vector compression is not yet included because #1286 makes it a pain to map it to a string.
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : storage_manager.tables()) {
@@ -104,7 +105,7 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table(const StorageMa
         const auto& segment = chunk->get_segment(column_id);
 
         const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
-        AllTypeVariant encoding;
+        AllTypeVariant encoding = NULL_VALUE;
         if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
           encoding = pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())};
         }
