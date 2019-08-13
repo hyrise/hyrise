@@ -37,7 +37,7 @@ void StorageManager::drop_table(const std::string& name) {
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) {
-  if (name.find("meta_") == 0) {  // TODO faster algo?
+  if (name.starts_with(MetaTableManager::META_PREFIX)) {
     MetaTableManager::get().update(*this, name.substr(5));
   }
 

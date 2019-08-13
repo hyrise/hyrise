@@ -20,8 +20,6 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -798,12 +796,6 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
 
   const auto insert_lqp = InsertNode::make("t", node_a);
   EXPECT_EQ(estimator.estimate_cardinality(insert_lqp), 0.0f);
-
-  const auto show_columns_lqp = ShowColumnsNode::make("t");
-  EXPECT_EQ(estimator.estimate_cardinality(show_columns_lqp), 0.0f);
-
-  const auto show_tables_lqp = ShowTablesNode::make();
-  EXPECT_EQ(estimator.estimate_cardinality(show_tables_lqp), 0.0f);
 
   EXPECT_EQ(estimator.estimate_cardinality(DeleteNode::make(node_a)), 0.0f);
   EXPECT_EQ(estimator.estimate_cardinality(DropViewNode::make("v", false)), 0.0f);
