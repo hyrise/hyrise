@@ -8,26 +8,27 @@
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
-  _methods["tables"] = std::bind(&MetaTableManager::generate_tables_table, this, std::placeholders::_1);
-  _methods["columns"] = std::bind(&MetaTableManager::generate_columns_table, this, std::placeholders::_1);
-  _methods["chunks"] = std::bind(&MetaTableManager::generate_chunks_table, this, std::placeholders::_1);
-  _methods["segments"] = std::bind(&MetaTableManager::generate_segments_table, this, std::placeholders::_1);
-}
+  _methods["tables"] = std::bind(&MetaTableManager::generate_tables_table, this);
+  _methods["columns"] = std::bind(&MetaTableManager::generate_columns_table, this);
+  _methods["chunks"] = std::bind(&MetaTableManager::generate_chunks_table, this);
+  _methods["segments"] = std::bind(&MetaTableManager::generate_segments_table, this);
 
-void MetaTableManager::update_all(StorageManager& storage_manager) {
-  for (const auto& [table_name, method] : _methods) {
-    update(storage_manager, table_name);
+  _table_names.reserve(_methods.size());
+  for (const auto& [table_name, _] : _methods) {
+    _table_names.emplace_back(table_name);
   }
+  std::sort(_table_names.begin(), _table_names.end());
 }
 
-void MetaTableManager::update(StorageManager& storage_manager, const std::string& table_name) {
-  const auto meta_table_name = std::string{META_PREFIX + table_name};
-  if (storage_manager.has_table(meta_table_name)) storage_manager.drop_table(meta_table_name);
-  auto table = _methods.at(table_name)(storage_manager);
-  storage_manager.add_table(meta_table_name, table);
+const std::vector<std::string>& MetaTableManager::table_names() const {
+  return _table_names;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_tables_table(const StorageManager& storage_manager) {
+std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table_name) const {
+  return _methods.at(table_name)();
+}
+
+std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {
   const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
                                               {"column_count", DataType::Int, false},
                                               {"row_count", DataType::Long, false},
@@ -35,8 +36,7 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table(const StorageMana
                                               {"max_chunk_size", DataType::Long, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& [table_name, table] : storage_manager.tables()) {
-    if (table_name.starts_with(META_PREFIX)) continue;
+  for (const auto& [table_name, table] : StorageManager::get().tables()) {
     output_table->append({pmr_string{table_name}, static_cast<int32_t>(table->column_count()),
                           static_cast<int64_t>(table->row_count()), static_cast<int32_t>(table->chunk_count()),
                           static_cast<int64_t>(table->max_chunk_size())});
@@ -45,15 +45,14 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table(const StorageMana
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_columns_table(const StorageManager& storage_manager) {
+std::shared_ptr<Table> MetaTableManager::generate_columns_table() const {
   const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
                                               {"name", DataType::String, false},
                                               {"type", DataType::String, false},
                                               {"nullable", DataType::Int, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& [table_name, table] : storage_manager.tables()) {
-    if (table_name.starts_with(META_PREFIX)) continue;
+  for (const auto& [table_name, table] : StorageManager::get().tables()) {
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       output_table->append({pmr_string{table_name}, static_cast<pmr_string>(table->column_name(column_id)),
                             static_cast<pmr_string>(data_type_to_string.left.at(table->column_data_type(column_id))),
@@ -64,7 +63,7 @@ std::shared_ptr<Table> MetaTableManager::generate_columns_table(const StorageMan
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_chunks_table(const StorageManager& storage_manager) {
+std::shared_ptr<Table> MetaTableManager::generate_chunks_table() const {
   const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"rows", DataType::Long, false},
@@ -72,8 +71,7 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table(const StorageMana
                                               {"cleanup_commit_id", DataType::Long, true}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& [table_name, table] : storage_manager.tables()) {
-    if (table_name.starts_with(META_PREFIX)) continue;
+  for (const auto& [table_name, table] : StorageManager::get().tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
       const auto cleanup_commit_id = chunk->get_cleanup_commit_id()
@@ -87,7 +85,7 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table(const StorageMana
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_segments_table(const StorageManager& storage_manager) {
+std::shared_ptr<Table> MetaTableManager::generate_segments_table() const {
   // TODO column_name/_type violate 3NF, do we want to include them for convenience?
 
   const auto columns =
@@ -97,8 +95,7 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table(const StorageMa
   // Vector compression is not yet included because #1286 makes it a pain to map it to a string.
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& [table_name, table] : storage_manager.tables()) {
-    if (table_name.starts_with(META_PREFIX)) continue;
+  for (const auto& [table_name, table] : StorageManager::get().tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
         const auto& chunk = table->get_chunk(chunk_id);

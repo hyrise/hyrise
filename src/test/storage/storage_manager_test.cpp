@@ -9,6 +9,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "utils/meta_table_manager.hpp"
 
 namespace opossum {
 

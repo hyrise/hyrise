@@ -13,21 +13,23 @@ class MetaTableManager : public Singleton<MetaTableManager> {
  public:
   static constexpr auto META_PREFIX = "meta_";
 
-  // We need to pass the StorageManager so that update_all can be called while the StorageManager is still being
-  // constructed
-  void update_all(StorageManager& storage_manager);
+  // Returns a sorted list of all meta table names (without prefix)
+  const std::vector<std::string>& table_names() const;
 
-  void update(StorageManager& storage_manager, const std::string& table_name);
+  // Generates the meta table specified by table_name (which should not include the prefix)
+  std::shared_ptr<Table> generate_table(const std::string& table_name) const;
 
-  std::shared_ptr<Table> generate_tables_table(const StorageManager&);
-  std::shared_ptr<Table> generate_columns_table(const StorageManager&);
-  std::shared_ptr<Table> generate_chunks_table(const StorageManager&);
-  std::shared_ptr<Table> generate_segments_table(const StorageManager&);
+  // Generator methods for the different meta tables
+  std::shared_ptr<Table> generate_tables_table() const;
+  std::shared_ptr<Table> generate_columns_table() const;
+  std::shared_ptr<Table> generate_chunks_table() const;
+  std::shared_ptr<Table> generate_segments_table() const;
 
  protected:
   MetaTableManager();
 
-  std::unordered_map<std::string, std::function<std::shared_ptr<Table>(const StorageManager&)>> _methods;
+  std::unordered_map<std::string, std::function<std::shared_ptr<Table>(void)>> _methods;
+  std::vector<std::string> _table_names;
 };
 
 }  // namespace opossum

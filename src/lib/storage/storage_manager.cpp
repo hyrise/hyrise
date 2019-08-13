@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-StorageManager::StorageManager() : Singleton<StorageManager>() { MetaTableManager::get().update_all(*this); }
+StorageManager::StorageManager() : Singleton<StorageManager>() {}
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
@@ -36,9 +36,9 @@ void StorageManager::drop_table(const std::string& name) {
   Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
-std::shared_ptr<Table> StorageManager::get_table(const std::string& name) {
+std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
   if (name.starts_with(MetaTableManager::META_PREFIX)) {
-    MetaTableManager::get().update(*this, name.substr(5));
+    return MetaTableManager::get().generate_table(name.substr(5));
   }
 
   const auto iter = _tables.find(name);
@@ -47,7 +47,13 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) {
   return iter->second;
 }
 
-bool StorageManager::has_table(const std::string& name) const { return _tables.count(name); }
+bool StorageManager::has_table(const std::string& name) const {
+  if (name.starts_with(MetaTableManager::META_PREFIX)) {
+    const auto& meta_table_names = MetaTableManager::get().table_names();
+    return std::binary_search(meta_table_names.begin(), meta_table_names.end(), name.substr(5));
+  }
+  return _tables.count(name);
+}
 
 std::vector<std::string> StorageManager::table_names() const {
   std::vector<std::string> table_names;

@@ -6,8 +6,7 @@
 
 namespace opossum {
 
-class MetaTableManagerTest : public BaseTest {
-};
+class MetaTableManagerTest : public BaseTest {};
 
 TEST_F(MetaTableManagerTest, TableBasedMetaData) {
   // This tests a bunch of meta tables that are somehow related to the tables stored in the StorageManager.
@@ -39,7 +38,9 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
 
     // Update the tables
     SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
-    SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}.create_pipeline().get_result_table();
+    SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}
+        .create_pipeline()
+        .get_result_table();
 
     {
       const auto meta_table = storage_manager.get_table(prefix + meta_table_name);

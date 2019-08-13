@@ -22,12 +22,14 @@ class AbstractLQPNode;
 class StorageManager : public Singleton<StorageManager> {
  public:
   /**
-   * @defgroup Manage Tables
+   * @defgroup Regular Tables
    * @{
    */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
   void drop_table(const std::string& name);
-  std::shared_ptr<Table> get_table(const std::string& name);
+  // get_table and has_table can also be used to retrieve meta tables. These are not listed in table_names() or
+  // tables(), making them invisible to anyone iterating over the stored tables.
+  std::shared_ptr<Table> get_table(const std::string& name) const;
   bool has_table(const std::string& name) const;
   std::vector<std::string> table_names() const;
   const std::map<std::string, std::shared_ptr<Table>>& tables() const;

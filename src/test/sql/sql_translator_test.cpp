@@ -1774,11 +1774,13 @@ TEST_F(SQLTranslatorTest, ShowTables) {
 TEST_F(SQLTranslatorTest, ShowColumns) {
   const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
 
+  // clang-format off
   const auto stored_table_node = StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "columns");
   const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
   const auto expected_lqp =
-      PredicateNode::make(equals_(value_("int_float"), table_name_column),
-                          StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "columns"));
+      PredicateNode::make(equals_(table_name_column, "int_float"),
+        StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "columns"));
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1786,7 +1788,7 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
 TEST_F(SQLTranslatorTest, DMLOnMetatables) {
   EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
   EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);
-  EXPECT_THROW(compile_query("INSERT INTO FROM meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
+  EXPECT_THROW(compile_query("INSERT INTO meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, InsertValues) {
