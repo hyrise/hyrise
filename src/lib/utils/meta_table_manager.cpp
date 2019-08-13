@@ -28,7 +28,7 @@ void MetaTableManager::update(StorageManager& storage_manager, const std::string
 
 std::shared_ptr<Table> MetaTableManager::generate_tables_table(const StorageManager& storage_manager) {
   const auto columns = TableColumnDefinitions{{"table", DataType::String},
-                                              {"col_count", DataType::Int},
+                                              {"column_count", DataType::Int},
                                               {"row_count", DataType::Long},
                                               {"chunk_count", DataType::Int},
                                               {"max_chunk_size", DataType::Long}};

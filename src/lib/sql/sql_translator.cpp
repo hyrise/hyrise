@@ -1058,11 +1058,11 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
-      return StoredTableNode::make("meta_tables");
+      return StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "tables");
     case hsql::ShowType::kShowColumns: {
       // TODO This hard-codes some information like the meta table name and that it stores the documented table's name
       // in the first column. Do we want to change this? If yes, how?
-      const auto stored_table_node = StoredTableNode::make("meta_columns");
+      const auto stored_table_node = StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "columns");
       const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
       const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
                                                                          value_(show_statement.name));

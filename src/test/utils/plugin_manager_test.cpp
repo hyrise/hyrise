@@ -1,5 +1,4 @@
 #include "../base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "storage/storage_manager.hpp"
 #include "utils/plugin_manager.hpp"
