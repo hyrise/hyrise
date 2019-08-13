@@ -36,7 +36,7 @@ class Projection : public AbstractReadOnlyOperator {
    */
   class DummyTable : public Table {
    public:
-    DummyTable() : Table(TableColumnDefinitions{{"dummy", DataType::Int}}, TableType::Data) {
+    DummyTable() : Table(TableColumnDefinitions{{"dummy", DataType::Int, false}}, TableType::Data) {
       append(std::vector<AllTypeVariant>{0});
     }
   };

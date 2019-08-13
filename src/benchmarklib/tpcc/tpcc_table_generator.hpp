@@ -100,7 +100,8 @@ class TPCCTableGenerator : public AbstractTableGenerator {
     bool is_first_column = column_definitions.size() == 0;
 
     auto data_type = data_type_from_type<T>();
-    column_definitions.emplace_back(name, data_type);
+    // TODO(anyone): NULL values are still represented as -1, so the columns are marked as non-nullable.
+    column_definitions.emplace_back(name, data_type, false);
 
     /**
      * Calculate the total row count for this column based on the cardinalities of the influencing tables.

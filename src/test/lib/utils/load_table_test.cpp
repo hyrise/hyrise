@@ -10,8 +10,8 @@ class LoadTableTest : public BaseTest {};
 
 TEST_F(LoadTableTest, EmptyTableFromHeader) {
   const auto tbl_header_table = create_table_from_header("resources/test_data/tbl/float_int.tbl");
-  const auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Float}, {"a", DataType::Int}}, TableType::Data);
+  const auto expected_table = std::make_shared<Table>(
+      TableColumnDefinitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}}, TableType::Data);
 
   EXPECT_EQ(tbl_header_table->row_count(), 0);
   EXPECT_TABLE_EQ_UNORDERED(tbl_header_table, expected_table);

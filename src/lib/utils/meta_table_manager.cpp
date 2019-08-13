@@ -2,6 +2,7 @@
 
 #include "constant_mappings.hpp"
 #include "storage/base_encoded_segment.hpp"
+#include "storage/table_column_definition.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -27,11 +28,11 @@ void MetaTableManager::update(StorageManager& storage_manager, const std::string
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_tables_table(const StorageManager& storage_manager) {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String},
-                                              {"column_count", DataType::Int},
-                                              {"row_count", DataType::Long},
-                                              {"chunk_count", DataType::Int},
-                                              {"max_chunk_size", DataType::Long}};
+  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+                                              {"column_count", DataType::Int, false},
+                                              {"row_count", DataType::Long, false},
+                                              {"chunk_count", DataType::Int, false},
+                                              {"max_chunk_size", DataType::Long, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : storage_manager.tables()) {
@@ -46,7 +47,7 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table(const StorageMana
 
 std::shared_ptr<Table> MetaTableManager::generate_columns_table(const StorageManager& storage_manager) {
   const auto columns = TableColumnDefinitions{
-      {"table", DataType::String}, {"name", DataType::String}, {"type", DataType::String}, {"nullable", DataType::Int}};
+      {"table", DataType::String, false}, {"name", DataType::String, false}, {"type", DataType::String, false}, {"nullable", DataType::Int, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : storage_manager.tables()) {
@@ -62,11 +63,11 @@ std::shared_ptr<Table> MetaTableManager::generate_columns_table(const StorageMan
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_chunks_table(const StorageManager& storage_manager) {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String},
-                                              {"chunk_id", DataType::Int},
-                                              {"rows", DataType::Long},
-                                              {"invalid_rows", DataType::Long},
-                                              {"cleanup_commit_id", DataType::Long}};
+  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+                                              {"chunk_id", DataType::Int, false},
+                                              {"rows", DataType::Long, false},
+                                              {"invalid_rows", DataType::Long, false},
+                                              {"cleanup_commit_id", DataType::Long, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : storage_manager.tables()) {
@@ -86,9 +87,9 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table(const StorageMana
 std::shared_ptr<Table> MetaTableManager::generate_segments_table(const StorageManager& storage_manager) {
   // TODO column_name/_type violate 3NF, do we want to include them for convenience?
 
-  const auto columns = TableColumnDefinitions{{"table", DataType::String},       {"chunk_id", DataType::Int},
-                                              {"column_id", DataType::Int},      {"column_name", DataType::String},
-                                              {"column_type", DataType::String}, {"encoding", DataType::String, true}};
+  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},       {"chunk_id", DataType::Int, false},
+                                              {"column_id", DataType::Int, false},      {"column_name", DataType::String, false},
+                                              {"column_type", DataType::String, false}, {"encoding", DataType::String, true}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : storage_manager.tables()) {

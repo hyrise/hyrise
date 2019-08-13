@@ -15,7 +15,7 @@ def initialize():
 		sys.exit(1)
 
 	build_dir = sys.argv[1]
-	console = pexpect.spawn(build_dir + "/hyriseConsole", timeout=15, dimensions=(200, 64))
+	console = pexpect.spawn(build_dir + "/hyriseConsole", timeout=60, dimensions=(200, 64))
 	return console
 
 def close_console(console):

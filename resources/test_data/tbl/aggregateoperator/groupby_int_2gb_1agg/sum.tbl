@@ -1,5 +1,5 @@
 a|b|SUM(c)
-int|float|long
+int|float|long_null
 12345|456.7|44
 12345|457.7|63
 123|458.7|40

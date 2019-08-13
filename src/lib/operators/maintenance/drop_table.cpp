@@ -19,7 +19,7 @@ std::shared_ptr<const Table> DropTable::_on_execute() {
     StorageManager::get().drop_table(table_name);
   }
 
-  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
+  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }
 
 std::shared_ptr<AbstractOperator> DropTable::_on_deep_copy(
