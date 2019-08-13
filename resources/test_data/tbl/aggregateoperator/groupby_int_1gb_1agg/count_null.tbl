@@ -1,5 +1,5 @@
 a|COUNT(b)
-int_null|long_null
+int_null|long
 12345|2
 123|1
 12|1

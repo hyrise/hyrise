@@ -25,7 +25,7 @@ class ChunkEncoderTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     for (auto column_id = 0u; column_id < column_count; ++column_id) {
       const auto column_name = std::to_string(column_id);
-      column_definitions.emplace_back(column_name, DataType::Int);
+      column_definitions.emplace_back(column_name, DataType::Int, false);
     }
     _table = std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
 

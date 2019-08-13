@@ -16,8 +16,8 @@ class StorageManagerTest : public BaseTest {
  protected:
   void SetUp() override {
     auto& sm = StorageManager::get();
-    auto t1 = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data);
-    auto t2 = std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Int}}, TableType::Data, 4);
+    auto t1 = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
+    auto t2 = std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Int, false}}, TableType::Data, 4);
 
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);

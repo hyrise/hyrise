@@ -1,4 +1,4 @@
 d|min_c|max_a
-int|float|float
+int|float_null|float_null
 30|17.2|459.7
 31|480.1|457.7

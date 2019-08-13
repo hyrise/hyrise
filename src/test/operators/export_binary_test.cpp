@@ -55,8 +55,8 @@ class OperatorsExportBinaryTest : public BaseTest {
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("FirstColumn", DataType::Int);
-  column_definitions.emplace_back("SecondColumn", DataType::String);
+  column_definitions.emplace_back("FirstColumn", DataType::Int, false);
+  column_definitions.emplace_back("SecondColumn", DataType::String, false);
 
   table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -70,7 +70,7 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
 
 TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Float);
+  column_definitions.emplace_back("a", DataType::Float, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({5.5f});
@@ -88,7 +88,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
 
 TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Float);
+  column_definitions.emplace_back("a", DataType::Float, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   table->append({5.5f});
@@ -106,7 +106,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
 
 TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({"This"});
@@ -125,7 +125,7 @@ TEST_F(OperatorsExportBinaryTest, StringValueSegment) {
 
 TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({"This"});
@@ -146,7 +146,7 @@ TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
 
 TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({"This"});
@@ -167,11 +167,11 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
@@ -191,11 +191,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
@@ -218,11 +218,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
 
 TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
@@ -247,11 +247,11 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
 // It assumes that the TableScan produces one output segment per input segment.
 TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
@@ -275,7 +275,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
@@ -296,7 +296,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueSegment) {
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
