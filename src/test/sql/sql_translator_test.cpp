@@ -1776,10 +1776,10 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
 
   // clang-format off
   const auto stored_table_node = StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "columns");
-  const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
+  const auto table_name_column = stored_table_node->get_column("table");
   const auto expected_lqp =
       PredicateNode::make(equals_(table_name_column, "int_float"),
-        StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "columns"));
+        stored_table_node);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
