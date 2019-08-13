@@ -1,0 +1,54 @@
+#include "../base_test.hpp"
+
+#include "storage/chunk_encoder.hpp"
+#include "utils/load_table.hpp"
+#include "utils/meta_table_manager.hpp"
+
+namespace opossum {
+
+class MetaTableManagerTest : public BaseTest {
+ public:
+  void update() {
+    SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
+  }
+};
+
+TEST_F(MetaTableManagerTest, TableBasedMetaData) {
+  // This tests a bunch of meta tables that are somehow related to the tables stored in the StorageManager.
+  auto& storage_manager = StorageManager::get();
+
+  const auto prefix = std::string{MetaTableManager::META_PREFIX};
+  const auto path = std::string{"resources/test_data/tbl/meta_tables/meta_"};
+  for (const auto& meta_table_name : {"tables", "columns", "chunks", "segments"}) {
+    SCOPED_TRACE(meta_table_name);
+
+    const auto int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
+    const auto int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
+    ChunkEncoder::encode_chunk(int_int_int_null->get_chunk(ChunkID{0}), int_int_int_null->column_data_types(),
+                               {{EncodingType::Dictionary},
+                                {EncodingType::RunLength, VectorCompressionType::SimdBp128},
+                                {EncodingType::Unencoded}});
+
+    if (storage_manager.has_table("int_int")) storage_manager.drop_table("int_int");
+    if (storage_manager.has_table("int_int_int_null")) storage_manager.drop_table("int_int_int_null");
+
+    storage_manager.add_table("int_int", int_int);
+    storage_manager.add_table("int_int_int_null", int_int_int_null);
+
+    {
+      const auto meta_table = storage_manager.get_table(prefix + meta_table_name);
+      const auto expected_table = load_table(path + meta_table_name + ".tbl");
+      EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+    }
+
+    update();
+
+    {
+      const auto meta_table = storage_manager.get_table(prefix + meta_table_name);
+      const auto expected_table = load_table(path + meta_table_name + "_updated.tbl");
+      EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+    }
+  }
+}
+
+}  // namespace opossum

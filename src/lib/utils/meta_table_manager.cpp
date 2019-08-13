@@ -2,8 +2,8 @@
 
 #include "constant_mappings.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/table_column_definition.hpp"
 #include "storage/table.hpp"
+#include "storage/table_column_definition.hpp"
 
 namespace opossum {
 
@@ -46,8 +46,10 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table(const StorageMana
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_columns_table(const StorageManager& storage_manager) {
-  const auto columns = TableColumnDefinitions{
-      {"table", DataType::String, false}, {"name", DataType::String, false}, {"type", DataType::String, false}, {"nullable", DataType::Int, false}};
+  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+                                              {"name", DataType::String, false},
+                                              {"type", DataType::String, false},
+                                              {"nullable", DataType::Int, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : storage_manager.tables()) {
@@ -67,15 +69,16 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table(const StorageMana
                                               {"chunk_id", DataType::Int, false},
                                               {"rows", DataType::Long, false},
                                               {"invalid_rows", DataType::Long, false},
-                                              {"cleanup_commit_id", DataType::Long, false}};
+                                              {"cleanup_commit_id", DataType::Long, true}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : storage_manager.tables()) {
     if (table_name.starts_with(META_PREFIX)) continue;
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      const auto cleanup_commit_id =
-          chunk->get_cleanup_commit_id() ? static_cast<int64_t>(*chunk->get_cleanup_commit_id()) : int64_t{0};
+      const auto cleanup_commit_id = chunk->get_cleanup_commit_id()
+                                         ? AllTypeVariant{static_cast<int64_t>(*chunk->get_cleanup_commit_id())}
+                                         : NULL_VALUE;
       output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int64_t>(chunk->size()),
                             static_cast<int64_t>(chunk->invalid_row_count()), cleanup_commit_id});
     }
@@ -87,9 +90,10 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table(const StorageMana
 std::shared_ptr<Table> MetaTableManager::generate_segments_table(const StorageManager& storage_manager) {
   // TODO column_name/_type violate 3NF, do we want to include them for convenience?
 
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},       {"chunk_id", DataType::Int, false},
-                                              {"column_id", DataType::Int, false},      {"column_name", DataType::String, false},
-                                              {"column_type", DataType::String, false}, {"encoding", DataType::String, true}};
+  const auto columns =
+      TableColumnDefinitions{{"table", DataType::String, false},       {"chunk_id", DataType::Int, false},
+                             {"column_id", DataType::Int, false},      {"column_name", DataType::String, false},
+                             {"column_type", DataType::String, false}, {"encoding", DataType::String, true}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : storage_manager.tables()) {

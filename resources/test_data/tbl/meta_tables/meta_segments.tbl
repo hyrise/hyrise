@@ -1,0 +1,2 @@
+table|chunk_id|column_id|column_name|column_type|encoding
+string|int|int|string|string|string
