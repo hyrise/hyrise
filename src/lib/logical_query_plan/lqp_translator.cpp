@@ -93,11 +93,17 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
    *
    * would result in multiple operators created from predicate_c and thus in performance drops
    */
-
-  const auto operator_iter = _operator_by_lqp_node.find(node);
-  if (operator_iter != _operator_by_lqp_node.end()) {
-    return operator_iter->second;
+  
+  for(const auto& [l_node, p_node] : _operator_by_lqp_node) {
+    if(node == l_node || *node == *l_node){
+      return p_node;
+    }
   }
+
+  // const auto operator_iter = _operator_by_lqp_node.find(node);
+  // if (operator_iter != _operator_by_lqp_node.end()) {
+  //   return operator_iter->second;
+  // }
 
   const auto pqp = _translate_by_node_type(node->type, node);
   _operator_by_lqp_node.emplace(node, pqp);
