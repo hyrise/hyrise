@@ -72,34 +72,39 @@ class SingleSegmentIndexTest : public BaseTest {
     return result;
   }
 
-  std::shared_ptr<AbstractIndex> index_int = nullptr;
+  // segments
   std::shared_ptr<BaseSegment> dict_segment_int = nullptr;
-  std::shared_ptr<AbstractIndex> index_int_2 = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_int_2 = nullptr;
-  std::shared_ptr<AbstractIndex> index_long = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_long = nullptr;
-  std::shared_ptr<AbstractIndex> index_float = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_float = nullptr;
-  std::shared_ptr<AbstractIndex> index_double = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_double = nullptr;
-  std::shared_ptr<AbstractIndex> index_str = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
-  std::shared_ptr<AbstractIndex> empty_index_int = nullptr;
+
   std::shared_ptr<BaseSegment> empty_dict_segment_int = nullptr;
-  std::shared_ptr<AbstractIndex> empty_index_long = nullptr;
   std::shared_ptr<BaseSegment> empty_dict_segment_long = nullptr;
-  std::shared_ptr<AbstractIndex> empty_index_float = nullptr;
   std::shared_ptr<BaseSegment> empty_dict_segment_float = nullptr;
-  std::shared_ptr<AbstractIndex> empty_index_double = nullptr;
   std::shared_ptr<BaseSegment> empty_dict_segment_double = nullptr;
-  std::shared_ptr<AbstractIndex> empty_index_str = nullptr;
   std::shared_ptr<BaseSegment> empty_dict_segment_str = nullptr;
+
+  // indexes
+  std::shared_ptr<AbstractIndex> index_int = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_2 = nullptr;
+  std::shared_ptr<AbstractIndex> index_long = nullptr;
+  std::shared_ptr<AbstractIndex> index_float = nullptr;
+  std::shared_ptr<AbstractIndex> index_double = nullptr;
+  std::shared_ptr<AbstractIndex> index_str = nullptr;
+  
+  std::shared_ptr<AbstractIndex> empty_index_int = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_long = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_float = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_double = nullptr;
+  std::shared_ptr<AbstractIndex> empty_index_str = nullptr;
   std::shared_ptr<AbstractIndex> no_segment_index = nullptr;
 };
 
 // List of indexes to test
 // TODO(Marcel) creating BTreeIndex for empty segments fails
-typedef ::testing::Types</*AdaptiveRadixTreeIndex, /*BTreeIndex,*/ CompositeGroupKeyIndex,
+typedef ::testing::Types<AdaptiveRadixTreeIndex, BTreeIndex, CompositeGroupKeyIndex,
                          GroupKeyIndex /* add further indexes */>
     DerivedIndexes;
 TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
