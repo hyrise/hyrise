@@ -1,69 +1,64 @@
 #include "gtest/gtest.h"
 
-#include "strategy_base_test.hpp"
-#include "testing_assert.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/or_to_union_rule.hpp"
+#include "strategy_base_test.hpp"
+#include "testing_assert.hpp"
 
 namespace opossum {
 
-  class OrToUnionRuleTest : public StrategyBaseTest {
-  public:
-    void SetUp() override {
-      node_a = MockNode::make(
-      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
-      a_a = node_a->get_column("a");
-      a_b = node_a->get_column("b");
-      a_c = node_a->get_column("c");
+class OrToUnionRuleTest : public StrategyBaseTest {
+ public:
+  void SetUp() override {
+    node_a = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
+    a_a = node_a->get_column("a");
+    a_b = node_a->get_column("b");
 
-      node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "b");
-      b_a = node_b->get_column("a");
-      b_b = node_b->get_column("b");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "b");
+    b_a = node_b->get_column("a");
+    b_b = node_b->get_column("b");
 
-      node_c = MockNode::make(
-      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
-      c_a = node_c->get_column("a");
-      c_b = node_c->get_column("b");
+    node_c = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
+    c_a = node_c->get_column("a");
+    c_b = node_c->get_column("b");
 
-      customer_demographics = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "c_customer_sk"}},
-                                             "customer_demographics");
-      c_customer_sk = customer_demographics->get_column("c_customer_sk");
+    customer_demographics =
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "c_customer_sk"}}, "customer_demographics");
+    c_customer_sk = customer_demographics->get_column("c_customer_sk");
 
-      date_dim = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "d_date_sk"},
-                                                            {DataType::Int, "d_year"},
-                                                            {DataType::Int, "d_qoy"}},
-                                                            "date_dim");
-      d_date_sk = date_dim->get_column("d_date_sk");
-      d_year = date_dim->get_column("d_year");
-      d_qoy = date_dim->get_column("d_qoy");
+    date_dim = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "d_date_sk"}, {DataType::Int, "d_year"}, {DataType::Int, "d_qoy"}},
+        "date_dim");
+    d_date_sk = date_dim->get_column("d_date_sk");
+    d_year = date_dim->get_column("d_year");
+    d_qoy = date_dim->get_column("d_qoy");
 
-//      store_sales = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "ss_sold_date_sk"}, "store_sales");
-//      ss_sold_date_sk = store_sales->get_column("ss_sold_date_sk");
+    web_sales = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "ws_sold_date_sk"}, {DataType::Int, "ws_bill_customer_sk"}},
+        "web_sales");
+    ws_sold_date_sk = web_sales->get_column("ws_sold_date_sk");
+    ws_bill_customer_sk = web_sales->get_column("ws_bill_customer_sk");
 
-      web_sales = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "ws_sold_date_sk"},
-                                                            {DataType::Int, "ws_bill_customer_sk"}},
-                                                            "web_sales");
-      ws_sold_date_sk = web_sales->get_column("ws_sold_date_sk");
-      ws_bill_customer_sk = web_sales->get_column("ws_bill_customer_sk");
+    catalog_sales = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "cs_sold_date_sk"}, {DataType::Int, "cs_ship_customer_sk"}},
+        "catalog_sales");
+    cs_sold_date_sk = catalog_sales->get_column("cs_sold_date_sk");
+    cs_ship_customer_sk = catalog_sales->get_column("cs_ship_customer_sk");
 
-      catalog_sales = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "cs_sold_date_sk"},
-                                                                 {DataType::Int, "cs_ship_customer_sk"}},
-                                                                 "catalog_sales");
-      cs_sold_date_sk = catalog_sales->get_column("cs_sold_date_sk");
-      cs_ship_customer_sk = catalog_sales->get_column("cs_ship_customer_sk");
+    _rule = std::make_shared<OrToUnionRule>();
+  }
 
-      _rule = std::make_shared<OrToUnionRule>();
-    }
+  std::shared_ptr<OrToUnionRule> _rule;
 
-    std::shared_ptr<OrToUnionRule> _rule;
-
-    std::shared_ptr<MockNode> node_a, node_b, node_c, customer_demographics, date_dim, store_sales, web_sales, catalog_sales;
-    LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, c_b, c_customer_sk, d_date_sk, d_year, d_qoy,
-      ss_sold_date_sk, ws_sold_date_sk, ws_bill_customer_sk, cs_sold_date_sk, cs_ship_customer_sk;
-  };
+  std::shared_ptr<MockNode> node_a, node_b, node_c, customer_demographics, date_dim, web_sales,
+      catalog_sales;
+  LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b, c_customer_sk, d_date_sk, d_year, d_qoy, ws_sold_date_sk,
+  ws_bill_customer_sk, cs_sold_date_sk, cs_ship_customer_sk;
+};
 
 TEST_F(OrToUnionRuleTest, TwoExistsToUnion) {
-  // select * from nation where exists (select * from customer where c_nationkey = n_nationkey) or exists (select * from supplier where s_nationkey = n_nationkey);
   // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b = a.b) OR EXISTS (SELECT * FROM c WHERE c.b = a.b)
 
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);

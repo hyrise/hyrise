@@ -1,11 +1,10 @@
 #include <expression/expression_utils.hpp>
 
-#include "or_to_union_rule.hpp"
+#include "expression/logical_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "expression/logical_expression.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
+#include "or_to_union_rule.hpp"
 
 namespace opossum {
 
