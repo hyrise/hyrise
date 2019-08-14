@@ -276,19 +276,9 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
 
-  // TODO(pascal): enable caching for sales and returns
-  for (const auto& table_name :
-       {"call_center", "catalog_page",
-        // "catalog_returns",
-        // "catalog_sales",
-        "customer_address", "customer", "customer_demographics", "date_dim", "household_demographics", "income_band",
-        "inventory", "item", "promotion", "reason", "ship_mode", "store",
-        // "store_returns",
-        // "store_sales",
-        "time_dim", "warehouse", "web_page",
-        // "web_returns",
-        // "web_sales",
-        "web_site"}) {
+  for (const auto& table_name : {"call_center", "catalog_page", "customer_address", "customer", "customer_demographics",
+                                 "date_dim", "household_demographics", "income_band", "inventory", "item", "promotion",
+                                 "reason", "ship_mode", "store", "time_dim", "warehouse", "web_page", "web_site"}) {
     table_info_by_name[table_name] = BenchmarkTableInfo{};
     auto& table_info = table_info_by_name[table_name];
     table_info.binary_file_path = path_to_cache.value_or("") / (std::string{table_name} + ".bin");
@@ -302,23 +292,32 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
     }
   }
 
-  auto catalog_sales_and_returns = generate_catalog_sales_and_returns();
-  std::cout << "catalog_sales table generated" << std::endl;
-  std::cout << "catalog_returns table generated" << std::endl;
-  table_info_by_name["catalog_sales"].table = catalog_sales_and_returns.first;
-  table_info_by_name["catalog_returns"].table = catalog_sales_and_returns.second;
+  for (const auto& [sales_table_name, returns_table_name] : std::vector<std::pair<std::string, std::string>>{
+           {"catalog_sales", "catalog_returns"}, {"store_sales", "store_returns"}, {"web_sales", "web_returns"}}) {
+    table_info_by_name[sales_table_name] = BenchmarkTableInfo{};
+    auto& sales_table_info = table_info_by_name[sales_table_name];
+    sales_table_info.binary_file_path = path_to_cache.value_or("") / (std::string{sales_table_name} + ".bin");
 
-  auto store_sales_and_returns = generate_store_sales_and_returns();
-  std::cout << "store_sales table generated" << std::endl;
-  std::cout << "store_returns table generated" << std::endl;
-  table_info_by_name["store_sales"].table = store_sales_and_returns.first;
-  table_info_by_name["store_returns"].table = store_sales_and_returns.second;
+    table_info_by_name[returns_table_name] = BenchmarkTableInfo{};
+    auto& returns_table_info = table_info_by_name[returns_table_name];
+    returns_table_info.binary_file_path = path_to_cache.value_or("") / (std::string{returns_table_name} + ".bin");
 
-  auto web_sales_and_returns = generate_web_sales_and_returns();
-  std::cout << "web_sales table generated" << std::endl;
-  std::cout << "web_returns table generated" << std::endl;
-  table_info_by_name["web_sales"].table = web_sales_and_returns.first;
-  table_info_by_name["web_returns"].table = web_sales_and_returns.second;
+    if (path_to_cache.has_value() && std::filesystem::is_regular_file(sales_table_info.binary_file_path.value()) &&
+        std::filesystem::is_regular_file(returns_table_info.binary_file_path.value())) {
+      std::cout << "loading " << sales_table_name << " table from cache..." << std::endl;
+      sales_table_info.table = ImportBinary::read_binary(sales_table_info.binary_file_path.value());
+      sales_table_info.loaded_from_binary = true;
+
+      std::cout << "loading " << returns_table_name << " table from cache..." << std::endl;
+      returns_table_info.table = ImportBinary::read_binary(returns_table_info.binary_file_path.value());
+      returns_table_info.loaded_from_binary = true;
+    } else {
+      std::cout << "generating " << sales_table_name << " and " << returns_table_name << " tables..." << std::endl;
+      auto catalog_sales_and_returns = _generate_sales_and_returns_tables(sales_table_name);
+      sales_table_info.table = catalog_sales_and_returns.first;
+      returns_table_info.table = catalog_sales_and_returns.second;
+    }
+  }
 
   if (cleanup_after_generate) {
     tpcds_cleanup();
@@ -366,6 +365,19 @@ std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& t
     return generate_web_site();
   } else {
     Assert(false, "unexpected table name: " + table_name);
+  }
+}
+
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::_generate_sales_and_returns_tables(
+    const std::string& sales_table_name) {
+  if (sales_table_name == "catalog_sales") {
+    return generate_catalog_sales_and_returns();
+  } else if (sales_table_name == "store_sales") {
+    return generate_store_sales_and_returns();
+  } else if (sales_table_name == "web_sales") {
+    return generate_web_sales_and_returns();
+  } else {
+    Assert(false, "unexpected sales table name: " + sales_table_name);
   }
 }
 
