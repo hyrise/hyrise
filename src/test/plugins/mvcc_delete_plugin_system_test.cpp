@@ -141,24 +141,23 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (2) Validate start conditions
   validate_table();
 
-  // (3) Prepare clean-up of chunk two
-  // (3.1) Create and run a thread which invalidates and reinserts rows of chunk two and three
-
-  // This context is older than all invalidations, so it might access the old rows. While it exists, no physical
-  // cleanup should be performed.
+  // (3) Create a blocker for the physical delete
+  // The following context is older than all invalidations following with (4). While it exists, no physical delete should be performed because the context might operate on old rows.
   auto some_other_transaction_context = TransactionManager::get().new_transaction_context();
 
-  // This thread calls update_next_row() continuously. As a PausableLoopThread, it gets terminated together with the
+  // (4) Prepare clean-up of chunk two
+  // (4.1) Create and run a thread which invalidates and reinserts rows of chunk two and three
+  // It calls update_next_row() continuously. As a PausableLoopThread, it gets terminated together with the
   // test.
   auto table_update_thread =
       std::make_unique<PausableLoopThread>(std::chrono::milliseconds(10), [&](size_t) { update_next_row(); });
 
-  // (3.2) Wait until the thread has finished invalidating rows in chunk two
+  // (4.2) Wait until the thread has finished invalidating rows in chunk two
   while (_counter < CHUNK_SIZE * 2) {  // -> if(_counter < 400)...
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  // (4) Wait for the MvccDeletePlugin to delete chunk two logically
+  // (5) Wait for the MvccDeletePlugin to delete chunk two logically
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
@@ -174,16 +173,28 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     EXPECT_GT(attempts_remaining, -1);
   }
 
-  // (5) Verify the correctness of the logical deletion operation.
+  // (6) Verify the correctness of the logical delete operation.
+  {
+    // Updates started from row 220 on. So chunk two contained 20 rows still valid before its logical deletion.
+    // These rows must have been invalidated and reinserted to the table during the logical delete operation
+    // by the MvccDeletePlugin.
+    validate_table();
+  }
 
-  // Updates started from row 220 on. So chunk two contained 20 rows still valid before its logical deletion.
-  // These rows must have been invalidated and reinserted to the table during the logical delete operation
-  // by the MvccDeletePlugin.
-  validate_table();
+  // (7) Set a prerequisite for the physical delete: So far the active-state of the following TransactionContext's snapshot-commit-id prevented a physical delete.
+  {
+    auto blocker_snapshot_cid = some_other_transaction_context->snapshot_commit_id();
+    auto lowest_active_snapshot_cid = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+    EXPECT_TRUE(lowest_active_snapshot_cid && lowest_active_snapshot_cid <= blocker_snapshot_cid);
 
-  // (6) Wait for the MvccDeletePlugin to delete chunk two physically
+    // Make snapshot-cid inactive
+    some_other_transaction_context = nullptr;
 
-  some_other_transaction_context = nullptr;
+    lowest_active_snapshot_cid = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+    EXPECT_TRUE(!lowest_active_snapshot_cid || lowest_active_snapshot_cid > blocker_snapshot_cid);
+  }
+
+  // (8) Wait for the MvccDeletePlugin to delete chunk two physically
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
@@ -198,7 +209,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     EXPECT_GT(attempts_remaining, -1);
   }
 
-  // (7) Check after conditions
+  // (9) Check after conditions
   {
     validate_table();
 
@@ -212,7 +223,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     EXPECT_TRUE(chunk2);
     EXPECT_FALSE(chunk2->get_cleanup_commit_id());
   }
-  // (8) Prepare clean-up of chunk three
+
+  // (10) Prepare clean-up of chunk three
   {
     // Kill a couple of commit IDs so that the third chunk is eligible for clean-up too. (so criterion 2 is fulfilled)
     for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
@@ -220,23 +232,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       TransactionManager::get().new_transaction_context()->commit();
     }
   }
-  // (9) Wait for the MvccDeletePlugin to delete chunk three logically
-  {
-    auto attempts_remaining = 10;
-    while (attempts_remaining--) {
-      // The second chunk should have been logically deleted by now
-      const auto chunk2 = _table->get_chunk(ChunkID{2});
-      EXPECT_TRUE(chunk2);
-      if (chunk2->get_cleanup_commit_id()) break;
 
-      // Not yet. Give the plugin some more time.
-      std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
-    }
-    // Check that we have not given up
-    EXPECT_GT(attempts_remaining, -1);
-  }
-
-  // (10) Wait for the MvccDeletePlugin to delete chunk three physically
+  // (11) Wait for the MvccDeletePlugin to delete chunk three logically & physically
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
@@ -244,15 +241,16 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       if (_table->get_chunk(ChunkID{2}) == nullptr) break;
 
       // Not yet. Give the plugin some more time.
-      std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_PHYSICAL_DELETE);
+      std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_PHYSICAL_DELETE +  MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
     }
 
     // Check that we have not given up
     EXPECT_GT(attempts_remaining, -1);
   }
 
-  // (11) Check after conditions
+  // (12) Check after conditions
   validate_table();
 
+  // (13) Unload the plugin
   PluginManager::get().unload_plugin("MvccDeletePlugin");
 }
