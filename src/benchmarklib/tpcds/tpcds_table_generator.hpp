@@ -66,7 +66,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   bool cleanup_after_generate;
   std::optional<std::filesystem::path> path_to_cache;
 
-  std::shared_ptr<Table> generate_table(const std::string& table_name);
+  std::shared_ptr<Table> _generate_table(const std::string& table_name);
 };
 
 }  // namespace opossum

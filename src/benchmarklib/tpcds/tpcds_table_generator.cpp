@@ -298,7 +298,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       table_info.loaded_from_binary = true;
     } else {
       std::cout << "generating " << table_name << " table..." << std::endl;
-      table_info.table = generate_table(table_name);
+      table_info.table = _generate_table(table_name);
     }
   }
 
@@ -327,7 +327,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   return table_info_by_name;
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_table(const std::string& table_name) {
+std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& table_name) {
   if (table_name == "call_center") {
     return generate_call_center();
   } else if (table_name == "catalog_page") {
