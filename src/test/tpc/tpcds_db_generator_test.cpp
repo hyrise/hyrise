@@ -101,7 +101,7 @@ TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
 
   EXPECT_EQ(StorageManager::get().tables().size(), 0);
 
-  TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0, false).generate_and_store();
+  TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
 
   for (const auto& [name, size] : expected_sizes) {
     SCOPED_TRACE("checking table " + std::string{name});

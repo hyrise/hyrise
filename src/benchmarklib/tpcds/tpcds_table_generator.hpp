@@ -24,14 +24,16 @@ namespace opossum {
  * to generate and then load .tbl files.
  *
  * NOT thread safe because the underlying dsdgen is probably not (assuming it has the same issues as the tpch dbgen).
+ * There is a tpcds_cleanup() function in third_party/tpcds-kit/r_params.c, but after calling tpcds_cleanup tpcds 
+ * data can no longer be generated. We decided that being able to generate tpcds data multiple times in for example a
+ * hyriseConsole session is more important than fixing these small memory leaks (<1MB for 1GB of generated data).
  */
 class TpcdsTableGenerator final : public AbstractTableGenerator {
  public:
   explicit TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
-                               int rng_seed = 19620718, bool cleanup_after_generate = true);
+                               int rng_seed = 19620718);
   TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                      std::optional<std::filesystem::path> path_to_cache = {}, int rng_seed = 19620718,
-                      bool cleanup_after_generate = true);
+                      std::optional<std::filesystem::path> path_to_cache = {}, int rng_seed = 19620718);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
@@ -63,7 +65,6 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
 
  private:
-  bool cleanup_after_generate;
   std::optional<std::filesystem::path> path_to_cache;
 
   std::shared_ptr<Table> _generate_table(const std::string& table_name);
