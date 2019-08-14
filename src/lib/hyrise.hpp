@@ -13,7 +13,8 @@ class Hyrise : public Singleton<Hyrise> {
   // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
   // creating new ones. This is used especially in tests and can lead to a lot of
   // issues if there are still running tasks / threads that want to access a resource.
-  // You should be very sure that this is what you want.
+  // You should be very sure that this is what you want. Have a look at base_test.hpp
+  // to see the correct order of resetting things.
   static void reset() { get() = Hyrise{}; }
 
   PluginManager plugin_manager;
@@ -22,10 +23,14 @@ class Hyrise : public Singleton<Hyrise> {
 
  private:
   Hyrise() {
-    // The default_memory_resource must be initialized before Hyrise's members in order
-    // to be torn down after them. If a member (e.g., the StorageManager) saves data
-    // that was allocated via the default_memory_resource, we want the member to
-    // deallocate the data first before the memory resource is destroyed.
+    // The default_memory_resource must be initialized before Hyrise's members so that
+    // it is destructed after them and remains accessible during their deconstruction.
+    // For example, when the StorageManager is destructed, it causes its stored tables
+    // to be deconstructed, too. As these might call deallocate on the
+    // default_memory_resource, it is important that the resource has not been
+    // destructed before. As objects are destructed in the reverse order of their
+    // construction, explicitly initializing the resource first means that it is
+    // destructed last.
     boost::container::pmr::get_default_resource();
 
     plugin_manager = PluginManager{};
