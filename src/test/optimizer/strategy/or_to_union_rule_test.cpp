@@ -112,8 +112,15 @@ TEST_F(OrToUnionRuleTest, TwoExistsToUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(OrToUnionRuleTest, ThreeExistsToUnion) {
-  // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b = a.b) OR EXISTS (SELECT * FROM c WHERE c.b = a.b) OR EXISTS (SELECT * FROM d WHERE d.b = a.b)
+TEST_F(OrToUnionRuleTest, NoRewriteThreeExistsToUnion) {
+  // Not yet implemented because it is not needed in TPC-DS
+  // SELECT * FROM a WHERE EXISTS (
+  //   SELECT * FROM b WHERE b.b = a.b
+  // ) OR EXISTS (
+  //   SELECT * FROM c WHERE c.b = a.b
+  // ) OR EXISTS (
+  //   SELECT * FROM d WHERE d.b = a.b
+  // )
 
   const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
 
@@ -140,22 +147,10 @@ TEST_F(OrToUnionRuleTest, ThreeExistsToUnion) {
   PredicateNode::make(or_(exists_(subquery_a), or_(exists_(subquery_b), exists_(subquery_c))),
     node_a);
 
-  const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(exists_(subquery_a),
-      node_a),
-    UnionNode::make(UnionMode::Positions,
-      PredicateNode::make(exists_(subquery_b),
-        node_a),
-      PredicateNode::make(exists_(subquery_c),
-        node_a)));
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  std::cout << "INPUT\n" << *input_lqp << "\n\n";
-  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
