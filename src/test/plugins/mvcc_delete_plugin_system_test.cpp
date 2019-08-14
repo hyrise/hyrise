@@ -163,7 +163,9 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
       // The second chunk should have been logically deleted by now
-      if (_table->get_chunk(ChunkID{1})->get_cleanup_commit_id()) break;
+      const auto chunk1 = _table->get_chunk(ChunkID{1});
+      EXPECT_TRUE(chunk1);
+      if (chunk1->get_cleanup_commit_id()) break;
 
       // Not yet. Give the plugin some more time.
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
@@ -197,29 +199,35 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   }
 
   // (7) Check after conditions
+  {
+    validate_table();
 
-  validate_table();
+    // The first chunk was never modified, so it should not have been cleaned up
+    const auto chunk0 = _table->get_chunk(ChunkID{0});
+    EXPECT_TRUE(chunk0);
+    EXPECT_FALSE(chunk0->get_cleanup_commit_id());
 
-  // The first chunk was never modified, so it should not have been cleaned up
-  EXPECT_FALSE(_table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
-
-  // The third chunk was the last to be modified, so it should not have been cleaned up either. (compare criterion 2)
-  EXPECT_FALSE(_table->get_chunk(ChunkID{2})->get_cleanup_commit_id());
-
-  // (8) Prepare clean-up of chunk three
-
-  // Kill a couple of commit IDs so that the third chunk is eligible for clean-up too. (so criterion 2 is fulfilled)
-  for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
-       ++transaction_idx) {
-    TransactionManager::get().new_transaction_context()->commit();
+    // The third chunk was the last to be modified, so it should not have been cleaned up either. (compare criterion 2)
+    const auto chunk2 = _table->get_chunk(ChunkID{2});
+    EXPECT_TRUE(chunk2);
+    EXPECT_FALSE(chunk2->get_cleanup_commit_id());
   }
-
+  // (8) Prepare clean-up of chunk three
+  {
+    // Kill a couple of commit IDs so that the third chunk is eligible for clean-up too. (so criterion 2 is fulfilled)
+    for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
+         ++transaction_idx) {
+      TransactionManager::get().new_transaction_context()->commit();
+    }
+  }
   // (9) Wait for the MvccDeletePlugin to delete chunk three logically
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
       // The second chunk should have been logically deleted by now
-      if (_table->get_chunk(ChunkID{2})->get_cleanup_commit_id()) break;
+      const auto chunk2 = _table->get_chunk(ChunkID{2});
+      EXPECT_TRUE(chunk2);
+      if (chunk2->get_cleanup_commit_id()) break;
 
       // Not yet. Give the plugin some more time.
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
