@@ -32,23 +32,19 @@ void OrToUnionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const
     const auto predicate = predicate_node->predicate();
 
     const auto flat_disjunction = flatten_logical_expressions(predicate, LogicalOperator::Or);
-    if (flat_disjunction.size() == 2) { // TODO(jj): also for > 2
+    if (flat_disjunction.size() == 2) {
       const auto union_node = UnionNode::make(UnionMode::Positions);
       const auto left_input = node->left_input();
-      std::cout << "Input node\n" << *node << "\n\n";
       lqp_replace_node(node, union_node);
       union_node->set_left_input(PredicateNode::make(flat_disjunction[0], left_input));
       union_node->set_right_input(PredicateNode::make(flat_disjunction[1], left_input));
-      std::cout << "Union Node before\n" << *union_node << "\n\n";
       _apply_to_inputs(union_node);
-      std::cout << "Union Node after\n" << *union_node << "\n\n";
     } else {
       _apply_to_inputs(node);
     }
   } else {
     _apply_to_inputs(node);
   }
-//  lqp_insert_node(node, LQPInputSide::Left, UnionNode::make(UnionMode::Positions));
 }
 
 }  // namespace opossum
