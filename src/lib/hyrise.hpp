@@ -10,11 +10,10 @@ namespace opossum {
 
 class Hyrise : public Singleton<Hyrise> {
  public:
-  // Resets the Hyrise state by deleting the Plugin-, Storage-, and TransactionManager
-  // and creating new ones. This is used especially in tests and can lead to a lot of
+  // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
+  // creating new ones. This is used especially in tests and can lead to a lot of
   // issues if there are still running tasks / threads that want to access a resource.
-  // You should be very sure that this is what you want. Have a look at base_test.hpp
-  // to see the correct order of resetting things.
+  // You should be very sure that this is what you want.
   static void reset() { get() = Hyrise{}; }
 
   PluginManager plugin_manager;
@@ -23,10 +22,10 @@ class Hyrise : public Singleton<Hyrise> {
 
  private:
   Hyrise() {
-    // The default_memory_resource must be initialized before Plugin-, Storage-, and
-    // TransactionManager so that it is the last object to be destructed. This prevents
-    // e.g. the StorageManager destructor to deallocate a table that is already
-    // destructed by the default_memory_resource destructor.
+    // The default_memory_resource must be initialized before Hyrise's members in order
+    // to be torn down after them. If a member (e.g., the StorageManager) saves data
+    // that was allocated via the default_memory_resource, we want the member to
+    // deallocate the data first before the memory resource is destroyed.
     boost::container::pmr::get_default_resource();
 
     plugin_manager = PluginManager{};

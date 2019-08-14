@@ -51,8 +51,6 @@ class TransactionManager : public Noncopyable {
   friend class TransactionManagerTest;
 
  public:
-  TransactionManager& operator=(TransactionManager&) = delete;
-
   CommitID last_commit_id() const;
 
   /**
