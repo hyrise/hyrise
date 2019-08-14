@@ -91,7 +91,7 @@ std::vector<DataType> Table::column_data_types() const {
 }
 
 bool Table::column_is_nullable(const ColumnID column_id) const {
-  DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range " + std::to_string(column_id) + " " + std::to_string(_column_definitions.size()));
+  DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
   return _column_definitions[column_id].nullable;
 }
 
