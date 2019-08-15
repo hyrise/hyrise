@@ -1,5 +1,7 @@
 #include <fstream>
 
+#include <boost/asio/ip/host_name.hpp>
+
 #include "cli_config_parser.hpp"
 #include "configuration/calibration_configuration.hpp"
 #include "cost_model_calibration.hpp"
@@ -33,8 +35,9 @@ int main(int argc, char* argv[]) {
 
   // Store the config file with a timestamp
   auto now_iso_date = opossum::get_time_as_iso_string(std::chrono::system_clock::now());
+  auto host_name = boost::asio::ip::host_name();
   std::ifstream src(argv[1], std::ios::binary);
-  std::ofstream dst(std::string(argv[1]) + now_iso_date, std::ios::binary);
+  std::ofstream dst(std::string(argv[1]) + "_" + host_name + "_" + now_iso_date, std::ios::binary);
 
   dst << src.rdbuf();
   dst.close();
