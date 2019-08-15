@@ -1346,6 +1346,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
 
     if(const auto value_segment = dynamic_cast<const ValueSegment<ColumnDataType>*>(&segment)) {
       // Shortcut
+      // TODO move to Rundumschlag
       values = std::vector<ColumnDataType>{value_segment->values().begin(), value_segment->values().end()};
       if (_table->column_is_nullable(column_id)) {
         nulls = std::vector<bool>{value_segment->null_values().begin(), value_segment->null_values().end()};

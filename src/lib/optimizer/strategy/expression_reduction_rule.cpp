@@ -330,6 +330,8 @@ void ExpressionReductionRule::remove_duplicate_aggregate(std::vector<std::shared
       }
       return LQPVisitation::VisitInputs;
     });
+
+    // TODO update aliasnode
   }
 }
 
