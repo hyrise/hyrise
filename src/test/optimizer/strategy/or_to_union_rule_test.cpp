@@ -156,10 +156,6 @@ TEST_F(OrToUnionRuleTest, SelectColumn) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
-  std::cout << "INPUT\n" << *input_lqp << "\n\n";
-  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
-
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 

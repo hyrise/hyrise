@@ -23,7 +23,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::column_expres
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   Assert(left_input() && right_input(), "Need both inputs to determine nullability");
-
+  Assert(left_input()->is_column_nullable(column_id) == right_input()->is_column_nullable(column_id),
+    "Invalid LQP: Both or neither of the inputs need to be nullable");
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
