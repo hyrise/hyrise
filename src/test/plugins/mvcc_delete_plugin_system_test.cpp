@@ -142,7 +142,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   validate_table();
 
   // (3) Create a blocker for the physical delete
-  // The following context is older than all invalidations following with (4). While it exists, no physical delete should be performed because the context might operate on old rows.
+  // The following context is older than all invalidations following with (4).
+  // While it exists, no physical delete should be performed because the context might operate on old rows.
   auto some_other_transaction_context = TransactionManager::get().new_transaction_context();
 
   // (4) Prepare clean-up of chunk two
@@ -181,7 +182,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     validate_table();
   }
 
-  // (7) Set a prerequisite for the physical delete: So far the active-state of the following TransactionContext's snapshot-commit-id prevented a physical delete.
+  // (7) Set a prerequisite for the physical delete:
+  // So far the active-state of the following TransactionContext's snapshot-commit-id prevented a physical delete.
   {
     auto blocker_snapshot_cid = some_other_transaction_context->snapshot_commit_id();
     auto lowest_active_snapshot_cid = TransactionManager::get().get_lowest_active_snapshot_commit_id();
@@ -241,7 +243,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       if (_table->get_chunk(ChunkID{2}) == nullptr) break;
 
       // Not yet. Give the plugin some more time.
-      std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_PHYSICAL_DELETE +  MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
+      std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_PHYSICAL_DELETE +
+                                  MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
     }
 
     // Check that we have not given up
