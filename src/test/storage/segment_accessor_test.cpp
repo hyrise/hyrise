@@ -30,8 +30,8 @@ class SegmentAccessorTest : public BaseTest {
     dc_int = encode_and_compress_segment(vc_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
     dc_str = encode_and_compress_segment(vc_str, DataType::String, SegmentEncodingSpec{EncodingType::Dictionary});
 
-    tbl = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"vc_int", DataType::Int},
-                                                         TableColumnDefinition{"dc_str", DataType::String}},
+    tbl = std::make_shared<Table>(TableColumnDefinitions{TableColumnDefinition{"vc_int", DataType::Int, false},
+                                                         TableColumnDefinition{"dc_str", DataType::String, false}},
                                   TableType::Data);
     tbl->append_chunk({vc_int, dc_str});
 

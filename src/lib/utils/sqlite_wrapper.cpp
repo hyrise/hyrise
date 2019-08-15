@@ -30,6 +30,9 @@ SQLiteWrapper::SQLiteWrapper() {
     sqlite3_close(_db);
     Fail("Cannot open database: " + std::string(sqlite3_errmsg(_db)));
   }
+
+  // Make LIKE case sensitive, just like in Hyrise
+  raw_execute_query("PRAGMA case_sensitive_like = true");
 }
 
 SQLiteWrapper::~SQLiteWrapper() { sqlite3_close(_db); }

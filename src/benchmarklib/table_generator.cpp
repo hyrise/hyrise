@@ -36,7 +36,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   TableColumnDefinitions column_definitions;
   for (size_t i = 0; i < _num_columns; i++) {
     auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
-    column_definitions.emplace_back(column_name, DataType::Int);
+    column_definitions.emplace_back(column_name, DataType::Int, false);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
   }
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
@@ -94,7 +94,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   TableColumnDefinitions column_definitions;
   for (size_t column = 1; column <= num_columns; ++column) {
     auto column_name = "column_" + std::to_string(column);
-    column_definitions.emplace_back(column_name, DataType::Int);
+    column_definitions.emplace_back(column_name, DataType::Int, false);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(chunk_size));
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);

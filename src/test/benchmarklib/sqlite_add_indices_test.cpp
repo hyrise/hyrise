@@ -16,8 +16,8 @@ class SQLiteAddIndicesTest : public BaseTest {
  protected:
   void SetUp() override {
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("column_1", DataType::Int);
-    column_definitions.emplace_back("column_2", DataType::String);
+    column_definitions.emplace_back("column_1", DataType::Int, false);
+    column_definitions.emplace_back("column_2", DataType::String, false);
     StorageManager::get().add_table("table_1", std::make_shared<Table>(column_definitions, TableType::Data, 2));
     stored_table = StorageManager::get().get_table("table_1");
     stored_table->append({13, "Hello,"});
