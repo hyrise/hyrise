@@ -137,10 +137,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
-  // TODO(Sven): Disable for now and use JoinProxy instead
-  // optimizer->add_rule(std::make_unique<JoinAlgorithmRule>(
-  //     std::make_shared<CostEstimatorAdaptive>(std::make_shared<CardinalityEstimator>())));
-
   return optimizer;
 }
 
