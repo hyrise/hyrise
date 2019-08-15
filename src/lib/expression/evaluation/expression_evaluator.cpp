@@ -1344,11 +1344,13 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
     std::vector<ColumnDataType> values;
     std::vector<bool> nulls;
 
-    // if(const auto value_segment = dynamic_cast<const ValueSegment<ColumnDataType>*>(&segment)) {
-    //   // Shortcut
-    //   values = std::vector<ColumnDataType>{value_segment->values().begin(), value_segment->values().end()};
-    //   nulls = std::vector<bool>{value_segment->null_values().begin(), value_segment->null_values().end()};
-    // } else {
+    if(const auto value_segment = dynamic_cast<const ValueSegment<ColumnDataType>*>(&segment)) {
+      // Shortcut
+      values = std::vector<ColumnDataType>{value_segment->values().begin(), value_segment->values().end()};
+      if (_table->column_is_nullable(column_id)) {
+        nulls = std::vector<bool>{value_segment->null_values().begin(), value_segment->null_values().end()};
+      }
+    } else {
       values.resize(segment.size());
       auto chunk_offset = ChunkOffset{0};
       if (_table->column_is_nullable(column_id)) {
@@ -1369,7 +1371,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
           ++chunk_offset;
         });
       }
-    // }
+    }
 
     if (_table->column_is_nullable(column_id)) {
       _segment_materializations[column_id] =
