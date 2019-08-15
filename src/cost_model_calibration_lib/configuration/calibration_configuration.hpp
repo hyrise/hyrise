@@ -6,6 +6,8 @@
 #include <fstream>
 #include <vector>
 
+#include <boost/asio/ip/host_name.hpp>
+
 #include "calibration_table_specification.hpp"
 #include "../calibration_helper.hpp"
 
@@ -70,12 +72,13 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
 
 
   auto now_iso_date = get_time_as_iso_string(std::chrono::system_clock::now());
+  auto host_name = boost::asio::ip::host_name();
 
   auto output_path = j.value("output_path", "./calibration_results");
-  output_path += "_" + now_iso_date + ".csv";
+  output_path += "_" + host_name + "_" + now_iso_date + ".csv";
 
   auto tpch_output_path = j.value("tpch_output_path", "./tpch_calibration_results");
-  tpch_output_path += "_" + now_iso_date + ".csv";
+  tpch_output_path += "_" + host_name + "_" + now_iso_date + ".csv";
 
   configuration.output_path = output_path;
   configuration.tpch_output_path = tpch_output_path;
