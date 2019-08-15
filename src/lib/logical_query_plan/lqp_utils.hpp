@@ -119,6 +119,26 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
   }
 }
 
+// TODO doc
+template <typename Visitor>
+void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
+  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
+  node_queue.push(lqp);
+
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+
+  while (!node_queue.empty()) {
+    auto node = node_queue.front();
+    node_queue.pop();
+
+    if (!visited_nodes.emplace(node).second) continue;
+
+    if (visitor(node) == LQPVisitation::VisitInputs) {
+      for (const auto& output : node->outputs()) node_queue.push(output);
+    }
+  }
+}
+
 /**
  * @return The node @param lqp as well as the root nodes of all LQPs in subqueries and, recursively, LQPs in their
  *         subqueries

@@ -1,5 +1,6 @@
 #include "expression_reduction_rule.hpp"
 
+#include <algorithm>
 #include <functional>
 #include <unordered_set>
 
@@ -22,6 +23,10 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   Assert(node->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   visit_lqp(node, [&](const auto& sub_node) {
+    if (sub_node->type == LQPNodeType::Aggregate) {
+      remove_duplicate_aggregate(sub_node->node_expressions, *sub_node);
+    }
+
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
       reduce_in_with_single_list_element(expression);
@@ -240,6 +245,83 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   } else {  // binary_predicate->predicate_condition == PredicateCondition::NotLike
     input_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
                            greater_than_equals_(binary_predicate->left_operand(), upper_bound));
+  }
+}
+
+void ExpressionReductionRule::remove_duplicate_aggregate(std::vector<std::shared_ptr<AbstractExpression>>& input_expressions, AbstractLQPNode& aggregate_node) {
+  // For now, we only handle top-level expressions. `AVG(x) + 1` will be left alone. That should be easy to add if we
+  // ever need it.
+  // TODO If the benefit is not significant, include it in the paper but say that it's scope is too limited
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums, counts, avgs;
+
+  for (auto& input_expression : input_expressions) {
+    if (input_expression->type != ExpressionType::Aggregate) continue;
+    auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
+    switch (aggregate_expression.aggregate_function) {
+      case AggregateFunction::Sum: {
+        sums.emplace_back(input_expression);
+        break;
+      }
+      case AggregateFunction::Count: {
+        counts.emplace_back(input_expression);
+        break;
+      }
+      case AggregateFunction::Avg: {
+        avgs.emplace_back(input_expression);
+        break;
+      }
+      default: continue;
+    }
+  }
+
+  auto aggregate_expressions = aggregate_node.column_expressions();
+  const auto& aggregate_input_node = aggregate_node.left_input();
+  auto replacements = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{};
+
+  for (auto& projection_expression : aggregate_expressions) {
+    const auto avg_expression = std::dynamic_pointer_cast<AggregateExpression>(projection_expression);
+    if (!avg_expression || avg_expression->aggregate_function != AggregateFunction::Avg) continue;
+
+    const auto avg_argument = avg_expression->argument();
+    const auto avg_argument_is_nullable = avg_argument.get()->is_nullable_on_lqp(*aggregate_input_node);
+
+    const auto finder = [&](const auto& other_expression) {
+      const auto other_argument = static_cast<const AggregateExpression*>(other_expression.get().get())->argument();
+
+      if (!other_argument) {
+        // other_argument might be nullptr if we are looking at COUNT(*) - that is acceptable if the argument a to AVG
+        // is not nullable. In that case, COUNT(*) == COUNT(a)
+        return !avg_argument_is_nullable;
+      }
+
+      return other_argument == avg_argument || (other_argument && *other_argument == *avg_argument);
+    };
+
+    auto sum_it = std::find_if(sums.begin(), sums.end(), finder);
+    auto count_it = std::find_if(counts.begin(), counts.end(), finder);
+    if(sum_it != sums.end() && count_it != counts.end()) {
+      replacements[avg_expression] = div_(sum_it->get(), count_it->get());
+    }
+  }
+
+  if (!replacements.empty()) {
+    auto projection_node = std::make_shared<ProjectionNode>(aggregate_expressions);
+    for (const auto& output_relation : aggregate_node.output_relations()) {
+      lqp_insert_node(output_relation.output, output_relation.input_side, projection_node);
+    }
+
+    // Now update the expression in all nodes that might refer to it
+    visit_lqp_upwards(projection_node, [&](const auto& node) {
+      for (auto& expression : node->node_expressions) {
+        visit_expression(expression, [&](auto& sub_expression) {
+          const auto replacement_iter = replacements.find(expression);
+          if (replacement_iter == replacements.end()) return ExpressionVisitation::VisitArguments;
+          sub_expression = replacement_iter->second;
+          return ExpressionVisitation::DoNotVisitArguments;
+        });
+      }
+      return LQPVisitation::VisitInputs;
+    });
   }
 }
 

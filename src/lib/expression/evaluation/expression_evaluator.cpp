@@ -1341,32 +1341,40 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
   resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
     using ColumnDataType = typename decltype(column_data_type_t)::type;
 
-    std::vector<ColumnDataType> values(segment.size());
+    std::vector<ColumnDataType> values;
+    std::vector<bool> nulls;
 
-    auto chunk_offset = ChunkOffset{0};
+    // if(const auto value_segment = dynamic_cast<const ValueSegment<ColumnDataType>*>(&segment)) {
+    //   // Shortcut
+    //   values = std::vector<ColumnDataType>{value_segment->values().begin(), value_segment->values().end()};
+    //   nulls = std::vector<bool>{value_segment->null_values().begin(), value_segment->null_values().end()};
+    // } else {
+      values.resize(segment.size());
+      auto chunk_offset = ChunkOffset{0};
+      if (_table->column_is_nullable(column_id)) {
+        nulls.resize(segment.size());
+
+        segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+          if (position.is_null()) {
+            nulls[chunk_offset] = true;
+          } else {
+            values[chunk_offset] = position.value();
+          }
+          ++chunk_offset;
+        });
+      } else {
+        segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+          DebugAssert(!position.is_null(), "Encountered NULL value in non-nullable column");
+          values[chunk_offset] = position.value();
+          ++chunk_offset;
+        });
+      }
+    // }
 
     if (_table->column_is_nullable(column_id)) {
-      std::vector<bool> nulls(segment.size());
-
-      segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-        if (position.is_null()) {
-          nulls[chunk_offset] = true;
-        } else {
-          values[chunk_offset] = position.value();
-        }
-        ++chunk_offset;
-      });
-
       _segment_materializations[column_id] =
           std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values), std::move(nulls));
-
     } else {
-      segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
-        DebugAssert(!position.is_null(), "Encountered NULL value in non-nullable column");
-        values[chunk_offset] = position.value();
-        ++chunk_offset;
-      });
-
       _segment_materializations[column_id] = std::make_shared<ExpressionResult<ColumnDataType>>(std::move(values));
     }
   });
