@@ -1,5 +1,5 @@
 a|SUM(b)|AVG(c)
-int|double|double
+int|double_null|double_null
 12345|914.4|26.5
 123|458.7|20
 12|350.7|10

@@ -16,7 +16,8 @@ TEST(TableBuilderTest, CreateColumnsWithCorrectNamesAndTypesAndNullables) {
   const auto table = table_builder.finish_table();
 
   const auto expected_table = std::make_shared<Table>(
-      TableColumnDefinitions{{"a", DataType::Int}, {"b", DataType::Float}, {"c", DataType::String}}, TableType::Data);
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Float, true}, {"c", DataType::String, false}},
+      TableType::Data);
 
   EXPECT_TABLE_EQ_UNORDERED(table, expected_table);
   EXPECT_EQ(table->columns_are_nullable(), std::vector({false, true, false}));
@@ -29,7 +30,7 @@ TEST(TableBuilderTest, AppendsRows) {
   const auto table = table_builder.finish_table();
 
   auto expected_table = std::make_shared<Table>(
-      TableColumnDefinitions{{"a", DataType::Int}, {"b", DataType::Float, true}, {"c", DataType::String}},
+      TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Float, true}, {"c", DataType::String, false}},
       TableType::Data);
   expected_table->append({42, 42.0f, "42"});
   expected_table->append({43, NULL_VALUE, "43"});

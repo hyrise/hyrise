@@ -27,7 +27,8 @@ std::shared_ptr<AbstractOperator> ShowTables::_on_deep_copy(
 void ShowTables::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> ShowTables::_on_execute() {
-  auto table = std::make_shared<Table>(TableColumnDefinitions{{"table_name", DataType::String}}, TableType::Data);
+  auto table =
+      std::make_shared<Table>(TableColumnDefinitions{{"table_name", DataType::String, false}}, TableType::Data);
 
   const auto table_names = StorageManager::get().table_names();
   const auto segment = std::make_shared<ValueSegment<pmr_string>>(

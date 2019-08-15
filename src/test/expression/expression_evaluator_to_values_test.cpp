@@ -363,6 +363,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, CaseSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(greater_than_(empty_a, 3), 1, 2), {}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(1, empty_a, empty_a), {}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(greater_than_(empty_a, 3), empty_a, empty_a), {}));
+  EXPECT_TRUE(test_expression<int32_t>(table_empty, *case_(equals_(add_(NullValue{}, 1), 0), 1, 2), {2}));
   // clang-format on
 }
 

@@ -288,7 +288,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // Create group by column definitions
   for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
-                                            input_table->column_data_type(column_id), true);
+                                            input_table->column_data_type(column_id),
+                                            input_table->column_is_nullable(column_id));
   }
 
   // Create aggregate column definitions
