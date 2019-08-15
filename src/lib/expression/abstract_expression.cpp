@@ -13,7 +13,7 @@ namespace opossum {
 
 AbstractExpression::AbstractExpression(const ExpressionType type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
-    : type(type), arguments(arguments) {}
+    : counter(0u), type(type), arguments(arguments) {}
 
 bool AbstractExpression::requires_computation() const { return true; }
 

@@ -244,17 +244,14 @@ const char* const tpch_query_6 =
  *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
  */
 const char* const tpch_query_7 =
-    R"(SELECT
-          n1.n_name,
-          n2.n_name
-       FROM
-          nation n1,
-          nation n2
-       LIMIT 10;)";
-      // GROUP BY
-      //     supp_nation, cust_nation, l_year
-      // ORDER BY
-      //     supp_nation, cust_nation, l_year;)";
+    R"(SELECT l1.l_linenumber,
+              l2.l_linenumber
+       FROM lineitem l1,
+            lineitem l2
+       WHERE  l1.l_linenumber = 1 AND
+              l1.l_orderkey = 1 AND
+              l2.l_linenumber = 2 AND
+              l2.l_orderkey = 1;)";
 
 /**
  * TPC-H 8

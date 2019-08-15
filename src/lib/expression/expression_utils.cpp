@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <queue>
 #include <sstream>
+#include <typeinfo>
 
 #include "expression_functional.hpp"
 #include "logical_expression.hpp"
@@ -80,14 +81,28 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
 }
 
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
-                                       const LQPNodeMapping& node_mapping) {
+                                       const LQPNodeMapping& node_mapping, std::optional<uint32_t> counter) {
   visit_expression(expression, [&](auto& expression_ptr) {
-    if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
-
+    // std::cout << "  visited expr: " << *expression_ptr << ", " << expression_ptr << "\n";
+    if (expression_ptr->type != ExpressionType::LQPColumn){
+      // std::cout << "    is no ColumnExpression\n";
+      return ExpressionVisitation::VisitArguments;
+    }
     const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
     Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
 
-    expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
+     // std::cout << "    is ColumnExpression; org: " << lqp_column_expression_ptr->column_reference.original_node() << "\n";
+
+    const auto& new_expr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
+    if (new_expr) {
+      if(counter){
+        new_expr->counter = *counter;
+        std::cout << "  exprssion ptr prev: " << *expression_ptr << "\n";
+        expression_ptr = new_expr;
+        std::cout << "  exprssion ptr updated: " << *expression_ptr << "\n";
+      // std::cout << "  replacement happened; new ptr: " << new_expr << ", org: " << new_expr->column_reference.original_node() << "\n";
+      }
+    }
 
     return ExpressionVisitation::DoNotVisitArguments;
   });
@@ -97,60 +112,13 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
                                                                        const LQPNodeMapping& node_mapping) {
   const auto node = lqp_column_expression.column_reference.original_node();
   const auto node_mapping_iter = node_mapping.find(node);
-  Assert(node_mapping_iter != node_mapping.end(),
-         "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
-
+  if (node_mapping_iter == node_mapping.end()) {
+    return nullptr;
+  }
   LQPColumnReference adapted_column_reference{node_mapping_iter->second,
                                               lqp_column_expression.column_reference.original_column_id()};
-
+                                             
   return std::make_shared<LQPColumnExpression>(adapted_column_reference);
-}
-
-void expressions_adapt_to_different_lqp(std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-                                        const std::vector<std::shared_ptr<AbstractLQPNode>> stored_table_nodes) {
-  for (auto& expression : expressions) {
-    expression_adapt_to_different_lqp(expression, stored_table_nodes);
-  }
-}
-
-void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
-                                       const std::vector<std::shared_ptr<AbstractLQPNode>> stored_table_nodes) {
-  visit_expression(expression, [&](auto& expression_ptr) {
-    if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
-
-    const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
-    Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
-
-    const auto& new_expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, stored_table_nodes);
-    if (new_expression_ptr) {
-      expression_ptr = new_expression_ptr;
-    }
-
-    return ExpressionVisitation::DoNotVisitArguments;
-  });
-}
-
-std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(
-    const LQPColumnExpression& lqp_column_expression,
-    const std::vector<std::shared_ptr<AbstractLQPNode>> stored_table_nodes) {
-  const auto node = lqp_column_expression.column_reference.original_node();
-
-  std::cout << "original node in expr.: " << node->description() << ", " << node << "\n";
-
-  const auto& begin = stored_table_nodes.begin();
-  const auto& end = stored_table_nodes.end();
-
-  if (std::find(begin, end, node) != end) {
-    return nullptr;
-  } else {
-    const auto& iter =
-        std::find_if(begin, end, [&node](const auto& stored_table_node) { return *stored_table_node == *node; });
-    Assert(iter != end, "No suitable stored table node available.");
-
-    LQPColumnReference adapted_column_reference{*iter, lqp_column_expression.column_reference.original_column_id()};
-
-    return std::make_shared<LQPColumnExpression>(adapted_column_reference);
-  }
 }
 
 std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {

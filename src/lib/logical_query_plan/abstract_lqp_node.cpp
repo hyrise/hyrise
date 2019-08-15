@@ -196,11 +196,27 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
-  const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below
-  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
-    if (*column_expressions[column_id] == expression) return column_id;
+  // std::cout << this->description() << ", " << this << "\n";
+  if(type == LQPNodeType::Join){
+    std::cout << "JOIN NODE BRANCH\n";
+    const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below
+    for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+      if (*column_expressions[column_id] == expression &&
+        column_expressions[column_id]->counter == expression.counter){
+        return column_id;
+      } 
+    }
+    return std::nullopt;
+  }else{
+    std::cout << "NON-JOIN NODE BRANCH\n";
+    const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below
+    for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+      if (*column_expressions[column_id] == expression){
+        return column_id;
+      }
+    }
+    return std::nullopt;
   }
-  return std::nullopt;
 }
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {

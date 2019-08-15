@@ -86,6 +86,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
 
   size_t hash() const;
 
+  uint32_t counter;
   const ExpressionType type;
   std::vector<std::shared_ptr<AbstractExpression>> arguments;
 
@@ -122,7 +123,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
 
 // So that google test, e.g., prints readable error messages
 inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& expression) {
-  return stream << expression.as_column_name();
+  return stream << expression.as_column_name() << ", " << expression.counter;
 }
 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>

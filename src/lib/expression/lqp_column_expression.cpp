@@ -14,7 +14,11 @@ LQPColumnExpression::LQPColumnExpression(const LQPColumnReference& column_refere
     : AbstractExpression(ExpressionType::LQPColumn, {}), column_reference(column_reference) {}
 
 std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
-  return std::make_shared<LQPColumnExpression>(column_reference);
+
+  auto copy = std::make_shared<LQPColumnExpression>(column_reference);
+  copy->counter = counter;
+  return copy;
+  // return std::make_shared<LQPColumnExpression>(column_reference);
 }
 
 std::string LQPColumnExpression::as_column_name() const {

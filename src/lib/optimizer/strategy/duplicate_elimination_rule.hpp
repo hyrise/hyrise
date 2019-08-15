@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "abstract_rule.hpp"
@@ -24,12 +25,13 @@ class DuplicateEliminationRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
+  void _create_possible_replacement_mapping(const std::shared_ptr<AbstractLQPNode>& node) const;
+  void _replace_nodes_traversal(const std::shared_ptr<AbstractLQPNode>& node, LQPNodeMapping& node_mapping) const;
+  void _adapt_expressions_traversal(const std::shared_ptr<AbstractLQPNode>& node,
+                                    const LQPNodeMapping& node_mapping, uint32_t counter = 0) const;
   void _print_traversal(const std::shared_ptr<AbstractLQPNode>& node) const;
-  void _find_sub_plan_duplicates_traversal(const std::shared_ptr<AbstractLQPNode>& node) const;
-  void _adapt_expressions_traversal(const std::shared_ptr<AbstractLQPNode>& node) const;
-  mutable std::vector<std::shared_ptr<AbstractLQPNode>> _remaining_stored_table_nodes;
-  mutable std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>>
-      _original_replacement_pairs;
+  mutable std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>
+      _possible_replacement_mapping;
   mutable std::vector<std::shared_ptr<AbstractLQPNode>> _sub_plans;
 };
 

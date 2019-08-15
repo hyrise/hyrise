@@ -52,8 +52,24 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
    * of feeble code.
    */
 
-  const auto& left_expressions = left_input()->column_expressions();
-  const auto& right_expressions = right_input()->column_expressions();
+  auto left_expressions = left_input()->column_expressions();
+  auto right_expressions = right_input()->column_expressions();
+  
+  for(const auto& left_expression : left_expressions){
+    std::cout << *left_expression << "\n";
+    auto right_duplication_iter = std::find_if(right_expressions.begin(), right_expressions.end(),
+      [&left_expression](const auto& right_expression){
+        return *left_expression == *right_expression;
+      });
+    if(right_duplication_iter != right_expressions.end()){
+      // SUM(ss_ext_sales_price) is not castable to LQPColumnExpression
+      const auto& right_duplicate_expression = std::dynamic_pointer_cast<LQPColumnExpression>(*right_duplication_iter);
+      if(right_duplicate_expression){
+        *right_duplication_iter = std::make_shared<LQPColumnExpression>(right_duplicate_expression->column_reference);    
+        (*right_duplication_iter)->counter = 1u;
+      }
+    }
+  }  
 
   const auto output_both_inputs =
       join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
@@ -63,6 +79,12 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
   auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _column_expressions.begin());
 
   if (output_both_inputs) std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
+
+  std::cout << "JN col exprs:\n";
+
+  for(const auto& exptr : _column_expressions) {
+    std::cout << *exptr << "\n";
+  }
 
   return _column_expressions;
 }
