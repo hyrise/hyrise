@@ -189,7 +189,8 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   StorageManager::get().add_table("table_3int", table);
 
   const std::string subquery_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
-  const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
+  const TableColumnDefinitions column_definitions = {
+      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
 
   auto sql_pipeline = SQLPipelineBuilder{subquery_query}.disable_mvcc().create_pipeline_statement();
   const auto [pipeline_status, first_result] = sql_pipeline.get_result_table();

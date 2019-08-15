@@ -15,8 +15,8 @@ namespace opossum {
 class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    column_definitions.emplace_back("column_1", DataType::Int);
-    column_definitions.emplace_back("column_2", DataType::String);
+    column_definitions.emplace_back("column_1", DataType::Int, false);
+    column_definitions.emplace_back("column_2", DataType::String, false);
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
@@ -122,7 +122,7 @@ TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
   t->append({4, "Hello,"});
   t->append({6, "world"});
 
-  auto chunk = t->get_chunk(ChunkID{0});
+  const auto chunk = t->get_chunk(ChunkID{0});
 
   const auto values = std::vector<CommitID>{1u, 2u};
 

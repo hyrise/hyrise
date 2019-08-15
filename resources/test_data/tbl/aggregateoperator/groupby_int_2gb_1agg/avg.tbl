@@ -1,5 +1,5 @@
 a|b|AVG(c)
-int|float|double
+int|float|double_null
 12345|456.7|22
 12345|457.7|31.5
 123|458.7|20
