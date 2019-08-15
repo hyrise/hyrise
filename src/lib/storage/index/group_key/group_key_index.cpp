@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "storage/index/abstract_index.hpp"
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
@@ -19,18 +20,16 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   Assert(static_cast<bool>(_indexed_segment), "GroupKeyIndex only works with dictionary segments_to_index.");
   Assert((segments_to_index.size() == 1), "GroupKeyIndex only works with a single segment.");
 
-  // 1) Initialize the index structures
-  // 1a) Set the index_offset to size of the dictionary + 2 (plus one for null and plus one to mark the ending position)
-  //     and set all offsets to 0.
-  //     Using `_index_offsets`, we want to count the occurences of each ValueID of the attribute vector (AV).
-  //     The ValueID for null in an AV is the highest available ValueID in the dictionary + 1.
-  //     `unique_values_count` returns the size of dictionary which does not store a ValueID for null.
-  //     Therefore we have `unique_values_count` + 1 (for null) ValueIDs for which we want to count the occurrences.
+  // 1) Initialize the index_offset:
+  //    Set the index_offset to size of the dictionary + 2 (plus one for null and plus one to mark the ending position)
+  //    and set all offsets to 0.
+  //    Using `_index_offsets`, we want to count the occurences of each ValueID of the attribute vector (AV).
+  //    The ValueID for null in an AV is the highest available ValueID in the dictionary + 1.
+  //    `unique_values_count` returns the size of dictionary which does not store a ValueID for null.
+  //    Therefore we have `unique_values_count` + 1 (for null) ValueIDs for which we want to count the occurrences.
   _index_offsets = std::vector<ChunkOffset>(
       _indexed_segment->unique_values_count() + 1u /*for null*/ + 1u /*to mark the ending position */, 0u);
-  // 1b) Set the _index_postings to the size of the attribute vector
-  _index_postings = std::vector<ChunkOffset>(_indexed_segment->size());
-
+  
   // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (i.e. value ids)
   //    and count the occurrences of each value id at their respective position in the dictionary,
   //    i.e. the position in the _index_offsets
@@ -41,22 +40,33 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   });
 
   null_value_id = _indexed_segment->unique_values_count();
-  null_count = _index_offsets[null_value_id + 1u];
+  const auto null_count = _index_offsets[null_value_id + 1u];
+  const auto non_null_count = _indexed_segment->size() - null_count;
 
-  // 3) Create offsets for the postings in _index_offsets
+  // 3) Set the _index_postings and _index_null_postings
+  _index_postings = std::vector<ChunkOffset>(non_null_count);
+  _index_null_postings = std::vector<ChunkOffset>(null_count);
+
+  // 4) Create offsets for the postings in _index_offsets
   std::partial_sum(_index_offsets.begin(), _index_offsets.end(), _index_offsets.begin());
 
-  // 4) Create the postings
-  // 4a) Copy _index_offsets to use it as a write counter
+  // 5) Create the postings
+  // 5a) Copy _index_offsets to use it as a write counter
   auto index_offset_copy = std::vector<ChunkOffset>(_index_offsets);
 
-  // 4b) Iterate once again over the attribute vector to obtain the write-offsets
+  // 5b) Iterate once again over the attribute vector to obtain the write-offsets
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](auto& attribute_vector) {
     auto value_id_it = attribute_vector.cbegin();
     auto position = 0u;
     for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++position) {
       const auto& value_id = static_cast<ValueID>(*value_id_it);
-      _index_postings[index_offset_copy[value_id]] = position;
+
+      if(value_id != null_value_id){
+        _index_postings[index_offset_copy[value_id]] = position;
+      } else{
+        const auto null_postings_offset = index_offset_copy[value_id] - non_null_count;
+        _index_null_postings[null_postings_offset] = position;
+      }
 
       // increase the write-offset in the copy by one to ensure that further writes
       // are directed to the next position in _index_postings
@@ -89,11 +99,7 @@ GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVar
 
 GroupKeyIndex::Iterator GroupKeyIndex::_cbegin() const { return _index_postings.cbegin(); }
 
-GroupKeyIndex::Iterator GroupKeyIndex::_cend() const { return _null_cbegin(); }
-
-GroupKeyIndex::Iterator GroupKeyIndex::_null_cbegin() const { return _index_postings.cend() - null_count; }
-
-GroupKeyIndex::Iterator GroupKeyIndex::_null_cend() const { return _index_postings.cend(); }
+GroupKeyIndex::Iterator GroupKeyIndex::_cend() const { return _index_postings.cend(); }
 
 /**
    *
@@ -122,6 +128,7 @@ size_t GroupKeyIndex::_memory_consumption() const {
   size_t bytes = sizeof(_indexed_segment);
   bytes += sizeof(ChunkOffset) * _index_offsets.size();
   bytes += sizeof(ChunkOffset) * _index_postings.size();
+  bytes += sizeof(ChunkOffset) * _index_null_postings.size();
   return bytes;
 }
 

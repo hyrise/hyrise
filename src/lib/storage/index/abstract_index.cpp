@@ -59,9 +59,9 @@ AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }
 
 AbstractIndex::Iterator AbstractIndex::cend() const { return _cend(); }
 
-AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _null_cbegin(); }
+AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _index_null_postings.cbegin(); }
 
-AbstractIndex::Iterator AbstractIndex::null_cend() const { return _null_cend(); }
+AbstractIndex::Iterator AbstractIndex::null_cend() const { return _index_null_postings.cend(); }
 
 SegmentIndexType AbstractIndex::type() const { return _type; }
 

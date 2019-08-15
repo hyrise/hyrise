@@ -34,6 +34,7 @@ class BaseSegment;
  **/
 
 class AbstractIndex : private Noncopyable {
+  friend class GroupKeyIndexTest;
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
   using Iterator = std::vector<ChunkOffset>::const_iterator;
@@ -157,6 +158,7 @@ class AbstractIndex : private Noncopyable {
   virtual Iterator _null_cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
+  std::vector<ChunkOffset> _index_null_postings; // null positions in the attribute vector
 
  private:
   const SegmentIndexType _type;

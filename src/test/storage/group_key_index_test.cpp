@@ -41,6 +41,7 @@ class GroupKeyIndexTest : public BaseTest {
 
     index_offsets = &(index->_index_offsets);
     index_postings = &(index->_index_postings);
+    index_null_postings = &(index->_index_null_postings);
   }
 
   std::shared_ptr<GroupKeyIndex> index = nullptr;
@@ -53,6 +54,7 @@ class GroupKeyIndexTest : public BaseTest {
    */
   std::vector<ChunkOffset>* index_offsets;
   std::vector<ChunkOffset>* index_postings;
+  std::vector<ChunkOffset>* index_null_postings;
 };
 
 TEST_F(GroupKeyIndexTest, IndexOffsets) {
@@ -62,10 +64,11 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
 
 TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   // expected memory consumption:
-  //  - `_indexed_segments`, shared pointer          ->  16 byte
-  //  - `_index_offsets`, 8 elements, each 4 byte    ->  32 byte
-  //  - `_index_postings`, 12 elements, each 4 byte  ->  48 byte
-  //  - sum                                          ->  96 byte
+  //  - `_indexed_segments`, shared pointer             ->  16 byte
+  //  - `_index_offsets`, 8 elements, each 4 byte       ->  32 byte
+  //  - `_index_postings`, 8 elements, each 4 byte      ->  32 byte
+  //  - `_index_null_postings`, 4 elements, each 4 byte ->  16 byte
+  //  - sum                                             ->  96 byte
   EXPECT_EQ(index->memory_consumption(), 96u);
 }
 
@@ -76,26 +79,32 @@ TEST_F(GroupKeyIndexTest, IndexPostings) {
 
   // check if the correct postings are present for each value-id
   auto expected_postings = std::vector<std::unordered_set<ChunkOffset>>{
-      {7}, {8, 9}, {8, 9}, {2, 4}, {2, 4}, {3}, {1}, {10}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}};
+      {7}, {8, 9}, {8, 9}, {2, 4}, {2, 4}, {3}, {1}, {10}};
+  auto expected_null_postings = std::vector<std::unordered_set<ChunkOffset>>{
+      {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}};
 
   for (size_t i = 0; i < index_postings->size(); ++i) {
     EXPECT_EQ(1u, expected_postings[i].count(index_postings->at(i)));
+  }
+
+  for (size_t i = 0; i < index_null_postings->size(); ++i) {
+    EXPECT_EQ(1u, expected_null_postings[i].count(index_null_postings->at(i)));
   }
 }
 
 TEST_F(GroupKeyIndexTest, IteratorBeginEnd) {
   EXPECT_EQ(index->cbegin(), index_postings->cbegin());
   EXPECT_EQ(index->cend(), index_postings->cbegin() + 8u);
-  EXPECT_EQ(index->null_cbegin(), index_postings->cbegin() + 8u);
-  EXPECT_EQ(index->null_cend(), index_postings->cend());
+  EXPECT_EQ(index->null_cbegin(), index_null_postings->cbegin());
+  EXPECT_EQ(index->null_cend(), index_null_postings->cbegin() + 4u);
   EXPECT_EQ(index->lower_bound({"inbox"}), index_postings->cbegin() + 7u);
   EXPECT_EQ(index->upper_bound({"inbox"}), index_postings->cbegin() + 8u);
   EXPECT_EQ(index->lower_bound({"hyrise"}), index_postings->cbegin() + 7u);
   EXPECT_EQ(index->upper_bound({"hyrise"}), index_postings->cbegin() + 7u);
   EXPECT_EQ(index->lower_bound({"lamp"}), index_postings->cbegin() + 8u);
   EXPECT_EQ(index->upper_bound({"lamp"}), index_postings->cbegin() + 8u);
-  EXPECT_EQ(index->lower_bound({NULL_VALUE}), index_postings->cbegin() + 8u);
-  EXPECT_EQ(index->upper_bound({NULL_VALUE}), index_postings->cend());
+  EXPECT_EQ(index->lower_bound({NULL_VALUE}), index_null_postings->cbegin());
+  EXPECT_EQ(index->upper_bound({NULL_VALUE}), index_null_postings->cbegin() + 4u);
 }
 
 }  // namespace opossum

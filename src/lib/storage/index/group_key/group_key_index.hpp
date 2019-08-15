@@ -44,6 +44,7 @@ class GroupKeyIndexTest;
  *  | 11 |         6 |            |         |         |-> 11 |  ie null can be found at i = 0, 5, 6 and 11
  *  +----+-----------+------------+---------+----------------+
  *
+ * // TODO adapt figure
  * 
  * Null is represented in the Attribute Vector by a ValueID which is the highest available
  * ValueID in the dictionary + 1, i.e. ValieID{6} in this example.
@@ -80,10 +81,6 @@ class GroupKeyIndex : public AbstractIndex {
 
   Iterator _cend() const final;
 
-  Iterator _null_cbegin() const final;
-
-  Iterator _null_cend() const final;
-
   /**
    *
    * @returns an iterator pointing to the the first ChunkOffset in the postings-vector
@@ -98,7 +95,6 @@ class GroupKeyIndex : public AbstractIndex {
  private:
   const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
   ValueID null_value_id;
-  ChunkOffset null_count;
   std::vector<ChunkOffset> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // record positions in the attribute vector
 };
