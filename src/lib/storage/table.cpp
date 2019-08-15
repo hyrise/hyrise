@@ -36,7 +36,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc)
-    : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::MAX_SIZE} : std::nullopt,
+    : Table(column_definitions, type, type == TableType::Data ? std::optional{chunks.size() > 0 ? chunks[0]->size() : Chunk::MAX_SIZE} : std::nullopt,
             use_mvcc) {
   _chunks = {chunks.begin(), chunks.end()};
 
