@@ -16,6 +16,7 @@ benchmark.json
 *.pyc
 console.log
 .repl_history
+*/calibration.json
 
 # Visualization results
 *.dot
