@@ -1,10 +1,13 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
+#include <chrono>
 #include <string>
+#include <fstream>
 #include <vector>
 
 #include "calibration_table_specification.hpp"
+#include "../calibration_helper.hpp"
 
 namespace opossum {
 
@@ -65,8 +68,17 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
     configuration.table_generation = false;
   }
 
-  configuration.output_path = j.value("output_path", "./calibration_results.json");
-  configuration.tpch_output_path = j.value("tpch_output_path", "./tpch_calibration_results.json");
+
+  auto now_iso_date = get_time_as_iso_string(std::chrono::system_clock::now());
+
+  auto output_path = j.value("output_path", "./calibration_results");
+  output_path += "_" + now_iso_date + ".csv";
+
+  auto tpch_output_path = j.value("tpch_output_path", "./tpch_calibration_results");
+  tpch_output_path += "_" + now_iso_date + ".csv";
+
+  configuration.output_path = output_path;
+  configuration.tpch_output_path = tpch_output_path;
   configuration.calibration_runs = j.value("calibration_runs", 1000u);
   configuration.table_specifications = j.value("table_specifications", std::vector<CalibrationTableSpecification>{});
   configuration.calibrate_vector_compression_types = j.value("calibrate_vector_compression_types", false);
