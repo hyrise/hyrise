@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include "storage/index/abstract_index.hpp"
 #include "storage/base_dictionary_segment.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
@@ -16,7 +16,9 @@ size_t GroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOf
 
 GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : AbstractIndex{get_index_type_of<GroupKeyIndex>()},
-      _indexed_segment(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index[0])) {
+      _indexed_segment(segments_to_index.empty()
+                           ? nullptr
+                           : std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index[0])) {
   Assert(static_cast<bool>(_indexed_segment), "GroupKeyIndex only works with dictionary segments_to_index.");
   Assert((segments_to_index.size() == 1), "GroupKeyIndex only works with a single segment.");
 
@@ -29,7 +31,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   //    Therefore we have `unique_values_count` + 1 (for null) ValueIDs for which we want to count the occurrences.
   _index_offsets = std::vector<ChunkOffset>(
       _indexed_segment->unique_values_count() + 1u /*for null*/ + 1u /*to mark the ending position */, 0u);
-  
+
   // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (i.e. value ids)
   //    and count the occurrences of each value id at their respective position in the dictionary,
   //    i.e. the position in the _index_offsets
@@ -61,9 +63,9 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
     for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++position) {
       const auto& value_id = static_cast<ValueID>(*value_id_it);
 
-      if(value_id != null_value_id){
+      if (value_id != null_value_id) {
         _index_postings[index_offset_copy[value_id]] = position;
-      } else{
+      } else {
         const auto null_postings_offset = index_offset_copy[value_id] - non_null_count;
         _index_null_postings[null_postings_offset] = position;
       }
@@ -73,13 +75,16 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
       index_offset_copy[value_id]++;
     }
   });
+
+  _index_postings.shrink_to_fit();
+  _index_null_postings.shrink_to_fit();
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
   if (variant_is_null(*values.begin())) {
-    return _null_cbegin();
+    return null_cbegin();
   }
 
   ValueID value_id = _indexed_segment->lower_bound(*values.begin());
@@ -90,7 +95,7 @@ GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVar
   DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
   if (variant_is_null(*values.begin())) {
-    return _null_cend();
+    return null_cend();
   }
 
   ValueID value_id = _indexed_segment->upper_bound(*values.begin());

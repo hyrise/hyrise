@@ -61,8 +61,6 @@ class CompositeGroupKeyIndex : public AbstractIndex {
   Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _cbegin() const final;
   Iterator _cend() const final;
-  Iterator _null_cbegin() const final;
-  Iterator _null_cend() const final;
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const final;
 
   size_t _memory_consumption() const final;

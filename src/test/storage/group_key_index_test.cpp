@@ -78,10 +78,10 @@ TEST_F(GroupKeyIndexTest, IndexPostings) {
   EXPECT_TRUE(distinct_values.size() == index_postings->size());
 
   // check if the correct postings are present for each value-id
-  auto expected_postings = std::vector<std::unordered_set<ChunkOffset>>{
-      {7}, {8, 9}, {8, 9}, {2, 4}, {2, 4}, {3}, {1}, {10}};
-  auto expected_null_postings = std::vector<std::unordered_set<ChunkOffset>>{
-      {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}};
+  auto expected_postings =
+      std::vector<std::unordered_set<ChunkOffset>>{{7}, {8, 9}, {8, 9}, {2, 4}, {2, 4}, {3}, {1}, {10}};
+  auto expected_null_postings =
+      std::vector<std::unordered_set<ChunkOffset>>{{0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}};
 
   for (size_t i = 0; i < index_postings->size(); ++i) {
     EXPECT_EQ(1u, expected_postings[i].count(index_postings->at(i)));

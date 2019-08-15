@@ -32,8 +32,6 @@ class BTreeIndex : public AbstractIndex {
   Iterator _upper_bound(const std::vector<AllTypeVariant>&) const override;
   Iterator _cbegin() const override;
   Iterator _cend() const override;
-  Iterator _null_cbegin() const override;
-  Iterator _null_cend() const override;
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const override;
   size_t _memory_consumption() const override;
 
