@@ -19,9 +19,6 @@
 
 namespace opossum {
 
-PredicateReorderingRule::PredicateReorderingRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
-    : _cost_estimator(cost_estimator) {}
-
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
 void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -60,65 +57,46 @@ void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 
 void PredicateReorderingRule::_reorder_predicates(
     const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
-  // Workaround for the now const'ed parameter
-  std::vector<std::shared_ptr<AbstractLQPNode>> non_const_predicates(predicates.begin(), predicates.end());
-
   // Store original input and output
-  auto input = non_const_predicates.back()->left_input();
-  const auto outputs = non_const_predicates.front()->outputs();
-  const auto input_sides = non_const_predicates.front()->get_input_sides();
+  auto input = predicates.back()->left_input();
+  const auto outputs = predicates.front()->outputs();
+  const auto input_sides = predicates.front()->get_input_sides();
 
-  Cost minimal_cost{std::numeric_limits<float>::max()};
-  auto minimal_order = non_const_predicates;
+  // Setup cardinality estimation cache so that the statistics of `input` (which might be a big plan) do not need to
+  // be determined repeatedly. For this, we hijack the `guarantee_join_graph()`-guarantee and via it promise the
+  // CardinalityEstimator that we will not change the LQP below the `input` node by marking it as a "vertex".
+  // This allows the CardinalityEstimator to compute the statistics of `input` once, cache them and then re-use them.
+  const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+  caching_cardinality_estimator->guarantee_join_graph(JoinGraph{{input}, {}});
 
-  // std::cout << "Before" << std::endl;
-  // non_const_predicates.front()->print();
+  // Estimate the output cardinalities of each individual predicate on top of the input LQP, i.e., predicates are
+  // estimated independently
+  auto nodes_and_cardinalities = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cardinality>>{};
+  nodes_and_cardinalities.reserve(predicates.size());
+  for (const auto& predicate : predicates) {
+    predicate->set_left_input(input);
+    nodes_and_cardinalities.emplace_back(predicate, caching_cardinality_estimator->estimate_cardinality(predicate));
+  }
 
   // Untie predicates from LQP, so we can freely retie them
-  for (auto& predicate : non_const_predicates) {
+  for (auto& predicate : predicates) {
     lqp_remove_node(predicate);
   }
 
-  do {
-    // Ensure that nodes are chained correctly
-    non_const_predicates.back()->set_left_input(input);
-
-    for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-      outputs[output_idx]->set_input(input_sides[output_idx], non_const_predicates.front());
-    }
-
-    for (size_t predicate_index = 0; predicate_index < non_const_predicates.size() - 1; predicate_index++) {
-      predicates[predicate_index]->set_left_input(non_const_predicates[predicate_index + 1]);
-    }
-
-    //        non_const_predicates.front()->print();
-    const auto estimated_cost = _cost_estimator->estimate_plan_cost(non_const_predicates.front());
-    //        std::cout << "Estimated cost: " << estimated_cost << std::endl;
-
-    if (estimated_cost < minimal_cost) {
-      minimal_cost = estimated_cost;
-      minimal_order = non_const_predicates;
-    }
-
-    // Untie non_const_predicates from LQP, so we can freely retie them
-    for (auto& predicate : non_const_predicates) {
-      lqp_remove_node(predicate);
-    }
-  } while (std::prev_permutation(non_const_predicates.begin(), non_const_predicates.end()));
+  // Sort in descending order
+  std::sort(nodes_and_cardinalities.begin(), nodes_and_cardinalities.end(),
+            [&](auto& left, auto& right) { return left.second > right.second; });
 
   // Ensure that nodes are chained correctly
-  minimal_order.back()->set_left_input(input);
+  nodes_and_cardinalities.back().first->set_left_input(input);
 
   for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-    outputs[output_idx]->set_input(input_sides[output_idx], minimal_order.front());
+    outputs[output_idx]->set_input(input_sides[output_idx], nodes_and_cardinalities.front().first);
   }
 
-  for (size_t predicate_index = 0; predicate_index < minimal_order.size() - 1; predicate_index++) {
-    minimal_order[predicate_index]->set_left_input(minimal_order[predicate_index + 1]);
+  for (size_t predicate_index = 0; predicate_index + 1 < nodes_and_cardinalities.size(); predicate_index++) {
+    nodes_and_cardinalities[predicate_index].first->set_left_input(nodes_and_cardinalities[predicate_index + 1].first);
   }
-
-  // std::cout << "Foobar" << std::endl;
-  // minimal_order.front()->print();
 }
 
 }  // namespace opossum
