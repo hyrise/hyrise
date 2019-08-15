@@ -27,56 +27,95 @@ class SingleSegmentIndexTest : public BaseTest {
     dict_segment_int_no_nulls =
         BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
     dict_segment_int_no_nulls_2 = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {3, 4, 0});
-    // dict_segment_int_nulls = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {NULL_VALUE, NULL_VALUE, NULL_VALUE});
+    dict_segment_int_nulls =
+        BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_int_mixed = BaseTest::create_dict_segment_by_type<int32_t>(
+        DataType::Int, {std::nullopt, 3, std::nullopt, 0, std::nullopt, 4, 3, std::nullopt});
     dict_segment_int_empty = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {});
 
     // Long segments
     dict_segment_long_no_nulls =
-        BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
+        BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {3L, 4L, 0L, 4L, 2L, 7L, 8L, 1L, 4L, 9L});
+    dict_segment_long_nulls =
+        BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_long_mixed = BaseTest::create_dict_segment_by_type<int64_t>(
+        DataType::Long, {std::nullopt, 3L, std::nullopt, 0L, std::nullopt, 4L, 3L, std::nullopt});
     dict_segment_long_empty = BaseTest::create_dict_segment_by_type<int64_t>(DataType::Long, {});
 
     // Float segments
     dict_segment_float_no_nulls = BaseTest::create_dict_segment_by_type<float>(
         DataType::Float, {3.1f, 4.9f, 0.2f, 4.8f, 2.3f, 7.7f, 8.4f, 1.6f, 4.5f, 9.0f});
+    dict_segment_float_nulls =
+        BaseTest::create_dict_segment_by_type<float>(DataType::Float, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_float_mixed = BaseTest::create_dict_segment_by_type<float>(
+        DataType::Float, {std::nullopt, 3.1f, std::nullopt, 0.2f, std::nullopt, 4.8f, 3.1f, std::nullopt});
     dict_segment_float_empty = BaseTest::create_dict_segment_by_type<float>(DataType::Float, {});
 
     // Double segments
     dict_segment_double_no_nulls = BaseTest::create_dict_segment_by_type<double>(
         DataType::Double, {3.1, 4.9, 0.2, 4.8, 2.3, 7.7, 8.4, 1.6, 4.5, 9.0});
+    dict_segment_double_nulls =
+        BaseTest::create_dict_segment_by_type<double>(DataType::Double, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_double_mixed = BaseTest::create_dict_segment_by_type<float>(
+        DataType::Float, {std::nullopt, 3.1, std::nullopt, 0.2, std::nullopt, 4.8, 3.1, std::nullopt});
     dict_segment_double_empty = BaseTest::create_dict_segment_by_type<double>(DataType::Double, {});
 
     // String segments
-    dict_segment_str_no_nulls = BaseTest::create_dict_segment_by_type<pmr_string>(
+    dict_segment_string_no_nulls = BaseTest::create_dict_segment_by_type<pmr_string>(
         DataType::String, {"hello", "world", "test", "foo", "bar", "foo"});
-    dict_segment_str_empty = BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {});
+    dict_segment_string_nulls =
+        BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt, std::nullopt});
+    dict_segment_string_mixed = BaseTest::create_dict_segment_by_type<pmr_string>(
+        DataType::String, {std::nullopt, "hello", std::nullopt, "world", std::nullopt, "test", "hello", std::nullopt});
+    dict_segment_string_empty = BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
     // Int indexes
     index_int_no_nulls =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_no_nulls}));
     index_int_no_nulls_2 =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_no_nulls}));
+    index_int_nulls =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_nulls}));
+    index_int_mixed =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_mixed}));
     index_int_empty =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_empty}));
     // Long indexes
     index_long_no_nulls =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_long_no_nulls}));
+    index_long_nulls =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_long_nulls}));
+    index_long_mixed =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_long_mixed}));
     index_long_empty =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_long_empty}));
     // Float indexes
     index_float_no_nulls =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_float_no_nulls}));
+    index_float_nulls =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_float_nulls}));
+    index_float_mixed =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_float_mixed}));
     index_float_empty =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_float_empty}));
     // Double indexes
     index_double_no_nulls =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_double_no_nulls}));
+    index_double_nulls =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_double_nulls}));
+    index_double_mixed =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_double_mixed}));
     index_double_empty =
         std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_double_empty}));
     // String indexes
-    index_str_no_nulls =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_str_no_nulls}));
-    index_str_empty =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_str_empty}));
+    index_string_no_nulls =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_no_nulls}));
+    index_string_nulls =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_nulls}));
+    index_string_mixed =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_mixed}));
+    index_string_empty =
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_string_empty}));
   }
 
   template <class Iterator>
@@ -93,31 +132,82 @@ class SingleSegmentIndexTest : public BaseTest {
   std::shared_ptr<BaseSegment> dict_segment_int_no_nulls = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_int_no_nulls_2 = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_int_nulls = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment_long_no_nulls = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment_float_no_nulls = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment_double_no_nulls = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment_str_no_nulls = nullptr;
-
+  std::shared_ptr<BaseSegment> dict_segment_int_mixed = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_int_empty = nullptr;
+
+  std::shared_ptr<BaseSegment> dict_segment_long_no_nulls = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_long_nulls = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_long_mixed = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_long_empty = nullptr;
+
+  std::shared_ptr<BaseSegment> dict_segment_float_no_nulls = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_float_nulls = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_float_mixed = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_float_empty = nullptr;
+
+  std::shared_ptr<BaseSegment> dict_segment_double_no_nulls = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_double_nulls = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_double_mixed = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_double_empty = nullptr;
-  std::shared_ptr<BaseSegment> dict_segment_str_empty = nullptr;
+
+  std::shared_ptr<BaseSegment> dict_segment_string_no_nulls = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_string_nulls = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_string_mixed = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_string_empty = nullptr;
 
   // indexes
   std::shared_ptr<AbstractIndex> index_int_no_nulls = nullptr;
   std::shared_ptr<AbstractIndex> index_int_no_nulls_2 = nullptr;
-  std::shared_ptr<AbstractIndex> index_long_no_nulls = nullptr;
-  std::shared_ptr<AbstractIndex> index_float_no_nulls = nullptr;
-  std::shared_ptr<AbstractIndex> index_double_no_nulls = nullptr;
-  std::shared_ptr<AbstractIndex> index_str_no_nulls = nullptr;
-
+  std::shared_ptr<AbstractIndex> index_int_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_mixed = nullptr;
   std::shared_ptr<AbstractIndex> index_int_empty = nullptr;
+
+  std::shared_ptr<AbstractIndex> index_long_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_long_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_long_mixed = nullptr;
   std::shared_ptr<AbstractIndex> index_long_empty = nullptr;
+
+  std::shared_ptr<AbstractIndex> index_float_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_float_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_float_mixed = nullptr;
   std::shared_ptr<AbstractIndex> index_float_empty = nullptr;
+
+  std::shared_ptr<AbstractIndex> index_double_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_double_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_double_mixed = nullptr;
   std::shared_ptr<AbstractIndex> index_double_empty = nullptr;
-  std::shared_ptr<AbstractIndex> index_str_empty = nullptr;
-  std::shared_ptr<AbstractIndex> no_segment_index = nullptr;
+
+  std::shared_ptr<AbstractIndex> index_string_no_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_string_nulls = nullptr;
+  std::shared_ptr<AbstractIndex> index_string_mixed = nullptr;
+  std::shared_ptr<AbstractIndex> index_string_empty = nullptr;
+
+  // index null postings
+  std::vector<ChunkOffset>* index_int_no_nulls_null_postings;
+  std::vector<ChunkOffset>* index_int_no_nulls_2_null_postings;
+  std::vector<ChunkOffset>* index_int_nulls_null_postings;
+  std::vector<ChunkOffset>* index_int_mixed_null_postings;
+  std::vector<ChunkOffset>* index_int_empty_null_postings;
+
+  std::vector<ChunkOffset>* index_long_no_nulls_null_postings;
+  std::vector<ChunkOffset>* index_long_nulls_null_postings;
+  std::vector<ChunkOffset>* index_long_mixed_null_postings;
+  std::vector<ChunkOffset>* index_long_empty_null_postings;
+
+  std::vector<ChunkOffset>* index_float_no_nulls_null_postings;
+  std::vector<ChunkOffset>* index_float_nulls_null_postings;
+  std::vector<ChunkOffset>* index_float_mixed_null_postings;
+  std::vector<ChunkOffset>* index_float_empty_null_postings;
+
+  std::vector<ChunkOffset>* index_double_no_nulls_null_postings;
+  std::vector<ChunkOffset>* index_double_nulls_null_postings;
+  std::vector<ChunkOffset>* index_double_mixed_null_postings;
+  std::vector<ChunkOffset>* index_double_empty_null_postings;
+
+  std::vector<ChunkOffset>* index_string_no_nulls_null_postings;
+  std::vector<ChunkOffset>* index_string_nulls_null_postings;
+  std::vector<ChunkOffset>* index_string_mixed_null_postings;
+  std::vector<ChunkOffset>* index_string_empty_null_postings;
 };
 
 // List of indexes to test
@@ -161,7 +251,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
   // A4, B2, C2, D1, E2, F1
   EXPECT_TRUE(this->index_double_no_nulls->is_index_for({this->dict_segment_double_no_nulls}));
   // A5, B2, C2, D1, E2, F1
-  EXPECT_TRUE(this->index_str_no_nulls->is_index_for({this->dict_segment_str_no_nulls}));
+  EXPECT_TRUE(this->index_string_no_nulls->is_index_for({this->dict_segment_string_no_nulls}));
   // A1, B1, C1, D1, E2, F1
   EXPECT_TRUE(this->index_int_empty->is_index_for({this->dict_segment_int_empty}));
   // A1, B2, C2, D2, E2, F1
@@ -169,9 +259,9 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
   // A1, B2, C2, D1, E1, F1
   EXPECT_FALSE(this->index_int_empty->is_index_for({}));
   // other
-  EXPECT_FALSE(this->index_str_no_nulls->is_index_for({this->dict_segment_int_no_nulls}));
+  EXPECT_FALSE(this->index_string_no_nulls->is_index_for({this->dict_segment_int_no_nulls}));
   EXPECT_FALSE(
-      this->index_str_no_nulls->is_index_for({this->dict_segment_str_no_nulls, this->dict_segment_int_no_nulls}));
+      this->index_string_no_nulls->is_index_for({this->dict_segment_string_no_nulls, this->dict_segment_int_no_nulls}));
 }
 
 /*
@@ -224,12 +314,31 @@ TYPED_TEST(SingleSegmentIndexTest, CEndTest) {
   // TODO(Marcel) implement (Refine combinations of blocks into test values)
 }
 
-TYPED_TEST(SingleSegmentIndexTest, NullCBeginTest) {
-  // TODO(Marcel) implement (Refine combinations of blocks into test values)
-}
+TYPED_TEST(SingleSegmentIndexTest, NullCBeginCEndTest) {
+  EXPECT_EQ(this->index_int_no_nulls->null_cend(), this->index_int_no_nulls->null_cbegin() + 0u);
+  EXPECT_EQ(this->index_int_nulls->null_cend(), this->index_int_nulls->null_cbegin() + 3u);
+  EXPECT_EQ(this->index_int_mixed->null_cend(), this->index_int_mixed->null_cbegin() + 4u);
+  EXPECT_EQ(this->index_int_empty->null_cend(), this->index_int_empty->null_cbegin() + 0u);
 
-TYPED_TEST(SingleSegmentIndexTest, NullCEndTest) {
-  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+  EXPECT_EQ(this->index_long_no_nulls->null_cend(), this->index_long_no_nulls->null_cbegin() + 0u);
+  EXPECT_EQ(this->index_long_nulls->null_cend(), this->index_long_nulls->null_cbegin() + 3u);
+  EXPECT_EQ(this->index_long_mixed->null_cend(), this->index_long_mixed->null_cbegin() + 4u);
+  EXPECT_EQ(this->index_long_empty->null_cend(), this->index_long_empty->null_cbegin() + 0u);
+
+  EXPECT_EQ(this->index_float_no_nulls->null_cend(), this->index_float_no_nulls->null_cbegin() + 0u);
+  EXPECT_EQ(this->index_float_nulls->null_cend(), this->index_float_nulls->null_cbegin() + 3u);
+  EXPECT_EQ(this->index_float_mixed->null_cend(), this->index_float_mixed->null_cbegin() + 4u);
+  EXPECT_EQ(this->index_float_empty->null_cend(), this->index_float_empty->null_cbegin() + 0u);
+
+  EXPECT_EQ(this->index_double_no_nulls->null_cend(), this->index_double_no_nulls->null_cbegin() + 0u);
+  EXPECT_EQ(this->index_double_nulls->null_cend(), this->index_double_nulls->null_cbegin() + 3u);
+  EXPECT_EQ(this->index_double_mixed->null_cend(), this->index_double_mixed->null_cbegin() + 4u);
+  EXPECT_EQ(this->index_double_empty->null_cend(), this->index_double_empty->null_cbegin() + 0u);
+
+  EXPECT_EQ(this->index_string_no_nulls->null_cend(), this->index_string_no_nulls->null_cbegin() + 0u);
+  EXPECT_EQ(this->index_string_nulls->null_cend(), this->index_string_nulls->null_cbegin() + 3u);
+  EXPECT_EQ(this->index_string_mixed->null_cend(), this->index_string_mixed->null_cbegin() + 4u);
+  EXPECT_EQ(this->index_string_empty->null_cend(), this->index_string_empty->null_cbegin() + 0u);
 }
 
 TYPED_TEST(SingleSegmentIndexTest, SegmentIndexTypeTest) {
@@ -277,9 +386,9 @@ TYPED_TEST(SingleSegmentIndexTest, FullRange) {
   auto expected_values_int = std::vector<AllTypeVariant>{0, 1, 2, 3, 4, 4, 4, 7, 8, 9};
   EXPECT_EQ(expected_values_int, result_values_int);
 
-  auto begin_str = this->index_str_no_nulls->cbegin();
-  auto end_str = this->index_str_no_nulls->cend();
-  auto result_values_str = this->result_as_vector(this->dict_segment_str_no_nulls, begin_str, end_str);
+  auto begin_str = this->index_string_no_nulls->cbegin();
+  auto end_str = this->index_string_no_nulls->cend();
+  auto result_values_str = this->result_as_vector(this->dict_segment_string_no_nulls, begin_str, end_str);
   auto expected_values_str = std::vector<AllTypeVariant>{"bar", "foo", "foo", "hello", "test", "world"};
   EXPECT_EQ(expected_values_str, result_values_str);
 }
