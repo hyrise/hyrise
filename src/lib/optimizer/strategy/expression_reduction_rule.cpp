@@ -305,6 +305,14 @@ void ExpressionReductionRule::remove_duplicate_aggregate(std::vector<std::shared
   }
 
   if (!replacements.empty()) {
+    {
+      auto& expressions = aggregate_node.node_expressions;
+      // Remove the AVG() expression
+      expressions.erase(std::remove_if(expressions.begin(), expressions.end(), [&](const auto& expression) {
+        return replacements.find(expression) != replacements.end();
+      }), expressions.end());
+    }
+
     auto projection_node = std::make_shared<ProjectionNode>(aggregate_expressions);
     for (const auto& output_relation : aggregate_node.output_relations()) {
       lqp_insert_node(output_relation.output, output_relation.input_side, projection_node);
