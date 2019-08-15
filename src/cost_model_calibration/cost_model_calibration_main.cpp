@@ -3,6 +3,7 @@
 #include "cli_config_parser.hpp"
 #include "configuration/calibration_configuration.hpp"
 #include "cost_model_calibration.hpp"
+#include "calibration_helper.hpp"
 
 /**
  * This class runs Calibration Queries for the Cost Model.
@@ -28,6 +29,15 @@ int main(int argc, char* argv[]) {
   std::ifstream json_file{argv[1]};
   json_file >> json_config;
   json_file.close();
+
+
+  // Store the config file with a timestamp
+  auto now_iso_date = opossum::get_time_as_iso_string(std::chrono::system_clock::now());
+  std::ifstream src(argv[1], std::ios::binary);
+  std::ofstream dst(std::string(argv[1]) + now_iso_date, std::ios::binary);
+
+  dst << src.rdbuf();
+  dst.close();
 
   opossum::CalibrationConfiguration calibration_config = json_config;
 

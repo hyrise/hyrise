@@ -14,6 +14,7 @@ set(
         cost_model_calibration_table_generator.hpp
         calibration_feature_extractor.cpp
         calibration_feature_extractor.hpp
+        calibration_helper.hpp
         query/calibration_query_generator.cpp
         query/calibration_query_generator.hpp
         query/calibration_query_generator_aggregates.cpp
