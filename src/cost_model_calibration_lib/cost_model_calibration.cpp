@@ -1,7 +1,6 @@
 #include "cost_model_calibration.hpp"
 
 #include <boost/algorithm/string/join.hpp>
-#include <fstream>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -40,12 +39,12 @@ void CostModelCalibration::run_tpch6_costing() {
 
 void CostModelCalibration::run() {
   CostModelCalibrationTableGenerator tableGenerator{_configuration, 100'000};
-  tableGenerator.load_calibration_tables();
-  tableGenerator.generate_calibration_tables();
-  _calibrate();
-
-  std::cout << "Finished Calibration" << std::endl;
-  if (_configuration.run_tpch) {
+  if (!_configuration.run_tpch) {
+    tableGenerator.load_calibration_tables();
+    tableGenerator.generate_calibration_tables();
+    _calibrate();
+    std::cout << "Finished Calibration" << std::endl;
+  } else {
     std::cout << "Now starting TPC-H" << std::endl;
     tableGenerator.load_tpch_tables(1.0f);
     _run_tpch();
@@ -64,17 +63,19 @@ void CostModelCalibration::_run_tpch() {
   // Run just a single iteration for TPCH
   for (size_t i = 0; i < number_of_iterations; i++) {
     for (BenchmarkItemID tpch_query_id{0}; tpch_query_id < 22; ++tpch_query_id) {
-      std::cout << "Running TPCH " << std::to_string(tpch_query_id) << std::endl;
-
       const auto tpch_sql = tpch_query_generator->build_query(tpch_query_id);
 
       // We want a warm cache.
+      // Todo: could be turned on in every second run to have a warm cache only in some cases.
       queryRunner.calibrate_query_from_sql(tpch_sql);
       const auto examples = queryRunner.calibrate_query_from_sql(tpch_sql);
       //      const auto tpch_file_output_path = _configuration.tpch_output_path + "_" + std::to_string(query.first);
 
       _append_to_result_csv(_configuration.tpch_output_path, examples);
+
     }
+
+    std::cout << "Finished iteration: " << i + 1 << std::endl;
   }
 }
 

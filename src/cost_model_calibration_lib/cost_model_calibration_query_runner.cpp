@@ -28,8 +28,6 @@ const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner
 
 const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_sql(
     const std::string& query) const {
-  std::cout << query << std::endl;
-
   //  SQLQueryCache<SQLQueryPlan>::get().clear();
 
   auto pipeline_builder = SQLPipelineBuilder{query};
