@@ -56,8 +56,8 @@ class SingleSegmentIndexTest : public BaseTest {
         DataType::Double, {3.1, 4.9, 0.2, 4.8, 2.3, 7.7, 8.4, 1.6, 4.5, 9.0});
     dict_segment_double_nulls =
         BaseTest::create_dict_segment_by_type<double>(DataType::Double, {std::nullopt, std::nullopt, std::nullopt});
-    dict_segment_double_mixed = BaseTest::create_dict_segment_by_type<float>(
-        DataType::Float, {std::nullopt, 3.1, std::nullopt, 0.2, std::nullopt, 4.8, 3.1, std::nullopt});
+    dict_segment_double_mixed = BaseTest::create_dict_segment_by_type<double>(
+        DataType::Double, {std::nullopt, 3.1, std::nullopt, 0.2, std::nullopt, 4.8, 3.1, std::nullopt});
     dict_segment_double_empty = BaseTest::create_dict_segment_by_type<double>(DataType::Double, {});
 
     // String segments
@@ -66,7 +66,7 @@ class SingleSegmentIndexTest : public BaseTest {
     dict_segment_string_nulls =
         BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt, std::nullopt});
     dict_segment_string_mixed = BaseTest::create_dict_segment_by_type<pmr_string>(
-        DataType::String, {std::nullopt, "hello", std::nullopt, "world", std::nullopt, "test", "hello", std::nullopt});
+        DataType::String, {std::nullopt, "hello", std::nullopt, "alpha", std::nullopt, "test", "hello", std::nullopt});
     dict_segment_string_empty = BaseTest::create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
     // Int indexes
@@ -210,8 +210,7 @@ class SingleSegmentIndexTest : public BaseTest {
   std::vector<ChunkOffset>* index_string_empty_null_postings;
 };
 
-// List of indexes to test
-// TODO(Marcel) creating BTreeIndex for empty segments fails
+// List of indexes to test, only the GroupKeyIndex is null-aware for now
 typedef ::testing::Types</*AdaptiveRadixTreeIndex, BTreeIndex, CompositeGroupKeyIndex,*/
                          GroupKeyIndex /* add further indexes */>
     DerivedIndexes;
@@ -265,12 +264,12 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
 }
 
 /*
-  Iterator lower_bound(const std::vector<AllTypeVariant>& values) const;
-  Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
-  Iterator cbegin() const;
-  Iterator cend() const;
-  Iterator null_cbegin() const;
-  Iterator null_cend() const;
+  Test case suits:
+    LowerBoundTest
+    UpperBoundTest
+  Tested functions:
+    Iterator lower_bound(const std::vector<AllTypeVariant>& values) const;
+    Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
 
   | Characteristic      |       Block 1  |        Block 2 |        Block 3 |          Block 4 | Block 5 |
   |---------------------|----------------|----------------|----------------|------------------|---------|
@@ -282,62 +281,189 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
   |[D] values is empty  |           true |          false |
 
   Base Choice:
-    A4, B4, C1, D2
-  Further derived combinations:
-   (A4, B4, C1, D1) --infeasible----+
-    A4, B5, C2, D1 <--alternative-<-+
-    A4, B4, C2, D2                  |
-    A4, B1, C1, D2                  |
-    A4, B2, C1, D2                  |
-    A4, B3, C1, D2                  |
-    A4, B5, C1, D2 --infeasible-----+
     A1, B4, C1, D2
+  Further derived Base Choice combinations:
+   (A1, B4, C1, D1) --infeasible----+
+    A1, B5, C2, D1 <--alternative-<-+
+    A1, B4, C2, D2                  |
+    A1, B1, C1, D2                  |
+    A1, B2, C1, D2                  |
+    A1, B3, C1, D2                  |
+   (A1, B5, C1, D2) --infeasible----+
     A2, B4, C1, D2
     A3, B4, C1, D2
+    A4, B4, C1, D2
     A5, B4, C1, D2
-
 */
 
 TYPED_TEST(SingleSegmentIndexTest, LowerBoundTest) {
-  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+  // A1, B4, C1, D2 //0,3,4, n
+  EXPECT_EQ(this->index_int_mixed->lower_bound({3}), this->index_int_mixed->cbegin() + 1);
+  // A1, B5, C2, D1
+  EXPECT_THROW(this->index_int_mixed->lower_bound({}), std::logic_error);
+  // A1, B4, C2, D2
+  EXPECT_EQ(this->index_int_mixed->lower_bound({2}), this->index_int_mixed->cbegin() + 1);
+  // A1, B1, C1, D2
+  EXPECT_EQ(this->index_int_mixed->lower_bound({NULL_VALUE}), this->index_int_mixed->null_cbegin());
+  // A1, B2, C1, D2
+  EXPECT_EQ(this->index_int_mixed->lower_bound({0}), this->index_int_mixed->cbegin());
+  // A1, B3, C1, D2
+  EXPECT_EQ(this->index_int_mixed->lower_bound({4}), this->index_int_mixed->cbegin() + 3);
+  // A2, B4, C1, D2
+  EXPECT_EQ(this->index_long_mixed->lower_bound({3L}), this->index_long_mixed->cbegin() + 1);
+  // A3, B4, C1, D2
+  EXPECT_EQ(this->index_float_mixed->lower_bound({3.1f}), this->index_float_mixed->cbegin() + 1);
+  // A4, B4, C1, D2
+  EXPECT_EQ(this->index_double_mixed->lower_bound({3.1}), this->index_double_mixed->cbegin() + 1);
+  // A5, B4, C1, D2
+  EXPECT_EQ(this->index_string_mixed->lower_bound({"hello"}), this->index_string_mixed->cbegin() + 1);
 }
 
 TYPED_TEST(SingleSegmentIndexTest, UpperBoundTest) {
-  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+  // A1, B4, C1, D2
+  EXPECT_EQ(this->index_int_mixed->upper_bound({3}), this->index_int_mixed->cbegin() + 3);
+  // A1, B5, C2, D1
+  EXPECT_THROW(this->index_int_mixed->upper_bound({}), std::logic_error);
+  // A1, B4, C2, D2
+  EXPECT_EQ(this->index_int_mixed->upper_bound({2}), this->index_int_mixed->cbegin() + 1);
+  // A1, B1, C1, D2
+  EXPECT_EQ(this->index_int_mixed->upper_bound({NULL_VALUE}), this->index_int_mixed->null_cend());
+  // A1, B2, C1, D2
+  EXPECT_EQ(this->index_int_mixed->upper_bound({0}), this->index_int_mixed->cbegin() + 1);
+  // A1, B3, C1, D2
+  EXPECT_EQ(this->index_int_mixed->upper_bound({4}), this->index_int_mixed->cbegin() + 4);
+  // A2, B4, C1, D2
+  EXPECT_EQ(this->index_long_mixed->upper_bound({3L}), this->index_long_mixed->cbegin() + 3);
+  // A3, B4, C1, D2
+  EXPECT_EQ(this->index_float_mixed->upper_bound({3.1f}), this->index_float_mixed->cbegin() + 3);
+  // A4, B4, C1, D2
+  EXPECT_EQ(this->index_double_mixed->upper_bound({3.1}), this->index_double_mixed->cbegin() + 3);
+  // A5, B4, C1, D2
+  EXPECT_EQ(this->index_string_mixed->upper_bound({"hello"}), this->index_string_mixed->cbegin() + 3);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, CBeginTest) {
-  // TODO(Marcel) implement (Refine combinations of blocks into test values)
-}
+/*
+  Test case suits:
+    CBeginCEndTest
+    NullCBeginCEndTest
 
-TYPED_TEST(SingleSegmentIndexTest, CEndTest) {
-  // TODO(Marcel) implement (Refine combinations of blocks into test values)
+  Tested functions:
+    Iterator cbegin() const;
+    Iterator cend() const;
+    Iterator null_cbegin() const;
+    Iterator null_cend() const;
+
+  | Characteristic      | Block 1  | Block 2 | Block 3 | Block 4 | Block 5 |
+  |---------------------|----------|---------|---------|---------|---------|
+  |[A] value data type  |      Int |    Long |   Float |  Double |  String |     
+  |[B] nulls only       |     true |   false |
+  |[C] non-nulls only   |     true |   false |
+  |[D] index is empty   |     true |   false |
+
+  Base Choice:
+    A1, B2, C2, D2
+  Further derived Base Choice combinations:
+    A1, B2, C2, D1
+    A1, B2, C1, D2
+    A1, B1, C2, D2
+    A2, B2, C2, D2
+    A3, B2, C2, D2
+    A4, B2, C2, D2
+    A5, B2, C2, D2
+
+*/
+
+TYPED_TEST(SingleSegmentIndexTest, CBeginCEndTest) {
+  // A1, B1, C2, D2
+  EXPECT_EQ(this->index_int_no_nulls->cend(), this->index_int_no_nulls->cbegin() + 10u);
+  // A1, B2, C1, D2
+  EXPECT_EQ(this->index_int_nulls->cend(), this->index_int_nulls->cbegin() + 0u);
+  // A1, B2, C2, D2
+  EXPECT_EQ(this->index_int_mixed->cend(), this->index_int_mixed->cbegin() + 4u);
+  // A1, B2, D2, D1
+  EXPECT_EQ(this->index_int_empty->cend(), this->index_int_empty->cbegin() + 0u);
+
+  // A2, B1, C2, D2
+  EXPECT_EQ(this->index_long_no_nulls->cend(), this->index_long_no_nulls->cbegin() + 10u);
+  // A2, B2, C1, D2
+  EXPECT_EQ(this->index_long_nulls->cend(), this->index_long_nulls->cbegin() + 0u);
+  // A2, B2, C2, D2
+  EXPECT_EQ(this->index_long_mixed->cend(), this->index_long_mixed->cbegin() + 4u);
+  // A2, B2, D2, D1
+  EXPECT_EQ(this->index_long_empty->cend(), this->index_long_empty->cbegin() + 0u);
+
+  // A3, B1, C2, D2
+  EXPECT_EQ(this->index_float_no_nulls->cend(), this->index_float_no_nulls->cbegin() + 10u);
+  // A3, B2, C1, D2
+  EXPECT_EQ(this->index_float_nulls->cend(), this->index_float_nulls->cbegin() + 0u);
+  // A3, B2, C2, D2
+  EXPECT_EQ(this->index_float_mixed->cend(), this->index_float_mixed->cbegin() + 4u);
+  // A3, B2, D2, D1
+  EXPECT_EQ(this->index_float_empty->cend(), this->index_float_empty->cbegin() + 0u);
+
+  // A4, B1, C2, D2
+  EXPECT_EQ(this->index_double_no_nulls->cend(), this->index_double_no_nulls->cbegin() + 10u);
+  // A4, B2, C1, D2
+  EXPECT_EQ(this->index_double_nulls->cend(), this->index_double_nulls->cbegin() + 0u);
+  // A4, B2, C2, D2
+  EXPECT_EQ(this->index_double_mixed->cend(), this->index_double_mixed->cbegin() + 4u);
+  // A4, B2, D2, D1
+  EXPECT_EQ(this->index_double_empty->cend(), this->index_double_empty->cbegin() + 0u);
+
+  // A5, B1, C2, D2
+  EXPECT_EQ(this->index_string_no_nulls->cend(), this->index_string_no_nulls->cbegin() + 6u);
+  // A5, B2, C1, D2
+  EXPECT_EQ(this->index_string_nulls->cend(), this->index_string_nulls->cbegin() + 0u);
+  // A5, B2, C2, D2
+  EXPECT_EQ(this->index_string_mixed->cend(), this->index_string_mixed->cbegin() + 4u);
+  // A5, B2, D2, D1
+  EXPECT_EQ(this->index_string_empty->cend(), this->index_string_empty->cbegin() + 0u);
 }
 
 TYPED_TEST(SingleSegmentIndexTest, NullCBeginCEndTest) {
+  // A1, B1, C2, D2
   EXPECT_EQ(this->index_int_no_nulls->null_cend(), this->index_int_no_nulls->null_cbegin() + 0u);
+  // A1, B2, C1, D2
   EXPECT_EQ(this->index_int_nulls->null_cend(), this->index_int_nulls->null_cbegin() + 3u);
+  // A1, B2, C2, D2
   EXPECT_EQ(this->index_int_mixed->null_cend(), this->index_int_mixed->null_cbegin() + 4u);
+  // A1, B2, D2, D1
   EXPECT_EQ(this->index_int_empty->null_cend(), this->index_int_empty->null_cbegin() + 0u);
 
+  // A2, B1, C2, D2
   EXPECT_EQ(this->index_long_no_nulls->null_cend(), this->index_long_no_nulls->null_cbegin() + 0u);
+  // A2, B2, C1, D2
   EXPECT_EQ(this->index_long_nulls->null_cend(), this->index_long_nulls->null_cbegin() + 3u);
+  // A2, B2, C2, D2
   EXPECT_EQ(this->index_long_mixed->null_cend(), this->index_long_mixed->null_cbegin() + 4u);
+  // A2, B2, D2, D1
   EXPECT_EQ(this->index_long_empty->null_cend(), this->index_long_empty->null_cbegin() + 0u);
 
+  // A3, B1, C2, D2
   EXPECT_EQ(this->index_float_no_nulls->null_cend(), this->index_float_no_nulls->null_cbegin() + 0u);
+  // A3, B2, C1, D2
   EXPECT_EQ(this->index_float_nulls->null_cend(), this->index_float_nulls->null_cbegin() + 3u);
+  // A3, B2, C2, D2
   EXPECT_EQ(this->index_float_mixed->null_cend(), this->index_float_mixed->null_cbegin() + 4u);
+  // A3, B2, D2, D1
   EXPECT_EQ(this->index_float_empty->null_cend(), this->index_float_empty->null_cbegin() + 0u);
 
+  // A4, B1, C2, D2
   EXPECT_EQ(this->index_double_no_nulls->null_cend(), this->index_double_no_nulls->null_cbegin() + 0u);
+  // A4, B2, C1, D2
   EXPECT_EQ(this->index_double_nulls->null_cend(), this->index_double_nulls->null_cbegin() + 3u);
+  // A4, B2, C2, D2
   EXPECT_EQ(this->index_double_mixed->null_cend(), this->index_double_mixed->null_cbegin() + 4u);
+  // A4, B2, D2, D1
   EXPECT_EQ(this->index_double_empty->null_cend(), this->index_double_empty->null_cbegin() + 0u);
 
+  // A5, B1, C2, D2
   EXPECT_EQ(this->index_string_no_nulls->null_cend(), this->index_string_no_nulls->null_cbegin() + 0u);
+  // A5, B2, C1, D2
   EXPECT_EQ(this->index_string_nulls->null_cend(), this->index_string_nulls->null_cbegin() + 3u);
+  // A5, B2, C2, D2
   EXPECT_EQ(this->index_string_mixed->null_cend(), this->index_string_mixed->null_cbegin() + 4u);
+  // A5, B2, D2, D1
   EXPECT_EQ(this->index_string_empty->null_cend(), this->index_string_empty->null_cbegin() + 0u);
 }
 
@@ -351,28 +477,6 @@ TYPED_TEST(SingleSegmentIndexTest, SegmentIndexTypeTest) {
   } else if constexpr (std::is_same_v<TypeParam, GroupKeyIndex>) {
     EXPECT_EQ(this->index_int_no_nulls->type(), SegmentIndexType::GroupKey);
   }
-}
-
-/*
-  size_t memory_consumption() const;
-  
-  |    Characteristic               | Block 1 | Block 2 |
-  |---------------------------------|---------|---------|
-  |[A] index is empty               |    true |   false |
-  |[B] index has null positions     |    true |   false |
-  |[C] index has non-null positions |    true |   false |
-  
-  Base Choice:
-    A2, B1, C1
-  Further derived combinations:
-    A2, B1, C2
-    A2, B2, C1
-   (A1, B1, C1) --infeasible---+
-    A1, B2, C2 <-alternative-<-+
-*/
-
-TYPED_TEST(SingleSegmentIndexTest, MemoryConsumptionTest) {
-  // TODO(Marcel) implement (Refine combinations of blocks into test values)
 }
 
 TYPED_TEST(SingleSegmentIndexTest, CreateZeroSegmentIndexTest) {

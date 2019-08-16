@@ -62,7 +62,36 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
   EXPECT_EQ(expected_offsets, *index_offsets);
 }
 
+/*
+  size_t memory_consumption() const;
+  
+  |    Characteristic               | Block 1 | Block 2 |
+  |---------------------------------|---------|---------|
+  |[A] index is empty               |    true |   false |
+  |[B] index has null positions     |    true |   false |
+  |[C] index has non-null positions |    true |   false |
+  
+  Base Choice:
+    A2, B1, C1
+  Further derived combinations:
+    A2, B1, C2
+    A2, B2, C1
+   (A1, B1, C1) --infeasible---+
+    A1, B2, C2 <-alternative-<-+
+*/
 TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
+  const auto& dict_segment_int_no_nulls = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {13, 37});
+  const auto& dict_segment_int_nulls =
+      BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {std::nullopt, std::nullopt});
+  const auto& dict_segment_int_empty = BaseTest::create_dict_segment_by_type<int32_t>(DataType::Int, {});
+  const auto& index_int_empty =
+      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_empty}));
+  const auto& index_int_no_nulls =
+      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_no_nulls}));
+  const auto& index_int_nulls =
+      std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int_nulls}));
+
+  // A2, B1, C1
   // expected memory consumption:
   //  - `_indexed_segments`, shared pointer             ->  16 byte
   //  - `_index_offsets`, 8 elements, each 4 byte       ->  32 byte
@@ -70,6 +99,33 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   //  - `_index_null_postings`, 4 elements, each 4 byte ->  16 byte
   //  - sum                                             ->  96 byte
   EXPECT_EQ(index->memory_consumption(), 96u);
+
+  // A2, B1, C2
+  // expected memory consumption:
+  //  - `_indexed_segments`, shared pointer             ->  16 byte
+  //  - `_index_offsets`, 2 elements, each 4 byte       ->   8 byte
+  //  - `_index_postings`, 0 elements, each 4 byte      ->   0 byte
+  //  - `_index_null_postings`, 2 elements, each 4 byte ->   8 byte
+  //  - sum                                             ->  32 byte
+  EXPECT_EQ(index_int_nulls->memory_consumption(), 32u);
+
+  // A2, B2, C1
+  // expected memory consumption:
+  //  - `_indexed_segments`, shared pointer             ->  16 byte
+  //  - `_index_offsets`, 4 elements, each 4 byte       ->  16 byte
+  //  - `_index_postings`, 2 elements, each 4 byte      ->   8 byte
+  //  - `_index_null_postings`, 0 elements, each 4 byte ->   0 byte
+  //  - sum                                             ->  40 byte
+  EXPECT_EQ(index_int_no_nulls->memory_consumption(), 40u);
+
+  // A1, B2, C2
+  // expected memory consumption:
+  //  - `_indexed_segments`, shared pointer             ->  16 byte
+  //  - `_index_offsets`, 2 elements, each 4 byte       ->   8 byte
+  //  - `_index_postings`, 0 elements, each 4 byte      ->   0 byte
+  //  - `_index_null_postings`, 0 elements, each 4 byte ->   0 byte
+  //  - sum                                             ->  24 byte
+  EXPECT_EQ(index_int_empty->memory_consumption(), 24u);
 }
 
 TEST_F(GroupKeyIndexTest, IndexPostings) {

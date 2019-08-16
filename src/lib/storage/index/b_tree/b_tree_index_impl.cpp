@@ -15,11 +15,13 @@ BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(const std::vector<AllTypeVariant>& values) const {
+  Assert(!values.empty(), "Value vector has to be non-empty.");
   return lower_bound(boost::get<DataType>(values[0]));
 }
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(const std::vector<AllTypeVariant>& values) const {
+  Assert(!values.empty(), "Value vector has to be non-empty.");
   return upper_bound(boost::get<DataType>(values[0]));
 }
 
