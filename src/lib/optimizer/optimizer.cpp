@@ -93,6 +93,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
+  optimizer->add_rule(std::make_unique<DisjunctionToUnionRule>());
+
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
@@ -105,8 +107,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
-
-  optimizer->add_rule(std::make_unique<DisjunctionToUnionRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
