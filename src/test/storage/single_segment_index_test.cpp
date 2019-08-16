@@ -210,8 +210,8 @@ class SingleSegmentIndexTest : public BaseTest {
   std::vector<ChunkOffset>* index_string_empty_null_postings;
 };
 
-// List of indexes to test, only the GroupKeyIndex is null-aware for now
-typedef ::testing::Types</*AdaptiveRadixTreeIndex, BTreeIndex, CompositeGroupKeyIndex,*/
+// List of indexes to test
+typedef ::testing::Types<AdaptiveRadixTreeIndex, /*BTreeIndex, CompositeGroupKeyIndex,*/
                          GroupKeyIndex /* add further indexes */>
     DerivedIndexes;
 TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
@@ -297,7 +297,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
 */
 
 TYPED_TEST(SingleSegmentIndexTest, LowerBoundTest) {
-  // A1, B4, C1, D2 //0,3,4, n
+  // A1, B4, C1, D2
   EXPECT_EQ(this->index_int_mixed->lower_bound({3}), this->index_int_mixed->cbegin() + 1);
   // A1, B5, C2, D1
   EXPECT_THROW(this->index_int_mixed->lower_bound({}), std::logic_error);

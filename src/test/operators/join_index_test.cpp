@@ -130,8 +130,7 @@ class JoinIndexTest : public BaseTest {
       _table_wrapper_m, _table_wrapper_n;
 };
 
-// for now, only the GroupKeyIndex is null-aware
-typedef ::testing::Types</*AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIndex,*/ GroupKeyIndex> DerivedIndices;
+typedef ::testing::Types<AdaptiveRadixTreeIndex, /*CompositeGroupKeyIndex, BTreeIndex,*/ GroupKeyIndex> DerivedIndices;
 
 TYPED_TEST_CASE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 

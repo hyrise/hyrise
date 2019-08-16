@@ -81,7 +81,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
-  Assert((values.size() == 1), "Group Key Index expects only one input value");
+  Assert((values.size() == 1), "Group Key Index expects exactly one input value");
 
   if (variant_is_null(*values.begin())) {
     return null_cbegin();
@@ -92,7 +92,7 @@ GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVar
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
-  Assert((values.size() == 1), "Group Key Index expects only one input value");
+  Assert((values.size() == 1), "Group Key Index expects exactly one input value");
 
   if (variant_is_null(*values.begin())) {
     return null_cend();
