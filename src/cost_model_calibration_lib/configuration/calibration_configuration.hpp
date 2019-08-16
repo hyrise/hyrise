@@ -125,6 +125,8 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
       } else {
         segments_encodings.push_back(SegmentEncodingSpec{encoding});
       }
+    } else {
+      segments_encodings.push_back(SegmentEncodingSpec{EncodingType::Unencoded});
     }
   }
 
