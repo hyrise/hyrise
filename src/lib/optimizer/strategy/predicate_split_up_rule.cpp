@@ -34,7 +34,7 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
   /**
    * Step 2:
    *    - Split up qualifying PredicateNodes into multiple consecutive PredicateNodes. We have to do this in a
-   *      second pass, because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
+   *      second pass because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
    *      bugs.
    */
   for (const auto& [predicate_node, flat_conjunction] : predicate_nodes_to_flat_conjunctions) {

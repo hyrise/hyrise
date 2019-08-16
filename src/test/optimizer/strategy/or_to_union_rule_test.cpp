@@ -11,7 +11,7 @@ class OrToUnionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
 
@@ -20,9 +20,19 @@ class OrToUnionRuleTest : public StrategyBaseTest {
     b_b = node_b->get_column("b");
 
     node_c = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "c");
     c_a = node_c->get_column("a");
     c_b = node_c->get_column("b");
+
+    node_d = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "d");
+    d_a = node_d->get_column("a");
+    d_b = node_d->get_column("b");
+
+    node_e = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "e");
+    e_a = node_e->get_column("a");
+    e_b = node_e->get_column("b");
 
     customer_demographics =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "c_customer_sk"}}, "customer_demographics");
@@ -52,16 +62,16 @@ class OrToUnionRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<OrToUnionRule> _rule;
 
-  std::shared_ptr<MockNode> node_a, node_b, node_c, customer_demographics, date_dim, web_sales,
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, customer_demographics, date_dim, web_sales,
       catalog_sales;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b, c_customer_sk, d_date_sk, d_year, d_qoy, ws_sold_date_sk,
+  LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b, d_a, d_b, e_a, e_b, c_customer_sk, d_date_sk, d_year, d_qoy, ws_sold_date_sk,
   ws_bill_customer_sk, cs_sold_date_sk, cs_ship_customer_sk;
 };
 
 TEST_F(OrToUnionRuleTest, TwoExistsToUnion) {
   // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b = a.b) OR EXISTS (SELECT * FROM c WHERE c.b = a.b)
 
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
 
   // clang-format off
   const auto subquery_lqp_a =
@@ -93,17 +103,18 @@ TEST_F(OrToUnionRuleTest, TwoExistsToUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(OrToUnionRuleTest, NoRewriteThreeExistsToUnion) {
-  // Not yet implemented because it is not needed in TPC-DS
+TEST_F(OrToUnionRuleTest, FourExistsToUnion) {
   // SELECT * FROM a WHERE EXISTS (
   //   SELECT * FROM b WHERE b.b = a.b
   // ) OR EXISTS (
   //   SELECT * FROM c WHERE c.b = a.b
   // ) OR EXISTS (
   //   SELECT * FROM d WHERE d.b = a.b
+  // ) OR EXISTS (
+  //   SELECT * FROM e WHERE e.b = e.b
   // )
 
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
 
   // clang-format off
   const auto subquery_lqp_a =
@@ -119,17 +130,33 @@ TEST_F(OrToUnionRuleTest, NoRewriteThreeExistsToUnion) {
   const auto subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, a_b));
 
   const auto subquery_lqp_c =
-  PredicateNode::make(equals_(c_b, parameter),
-    node_c);
+  PredicateNode::make(equals_(d_b, parameter),
+    node_d);
 
   const auto subquery_c = lqp_subquery_(subquery_lqp_c, std::make_pair(ParameterID{0}, a_b));
 
+  const auto subquery_lqp_d =
+  PredicateNode::make(equals_(e_b, parameter),
+                      node_e);
+
+  const auto subquery_d = lqp_subquery_(subquery_lqp_d, std::make_pair(ParameterID{0}, a_b));
+
   const auto input_lqp =
-  PredicateNode::make(or_(exists_(subquery_a), or_(exists_(subquery_b), exists_(subquery_c))),
+  PredicateNode::make(or_(exists_(subquery_a), or_(exists_(subquery_b), or_(exists_(subquery_c), exists_(subquery_d)))),
     node_a);
 
-  const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
+  const auto expected_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(exists_(subquery_a),
+      node_a),
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(exists_(subquery_b),
+        node_a),
+      UnionNode::make(UnionMode::Positions,
+        PredicateNode::make(exists_(subquery_c),
+          node_a),
+        PredicateNode::make(exists_(subquery_d),
+          node_a))));
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
