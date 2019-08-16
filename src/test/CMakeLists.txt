@@ -125,7 +125,7 @@ set(
     optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
-        optimizer/strategy/disjunction_to_union_rule_test.cpp
+    optimizer/strategy/disjunction_to_union_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
