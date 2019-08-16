@@ -67,6 +67,7 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
   }
 
   Assert(encoding_mapping[table_encoding_type] == static_cast<size_t>(chunk_count), "Tables should not have mixed encodings!");
+
   if (vector_compression_type)
     Assert(vector_compression_mapping[*vector_compression_type] == static_cast<size_t>(chunk_count), "Tables should not have mixed compression types!");
 
@@ -91,9 +92,30 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(const std::shared_
         const auto equal_distinct_count_histogram = std::dynamic_pointer_cast<EqualDistinctCountHistogram<ColumnDataType>>(attribute_statistics->histogram);
         if (equal_distinct_count_histogram) {
           column_features.column_distinct_value_count = static_cast<size_t>(equal_distinct_count_histogram->total_distinct_count());
+          Assert(column_features.column_distinct_value_count > 0, "Should not happen");
+        } else {
+          Assert(false, "Should not happen");
         }
+      } else {
+        Assert(false, "Should not happen");
       }
     });
+  } else {
+    if (table->type() == TableType::Data) {
+      if (!table->table_statistics()) {
+        const auto& cn = table->column_names();
+        for (const auto& c : cn) {
+          std::cout << c << std::endl;
+        }
+        Assert(false, "Should not happen");
+      }
+      if (column_id < table->table_statistics()->column_statistics.size()) {
+        Assert(false, "Should not happen");
+      }
+    }
+    if (table->type() != TableType::References) {
+      Assert(false, "Should not happen");
+    }
   }
 
   return column_features;
