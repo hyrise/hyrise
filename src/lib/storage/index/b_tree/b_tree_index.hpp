@@ -35,7 +35,7 @@ class BTreeIndex : public AbstractIndex {
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const override;
   size_t _memory_consumption() const override;
 
-  std::shared_ptr<const BaseSegment> _indexed_segments;
+  std::shared_ptr<const BaseSegment> _indexed_segment;
   std::shared_ptr<BaseBTreeIndexImpl> _impl;
 };
 

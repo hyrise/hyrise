@@ -8,20 +8,19 @@
 namespace opossum {
 
 template <typename DataType>
-BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index)
+BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index,
+                                         std::vector<ChunkOffset>& index_null_postings)
     : _heap_bytes_used{0} {
-  _bulk_insert(segments_to_index);
+  _bulk_insert(segments_to_index, index_null_postings);
 }
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  Assert(!values.empty(), "Value vector has to be non-empty.");
   return lower_bound(boost::get<DataType>(values[0]));
 }
 
 template <typename DataType>
 BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  Assert(!values.empty(), "Value vector has to be non-empty.");
   return upper_bound(boost::get<DataType>(values[0]));
 }
 
@@ -55,6 +54,7 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType valu
   }
 }
 
+// TODO(Marcel) update
 template <typename DataType>
 size_t BTreeIndexImpl<DataType>::memory_consumption() const {
   return sizeof(std::vector<ChunkOffset>) + sizeof(ChunkOffset) * _chunk_offsets.size() + _btree.bytes_used() +
@@ -62,14 +62,21 @@ size_t BTreeIndexImpl<DataType>::memory_consumption() const {
 }
 
 template <typename DataType>
-void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegment>& segment) {
+void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegment>& segment,
+                                            std::vector<ChunkOffset>& index_null_postings) {
   std::vector<std::pair<ChunkOffset, DataType>> values;
+  index_null_postings.reserve(values.size());
 
   // Materialize
   segment_iterate<DataType>(*segment, [&](const auto& position) {
-    if (position.is_null()) return;
-    values.push_back(std::make_pair(position.chunk_offset(), position.value()));
+    if (position.is_null()) {
+      index_null_postings.emplace_back(position.chunk_offset());
+    } else {
+      values.push_back(std::make_pair(position.chunk_offset(), position.value()));
+    }
   });
+
+  index_null_postings.shrink_to_fit();
 
   // Sort
   std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
@@ -79,14 +86,16 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
   }
 
   // Build index
-  DataType current_value = values[0].second;
-  _btree[current_value] = 0;
-  _add_to_heap_memory_usage(current_value);
-  for (size_t i = 0; i < values.size(); i++) {
-    if (values[i].second != current_value) {
-      current_value = values[i].second;
-      _btree[current_value] = i;
-      _add_to_heap_memory_usage(current_value);
+  if (!values.empty()) {
+    DataType current_value = values[0].second;
+    _btree[current_value] = 0;
+    _add_to_heap_memory_usage(current_value);
+    for (size_t i = 0; i < values.size(); i++) {
+      if (values[i].second != current_value) {
+        current_value = values[i].second;
+        _btree[current_value] = i;
+        _add_to_heap_memory_usage(current_value);
+      }
     }
   }
 }

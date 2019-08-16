@@ -43,7 +43,8 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   friend BTreeIndexTest;
 
  public:
-  explicit BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index);
+  explicit BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index,
+                          std::vector<ChunkOffset>& _index_null_postings);
 
   size_t memory_consumption() const override;
 
@@ -56,7 +57,7 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   Iterator cend() const override;
 
  protected:
-  void _bulk_insert(const std::shared_ptr<const BaseSegment>&);
+  void _bulk_insert(const std::shared_ptr<const BaseSegment>&, std::vector<ChunkOffset>& _index_null_postings);
   void _add_to_heap_memory_usage(const DataType&);
 
   btree::btree_map<DataType, size_t> _btree;
