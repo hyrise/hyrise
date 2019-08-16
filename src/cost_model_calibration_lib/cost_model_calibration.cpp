@@ -99,8 +99,8 @@ void CostModelCalibration::_calibrate() {
 
   // Only use half of the available cores to avoid bandwidth problems. We always cap
   // at eight threads to avoid node-spanning execution for large servers with many CPUs.
-  const size_t concurrent_thread_count = std::thread::hardware_concurrency();
-  const size_t threads_to_create = std::min(8ul, concurrent_thread_count / 2);
+  // const size_t concurrent_thread_count = std::thread::hardware_concurrency();
+  const size_t threads_to_create = 1;//std::min(8ul, concurrent_thread_count / 2);
 
   CalibrationQueryGenerator generator(table_names, columns, _configuration);
   const auto& queries = generator.generate_queries();
