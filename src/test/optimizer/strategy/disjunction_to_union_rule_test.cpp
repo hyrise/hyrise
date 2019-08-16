@@ -10,8 +10,9 @@ namespace opossum {
 class DisjunctionToUnionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
     a_a = node_a->get_column("a");
+    a_b = node_a->get_column("b");
 
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
     b_a = node_b->get_column("a");
@@ -31,7 +32,7 @@ class DisjunctionToUnionRuleTest : public StrategyBaseTest {
   std::shared_ptr<DisjunctionToUnionRule> _rule;
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e;
-  LQPColumnReference a_a, b_a, c_a, d_a, e_a;
+  LQPColumnReference a_a, a_b, b_a, c_a, d_a, e_a;
 };
 
 TEST_F(DisjunctionToUnionRuleTest, TwoExistsToUnion) {
@@ -149,6 +150,45 @@ TEST_F(DisjunctionToUnionRuleTest, SelectColumn) {
         node_a),
       PredicateNode::make(greater_than_(value_(3), value_(2)),
         node_a)));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(DisjunctionToUnionRuleTest, HandleDiamondLQP) {
+  // SELECT * FROM (
+  //   SELECT a FROM a WHERE a.a > 3 OR a.b > 4
+  // ) r JOIN (
+  //   SELECT b FROM a WHERE a.a > 3 OR a.b > 4
+  // ) s ON r.a = s.b
+
+  // clang-format off
+  const auto predicate_node =
+  PredicateNode::make(or_(greater_than_(a_a, value_(3)), greater_than_(a_b, value_(4))),
+    node_a);
+
+  const auto input_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, a_b),
+    ProjectionNode::make(expression_vector(a_a),
+      predicate_node),
+    ProjectionNode::make(expression_vector(a_b),
+      predicate_node));
+
+  const auto union_node =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(greater_than_(a_a, value_(3)),
+      node_a),
+    PredicateNode::make(greater_than_(a_b, value_(4)),
+      node_a));
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, a_b),
+    ProjectionNode::make(expression_vector(a_a),
+      union_node),
+    ProjectionNode::make(expression_vector(a_b),
+      union_node));
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
