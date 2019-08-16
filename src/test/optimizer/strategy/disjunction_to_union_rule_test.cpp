@@ -10,25 +10,20 @@ namespace opossum {
 class DisjunctionToUnionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
     a_a = node_a->get_column("a");
-    a_b = node_a->get_column("b");
 
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "b");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
     b_a = node_b->get_column("a");
-    b_b = node_b->get_column("b");
 
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "c");
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
     c_a = node_c->get_column("a");
-    c_b = node_c->get_column("b");
 
-    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "d");
+    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
     d_a = node_d->get_column("a");
-    d_b = node_d->get_column("b");
 
-    node_e = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "e");
+    node_e = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "e");
     e_a = node_e->get_column("a");
-    e_b = node_e->get_column("b");
 
     _rule = std::make_shared<DisjunctionToUnionRule>();
   }
@@ -36,26 +31,30 @@ class DisjunctionToUnionRuleTest : public StrategyBaseTest {
   std::shared_ptr<DisjunctionToUnionRule> _rule;
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b, d_a, d_b, e_a, e_b;
+  LQPColumnReference a_a, b_a, c_a, d_a, e_a;
 };
 
 TEST_F(DisjunctionToUnionRuleTest, TwoExistsToUnion) {
-  // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b = a.b) OR EXISTS (SELECT * FROM c WHERE c.b = a.b)
+  // SELECT * FROM a WHERE EXISTS (
+  //   SELECT * FROM b WHERE b.a = a.a
+  // ) OR EXISTS (
+  //   SELECT * FROM c WHERE c.a = a.a
+  // )
 
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
 
   // clang-format off
   const auto subquery_lqp_a =
-  PredicateNode::make(equals_(b_b, parameter),
+  PredicateNode::make(equals_(b_a, parameter),
     node_b);
 
-  const auto subquery_a = lqp_subquery_(subquery_lqp_a, std::make_pair(ParameterID{0}, a_b));
+  const auto subquery_a = lqp_subquery_(subquery_lqp_a, std::make_pair(ParameterID{0}, a_a));
 
   const auto subquery_lqp_b =
-  PredicateNode::make(equals_(c_b, parameter),
+  PredicateNode::make(equals_(c_a, parameter),
     node_c);
 
-  const auto subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, a_b));
+  const auto subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, a_a));
 
   const auto input_lqp =
   PredicateNode::make(or_(exists_(subquery_a), exists_(subquery_b)),
@@ -76,41 +75,41 @@ TEST_F(DisjunctionToUnionRuleTest, TwoExistsToUnion) {
 
 TEST_F(DisjunctionToUnionRuleTest, FourExistsToUnion) {
   // SELECT * FROM a WHERE EXISTS (
-  //   SELECT * FROM b WHERE b.b = a.b
+  //   SELECT * FROM b WHERE b.a = a.a
   // ) OR EXISTS (
-  //   SELECT * FROM c WHERE c.b = a.b
+  //   SELECT * FROM c WHERE c.a = a.a
   // ) OR EXISTS (
-  //   SELECT * FROM d WHERE d.b = a.b
+  //   SELECT * FROM d WHERE d.a = a.a
   // ) OR EXISTS (
-  //   SELECT * FROM e WHERE e.b = e.b
+  //   SELECT * FROM e WHERE e.a = a.a
   // )
 
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
 
   // clang-format off
   const auto subquery_lqp_a =
-  PredicateNode::make(equals_(b_b, parameter),
+  PredicateNode::make(equals_(b_a, parameter),
     node_b);
 
-  const auto subquery_a = lqp_subquery_(subquery_lqp_a, std::make_pair(ParameterID{0}, a_b));
+  const auto subquery_a = lqp_subquery_(subquery_lqp_a, std::make_pair(ParameterID{0}, a_a));
 
   const auto subquery_lqp_b =
-  PredicateNode::make(equals_(c_b, parameter),
+  PredicateNode::make(equals_(c_a, parameter),
     node_c);
 
-  const auto subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, a_b));
+  const auto subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, a_a));
 
   const auto subquery_lqp_c =
-  PredicateNode::make(equals_(d_b, parameter),
+  PredicateNode::make(equals_(d_a, parameter),
     node_d);
 
-  const auto subquery_c = lqp_subquery_(subquery_lqp_c, std::make_pair(ParameterID{0}, a_b));
+  const auto subquery_c = lqp_subquery_(subquery_lqp_c, std::make_pair(ParameterID{0}, a_a));
 
   const auto subquery_lqp_d =
-  PredicateNode::make(equals_(e_b, parameter),
+  PredicateNode::make(equals_(e_a, parameter),
                       node_e);
 
-  const auto subquery_d = lqp_subquery_(subquery_lqp_d, std::make_pair(ParameterID{0}, a_b));
+  const auto subquery_d = lqp_subquery_(subquery_lqp_d, std::make_pair(ParameterID{0}, a_a));
 
   const auto input_lqp =
   PredicateNode::make(or_(exists_(subquery_a), or_(exists_(subquery_b), or_(exists_(subquery_c), exists_(subquery_d)))),
