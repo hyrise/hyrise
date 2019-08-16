@@ -14,8 +14,9 @@ class DisjunctionToUnionRuleTest : public StrategyBaseTest {
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
 
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "b");
     b_a = node_b->get_column("a");
+    b_b = node_b->get_column("b");
 
     node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
     c_a = node_c->get_column("a");
@@ -32,7 +33,7 @@ class DisjunctionToUnionRuleTest : public StrategyBaseTest {
   std::shared_ptr<DisjunctionToUnionRule> _rule;
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e;
-  LQPColumnReference a_a, a_b, b_a, c_a, d_a, e_a;
+  LQPColumnReference a_a, a_b, b_a, b_b, c_a, d_a, e_a;
 };
 
 TEST_F(DisjunctionToUnionRuleTest, TwoExistsToUnion) {
@@ -157,16 +158,19 @@ TEST_F(DisjunctionToUnionRuleTest, SelectColumn) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(DisjunctionToUnionRuleTest, HandleDiamondLQP) {
+TEST_F(DisjunctionToUnionRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
   // SELECT * FROM (
-  //   SELECT a FROM a WHERE a.a > 3 OR a.b > 4
+  //   SELECT a FROM a, b WHERE a.a > b.a OR a.b > b.b
   // ) r JOIN (
-  //   SELECT b FROM a WHERE a.a > 3 OR a.b > 4
+  //   SELECT b FROM a, b WHERE a.a > b.a OR a.b > b.b
   // ) s ON r.a = s.b
+
+  const auto parameter0 = correlated_parameter_(ParameterID{0}, b_a);
+  const auto parameter1 = correlated_parameter_(ParameterID{1}, b_b);
 
   // clang-format off
   const auto predicate_node =
-  PredicateNode::make(or_(greater_than_(a_a, value_(3)), greater_than_(a_b, value_(4))),
+  PredicateNode::make(or_(greater_than_(a_a, parameter0), greater_than_(a_b, parameter1)),
     node_a);
 
   const auto input_lqp =
@@ -178,9 +182,9 @@ TEST_F(DisjunctionToUnionRuleTest, HandleDiamondLQP) {
 
   const auto union_node =
   UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(greater_than_(a_a, value_(3)),
+    PredicateNode::make(greater_than_(a_a, parameter0),
       node_a),
-    PredicateNode::make(greater_than_(a_b, value_(4)),
+    PredicateNode::make(greater_than_(a_b, parameter1),
       node_a));
 
   const auto expected_lqp =

@@ -78,6 +78,12 @@ SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 < a;
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 40 OR b >= 50 AND b <= 95;
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 40 AND c <= 35 AND b >= 49 AND a >= 21 AND b <= 95 AND c <= 40 AND c >= 23;
 
+-- Scans with potential for disjunction to union reformulation
+SELECT a FROM mixed WHERE 1 OR 3 > 2;
+SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_100 AS c WHERE c.b = a.b)
+SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS c WHERE c.b + 1 = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS d WHERE d.b + 2 = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS e WHERE e.b + 3 = a.b)
+SELECT * FROM (SELECT a.a FROM id_int_int_int_100 AS a, mixed AS b WHERE a.a = b.b OR a.b = b.c) r JOIN (SELECT a.b FROM id_int_int_int_100 AS a, mixed AS b WHERE a.a = b.b OR a.b = b.c) s ON r.a = s.b
+
 -- Projection
 SELECT a FROM mixed;
 SELECT -b as neg_b FROM mixed;
@@ -94,7 +100,6 @@ SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
 SELECT 2 / 0, b / 0, 50 / id FROM mixed;
 SELECT 2 % 0, b % 0, 50 % id FROM mixed;
-SELECT a FROM mixed WHERE 1 OR 3 > 2;
 
 -- Aliases
 SELECT R.a, S.a FROM mixed AS R, mixed AS S;
@@ -404,7 +409,6 @@ SELECT NOT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 SELECT * FROM mixed AS outer_mixed WHERE EXISTS(SELECT * FROM mixed AS inner_mixed WHERE inner_mixed.id = outer_mixed.id * 10);
 SELECT * FROM mixed WHERE EXISTS (SELECT id_int_int_int_100.a FROM id_int_int_int_100 WHERE id_int_int_int_100.b = mixed.b);
 SELECT * FROM mixed WHERE NOT EXISTS (SELECT id_int_int_int_100.a FROM id_int_int_int_100 WHERE id_int_int_int_100.b = mixed.b);
-SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_100 AS c WHERE c.b = a.b)
 SELECT * FROM mixed_null WHERE EXISTS(SELECT 0) OR b = 42;
 SELECT * FROM mixed_null WHERE EXISTS(SELECT 1);
 SELECT * FROM mixed_null WHERE NOT EXISTS(SELECT * FROM mixed WHERE b > 1000);
