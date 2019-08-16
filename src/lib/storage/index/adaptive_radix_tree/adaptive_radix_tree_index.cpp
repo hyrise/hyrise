@@ -56,11 +56,11 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
 AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
 
-  if (variant_is_null(*values.begin())) {
+  if (variant_is_null(values[0])) {
     return null_cbegin();
   }
 
-  ValueID value_id = _indexed_segment->lower_bound(*values.begin());
+  ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
   } else {
@@ -71,11 +71,11 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<A
 AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
 
-  if (variant_is_null(*values.begin())) {
+  if (variant_is_null(values[0])) {
     return null_cend();
   }
 
-  ValueID value_id = _indexed_segment->upper_bound(*values.begin());
+  ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
   } else {

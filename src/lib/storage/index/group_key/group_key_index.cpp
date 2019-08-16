@@ -83,22 +83,22 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Group Key Index expects exactly one input value");
 
-  if (variant_is_null(*values.begin())) {
+  if (variant_is_null(values[0])) {
     return null_cbegin();
   }
 
-  ValueID value_id = _indexed_segment->lower_bound(*values.begin());
+  ValueID value_id = _indexed_segment->lower_bound(values[0]);
   return _get_postings_iterator_at(value_id);
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Group Key Index expects exactly one input value");
 
-  if (variant_is_null(*values.begin())) {
+  if (variant_is_null(values[0])) {
     return null_cend();
   }
 
-  ValueID value_id = _indexed_segment->upper_bound(*values.begin());
+  ValueID value_id = _indexed_segment->upper_bound(values[0]);
   return _get_postings_iterator_at(value_id);
 }
 
