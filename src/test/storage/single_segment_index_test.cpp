@@ -308,7 +308,7 @@ TYPED_TEST(SingleSegmentIndexTest, LowerBoundTest) {
   // A1, B3, C1, D2
   EXPECT_EQ(this->index_int_mixed->lower_bound({4}), this->index_int_mixed->cbegin() + 3);
   // A2, B4, C1, D2
-  // EXPECT_EQ(this->index_long_mixed->lower_bound({3L}), this->index_long_mixed->cbegin() + 1);
+  EXPECT_EQ(this->index_long_mixed->lower_bound({3L}), this->index_long_mixed->cbegin() + 1);
   // A3, B4, C1, D2
   EXPECT_EQ(this->index_float_mixed->lower_bound({3.1f}), this->index_float_mixed->cbegin() + 1);
   // A4, B4, C1, D2
@@ -331,7 +331,7 @@ TYPED_TEST(SingleSegmentIndexTest, UpperBoundTest) {
   // A1, B3, C1, D2
   EXPECT_EQ(this->index_int_mixed->upper_bound({4}), this->index_int_mixed->cbegin() + 4);
   // A2, B4, C1, D2
-  // EXPECT_EQ(this->index_long_mixed->upper_bound({3L}), this->index_long_mixed->cbegin() + 3);
+  EXPECT_EQ(this->index_long_mixed->upper_bound({3L}), this->index_long_mixed->cbegin() + 3);
   // A3, B4, C1, D2
   EXPECT_EQ(this->index_float_mixed->upper_bound({3.1f}), this->index_float_mixed->cbegin() + 3);
   // A4, B4, C1, D2

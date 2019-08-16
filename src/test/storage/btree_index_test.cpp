@@ -134,7 +134,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNulls) {
   EXPECT_EQ(index->memory_consumption(), 80u);
 #else
   // libc++:
-  // TODO(anyone) implelemt more accurate
+  // TODO(anyone) implement this more accurate
   //    ?? (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +   0 number of elements (0) * sizeof(ChunkOffset) (4)
@@ -192,7 +192,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringEmpty) {
   EXPECT_EQ(index->memory_consumption(), 72u);
 #else
   // libc++:
-  // TODO(anyone) implelemt more accurate
+  // TODO(anyone) implement this more accurate
   //    ?? (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +   0 number of elements (0) * sizeof(ChunkOffset) (4)
