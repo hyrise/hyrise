@@ -15,6 +15,7 @@
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
+#include "strategy/in_expression_to_join_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
@@ -111,6 +112,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+  optimizer->add_rule(std::make_unique<InExpressionToJoinRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 

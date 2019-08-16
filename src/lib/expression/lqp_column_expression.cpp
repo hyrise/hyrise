@@ -3,6 +3,7 @@
 #include "boost/functional/hash.hpp"
 
 #include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -31,7 +32,11 @@ std::string LQPColumnExpression::as_column_name() const {
     Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
     return mock_node->column_definitions()[column_reference.original_column_id()].second;
 
+  } else if (column_reference.original_node()->type == LQPNodeType::StaticTable) {
+    // TODO
+    return "";
   } else {
+    // TODO
     Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
   }
 }
@@ -47,6 +52,10 @@ DataType LQPColumnExpression::data_type() const {
     Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
     return mock_node->column_definitions()[column_reference.original_column_id()].first;
 
+  } else if (column_reference.original_node()->type == LQPNodeType::StaticTable) {
+    const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(column_reference.original_node());
+    Assert(column_reference.original_column_id() < static_table_node->table->column_definitions().size(), "ColumnID out of range");
+    return static_table_node->table->column_definitions()[column_reference.original_column_id()].data_type;
   } else {
     Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
   }
