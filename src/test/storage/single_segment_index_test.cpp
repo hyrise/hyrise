@@ -483,18 +483,78 @@ TYPED_TEST(SingleSegmentIndexTest, CreateZeroSegmentIndexTest) {
   EXPECT_THROW(std::make_shared<TypeParam>(std::vector<std::shared_ptr<const BaseSegment>>({})), std::logic_error);
 }
 
-TYPED_TEST(SingleSegmentIndexTest, FullRange) {
+TYPED_TEST(SingleSegmentIndexTest, FullRangeNoNulls) {
+  // int
   auto begin_int = this->index_int_no_nulls->cbegin();
   auto end_int = this->index_int_no_nulls->cend();
-  auto result_values_int = this->result_as_vector(this->dict_segment_int_no_nulls, begin_int, end_int);
+  auto actual_values_int = this->result_as_vector(this->dict_segment_int_no_nulls, begin_int, end_int);
   auto expected_values_int = std::vector<AllTypeVariant>{0, 1, 2, 3, 4, 4, 4, 7, 8, 9};
-  EXPECT_EQ(expected_values_int, result_values_int);
+  EXPECT_EQ(expected_values_int, actual_values_int);
 
+  auto actual_null_positions_int =
+      std::vector<ChunkOffset>(this->index_int_no_nulls->null_cbegin(), this->index_int_no_nulls->null_cend());
+  auto expected_null_positions = std::vector<ChunkOffset>{};
+  EXPECT_EQ(expected_null_positions, actual_null_positions_int);
+
+  // string
   auto begin_str = this->index_string_no_nulls->cbegin();
   auto end_str = this->index_string_no_nulls->cend();
-  auto result_values_str = this->result_as_vector(this->dict_segment_string_no_nulls, begin_str, end_str);
+  auto actual_values_str = this->result_as_vector(this->dict_segment_string_no_nulls, begin_str, end_str);
   auto expected_values_str = std::vector<AllTypeVariant>{"bar", "foo", "foo", "hello", "test", "world"};
-  EXPECT_EQ(expected_values_str, result_values_str);
+  EXPECT_EQ(expected_values_str, actual_values_str);
+
+  auto actual_null_positions_string =
+      std::vector<ChunkOffset>(this->index_string_no_nulls->null_cbegin(), this->index_string_no_nulls->null_cend());
+  EXPECT_EQ(expected_null_positions, actual_null_positions_string);
+}
+
+TYPED_TEST(SingleSegmentIndexTest, FullRangeNulls) {
+  // int
+  auto begin_int = this->index_int_nulls->cbegin();
+  auto end_int = this->index_int_nulls->cend();
+  auto actual_values_int = this->result_as_vector(this->dict_segment_int_nulls, begin_int, end_int);
+  auto expected_values = std::vector<AllTypeVariant>{};
+  EXPECT_EQ(expected_values, actual_values_int);
+
+  auto actual_null_positions_int =
+      std::vector<ChunkOffset>(this->index_int_nulls->null_cbegin(), this->index_int_nulls->null_cend());
+  auto expected_null_positions = std::vector<ChunkOffset>{0u, 1u, 2u};
+  EXPECT_EQ(expected_null_positions, actual_null_positions_int);
+
+  // string
+  auto begin_str = this->index_string_nulls->cbegin();
+  auto end_str = this->index_string_nulls->cend();
+  auto actual_values_str = this->result_as_vector(this->dict_segment_string_nulls, begin_str, end_str);
+  EXPECT_EQ(expected_values, actual_values_str);
+
+  auto actual_null_positions_string =
+      std::vector<ChunkOffset>(this->index_string_nulls->null_cbegin(), this->index_string_nulls->null_cend());
+  EXPECT_EQ(expected_null_positions, actual_null_positions_string);
+}
+
+TYPED_TEST(SingleSegmentIndexTest, FullRangeMixed) {
+  // int
+  auto begin_int = this->index_int_mixed->cbegin();
+  auto end_int = this->index_int_mixed->cend();
+  auto actual_values_int = this->result_as_vector(this->dict_segment_int_mixed, begin_int, end_int);
+  auto expected_values_int = std::vector<AllTypeVariant>{0, 3, 3, 4};
+  EXPECT_EQ(expected_values_int, actual_values_int);
+
+  auto actual_null_positions_int =
+      std::vector<ChunkOffset>(this->index_int_mixed->null_cbegin(), this->index_int_mixed->null_cend());
+  auto expected_null_positions = std::vector<ChunkOffset>{0u, 2u, 4u, 7u};
+  EXPECT_EQ(expected_null_positions, actual_null_positions_int);
+
+  // string
+  auto begin_str = this->index_string_mixed->cbegin();
+  auto end_str = this->index_string_mixed->cend();
+  auto actual_values_str = this->result_as_vector(this->dict_segment_string_mixed, begin_str, end_str);
+  auto expected_values_str = std::vector<AllTypeVariant>{"alpha", "hello", "hello", "test"};
+  EXPECT_EQ(expected_values_str, actual_values_str);
+
+  auto actual_null_positions_string =
+      std::vector<ChunkOffset>(this->index_string_mixed->null_cbegin(), this->index_string_mixed->null_cend());
+  EXPECT_EQ(expected_null_positions, actual_null_positions_string);
 }
 
 TYPED_TEST(SingleSegmentIndexTest, PointQueryWithSingleReturnValue) {
@@ -530,13 +590,13 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQuery) {
   auto end = this->index_int_no_nulls->upper_bound({3});
 
   auto result_positions = std::set<std::size_t>(begin, end);
-  auto result_values = this->result_as_vector(this->dict_segment_int_no_nulls, begin, end);
+  auto actual_values = this->result_as_vector(this->dict_segment_int_no_nulls, begin, end);
 
   auto expected_positions = std::set<std::size_t>{0, 4, 7};
   auto expected_values = std::vector<AllTypeVariant>{1, 2, 3};
 
   EXPECT_EQ(expected_positions, result_positions);
-  EXPECT_EQ(expected_values, result_values);
+  EXPECT_EQ(expected_values, actual_values);
 }
 
 TYPED_TEST(SingleSegmentIndexTest, RangeQueryBelow) {
