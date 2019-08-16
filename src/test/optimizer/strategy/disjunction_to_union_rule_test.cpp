@@ -10,8 +10,7 @@ namespace opossum {
 class DisjunctionToUnionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "a");
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
 
@@ -19,18 +18,15 @@ class DisjunctionToUnionRuleTest : public StrategyBaseTest {
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
-    node_c = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "c");
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "c");
     c_a = node_c->get_column("a");
     c_b = node_c->get_column("b");
 
-    node_d = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "d");
+    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "d");
     d_a = node_d->get_column("a");
     d_b = node_d->get_column("b");
 
-    node_e = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "e");
+    node_e = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "e");
     e_a = node_e->get_column("a");
     e_b = node_e->get_column("b");
 
@@ -64,8 +60,8 @@ class DisjunctionToUnionRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, customer_demographics, date_dim, web_sales,
       catalog_sales;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b, d_a, d_b, e_a, e_b, c_customer_sk, d_date_sk, d_year, d_qoy, ws_sold_date_sk,
-  ws_bill_customer_sk, cs_sold_date_sk, cs_ship_customer_sk;
+  LQPColumnReference a_a, a_b, b_a, b_b, c_a, c_b, d_a, d_b, e_a, e_b, c_customer_sk, d_date_sk, d_year, d_qoy,
+      ws_sold_date_sk, ws_bill_customer_sk, cs_sold_date_sk, cs_ship_customer_sk;
 };
 
 TEST_F(DisjunctionToUnionRuleTest, TwoExistsToUnion) {
