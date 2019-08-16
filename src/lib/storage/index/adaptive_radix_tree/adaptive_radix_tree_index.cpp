@@ -63,8 +63,10 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<A
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else {
+  } else if (_root) {
     return _root->lower_bound(BinaryComparable(value_id), 0);
+  } else {
+    return _cend();
   }
 }
 
@@ -78,8 +80,10 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<A
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else {
+  } else if (_root) {
     return _root->lower_bound(BinaryComparable(value_id), 0);
+  } else {
+    return _cend();
   }
 }
 
@@ -89,10 +93,12 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_of
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
-  DebugAssert(!(values.empty()), "Index on empty segment is not defined");
-  _chunk_offsets.reserve(values.size());
-  auto begin = _chunk_offsets.cbegin();
-  return _bulk_insert(values, static_cast<size_t>(0u), begin);
+  if (!values.empty()) {
+    _chunk_offsets.reserve(values.size());
+    auto begin = _chunk_offsets.cbegin();
+    return _bulk_insert(values, static_cast<size_t>(0u), begin);
+  }
+  return nullptr;
 }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
