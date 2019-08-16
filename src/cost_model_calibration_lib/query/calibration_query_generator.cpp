@@ -141,7 +141,8 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
         const auto validdate_table_node = StoredTableNode::make(table_name);
         queries.push_back(_generate_validate_on_data_table(validdate_table_node));
         for (const auto selectivity : _configuration.selectivities) {
-          for (const auto scan_type : {ScanType::TableScan, ScanType::IndexScan}) {
+          for (const auto scan_type : {ScanType::TableScan}) {
+          // for (const auto scan_type : {ScanType::TableScan, ScanType::IndexScan}) {
             // IndexScans are currently not supported on reference segments and indexes are only created for
             // dictionary-encoded FSBA columns (not a Hyrise restriction, just considered sufficent for calibration).
             // Consequently, we skip queries where the data table scan would be an index scan on other segment encodings.
