@@ -112,7 +112,7 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
 
   configuration.selectivities = j.at("selectivities").get<std::vector<float>>();
 
-  std::vector<SegmentEncodingSpec> segments_encodings{SegmentEncodingSpec{EncodingType::Unencoded}};
+  std::vector<SegmentEncodingSpec> segments_encodings{SegmentEncodingSpec{}};
   for (const auto& encoding : configuration.encodings) {
     if (encoding != EncodingType::Unencoded) {
       auto encoder = create_encoder(encoding);
