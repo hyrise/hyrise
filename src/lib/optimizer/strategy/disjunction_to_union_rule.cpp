@@ -4,14 +4,14 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "or_to_union_rule.hpp"
+#include "disjunction_to_union_rule.hpp"
 
 namespace opossum {
 
-  std::string OrToUnionRule::name() const { return "Or to Union Rule"; }
+  std::string DisjunctionToUnionRule::name() const { return "Disjunction to Union Rule"; }
 
-  void OrToUnionRule::apply_to(const std::shared_ptr<AbstractLQPNode> &root) const {
-    Assert(root->type == LQPNodeType::Root, "OrToUnionRule needs root to hold onto");
+  void DisjunctionToUnionRule::apply_to(const std::shared_ptr<AbstractLQPNode> &root) const {
+    Assert(root->type == LQPNodeType::Root, "DisjunctionToUnionRule needs root to hold onto");
 
     /**
      * Step 1:

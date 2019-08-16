@@ -1,13 +1,13 @@
 #include "gtest/gtest.h"
 
 #include "logical_query_plan/union_node.hpp"
-#include "optimizer/strategy/or_to_union_rule.hpp"
+#include "optimizer/strategy/disjunction_to_union_rule.hpp"
 #include "strategy_base_test.hpp"
 #include "testing_assert.hpp"
 
 namespace opossum {
 
-class OrToUnionRuleTest : public StrategyBaseTest {
+class DisjunctionToUnionRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(
@@ -57,10 +57,10 @@ class OrToUnionRuleTest : public StrategyBaseTest {
     cs_sold_date_sk = catalog_sales->get_column("cs_sold_date_sk");
     cs_ship_customer_sk = catalog_sales->get_column("cs_ship_customer_sk");
 
-    _rule = std::make_shared<OrToUnionRule>();
+    _rule = std::make_shared<DisjunctionToUnionRule>();
   }
 
-  std::shared_ptr<OrToUnionRule> _rule;
+  std::shared_ptr<DisjunctionToUnionRule> _rule;
 
   std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, customer_demographics, date_dim, web_sales,
       catalog_sales;
@@ -68,7 +68,7 @@ class OrToUnionRuleTest : public StrategyBaseTest {
   ws_bill_customer_sk, cs_sold_date_sk, cs_ship_customer_sk;
 };
 
-TEST_F(OrToUnionRuleTest, TwoExistsToUnion) {
+TEST_F(DisjunctionToUnionRuleTest, TwoExistsToUnion) {
   // SELECT * FROM a WHERE EXISTS (SELECT * FROM b WHERE b.b = a.b) OR EXISTS (SELECT * FROM c WHERE c.b = a.b)
 
   const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
@@ -103,7 +103,7 @@ TEST_F(OrToUnionRuleTest, TwoExistsToUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(OrToUnionRuleTest, FourExistsToUnion) {
+TEST_F(DisjunctionToUnionRuleTest, FourExistsToUnion) {
   // SELECT * FROM a WHERE EXISTS (
   //   SELECT * FROM b WHERE b.b = a.b
   // ) OR EXISTS (
@@ -163,7 +163,7 @@ TEST_F(OrToUnionRuleTest, FourExistsToUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(OrToUnionRuleTest, SelectColumn) {
+TEST_F(DisjunctionToUnionRuleTest, SelectColumn) {
   // SELECT * FROM a WHERE 1 OR 3 > 2
 
   // clang-format off
@@ -186,8 +186,8 @@ TEST_F(OrToUnionRuleTest, SelectColumn) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(OrToUnionRuleTest, OptimizeTPCDS35) {
-  // Optimize a simplified and pre-optimized part of TPC-H 35, as the OrToUnionRule would receive it
+TEST_F(DisjunctionToUnionRuleTest, OptimizeTPCDS35) {
+  // Optimize a simplified and pre-optimized part of TPC-H 35, as the DisjunctionToUnionRule would receive it
   //  select *
   //  from customer_demographics
   //  (exists (select *

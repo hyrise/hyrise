@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-class OrToUnionRule : public AbstractRule {
+class DisjunctionToUnionRule : public AbstractRule {
  public:
   std::string name() const override;
 
