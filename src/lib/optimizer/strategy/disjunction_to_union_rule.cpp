@@ -41,7 +41,7 @@ void DisjunctionToUnionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& ro
    */
   for (const auto& [predicate_node, flat_disjunction] : predicate_nodes_to_flat_disjunctions) {
     if (flat_disjunction.size() <= 1) {
-      break;  // TODO(jj): Test this
+      break;
     }
 
     auto previous_union_node = UnionNode::make(UnionMode::Positions);

@@ -134,7 +134,7 @@ TEST_F(DisjunctionToUnionRuleTest, FourExistsToUnion) {
 }
 
 TEST_F(DisjunctionToUnionRuleTest, SelectColumn) {
-  // SELECT * FROM a WHERE 1 OR 3 > 2
+  // SELECT a FROM a WHERE 1 OR 3 > 2
 
   // clang-format off
   const auto input_lqp =
@@ -149,6 +149,22 @@ TEST_F(DisjunctionToUnionRuleTest, SelectColumn) {
         node_a),
       PredicateNode::make(greater_than_(value_(3), value_(2)),
         node_a)));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(DisjunctionToUnionRuleTest, NoRewriteSimplePredicate) {
+  // SELECT * FROM a WHERE a = 10
+
+  // clang-format off
+  const auto input_lqp =
+    PredicateNode::make(value_(10),
+      node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
