@@ -96,8 +96,7 @@ class GroupKeyIndex : public AbstractIndex {
 
  private:
   const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
-  ValueID null_value_id;
   std::vector<ChunkOffset> _index_offsets;   // maps value-ids to offsets in _index_postings
-  std::vector<ChunkOffset> _index_postings;  // record positions in the attribute vector
+  std::vector<ChunkOffset> _index_postings;  // non-null record positions in the attribute vector
 };
 }  // namespace opossum

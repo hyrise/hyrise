@@ -41,7 +41,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
     }
   });
 
-  null_value_id = _indexed_segment->unique_values_count();
+  const auto null_value_id = _indexed_segment->unique_values_count();
   const auto null_count = _index_offsets[null_value_id + 1u];
   const auto non_null_count = _indexed_segment->size() - null_count;
 
