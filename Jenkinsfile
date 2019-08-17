@@ -232,16 +232,28 @@ try {
           }
         }
 
-        stage("memcheckReleaseTest") {
-          // Runs separately as it depends on clang-release to be built
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "mkdir ./clang-release-memcheck-test"
-            // If this shows a leak, try --leak-check=full, which is slower but more precise
-            sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-          } else {
-            Utils.markStageSkippedForConditional("memcheckReleaseTest")
+        parallel memcheckReleaseTest: {
+          stage("memcheckReleaseTest") {
+            // Runs separately as it depends on clang-release to be built
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "mkdir ./clang-release-memcheck-test"
+              // If this shows a leak, try --leak-check=full, which is slower but more precise
+              sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+            } else {
+              Utils.markStageSkippedForConditional("memcheckReleaseTest")
+            }
           }
-        }
+        }, tpchQueryPlans: {
+          stage("tpchQueryPlans") {
+            // Query plan generation runs as part of this parallel block in order to avoid a load imbalance between the parallel blocks
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              sh "cd ./gcc-release; ./hyriseBenchmarkTPCH -r 1 --visualize"
+            } else {
+              Utils.markStageSkippedForConditional("tpchQueryPlans")
+              archiveArtifacts artifacts: '*.svg'
+            }
+          }
+        } // TODO: add TPC-DS query plans
       } finally {
         sh "ls -A1 | xargs rm -rf"
         deleteDir()
