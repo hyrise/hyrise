@@ -257,7 +257,7 @@ try {
           stage("tpcdsQueryPlans") {
             // Query plan generation runs as part of this parallel block in order to avoid a load imbalance between the parallel blocks
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize"
+              sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize"
               archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
             } else {
               Utils.markStageSkippedForConditional("tpcdsQueryPlans")
