@@ -76,13 +76,15 @@ int main(int argc, char* argv[]) {
                   context)
       .run();
 
-  std::cout << "- Running consistency checks at the end of the benchmark" << std::endl;
-  check_consistency(num_warehouses);
-  std::cout << "- Consistency checks passed" << std::endl;
+  if (config.verify) {
+    std::cout << "- Running consistency checks at the end of the benchmark" << std::endl;
+    check_consistency(num_warehouses);
+    std::cout << "- Consistency checks passed" << std::endl;
+  }
 }
 
 namespace {
-template <typename T>
+template <typename T, typename = std::enable_if<std::is_floating_point_v<T>>>
 bool floats_near(T a, T b) {
   if (a == b) return true;
   // Tolerate 0.1% discrepancy due to float variations
@@ -90,22 +92,27 @@ bool floats_near(T a, T b) {
 }
 
 void check_consistency(const int num_warehouses) {
-  // new_order_counts[5-1][2-1] will hold the number of new_orders for W_ID 5, D_ID 2
+  // new_order_counts[5-1][2-1] will hold the number of new_orders for W_ID 5, D_ID 2.
+  // Filled as a byproduct of check 2, validated in check 3.
   std::vector<std::vector<int64_t>> new_order_counts(num_warehouses, std::vector<int64_t>(NUM_DISTRICTS_PER_WAREHOUSE));
+
+  const auto total_num_districts = static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE);
 
   {
     std::cout << "  -> Running consistency check 1" << std::endl;  // see 3.3.2.1
+    // There is only one value for W_YTD. We select MAX() because we need an aggregate column.
     auto pipeline =
         SQLPipelineBuilder{
             "SELECT W_ID, MAX(W_YTD), SUM(D_YTD) FROM WAREHOUSE, DISTRICT WHERE W_ID = D_W_ID GROUP BY W_ID"}
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse");
-    for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
+    const auto row_count = table->row_count();
+    for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto w_ytd = double{table->get_value<float>(ColumnID{1}, row_id)};
-      const auto d_ytd = table->get_value<double>(ColumnID{2}, row_id);
+      const auto d_ytd_sum = table->get_value<double>(ColumnID{2}, row_id);
 
-      Assert(floats_near(w_ytd, d_ytd), "Mismatching YTD for WAREHOUSE and HISTORY");
+      Assert(floats_near(w_ytd, d_ytd_sum), "Mismatching YTD for WAREHOUSE and DISTRICT");
     }
   }
 
@@ -118,14 +125,14 @@ void check_consistency(const int num_warehouses) {
       const auto [district_pipeline_status, district_table] = district_pipeline.get_result_table();
       Assert(district_table && district_table->row_count() == NUM_DISTRICTS_PER_WAREHOUSE, "Lost a district");
       for (auto d_id = 1; d_id <= NUM_DISTRICTS_PER_WAREHOUSE; ++d_id) {
-        const auto max_o_id = district_table->get_value<int32_t>(ColumnID{0}, d_id - 1);
+        const auto district_max_o_id = district_table->get_value<int32_t>(ColumnID{0}, d_id - 1);
 
         auto order_pipeline = SQLPipelineBuilder{std::string{"SELECT MAX(O_ID) FROM \"ORDER\" WHERE O_W_ID = "} +
                                                  std::to_string(w_id) + " AND O_D_ID = " + std::to_string(d_id)}
                                   .create_pipeline();
         const auto [order_pipeline_status, order_table] = order_pipeline.get_result_table();
         Assert(order_table && order_table->row_count() == 1, "Did not find MAX(O_ID)");
-        Assert(order_table->get_value<int32_t>(ColumnID{0}, 0) == max_o_id, "Mismatching order IDs");
+        Assert(order_table->get_value<int32_t>(ColumnID{0}, 0) == district_max_o_id, "Mismatching order IDs");
 
         auto new_order_pipeline =
             SQLPipelineBuilder{std::string{"SELECT COUNT(*), MAX(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} +
@@ -136,7 +143,7 @@ void check_consistency(const int num_warehouses) {
         const auto new_order_count = new_order_table->get_value<int64_t>(ColumnID{0}, 0);
         new_order_counts[w_id - 1][d_id - 1] = new_order_count;
         if (new_order_count > 0) {
-          Assert(new_order_table->get_value<int32_t>(ColumnID{1}, 0) == max_o_id, "Mismatching order IDs");
+          Assert(new_order_table->get_value<int32_t>(ColumnID{1}, 0) == district_max_o_id, "Mismatching order IDs");
         }
       }
     }
@@ -150,7 +157,8 @@ void check_consistency(const int num_warehouses) {
             .create_pipeline();
     const auto [new_order_pipeline_status, new_order_table] = new_order_pipeline.get_result_table();
     Assert(new_order_table, "Could not retrieve new_orders");
-    for (auto row_id = size_t{0}; row_id < new_order_table->row_count(); ++row_id) {
+    const auto& row_count = new_order_table->row_count();
+    for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto w_id = new_order_table->get_value<int32_t>(ColumnID{0}, row_id);
       const auto d_id = new_order_table->get_value<int32_t>(ColumnID{1}, row_id);
       const auto min_o_id = new_order_table->get_value<int32_t>(ColumnID{2}, row_id);
@@ -166,7 +174,7 @@ void check_consistency(const int num_warehouses) {
             "SELECT O_W_ID, O_D_ID, SUM(O_OL_CNT) FROM \"ORDER\" GROUP BY O_W_ID, O_D_ID ORDER BY O_W_ID, O_D_ID"}
             .create_pipeline();
     const auto [order_pipeline_status, order_table] = order_pipeline.get_result_table();
-    Assert(order_table && order_table->row_count() == static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE),
+    Assert(order_table && order_table->row_count() == total_num_districts,
            "Did not find SUM(O_OL_CNT) for all districts");
 
     auto order_line_pipeline =
@@ -175,10 +183,11 @@ void check_consistency(const int num_warehouses) {
             .create_pipeline();
     const auto [order_line_pipeline_status, order_line_table] = order_line_pipeline.get_result_table();
     Assert(order_line_table &&
-               order_line_table->row_count() == static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE),
+               order_line_table->row_count() == total_num_districts,
            "Did not find COUNT(*) FROM ORDER_LINE for all districts");
 
-    for (auto row_id = size_t{0}; row_id < order_line_table->row_count(); ++row_id) {
+    const auto row_count = order_line_table->row_count();
+    for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       Assert(order_table->get_value<int64_t>(ColumnID{2}, row_id) ==
                  order_line_table->get_value<int64_t>(ColumnID{2}, row_id),
              "Mismatching order_line count");
@@ -187,25 +196,39 @@ void check_consistency(const int num_warehouses) {
 
   {
     std::cout << "  -> Running consistency check 5" << std::endl;
-    auto pipeline =
-        SQLPipelineBuilder{
-            "SELECT * FROM \"ORDER\" WHERE O_CARRIER_ID = -1 AND NOT EXISTS (SELECT NO_W_ID FROM NEW_ORDER WHERE "
-            "O_W_ID = NO_W_ID AND O_D_ID = NO_D_ID AND NO_O_ID = O_ID)"}
-            .create_pipeline();
+    // clang-format off
+    auto pipeline = SQLPipelineBuilder{R"(
+                      SELECT *
+                      FROM "order"
+                      WHERE o_carrier_id = -1
+                      AND NOT EXISTS (SELECT no_w_id
+                        FROM new_order
+                        WHERE o_w_id = no_w_id
+                              AND o_d_id = no_d_id
+                              AND no_o_id = o_id)
+                    )"}.create_pipeline();
+    // clang-format on
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() == size_t{0}, "Found fulfilled order without O_CARRIER_ID");
   }
 
   {
     std::cout << "  -> Running consistency check 6" << std::endl;
-    auto pipeline =
-        SQLPipelineBuilder{
-            "SELECT O_W_ID, O_D_ID, O_ID, MAX(O_OL_CNT), COUNT(*) FROM \"ORDER\" LEFT JOIN ORDER_LINE ON O_W_ID = "
-            "OL_W_ID AND O_D_ID = OL_D_ID AND O_ID = OL_O_ID GROUP BY O_W_ID, O_D_ID, O_ID"}
-            .create_pipeline();
+    // clang-format off
+    auto pipeline = SQLPipelineBuilder{R"(
+                      SELECT o_w_id, o_d_id, o_id, MAX(o_ol_cnt), COUNT(*)
+                      FROM "ORDER"
+                      LEFT JOIN order_line
+                        ON o_w_id = ol_w_id
+                        AND o_d_id = ol_d_id
+                        AND o_id = ol_o_id
+                      GROUP BY o_w_id, o_d_id, o_id
+                    )"}.create_pipeline();
+    // clang-format on
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() > size_t{0}, "Failed to retrieve order / order lines");
-    for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
+    const auto row_count = table->row_count();
+    for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       Assert(table->get_value<int32_t>(ColumnID{3}, row_id) == table->get_value<int64_t>(ColumnID{4}, row_id),
              "Mismatching number of order lines");
     }
@@ -231,7 +254,8 @@ void check_consistency(const int num_warehouses) {
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() == static_cast<size_t>(num_warehouses), "Lost a warehouse");
-    for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
+    const auto row_count = table->row_count();
+    for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto w_ytd = double{table->get_value<float>(ColumnID{1}, row_id)};
       const auto h_amount = table->get_value<double>(ColumnID{2}, row_id);
 
@@ -247,9 +271,10 @@ void check_consistency(const int num_warehouses) {
             "= H_D_ID GROUP BY D_W_ID, D_ID"}
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() == static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE),
+    Assert(table && table->row_count() == total_num_districts,
            "Lost a district");
-    for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
+    const auto row_count = table->row_count();
+    for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto d_ytd = double{table->get_value<float>(ColumnID{2}, row_id)};
       const auto h_amount = table->get_value<double>(ColumnID{3}, row_id);
 
@@ -261,25 +286,38 @@ void check_consistency(const int num_warehouses) {
     std::cout << "  -> Running consistency check 10" << std::endl;
     std::cout << "  -> Skipped because of #1771" << std::endl;
     if ((false)) {
-      auto pipeline =
-          SQLPipelineBuilder{
-              "SELECT C_W_ID, C_D_ID, C_ID, MAX(C_BALANCE), (CASE WHEN SUM_OL_AMOUNT IS NULL THEN 0 ELSE SUM_OL_AMOUNT "
-              "END) AS SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT FROM CUSTOMER LEFT JOIN (SELECT O_W_ID, O_D_ID, O_C_ID, "
-              "SUM(OL_AMOUNT) FROM \"ORDER\", ORDER_LINE WHERE OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = "
-              "O_ID AND OL_DELIVERY_D <> -1 GROUP BY O_W_ID, O_D_ID, O_C_ID) AS sub1(O_W_ID, O_D_ID, O_C_ID, "
-              "SUM_OL_AMOUNT) ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN (SELECT H_W_ID, "
-              "H_D_ID, H_C_ID, SUM(H_AMOUNT) FROM HISTORY GROUP BY H_W_ID, H_D_ID, H_C_ID) AS sub2(H_W_ID, H_D_ID, "
-              "H_C_ID, SUM_H_AMOUNT) ON H_W_ID = C_W_ID AND H_D_ID = C_D_ID AND H_C_ID = C_ID GROUP BY C_W_ID, C_D_ID, "
-              "C_ID, SUM_OL_AMOUNT_NONNULL, SUM_H_AMOUNT"}
-              .create_pipeline();
+    // clang-format off
+    auto pipeline = SQLPipelineBuilder{R"(
+                      SELECT C_W_ID, C_D_ID, C_ID, MAX(C_BALANCE), SUM_H_AMOUNT
+                        (CASE WHEN SUM_OL_AMOUNT IS NULL THEN 0 ELSE SUM_OL_AMOUNT END) AS SUM_OL_AMOUNT_NONNULL,
+                      FROM CUSTOMER
+                      LEFT JOIN 
+                        (SELECT O_W_ID, O_D_ID, O_C_ID, SUM(OL_AMOUNT)
+                         FROM "ORDER", ORDER_LINE
+                         WHERE
+                          OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID
+                          AND OL_DELIVERY_D <> -1
+                          GROUP BY O_W_ID, O_D_ID, O_C_ID
+                        ) AS sub1(O_W_ID, O_D_ID, O_C_ID, SUM_OL_AMOUNT)
+                        ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID
+                      LEFT JOIN
+                        (SELECT H_W_ID, H_D_ID, H_C_ID, SUM(H_AMOUNT)
+                         FROM HISTORY
+                         GROUP BY H_W_ID, H_D_ID, H_C_ID
+                        ) AS sub2(H_W_ID, H_D_ID, H_C_ID, SUM_H_AMOUNT)
+                        ON H_W_ID = C_W_ID AND H_D_ID = C_D_ID AND H_C_ID = C_ID
+                      GROUP BY C_W_ID, C_D_ID, C_ID, SUM_H_AMOUNT, SUM_OL_AMOUNT_NONNULL
+                    )"}.create_pipeline();
+      // clang-format on
       const auto [pipeline_status, table] = pipeline.get_result_table();
       Assert(table && table->row_count() == static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE *
                                                                 NUM_CUSTOMERS_PER_DISTRICT),
              "Lost a customer");
-      for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
+      const auto row_count = table->row_count();
+      for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
         const auto c_balance = double{table->get_value<float>(ColumnID{3}, row_id)};
-        const auto sum_ol_amount = table->get_value<double>(ColumnID{4}, row_id);
-        const auto sum_h_amount = table->get_value<double>(ColumnID{5}, row_id);
+        const auto sum_h_amount = table->get_value<double>(ColumnID{4}, row_id);
+        const auto sum_ol_amount = table->get_value<double>(ColumnID{5}, row_id);
 
         Assert(floats_near(sum_ol_amount - sum_h_amount, c_balance), "Mismatching amounts for customer");
       }
@@ -296,18 +334,25 @@ void check_consistency(const int num_warehouses) {
 
   {
     std::cout << "  -> Running consistency check 12" << std::endl;
-    auto pipeline =
-        SQLPipelineBuilder{
-            "SELECT C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT, (CASE WHEN SUM(OL_AMOUNT) IS NULL THEN 0 ELSE "
-            "SUM(OL_AMOUNT) END) AS SUM_OL_AMOUNT_NONNULL FROM CUSTOMER LEFT JOIN \"ORDER\" ON O_W_ID = C_W_ID AND "
-            "O_D_ID = C_D_ID AND O_C_ID = C_ID LEFT JOIN ORDER_LINE ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND "
-            "OL_O_ID = O_ID AND OL_DELIVERY_D <> -1 GROUP BY C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT"}
-            .create_pipeline();
+    // clang-format off
+    auto pipeline = SQLPipelineBuilder{R"(
+                      SELECT C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT,
+                        (CASE WHEN SUM(OL_AMOUNT) IS NULL THEN 0 ELSE SUM(OL_AMOUNT) END) AS SUM_OL_AMOUNT_NONNULL
+                      FROM CUSTOMER
+                      LEFT JOIN "ORDER"
+                        ON O_W_ID = C_W_ID AND O_D_ID = C_D_ID AND O_C_ID = C_ID
+                      LEFT JOIN ORDER_LINE
+                        ON OL_W_ID = O_W_ID AND OL_D_ID = O_D_ID AND OL_O_ID = O_ID
+                        AND OL_DELIVERY_D <> -1
+                      GROUP BY C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT
+                    )"}.create_pipeline();
+      // clang-format on
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() ==
                         static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE * NUM_CUSTOMERS_PER_DISTRICT),
            "Lost a customer");
-    for (auto row_id = size_t{0}; row_id < table->row_count(); ++row_id) {
+    const auto row_count = table->row_count();
+    for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto c_balance = double{table->get_value<float>(ColumnID{3}, row_id)};
       const auto c_ytd_payment = double{table->get_value<float>(ColumnID{4}, row_id)};
       const auto sum_ol_amount = table->get_value<double>(ColumnID{5}, row_id);

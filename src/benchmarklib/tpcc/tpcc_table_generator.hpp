@@ -68,6 +68,8 @@ class TPCCTableGenerator : public AbstractTableGenerator {
                               OrderLineCounts order_line_counts,
                               const std::function<T(std::vector<size_t>)>& generator_function);
 
+  // Used to generate not only random numbers, but also non-uniform numbers and random last names as defined by the
+  // TPC-C Specification.
   static thread_local TPCCRandomGenerator _random_gen;
 
   /**

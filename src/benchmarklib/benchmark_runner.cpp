@@ -390,9 +390,10 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   const auto compression_strings_option =
       boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
 
-  // This is not really nice, but as the TPC-C benchmark binary has just a main method and not a class, retrieving this
-  // default value properly would require some major refactoring of how benchmarks interact with the BenchmarkRunner.
-  // At this moment, that does not seem to be worth the effort.
+  // Make TPC-C run in shuffled mode. While it can also run in ordered mode, it would run out of orders to fulfill at
+  // some point. The way this is solved here is not really nice, but as the TPC-C benchmark binary has just a main
+  // method and not a class, retrieving this default value properly would require some major refactoring of how
+  // benchmarks interact with the BenchmarkRunner. At this moment, that does not seem to be worth the effort.
   const auto default_mode = (benchmark_name == "TPC-C Benchmark" ? "Shuffled" : "Ordered");
 
   // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the

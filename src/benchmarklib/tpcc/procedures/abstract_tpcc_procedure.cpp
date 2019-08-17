@@ -15,12 +15,8 @@ AbstractTPCCProcedure::AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor)
 AbstractTPCCProcedure& AbstractTPCCProcedure::operator=(const AbstractTPCCProcedure& other) {
   DebugAssert(&_sql_executor == &other._sql_executor,
               "Can only assign AbstractTPCCProcedure if the sql_executors are the same");
+  // Doesn't assign anything as the only member _sql_executor is already the same.
   return *this;
 }
-
-// As random values are generate during creation of the procedure, this is mostly done in a single thread, not in the
-// database worker's. As such, having a fixed seed for all thread-local random engines should not be an issue.
-thread_local std::minstd_rand AbstractTPCCProcedure::_random_engine = std::minstd_rand{42};                // NOLINT
-thread_local TPCCRandomGenerator AbstractTPCCProcedure::_tpcc_random_generator = TPCCRandomGenerator{42};  // NOLINT
 
 }  // namespace opossum

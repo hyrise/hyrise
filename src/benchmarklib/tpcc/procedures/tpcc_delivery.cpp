@@ -18,7 +18,7 @@ TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_e
 
 bool TPCCDelivery::execute() {
   for (auto d_id = 1; d_id <= 10; ++d_id) {
-    // This could be optimized by querying only once and grouping by NO_D_ID - would that be legal?
+    // TODO(anyone): This could be optimized by querying only once and grouping by NO_D_ID
     const auto new_order_select_pair =
         _sql_executor.execute(std::string{"SELECT COUNT(*), MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} +
                               std::to_string(w_id) + " AND NO_D_ID = " + std::to_string(d_id));
