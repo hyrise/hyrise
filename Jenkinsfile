@@ -76,13 +76,6 @@ try {
           stage("clang-release") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-              sh "./clang-release/hyriseTest clang-release"
-              sh "./clang-release/hyriseSystemTest clang-release"
-              sh "./scripts/test/hyriseConsole_test.py clang-release"
-              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
-              sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
-              sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-release"
-
             } else {
               Utils.markStageSkippedForConditional("clangRelease")
             }
@@ -94,9 +87,9 @@ try {
             // Query plan generation runs as part of this parallel block in order to avoid a load imbalance between the parallel blocks
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "cd ./clang-release; ./hyriseBenchmarkTPCH -r 1 --visualize"
+              archiveArtifacts artifacts: '*.svg'
             } else {
               Utils.markStageSkippedForConditional("tpchQueryPlans")
-              archiveArtifacts artifacts: '*.svg'
             }
           }
         } // TODO: add TPC-DS query plans
