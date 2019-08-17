@@ -10,13 +10,13 @@
 #include "benchmark_config.hpp"
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/format_duration.hpp"
@@ -63,7 +63,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
     // Load the data into SQLite
     sqlite_wrapper = std::make_shared<SQLiteWrapper>();
-    for (const auto& [table_name, table] : StorageManager::get().tables()) {
+    for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
       std::cout << "-  Loading '" << table_name << "' into SQLite " << std::flush;
       Timer per_table_timer;
       sqlite_wrapper->create_table(*table, table_name);
@@ -362,7 +362,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
 
   // Gather information on the (estimated) table size
   auto table_size = size_t{0};
-  for (const auto& table_pair : StorageManager::get().tables()) {
+  for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
     table_size += table_pair.second->estimate_memory_usage();
   }
 

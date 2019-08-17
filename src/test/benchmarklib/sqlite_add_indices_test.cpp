@@ -3,8 +3,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/print.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "testing_assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
@@ -18,8 +18,9 @@ class SQLiteAddIndicesTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column_1", DataType::Int, false);
     column_definitions.emplace_back("column_2", DataType::String, false);
-    StorageManager::get().add_table("table_1", std::make_shared<Table>(column_definitions, TableType::Data, 2));
-    stored_table = StorageManager::get().get_table("table_1");
+    Hyrise::get().storage_manager.add_table("table_1", std::make_shared<Table>(column_definitions, TableType::Data, 2));
+
+    stored_table = Hyrise::get().storage_manager.get_table("table_1");
     stored_table->append({13, "Hello,"});
     stored_table->append({37, "world"});
 

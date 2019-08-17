@@ -1,6 +1,6 @@
 #pragma once
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/singleton.hpp"
 
@@ -8,7 +8,7 @@ namespace opossum {
 
 class TestPlugin : public AbstractPlugin, public Singleton<TestPlugin> {
  public:
-  TestPlugin() : sm(StorageManager::get()) {}
+  TestPlugin() : sm(Hyrise::get().storage_manager) {}
 
   const std::string description() const final;
 

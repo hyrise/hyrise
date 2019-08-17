@@ -9,13 +9,13 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -42,7 +42,7 @@ class ReferenceSegmentTest : public BaseTest {
 
     ChunkEncoder::encode_chunks(_test_table_dict, {ChunkID{0}, ChunkID{1}});
 
-    StorageManager::get().add_table("test_table_dict", _test_table_dict);
+    Hyrise::get().storage_manager.add_table("test_table_dict", _test_table_dict);
   }
 
  public:

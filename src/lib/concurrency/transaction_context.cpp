@@ -4,8 +4,8 @@
 #include <memory>
 
 #include "commit_context.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_read_write_operator.hpp"
-#include "transaction_manager.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -15,7 +15,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
       _snapshot_commit_id{snapshot_commit_id},
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {
-  TransactionManager::get()._register_transaction(snapshot_commit_id);
+  Hyrise::get().transaction_manager._register_transaction(snapshot_commit_id);
 }
 
 TransactionContext::~TransactionContext() {
@@ -46,7 +46,7 @@ TransactionContext::~TransactionContext() {
    * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
    * that this transaction has finished.
    */
-  TransactionManager::get()._deregister_transaction(_snapshot_commit_id);
+  Hyrise::get().transaction_manager._deregister_transaction(_snapshot_commit_id);
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
@@ -132,7 +132,7 @@ void TransactionContext::_prepare_commit() {
 
   _wait_for_active_operators_to_finish();
 
-  _commit_context = TransactionManager::get()._new_commit_context();
+  _commit_context = Hyrise::get().transaction_manager._new_commit_context();
 }
 
 void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback) {
@@ -154,7 +154,7 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
     if (callback) callback(transaction_id);
   });
 
-  TransactionManager::get()._try_increment_last_commit_id(_commit_context);
+  Hyrise::get().transaction_manager._try_increment_last_commit_id(_commit_context);
 }
 
 void TransactionContext::on_operator_started() { ++_num_active_operators; }
