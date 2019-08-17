@@ -88,6 +88,12 @@ void TransactionContext::commit_async(const std::function<void(TransactionID)>& 
 void TransactionContext::commit() {
   Assert(_phase == TransactionPhase::Active, "TransactionContext must be active to be committed.");
 
+  // No modifications made, nothing to commit, no need to acquire a commit ID
+  if (_rw_operators.empty()) {
+    _phase = TransactionPhase::Committed;
+    return;
+  }
+
   auto committed = std::promise<void>{};
   const auto committed_future = committed.get_future();
   const auto callback = [&committed](TransactionID) { committed.set_value(); };
