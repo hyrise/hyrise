@@ -57,8 +57,11 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
     }
   }
 
+  // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape all table names.
+  const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+
   std::stringstream create_table_query;
-  create_table_query << "CREATE TABLE " << table_name << "(";
+  create_table_query << "CREATE TABLE " << escaped_table_name << "(";
   for (auto column_id = ColumnID{0}; column_id < table.column_definitions().size(); column_id++) {
     create_table_query << table.column_definitions()[column_id].name << " " << column_types[column_id];
 
@@ -71,7 +74,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
 
   // Prepare `INSERT INTO <table_name> VALUES (?, ?, ...)` statement
   std::stringstream insert_into_stream;
-  insert_into_stream << "INSERT INTO " << table_name << " VALUES (";
+  insert_into_stream << "INSERT INTO " << escaped_table_name << " VALUES (";
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
     insert_into_stream << "?";
     if (column_id + 1u < table.column_count()) {

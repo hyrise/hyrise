@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
                   context)
       .run();
 
-  if (config.verify) {
+  if (config->verify) {
     std::cout << "- Running consistency checks at the end of the benchmark" << std::endl;
     check_consistency(num_warehouses);
     std::cout << "- Consistency checks passed" << std::endl;

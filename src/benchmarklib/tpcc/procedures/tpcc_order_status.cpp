@@ -73,9 +73,6 @@ bool TPCCOrderStatus::execute() {
     ol_quantity_sum += order_line_table->get_value<int32_t>(ColumnID{2}, row);
   }
 
-  // No need to commit the transaction as we have not modified anything. As ~SQLExecutor would auto-commit the
-  // transaction, set it to nullptr before we return.
-  _sql_executor.transaction_context = nullptr;
   return true;
 }
 

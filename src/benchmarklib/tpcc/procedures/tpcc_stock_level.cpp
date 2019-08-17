@@ -48,9 +48,6 @@ bool TPCCStockLevel::execute() {
   _sql_executor.execute(std::string{"SELECT COUNT(*) FROM STOCK WHERE S_I_ID IN ("} + ol_i_ids +
                         ") AND S_W_ID = " + std::to_string(w_id) + " AND S_QUANTITY < " + std::to_string(threshold));
 
-  // No need to commit the transaction as we have not modified anything. As ~SQLExecutor would auto-commit the
-  // transaction, set it to nullptr before we return.
-  _sql_executor.transaction_context = nullptr;
   return true;
 }
 

@@ -11,7 +11,9 @@
 namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix)
-    : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {}
+    : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {
+      if (_sqlite_wrapper) _sqlite_wrapper->raw_execute_query("BEGIN TRANSACTION");
+    }
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(
     const std::string& sql, const std::shared_ptr<const Table>& expected_result_table) {
@@ -48,12 +50,14 @@ void BenchmarkSQLExecutor::commit() {
   DebugAssert(transaction_context, "Can only explicitly commit transaction if auto-commit is disabled");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
   transaction_context->commit();
+  if (_sqlite_wrapper) _sqlite_wrapper->raw_execute_query("COMMIT TRANSACTION");
 }
 
 void BenchmarkSQLExecutor::rollback() {
   DebugAssert(transaction_context, "Can only explicitly roll back transaction if auto-commit is disabled");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
   transaction_context->rollback();
+  if (_sqlite_wrapper) _sqlite_wrapper->raw_execute_query("ROLLBACK TRANSACTION");
 }
 
 void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
@@ -62,6 +66,8 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline.get_sql());
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
   DebugAssert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
+  if (!result_table) return;  // Updates do no return a table
+
   _compare_tables(sqlite_result, result_table, "Using SQLite's result table as expected result table");
 }
 

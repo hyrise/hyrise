@@ -20,8 +20,12 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
   // schema and copy the data.
   for (const auto& table_name : StorageManager::get().table_names()) {
+    // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape it. No need to escape the
+    // "..._unindexed" name.
+    const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+
     sqlite_wrapper->raw_execute_query(
-        std::string{"ALTER TABLE "}.append(table_name).append(" RENAME TO ").append(table_name).append("_unindexed"));
+        std::string{"ALTER TABLE "}.append(escaped_table_name).append(" RENAME TO ").append(table_name).append("_unindexed"));
   }
 
   // Recreate tables using the passed schema sql file
@@ -40,8 +44,10 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
     Timer per_table_time;
     std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 
+    const auto escaped_table_name = std::string{"\""} + table_name + "\"";
+
     sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "}
-                                          .append(table_name)
+                                          .append(escaped_table_name)
                                           .append(" SELECT * FROM ")
                                           .append(table_name)
                                           .append("_unindexed"));

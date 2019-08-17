@@ -74,7 +74,7 @@ bool TPCCNewOrder::execute() {
   // Update the next order ID (D_NEXT_O_ID). This is probably the biggest bottleneck as it leads to a high number of
   // MVCC conflicts.
   const auto district_update_pair =
-      _sql_executor.execute(std::string{"UPDATE \"DISTRICT\" SET D_NEXT_O_ID = "} + std::to_string(d_next_o_id + 1) +
+      _sql_executor.execute(std::string{"UPDATE DISTRICT SET D_NEXT_O_ID = "} + std::to_string(d_next_o_id + 1) +
                             " WHERE D_W_ID = " + std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   if (district_update_pair.first != SQLPipelineStatus::Success) {
     return false;
