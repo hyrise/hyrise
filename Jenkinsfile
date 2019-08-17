@@ -87,7 +87,7 @@ try {
             // Query plan generation runs as part of this parallel block in order to avoid a load imbalance between the parallel blocks
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "cd ./clang-release; ./hyriseBenchmarkTPCH -r 1 --visualize"
-              archiveArtifacts artifacts: '*.svg'
+              archiveArtifacts artifacts: 'clang-release/*.svg'
             } else {
               Utils.markStageSkippedForConditional("tpchQueryPlans")
             }
