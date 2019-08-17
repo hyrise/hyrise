@@ -24,8 +24,11 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
     // "..._unindexed" name.
     const auto escaped_table_name = std::string{"\""} + table_name + "\"";
 
-    sqlite_wrapper->raw_execute_query(
-        std::string{"ALTER TABLE "}.append(escaped_table_name).append(" RENAME TO ").append(table_name).append("_unindexed"));
+    sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "}
+                                          .append(escaped_table_name)
+                                          .append(" RENAME TO ")
+                                          .append(table_name)
+                                          .append("_unindexed"));
   }
 
   // Recreate tables using the passed schema sql file

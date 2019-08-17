@@ -12,8 +12,8 @@ namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix)
     : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {
-      if (_sqlite_wrapper) _sqlite_wrapper->raw_execute_query("BEGIN TRANSACTION");
-    }
+  if (_sqlite_wrapper) _sqlite_wrapper->raw_execute_query("BEGIN TRANSACTION");
+}
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(
     const std::string& sql, const std::shared_ptr<const Table>& expected_result_table) {

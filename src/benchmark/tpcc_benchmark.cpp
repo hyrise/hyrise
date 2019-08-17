@@ -182,8 +182,7 @@ void check_consistency(const int num_warehouses) {
             "SELECT OL_W_ID, OL_D_ID, COUNT(*) FROM ORDER_LINE GROUP BY OL_W_ID, OL_D_ID ORDER BY OL_W_ID, OL_D_ID"}
             .create_pipeline();
     const auto [order_line_pipeline_status, order_line_table] = order_line_pipeline.get_result_table();
-    Assert(order_line_table &&
-               order_line_table->row_count() == total_num_districts,
+    Assert(order_line_table && order_line_table->row_count() == total_num_districts,
            "Did not find COUNT(*) FROM ORDER_LINE for all districts");
 
     const auto row_count = order_line_table->row_count();
@@ -271,8 +270,7 @@ void check_consistency(const int num_warehouses) {
             "= H_D_ID GROUP BY D_W_ID, D_ID"}
             .create_pipeline();
     const auto [pipeline_status, table] = pipeline.get_result_table();
-    Assert(table && table->row_count() == total_num_districts,
-           "Lost a district");
+    Assert(table && table->row_count() == total_num_districts, "Lost a district");
     const auto row_count = table->row_count();
     for (auto row_id = size_t{0}; row_id < row_count; ++row_id) {
       const auto d_ytd = double{table->get_value<float>(ColumnID{2}, row_id)};
@@ -286,7 +284,7 @@ void check_consistency(const int num_warehouses) {
     std::cout << "  -> Running consistency check 10" << std::endl;
     std::cout << "  -> Skipped because of #1771" << std::endl;
     if ((false)) {
-    // clang-format off
+      // clang-format off
     auto pipeline = SQLPipelineBuilder{R"(
                       SELECT C_W_ID, C_D_ID, C_ID, MAX(C_BALANCE), SUM_H_AMOUNT
                         (CASE WHEN SUM_OL_AMOUNT IS NULL THEN 0 ELSE SUM_OL_AMOUNT END) AS SUM_OL_AMOUNT_NONNULL,
@@ -346,7 +344,7 @@ void check_consistency(const int num_warehouses) {
                         AND OL_DELIVERY_D <> -1
                       GROUP BY C_W_ID, C_D_ID, C_ID, C_BALANCE, C_YTD_PAYMENT
                     )"}.create_pipeline();
-      // clang-format on
+    // clang-format on
     const auto [pipeline_status, table] = pipeline.get_result_table();
     Assert(table && table->row_count() ==
                         static_cast<size_t>(num_warehouses * NUM_DISTRICTS_PER_WAREHOUSE * NUM_CUSTOMERS_PER_DISTRICT),
