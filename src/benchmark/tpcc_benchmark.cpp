@@ -198,13 +198,13 @@ void check_consistency(const int num_warehouses) {
     // clang-format off
     auto pipeline = SQLPipelineBuilder{R"(
                       SELECT *
-                      FROM "order"
-                      WHERE o_carrier_id = -1
-                      AND NOT EXISTS (SELECT no_w_id
-                        FROM new_order
-                        WHERE o_w_id = no_w_id
-                              AND o_d_id = no_d_id
-                              AND no_o_id = o_id)
+                      FROM "ORDER"
+                      WHERE O_CARRIER_ID = -1
+                      AND NOT EXISTS (SELECT NO_W_ID
+                        FROM NEW_ORDER
+                        WHERE O_W_ID = NO_W_ID
+                              AND O_D_ID = NO_D_ID
+                              AND NO_O_ID = O_ID)
                     )"}.create_pipeline();
     // clang-format on
     const auto [pipeline_status, table] = pipeline.get_result_table();
@@ -215,13 +215,13 @@ void check_consistency(const int num_warehouses) {
     std::cout << "  -> Running consistency check 6" << std::endl;
     // clang-format off
     auto pipeline = SQLPipelineBuilder{R"(
-                      SELECT o_w_id, o_d_id, o_id, MAX(o_ol_cnt), COUNT(*)
+                      SELECT O_W_ID, O_D_ID, O_ID, MAX(O_OL_CNT), COUNT(*)
                       FROM "ORDER"
-                      LEFT JOIN order_line
-                        ON o_w_id = ol_w_id
-                        AND o_d_id = ol_d_id
-                        AND o_id = ol_o_id
-                      GROUP BY o_w_id, o_d_id, o_id
+                      LEFT JOIN ORDER_LINE
+                        ON O_W_ID = OL_W_ID
+                        AND O_D_ID = OL_D_ID
+                        AND O_ID = OL_O_ID
+                      GROUP BY O_W_ID, O_D_ID, O_ID
                     )"}.create_pipeline();
     // clang-format on
     const auto [pipeline_status, table] = pipeline.get_result_table();

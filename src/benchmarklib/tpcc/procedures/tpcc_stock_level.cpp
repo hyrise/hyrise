@@ -48,6 +48,7 @@ bool TPCCStockLevel::execute() {
   _sql_executor.execute(std::string{"SELECT COUNT(*) FROM STOCK WHERE S_I_ID IN ("} + ol_i_ids +
                         ") AND S_W_ID = " + std::to_string(w_id) + " AND S_QUANTITY < " + std::to_string(threshold));
 
+  _sql_executor.commit();
   return true;
 }
 

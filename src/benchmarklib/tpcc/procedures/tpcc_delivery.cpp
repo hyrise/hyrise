@@ -20,12 +20,13 @@ bool TPCCDelivery::execute() {
   for (auto d_id = 1; d_id <= 10; ++d_id) {
     // TODO(anyone): This could be optimized by querying only once and grouping by NO_D_ID
     const auto new_order_select_pair =
-        _sql_executor.execute(std::string{"SELECT COUNT(*), MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} +
+        _sql_executor.execute(std::string{"SELECT MIN(NO_O_ID) IS NULL, MIN(NO_O_ID) FROM NEW_ORDER WHERE NO_W_ID = "} +
                               std::to_string(w_id) + " AND NO_D_ID = " + std::to_string(d_id));
     const auto& new_order_table = new_order_select_pair.second;
 
-    // TODO(anyone): Selecting COUNT(*) and using it here would not be necessary if get_value returned NULLs as nullopt
-    if (new_order_table->get_value<int64_t>(ColumnID{0}, 0) == 0) continue;
+    // TODO(anyone): Selecting MIN(NO_O_ID) IS NULL and using it here would not be necessary if get_value returned
+    // NULLs as nullopt
+    if (new_order_table->get_value<int32_t>(ColumnID{0}, 0) == 1) continue;
 
     // The oldest undelivered order in that district
     const auto no_o_id = new_order_table->get_value<int32_t>(ColumnID{1}, 0);
@@ -35,6 +36,7 @@ bool TPCCDelivery::execute() {
         _sql_executor.execute(std::string{"DELETE FROM NEW_ORDER WHERE NO_W_ID = "} + std::to_string(w_id) +
                               " AND NO_D_ID = " + std::to_string(d_id) + " AND NO_O_ID = " + std::to_string(no_o_id));
     if (new_order_update_pair.first != SQLPipelineStatus::Success) {
+      _sql_executor.rollback();
       return false;
     }
 
@@ -76,6 +78,7 @@ bool TPCCDelivery::execute() {
                               ", C_DELIVERY_CNT = C_DELIVERY_CNT + 1 WHERE C_W_ID = " + std::to_string(w_id) +
                               " AND C_D_ID = " + std::to_string(d_id) + " AND C_ID = " + std::to_string(o_c_id));
     if (customer_update_pair.first != SQLPipelineStatus::Success) {
+      _sql_executor.rollback();
       return false;
     }
   }

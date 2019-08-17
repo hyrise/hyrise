@@ -73,6 +73,7 @@ bool TPCCOrderStatus::execute() {
     ol_quantity_sum += order_line_table->get_value<int32_t>(ColumnID{2}, row);
   }
 
+  _sql_executor.commit();
   return true;
 }
 

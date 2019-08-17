@@ -13,9 +13,9 @@ namespace opossum {
 class AbstractTPCCProcedure {
  public:
   explicit AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor);
+  virtual ~AbstractTPCCProcedure();
 
   AbstractTPCCProcedure(const AbstractTPCCProcedure& other) = default;
-  virtual ~AbstractTPCCProcedure() = default;
   AbstractTPCCProcedure& operator=(const AbstractTPCCProcedure& other);
 
   // Executes the procedure; returns true if it was successful and false if a transaction conflict occurred
@@ -28,6 +28,7 @@ class AbstractTPCCProcedure {
   inline static thread_local TPCCRandomGenerator _tpcc_random_generator{42};
 
   BenchmarkSQLExecutor& _sql_executor;
+  std::shared_ptr<TransactionContext> _transaction_context;
 };
 
 }  // namespace opossum
