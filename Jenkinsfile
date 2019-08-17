@@ -72,19 +72,24 @@ try {
           mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           wait"
         }
-
-        parallel memcheckReleaseTest: {
-          stage("memcheckReleaseTest") {
-            // Runs separately as it depends on clang-release to be built
+        parallel clangRelease: {
+          stage("clang-release") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "mkdir ./clang-release-memcheck-test"
-              // If this shows a leak, try --leak-check=full, which is slower but more precise
-              sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "./clang-release/hyriseTest clang-release"
+              sh "./clang-release/hyriseSystemTest clang-release"
+              sh "./scripts/test/hyriseConsole_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-release"
+
             } else {
-              Utils.markStageSkippedForConditional("memcheckReleaseTest")
+              Utils.markStageSkippedForConditional("clangRelease")
             }
           }
-        }, tpchQueryPlans: {
+        }
+
+        parallel tpchQueryPlans: {
           stage("tpchQueryPlans") {
             // Query plan generation runs as part of this parallel block in order to avoid a load imbalance between the parallel blocks
             if (env.BRANCH_NAME == 'master' || full_ci) {
