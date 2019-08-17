@@ -113,6 +113,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
+  // Before the IN predicate becomes a join, it should have been moved to a good position. Also, it should not take
+  // part in the join ordering, so we run this rule close to the end.
   optimizer->add_rule(std::make_unique<InExpressionToJoinRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
