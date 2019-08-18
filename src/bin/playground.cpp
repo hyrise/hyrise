@@ -29,7 +29,7 @@ int main() {
 
       auto pipeline = SQLPipelineBuilder{sql_stream.str()}.dont_cleanup_temporaries().create_pipeline();
       pipeline.get_result_table();
-      std::cout << name << "," << list_length << pipeline.metrics().statement_metrics[0]->plan_execution_duration.count() << std::endl;
+      std::cout << name << "," << pipeline.metrics().statement_metrics[0]->plan_execution_duration.count() << std::endl;
 
       PQPVisualizer{}.visualize(pipeline.get_physical_plans(), name + std::to_string(list_length) + ".png");
     }
