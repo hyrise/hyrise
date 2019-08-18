@@ -37,7 +37,7 @@ void InExpressionToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
       auto join_node = std::shared_ptr<AbstractLQPNode>{};
 
       // Resolve element type
-      boost::apply_visitor([&](const auto& first_value) {  // TODO could be NULL
+      boost::apply_visitor([&](const auto& first_value) {  // TODO could be NULL - test this
         using FirstElementType = std::decay_t<decltype(first_value)>;
         auto values = std::vector<FirstElementType>{};
         values.resize(elements.size());
@@ -58,6 +58,11 @@ void InExpressionToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
 
           values[element_idx] = boost::get<FirstElementType>(nth_variant);
         }
+
+
+        // TODO extract handling (diamond, expressionevaluator, or disjunction) into separate function
+        // TODO For disjunction: Use UnionAll after ensuring duplicates are eliminated - test this especially for floats
+        // TODO Remove the old `IN (?)` rule
 
         const auto list_as_table = 
           std::make_shared<Table>(TableColumnDefinitions{{"value", elements[0]->data_type(), false}}, TableType::Data);
