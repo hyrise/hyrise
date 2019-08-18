@@ -245,7 +245,6 @@ try {
           }
         }, tpchQueryPlans: {
           stage("tpchQueryPlans") {
-            // Query plan generation runs as part of this parallel block in order to avoid a load imbalance between the parallel blocks
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ../../clang-release/hyriseBenchmarkTPCH -r 1 --visualize"
               archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
@@ -255,7 +254,6 @@ try {
           }
         }, tpcdsQueryPlans: {
           stage("tpcdsQueryPlans") {
-            // Query plan generation runs as part of this parallel block in order to avoid a load imbalance between the parallel blocks
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize"
               archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
