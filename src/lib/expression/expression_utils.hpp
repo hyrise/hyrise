@@ -42,6 +42,11 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
+/*
+ * Recurse through the expression and replace them according to replacements, where applicable
+ */
+void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression, const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping);
+
 /**
  * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting column references in
  * LQPColumnExpressions according to the node_mapping
@@ -102,6 +107,7 @@ void visit_expression(Expression& expression, Visitor visitor) {
 /**
  * @return  The result DataType of a non-boolean binary expression where the operands have the specified types.
  *          E.g., `<float> + <long> => <double>`, `(<float>, <int>, <int>) => <float>`
+ *          Division has to be handled by the caller.
  */
 DataType expression_common_type(const DataType lhs, const DataType rhs);
 

@@ -213,7 +213,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*add_(5, 6), {11}));
   EXPECT_TRUE(test_expression<float>(*add_(5, 6), {11.0}));
   EXPECT_TRUE(test_expression<int32_t>(*sub_(15, 12), {3}));
-  EXPECT_TRUE(test_expression<float>(*div_(10.0, 4.0), {2.5f}));
+  EXPECT_TRUE(test_expression<float>(*div_(10.0, 4.0), {2.5}));
+  EXPECT_TRUE(test_expression<float>(*div_(10, 4), {2.5}));
   EXPECT_TRUE(test_expression<float>(*div_(10.0, 0), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*div_(10, 0), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*sub_(NullValue{}, NullValue{}), {std::nullopt}));
@@ -226,6 +227,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsLiterals) {
 TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsSeries) {
   // clang-format off
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mul_(a, b), {2, 6, 12, 20}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *div_(a, b), {.5, 2.0/3, 3.0/4, .8}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mod_(b, a), {0, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mod_(a, c), {1, std::nullopt, 3, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(a, add_(b, c)), {36, std::nullopt, 41, std::nullopt}));

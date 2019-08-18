@@ -91,7 +91,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
- * Calls the passed @param visitor on each node of the @param lqp. This will NOT visit subqueries.
+ * Calls the passed @param visitor recursiveley on each INPUT of the @param lqp. This will NOT visit subqueries.
  * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
  * as well.
  * Each node is visited exactly once.
@@ -119,7 +119,16 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
   }
 }
 
-// TODO doc
+/**
+ * Calls the passed @param visitor recursively on each node that uses @param lqp as an OUTPUT. If the LQP is
+ * used as a subquery, the users of the subquery are not visited.
+ * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
+ * as well.
+ * Each node is visited exactly once.
+ *
+ * @tparam Visitor      Functor called with every node as a param.
+ *                      Returns `LQPVisitation`
+ */
 template <typename Visitor>
 void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
   std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;

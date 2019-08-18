@@ -7,8 +7,10 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/expression_reduction_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
+#include "storage/table_column_definition.hpp"
 #include "testing_assert.hpp"
 #include "types.hpp"
 
@@ -157,6 +159,129 @@ TEST_F(ExpressionReductionRuleTest, RewriteLikePrefixWildcard) {
   auto expression_h = std::shared_ptr<AbstractExpression>(greater_than_(s, "RED%"));
   ExpressionReductionRule::rewrite_like_prefix_wildcard(expression_h);
   EXPECT_EQ(*expression_h, *greater_than_(s, "RED%"));
+}
+
+TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
+  const auto table_definition = TableColumnDefinitions{{"a", DataType::Int, false}, {"b", DataType::Int, true}};
+  const auto table = Table::create_dummy_table(table_definition);
+  Hyrise::get().storage_manager.add_table("agg_table", table);
+  const auto stored_table_node = StoredTableNode::make("agg_table");
+
+  const auto col_a = lqp_column_({stored_table_node, ColumnID{0}});
+  const auto col_b = lqp_column_({stored_table_node, ColumnID{1}});
+
+  {
+    // SELECT SUM(a), COUNT(a), AVG(a) -> SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)
+    // clang-format off
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
+                             stored_table_node);
+
+    const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(a)", "AVG(a)"};
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))), expected_aliases, 
+                                ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),
+                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)), stored_table_node)));
+    // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // SELECT SUM(a), COUNT(*), AVG(a) -> SUM(a), COUNT(*), SUM(a) / COUNT(*) AS AVG(a) as a is not NULLable
+    // clang-format off
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(), avg_(col_a)),
+                             stored_table_node);
+
+    const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(*)", "AVG(a)"};
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(), div_(sum_(col_a), count_star_())), expected_aliases,
+                                ProjectionNode::make(expression_vector(sum_(col_a), count_star_(), div_(sum_(col_a), count_star_())),
+                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_()),
+                                    stored_table_node)));
+    // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // SELECT SUM(a), COUNT(a), AVG(a) GROUP BY b -> SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a) GROUP BY b
+    // clang-format off
+    const auto input_lqp = AggregateNode::make(expression_vector(col_b), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
+                             stored_table_node);
+
+    const auto expected_aliases = std::vector<std::string>{"b", "SUM(a)", "COUNT(a)", "AVG(a)"};
+    const auto expected_lqp = AliasNode::make(expression_vector(col_b, sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))), expected_aliases, 
+                                ProjectionNode::make(expression_vector(col_b, sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),
+                                  AggregateNode::make(expression_vector(col_b), expression_vector(sum_(col_a), count_(col_a)), stored_table_node)));
+    // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // SELECT SUM(b), COUNT(*), AVG(b) stays unmodified as b is NULLable
+    // clang-format off
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_b), count_star_(), avg_(col_b)),
+                             stored_table_node);
+    // clang-format on
+
+    const auto expected_lqp = input_lqp->deep_copy();
+    const auto actual_lqp = apply_rule(rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // SELECT SUM(a), COUNT(b), AVG(a) stays unmodified as COUNT(b) is unrelated
+    // clang-format off
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_b), avg_(col_a)),
+                             stored_table_node);
+    // clang-format on
+
+    const auto expected_lqp = input_lqp->deep_copy();
+    const auto actual_lqp = apply_rule(rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // SELECT SUM(a), COUNT(a) + 1, AVG(a) + 2 -> SUM(a), COUNT(a) + 1, SUM(a) / COUNT(a) + 2 AS AVG(a) + 2
+    // clang-format off
+    const auto input_lqp = ProjectionNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(avg_(col_a), 2)),
+                             AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
+                              stored_table_node));
+
+    const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(a) + 1", "AVG(a) + 2"};
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(div_(sum_(col_a), count_(col_a)), 2)), expected_aliases,
+                                ProjectionNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(div_(sum_(col_a), count_(col_a)), 2)),
+                                  ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),
+                                    AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),
+                                      stored_table_node))));
+    // clang-format on
+
+
+    const auto actual_lqp = apply_rule(rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // SELECT SUM(a), COUNT(a) AS foo, AVG(a) AS bar -> SUM(a), COUNT(a) AS foo, SUM(a) / COUNT(a) AS bar
+    const auto aliases = std::vector<std::string>{"SUM(a)", "foo", "bar"};
+
+    // clang-format off
+    const auto input_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), avg_(col_a)), aliases, 
+                             AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
+                              stored_table_node));
+
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))), aliases, 
+                                ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),
+                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),
+                                    stored_table_node)));
+    // clang-format on
+
+
+    const auto actual_lqp = apply_rule(rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {

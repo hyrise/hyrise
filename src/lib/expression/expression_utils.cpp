@@ -60,6 +60,18 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
   return copied_expressions;
 }
 
+void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression, const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping) {
+  visit_expression(expression, [&](auto& sub_expression) {  // TODO test me
+    const auto replacement_iter = mapping.find(sub_expression);
+    if (replacement_iter != mapping.end()) {
+      sub_expression = replacement_iter->second;
+      return ExpressionVisitation::DoNotVisitArguments;
+    } else {
+      return ExpressionVisitation::VisitArguments;
+    }
+  });
+}
+
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
