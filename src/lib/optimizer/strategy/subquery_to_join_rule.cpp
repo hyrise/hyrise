@@ -568,23 +568,23 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   lqp_replace_node(node, join_node);
   join_node->set_right_input(pull_up_result.adapted_lqp);
 
-  // if (pull_up_result.adapted_lqp) {
-  //   const auto& estimator = cost_estimator->cardinality_estimator;
-  //   const auto left_side_cardinality = estimator->estimate_cardinality(join_node->left_input());
-  //   const auto right_side_cardinality = estimator->estimate_cardinality(join_node->right_input());
+  if (pull_up_result.adapted_lqp) {
+    const auto& estimator = cost_estimator->cardinality_estimator;
+    const auto left_side_cardinality = estimator->estimate_cardinality(join_node->left_input());
+    const auto right_side_cardinality = estimator->estimate_cardinality(join_node->right_input());
 
-  //   std::cout << "left: " << left_side_cardinality << ", right: " << right_side_cardinality << std::endl;
-  //   if ((join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) && right_side_cardinality > left_side_cardinality) {
-  //     // TODO not just bigger, significantly bigger
-  //     // Semi/Anti joins are currently handled by the hash join, which performs bad if the right side is significantly
-  //     // bigger than the left side. For that case, we add a second semi join on the right side, which throws out all
-  //     // values that will not be found in the later join, anyway. For an example, see TPC-H query 21.
-  //     const auto pre_join_predicate = join_predicates[0];
-  //     const auto pre_join_node = JoinNode::make(JoinMode::Semi, pre_join_predicate);
-  //     lqp_insert_node(join_node, LQPInputSide::Right, pre_join_node);
-  //     pre_join_node->set_right_input(join_node->left_input()->left_input());  // TODO naming
-  //   }
-  // }
+    std::cout << "left: " << left_side_cardinality << ", right: " << right_side_cardinality << std::endl;
+    if ((join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) && right_side_cardinality > left_side_cardinality) {
+      // TODO not just bigger, significantly bigger
+      // Semi/Anti joins are currently handled by the hash join, which performs bad if the right side is significantly
+      // bigger than the left side. For that case, we add a second semi join on the right side, which throws out all
+      // values that will not be found in the later join, anyway. For an example, see TPC-H query 21.
+      const auto pre_join_predicate = join_predicates[0];
+      const auto pre_join_node = JoinNode::make(JoinMode::Semi, pre_join_predicate);
+      lqp_insert_node(join_node, LQPInputSide::Right, pre_join_node);
+      pre_join_node->set_right_input(join_node->left_input()->left_input());  // TODO naming
+    }
+  }
 
   _apply_to_inputs(join_node);
 }
