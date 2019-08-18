@@ -34,9 +34,6 @@ The original value is used to detect hash collisions.
 */
 template <typename T>
 struct PartitionedElement {
-  PartitionedElement() : row_id(NULL_ROW_ID), value(T()) {}
-  PartitionedElement(RowID row, T val) : row_id(row), value(val) {}
-
   RowID row_id;
   T value;
 };
@@ -161,11 +158,41 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
   return chunk_offsets;
 }
 
+template <typename T, bool retain_null_values, typename Iterator, typename OutputIterator>
+void __attribute__ ((noinline)) x(Iterator& it, const Iterator& end, std::vector<size_t>& histogram, OutputIterator& output_iterator, ChunkID chunk_id) {
+  using IterableType = typename Iterator::IterableType;
+  auto reference_chunk_offset = ChunkOffset{0};
+
+  while (it != end) {
+    const auto& value = *it;
+    ++it;
+
+    if (!value.is_null() || retain_null_values) {
+      /*
+      For ReferenceSegments we do not use the RowIDs from the referenced tables.
+      Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
+      values from different inputs (important for Multi Joins).
+      */
+      if constexpr (is_reference_segment_iterable_v<IterableType>) {
+        *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
+      } else {
+        *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
+      }
+
+      ++histogram[0];
+    }
+    // reference_chunk_offset is only used for ReferenceSegments
+    if constexpr (is_reference_segment_iterable_v<IterableType>) {
+      ++reference_chunk_offset;
+    }
+  }
+}
+
 template <typename T, typename HashedType, bool retain_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                     const std::vector<size_t>& chunk_offsets,
                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits) {
-  const std::hash<HashedType> hash_function;
+  // const std::hash<HashedType> hash_function;
   // list of all elements that will be partitioned
   auto elements = std::make_shared<Partition<T>>(in_table->row_count());
 
@@ -178,8 +205,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   const size_t num_partitions = 1ull << radix_bits;
 
   // currently, we just do one pass
-  size_t pass = 0;
-  size_t mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
+  // size_t pass = 0;
+  // size_t mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
   // create histograms per chunk
   histograms.resize(chunk_offsets.size());
@@ -208,48 +235,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       // prepare histogram
       auto histogram = std::vector<size_t>(num_partitions);
 
-      auto reference_chunk_offset = ChunkOffset{0};
-
       segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
-        using IterableType = typename decltype(it)::IterableType;
-
-        while (it != end) {
-          const auto& value = *it;
-          ++it;
-
-          if (!value.is_null() || retain_null_values) {
-            // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
-            // joins an information loss is possible when joining with longs that cannot be losslessly converted to
-            // double
-            const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
-
-            /*
-            For ReferenceSegments we do not use the RowIDs from the referenced tables.
-            Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
-            values from different inputs (important for Multi Joins).
-            */
-            if constexpr (is_reference_segment_iterable_v<IterableType>) {
-              *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
-            } else {
-              *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
-            }
-
-            // In case we care about NULL values, store the NULL flag
-            if constexpr (retain_null_values) {
-              if (value.is_null()) {
-                *null_value_bitvector_iterator = true;
-              }
-            }
-
-            const Hash radix = hashed_value & mask;
-            ++histogram[radix];
-            ++null_value_bitvector_iterator;
-          }
-          // reference_chunk_offset is only used for ReferenceSegments
-          if constexpr (is_reference_segment_iterable_v<IterableType>) {
-            ++reference_chunk_offset;
-          }
-        }
+        x<T, retain_null_values>(it, end, histogram, output_iterator, chunk_id);
       });
 
       if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {  // NOLINT
