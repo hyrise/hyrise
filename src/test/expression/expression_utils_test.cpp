@@ -39,13 +39,12 @@ TEST_F(ExpressionUtilsTest, ExpressionFlattenAndInflate) {
 
 TEST_F(ExpressionUtilsTest, ExpressionDeepReplace) {
   // (a > 5 AND a < 6) AND c = 7
-  std::shared_ptr<AbstractExpression> expression = and_(and_(greater_than_(a_a, 5), less_than_(a_a, 6)), equals_(a_c, 7));
+  std::shared_ptr<AbstractExpression> expression =
+      and_(and_(greater_than_(a_a, 5), less_than_(a_a, 6)), equals_(a_c, 7));
 
   // replace a with b; 7 with 8
-  const auto mapping = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{
-    {lqp_column_(a_a), lqp_column_(a_b)},
-    {value_(7), value_(8)}
-  };
+  const auto mapping = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{{lqp_column_(a_a), lqp_column_(a_b)},
+                                                                                   {value_(7), value_(8)}};
 
   expression_deep_replace(expression, mapping);
 
