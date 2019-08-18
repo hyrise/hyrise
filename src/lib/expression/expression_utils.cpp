@@ -60,7 +60,8 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
   return copied_expressions;
 }
 
-void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression, const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping) {
+void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
+                             const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping) {
   visit_expression(expression, [&](auto& sub_expression) {  // TODO test me
     const auto replacement_iter = mapping.find(sub_expression);
     if (replacement_iter != mapping.end()) {

@@ -248,7 +248,9 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   }
 }
 
-void ExpressionReductionRule::remove_duplicate_aggregate(std::vector<std::shared_ptr<AbstractExpression>>& input_expressions, const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node) {
+void ExpressionReductionRule::remove_duplicate_aggregate(
+    std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
+    const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node) {
   // Create a list of all sums, counts, and averages in the aggregate node.
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums, counts, avgs;
   for (auto& input_expression : input_expressions) {
@@ -267,7 +269,8 @@ void ExpressionReductionRule::remove_duplicate_aggregate(std::vector<std::shared
         avgs.emplace_back(input_expression);
         break;
       }
-      default: continue;
+      default:
+        continue;
     }
   }
 
@@ -299,7 +302,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(std::vector<std::shared
 
     auto sum_it = std::find_if(sums.begin(), sums.end(), finder);
     auto count_it = std::find_if(counts.begin(), counts.end(), finder);
-    if(sum_it != sums.end() && count_it != counts.end()) {
+    if (sum_it != sums.end() && count_it != counts.end()) {
       // Found matching SUM and COUNT (either COUNT(a) or COUNT(*) for a non-NULL a) - add it to the replacements list
       replacements[avg_expression_ptr] = div_(sum_it->get(), count_it->get());
     }
@@ -308,7 +311,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(std::vector<std::shared
   // No replacements possible
   if (replacements.empty()) return;
 
-  // Back up the current column names 
+  // Back up the current column names
   const auto& root_expressions = root_node->column_expressions();
   auto old_column_names = std::vector<std::string>(root_expressions.size());
   for (auto expression_idx = size_t{0}; expression_idx < root_expressions.size(); ++expression_idx) {
@@ -318,9 +321,10 @@ void ExpressionReductionRule::remove_duplicate_aggregate(std::vector<std::shared
   {
     // Remove the AVG() expression from the AggregateNode
     auto& expressions = aggregate_node->node_expressions;
-    expressions.erase(std::remove_if(expressions.begin(), expressions.end(), [&](const auto& expression) {
-      return replacements.find(expression) != replacements.end();
-    }), expressions.end());
+    expressions.erase(
+        std::remove_if(expressions.begin(), expressions.end(),
+                       [&](const auto& expression) { return replacements.find(expression) != replacements.end(); }),
+        expressions.end());
   }
 
   // Add a ProjectionNode that calculates AVG(a) as SUM(a)/COUNT(a).

@@ -258,7 +258,6 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                                       stored_table_node))));
     // clang-format on
 
-
     const auto actual_lqp = apply_rule(rule, input_lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
@@ -277,7 +276,6 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                                   AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),
                                     stored_table_node)));
     // clang-format on
-
 
     const auto actual_lqp = apply_rule(rule, input_lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);

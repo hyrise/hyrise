@@ -45,7 +45,8 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
 /*
  * Recurse through the expression and replace them according to replacements, where applicable
  */
-void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression, const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping);
+void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
+                             const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping);
 
 /**
  * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting column references in

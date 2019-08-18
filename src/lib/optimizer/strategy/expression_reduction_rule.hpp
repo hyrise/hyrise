@@ -68,8 +68,9 @@ class ExpressionReductionRule : public AbstractRule {
   /**
    * Rewrite `SELECT SUM(a), COUNT(a), AVG(a)` to `SELECT SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)`
    */
-  static void remove_duplicate_aggregate(std::vector<std::shared_ptr<AbstractExpression>>& input_expressions, const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node);
-
+  static void remove_duplicate_aggregate(std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
+                                         const std::shared_ptr<AbstractLQPNode>& aggregate_node,
+                                         const std::shared_ptr<AbstractLQPNode>& root_node);
 };
 
 }  // namespace opossum
