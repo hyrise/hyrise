@@ -468,7 +468,7 @@ void JoinIndex::_append_matches_non_inner(const bool is_semi_or_anti_join) {
       const auto chunk_size = chunk->size();
       for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (_probe_matches[chunk_id][chunk_offset] ^ invert) {
-          _probe_pos_list->emplace_back(chunk_id, chunk_offset);
+          _probe_pos_list->emplace_back(RowID{chunk_id, chunk_offset});
         }
       }
     }
