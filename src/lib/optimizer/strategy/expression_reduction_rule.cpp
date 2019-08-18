@@ -22,7 +22,6 @@ void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   visit_lqp(node, [&](const auto& sub_node) {
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
-      reduce_in_with_single_list_element(expression);
       rewrite_like_prefix_wildcard(expression);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
@@ -134,23 +133,6 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
              "Bug detected. inflated_disjunction_remainder should contain an expression");
       input_expression = inflated_disjunction_remainder;
     }
-  }
-
-  return input_expression;
-}
-
-const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_in_with_single_list_element(
-    std::shared_ptr<AbstractExpression>& input_expression) {
-  if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(input_expression)) {
-    if (const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression->set())) {
-      if (list_expression->arguments.size() == 1) {
-        input_expression = equals_(in_expression->value(), list_expression->arguments[0]);
-      }
-    }
-  }
-
-  for (auto& argument : input_expression->arguments) {
-    reduce_in_with_single_list_element(argument);
   }
 
   return input_expression;
