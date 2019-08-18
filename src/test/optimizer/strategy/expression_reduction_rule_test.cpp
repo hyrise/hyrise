@@ -177,8 +177,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(a)", "AVG(a)"};
-    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))), expected_aliases, 
-                                ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))), expected_aliases, 
+                                ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))),
                                   AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)), stored_table_node)));
     // clang-format on
 
@@ -193,8 +193,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(*)", "AVG(a)"};
-    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(), div_(sum_(col_a), count_star_())), expected_aliases,
-                                ProjectionNode::make(expression_vector(sum_(col_a), count_star_(), div_(sum_(col_a), count_star_())),
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(), div_(cast_(sum_(col_a), DataType::Double), count_star_())), expected_aliases,
+                                ProjectionNode::make(expression_vector(sum_(col_a), count_star_(), div_(cast_(sum_(col_a), DataType::Double), count_star_())),
                                   AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_()),
                                     stored_table_node)));
     // clang-format on
@@ -210,8 +210,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"b", "SUM(a)", "COUNT(a)", "AVG(a)"};
-    const auto expected_lqp = AliasNode::make(expression_vector(col_b, sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))), expected_aliases, 
-                                ProjectionNode::make(expression_vector(col_b, sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),
+    const auto expected_lqp = AliasNode::make(expression_vector(col_b, sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))), expected_aliases, 
+                                ProjectionNode::make(expression_vector(col_b, sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))),
                                   AggregateNode::make(expression_vector(col_b), expression_vector(sum_(col_a), count_(col_a)), stored_table_node)));
     // clang-format on
 
@@ -251,9 +251,9 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                               stored_table_node));
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(a) + 1", "AVG(a) + 2"};
-    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(div_(sum_(col_a), count_(col_a)), 2)), expected_aliases,
-                                ProjectionNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(div_(sum_(col_a), count_(col_a)), 2)),
-                                  ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(div_(cast_(sum_(col_a), DataType::Double), count_(col_a)), 2)), expected_aliases,
+                                ProjectionNode::make(expression_vector(sum_(col_a), add_(count_(col_a), 1), add_(div_(cast_(sum_(col_a), DataType::Double), count_(col_a)), 2)),
+                                  ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))),
                                     AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),
                                       stored_table_node))));
     // clang-format on
@@ -271,8 +271,8 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                              AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a), avg_(col_a)),
                               stored_table_node));
 
-    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))), aliases, 
-                                ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(sum_(col_a), count_(col_a))),
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))), aliases, 
+                                ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))),
                                   AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)),
                                     stored_table_node)));
     // clang-format on

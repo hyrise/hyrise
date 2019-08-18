@@ -140,20 +140,20 @@ TEST_F(LQPUtilsTest, VisitLQP) {
 
 TEST_F(LQPUtilsTest, VisitLQPUpwards) {
   // clang-format off
-  const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{
+  const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{node_a,
     PredicateNode::make(greater_than_(a_a, 4)), UnionNode::make(UnionMode::Positions),
-    PredicateNode::make(less_than_(a_a, 4)), PredicateNode::make(equals_(a_a, 4)), node_a};
+    PredicateNode::make(less_than_(a_a, 4)), PredicateNode::make(equals_(a_a, 4))};
   // clang-format on
 
-  expected_nodes[0]->set_left_input(expected_nodes[1]);
-  expected_nodes[1]->set_left_input(expected_nodes[2]);
-  expected_nodes[1]->set_right_input(expected_nodes[3]);
+  expected_nodes[4]->set_left_input(expected_nodes[3]);
+  expected_nodes[3]->set_left_input(expected_nodes[1]);
+  expected_nodes[3]->set_right_input(expected_nodes[2]);
+  expected_nodes[1]->set_left_input(node_a);
   expected_nodes[2]->set_left_input(node_a);
-  expected_nodes[3]->set_left_input(node_a);
 
   {
     auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-    visit_lqp(node_a, [&](const auto& node) {
+    visit_lqp_upwards(node_a, [&](const auto& node) {
       actual_nodes.emplace_back(node);
       return LQPVisitation::VisitInputs;
     });

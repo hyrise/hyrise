@@ -214,7 +214,6 @@ TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsLiterals) {
   EXPECT_TRUE(test_expression<float>(*add_(5, 6), {11.0}));
   EXPECT_TRUE(test_expression<int32_t>(*sub_(15, 12), {3}));
   EXPECT_TRUE(test_expression<float>(*div_(10.0, 4.0), {2.5}));
-  EXPECT_TRUE(test_expression<float>(*div_(10, 4), {2.5}));
   EXPECT_TRUE(test_expression<float>(*div_(10.0, 0), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*div_(10, 0), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*sub_(NullValue{}, NullValue{}), {std::nullopt}));

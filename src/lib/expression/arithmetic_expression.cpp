@@ -44,7 +44,6 @@ std::shared_ptr<AbstractExpression> ArithmeticExpression::deep_copy() const {
 }
 
 DataType ArithmeticExpression::data_type() const {
-  if (arithmetic_operator == ArithmeticOperator::Division) return DataType::Double;
   return expression_common_type(left_operand()->data_type(), right_operand()->data_type());
 }
 
