@@ -582,7 +582,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
       const auto pre_join_predicate = join_predicates[0];
       const auto pre_join_node = JoinNode::make(JoinMode::Semi, pre_join_predicate);
       lqp_insert_node(join_node, LQPInputSide::Right, pre_join_node);
-      pre_join_node->set_right_input(join_node->left_input()->left_input());  // TODO naming
+      pre_join_node->set_right_input(join_node->left_input());
     }
   }
 
