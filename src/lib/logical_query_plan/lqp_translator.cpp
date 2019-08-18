@@ -207,12 +207,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    if (chunk && !chunk->get_indexes(column_ids).empty()) {
-      if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
-        indexed_chunks.emplace_back(chunk_id);
-      } else {
-        PerformanceWarning("Found index, but LQPTranslator currently only supports GroupKeyIndexes");
-      }
+    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
+      indexed_chunks.emplace_back(chunk_id);
     }
   }
 

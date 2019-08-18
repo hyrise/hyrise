@@ -128,17 +128,11 @@ inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrHash final {
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const { return expression->hash(); }
-  size_t operator()(const std::shared_ptr<const AbstractExpression>& expression) const { return expression->hash(); }
 };
 
 // Wrapper around AbstractExpression::operator==(), to enable hash based containers containing
 // std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrEqual final {
-  size_t operator()(const std::shared_ptr<const AbstractExpression>& expression_a,
-                    const std::shared_ptr<const AbstractExpression>& expression_b) const {
-    return *expression_a == *expression_b;
-  }
-
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression_a,
                     const std::shared_ptr<AbstractExpression>& expression_b) const {
     return *expression_a == *expression_b;
@@ -148,11 +142,6 @@ struct ExpressionSharedPtrEqual final {
 template <typename Value>
 using ExpressionUnorderedMap =
     std::unordered_map<std::shared_ptr<AbstractExpression>, Value, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
-
-template <typename Value>
-using ConstExpressionUnorderedMap = std::unordered_map<std::shared_ptr<const AbstractExpression>, Value,
-                                                       ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
-
 using ExpressionUnorderedSet =
     std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 

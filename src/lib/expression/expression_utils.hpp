@@ -108,7 +108,6 @@ void visit_expression(Expression& expression, Visitor visitor) {
 /**
  * @return  The result DataType of a non-boolean binary expression where the operands have the specified types.
  *          E.g., `<float> + <long> => <double>`, `(<float>, <int>, <int>) => <float>`
- *          Division has to be handled by the caller.
  */
 DataType expression_common_type(const DataType lhs, const DataType rhs);
 
