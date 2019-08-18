@@ -61,7 +61,7 @@ endif()
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
-set(BUILD_TYPES Debug RelWithDebInfo Release Stripped)
+set(BUILD_TYPES Debug RelWithDebInfo Release)
 if(NOT CMAKE_BUILD_TYPE IN_LIST BUILD_TYPES)
     message(FATAL_ERROR "Unknown Build Type: ${CMAKE_BUILD_TYPE}")
 endif()
@@ -140,9 +140,6 @@ foreach(no_lto_target gtest gtest_main gmock gmock_main hpinuma_s hpinuma hpinum
 endforeach(no_lto_target)
 add_subdirectory(src)
 
-# Add a new build type -DCMAKE_BUILD_TYPE=Stripped - do this add the end so that we catch all flags added earlier
-STRING(REPLACE "-g" "" CMAKE_CXX_FLAGS_DEBUG_WITHOUT_G ${CMAKE_CXX_FLAGS_DEBUG})
-STRING(REPLACE "-g" "" CMAKE_C_FLAGS_DEBUG_WITHOUT_G ${CMAKE_C_FLAGS_DEBUG})
-SET(CMAKE_CXX_FLAGS_STRIPPED "${CMAKE_CXX_FLAGS_DEBUG_WITHOUT_G}" CACHE STRING "" FORCE )
-SET(CMAKE_C_FLAGS_STRIPPED "${CMAKE_C_FLAGS_DEBUG_WITHOUT_G}" CACHE STRING "" FORCE )
-MARK_AS_ADVANCED(CMAKE_CXX_FLAGS_STRIPPED CMAKE_C_FLAGS_STRIPPED)
+
+# Useful for printing all c++ files in a directory:
+# find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort
