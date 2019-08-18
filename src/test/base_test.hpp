@@ -6,9 +6,9 @@
 #include <vector>
 
 #include "cache/cache.hpp"
-#include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
+#include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
@@ -21,13 +21,11 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
-#include "utils/plugin_manager.hpp"
 
 namespace opossum {
 
@@ -70,9 +68,7 @@ class BaseTestWithParam
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
     CurrentScheduler::set(nullptr);
 
-    PluginManager::reset();
-    StorageManager::reset();
-    TransactionManager::reset();
+    Hyrise::reset();
     SQLPipelineBuilder::default_pqp_cache = nullptr;
     SQLPipelineBuilder::default_lqp_cache = nullptr;
   }

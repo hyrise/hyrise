@@ -16,7 +16,7 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -30,7 +30,6 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 

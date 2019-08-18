@@ -3,8 +3,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/maintenance/show_tables.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -28,7 +28,7 @@ TEST_F(ShowTablesTest, CanBeCopied) {
 }
 
 TEST_F(ShowTablesTest, CanShowTables) {
-  auto& sm = StorageManager::get();
+  auto& sm = Hyrise::get().storage_manager;
 
   sm.add_table("first_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
   sm.add_table("second_table", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));

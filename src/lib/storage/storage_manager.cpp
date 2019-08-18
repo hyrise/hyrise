@@ -131,8 +131,6 @@ const std::map<std::string, std::shared_ptr<PreparedPlan>>& StorageManager::prep
   return _prepared_plans;
 }
 
-void StorageManager::reset() { get() = StorageManager{}; }
-
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   tasks.reserve(_tables.size());
