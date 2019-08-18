@@ -23,6 +23,7 @@ void InExpressionToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
     // We only handle top-level INs in this rule. Conjunctive chains (AND) should have been split up by a previous
     // rule, disjunctive chains (OR) don't allow us to extract the IN.
     if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(expression)) {  // TODO change to guard
+      // TODO deal with NOT IN
       if (in_expression->set()->type != ExpressionType::List) {
         return LQPVisitation::VisitInputs;
       }
