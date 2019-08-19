@@ -95,6 +95,8 @@ class PosHashTable {
       pos_list.shrink_to_fit();
     }
 
+    // For very small hash tables, a linear search performs better. In that case, replace the hash table with a vector
+    // of value/offset pairs.  The boundary was determined experimentally and chosen conservatively.
     if (_hash_table.size() <= 10) {
       _values = std::vector<std::pair<HashedType, Offset>>{};
       _values->reserve(_hash_table.size());
