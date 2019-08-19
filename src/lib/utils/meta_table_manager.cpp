@@ -115,7 +115,7 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() const {
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) const {
   const auto prefix_len = META_PREFIX.size();
-  return name.size() > prefix_len && std::string_view{&name[prefix_len]} == MetaTableManager::META_PREFIX;
+  return name.size() > prefix_len && std::string_view{&name[0], prefix_len} == MetaTableManager::META_PREFIX;
 }
 
 }  // namespace opossum
