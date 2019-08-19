@@ -66,7 +66,9 @@ class PosHashTable {
 
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)  // TODO explicitly test this
-      : _hash_table(max_size), _pos_lists(max_size), _mode(mode) {}
+      : _hash_table(), _pos_lists(max_size), _mode(mode) {
+        _hash_table.reserve(max_size);
+      }
 
   // For a value seen on the build side, add its row_id to the table
   template <typename InputType>

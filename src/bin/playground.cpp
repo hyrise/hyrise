@@ -49,10 +49,10 @@ int main() {
     }
   };
 
-  run("ExpressionEvaluator", InExpressionToJoinRule::Algorithm::ExpressionEvaluator);  // TODO will be faster with mrks/rundumschlag
+  run("ExpressionEvaluator", InExpressionToJoinRule::Algorithm::ExpressionEvaluator);
   run("Join", InExpressionToJoinRule::Algorithm::Join);
-  run("Disjunction", InExpressionToJoinRule::Algorithm::Disjunction);
   run("Auto", InExpressionToJoinRule::Algorithm::Auto);
+  run("Disjunction", InExpressionToJoinRule::Algorithm::Disjunction);
 
   return 0;
 }
