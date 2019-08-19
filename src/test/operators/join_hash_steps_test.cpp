@@ -57,11 +57,11 @@ class JoinHashStepsTest : public BaseTest {
 TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
   auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 50};
   for (auto i = 0; i < 10; ++i) {
-    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200} + i});
-    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200} + i + 1});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
   }
-  const auto expected_pos_list =
-      boost::container::small_vector<RowID, 1>{RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}};
+  const auto expected_pos_list = boost::container::small_vector<RowID, 1>{RowID{ChunkID{105}, ChunkOffset{205}},
+                                                                          RowID{ChunkID{105}, ChunkOffset{206}}};
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));
@@ -80,8 +80,8 @@ TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
 TEST_F(JoinHashStepsTest, LargeHashTableSinglePositions) {
   auto table = PosHashTable<int>{JoinHashBuildMode::SinglePosition, 100};
   for (auto i = 0; i < 100; ++i) {
-    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200} + i});
-    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200} + i + 1});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
   }
   const auto expected_pos_list = boost::container::small_vector<RowID, 1>{RowID{ChunkID{150}, ChunkOffset{250}}};
   {
