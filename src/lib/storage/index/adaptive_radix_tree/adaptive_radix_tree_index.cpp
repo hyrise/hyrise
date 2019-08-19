@@ -63,7 +63,7 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<A
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else if (_root) { // _root is nullptr if the index contains null postings only
+  } else if (_root) {  // _root is nullptr if the index contains null postings only
     return _root->lower_bound(BinaryComparable(value_id), 0);
   } else {
     return _cend();
@@ -80,7 +80,7 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<A
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else if (_root) { // _root is nullptr if the index contains null postings only
+  } else if (_root) {  // _root is nullptr if the index contains null postings only
     return _root->lower_bound(BinaryComparable(value_id), 0);
   } else {
     return _cend();
