@@ -115,6 +115,12 @@ void InExpressionToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
       rewrite_to_join(sub_node, in_expression->value(), elements, *common_data_type);
     } else if (forced_algorithm == Algorithm::Disjunction) {  // TODO - maybe stick to expression evaluator if we need it anyway?
       rewrite_to_disjunction(sub_node, in_expression->value(), elements, *common_data_type);
+    } else if (forced_algorithm == Algorithm::Auto) {
+      if (elements.size() < 5) {
+        rewrite_to_disjunction(sub_node, in_expression->value(), elements, *common_data_type);
+      } else if (common_data_type && elements.size() > 500) {
+        rewrite_to_join(sub_node, in_expression->value(), elements, *common_data_type);
+      }
     }
 
     return LQPVisitation::VisitInputs;

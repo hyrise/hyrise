@@ -74,8 +74,8 @@ class PosHashTable {
     const auto casted_value = static_cast<HashedType>(value);
     const auto it = _hash_table.find(casted_value);
     if (it != _hash_table.end()) {
-      auto& pos_list = _pos_lists[it->second];
       if (_mode == JoinHashBuildMode::AllPositions) {
+        auto& pos_list = _pos_lists[it->second];
         pos_list.emplace_back(row_id);
       }
     } else {
@@ -93,17 +93,19 @@ class PosHashTable {
       pos_list.shrink_to_fit();
     }
 
-    if (_hash_table.size() < 10) {  // TODO value tbd
+    if (_hash_table.size() <= 10) {
       _values = std::vector<std::pair<HashedType, Offset>>{};
       _values->reserve(_hash_table.size());
       for (const auto& [value, offset] : _hash_table) {
         _values->emplace_back(std::pair<HashedType, Offset>{value, offset});
       }
       _hash_table.clear();
+    } else {
+      _hash_table.shrink_to_fit();
     }
   }
 
-  // For a value seen on the probe side, return an iterator into the matching values
+  // For a value seen on the probe side, return an iterator into the matching positions on the build side
   template <typename InputType>
   const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
     const auto casted_value = static_cast<HashedType>(value);
@@ -116,6 +118,19 @@ class PosHashTable {
       const auto values_iter = std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value;} );
       if (values_iter == _values->end()) return end();
       return _pos_lists.begin() + values_iter->second;
+    }
+  }
+
+  // For a value seen on the probe side, return whether it has been seen on the build side
+  template <typename InputType>
+  bool contains(const InputType& value) const {
+    const auto casted_value = static_cast<HashedType>(value);
+
+    if (!_values) {
+      return _hash_table.find(casted_value) != _hash_table.end();
+    } else {
+      const auto values_iter = std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value;} );
+      return values_iter != _values->end();
     }
   }
 
@@ -271,6 +286,15 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           }
         }
       });
+
+      if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {  // NOLINT
+        // Because the vector is uninitialized, we need to manually fill up all slots that we did not use because the
+        // input values were NULL.
+        auto output_offset_end = chunk_id < chunk_offsets.size() - 1 ? chunk_offsets[chunk_id + 1] : elements->size();
+        while (output_iterator != elements->begin() + output_offset_end) {
+          *(output_iterator++) = PartitionedElement<T>{};
+        }
+      }
 
       histograms[chunk_id] = std::move(histogram);
     }));
@@ -668,13 +692,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
 
       if (hash_tables[current_partition_id]) {
         // Valid hash table found, so there is at least one match in this partition
+        const auto& hash_table = hash_tables[current_partition_id].value();
 
         // Accessors are not thread-safe, so we create one evaluator per job
         MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode,
                                                                    secondary_join_predicates);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
-          auto& probe_column_element = partition[partition_offset];
+          const auto& probe_column_element = partition[partition_offset];
 
           if constexpr (mode == JoinMode::Semi) {
             // NULLs on the probe side are never emitted
@@ -697,15 +722,19 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           }
 
           auto any_build_column_value_matches = false;
-          const auto& hash_table = hash_tables[current_partition_id].value();
-          const auto& primary_predicate_matching_rows =
-              hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-          if (primary_predicate_matching_rows != hash_table.end()) {
-            for (const auto& row_id : *primary_predicate_matching_rows) {
-              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
-                any_build_column_value_matches = true;
-                break;
+          if (secondary_join_predicates.empty()) {
+            any_build_column_value_matches = hash_table.contains(static_cast<HashedType>(probe_column_element.value));
+          } else {
+            const auto primary_predicate_matching_rows =
+                hash_table.find(static_cast<HashedType>(probe_column_element.value));
+
+            if (primary_predicate_matching_rows != hash_table.end()) {
+              for (const auto& row_id : *primary_predicate_matching_rows) {
+                if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
+                  any_build_column_value_matches = true;
+                  break;
+                }
               }
             }
           }

@@ -23,7 +23,7 @@ int main() {
 
     auto warmup = true;
 
-    for (auto list_length : std::vector<int>{1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30, 50, 75, 100, 150, 200, 300, 400}) {
+    for (auto list_length = 1; list_length < 1000; ++list_length) {
       start:
       auto sql_stream = std::stringstream{};
       // Don't choose an ID column here as that would allow the scan to prune most chunks
@@ -52,7 +52,7 @@ int main() {
   run("ExpressionEvaluator", InExpressionToJoinRule::Algorithm::ExpressionEvaluator);  // TODO will be faster with mrks/rundumschlag
   run("Join", InExpressionToJoinRule::Algorithm::Join);
   run("Disjunction", InExpressionToJoinRule::Algorithm::Disjunction);
-  // run("Auto", InExpressionToJoinRule::Algorithm::Auto);
+  run("Auto", InExpressionToJoinRule::Algorithm::Auto);
 
   return 0;
 }
