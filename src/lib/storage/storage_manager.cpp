@@ -36,9 +36,7 @@ void StorageManager::drop_table(const std::string& name) {
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
-  // TODO(anyone): This should be string::starts_with once libstdc++ supports it
-  const auto prefix_len = MetaTableManager::META_PREFIX.size();
-  if (name.size() > prefix_len && std::string_view{&name[prefix_len]} == MetaTableManager::META_PREFIX) {
+  if (Hyrise::get().meta_table_manager.is_meta_table_name(name)) {
     return Hyrise::get().meta_table_manager.generate_table(name.substr(MetaTableManager::META_PREFIX.size()));
   }
 
@@ -49,9 +47,7 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
 }
 
 bool StorageManager::has_table(const std::string& name) const {
-  // TODO(anyone): This should be string::starts_with once libstdc++ supports it
-  const auto prefix_len = MetaTableManager::META_PREFIX.size();
-  if (name.size() > prefix_len && std::string_view{&name[prefix_len]} == MetaTableManager::META_PREFIX) {
+  if (Hyrise::get().meta_table_manager.is_meta_table_name(name)) {
     const auto& meta_table_names = Hyrise::get().meta_table_manager.table_names();
     return std::binary_search(meta_table_names.begin(), meta_table_names.end(),
                               name.substr(MetaTableManager::META_PREFIX.size()));

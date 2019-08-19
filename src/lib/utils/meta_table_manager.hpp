@@ -25,6 +25,9 @@ class MetaTableManager : public Noncopyable {
   std::shared_ptr<Table> generate_chunks_table() const;
   std::shared_ptr<Table> generate_segments_table() const;
 
+  // Returns name.starts_with(META_PREFIX) as stdlibc++ does not support starts_with yet.
+  bool is_meta_table_name(const std::string& name) const;
+
  protected:
   friend class Hyrise;
   MetaTableManager();
