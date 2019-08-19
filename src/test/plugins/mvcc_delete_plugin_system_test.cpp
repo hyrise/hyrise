@@ -228,7 +228,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   {
     const auto chunk3 = _table->get_chunk(ChunkID{2});
-    EXPECT_TRUE(chunk3 && !chunk3->get_cleanup_commit_id()); // otherwise our blocker won't work
+    EXPECT_TRUE(chunk3 && !chunk3->get_cleanup_commit_id());  // otherwise our blocker won't work
   }
 
   // (11) Prepare clean-up of chunk 3

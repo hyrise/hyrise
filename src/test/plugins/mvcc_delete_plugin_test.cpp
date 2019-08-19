@@ -29,9 +29,7 @@ class MvccDeletePluginTest : public BaseTest {
 
   void SetUp() override {}  // managed by each test individually
 
-  void TearDown() override {
-    Hyrise::get().reset();
-  }
+  void TearDown() override { Hyrise::get().reset(); }
 
  protected:
   void _increment_all_values_by_one() {
