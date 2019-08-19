@@ -76,17 +76,17 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
   const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 5);
 
   const auto position_filter = std::make_shared<PosList>();
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{0});
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{1});
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{2});
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{3});
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{4});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{3}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{4}});
   position_filter->guarantee_single_chunk();
 
   const auto position_filter_multi_chunk = std::make_shared<PosList>(position_filter->begin(), position_filter->end());
-  position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{0});
-  position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{1});
-  position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{2});
+  position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
+  position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{2}});
 
   /**
    * Takes an iterator pair and verifies its LegacyForwardIterators compatibility by feeding it into STL algorithms that
@@ -129,14 +129,14 @@ TEST_P(SegmentIteratorsTest, LegacyBidirectionalIteratorCompatible) {
   const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 3);
 
   const auto position_filter = std::make_shared<PosList>();
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{0});
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{1});
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{2});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
   position_filter->guarantee_single_chunk();
 
   const auto position_filter_multi_chunk = std::make_shared<PosList>(position_filter->begin(), position_filter->end());
-  position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{0});
-  position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{1});
+  position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
 
   /**
    * Takes an iterator pair and verifies its LegacyBidirectionalIterators compatibility by both post and pre
@@ -173,14 +173,14 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
   const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 3);
 
   const auto position_filter = std::make_shared<PosList>();
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{0});
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{1});
-  position_filter->emplace_back(ChunkID{0}, ChunkOffset{2});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
   position_filter->guarantee_single_chunk();
 
   const auto position_filter_multi_chunk = std::make_shared<PosList>(position_filter->begin(), position_filter->end());
-  position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{0});
-  position_filter_multi_chunk->emplace_back(ChunkID{1}, ChunkOffset{1});
+  position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  position_filter_multi_chunk->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
 
   /**
    * Takes an iterator pair and verifies its LegacyRandomAccessIterator compatibility by feeding it into STL algorithms

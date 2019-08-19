@@ -13,7 +13,7 @@ using namespace opossum;  // NOLINT
 int main() {
   const auto scale_factor = 1.f;
   auto benchmark_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
-  // benchmark_config->encoding_config = EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
+  benchmark_config->encoding_config = EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
   TPCHTableGenerator{scale_factor, benchmark_config}.generate_and_store();
 
   std::cout << "algorithm,list_length,execution_duration" << std::endl;

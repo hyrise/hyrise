@@ -93,14 +93,14 @@ class PosHashTable {
       pos_list.shrink_to_fit();
     }
 
-    // if (_hash_table.size() < 10) {  // TODO value tbd
-    //   _values = std::vector<HashedType>{};
-    //   _values->reserve(_hash_table.size());
-    //   for (const auto& [value, offset] : _hash_table) {
-    //     _values->emplace_back(value);  also store offset
-    //   }
-    //   _hash_table.clear();
-    // }
+    if (_hash_table.size() < 10) {  // TODO value tbd
+      _values = std::vector<std::pair<HashedType, Offset>>{};
+      _values->reserve(_hash_table.size());
+      for (const auto& [value, offset] : _hash_table) {
+        _values->emplace_back(std::pair<HashedType, Offset>{value, offset});
+      }
+      _hash_table.clear();
+    }
   }
 
   // For a value seen on the probe side, return an iterator into the matching values
@@ -113,8 +113,9 @@ class PosHashTable {
       if (hash_table_iter == _hash_table.end()) return end();
       return _pos_lists.begin() + hash_table_iter->second;
     } else {
-      const auto values_iter = std::find(_values->begin(), _values->end(), casted_value);
-      return _pos_lists.begin() + std::distance(_values->begin(), values_iter);
+      const auto values_iter = std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value;} );
+      if (values_iter == _values->end()) return end();
+      return _pos_lists.begin() + values_iter->second;
     }
   }
 
@@ -126,7 +127,7 @@ class PosHashTable {
   HashTable _hash_table;
   std::vector<SmallPosList> _pos_lists;
   JoinHashBuildMode _mode;
-  std::optional<std::vector<HashedType>> _values{std::nullopt};
+  std::optional<std::vector<std::pair<HashedType, Offset>>> _values{std::nullopt};
 };
 
 /*
@@ -228,7 +229,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
         if (radix_bits == 0) {
           // If we do not use partitioning, we will not increment the histogram counter in the loop, so we do it here.
-          histogram[0] += std::distance(it, end);
+          histogram[0] = std::distance(it, end);
         }
 
         while (it != end) {
@@ -252,6 +253,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
               if (value.is_null()) {
                 *null_value_bitvector_iterator = true;
               }
+              ++null_value_bitvector_iterator;
             }
 
             if (radix_bits > 0) {
@@ -261,7 +263,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
               const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
               const Hash radix = hashed_value & mask;
               ++histogram[radix];
-              ++null_value_bitvector_iterator;
             }
           }
           // reference_chunk_offset is only used for ReferenceSegments
@@ -270,14 +271,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
           }
         }
       });
-
-      if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {  // NOLINT
-        // Because the vector is uninitialized, we need to manually fill up all slots that we did not use
-        auto output_offset_end = chunk_id < chunk_offsets.size() - 1 ? chunk_offsets[chunk_id + 1] : elements->size();
-        while (output_iterator != elements->begin() + output_offset_end) {
-          *(output_iterator++) = PartitionedElement<T>{};
-        }
-      }
 
       histograms[chunk_id] = std::move(histogram);
     }));
