@@ -4,7 +4,6 @@
 #include "gtest/gtest.h"
 
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/storage_manager.hpp"
 
 #include "all_parameter_variant.hpp"
 #include "types.hpp"

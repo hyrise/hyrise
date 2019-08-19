@@ -7,8 +7,8 @@
 
 #include "tbb/concurrent_vector.h"
 
+#include "hyrise.hpp"
 #include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
@@ -30,7 +30,7 @@ std::shared_ptr<const Table> ShowTables::_on_execute() {
   auto table =
       std::make_shared<Table>(TableColumnDefinitions{{"table_name", DataType::String, false}}, TableType::Data);
 
-  const auto table_names = StorageManager::get().table_names();
+  const auto table_names = Hyrise::get().storage_manager.table_names();
   const auto segment = std::make_shared<ValueSegment<pmr_string>>(
       tbb::concurrent_vector<pmr_string>(table_names.begin(), table_names.end()));
 

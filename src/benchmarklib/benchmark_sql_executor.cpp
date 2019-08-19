@@ -1,6 +1,5 @@
 #include "benchmark_sql_executor.hpp"
 
-#include "concurrency/transaction_manager.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/check_table_equal.hpp"
