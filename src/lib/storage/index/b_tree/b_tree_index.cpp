@@ -23,7 +23,7 @@ size_t BTreeIndex::_memory_consumption() const {
   size_t bytes{0};
   bytes += _impl->memory_consumption();
   bytes += sizeof(ChunkOffset) * _index_null_postings.capacity();
-  bytes += sizeof(std::vector<ChunkOffset>);
+  bytes += sizeof(std::vector<ChunkOffset>); // _index_null_postings
   return bytes;
 }
 
