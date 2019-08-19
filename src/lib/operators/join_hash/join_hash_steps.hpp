@@ -159,7 +159,7 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
 }
 
 template <typename T, bool retain_null_values, typename Iterator, typename OutputIterator>
-void __attribute__ ((noinline)) x(Iterator& it, const Iterator& end, std::vector<size_t>& histogram, OutputIterator& output_iterator, ChunkID chunk_id) {
+void __attribute__ ((noinline)) x(Iterator it, const Iterator& end, std::vector<size_t>& histogram, OutputIterator output_iterator, ChunkID chunk_id) {
   using IterableType = typename Iterator::IterableType;
   auto reference_chunk_offset = ChunkOffset{0};
 
