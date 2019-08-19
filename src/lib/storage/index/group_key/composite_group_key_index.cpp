@@ -129,6 +129,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // retrieve the partial keys for every value except for the last one and append them into one partial-key
   for (auto column_id = ColumnID{0}; column_id < values.size() - 1; ++column_id) {
+    Assert(!variant_is_null(values[column_id]), "CompositeGroupKeyIndex doesn't support null handling yet.");
     auto partial_key = _indexed_segments[column_id]->lower_bound(values[column_id]);
     auto bits_of_partial_key =
         byte_width_for_fixed_size_byte_aligned_type(*_indexed_segments[column_id]->compressed_vector_type()) * CHAR_BIT;
