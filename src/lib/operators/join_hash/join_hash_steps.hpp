@@ -81,10 +81,11 @@ class PosHashTable {
         pos_list.emplace_back(row_id);
       }
     } else {
+      DebugAssert(_hash_table.size() < _pos_lists.size(), "Hash table too big for pre-allocated data structures");
       auto& pos_list = _pos_lists[_hash_table.size()];
       pos_list.push_back(row_id);
       _hash_table.emplace(casted_value, _hash_table.size());
-      Assert(_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
+      DebugAssert(_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
     }
   }
 
