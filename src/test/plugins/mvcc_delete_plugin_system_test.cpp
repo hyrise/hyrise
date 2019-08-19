@@ -33,7 +33,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    */
   void SetUp() override {
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("number", DataType::Int);
+    column_definitions.emplace_back("number", DataType::Int, false);
 
     _table = std::make_shared<Table>(column_definitions, TableType::Data, CHUNK_SIZE, UseMvcc::Yes);
 
