@@ -13,7 +13,7 @@ using namespace opossum;  // NOLINT
 int main() {
   const auto scale_factor = 1.f;
   auto benchmark_config = std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config());
-  benchmark_config->encoding_config = EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
+  // benchmark_config->encoding_config = EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
   TPCHTableGenerator{scale_factor, benchmark_config}.generate_and_store();
 
   std::cout << "algorithm,list_length,execution_duration" << std::endl;
@@ -23,7 +23,8 @@ int main() {
 
     auto warmup = true;
 
-    for (auto list_length = 1; list_length < 10; ++list_length) {
+    for (auto list_length : std::vector<int>{1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30, 50, 75, 100, 150, 200, 300, 400}) {
+      start:
       auto sql_stream = std::stringstream{};
       // Don't choose an ID column here as that would allow the scan to prune most chunks
       sql_stream << "SELECT * FROM lineitem WHERE l_suppkey IN (";
@@ -38,18 +39,17 @@ int main() {
 
       if (warmup) {
         // Throw away result, restart
-        --list_length;
         warmup = false;
-        continue;
+        goto start;
       }
 
-      std::cout << name << "," << pipeline.metrics().statement_metrics[0]->plan_execution_duration.count() << std::endl;
+      std::cout << name << "," << list_length << "," << pipeline.metrics().statement_metrics[0]->plan_execution_duration.count() << std::endl;
 
       // PQPVisualizer{}.visualize(pipeline.get_physical_plans(), name + std::to_string(list_length) + ".png");
     }
   };
 
-  run("ExpressionEvaluator", InExpressionToJoinRule::Algorithm::ExpressionEvaluator);
+  run("ExpressionEvaluator", InExpressionToJoinRule::Algorithm::ExpressionEvaluator);  // TODO will be faster with mrks/rundumschlag
   run("Join", InExpressionToJoinRule::Algorithm::Join);
   run("Disjunction", InExpressionToJoinRule::Algorithm::Disjunction);
   // run("Auto", InExpressionToJoinRule::Algorithm::Auto);

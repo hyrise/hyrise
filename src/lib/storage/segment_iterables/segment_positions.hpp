@@ -46,7 +46,7 @@ class AbstractSegmentPosition {
  * Used in most segment iterators.
  */
 template <typename T>
-class SegmentPosition : public AbstractSegmentPosition<T> {
+class SegmentPosition final : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = true;
 
@@ -70,7 +70,7 @@ class SegmentPosition : public AbstractSegmentPosition<T> {
  * Used when an underlying segment (or data structure) cannot be null.
  */
 template <typename T>
-class NonNullSegmentPosition : public AbstractSegmentPosition<T> {
+class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = false;
 
@@ -94,7 +94,7 @@ class NonNullSegmentPosition : public AbstractSegmentPosition<T> {
  *
  * @see NullValueVectorIterable
  */
-class IsNullSegmentPosition : public AbstractSegmentPosition<boost::blank> {
+class IsNullSegmentPosition final : public AbstractSegmentPosition<boost::blank> {
  public:
   static constexpr bool Nullable = true;
 
