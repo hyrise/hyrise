@@ -59,7 +59,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * Updates a single row to make it invalid in its chunk. Data modification is not involved, so the row gets reinserted
    * at the end of the table.
    * - Updates start at position 220 (INITIAL_UPDATE_OFFSET), so the first chunk stays untouched.
-   * - Updates stop just before the end of Chunk three, so that it is "fresh" and not cleaned up. // TODO unclear!
+   * - Updates stop just before the end of Chunk 3, so that it is "fresh" and not cleaned up.
    */
   void update_next_row() {
     if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) return;  // -> if (_counter == 598)...
@@ -74,9 +74,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     const auto validate = std::make_shared<Validate>(gt);
     validate->set_transaction_context(transaction_context);
 
-    _counter++;
-    const auto value = static_cast<int>(_counter);
-    const auto expr = expression_functional::equals_(column, value);
+    const auto expr = expression_functional::equals_(column, static_cast<int>(_counter));
     const auto where = std::make_shared<TableScan>(validate, expr);
     where->set_transaction_context(transaction_context);
 
@@ -88,12 +86,12 @@ class MvccDeletePluginSystemTest : public BaseTest {
     where->execute();
     update->execute();
 
-    if (!update->execute_failed()) {
-      transaction_context->commit();
-    } else {
+    if (update->execute_failed()) {
       // Collided with the plugin rewriting a chunk
       transaction_context->rollback();
-      _counter--;
+    } else {
+      transaction_context->commit();
+      _counter++;
     }
   }
 
@@ -141,31 +139,31 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (2) Validate start conditions
   validate_table();
 
-  // (3) Create a blocker for the physical delete
+  // (3) Create a blocker for the physical delete of chunk 2
   // The following context is older than all invalidations following with (4).
   // While it exists, no physical delete should be performed because the context might operate on old rows.
-  auto some_other_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  auto blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
-  // (4) Prepare clean-up of chunk two
-  // (4.1) Create and run a thread which invalidates and reinserts rows of chunk two and three
+  // (4) Prepare clean-up of chunk 2
+  // (4.1) Create and run a thread which invalidates and reinserts rows of chunk 2 and 3
   // It calls update_next_row() continuously. As a PausableLoopThread, it gets terminated together with the
   // test.
   auto table_update_thread =
       std::make_unique<PausableLoopThread>(std::chrono::milliseconds(10), [&](size_t) { update_next_row(); });
 
-  // (4.2) Wait until the thread has finished invalidating rows in chunk two
+  // (4.2) Wait until the thread has finished invalidating rows in chunk 2
   while (_counter < CHUNK_SIZE * 2) {  // -> if(_counter < 400)...
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  // (5) Wait for the MvccDeletePlugin to delete chunk two logically
+  // (5) Wait for the MvccDeletePlugin to delete chunk 2 logically
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
-      // The second chunk should have been logically deleted by now
-      const auto chunk1 = _table->get_chunk(ChunkID{1});
-      EXPECT_TRUE(chunk1);
-      if (chunk1->get_cleanup_commit_id()) break;
+      // Chunk 2 should have been logically deleted by now
+      const auto chunk2 = _table->get_chunk(ChunkID{1});
+      EXPECT_TRUE(chunk2);
+      if (chunk2->get_cleanup_commit_id()) break;
 
       // Not yet. Give the plugin some more time.
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
@@ -176,31 +174,31 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (6) Verify the correctness of the logical delete operation.
   {
-    // Updates started from row 220 on. So chunk two contained 20 rows still valid before its logical deletion.
+    // Updates started from row 220 on. So chunk 2 contained 20 rows still valid before its logical deletion.
     // These rows must have been invalidated and reinserted to the table during the logical delete operation
     // by the MvccDeletePlugin.
     validate_table();
   }
 
-  // (7) Set a prerequisite for the physical delete:
+  // (7) Set a prerequisite for the physical delete of chunk 2
   // So far the active-state of the following TransactionContext's snapshot-commit-id prevented a physical delete.
   {
-    auto blocker_snapshot_cid = some_other_transaction_context->snapshot_commit_id();
+    auto blocker_snapshot_cid = blocker_transaction_context->snapshot_commit_id();
     auto lowest_active_snapshot_cid = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
     EXPECT_TRUE(lowest_active_snapshot_cid && lowest_active_snapshot_cid <= blocker_snapshot_cid);
 
     // Make snapshot-cid inactive
-    some_other_transaction_context = nullptr;
+    blocker_transaction_context = nullptr;
 
     lowest_active_snapshot_cid = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
     EXPECT_TRUE(!lowest_active_snapshot_cid || lowest_active_snapshot_cid > blocker_snapshot_cid);
   }
 
-  // (8) Wait for the MvccDeletePlugin to delete chunk two physically
+  // (8) Wait for the MvccDeletePlugin to delete chunk 2 physically
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
-      // The second chunk should have been physically deleted by now
+      // Chunk 2 should have been physically deleted by now
       if (_table->get_chunk(ChunkID{1}) == nullptr) break;
 
       // Not yet. Give the plugin some more time.
@@ -215,45 +213,81 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   {
     validate_table();
 
-    // The first chunk was never modified, so it should not have been cleaned up
-    const auto chunk0 = _table->get_chunk(ChunkID{0});
-    EXPECT_TRUE(chunk0);
-    EXPECT_FALSE(chunk0->get_cleanup_commit_id());
+    // Chunk 1 was never modified, so it should not have been cleaned up
+    const auto chunk1 = _table->get_chunk(ChunkID{0});
+    EXPECT_TRUE(chunk1);
+    EXPECT_FALSE(chunk1->get_cleanup_commit_id());
 
-    // The third chunk was the last to be modified, so it should not have been cleaned up either. (compare criterion 2)
-    const auto chunk2 = _table->get_chunk(ChunkID{2});
-    EXPECT_TRUE(chunk2);
-    EXPECT_FALSE(chunk2->get_cleanup_commit_id());
+    // Chunk 3 was the last to be modified, so it should not have been cleaned up either. (compare criterion 2)
+    const auto chunk3 = _table->get_chunk(ChunkID{2});
+    EXPECT_TRUE(chunk3);
+    EXPECT_FALSE(chunk3->get_cleanup_commit_id());
   }
 
-  // (10) Prepare clean-up of chunk three
+  // (10) Create a blocker for the physical delete of chunk 3, similar to step (3)
+  blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto chunk3 = _table->get_chunk(ChunkID{2});
+  EXPECT_TRUE(chunk3 && !chunk3->get_cleanup_commit_id()); // otherwise our blocker won't work
+
+  // (11) Prepare clean-up of chunk 3
   {
-    // Kill a couple of commit IDs so that the third chunk is eligible for clean-up too. (so criterion 2 is fulfilled)
+    // Kill a couple of commit IDs so that chunk 3 is eligible for clean-up too. (so criterion 2 is fulfilled)
     for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
          ++transaction_idx) {
       Hyrise::get().transaction_manager.new_transaction_context()->commit();
     }
   }
 
-  // (11) Wait for the MvccDeletePlugin to delete chunk three logically & physically
+  // (12) Wait for the MvccDeletePlugin to delete chunk 3 logically
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
-      // The third chunk should have been phyiscally deleted by now
+      // Chunk 2 should have been logically deleted by now
+      const auto chunk2 = _table->get_chunk(ChunkID{1});
+      EXPECT_TRUE(chunk2);
+      if (chunk2->get_cleanup_commit_id()) break;
+
+      // Not yet. Give the plugin some more time.
+      std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
+    }
+    // Check that we have not given up
+    EXPECT_GT(attempts_remaining, -1);
+  }
+
+  // (13) Verify the correctness of the logical delete operation.
+  validate_table();
+
+  // (14) Set a prerequisite for the physical delete of chunk 3
+  {
+    auto blocker_snapshot_cid = blocker_transaction_context->snapshot_commit_id();
+    auto lowest_active_snapshot_cid = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
+    EXPECT_TRUE(lowest_active_snapshot_cid && lowest_active_snapshot_cid <= blocker_snapshot_cid);
+
+    // Make snapshot-cid inactive
+    blocker_transaction_context = nullptr;
+
+    lowest_active_snapshot_cid = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
+    EXPECT_TRUE(!lowest_active_snapshot_cid || lowest_active_snapshot_cid > blocker_snapshot_cid);
+  }
+
+  // (15) Wait for the MvccDeletePlugin to delete chunk 3 physically
+  {
+    auto attempts_remaining = 10;
+    while (attempts_remaining--) {
+      // Chunk 3 should have been phyiscally deleted by now
       if (_table->get_chunk(ChunkID{2}) == nullptr) break;
 
       // Not yet. Give the plugin some more time.
-      std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_PHYSICAL_DELETE +
-                                  MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
+      std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_PHYSICAL_DELETE);
     }
 
     // Check that we have not given up
     EXPECT_GT(attempts_remaining, -1);
   }
 
-  // (12) Check after conditions
+  // (16) Check after conditions
   validate_table();
 
-  // (13) Unload the plugin
+  // (17) Unload the plugin
   Hyrise::get().plugin_manager.unload_plugin("MvccDeletePlugin");
 }
