@@ -226,8 +226,10 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (10) Create a blocker for the physical delete of chunk 3, similar to step (3)
   blocker_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
-  const auto chunk3 = _table->get_chunk(ChunkID{2});
-  EXPECT_TRUE(chunk3 && !chunk3->get_cleanup_commit_id()); // otherwise our blocker won't work
+  {
+    const auto chunk3 = _table->get_chunk(ChunkID{2});
+    EXPECT_TRUE(chunk3 && !chunk3->get_cleanup_commit_id()); // otherwise our blocker won't work
+  }
 
   // (11) Prepare clean-up of chunk 3
   {
@@ -242,10 +244,10 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
-      // Chunk 2 should have been logically deleted by now
-      const auto chunk2 = _table->get_chunk(ChunkID{1});
-      EXPECT_TRUE(chunk2);
-      if (chunk2->get_cleanup_commit_id()) break;
+      // Chunk 3 should have been logically deleted by now
+      const auto chunk3 = _table->get_chunk(ChunkID{2});
+      EXPECT_TRUE(chunk3);
+      if (chunk3->get_cleanup_commit_id()) break;
 
       // Not yet. Give the plugin some more time.
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
