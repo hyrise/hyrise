@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
@@ -35,7 +36,9 @@ void StorageManager::drop_table(const std::string& name) {
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
-  if (name.starts_with(MetaTableManager::META_PREFIX)) {
+  // TODO(anyone): This should be string::starts_with once libstdc++ supports it
+  const auto prefix_len = MetaTableManager::META_PREFIX.size();
+  if (name.size() > prefix_len && std::string_view{&name[prefix_len]} == MetaTableManager::META_PREFIX) {
     return Hyrise::get().meta_table_manager.generate_table(name.substr(MetaTableManager::META_PREFIX.size()));
   }
 
@@ -46,7 +49,9 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
 }
 
 bool StorageManager::has_table(const std::string& name) const {
-  if (name.starts_with(MetaTableManager::META_PREFIX)) {
+  // TODO(anyone): This should be string::starts_with once libstdc++ supports it
+  const auto prefix_len = MetaTableManager::META_PREFIX.size();
+  if (name.size() > prefix_len && std::string_view{&name[prefix_len]} == MetaTableManager::META_PREFIX) {
     const auto& meta_table_names = Hyrise::get().meta_table_manager.table_names();
     return std::binary_search(meta_table_names.begin(), meta_table_names.end(),
                               name.substr(MetaTableManager::META_PREFIX.size()));
