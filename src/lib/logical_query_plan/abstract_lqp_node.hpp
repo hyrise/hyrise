@@ -146,6 +146,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool operator==(const AbstractLQPNode& rhs) const;
   bool operator!=(const AbstractLQPNode& rhs) const;
 
+  size_t hash() const;
+
   const LQPNodeType type;
 
   /**
@@ -159,6 +161,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
  protected:
+  virtual size_t _on_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 

@@ -5,6 +5,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
+#include "bytell_hash_map.hpp"
 #include "operators/abstract_operator.hpp"
 
 namespace opossum {
@@ -68,9 +69,8 @@ class LQPTranslator {
       const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  // Cache operator subtrees by LQP node to avoid executing operators below a diamond shape multiple times
-  mutable std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractOperator>>
-      _operator_by_lqp_node;
+  // Cache operator subtrees by LQP node hash to avoid executing identical operators redundantly
+  mutable ska::bytell_hash_map<size_t, std::shared_ptr<AbstractOperator>> _operator_by_lqp_node;
 };
 
 }  // namespace opossum
