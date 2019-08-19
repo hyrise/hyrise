@@ -584,7 +584,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     if ((join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
          join_mode == JoinMode::AntiNullAsFalse) &&
         right_side_cardinality > left_side_cardinality * 10 && first_join_predicate_is_equals) {
-      // Semi/Anti joins are currently handled by the hash join, which performs bad if the right side is significantly
+      // Semi/Anti joins are currently handled by the hash join, which performs badly if the right side is much
       // bigger than the left side. For that case, we add a second semi join on the right side, which throws out all
       // values that will not be found by the primary predicate of the later join, anyway. However, we can only throw
       // away values on the build side if the first predicate is an equals predicate. For an example, see TPC-H query
