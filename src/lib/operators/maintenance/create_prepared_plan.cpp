@@ -1,7 +1,7 @@
 #include "create_prepared_plan.hpp"
 
+#include "hyrise.hpp"
 #include "storage/prepared_plan.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -27,7 +27,7 @@ std::shared_ptr<PreparedPlan> CreatePreparedPlan::prepared_plan() const { return
 const std::string& CreatePreparedPlan::prepared_plan_name() const { return _prepared_plan_name; }
 
 std::shared_ptr<const Table> CreatePreparedPlan::_on_execute() {
-  StorageManager::get().add_prepared_plan(_prepared_plan_name, _prepared_plan);
+  Hyrise::get().storage_manager.add_prepared_plan(_prepared_plan_name, _prepared_plan);
   return nullptr;
 }
 

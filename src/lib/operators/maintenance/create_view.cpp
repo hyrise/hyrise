@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "storage/lqp_view.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -31,10 +31,10 @@ void CreateView::_on_set_parameters(const std::unordered_map<ParameterID, AllTyp
 
 std::shared_ptr<const Table> CreateView::_on_execute() {
   // If IF NOT EXISTS is not set and the view already exists, StorageManager throws an exception
-  if (!_if_not_exists || !StorageManager::get().has_view(_view_name)) {
-    StorageManager::get().add_view(_view_name, _view);
+  if (!_if_not_exists || !Hyrise::get().storage_manager.has_view(_view_name)) {
+    Hyrise::get().storage_manager.add_view(_view_name, _view);
   }
-  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
+  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }
 
 }  // namespace opossum

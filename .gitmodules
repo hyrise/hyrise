@@ -37,9 +37,9 @@
 [submodule "third_party/jemalloc"]
 	path = third_party/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
-[submodule "third_party/tpcds-result-reproduction"]
-	path = third_party/tpcds-result-reproduction
-	url = https://github.com/hyrise-mp/tpcds-result-reproduction.git
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
+[submodule "resources/benchmark/tpcds/tpcds-result-reproduction"]
+	path = resources/benchmark/tpcds/tpcds-result-reproduction
+	url = https://github.com/hyrise-mp/tpcds-result-reproduction.git

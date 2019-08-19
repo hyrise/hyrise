@@ -1362,6 +1362,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
 
     } else {
       segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+        DebugAssert(!position.is_null(), "Encountered NULL value in non-nullable column");
         values[chunk_offset] = position.value();
         ++chunk_offset;
       });

@@ -5,8 +5,8 @@
 #include <optional>
 #include <string>
 
+#include "hyrise.hpp"
 #include "import_export/csv_parser.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -22,8 +22,8 @@ ImportCsv::ImportCsv(const std::string& filename, const ChunkOffset chunk_size,
 const std::string ImportCsv::name() const { return "ImportCSV"; }
 
 std::shared_ptr<const Table> ImportCsv::_on_execute() {
-  if (_tablename && StorageManager::get().has_table(*_tablename)) {
-    return StorageManager::get().get_table(*_tablename);
+  if (_tablename && Hyrise::get().storage_manager.has_table(*_tablename)) {
+    return Hyrise::get().storage_manager.get_table(*_tablename);
   }
 
   // Check if file exists before giving it to the parser
@@ -36,7 +36,7 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
   table = parser.parse(_filename, _csv_meta, _chunk_size);
 
   if (_tablename) {
-    StorageManager::get().add_table(*_tablename, table);
+    Hyrise::get().storage_manager.add_table(*_tablename, table);
   }
 
   return table;

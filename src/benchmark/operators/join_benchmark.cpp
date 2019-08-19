@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
+#include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_mpsm.hpp"
@@ -9,7 +10,6 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/storage_manager.hpp"
 #include "table_generator.hpp"
 
 namespace {
@@ -73,7 +73,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
     join->execute();
   }
 
-  opossum::StorageManager::get().reset();
+  opossum::Hyrise::reset();
 }
 
 template <class C>

@@ -3,6 +3,7 @@
 
 #include "base_test.hpp"
 
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/operator_join_predicate.hpp"
@@ -11,7 +12,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -19,11 +19,11 @@ class UnionPositionsTest : public BaseTest {
  public:
   void SetUp() override {
     _table_10_ints = load_table("resources/test_data/tbl/10_ints.tbl", 3);
-    StorageManager::get().add_table("10_ints", _table_10_ints);
+    Hyrise::get().storage_manager.add_table("10_ints", _table_10_ints);
 
     _table_int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 3);
-    StorageManager::get().add_table("int_float4", _table_int_float4);
-    StorageManager::get().add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    Hyrise::get().storage_manager.add_table("int_float4", _table_int_float4);
+    Hyrise::get().storage_manager.add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, false, "");
     _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, false, "");
@@ -284,9 +284,9 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto segment_right_1_2 = std::make_shared<ReferenceSegment>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Int);
-  column_definitions.emplace_back("b", DataType::Float);
-  column_definitions.emplace_back("c", DataType::Int);
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, false);
+  column_definitions.emplace_back("c", DataType::Int, false);
   auto table_left = std::make_shared<Table>(column_definitions, TableType::References);
 
   table_left->append_chunk(Segments({segment_left_0_0, segment_left_0_1, segment_left_0_2}));

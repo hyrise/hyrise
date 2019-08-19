@@ -1,5 +1,5 @@
 cntrycode|numcust|totacctbal
-string|long|double
+string_null|long|double_null
 13|10|75359.3
 17|8|62289
 18|14|111072

@@ -1,5 +1,5 @@
 a|b|MIN(c)|AVG(d)
-int|float|int|double
+int|float|int_null|double_null
 12345|456.7|20|20.35
 12345|457.7|30|32.95
 123|458.7|20|3
