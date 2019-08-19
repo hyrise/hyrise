@@ -21,7 +21,6 @@
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

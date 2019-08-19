@@ -2,9 +2,9 @@
 
 #include "boost/functional/hash.hpp"
 
+#include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -39,9 +39,9 @@ std::string LQPColumnExpression::as_column_name() const {
 
 DataType LQPColumnExpression::data_type() const {
   const auto original_node = column_reference.original_node();
-  if (original_node->type == LQPNodeType::StoredTable) {
-    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node);
-    const auto table = StorageManager::get().get_table(stored_table_node->table_name);
+  if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
+    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
+    const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
     return table->column_data_type(column_reference.original_column_id());
 
   } else if (original_node->type == LQPNodeType::Mock) {

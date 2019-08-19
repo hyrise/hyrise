@@ -25,17 +25,17 @@ namespace opossum {
 class PredicatePlacementRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("resources/test_data/tbl/int_float.tbl"));
+    Hyrise::get().storage_manager.add_table("a", load_table("resources/test_data/tbl/int_float.tbl"));
     _table_a = std::make_shared<StoredTableNode>("a");
     _a_a = LQPColumnReference(_table_a, ColumnID{0});
     _a_b = LQPColumnReference(_table_a, ColumnID{1});
 
-    StorageManager::get().add_table("b", load_table("resources/test_data/tbl/int_float2.tbl"));
+    Hyrise::get().storage_manager.add_table("b", load_table("resources/test_data/tbl/int_float2.tbl"));
     _table_b = std::make_shared<StoredTableNode>("b");
     _b_a = LQPColumnReference(_table_b, ColumnID{0});
     _b_b = LQPColumnReference(_table_b, ColumnID{1});
 
-    StorageManager::get().add_table("c", load_table("resources/test_data/tbl/int_float3.tbl"));
+    Hyrise::get().storage_manager.add_table("c", load_table("resources/test_data/tbl/int_float3.tbl"));
     _table_c = std::make_shared<StoredTableNode>("c");
     _c_a = LQPColumnReference(_table_c, ColumnID{0});
     _c_b = LQPColumnReference(_table_c, ColumnID{1});
