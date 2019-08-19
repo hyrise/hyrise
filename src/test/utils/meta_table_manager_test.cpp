@@ -12,7 +12,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
   // This tests a bunch of meta tables that are somehow related to the tables stored in the StorageManager.
   auto& storage_manager = StorageManager::get();
 
-  const auto prefix = std::string{MetaTableManager::META_PREFIX};
+  const auto prefix = MetaTableManager::META_PREFIX;
   const auto path = std::string{"resources/test_data/tbl/meta_tables/meta_"};
   for (const auto& meta_table_name : {"tables", "columns", "chunks", "segments"}) {
     SCOPED_TRACE(meta_table_name);

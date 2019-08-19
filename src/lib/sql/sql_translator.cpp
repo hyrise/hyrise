@@ -303,7 +303,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const auto table_name = std::string{insert.tableName};
-  AssertInput(!table_name.starts_with(MetaTableManager::META_PREFIX), "Cannot update meta tables");
+  AssertInput(!table_name.starts_with(MetaTableManager::META_PREFIX), "Cannot modify meta tables");
   AssertInput(StorageManager::get().has_table(table_name), std::string{"Did not find a table with name "} + table_name);
 
   const auto target_table = StorageManager::get().get_table(table_name);
@@ -410,7 +410,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
   AssertInput(!std::string_view{delete_statement.tableName}.starts_with(MetaTableManager::META_PREFIX),
-              "Cannot update meta tables");
+              "Cannot modify meta tables");
   Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
@@ -425,7 +425,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name");
 
   const auto table_name = std::string{update.table->name};
-  AssertInput(!table_name.starts_with(MetaTableManager::META_PREFIX), "Cannot update meta tables");
+  AssertInput(!table_name.starts_with(MetaTableManager::META_PREFIX), "Cannot modify meta tables");
 
   auto translation_state = _translate_table_ref(*update.table);
 
@@ -1058,11 +1058,9 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
-      return StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "tables");
+      return StoredTableNode::make(MetaTableManager::META_PREFIX + "tables");
     case hsql::ShowType::kShowColumns: {
-      // TODO This hard-codes some information like the meta table name and that it stores the documented table's name
-      // in the first column. Do we want to change this? If yes, how?
-      const auto stored_table_node = StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "columns");
+      const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
       const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
       const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
                                                                          value_(show_statement.name));

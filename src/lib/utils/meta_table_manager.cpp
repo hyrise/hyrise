@@ -20,9 +20,7 @@ MetaTableManager::MetaTableManager() {
   std::sort(_table_names.begin(), _table_names.end());
 }
 
-const std::vector<std::string>& MetaTableManager::table_names() const {
-  return _table_names;
-}
+const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
 
 std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table_name) const {
   return _methods.at(table_name)();
@@ -33,7 +31,7 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {
                                               {"column_count", DataType::Int, false},
                                               {"row_count", DataType::Long, false},
                                               {"chunk_count", DataType::Int, false},
-                                              {"max_chunk_size", DataType::Long, false}};
+                                              {"max_chunk_size", DataType::Int, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : StorageManager::get().tables()) {
@@ -86,8 +84,6 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() const {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_segments_table() const {
-  // TODO column_name/_type violate 3NF, do we want to include them for convenience?
-
   const auto columns =
       TableColumnDefinitions{{"table", DataType::String, false},       {"chunk_id", DataType::Int, false},
                              {"column_id", DataType::Int, false},      {"column_name", DataType::String, false},

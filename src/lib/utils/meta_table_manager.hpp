@@ -11,7 +11,7 @@ class MetaTableManager : public Singleton<MetaTableManager> {
   friend class Singleton<MetaTableManager>;
 
  public:
-  static constexpr auto META_PREFIX = "meta_";
+  static constexpr auto META_PREFIX = std::string{"meta_"};
 
   // Returns a sorted list of all meta table names (without prefix)
   const std::vector<std::string>& table_names() const;

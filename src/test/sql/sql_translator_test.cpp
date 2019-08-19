@@ -1766,7 +1766,7 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 TEST_F(SQLTranslatorTest, ShowTables) {
   const auto actual_lqp = compile_query("SHOW TABLES");
 
-  const auto expected_lqp = StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "tables");
+  const auto expected_lqp = StoredTableNode::make(MetaTableManager::META_PREFIX + "tables");
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -1775,7 +1775,7 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
   const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
 
   // clang-format off
-  const auto stored_table_node = StoredTableNode::make(std::string{MetaTableManager::META_PREFIX} + "columns");
+  const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
   const auto table_name_column = stored_table_node->get_column("table");
   const auto expected_lqp =
       PredicateNode::make(equals_(table_name_column, "int_float"),
