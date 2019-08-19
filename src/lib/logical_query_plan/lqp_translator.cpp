@@ -11,7 +11,6 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
-#include "bytell_hash_map.hpp"
 #include "create_prepared_plan_node.hpp"
 #include "create_table_node.hpp"
 #include "create_view_node.hpp"

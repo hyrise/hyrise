@@ -3,7 +3,6 @@
 #include <memory>
 #include <unordered_set>
 
-#include "bytell_hash_map.hpp"
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
