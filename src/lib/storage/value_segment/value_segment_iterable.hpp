@@ -137,8 +137,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ChunkOffset _chunk_offset;
   };
 
-  class NonNullPointAccessIterator
-      final : public BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>> {
+  class NonNullPointAccessIterator final
+      : public BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;

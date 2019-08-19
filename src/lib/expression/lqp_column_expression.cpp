@@ -54,7 +54,8 @@ DataType LQPColumnExpression::data_type() const {
 
   } else if (column_reference.original_node()->type == LQPNodeType::StaticTable) {
     const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(column_reference.original_node());
-    Assert(column_reference.original_column_id() < static_table_node->table->column_definitions().size(), "ColumnID out of range");
+    Assert(column_reference.original_column_id() < static_table_node->table->column_definitions().size(),
+           "ColumnID out of range");
     return static_table_node->table->column_definitions()[column_reference.original_column_id()].data_type;
   } else {
     Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");

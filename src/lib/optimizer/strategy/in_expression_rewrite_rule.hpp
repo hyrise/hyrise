@@ -9,12 +9,15 @@ class PredicateNode;
 
 // TODO Doc
 
-class InExpressionToJoinRule : public AbstractRule {
+class InExpressionRewriteRule : public AbstractRule {
  public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
   enum class Algorithm {  // TODO remove or keep for tests?
-  	Auto, ExpressionEvaluator, Join, Disjunction
+    Auto,
+    ExpressionEvaluator,
+    Join,
+    Disjunction
   };
   static inline Algorithm forced_algorithm{Algorithm::Disjunction};
 };

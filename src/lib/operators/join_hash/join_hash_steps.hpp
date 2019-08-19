@@ -67,8 +67,8 @@ class PosHashTable {
  public:
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)  // TODO explicitly test this
       : _hash_table(), _pos_lists(max_size), _mode(mode) {
-        _hash_table.reserve(max_size);
-      }
+    _hash_table.reserve(max_size);
+  }
 
   // For a value seen on the build side, add its row_id to the table
   template <typename InputType>
@@ -117,7 +117,8 @@ class PosHashTable {
       if (hash_table_iter == _hash_table.end()) return end();
       return _pos_lists.begin() + hash_table_iter->second;
     } else {
-      const auto values_iter = std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value;} );
+      const auto values_iter =
+          std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value; });
       if (values_iter == _values->end()) return end();
       return _pos_lists.begin() + values_iter->second;
     }
@@ -131,7 +132,8 @@ class PosHashTable {
     if (!_values) {
       return _hash_table.find(casted_value) != _hash_table.end();
     } else {
-      const auto values_iter = std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value;} );
+      const auto values_iter =
+          std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value; });
       return values_iter != _values->end();
     }
   }

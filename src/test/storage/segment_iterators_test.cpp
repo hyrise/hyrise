@@ -186,12 +186,11 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
    * Takes an iterator pair and verifies its LegacyRandomAccessIterator compatibility by feeding it into STL algorithms
    * that require LegacyRandomAccessIterator. Most of the testing is that this compiles.
    */
-  test_all_iterators(table, position_filter, position_filter_multi_chunk, [&](const auto begin, const auto end) {
-    (void) std::is_heap(begin, end);
-  });
+  test_all_iterators(table, position_filter, position_filter_multi_chunk,
+                     [&](const auto begin, const auto end) { (void)std::is_heap(begin, end); });
 }
 
-template<typename T>
+template <typename T>
 bool operator<(const AbstractSegmentPosition<T>&, const AbstractSegmentPosition<T>&) {
   // Fake comparator needed by is_heap
   return false;

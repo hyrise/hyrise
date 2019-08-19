@@ -168,7 +168,6 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-
 TEST_F(PredicatePlacementRuleTest, ComplexBlockingPredicatesPushdownTest) {
   // clang-format off
   const auto input_lqp =
