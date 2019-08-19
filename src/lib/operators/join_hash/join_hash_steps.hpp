@@ -285,9 +285,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
   CurrentScheduler::wait_for_tasks(jobs);
 
-  // No partitions yet
-  const auto partition_offsets = std::vector<size_t>{0};
-  return RadixContainer<T>{elements, partition_offsets, null_value_bitvector};
+  return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}, null_value_bitvector};
 }
 
 /*
