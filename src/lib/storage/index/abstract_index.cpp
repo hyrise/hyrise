@@ -65,6 +65,13 @@ AbstractIndex::Iterator AbstractIndex::null_cend() const { return _index_null_po
 
 SegmentIndexType AbstractIndex::type() const { return _type; }
 
-size_t AbstractIndex::memory_consumption() const { return _memory_consumption(); }
+size_t AbstractIndex::memory_consumption() const {
+  size_t bytes{0u};
+  bytes += _memory_consumption();
+  bytes += sizeof(_index_null_postings);
+  bytes += sizeof(ChunkOffset) * _index_null_postings.capacity();
+  bytes += sizeof(_type);
+  return bytes;
+}
 
 }  // namespace opossum

@@ -19,13 +19,7 @@ BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& se
                                                                        _index_null_postings);
 }
 
-size_t BTreeIndex::_memory_consumption() const {
-  size_t bytes{0};
-  bytes += _impl->memory_consumption();
-  bytes += sizeof(ChunkOffset) * _index_null_postings.capacity();
-  bytes += sizeof(std::vector<ChunkOffset>); // _index_null_postings
-  return bytes;
-}
+size_t BTreeIndex::_memory_consumption() const { return _impl->memory_consumption(); }
 
 BTreeIndex::Iterator BTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert(!values.empty(), "Value vector has to be non-empty.");

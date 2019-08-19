@@ -93,39 +93,55 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
 
   // A2, B1, C1
   // expected memory consumption:
-  //  - `_indexed_segments`, shared pointer             ->  16 byte
-  //  - `_index_offsets`, 8 elements, each 4 byte       ->  32 byte
-  //  - `_index_postings`, 8 elements, each 4 byte      ->  32 byte
-  //  - `_index_null_postings`, 4 elements, each 4 byte ->  16 byte
-  //  - sum                                             ->  96 byte
-  EXPECT_EQ(index->memory_consumption(), 96u);
+  //  - `_indexed_segments`, shared pointer               ->  16 bytes
+  //  - `_index_offsets`                                  ->  24 bytes
+  //  - `_index_offsets`, 8 elements, each 4 bytes        ->  32 bytes
+  //  - `_index_postings`                                 ->  24 bytes
+  //  - `_index_postings`, 8 elements, each 4 bytes       ->  32 bytes
+  //  - `_index_null_postings`                            ->  24 bytes
+  //  - `_index_null_postings`, 4 elements, each 4 bytes  ->  16 bytes
+  //  - `_type`                                           ->   1 byte
+  //  - sum                                               >> 169 bytes
+  EXPECT_EQ(index->memory_consumption(), 169u);
 
   // A2, B1, C2
   // expected memory consumption:
-  //  - `_indexed_segments`, shared pointer             ->  16 byte
-  //  - `_index_offsets`, 2 elements, each 4 byte       ->   8 byte
-  //  - `_index_postings`, 0 elements, each 4 byte      ->   0 byte
-  //  - `_index_null_postings`, 2 elements, each 4 byte ->   8 byte
-  //  - sum                                             ->  32 byte
-  EXPECT_EQ(index_int_nulls->memory_consumption(), 32u);
+  //  - `_indexed_segments`, shared pointer               ->  16 bytes
+  //  - `_index_offsets`                                  ->  24 bytes
+  //  - `_index_offsets`, 2 elements, each 4 bytes        ->   8 bytes
+  //  - `_index_postings`                                 ->  24 bytes
+  //  - `_index_postings`, 0 elements, each 4 bytes       ->   0 bytes
+  //  - `_index_null_postings`                            ->  24 bytes
+  //  - `_index_null_postings`, 2 elements, each 4 bytes  ->   8 bytes
+  //  - `_type`                                           ->   1 byte
+  //  - sum                                               >> 105 bytes
+  EXPECT_EQ(index_int_nulls->memory_consumption(), 105u);
 
   // A2, B2, C1
   // expected memory consumption:
-  //  - `_indexed_segments`, shared pointer             ->  16 byte
-  //  - `_index_offsets`, 4 elements, each 4 byte       ->  16 byte
-  //  - `_index_postings`, 2 elements, each 4 byte      ->   8 byte
-  //  - `_index_null_postings`, 0 elements, each 4 byte ->   0 byte
-  //  - sum                                             ->  40 byte
-  EXPECT_EQ(index_int_no_nulls->memory_consumption(), 40u);
+  //  - `_indexed_segments`, shared pointer               ->  16 bytes
+  //  - `_index_offsets`                                  ->  24 bytes
+  //  - `_index_offsets`, 4 elements, each 4 bytes        ->  16 bytes
+  //  - `_index_postings`                                 ->  24 bytes
+  //  - `_index_postings`, 2 elements, each 4 bytes       ->   8 bytes
+  //  - `_index_null_postings`                            ->  24 bytes
+  //  - `_index_null_postings`, 0 elements, each 4 bytes  ->   0 bytes
+  //  - `_type`                                           ->   1 byte
+  //  - sum                                               >> 113 bytes
+  EXPECT_EQ(index_int_no_nulls->memory_consumption(), 113u);
 
   // A1, B2, C2
   // expected memory consumption:
-  //  - `_indexed_segments`, shared pointer             ->  16 byte
-  //  - `_index_offsets`, 2 elements, each 4 byte       ->   8 byte
-  //  - `_index_postings`, 0 elements, each 4 byte      ->   0 byte
-  //  - `_index_null_postings`, 0 elements, each 4 byte ->   0 byte
-  //  - sum                                             ->  24 byte
-  EXPECT_EQ(index_int_empty->memory_consumption(), 24u);
+  //  - `_indexed_segments`, shared pointer               ->  16 bytes
+  //  - `_index_offsets`                                  ->  24 bytes
+  //  - `_index_offsets`, 2 elements, each 4 bytes        ->   8 bytes
+  //  - `_index_postings`                                 ->  24 bytes
+  //  - `_index_postings`, 0 elements, each 4 bytes       ->   0 bytes
+  //  - `_index_null_postings`                            ->  24 bytes
+  //  - `_index_null_postings`, 0 elements, each 4 bytes  ->   0 bytes
+  //  - `_type`                                           ->   1 byte
+  //  - sum                                               >>  97 bytes
+  EXPECT_EQ(index_int_empty->memory_consumption(), 97u);
 }
 
 TEST_F(GroupKeyIndexTest, IndexPostings) {
