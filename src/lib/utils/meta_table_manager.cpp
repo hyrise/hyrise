@@ -38,7 +38,7 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     output_table->append({pmr_string{table_name}, static_cast<int32_t>(table->column_count()),
                           static_cast<int64_t>(table->row_count()), static_cast<int32_t>(table->chunk_count()),
-                          static_cast<int64_t>(table->max_chunk_size())});
+                          static_cast<int32_t>(table->max_chunk_size())});
   }
 
   return output_table;
@@ -47,7 +47,7 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {
 std::shared_ptr<Table> MetaTableManager::generate_columns_table() const {
   const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
                                               {"name", DataType::String, false},
-                                              {"type", DataType::String, false},
+                                              {"data_type", DataType::String, false},
                                               {"nullable", DataType::Int, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
@@ -85,10 +85,12 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() const {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_segments_table() const {
-  const auto columns =
-      TableColumnDefinitions{{"table", DataType::String, false},       {"chunk_id", DataType::Int, false},
-                             {"column_id", DataType::Int, false},      {"column_name", DataType::String, false},
-                             {"column_type", DataType::String, false}, {"encoding", DataType::String, true}};
+  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+                                              {"chunk_id", DataType::Int, false},
+                                              {"column_id", DataType::Int, false},
+                                              {"column_name", DataType::String, false},
+                                              {"column_data_type", DataType::String, false},
+                                              {"encoding", DataType::String, true}};
   // Vector compression is not yet included because #1286 makes it a pain to map it to a string.
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
