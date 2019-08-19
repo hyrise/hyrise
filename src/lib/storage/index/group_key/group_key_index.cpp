@@ -75,9 +75,6 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
       index_offset_copy[value_id]++;
     }
   });
-
-  _index_postings.shrink_to_fit();
-  _index_null_postings.shrink_to_fit();
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
