@@ -22,8 +22,6 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
-
 void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
   // This EXCLUDES columns that are merely forwarded by Projections throughout the LQP
