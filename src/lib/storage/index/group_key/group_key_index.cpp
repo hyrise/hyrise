@@ -128,9 +128,9 @@ std::vector<std::shared_ptr<const BaseSegment>> GroupKeyIndex::_get_indexed_segm
 
 size_t GroupKeyIndex::_memory_consumption() const {
   size_t bytes = sizeof(_indexed_segment);
-  bytes += sizeof(_index_offsets);
+  bytes += sizeof(std::vector<ChunkOffset>);  // _index_offsets
   bytes += sizeof(ChunkOffset) * _index_offsets.capacity();
-  bytes += sizeof(_index_postings);
+  bytes += sizeof(std::vector<ChunkOffset>);  // _index_postings
   bytes += sizeof(ChunkOffset) * _index_postings.capacity();
   return bytes;
 }
