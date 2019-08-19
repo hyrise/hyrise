@@ -54,6 +54,48 @@ class JoinHashStepsTest : public BaseTest {
   inline static std::shared_ptr<TableScan> _table_with_nulls_and_zeros_scanned;
 };
 
+TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
+  auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 100};
+  for (auto i = 0; i < 10; ++i) {
+    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200 + i}});
+    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200 + i + 1}});
+  }
+  {
+    EXPECT_TRUE(table.contains(5));
+    EXPECT_FALSE(table.contains(1000));
+    const auto pos_list = *table.find(5);
+    EXPECT_EQ(pos_list, {RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}});
+  }
+  table.shrink_to_fit();
+  {
+    EXPECT_TRUE(table.contains(5));
+    EXPECT_FALSE(table.contains(1000));
+    const auto pos_list = *table.find(5);
+    EXPECT_EQ(pos_list, {RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}});
+  }
+}
+
+TEST_F(JoinHashStepsTest, LargeHashTableSinglePositions) {
+  auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 100};
+  for (auto i = 0; i < 100; ++i) {
+    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200 + i}});
+    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200 + i + 1}});
+  }
+  {
+    EXPECT_TRUE(table.contains(5));
+    EXPECT_FALSE(table.contains(1000));
+    const auto pos_list = *table.find(5);
+    EXPECT_EQ(pos_list, {RowID{ChunkID{105}, ChunkOffset{205}}});
+  }
+  table.shrink_to_fit();
+  {
+    EXPECT_TRUE(table.contains(5));
+    EXPECT_FALSE(table.contains(1000));
+    const auto pos_list = *table.find(5);
+    EXPECT_EQ(pos_list, {RowID{ChunkID{105}, ChunkOffset{205}}});
+  }
+}
+
 TEST_F(JoinHashStepsTest, MaterializeInput) {
   std::vector<std::vector<size_t>> histograms;
   const auto chunk_offsets = determine_chunk_offsets(_table_with_nulls_and_zeros_scanned->get_output());

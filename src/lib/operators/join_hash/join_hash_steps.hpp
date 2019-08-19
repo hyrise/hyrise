@@ -65,7 +65,7 @@ class PosHashTable {
   using SmallPosList = boost::container::small_vector<RowID, 1>;
 
  public:
-  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)  // TODO explicitly test this
+  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
       : _hash_table(), _pos_lists(max_size), _mode(mode) {
     _hash_table.reserve(max_size);
   }
