@@ -65,7 +65,7 @@ class PosHashTable {
   using SmallPosList = boost::container::small_vector<RowID, 1>;
 
  public:
-  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
+  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)  // TODO explicitly test this
       : _hash_table(max_size), _pos_lists(max_size), _mode(mode) {}
 
   // For a value seen on the build side, add its row_id to the table
@@ -92,15 +92,30 @@ class PosHashTable {
     for (auto& pos_list : _pos_lists) {
       pos_list.shrink_to_fit();
     }
+
+    // if (_hash_table.size() < 10) {  // TODO value tbd
+    //   _values = std::vector<HashedType>{};
+    //   _values->reserve(_hash_table.size());
+    //   for (const auto& [value, offset] : _hash_table) {
+    //     _values->emplace_back(value);  also store offset
+    //   }
+    //   _hash_table.clear();
+    // }
   }
 
   // For a value seen on the probe side, return an iterator into the matching values
   template <typename InputType>
   const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
     const auto casted_value = static_cast<HashedType>(value);
-    const auto it = _hash_table.find(casted_value);
-    if (it == _hash_table.end()) return end();
-    return _pos_lists.begin() + it->second;
+
+    if (!_values) {
+      const auto hash_table_iter = _hash_table.find(casted_value);
+      if (hash_table_iter == _hash_table.end()) return end();
+      return _pos_lists.begin() + hash_table_iter->second;
+    } else {
+      const auto values_iter = std::find(_values->begin(), _values->end(), casted_value);
+      return _pos_lists.begin() + std::distance(_values->begin(), values_iter);
+    }
   }
 
   const std::vector<SmallPosList>::const_iterator begin() const { return _pos_lists.begin(); }
@@ -111,6 +126,7 @@ class PosHashTable {
   HashTable _hash_table;
   std::vector<SmallPosList> _pos_lists;
   JoinHashBuildMode _mode;
+  std::optional<std::vector<HashedType>> _values{std::nullopt};
 };
 
 /*
@@ -156,36 +172,6 @@ inline std::vector<size_t> determine_chunk_offsets(const std::shared_ptr<const T
     offset += chunk->size();
   }
   return chunk_offsets;
-}
-
-template <typename T, bool retain_null_values, typename Iterator, typename OutputIterator>
-void __attribute__ ((noinline)) x(Iterator it, const Iterator& end, std::vector<size_t>& histogram, OutputIterator output_iterator, ChunkID chunk_id) {
-  using IterableType = typename Iterator::IterableType;
-  auto reference_chunk_offset = ChunkOffset{0};
-
-  while (it != end) {
-    const auto& value = *it;
-    ++it;
-
-    if (!value.is_null() || retain_null_values) {
-      /*
-      For ReferenceSegments we do not use the RowIDs from the referenced tables.
-      Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
-      values from different inputs (important for Multi Joins).
-      */
-      if constexpr (is_reference_segment_iterable_v<IterableType>) {
-        *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
-      } else {
-        *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
-      }
-
-      ++histogram[0];
-    }
-    // reference_chunk_offset is only used for ReferenceSegments
-    if constexpr (is_reference_segment_iterable_v<IterableType>) {
-      ++reference_chunk_offset;
-    }
-  }
 }
 
 template <typename T, typename HashedType, bool retain_null_values>
@@ -236,7 +222,32 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto histogram = std::vector<size_t>(num_partitions);
 
       segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
-        x<T, retain_null_values>(it, end, histogram, output_iterator, chunk_id);
+        using IterableType = typename decltype(it)::IterableType;
+        auto reference_chunk_offset = ChunkOffset{0};
+
+        histogram[0] += std::distance(it, end);
+
+        while (it != end) {
+          const auto& value = *it;
+          ++it;
+
+          // if (!value.is_null() || retain_null_values) {
+            /*
+            For ReferenceSegments we do not use the RowIDs from the referenced tables.
+            Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
+            values from different inputs (important for Multi Joins).
+            */
+            if constexpr (is_reference_segment_iterable_v<IterableType>) {
+              *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, reference_chunk_offset}, value.value()};
+            } else {
+              *(output_iterator++) = PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, value.value()};
+            }
+          // }
+          // reference_chunk_offset is only used for ReferenceSegments
+          if constexpr (is_reference_segment_iterable_v<IterableType>) {
+            ++reference_chunk_offset;
+          }
+        }
       });
 
       if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {  // NOLINT
@@ -253,7 +264,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}, null_value_bitvector};
+  // No partitions yet
+  const auto partition_offsets = std::vector<size_t>{0};
+  return RadixContainer<T>{elements, partition_offsets, null_value_bitvector};
 }
 
 /*
