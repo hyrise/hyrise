@@ -3,6 +3,7 @@
 #include "boost/container/pmr/memory_resource.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/meta_table_manager.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/singleton.hpp"
 
@@ -20,6 +21,7 @@ class Hyrise : public Singleton<Hyrise> {
   PluginManager plugin_manager;
   StorageManager storage_manager;
   TransactionManager transaction_manager;
+  MetaTableManager meta_table_manager;
 
  private:
   Hyrise() {
@@ -36,6 +38,7 @@ class Hyrise : public Singleton<Hyrise> {
     plugin_manager = PluginManager{};
     storage_manager = StorageManager{};
     transaction_manager = TransactionManager{};
+    meta_table_manager = MetaTableManager{};
   }
   friend class Singleton;
 };

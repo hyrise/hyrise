@@ -3,15 +3,15 @@
 #include <functional>
 #include <unordered_map>
 
-#include "storage/storage_manager.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
-class MetaTableManager : public Singleton<MetaTableManager> {
-  friend class Singleton<MetaTableManager>;
+class Table;
 
+class MetaTableManager : public Noncopyable {
  public:
-  static constexpr auto META_PREFIX = std::string{"meta_"};
+  static inline const auto META_PREFIX = std::string{"meta_"};
 
   // Returns a sorted list of all meta table names (without prefix)
   const std::vector<std::string>& table_names() const;
@@ -26,6 +26,7 @@ class MetaTableManager : public Singleton<MetaTableManager> {
   std::shared_ptr<Table> generate_segments_table() const;
 
  protected:
+  friend class Hyrise;
   MetaTableManager();
 
   std::unordered_map<std::string, std::function<std::shared_ptr<Table>(void)>> _methods;

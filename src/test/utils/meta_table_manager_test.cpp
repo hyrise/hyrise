@@ -10,7 +10,7 @@ class MetaTableManagerTest : public BaseTest {};
 
 TEST_F(MetaTableManagerTest, TableBasedMetaData) {
   // This tests a bunch of meta tables that are somehow related to the tables stored in the StorageManager.
-  auto& storage_manager = StorageManager::get();
+  auto& storage_manager = Hyrise::get().storage_manager;
 
   const auto prefix = MetaTableManager::META_PREFIX;
   const auto path = std::string{"resources/test_data/tbl/meta_tables/meta_"};

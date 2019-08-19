@@ -1,6 +1,7 @@
 #include "meta_table_manager.hpp"
 
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -34,7 +35,7 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {
                                               {"max_chunk_size", DataType::Int, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& [table_name, table] : StorageManager::get().tables()) {
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     output_table->append({pmr_string{table_name}, static_cast<int32_t>(table->column_count()),
                           static_cast<int64_t>(table->row_count()), static_cast<int32_t>(table->chunk_count()),
                           static_cast<int64_t>(table->max_chunk_size())});
@@ -50,7 +51,7 @@ std::shared_ptr<Table> MetaTableManager::generate_columns_table() const {
                                               {"nullable", DataType::Int, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& [table_name, table] : StorageManager::get().tables()) {
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       output_table->append({pmr_string{table_name}, static_cast<pmr_string>(table->column_name(column_id)),
                             static_cast<pmr_string>(data_type_to_string.left.at(table->column_data_type(column_id))),
@@ -69,7 +70,7 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() const {
                                               {"cleanup_commit_id", DataType::Long, true}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& [table_name, table] : StorageManager::get().tables()) {
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
       const auto cleanup_commit_id = chunk->get_cleanup_commit_id()
@@ -91,7 +92,7 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() const {
   // Vector compression is not yet included because #1286 makes it a pain to map it to a string.
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  for (const auto& [table_name, table] : StorageManager::get().tables()) {
+  for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
         const auto& chunk = table->get_chunk(chunk_id);
