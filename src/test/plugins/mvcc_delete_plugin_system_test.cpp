@@ -218,7 +218,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     EXPECT_TRUE(chunk1);
     EXPECT_FALSE(chunk1->get_cleanup_commit_id());
 
-    // Chunk 3 was the last to be modified, so it should not have been cleaned up either. (compare criterion 2)
+    // Chunk 3 was the last to be modified, so it should not have been cleaned up either (compare criterion 2).
     const auto chunk3 = _table->get_chunk(ChunkID{2});
     EXPECT_TRUE(chunk3);
     EXPECT_FALSE(chunk3->get_cleanup_commit_id());
@@ -233,7 +233,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (11) Prepare clean-up of chunk 3
   {
-    // Kill a couple of commit IDs so that chunk 3 is eligible for clean-up too. (so criterion 2 is fulfilled)
+    // Kill a couple of commit IDs so that criterion 2 is fulfilled and chunk 3 is eligible for clean-up, too.
     for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
          ++transaction_idx) {
       Hyrise::get().transaction_manager.new_transaction_context()->commit();
@@ -276,7 +276,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   {
     auto attempts_remaining = 10;
     while (attempts_remaining--) {
-      // Chunk 3 should have been phyiscally deleted by now
+      // Chunk 3 should have been physically deleted by now
       if (_table->get_chunk(ChunkID{2}) == nullptr) break;
 
       // Not yet. Give the plugin some more time.
