@@ -104,7 +104,7 @@ class AbstractIndex : private Noncopyable {
   Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
 
   /**
-   * Returns an Iterator to the position of the smallest indexed element. This is useful for range queries
+   * Returns an Iterator to the position of the smallest indexed non-null element. This is useful for range queries
    * with no specified begin.
    * Iterating from cbegin() to cend() will result in a position list with ordered values.
    * Calls _cbegin() of the most derived class.
@@ -113,7 +113,7 @@ class AbstractIndex : private Noncopyable {
   Iterator cbegin() const;
 
   /**
-   * Returns an Iterator past the position of the greatest indexed element. This is useful for open
+   * Returns an Iterator past the position of the greatest indexed non-null element. This is useful for open
    * end range queries.
    * Iterating from cbegin() to cend() will result in a position list with ordered values.
    * Calls _cend() of the most derived class.
