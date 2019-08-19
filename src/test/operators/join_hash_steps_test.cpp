@@ -57,42 +57,45 @@ class JoinHashStepsTest : public BaseTest {
 TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
   auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 100};
   for (auto i = 0; i < 10; ++i) {
-    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200 + i}});
-    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200 + i + 1}});
+    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{uint{200 + i}}});
+    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{uint{200 + i + 1}}});
   }
+  const auto expected_pos_list =
+      std::vector<RowID>{RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}};
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));
     const auto pos_list = *table.find(5);
-    EXPECT_EQ(pos_list, {RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}});
+    EXPECT_EQ(pos_list, expected_pos_list);
   }
   table.shrink_to_fit();
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));
     const auto pos_list = *table.find(5);
-    EXPECT_EQ(pos_list, {RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}});
+    EXPECT_EQ(pos_list, expected_pos_list);
   }
 }
 
 TEST_F(JoinHashStepsTest, LargeHashTableSinglePositions) {
   auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 100};
   for (auto i = 0; i < 100; ++i) {
-    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200 + i}});
-    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{200 + i + 1}});
+    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{uint{200 + i}}});
+    table.emplace(i, RowID{ChunkID{100 + i}, ChunkOffset{uint{200 + i + 1}}});
   }
+  const auto expected_pos_list = std::vector<RowID>{RowID{ChunkID{155}, ChunkOffset{255}}};
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));
-    const auto pos_list = *table.find(5);
-    EXPECT_EQ(pos_list, {RowID{ChunkID{105}, ChunkOffset{205}}});
+    const auto pos_list = *table.find(50);
+    EXPECT_EQ(pos_list, expected_pos_list);
   }
   table.shrink_to_fit();
   {
     EXPECT_TRUE(table.contains(5));
     EXPECT_FALSE(table.contains(1000));
-    const auto pos_list = *table.find(5);
-    EXPECT_EQ(pos_list, {RowID{ChunkID{105}, ChunkOffset{205}}});
+    const auto pos_list = *table.find(50);
+    EXPECT_EQ(pos_list, expected_pos_list);
   }
 }
 
