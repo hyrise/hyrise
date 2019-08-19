@@ -30,13 +30,12 @@ class MvccDeletePluginTest : public BaseTest {
   void SetUp() override {}  // managed by each test individually
 
   void TearDown() override {
-    StorageManager::reset();
-    PluginManager::reset();
+    Hyrise::get().reset();
   }
 
  protected:
   void _increment_all_values_by_one() {
-    auto transaction_context = TransactionManager::get().new_transaction_context();
+    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
     // GetTable
     auto get_table = std::make_shared<GetTable>(_table_name);
     get_table->set_transaction_context(transaction_context);
@@ -61,7 +60,7 @@ class MvccDeletePluginTest : public BaseTest {
     return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id);
   }
   static void _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
-    MvccDeletePlugin::_delete_chunk_physically(StorageManager::get().get_table(table_name), chunk_id);
+    MvccDeletePlugin::_delete_chunk_physically(Hyrise::get().storage_manager.get_table(table_name), chunk_id);
   }
   static int _get_int_value_from_table(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
                                        const ColumnID column_id, const ChunkOffset chunk_offset) {
@@ -75,7 +74,7 @@ class MvccDeletePluginTest : public BaseTest {
 };
 
 TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
-  auto& pm = PluginManager::get();
+  auto& pm = Hyrise::get().plugin_manager;
   pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
   pm.unload_plugin("MvccDeletePlugin");
 }
@@ -94,7 +93,7 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
 
   // Prepare test
   const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
-  StorageManager::get().add_table(_table_name, table);
+  Hyrise::get().storage_manager.add_table(_table_name, table);
   // --- Check table structure
   // --- Expected: 1, 2, 3
   EXPECT_EQ(table->chunk_count(), 1);
@@ -128,7 +127,7 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{1}), 2);
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{2}), 3);
   // --- Check count of invalidations
-  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   auto get_table = std::make_shared<GetTable>(_table_name);
   get_table->set_transaction_context(transaction_context);
   get_table->execute();
@@ -152,7 +151,7 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   // Prepare the test
   const auto& table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
   const auto& chunk = table->get_chunk(chunk_to_delete_id);
-  StorageManager::get().add_table(_table_name, table);
+  Hyrise::get().storage_manager.add_table(_table_name, table);
   // --- invalidate records
   _increment_all_values_by_one();
   // --- delete chunk logically

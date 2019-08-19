@@ -51,7 +51,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
       begin_value += CHUNK_SIZE;
     }
 
-    StorageManager::get().add_table("mvcc_test", _table);
+    Hyrise::get().storage_manager.add_table("mvcc_test", _table);
   }
 
  protected:
@@ -66,7 +66,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
 
-    const auto transaction_context = TransactionManager::get().new_transaction_context();
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
     const auto gt = std::make_shared<GetTable>("mvcc_test");
     gt->set_transaction_context(transaction_context);
@@ -101,7 +101,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * Checks the table configuration by summing up all integer values
    */
   void validate_table() {
-    const auto transaction_context = TransactionManager::get().new_transaction_context();
+    const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
     const auto gt = std::make_shared<GetTable>("mvcc_test");
     gt->set_transaction_context(transaction_context);
@@ -135,7 +135,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
  */
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (1) Load the MvccDeletePlugin
-  auto& pm = PluginManager::get();
+  auto& pm = Hyrise::get().plugin_manager;
   pm.load_plugin(build_dylib_path("libMvccDeletePlugin"));
 
   // (2) Validate start conditions
@@ -144,7 +144,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (3) Create a blocker for the physical delete
   // The following context is older than all invalidations following with (4).
   // While it exists, no physical delete should be performed because the context might operate on old rows.
-  auto some_other_transaction_context = TransactionManager::get().new_transaction_context();
+  auto some_other_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   // (4) Prepare clean-up of chunk two
   // (4.1) Create and run a thread which invalidates and reinserts rows of chunk two and three
@@ -186,13 +186,13 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // So far the active-state of the following TransactionContext's snapshot-commit-id prevented a physical delete.
   {
     auto blocker_snapshot_cid = some_other_transaction_context->snapshot_commit_id();
-    auto lowest_active_snapshot_cid = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+    auto lowest_active_snapshot_cid = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
     EXPECT_TRUE(lowest_active_snapshot_cid && lowest_active_snapshot_cid <= blocker_snapshot_cid);
 
     // Make snapshot-cid inactive
     some_other_transaction_context = nullptr;
 
-    lowest_active_snapshot_cid = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+    lowest_active_snapshot_cid = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
     EXPECT_TRUE(!lowest_active_snapshot_cid || lowest_active_snapshot_cid > blocker_snapshot_cid);
   }
 
@@ -231,7 +231,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     // Kill a couple of commit IDs so that the third chunk is eligible for clean-up too. (so criterion 2 is fulfilled)
     for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
          ++transaction_idx) {
-      TransactionManager::get().new_transaction_context()->commit();
+      Hyrise::get().transaction_manager.new_transaction_context()->commit();
     }
   }
 
@@ -255,5 +255,5 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   validate_table();
 
   // (13) Unload the plugin
-  PluginManager::get().unload_plugin("MvccDeletePlugin");
+  Hyrise::get().plugin_manager.unload_plugin("MvccDeletePlugin");
 }

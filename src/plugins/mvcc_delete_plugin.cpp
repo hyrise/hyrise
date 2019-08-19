@@ -1,6 +1,5 @@
 #include "mvcc_delete_plugin.hpp"
 
-#include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/update.hpp"
@@ -35,7 +34,7 @@ void MvccDeletePlugin::stop() {
  */
 void MvccDeletePlugin::_logical_delete_loop() {
   // Check all tables
-  for (auto& [table_name, table] : StorageManager::get().tables()) {
+  for (auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
 
     // Check all chunks, except for the last one, which is currently used for insertions
@@ -62,7 +61,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
                               });
 
         const bool criterion2 =
-            highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= TransactionManager::get().last_commit_id();
+            highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= Hyrise::get().transaction_manager.last_commit_id();
 
         if (!criterion2) {
           continue;
@@ -101,7 +100,7 @@ void MvccDeletePlugin::_physical_delete_loop() {
     if (chunk->get_cleanup_commit_id().has_value()) {
       // Check whether there are still active transactions that might use the chunk
       bool conflicting_transactions = false;
-      auto lowest_snapshot_commit_id = TransactionManager::get().get_lowest_active_snapshot_commit_id();
+      auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
 
       if (lowest_snapshot_commit_id.has_value()) {
         conflicting_transactions = chunk->get_cleanup_commit_id().value() > lowest_snapshot_commit_id.value();
@@ -116,7 +115,7 @@ void MvccDeletePlugin::_physical_delete_loop() {
 }
 
 bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const ChunkID chunk_id) {
-  const auto& table = StorageManager::get().get_table(table_name);
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& chunk = table->get_chunk(chunk_id);
 
   Assert(chunk != nullptr, "Chunk does not exist. Logical Delete can not be applied.");
@@ -129,7 +128,7 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
 
-  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   auto gt = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
   gt->set_transaction_context(transaction_context);

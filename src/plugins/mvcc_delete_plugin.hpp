@@ -7,8 +7,8 @@
 #include <thread>
 
 #include "gtest/gtest_prod.h"
+#include "hyrise.hpp"
 #include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/singleton.hpp"
