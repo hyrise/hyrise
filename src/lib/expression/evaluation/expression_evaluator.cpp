@@ -1031,7 +1031,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                   auto matches = ExpressionEvaluator::Bool{0};
                   ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
                                           right_result.value(chunk_offset));
-                  if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                  if (matches != 0) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
                 }
               } else {
                 Fail("Argument types not compatible");
@@ -1053,11 +1053,11 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             } else {  // PredicateCondition::IsNotNull
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             }
           });
@@ -1077,7 +1077,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           result->as_view([&](const auto& result_view) {
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
-                result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             }
           });
@@ -1115,13 +1115,13 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       if (subquery_expression->is_correlated()) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           if ((subquery_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
-            result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
           }
         }
       } else {
         if ((subquery_result_tables.front()->row_count() > 0) ^ invert) {
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-            result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
           }
         }
       }

@@ -34,9 +34,6 @@ The original value is used to detect hash collisions.
 */
 template <typename T>
 struct PartitionedElement {
-  PartitionedElement() : row_id(NULL_ROW_ID), value(T()) {}
-  PartitionedElement(RowID row, T val) : row_id(row), value(val) {}
-
   RowID row_id;
   T value;
 };
@@ -68,8 +65,10 @@ class PosHashTable {
   using SmallPosList = boost::container::small_vector<RowID, 1>;
 
  public:
-  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
-      : _hash_table(max_size), _pos_lists(max_size), _mode(mode) {}
+  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)  // TODO explicitly test this
+      : _hash_table(), _pos_lists(max_size), _mode(mode) {
+    _hash_table.reserve(max_size);
+  }
 
   // For a value seen on the build side, add its row_id to the table
   template <typename InputType>
@@ -77,8 +76,8 @@ class PosHashTable {
     const auto casted_value = static_cast<HashedType>(value);
     const auto it = _hash_table.find(casted_value);
     if (it != _hash_table.end()) {
-      auto& pos_list = _pos_lists[it->second];
       if (_mode == JoinHashBuildMode::AllPositions) {
+        auto& pos_list = _pos_lists[it->second];
         pos_list.emplace_back(row_id);
       }
     } else {
@@ -95,15 +94,48 @@ class PosHashTable {
     for (auto& pos_list : _pos_lists) {
       pos_list.shrink_to_fit();
     }
+
+    if (_hash_table.size() <= 10) {
+      _values = std::vector<std::pair<HashedType, Offset>>{};
+      _values->reserve(_hash_table.size());
+      for (const auto& [value, offset] : _hash_table) {
+        _values->emplace_back(std::pair<HashedType, Offset>{value, offset});
+      }
+      _hash_table.clear();
+    } else {
+      _hash_table.shrink_to_fit();
+    }
   }
 
-  // For a value seen on the probe side, return an iterator into the matching values
+  // For a value seen on the probe side, return an iterator into the matching positions on the build side
   template <typename InputType>
   const std::vector<SmallPosList>::const_iterator find(const InputType& value) const {
     const auto casted_value = static_cast<HashedType>(value);
-    const auto it = _hash_table.find(casted_value);
-    if (it == _hash_table.end()) return end();
-    return _pos_lists.begin() + it->second;
+
+    if (!_values) {
+      const auto hash_table_iter = _hash_table.find(casted_value);
+      if (hash_table_iter == _hash_table.end()) return end();
+      return _pos_lists.begin() + hash_table_iter->second;
+    } else {
+      const auto values_iter =
+          std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value; });
+      if (values_iter == _values->end()) return end();
+      return _pos_lists.begin() + values_iter->second;
+    }
+  }
+
+  // For a value seen on the probe side, return whether it has been seen on the build side
+  template <typename InputType>
+  bool contains(const InputType& value) const {
+    const auto casted_value = static_cast<HashedType>(value);
+
+    if (!_values) {
+      return _hash_table.find(casted_value) != _hash_table.end();
+    } else {
+      const auto values_iter =
+          std::find_if(_values->begin(), _values->end(), [&](const auto& pair) { return pair.first == casted_value; });
+      return values_iter != _values->end();
+    }
   }
 
   const std::vector<SmallPosList>::const_iterator begin() const { return _pos_lists.begin(); }
@@ -114,6 +146,7 @@ class PosHashTable {
   HashTable _hash_table;
   std::vector<SmallPosList> _pos_lists;
   JoinHashBuildMode _mode;
+  std::optional<std::vector<std::pair<HashedType, Offset>>> _values{std::nullopt};
 };
 
 /*
@@ -213,16 +246,16 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
         using IterableType = typename decltype(it)::IterableType;
 
+        if (radix_bits == 0) {
+          // If we do not use partitioning, we will not increment the histogram counter in the loop, so we do it here.
+          histogram[0] = std::distance(it, end);
+        }
+
         while (it != end) {
           const auto& value = *it;
           ++it;
 
           if (!value.is_null() || retain_null_values) {
-            // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
-            // joins an information loss is possible when joining with longs that cannot be losslessly converted to
-            // double
-            const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
-
             /*
             For ReferenceSegments we do not use the RowIDs from the referenced tables.
             Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
@@ -239,11 +272,17 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
               if (value.is_null()) {
                 *null_value_bitvector_iterator = true;
               }
+              ++null_value_bitvector_iterator;
             }
 
-            const Hash radix = hashed_value & mask;
-            ++histogram[radix];
-            ++null_value_bitvector_iterator;
+            if (radix_bits > 0) {
+              // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
+              // joins an information loss is possible when joining with longs that cannot be losslessly converted to
+              // double
+              const Hash hashed_value = hash_function(static_cast<HashedType>(value.value()));
+              const Hash radix = hashed_value & mask;
+              ++histogram[radix];
+            }
           }
           // reference_chunk_offset is only used for ReferenceSegments
           if constexpr (is_reference_segment_iterable_v<IterableType>) {
@@ -253,7 +292,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       });
 
       if constexpr (std::is_same_v<Partition<T>, uninitialized_vector<PartitionedElement<T>>>) {  // NOLINT
-        // Because the vector is uninitialized, we need to manually fill up all slots that we did not use
+        // Because the vector is uninitialized, we need to manually fill up all slots that we did not use because the
+        // input values were NULL.
         auto output_offset_end = chunk_id < chunk_offsets.size() - 1 ? chunk_offsets[chunk_id + 1] : elements->size();
         while (output_iterator != elements->begin() + output_offset_end) {
           *(output_iterator++) = PartitionedElement<T>{};
@@ -656,13 +696,14 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
 
       if (hash_tables[current_partition_id]) {
         // Valid hash table found, so there is at least one match in this partition
+        const auto& hash_table = hash_tables[current_partition_id].value();
 
         // Accessors are not thread-safe, so we create one evaluator per job
         MultiPredicateJoinEvaluator multi_predicate_join_evaluator(build_table, probe_table, mode,
                                                                    secondary_join_predicates);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
-          auto& probe_column_element = partition[partition_offset];
+          const auto& probe_column_element = partition[partition_offset];
 
           if constexpr (mode == JoinMode::Semi) {
             // NULLs on the probe side are never emitted
@@ -685,15 +726,19 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
           }
 
           auto any_build_column_value_matches = false;
-          const auto& hash_table = hash_tables[current_partition_id].value();
-          const auto& primary_predicate_matching_rows =
-              hash_table.find(static_cast<HashedType>(probe_column_element.value));
 
-          if (primary_predicate_matching_rows != hash_table.end()) {
-            for (const auto& row_id : *primary_predicate_matching_rows) {
-              if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
-                any_build_column_value_matches = true;
-                break;
+          if (secondary_join_predicates.empty()) {
+            any_build_column_value_matches = hash_table.contains(static_cast<HashedType>(probe_column_element.value));
+          } else {
+            const auto primary_predicate_matching_rows =
+                hash_table.find(static_cast<HashedType>(probe_column_element.value));
+
+            if (primary_predicate_matching_rows != hash_table.end()) {
+              for (const auto& row_id : *primary_predicate_matching_rows) {
+                if (multi_predicate_join_evaluator.satisfies_all_predicates(row_id, probe_column_element.row_id)) {
+                  any_build_column_value_matches = true;
+                  break;
+                }
               }
             }
           }
