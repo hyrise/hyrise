@@ -33,11 +33,10 @@ std::string LQPColumnExpression::as_column_name() const {
     return mock_node->column_definitions()[column_reference.original_column_id()].second;
 
   } else if (column_reference.original_node()->type == LQPNodeType::StaticTable) {
-    // TODO
-    return "";
+    const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(column_reference.original_node());
+    return static_table_node->table->column_name(column_reference.original_column_id());
   } else {
-    // TODO
-    Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
+    Fail("Node type can not be referenced in LQPColumnExpressions");
   }
 }
 
@@ -58,7 +57,7 @@ DataType LQPColumnExpression::data_type() const {
            "ColumnID out of range");
     return static_table_node->table->column_definitions()[column_reference.original_column_id()].data_type;
   } else {
-    Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
+    Fail("Node type can not be referenced in LQPColumnExpressions");
   }
 }
 
@@ -74,7 +73,7 @@ size_t LQPColumnExpression::_on_hash() const { return std::hash<LQPColumnReferen
 
 bool LQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   Fail(
-      "Should not be called. This should have been forwarded to StoredTable/MockNode by "
+      "Should not be called. This should have been forwarded to StoredTableNode/StaticTableNode/MockNode by "
       "AbstractExpression::is_nullable_on_lqp()");
 }
 

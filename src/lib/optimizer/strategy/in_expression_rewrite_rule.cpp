@@ -28,8 +28,6 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
     right_values.emplace_back(variant);
   }
 
-  // TODO Remove the old `IN (?)` rule
-
   const auto list_as_table =
       std::make_shared<Table>(TableColumnDefinitions{{"right_values", data_type, true}}, TableType::Data);
 

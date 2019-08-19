@@ -8,6 +8,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/get_table.hpp"
 #include "utils/load_table.hpp"
@@ -274,6 +275,28 @@ TEST_F(ExpressionTest, IsNullable) {
   // Division by zero could be nullable, thus division and modulo are always nullable
   EXPECT_TRUE(div_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_TRUE(mod_(1, 2)->is_nullable_on_lqp(*dummy_lqp));
+}
+
+TEST_F(ExpressionTest, StaticTableNode) {
+  {
+    const auto static_table_node = StaticTableNode::make(table_int_float);
+    const auto col_a = lqp_column_({static_table_node}, ColumnID{0});
+    const auto col_b = lqp_column_({static_table_node}, ColumnID{1});
+    EXPECT_EQ(col_a->as_column_name(), "a");
+    EXPECT_EQ(col_a->data_type(), DataType::Int);
+    EXPECT_EQ(col_a->is_nullable_on_lqp(static_table_node), false);
+    EXPECT_EQ(col_b->as_column_name(), "b");
+    EXPECT_EQ(col_b->data_type(), DataType::Float);
+    EXPECT_EQ(col_b->is_nullable_on_lqp(static_table_node), false);
+  }
+
+  {
+    const auto static_table_node = StaticTableNode::make(table_int_float_with_null);
+    const auto col_a = lqp_column_({static_table_node}, ColumnID{0});
+    EXPECT_EQ(col_a->as_column_name(), "a");
+    EXPECT_EQ(col_a->data_type(), DataType::Int);
+    EXPECT_EQ(col_a->is_nullable_on_lqp(static_table_node), true);
+  }
 }
 
 }  // namespace opossum
