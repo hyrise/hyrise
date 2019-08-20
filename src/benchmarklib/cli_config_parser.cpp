@@ -7,7 +7,6 @@
 
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"
-#include "utils/null_streambuf.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
