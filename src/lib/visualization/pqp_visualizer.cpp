@@ -97,8 +97,8 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
   if (const auto& output = from->get_output()) {
     std::stringstream stream;
 
-    stream << std::to_string(output->row_count()) + " row(s)\n";
-    stream << std::to_string(output->chunk_count()) + " chunk(s)\n";
+    stream << std::to_string(output->row_count()) + " row(s)/";
+    stream << std::to_string(output->chunk_count()) + " chunk(s)/";
     stream << format_bytes(output->estimate_memory_usage());
 
     info.label = stream.str();
