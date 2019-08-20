@@ -1,6 +1,6 @@
 #include "benchmark/benchmark.h"
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
@@ -13,7 +13,7 @@ namespace opossum {
 static void BM_TPCHTableGenerator(benchmark::State& state) {  // NOLINT
   for (auto _ : state) {
     TPCHTableGenerator(0.5f, 1000).generate_and_store();
-    StorageManager::reset();
+    Hyrise::reset();
   }
 }
 BENCHMARK(BM_TPCHTableGenerator);

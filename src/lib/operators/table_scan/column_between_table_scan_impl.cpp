@@ -23,8 +23,8 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
                                                        const AllTypeVariant& right_value,
                                                        PredicateCondition predicate_condition)
     : AbstractDereferencedColumnTableScanImpl(in_table, column_id, predicate_condition),
-      _left_value{left_value},
-      _right_value{right_value} {
+      left_value{left_value},
+      right_value{right_value} {
   const auto column_data_type = in_table->column_data_type(column_id);
   Assert(column_data_type == data_type_from_all_type_variant(left_value), "Type of lower bound has to match column");
   Assert(column_data_type == data_type_from_all_type_variant(right_value), "Type of upper bound has to match column");
@@ -54,10 +54,10 @@ void ColumnBetweenTableScanImpl::_scan_generic_segment(const BaseSegment& segmen
     // ReferenceSegments are handled via position_filter
     if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
                   !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
-      auto typed_left_value = boost::get<ColumnDataType>(_left_value);
-      auto typed_right_value = boost::get<ColumnDataType>(_right_value);
+      auto typed_left_value = boost::get<ColumnDataType>(left_value);
+      auto typed_right_value = boost::get<ColumnDataType>(right_value);
 
-      with_between_comparator(_predicate_condition, [&](auto between_comparator_function) {
+      with_between_comparator(predicate_condition, [&](auto between_comparator_function) {
         auto between_comparator = [&](const auto& position) {
           return between_comparator_function(position.value(), typed_left_value, typed_right_value);
         };
@@ -73,17 +73,17 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
   ValueID lower_bound_value_id;
-  if (is_lower_inclusive_between(_predicate_condition)) {
-    lower_bound_value_id = segment.lower_bound(_left_value);
+  if (is_lower_inclusive_between(predicate_condition)) {
+    lower_bound_value_id = segment.lower_bound(left_value);
   } else {
-    lower_bound_value_id = segment.upper_bound(_left_value);
+    lower_bound_value_id = segment.upper_bound(left_value);
   }
 
   ValueID upper_bound_value_id;
-  if (is_upper_inclusive_between(_predicate_condition)) {
-    upper_bound_value_id = segment.upper_bound(_right_value);
+  if (is_upper_inclusive_between(predicate_condition)) {
+    upper_bound_value_id = segment.upper_bound(right_value);
   } else {
-    upper_bound_value_id = segment.lower_bound(_right_value);
+    upper_bound_value_id = segment.lower_bound(right_value);
   }
 
   auto attribute_vector_iterable = create_iterable_from_attribute_vector(segment);

@@ -27,12 +27,12 @@ class TPCCTest : public BaseTest {
       const auto generated_table = table_info.table;
       auto isolated_table =
           std::make_shared<Table>(generated_table->column_definitions(), TableType::Data, std::nullopt, UseMvcc::Yes);
-      StorageManager::get().add_table(table_name, isolated_table);
+      Hyrise::get().storage_manager.add_table(table_name, isolated_table);
 
       auto table_wrapper = std::make_shared<TableWrapper>(generated_table);
       table_wrapper->execute();
       auto insert = std::make_shared<Insert>(table_name, table_wrapper);
-      auto transaction_context = TransactionManager::get().new_transaction_context();
+      auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
       insert->set_transaction_context(transaction_context);
       insert->execute();
       transaction_context->commit();
@@ -53,7 +53,7 @@ class TPCCTest : public BaseTest {
 
   void verify_table_sizes(const std::unordered_map<std::string, size_t>& sizes) {
     for (const auto& [table_name, size] : sizes) {
-      auto transaction_context = TransactionManager::get().new_transaction_context();
+      auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
       const auto table = get_validated(table_name, transaction_context);
 
       if (table_name == "ORDER_LINE" && size == 0) {
@@ -87,7 +87,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTest::tables;
 TEST_F(TPCCTest, InitialTables) { verify_table_sizes(initial_sizes); }
 
 TEST_F(TPCCTest, Delivery) {
-  auto old_transaction_context = TransactionManager::get().new_transaction_context();
+  auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   const auto old_time = time(nullptr);
 
   BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
@@ -194,8 +194,8 @@ TEST_F(TPCCTest, Delivery) {
 }
 
 TEST_F(TPCCTest, NewOrder) {
-  auto old_transaction_context = TransactionManager::get().new_transaction_context();
-  const auto old_order_line_size = static_cast<int>(StorageManager::get().get_table("ORDER_LINE")->row_count());
+  auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+  const auto old_order_line_size = static_cast<int>(Hyrise::get().storage_manager.get_table("ORDER_LINE")->row_count());
   const auto old_time = time(nullptr);
 
   BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
@@ -245,13 +245,13 @@ TEST_F(TPCCTest, NewOrder) {
   verify_table_sizes(new_sizes);
 
   // Verify NEW_ORDER entry
-  const auto new_order_row = StorageManager::get().get_table("NEW_ORDER")->get_row(new_sizes["NEW_ORDER"] - 1);
+  const auto new_order_row = Hyrise::get().storage_manager.get_table("NEW_ORDER")->get_row(new_sizes["NEW_ORDER"] - 1);
   EXPECT_EQ(new_order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});
   EXPECT_EQ(new_order_row[1], AllTypeVariant{new_order.d_id});
   EXPECT_EQ(new_order_row[2], AllTypeVariant{new_order.w_id});
 
   // Verify ORDER entry
-  const auto order_row = StorageManager::get().get_table("ORDER")->get_row(new_sizes["ORDER"] - 1);
+  const auto order_row = Hyrise::get().storage_manager.get_table("ORDER")->get_row(new_sizes["ORDER"] - 1);
   EXPECT_EQ(order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});
   EXPECT_EQ(order_row[1], AllTypeVariant{new_order.d_id});
   EXPECT_EQ(order_row[2], AllTypeVariant{new_order.w_id});
@@ -264,7 +264,7 @@ TEST_F(TPCCTest, NewOrder) {
   // VERIFY ORDER_LINE entries
   for (auto line_idx = size_t{0}; line_idx < order_lines.size(); ++line_idx) {
     const auto row_idx = new_sizes["ORDER_LINE"] - order_lines.size() + line_idx;
-    const auto order_line_row = StorageManager::get().get_table("ORDER_LINE")->get_row(row_idx);
+    const auto order_line_row = Hyrise::get().storage_manager.get_table("ORDER_LINE")->get_row(row_idx);
     EXPECT_EQ(order_line_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});
     EXPECT_EQ(order_line_row[1], AllTypeVariant{new_order.d_id});
     EXPECT_EQ(order_line_row[2], AllTypeVariant{new_order.w_id});
@@ -292,7 +292,7 @@ TEST_F(TPCCTest, NewOrderUnusedOrderId) {
   // TPC-C transactions with simulated user input errors are still counted as successful
   EXPECT_TRUE(new_order.execute());
 
-  auto new_transaction_context = TransactionManager::get().new_transaction_context();
+  auto new_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   // None of the tables should have been visibly modified
   for (const auto& [table_name, table_info] : tables) {

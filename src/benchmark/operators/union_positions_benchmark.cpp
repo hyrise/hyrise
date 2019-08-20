@@ -53,7 +53,7 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_
 
   TableColumnDefinitions column_definitions;
   for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
-    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
+    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int, false);
   }
   auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
@@ -89,7 +89,7 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
   TableColumnDefinitions column_definitions;
 
   for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
-    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
+    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int, false);
   }
   auto referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
 

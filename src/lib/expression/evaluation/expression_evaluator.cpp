@@ -1031,7 +1031,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                   auto matches = ExpressionEvaluator::Bool{0};
                   ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
                                           right_result.value(chunk_offset));
-                  if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                  if (matches != 0) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
                 }
               } else {
                 Fail("Argument types not compatible");
@@ -1053,11 +1053,11 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             } else {  // PredicateCondition::IsNotNull
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             }
           });
@@ -1077,7 +1077,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           result->as_view([&](const auto& result_view) {
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
-                result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             }
           });
@@ -1115,13 +1115,13 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       if (subquery_expression->is_correlated()) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           if ((subquery_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
-            result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
           }
         }
       } else {
         if ((subquery_result_tables.front()->row_count() > 0) ^ invert) {
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-            result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
           }
         }
       }
@@ -1362,6 +1362,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
 
     } else {
       segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
+        DebugAssert(!position.is_null(), "Encountered NULL value in non-nullable column");
         values[chunk_offset] = position.value();
         ++chunk_offset;
       });
@@ -1526,8 +1527,12 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     if (table->column_is_nullable(ColumnID{0})) {
       result_nulls.resize(table->row_count());
 
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-        const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
+        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+        const auto& result_segment = *chunk->get_segment(ColumnID{0});
         segment_iterate<Result>(result_segment, [&](const auto& position) {
           if (position.is_null()) {
             result_nulls[chunk_offset] = true;
@@ -1538,8 +1543,12 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
         });
       }
     } else {
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-        const auto& result_segment = *table->get_chunk(chunk_id)->get_segment(ColumnID{0});
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
+        Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+        const auto& result_segment = *chunk->get_segment(ColumnID{0});
         segment_iterate<Result>(result_segment, [&](const auto& position) {
           result_values[chunk_offset] = position.value();
           ++chunk_offset;

@@ -86,6 +86,7 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    hyrise.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
@@ -564,6 +565,8 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/lossless_predicate_cast.cpp
+    utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
     utils/null_streambuf.cpp
     utils/null_streambuf.hpp

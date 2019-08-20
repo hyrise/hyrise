@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 
 namespace opossum {
 
@@ -24,11 +24,11 @@ void DropView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 
 std::shared_ptr<const Table> DropView::_on_execute() {
   // If IF EXISTS is not set and the view is not found, StorageManager throws an exception
-  if (!if_exists || StorageManager::get().has_view(view_name)) {
-    StorageManager::get().drop_view(view_name);
+  if (!if_exists || Hyrise::get().storage_manager.has_view(view_name)) {
+    Hyrise::get().storage_manager.drop_view(view_name);
   }
 
-  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
+  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }
 
 }  // namespace opossum

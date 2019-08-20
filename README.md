@@ -8,6 +8,16 @@ This is the repository for the current Hyrise version, which has been rewritten 
 
 Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
 
+## Supported Benchmarks
+We support a number of benchmarks out of the box. This makes it easy to generate performance numbers without having to set up the data generation, loading CSVs, and finding a query runner. You can run them using the `./hyriseBenchmark*` binaries.
+
+| Benchmark  | Notes                                                                                                                    |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| TPC-C      | In development, no proper optimization done yet                                                                          |
+| TPC-DS     | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpcds) |
+| TPC-H      | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpch)  |
+| Join Order |                                                                                                                          |
+
 # Getting started
 
 *Have a look at our [contributor guidelines](CONTRIBUTING.md)*.

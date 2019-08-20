@@ -16,6 +16,7 @@
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -32,7 +33,6 @@
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/storage_manager.hpp"
 #include "types.hpp"
 
 using namespace std::string_literals;  // NOLINT
@@ -235,10 +235,10 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         // COUNT(*)
         DebugAssert(aggregate_expression->aggregate_function == AggregateFunction::Count,
                     "Only the aggregate function COUNT can have no arguments");
-        // JitAggregate requires one value for each aggregate function. This value is ignored for COUNT so that the
-        // first value in the tuple can be used.
-        const size_t tuple_index{0};
-        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), {DataType::Long, false, tuple_index},
+        // JitAggregate requires one value for each aggregate function. Since COUNT(*) does not specify a value, a
+        // constant value is used.
+        auto constant_value = read_tuples->add_literal_value(AllTypeVariant{0});
+        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), constant_value,
                                         aggregate_expression->aggregate_function);
       } else {
         const auto jit_expression =

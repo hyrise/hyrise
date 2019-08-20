@@ -60,10 +60,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    */
   auto output_chunk_segments = std::vector<Segments>(input_table.chunk_count());
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
-    auto output_segments = Segments{expressions.size()};
-
+  const auto chunk_count_input_table = input_table.chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);
+    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
+
+    auto output_segments = Segments{expressions.size()};
 
     ExpressionEvaluator evaluator(input_table_left(), chunk_id, uncorrelated_subquery_results);
 
@@ -96,11 +98,14 @@ std::shared_ptr<const Table> Projection::_on_execute() {
                                     column_is_nullable[column_id]);
   }
 
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{input_table.chunk_count()};
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count_input_table};
 
-  for (auto chunk_id = ChunkID{0}; chunk_id < input_table.chunk_count(); ++chunk_id) {
-    output_chunks[chunk_id] = std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]),
-                                                      input_table.get_chunk(chunk_id)->mvcc_data());
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_input_table; ++chunk_id) {
+    const auto input_chunk = input_table.get_chunk(chunk_id);
+    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
+
+    output_chunks[chunk_id] =
+        std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
   }
 
   return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),

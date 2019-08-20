@@ -26,9 +26,9 @@ class EncodingConfig {
 
   static EncodingConfig unencoded();
 
-  const SegmentEncodingSpec default_encoding_spec;
-  const DataTypeEncodingMapping type_encoding_mapping;
-  const TableSegmentEncodingMapping custom_encoding_mapping;
+  SegmentEncodingSpec default_encoding_spec;
+  DataTypeEncodingMapping type_encoding_mapping;
+  TableSegmentEncodingMapping custom_encoding_mapping;
 
   static SegmentEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
                                                         const std::string& compression_str);

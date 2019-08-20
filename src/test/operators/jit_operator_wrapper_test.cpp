@@ -18,7 +18,7 @@ namespace opossum {
 class JitOperatorWrapperTest : public BaseTest {
  protected:
   void SetUp() override {
-    _empty_table = Table::create_dummy_table({{"a", DataType::Int}});
+    _empty_table = Table::create_dummy_table({{"a", DataType::Int, false}});
     _empty_table_wrapper = std::make_shared<TableWrapper>(_empty_table);
     _empty_table_wrapper->execute();
     _int_table = load_table("resources/test_data/tbl/10_ints.tbl", 5);

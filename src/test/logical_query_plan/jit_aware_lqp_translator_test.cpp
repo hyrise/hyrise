@@ -30,8 +30,8 @@ class JitAwareLQPTranslatorTest : public BaseTest {
     const auto int_int_int_table = load_table("resources/test_data/tbl/int_int_int.tbl");
     const auto int_float_null_table = load_table("resources/test_data/tbl/int_float_null_sorted_asc.tbl");
 
-    StorageManager::get().add_table("table_a", int_int_int_table);
-    StorageManager::get().add_table("table_b", int_float_null_table);
+    Hyrise::get().storage_manager.add_table("table_a", int_int_int_table);
+    Hyrise::get().storage_manager.add_table("table_b", int_float_null_table);
 
     stored_table_node_a = std::make_shared<StoredTableNode>("table_a");
     stored_table_node_a2 = std::make_shared<StoredTableNode>("table_a");
@@ -543,7 +543,7 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
 
   ASSERT_EQ(aggregate_columns[5].column_name, "COUNT(*)");
   ASSERT_EQ(aggregate_columns[5].function, AggregateFunction::Count);
-  ASSERT_EQ(aggregate_columns[5].tuple_entry.tuple_index, 0u);
+  ASSERT_EQ(aggregate_columns[5].tuple_entry.tuple_index, 3u);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, LimitOperator) {
@@ -656,7 +656,7 @@ TEST_F(JitAwareLQPTranslatorTest, IgnoresValueIDExpressions) {
     // Predicate condition does not allow a comparison on value ids for (not) like and (not) in
     const auto string_table = load_table("resources/test_data/tbl/string.tbl");
     ChunkEncoder::encode_all_chunks(string_table);
-    StorageManager::get().add_table("string_table", string_table);
+    Hyrise::get().storage_manager.add_table("string_table", string_table);
     const auto stored_table = StoredTableNode::make("string_table");
     const auto col_a = stored_table->get_column("a");
 

@@ -29,9 +29,17 @@ std::shared_ptr<const Table> Product::_on_execute() {
   }
 
   auto output = std::make_shared<Table>(column_definitions, TableType::References);
+  auto chunk_count_left_table = input_table_left()->chunk_count();
+  auto chunk_count_right_table = input_table_right()->chunk_count();
 
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
+    const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
+    Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
+      const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
+      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+
       _add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
     }
   }

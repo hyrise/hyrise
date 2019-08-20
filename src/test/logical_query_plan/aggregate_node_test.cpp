@@ -8,7 +8,6 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "types.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

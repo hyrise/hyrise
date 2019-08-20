@@ -1,6 +1,6 @@
 #include "abstract_tpcc_procedure.hpp"
 
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {
@@ -9,7 +9,7 @@ AbstractTPCCProcedure::AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor)
   PerformanceWarning(
       "The TPC-C support is in a very early stage. Indexes are not used and even the most obvious optimizations are "
       "not done yet.");
-  _transaction_context = TransactionManager::get().new_transaction_context();
+  _transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   _sql_executor.transaction_context = _transaction_context;
 }
 

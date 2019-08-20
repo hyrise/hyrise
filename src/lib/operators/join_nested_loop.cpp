@@ -136,16 +136,24 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   auto left_matches_by_chunk = std::vector<std::vector<bool>>(left_table->chunk_count());
 
   auto right_matches_by_chunk = std::vector<std::vector<bool>>(right_table->chunk_count());
-  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-    right_matches_by_chunk[chunk_id_right].resize(right_table->get_chunk(chunk_id_right)->size());
+  const auto chunk_count_right = right_table->chunk_count();
+  for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
+    const auto chunk_right = right_table->get_chunk(chunk_id_right);
+    Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+
+    right_matches_by_chunk[chunk_id_right].resize(chunk_right->size());
   }
 
   auto secondary_predicate_evaluator =
       MultiPredicateJoinEvaluator{*left_table, *right_table, _mode, maybe_flipped_secondary_predicates};
 
   // Scan all chunks from left input
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < left_table->chunk_count(); ++chunk_id_left) {
-    auto segment_left = left_table->get_chunk(chunk_id_left)->get_segment(left_column_id);
+  const auto chunk_count_left = left_table->chunk_count();
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left; ++chunk_id_left) {
+    const auto chunk_left = left_table->get_chunk(chunk_id_left);
+    Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+
+    auto segment_left = chunk_left->get_segment(left_column_id);
 
     std::vector<bool> left_matches;
 
@@ -153,8 +161,11 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
       left_matches.resize(segment_left->size());
     }
 
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      const auto segment_right = right_table->get_chunk(chunk_id_right)->get_segment(right_column_id);
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
+      const auto chunk_right = right_table->get_chunk(chunk_id_right);
+      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
+
+      const auto segment_right = chunk_right->get_segment(right_column_id);
 
       JoinParams params{*pos_list_left,
                         *pos_list_right,
@@ -185,13 +196,15 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   // For Full Outer we need to add all unmatched rows for the right side.
   // Unmatched rows on the left side are already added in the main loop above
   if (_mode == JoinMode::FullOuter) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      const auto chunk_size = right_table->get_chunk(chunk_id_right)->size();
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right; ++chunk_id_right) {
+      const auto chunk_right = right_table->get_chunk(chunk_id_right);
+      Assert(chunk_right, "Did not expect deleted chunk here.");  // see #1686
 
+      const auto chunk_size = chunk_right->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (!right_matches_by_chunk[chunk_id_right][chunk_offset]) {
           pos_list_left->emplace_back(NULL_ROW_ID);
-          pos_list_right->emplace_back(chunk_id_right, chunk_offset);
+          pos_list_right->emplace_back(RowID{chunk_id_right, chunk_offset});
         }
       }
     }
@@ -202,11 +215,13 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   if (is_semi_or_anti_join) {
     const auto invert = _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < left_table->chunk_count(); ++chunk_id) {
-      const auto chunk_size = left_table->get_chunk(chunk_id)->size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_left; ++chunk_id) {
+      const auto chunk_left = left_table->get_chunk(chunk_id);
+      Assert(chunk_left, "Did not expect deleted chunk here.");  // see #1686
+      const auto chunk_size = chunk_left->size();
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         if (left_matches_by_chunk[chunk_id][chunk_offset] ^ invert) {
-          pos_list_left->emplace_back(chunk_id, chunk_offset);
+          pos_list_left->emplace_back(RowID{chunk_id, chunk_offset});
         }
       }
     }

@@ -5,7 +5,6 @@
 
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
-#include "utils/singleton.hpp"
 #include "utils/string_utils.hpp"
 
 namespace opossum {
@@ -18,7 +17,8 @@ struct PluginHandleWrapper {
   AbstractPlugin* plugin;
 };
 
-class PluginManager : public Singleton<PluginManager> {
+class PluginManager : public Noncopyable {
+  friend class HyriseTest;
   friend class PluginManagerTest;
   friend class SingletonTest;
 
@@ -28,16 +28,10 @@ class PluginManager : public Singleton<PluginManager> {
 
   ~PluginManager();
 
-  // Deletes the entire PluginManager and creates a new one, used especially in tests.
-  // This can lead to a lot of issues if there are still running tasks / threads that
-  // want to access a resource. You should be very sure that this is what you want.
-  // Have a look at base_test.hpp to see the correct order of resetting things.
-  static void reset();
-
  protected:
-  friend class Singleton;
+  PluginManager() = default;
+  friend class Hyrise;
 
-  PluginManager() {}
   const PluginManager& operator=(const PluginManager&) = delete;
   PluginManager& operator=(PluginManager&&) = default;
 
