@@ -1,6 +1,7 @@
 #include "predicate_placement_rule.hpp"
 #include "all_parameter_variant.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
@@ -68,6 +69,73 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->right_input());
 
           if (!move_to_left && !move_to_right) {
+            // TODO Doc
+            // TODO Move to own function
+
+            // (l1 AND r2) OR (l2 AND r1) -> push down l1 OR l2 to left, r1 OR r2 to right
+            // (l1 AND u1) OR (l2 AND u2) -> push down l1 OR l2 to left
+            // (l1 AND u1) OR (r2 AND u2) -> push down nothing
+            // (l1 AND l2 AND u1) ...     -> abort, we cannot find a condition for the right side
+
+            std::vector<std::shared_ptr<AbstractExpression>> left_disjunction{};
+            std::vector<std::shared_ptr<AbstractExpression>> right_disjunction{};
+
+            // Tracks whether we had to abort the search for one of the sides as an inner_conjunction was found that
+            // did not cover the side.
+            auto aborted_left_side = false;
+            auto aborted_right_side = false;
+
+            const auto outer_disjunction = flatten_logical_expressions(push_down_node->predicate(), LogicalOperator::Or);
+            for (const auto& expression_in_disjunction : outer_disjunction) {
+              std::cout << expression_in_disjunction->as_column_name() << std::endl;
+
+              std::vector<std::shared_ptr<AbstractExpression>> left_conjunction{};
+              std::vector<std::shared_ptr<AbstractExpression>> right_conjunction{};
+
+              const auto inner_conjunction = flatten_logical_expressions(expression_in_disjunction, LogicalOperator::And);
+              for (const auto& expression_in_conjunction : inner_conjunction) {
+                std::cout << "  " << expression_in_conjunction->as_column_name() << ": ";
+                if (expression_evaluable_on_lqp(expression_in_conjunction, *join_node->left_input()) && !aborted_left_side) {
+                  left_conjunction.emplace_back(expression_in_conjunction);
+                  std::cout << "l";
+                }
+                if (expression_evaluable_on_lqp(expression_in_conjunction, *join_node->right_input()) && !aborted_right_side) {
+                  right_conjunction.emplace_back(expression_in_conjunction);
+                  std::cout << "r";
+                }
+                std::cout << std::endl;
+              }
+
+              if (!left_conjunction.empty()) {
+                left_disjunction.emplace_back(inflate_logical_expressions(left_conjunction, LogicalOperator::And));
+              } else {
+                aborted_left_side = true;
+                left_disjunction.clear();
+              }
+              if (!right_conjunction.empty()) {
+                right_disjunction.emplace_back(inflate_logical_expressions(right_conjunction, LogicalOperator::And));
+              } else {
+                aborted_right_side = true;
+                right_disjunction.clear();
+              }
+            }
+
+            if (!left_disjunction.empty()) {
+              Assert(!aborted_left_side, ""); // TODO
+              const auto left_expression = inflate_logical_expressions(left_disjunction, LogicalOperator::Or);
+              std::cout << "Push to left: " << left_expression->as_column_name() << std::endl;
+              const auto pre_filter_predicate_node = PredicateNode::make(left_expression);
+              left_push_down_nodes.emplace_back(pre_filter_predicate_node);
+            }
+
+            if (!right_disjunction.empty()) {
+              Assert(!aborted_right_side, ""); // TODO
+              const auto right_expression = inflate_logical_expressions(right_disjunction, LogicalOperator::Or);
+              std::cout << "Push to right: " << right_expression->as_column_name() << std::endl;
+              const auto pre_filter_predicate_node = PredicateNode::make(right_expression);
+              right_push_down_nodes.emplace_back(pre_filter_predicate_node);
+            }
+
             _insert_nodes(current_node, input_side, {push_down_node});
           }
 
