@@ -69,7 +69,7 @@ AbstractLQPNode::~AbstractLQPNode() {
 }
 
 size_t AbstractLQPNode::hash() const {
-  auto hash = boost::hash_value(static_cast<LQPNodeType>(type));
+  auto hash = boost::hash_value(type);
   for (const auto& expression : node_expressions) {
     boost::hash_combine(hash, expression->hash());
   }

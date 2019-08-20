@@ -35,7 +35,7 @@ bool AbstractExpression::operator==(const AbstractExpression& other) const {
 bool AbstractExpression::operator!=(const AbstractExpression& other) const { return !operator==(other); }
 
 size_t AbstractExpression::hash() const {
-  auto hash = boost::hash_value(static_cast<ExpressionType>(type));
+  auto hash = boost::hash_value(type);
   for (const auto& argument : arguments) {
     boost::hash_combine(hash, argument->hash());
   }
