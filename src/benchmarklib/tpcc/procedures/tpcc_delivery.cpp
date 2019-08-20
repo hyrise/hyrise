@@ -16,7 +16,7 @@ TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_e
   ol_delivery_d = static_cast<int32_t>(std::time(nullptr));
 }
 
-bool TPCCDelivery::execute() {
+bool TPCCDelivery::_on_execute() {
   for (auto d_id = 1; d_id <= 10; ++d_id) {
     // TODO(anyone): This could be optimized by querying only once and grouping by NO_D_ID
     const auto new_order_select_pair =

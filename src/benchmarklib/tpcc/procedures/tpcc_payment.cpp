@@ -40,7 +40,7 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
   h_date = static_cast<int32_t>(std::time(nullptr));
 }
 
-bool TPCCPayment::execute() {
+bool TPCCPayment::_on_execute() {
   SQLPipelineStatus pipeline_status;
 
   // Retrieve information about the warehouse

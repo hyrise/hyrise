@@ -387,12 +387,12 @@ TEST_F(TPCCTest, OrderStatusCustomerById) {
   // We have covered customer selection by name in PaymentCustomerByName
   // As Order-Status has no externally visible changes, we create a new order and test for correct return values
 
-  BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
-
-  auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
+  BenchmarkSQLExecutor new_order_sql_executor{false, nullptr, std::nullopt};
+  auto new_order = TPCCNewOrder{NUM_WAREHOUSES, new_order_sql_executor};
   EXPECT_TRUE(new_order.execute());
 
-  auto order_status = TPCCOrderStatus{NUM_WAREHOUSES, sql_executor};
+  BenchmarkSQLExecutor order_status_sql_executor{false, nullptr, std::nullopt};
+  auto order_status = TPCCOrderStatus{NUM_WAREHOUSES, order_status_sql_executor};
   order_status.w_id = new_order.w_id;
   order_status.d_id = new_order.d_id;
   order_status.select_customer_by_name = false;

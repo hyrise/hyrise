@@ -11,7 +11,7 @@ class TPCCDelivery : public AbstractTPCCProcedure {
  public:
   TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
-  [[nodiscard]] bool execute() override;
+  [[nodiscard]] bool _on_execute() override;
 
   // Values generated BEFORE the procedure is executed:
   int32_t w_id;           // Home warehouse ID    [1..num_warehouses]

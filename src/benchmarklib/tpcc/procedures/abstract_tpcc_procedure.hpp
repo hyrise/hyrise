@@ -13,22 +13,23 @@ namespace opossum {
 class AbstractTPCCProcedure {
  public:
   explicit AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor);
-  virtual ~AbstractTPCCProcedure();
+  virtual ~AbstractTPCCProcedure() = default;
 
   AbstractTPCCProcedure(const AbstractTPCCProcedure& other) = default;
   AbstractTPCCProcedure& operator=(const AbstractTPCCProcedure& other);
 
   // Executes the procedure; returns true if it was successful and false if a transaction conflict occurred
-  [[nodiscard]] virtual bool execute() = 0;
+  [[nodiscard]] bool execute();
 
  protected:
+  [[nodiscard]] virtual bool _on_execute() = 0;
+
   // As random values are generate during creation of the procedure, this is mostly done in a single thread, not in the
   // database worker's. As such, having a fixed seed for all thread-local random engines should not be an issue.
   inline static thread_local std::minstd_rand _random_engine{42};
   inline static thread_local TPCCRandomGenerator _tpcc_random_generator{42};
 
   BenchmarkSQLExecutor& _sql_executor;
-  std::shared_ptr<TransactionContext> _transaction_context;
 };
 
 }  // namespace opossum

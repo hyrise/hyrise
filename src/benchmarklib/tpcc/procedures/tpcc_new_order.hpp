@@ -8,7 +8,7 @@ class TPCCNewOrder : public AbstractTPCCProcedure {
  public:
   TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
-  [[nodiscard]] bool execute() override;
+  [[nodiscard]] bool _on_execute() override;
 
   static constexpr int INVALID_ITEM_ID = 222'222;
 

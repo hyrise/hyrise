@@ -48,7 +48,7 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
   o_entry_d = static_cast<int32_t>(std::time(nullptr));
 }
 
-bool TPCCNewOrder::execute() {
+bool TPCCNewOrder::_on_execute() {
   // Retrieve W_TAX, the warehouse tax rate
   const auto warehouse_select_pair =
       _sql_executor.execute(std::string{"SELECT W_TAX FROM WAREHOUSE WHERE W_ID = "} + std::to_string(w_id));

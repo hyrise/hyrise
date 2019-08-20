@@ -19,7 +19,7 @@ TPCCStockLevel::TPCCStockLevel(const int num_warehouses, BenchmarkSQLExecutor& s
   threshold = threshold_dist(_random_engine);
 }
 
-bool TPCCStockLevel::execute() {
+bool TPCCStockLevel::_on_execute() {
   // Retrieve next order ID
   const auto district_table_pair =
       _sql_executor.execute(std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} + std::to_string(w_id) +

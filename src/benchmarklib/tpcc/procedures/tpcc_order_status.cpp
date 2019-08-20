@@ -24,7 +24,7 @@ TPCCOrderStatus::TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor&
   }
 }
 
-bool TPCCOrderStatus::execute() {
+bool TPCCOrderStatus::_on_execute() {
   auto customer_table = std::shared_ptr<const Table>{};
   auto customer_id = int32_t{};
 

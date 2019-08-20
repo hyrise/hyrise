@@ -6,7 +6,7 @@ class TPCCStockLevel : public AbstractTPCCProcedure {
  public:
   TPCCStockLevel(const int num_warehouses, BenchmarkSQLExecutor& sql_executor);
 
-  [[nodiscard]] bool execute() override;
+  [[nodiscard]] bool _on_execute() override;
 
  protected:
   // Values generated BEFORE the procedure is executed:
