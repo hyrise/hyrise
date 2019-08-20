@@ -226,7 +226,7 @@ void CostModelCalibration::_export_segment_size_information() {
                 break;
               }
               case CompressedVectorType::SimdBp128: {
-                segment_size_csv_file << "SimdBp128,";
+                segment_size_csv_file << "SIMD-BP128,";
                 break;
               }
               default:
