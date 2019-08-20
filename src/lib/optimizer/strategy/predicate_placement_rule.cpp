@@ -70,12 +70,20 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
           if (!move_to_left && !move_to_right) {
             // TODO Doc
+            // For now, this is indiscriminate. For predicates that throw out only few rows, it might actually
+            // hurt the performance as the predicate will be evaluated twice. In case we see such a case, we could
+            // estimate the selectivity of the predicate and decide whether it is worth creating a pre-join reduction.
+            //
+            // A more complicated future optimization would be for the join sides to produce a discriminator column,
+            // telling us which of the condition(s) was true. This could save us from evaluating complex conditions
+            // twice. However, as (1) a predicate node cannot produce columns and (2) we do not have column types that
+            // hold multiple values, we will not address that any time soon.
             // TODO Move to own function
 
             // (l1 AND r2) OR (l2 AND r1) -> push down l1 OR l2 to left, r1 OR r2 to right
             // (l1 AND u1) OR (l2 AND u2) -> push down l1 OR l2 to left
             // (l1 AND u1) OR (r2 AND u2) -> push down nothing
-            // (l1 AND l2 AND u1) ...     -> abort, we cannot find a condition for the right side
+            // (l1 AND l2 AND u1) ...     -> abort, we cannot find a condition for the right side as `u1` can only be considered `true` for the left side
 
             std::vector<std::shared_ptr<AbstractExpression>> left_disjunction{};
             std::vector<std::shared_ptr<AbstractExpression>> right_disjunction{};
