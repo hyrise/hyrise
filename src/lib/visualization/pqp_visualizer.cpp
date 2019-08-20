@@ -97,13 +97,13 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
   if (const auto& output = from->get_output()) {
     std::stringstream stream;
 
-    stream << std::to_string(output->row_count()) + " row(s)/";
-    stream << std::to_string(output->chunk_count()) + " chunk(s)/";
+    stream << std::to_string(output->row_count()) + " row(s)\n";
+    stream << std::to_string(output->chunk_count()) + " chunk(s)\n";
     stream << format_bytes(output->estimate_memory_usage());
 
     info.label = stream.str();
 
-    info.pen_width = std::fmax(1, std::ceil(std::log10(output->row_count()) / 2));
+    info.pen_width = output->row_count();
   }
 
   _add_edge(from, to, info);
@@ -116,7 +116,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   if (op->get_output()) {
     auto total = op->performance_data().walltime;
     label += "\n\n" + format_duration(total);
-    info.pen_width = std::fmax(1, std::ceil(std::log10(total.count()) / 2));
+    info.pen_width = total.count();
   }
 
   info.label = label;
