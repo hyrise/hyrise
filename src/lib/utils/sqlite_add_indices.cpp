@@ -7,6 +7,7 @@
 #include "operators/print.hpp"
 
 #include "hyrise.hpp"
+#include "utils/meta_table_manager.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 
