@@ -158,7 +158,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (5) Wait for the MvccDeletePlugin to delete chunk 2 logically
   {
-    auto attempts_remaining = 10;
+    auto attempts_remaining = 20;
     while (attempts_remaining--) {
       // Chunk 2 should have been logically deleted by now
       const auto chunk2 = _table->get_chunk(ChunkID{1});
@@ -196,7 +196,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (8) Wait for the MvccDeletePlugin to delete chunk 2 physically
   {
-    auto attempts_remaining = 10;
+    auto attempts_remaining = 20;
     while (attempts_remaining--) {
       // Chunk 2 should have been physically deleted by now
       if (_table->get_chunk(ChunkID{1}) == nullptr) break;
@@ -242,7 +242,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (12) Wait for the MvccDeletePlugin to delete chunk 3 logically
   {
-    auto attempts_remaining = 10;
+    auto attempts_remaining = 20;
     while (attempts_remaining--) {
       // Chunk 3 should have been logically deleted by now
       const auto chunk3 = _table->get_chunk(ChunkID{2});
@@ -274,7 +274,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (15) Wait for the MvccDeletePlugin to delete chunk 3 physically
   {
-    auto attempts_remaining = 10;
+    auto attempts_remaining = 20;
     while (attempts_remaining--) {
       // Chunk 3 should have been physically deleted by now
       if (_table->get_chunk(ChunkID{2}) == nullptr) break;

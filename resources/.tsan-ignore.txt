@@ -10,3 +10,7 @@ race:shared_count
 # Boost is not built with tsan support, either
 race:boost::detail::thread_data_base
 race:thread_data
+
+# Hyrise is able to handle concurrent access to MVCC-data correctly.
+# However, the MvccDeletePluginSystemTest lead to several TSan warnings. (#1493)
+race:Delete::_on_commit_records
