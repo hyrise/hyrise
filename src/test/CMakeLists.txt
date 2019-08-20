@@ -55,8 +55,6 @@ set(
     logical_query_plan/mock_node_test.cpp
     logical_query_plan/predicate_node_test.cpp
     logical_query_plan/projection_node_test.cpp
-    logical_query_plan/show_columns_node_test.cpp
-    logical_query_plan/show_tables_node_test.cpp
     logical_query_plan/sort_node_test.cpp
     logical_query_plan/static_table_node_test.cpp
     logical_query_plan/stored_table_node_test.cpp
@@ -92,8 +90,6 @@ set(
     operators/maintenance/create_table_test.cpp
     operators/maintenance/drop_view_test.cpp
     operators/maintenance/drop_table_test.cpp
-    operators/maintenance/show_columns_test.cpp
-    operators/maintenance/show_tables_test.cpp
     operators/operator_deep_copy_test.cpp
     operators/operator_join_predicate_test.cpp
     operators/operator_scan_predicate_test.cpp
@@ -191,6 +187,7 @@ set(
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/lossless_predicate_cast_test.cpp
+    utils/meta_table_manager_test.cpp
     utils/plugin_manager_test.cpp
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp

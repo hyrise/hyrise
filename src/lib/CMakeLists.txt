@@ -141,10 +141,6 @@ set(
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
-    logical_query_plan/show_columns_node.cpp
-    logical_query_plan/show_columns_node.hpp
-    logical_query_plan/show_tables_node.cpp
-    logical_query_plan/show_tables_node.hpp
     logical_query_plan/sort_node.cpp
     logical_query_plan/sort_node.hpp
     logical_query_plan/static_table_node.cpp
@@ -228,10 +224,6 @@ set(
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-    operators/maintenance/show_columns.cpp
-    operators/maintenance/show_columns.hpp
-    operators/maintenance/show_tables.cpp
-    operators/maintenance/show_tables.hpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.cpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.hpp
     operators/operator_join_predicate.cpp
@@ -568,6 +560,8 @@ set(
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
+    utils/meta_table_manager.cpp
+    utils/meta_table_manager.hpp
     utils/null_streambuf.cpp
     utils/null_streambuf.hpp
     utils/pausable_loop_thread.cpp
