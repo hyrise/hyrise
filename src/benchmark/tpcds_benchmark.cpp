@@ -97,8 +97,7 @@ int main(int argc, char* argv[]) {
     query_generator->load_dedicated_expected_results(
         std::filesystem::path{"third_party/tpcds-result-reproduction/answer_sets_tbl"});
   }
-  auto table_generator =
-      std::make_unique<TpcdsTableGenerator>(scale_factor, config, "resources/benchmark/cached_binary_tables");
+  auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator),
                                           opossum::BenchmarkRunner::create_context(*config)};
   if (config->verify) {

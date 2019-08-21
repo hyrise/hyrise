@@ -36,9 +36,10 @@ extern "C" {
 #include <tpcds-kit/tools/w_web_site.h>
 }
 
-#include <benchmark_config.hpp>
-#include <operators/import_binary.hpp>
-#include <table_builder.hpp>
+#include "benchmark_config.hpp"
+#include "operators/import_binary.hpp"
+#include "table_builder.hpp"
+#include "utils/timer.hpp"
 
 namespace {
 using namespace opossum;  // NOLINT
@@ -257,60 +258,55 @@ const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_
 namespace opossum {
 
 TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
-    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)) {
+    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
 TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
-                                         const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                                         std::optional<std::filesystem::path> path_to_cache, int rng_seed)
-    : AbstractTableGenerator(benchmark_config), path_to_cache{std::move(path_to_cache)} {
+                                         const std::shared_ptr<BenchmarkConfig>& benchmark_config, int rng_seed)
+    : AbstractTableGenerator(benchmark_config), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
-  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
+  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
+
+  // try to load cached tables
+  const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
+      const auto table_name = table_file.path().stem();
+      auto timer = Timer{};
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+
+      auto table_info = BenchmarkTableInfo{};
+      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.loaded_from_binary = true;
+      table_info_by_name[table_name] = table_info;
+
+      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    }
+
+    return table_info_by_name;
+  }
 
   for (const auto& table_name : {"call_center", "catalog_page", "customer_address", "customer", "customer_demographics",
                                  "date_dim", "household_demographics", "income_band", "inventory", "item", "promotion",
                                  "reason", "ship_mode", "store", "time_dim", "warehouse", "web_page", "web_site"}) {
-    table_info_by_name[table_name] = BenchmarkTableInfo{};
-    auto& table_info = table_info_by_name[table_name];
-    table_info.binary_file_path = path_to_cache.value_or("") / (std::string{table_name} + ".bin");
-    if (path_to_cache.has_value() && std::filesystem::is_regular_file(table_info.binary_file_path.value())) {
-      std::cout << "loading " << table_name << " table from cache..." << std::endl;
-      table_info.table = ImportBinary::read_binary(table_info.binary_file_path.value());
-      table_info.loaded_from_binary = true;
-    } else {
-      std::cout << "generating " << table_name << " table..." << std::endl;
-      table_info.table = _generate_table(table_name);
-    }
+    table_info_by_name[table_name].table = _generate_table(table_name);
   }
 
   for (const auto& [sales_table_name, returns_table_name] : std::vector<std::pair<std::string, std::string>>{
            {"catalog_sales", "catalog_returns"}, {"store_sales", "store_returns"}, {"web_sales", "web_returns"}}) {
-    table_info_by_name[sales_table_name] = BenchmarkTableInfo{};
-    auto& sales_table_info = table_info_by_name[sales_table_name];
-    sales_table_info.binary_file_path = path_to_cache.value_or("") / (std::string{sales_table_name} + ".bin");
+    auto catalog_sales_and_returns = _generate_sales_and_returns_tables(sales_table_name);
+    table_info_by_name[sales_table_name].table = catalog_sales_and_returns.first;
+    table_info_by_name[returns_table_name].table = catalog_sales_and_returns.second;
+  }
 
-    table_info_by_name[returns_table_name] = BenchmarkTableInfo{};
-    auto& returns_table_info = table_info_by_name[returns_table_name];
-    returns_table_info.binary_file_path = path_to_cache.value_or("") / (std::string{returns_table_name} + ".bin");
-
-    if (path_to_cache.has_value() && std::filesystem::is_regular_file(sales_table_info.binary_file_path.value()) &&
-        std::filesystem::is_regular_file(returns_table_info.binary_file_path.value())) {
-      std::cout << "loading " << sales_table_name << " table from cache..." << std::endl;
-      sales_table_info.table = ImportBinary::read_binary(sales_table_info.binary_file_path.value());
-      sales_table_info.loaded_from_binary = true;
-
-      std::cout << "loading " << returns_table_name << " table from cache..." << std::endl;
-      returns_table_info.table = ImportBinary::read_binary(returns_table_info.binary_file_path.value());
-      returns_table_info.loaded_from_binary = true;
-    } else {
-      std::cout << "generating " << sales_table_name << " and " << returns_table_name << " tables..." << std::endl;
-      auto catalog_sales_and_returns = _generate_sales_and_returns_tables(sales_table_name);
-      sales_table_info.table = catalog_sales_and_returns.first;
-      returns_table_info.table = catalog_sales_and_returns.second;
+  if (_benchmark_config->cache_binary_tables) {
+    std::filesystem::create_directories(cache_directory);
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";
     }
   }
 

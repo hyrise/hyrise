@@ -98,7 +98,6 @@
     "quote": "\"",
     "reject_quoted_nonstrings": true,
     "null_handling": "null_string_as_value",
-    "unquoted_null_string_is_string": true,
     "rfc_mode": true,
     "separator": "|"
   }

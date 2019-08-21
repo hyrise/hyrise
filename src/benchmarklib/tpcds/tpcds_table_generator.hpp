@@ -33,7 +33,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   explicit TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                int rng_seed = 19620718);
   TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                      std::optional<std::filesystem::path> path_to_cache = {}, int rng_seed = 19620718);
+                      int rng_seed = 19620718);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
@@ -65,7 +65,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = std::numeric_limits<ds_key_t>::max()) const;
 
  private:
-  std::optional<std::filesystem::path> path_to_cache;
+  uint32_t _scale_factor;
 
   std::shared_ptr<Table> _generate_table(const std::string& table_name);
   std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> _generate_sales_and_returns_tables(

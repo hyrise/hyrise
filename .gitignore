@@ -42,4 +42,4 @@ cmake-build-*
 default.profdata
 default.profraw
 
-resources/benchmark/cached_binary_tables
+tpcds_cached_tables/
