@@ -9,6 +9,7 @@ namespace opossum {
 
 class AbstractExpression;
 class AbstractLQPNode;
+class JoinNode;
 
 // Predicate representation for Join operators consists of one column of each input side and a join predicate.
 struct OperatorJoinPredicate {

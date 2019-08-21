@@ -1,75 +1,43 @@
 #pragma once
 
+#include <atomic>
+#include <iostream>
 #include <memory>
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
-#include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
-#include "types.hpp"
 
 namespace opossum {
 
-class BaseColumnStatistics;
+class BaseAttributeStatistics;
+class Table;
 
 /**
- * Statistics about a table, with algorithms to perform cardinality estimations.
+ * Container for all cardinality estimation statistics gathered about a Table. Also used to represent the estimation of
+ * a temporary Table during Optimization.
  */
-class TableStatistics final {
+class TableStatistics {
  public:
-  // magic numbers below are taken from paper "Access path selection in a relational database management system",
-  // P. Griffiths Selinger, 1979
-  static constexpr auto DEFAULT_LIKE_SELECTIVITY = 0.1f;
-  static constexpr auto DEFAULT_OPEN_ENDED_SELECTIVITY = 1.f / 3.f;
-  // Made up magic number
-  static constexpr auto DEFAULT_DISJUNCTION_SELECTIVITY = 0.2f;
+  /**
+   * Creates statistics objects for cardinality estimation for all Columns in @param table. See implementation for
+   * which statistics objects are created.
+   */
+  static std::shared_ptr<TableStatistics> from_table(const Table& table);
 
-  TableStatistics(const TableType table_type, const float row_count,
-                  const std::vector<std::shared_ptr<const BaseColumnStatistics>>& column_statistics);
-  TableStatistics(const TableStatistics& table_statistics) = default;
+  TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& column_statistics,
+                  const Cardinality row_count);
 
   /**
-   * @defgroup Member access
-   * @{
+   * @return column_statistics[column_id]->data_type
    */
-  TableType table_type() const;
-  float row_count() const;
-  uint64_t approx_valid_row_count() const;
-  const std::vector<std::shared_ptr<const BaseColumnStatistics>>& column_statistics() const;
-  /** @} */
+  DataType column_data_type(const ColumnID column_id) const;
 
-  /**
-   * @defgroup Cardinality Estimations
-   * @{
-   */
-  TableStatistics estimate_predicate(const ColumnID column_id, const PredicateCondition predicate_condition,
-                                     const AllParameterVariant& value,
-                                     const std::optional<AllParameterVariant>& value2 = std::nullopt) const;
-
-  TableStatistics estimate_cross_join(const TableStatistics& right_table_statistics) const;
-
-  TableStatistics estimate_predicated_join(const TableStatistics& right_table_statistics, const JoinMode mode,
-                                           const ColumnIDPair column_ids,
-                                           const PredicateCondition predicate_condition) const;
-  TableStatistics estimate_disjunction(const TableStatistics& right_table_statistics) const;
-  /** @} */
-
-  // Increases the (approximate) count of invalid rows in the table (caused by deletes).
-  void increase_invalid_row_count(uint64_t count);
-
-  // Decreases the (approximate) count of invalid rows in the table (caused by deleted chunks).
-  void decrease_invalid_row_count(uint64_t count);
-
-  std::string description() const;
-
- private:
-  TableType _table_type;
-  float _row_count;
-  std::vector<std::shared_ptr<const BaseColumnStatistics>> _column_statistics;
-
-  // Stores the number of invalid (deleted) rows.
-  // This is currently not an atomic due to performance considerations.
-  // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
-  uint64_t _approx_invalid_row_count{0};
+  const std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics;
+  Cardinality row_count;
 };
+
+std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_statistics);
 
 }  // namespace opossum

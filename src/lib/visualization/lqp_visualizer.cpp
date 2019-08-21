@@ -10,12 +10,16 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "statistics/cardinality_estimator.hpp"
 
 namespace opossum {
 
 LQPVisualizer::LQPVisualizer() {
   // Set defaults for this visualizer
   _default_vertex.shape = "rectangle";
+
+  // We can guarantee the LQP never changes during visualization and thus avoid redundant estimations for subplans
+  _cardinality_estimator.guarantee_bottom_up_construction();
 }
 
 LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
@@ -80,7 +84,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   double pen_width;
 
   try {
-    row_count = from->get_statistics()->row_count();
+    row_count = _cardinality_estimator.estimate_cardinality(from);
     pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
   } catch (...) {
     // statistics don't exist for this edge
@@ -90,9 +94,9 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   if (from->left_input()) {
     try {
-      float input_count = from->left_input()->get_statistics()->row_count();
+      float input_count = _cardinality_estimator.estimate_cardinality(from->left_input());
       if (from->right_input()) {
-        input_count *= from->right_input()->get_statistics()->row_count();
+        input_count *= _cardinality_estimator.estimate_cardinality(from->right_input());
       }
       row_percentage = 100 * row_count / input_count;
     } catch (...) {

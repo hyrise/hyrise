@@ -8,11 +8,12 @@
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "statistics/table_statistics.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -31,6 +32,8 @@ constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
 void IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  DebugAssert(cost_estimator, "IndexScanRule requires cost estimator to be set");
+
   if (node->type == LQPNodeType::Predicate) {
     const auto& child = node->left_input();
 
@@ -69,11 +72,11 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   if (index_info.column_ids[0] != operator_predicate.column_id) return false;
 
-  const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
+  const auto row_count_table =
+      cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node->left_input());
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
 
-  const auto row_count_predicate =
-      predicate_node->derive_statistics_from(predicate_node->left_input(), nullptr)->row_count();
+  const auto row_count_predicate = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
   const float selectivity = row_count_predicate / row_count_table;
 
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
