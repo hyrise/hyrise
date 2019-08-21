@@ -53,6 +53,7 @@ struct CostModelFeatures : public AbstractFeatures {
 
 
   TableScanFeatures table_scan_features{};
+  JoinFeatures join_features{};
 };
 
 }  // namespace cost_model

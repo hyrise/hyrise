@@ -62,6 +62,75 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
   std::vector<std::string> column_names;
   std::vector<SegmentEncodingSpec> column_encodings;
 
+  if (_configuration.calibrate_joins) {
+    struct TableDef {
+      size_t table_size;
+      std::vector<float> distinctnesses;
+    };
+
+    std::vector<TableDef> table_defs_S = {{10, std::vector<float>{1.0f, 0.1f}}, {1'000, std::vector<float>{1.0f, 0.1f, 0.01f}}, {10'000, std::vector<float>{1.0f, 0.1f, 0.01f, 0.001f}}, {100'000, std::vector<float>{1.0f, 0.1f, 0.01f, 0.001f, 0.0001f}}, {1'000'000, std::vector<float>{1.0f, 0.1f, 0.01f, 0.001f}}};
+    std::vector<TableDef> table_defs_R = {{10, std::vector<float>{1.0f, 0.1f}}, {1'000, std::vector<float>{1.0f, 0.1f, 0.01f}}, {10'000, std::vector<float>{1.0f, 0.1f, 0.01f, 0.001f}}, {100'000, std::vector<float>{1.0f, 0.1f, 0.01f}}, {1'000'000, std::vector<float>{1.0f, 0.1f, 0.01f}}};
+
+    for (const auto& table_def_S : table_defs_S) {
+      std::vector<ColumnDataDistribution> column_data_distributions_S;
+      std::vector<DataType> column_data_types_S;
+      std::vector<std::string> column_names_S;
+      std::vector<SegmentEncodingSpec> column_encodings_S;
+
+      for (const auto distinctness : table_def_S.distinctnesses) {
+        size_t distinct_value_count = static_cast<size_t>(table_def_S.table_size * distinctness);
+        Assert(distinct_value_count <= table_def_S.table_size, "Dist table size mismatch");
+
+        column_data_distributions_S.push_back(ColumnDataDistribution::make_uniform_config(0.0, distinct_value_count));
+
+        column_data_types_S.push_back(DataType::Int);
+
+        column_encodings_S.push_back(SegmentEncodingSpec{EncodingType::Dictionary});
+
+        column_names_S.push_back(std::string("_") + std::to_string(distinct_value_count));
+      }
+
+      const auto table_name_S = _configuration.table_generation_name_prefix + std::to_string(table_def_S.table_size) + "_S";
+
+      auto table = table_generator.generate_table(column_data_distributions_S, column_data_types_S, table_def_S.table_size, _chunk_size,
+                                                  column_encodings_S, column_names_S, UseMvcc::Yes, false);
+      StorageManager::get().add_table(table_name_S, table);
+
+      std::cout << "Table " << table_name_S << " done " << std::endl;
+    }
+
+    for (const auto& table_def_R : table_defs_R) {
+      std::vector<ColumnDataDistribution> column_data_distributions_R;
+      std::vector<DataType> column_data_types_R;
+      std::vector<std::string> column_names_R;
+      std::vector<SegmentEncodingSpec> column_encodings_R;
+
+      for (const auto distinctness : table_def_R.distinctnesses) {
+        size_t distinct_value_count = static_cast<size_t>(table_def_R.table_size * distinctness);
+        Assert(distinct_value_count <= table_def_R.table_size, "Dist table size mismatch");
+
+        column_data_distributions_R.push_back(ColumnDataDistribution::make_uniform_config(0.0, distinct_value_count));
+
+        column_data_types_R.push_back(DataType::Int);
+
+        column_encodings_R.push_back(SegmentEncodingSpec{EncodingType::Dictionary});
+
+        column_names_R.push_back(std::string("_") + std::to_string(distinct_value_count));
+      }
+
+      const auto table_name_R = _configuration.table_generation_name_prefix + std::to_string(table_def_R.table_size) + "_R";
+
+      auto table = table_generator.generate_table(column_data_distributions_R, column_data_types_R, table_def_R.table_size, _chunk_size,
+                                                  column_encodings_R, column_names_R, UseMvcc::Yes, false);
+      StorageManager::get().add_table(table_name_R, table);
+
+      std::cout << "Table " << table_name_R << " done " << std::endl;
+    }
+
+    return;
+  }
+
+
   for (const auto& column_spec : _configuration.columns) {
     column_data_distributions.push_back(
         ColumnDataDistribution::make_uniform_config(0.0, column_spec.distinct_value_count));

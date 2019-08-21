@@ -230,11 +230,38 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
   }
 
   if (_configuration.calibrate_joins) {
-    const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);
-    for (const auto& permutation : join_permutations) {
-      const auto& join_queries = _generate_join(permutation);
-      add_queries_if_present(queries, join_queries);
+    auto& storage_manager = StorageManager::get();
+    std::vector<std::string> join_tables_R;
+    std::vector<std::string> join_tables_S;
+    const auto table_names = storage_manager.table_names();
+
+    for (const auto& table_name : table_names) {
+      if (table_name.find("_R") != std::string::npos) {
+        join_tables_R.push_back(table_name);
+        continue;
+      }
+
+      if (table_name.find("_S") != std::string::npos) {
+        join_tables_S.push_back(table_name);
+        continue;
+      }
     }
+
+    for (const auto& table_name_S : join_tables_S) {
+      for (const auto& table_name_R : join_tables_R) {
+        const auto table_R = storage_manager.get_table(table_name_R);
+        const auto table_S = storage_manager.get_table(table_name_S);
+        if (table_R->row_count() <= table_S->row_count()) {
+          const auto& join_queries = _generate_join_jan(table_name_R, table_name_S);
+          add_queries_if_present(queries, join_queries);
+        }
+      }
+    }
+    // const auto join_permutations = CalibrationQueryGeneratorJoin::generate_join_permutations(_tables, _configuration);
+    // for (const auto& permutation : join_permutations) {
+    //   const auto& join_queries = _generate_join(permutation);
+    //   add_queries_if_present(queries, join_queries);
+    // }
   }
 
   std::cout << "Generated " << queries.size() << " queries." << std::endl;
@@ -301,6 +328,92 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_
   }
 
   return output;
+}
+
+const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join_jan(const std::string table_name_R, const std::string table_name_S) const {
+  const auto table_R = StoredTableNode::make(table_name_R);
+  const auto table_S = StoredTableNode::make(table_name_S);
+
+  auto& sm = StorageManager::get();
+
+
+  std::vector<std::shared_ptr<AbstractLQPNode>> join_nodes{};
+  const auto columns_R = table_R->get_columns();
+  const auto columns_S = table_S->get_columns();
+  const auto column_definitions_R = sm.get_table(table_name_R)->column_definitions();
+  const auto column_definitions_S = sm.get_table(table_name_S)->column_definitions();
+
+  for (size_t i = 0; i < columns_R.size(); ++i) {
+    const auto data_type_R = column_definitions_R[i].data_type;
+    const auto column_expression_R = lqp_column_(columns_R[i]);
+
+    for (size_t j = 0; j < columns_S.size(); ++j) {
+      const auto data_type_S = column_definitions_S[j].data_type;
+      if ((data_type_R == DataType::String || data_type_S == DataType::String) && data_type_R != data_type_S) continue;
+
+      const auto column_expression_S = lqp_column_(columns_S[j]);
+
+      // R Data - S Data
+      const auto join_predicate = expression_functional::equals_(column_expression_R, column_expression_S);
+      Assert(join_predicate, "No join predicate");
+
+      const auto join_node = JoinNode::make(JoinMode::Inner, join_predicate, JoinType::Hash);
+      Assert(join_node, "No Join node");
+
+      join_node->set_left_input(table_R);
+      join_node->set_right_input(table_S);
+
+      join_nodes.push_back(join_node);
+
+
+      // R Ref - S Ref
+      const auto join_node_ref_ref = JoinNode::make(JoinMode::Inner, join_predicate, JoinType::Hash);
+      Assert(join_node_ref_ref, "No Join node");
+
+      const auto left_validate_node = ValidateNode::make();
+      const auto right_validate_node = ValidateNode::make();
+
+      left_validate_node->set_left_input(table_R);
+      right_validate_node->set_left_input(table_S);
+
+      join_node_ref_ref->set_left_input(left_validate_node);
+      join_node_ref_ref->set_right_input(right_validate_node);
+
+      join_nodes.push_back(join_node_ref_ref);
+
+
+      // R Ref - S Data
+      const auto join_node_ref_data = JoinNode::make(JoinMode::Inner, join_predicate, JoinType::Hash);
+      Assert(join_node_ref_data, "No Join node");
+
+      const auto left_validate_node_2 = ValidateNode::make();
+
+      left_validate_node_2->set_left_input(table_R);
+
+      join_node_ref_data->set_left_input(left_validate_node_2);
+      join_node_ref_data->set_right_input(table_S);
+
+      join_nodes.push_back(join_node_ref_data);
+
+
+      // R Data - S Ref
+      const auto join_node_data_ref = JoinNode::make(JoinMode::Inner, join_predicate, JoinType::Hash);
+      Assert(join_node_data_ref, "No Join node");
+
+      const auto right_validate_node_2 = ValidateNode::make();
+
+      right_validate_node_2->set_left_input(table_S);
+
+      join_node_data_ref->set_left_input(table_R);
+      join_node_data_ref->set_right_input(right_validate_node_2);
+
+      join_nodes.push_back(join_node_data_ref);
+    }
+  }
+
+  Assert(!join_nodes.empty(), "Join Nodes are empty");
+
+  return join_nodes;
 }
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::_generate_join(

@@ -40,6 +40,7 @@ class CalibrationQueryGenerator {
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_aggregate(const std::string& table_name) const;
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_join(
       const CalibrationQueryGeneratorJoinConfiguration& configuration) const;
+  const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_join_jan(const std::string r, const std::string s) const;
 
   const std::vector<std::shared_ptr<AbstractLQPNode>> _generate_projection(
       const std::vector<LQPColumnReference>& columns) const;
