@@ -19,9 +19,6 @@ namespace opossum {
 
 template <typename T>
 struct MaterializedValue {
-  MaterializedValue() = default;
-  MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
-
   RowID row_id;
   T value;
 };
@@ -35,8 +32,8 @@ using MaterializedSegmentList = std::vector<std::shared_ptr<MaterializedSegment<
 /**
  * This data structure is passed as a reference to the jobs which materialize
  * the chunks. Each job then adds `samples_to_collect` samples to its passed
- * SampleRequest. All SampleRequests are later merged to gather a global sample
- * list with which the split values for the radix partitioning are determined.
+ * Subsample. All Subsamples are later merged to gather a global sample
+ * list with which the split values for the partitioning are determined.
  */
 template <typename T>
 struct Subsample {
@@ -46,13 +43,13 @@ struct Subsample {
 };
 
 /**
- * Materializes a table for a specific segment and sorts it if required. Result is a triple of
- * materialized values, positions of NULL values, and a list of samples.
+ * Materializes all segments of a given column and sorts each segment if required. Result
+ * is a triple of materialized values, positions of NULL values, and a list of samples.
  **/
 template <typename T>
 class ColumnMaterializer {
  public:
-  explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
+  explicit ColumnMaterializer(const bool sort_materialized_segments, const bool materialize_null, const bool gather_samples = false) : _sort_materialized_segments{sort_materialized_segments}, _materialize_null{materialize_null}, _gather_samples(gather_samples) {}
 
  public:
   /**
@@ -62,7 +59,7 @@ class ColumnMaterializer {
    **/
   std::tuple<MaterializedSegmentList<T>, std::unique_ptr<PosList>, std::vector<T>> materialize(
       const std::shared_ptr<const Table> input, const ColumnID column_id) {
-    const ChunkOffset samples_per_chunk = 10;  // rather arbitrarily chosen number
+    const ChunkOffset samples_per_chunk = static_cast<ChunkOffset>(_gather_samples) * 10;  // rather arbitrarily chosen number
     const auto chunk_count = input->chunk_count();
 
     auto output = MaterializedSegmentList<T>(chunk_count);
@@ -84,10 +81,12 @@ class ColumnMaterializer {
     CurrentScheduler::wait_for_tasks(jobs);
 
     auto gathered_samples = std::vector<T>();
-    gathered_samples.reserve(samples_per_chunk * chunk_count);
+    if (_gather_samples) {  
+      gathered_samples.reserve(samples_per_chunk * chunk_count);
 
-    for (const auto& subsample : subsamples) {
-      gathered_samples.insert(gathered_samples.end(), subsample.samples.begin(), subsample.samples.end());
+      for (const auto& subsample : subsamples) {
+        gathered_samples.insert(gathered_samples.end(), subsample.samples.begin(), subsample.samples.end());
+      }
     }
 
     return {std::move(output), std::move(null_rows), std::move(gathered_samples)};
@@ -153,16 +152,18 @@ class ColumnMaterializer {
           null_rows_output->emplace_back(row_id);
         }
       } else {
-        output.emplace_back(row_id, position.value());
+        output.emplace_back(MaterializedValue<T>{row_id, position.value()});
       }
     });
 
-    if (_sort) {
+    if (_sort_materialized_segments) {
       std::sort(output.begin(), output.end(),
                 [](const auto& left, const auto& right) { return left.value < right.value; });
     }
 
-    _gather_samples_from_segment(output, subsample);
+    if (_gather_samples) {
+      _gather_samples_from_segment(output, subsample);
+    }
 
     return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }
@@ -180,7 +181,7 @@ class ColumnMaterializer {
     auto base_attribute_vector = segment.attribute_vector();
     auto dict = segment.dictionary();
 
-    if (_sort) {
+    if (_sort_materialized_segments) {
       // Works like Bucket Sort
       // Collect for every value id, the set of rows that this value appeared in
       // value_count is used as an inverted index
@@ -214,7 +215,7 @@ class ColumnMaterializer {
       ChunkOffset chunk_offset{0};
       for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
         for (auto& row_id : rows_with_value[value_id]) {
-          output.emplace_back(row_id, (*dict)[value_id]);
+          output.emplace_back(MaterializedValue<T>{row_id, (*dict)[value_id]});
           ++chunk_offset;
         }
       }
@@ -227,19 +228,22 @@ class ColumnMaterializer {
             null_rows_output->emplace_back(row_id);
           }
         } else {
-          output.emplace_back(row_id, position.value());
+          output.emplace_back(MaterializedValue<T>{row_id, position.value()});
         }
       });
     }
 
-    _gather_samples_from_segment(output, subsample);
+    if (_gather_samples) {
+      _gather_samples_from_segment(output, subsample);
+    }
 
     return std::make_shared<MaterializedSegment<T>>(std::move(output));
   }
 
  private:
-  bool _sort;
+  bool _sort_materialized_segments;
   bool _materialize_null;
+  bool _gather_samples;
 };
 
 }  // namespace opossum

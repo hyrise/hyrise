@@ -1,0 +1,16 @@
+{
+  "table_generation": {
+    "table_name_prefix": "calibration_table_",
+    "table_sizes": [10, 100, 1000, 10000]
+  },
+  "tpch_output_path": "./resources/calibration_results/scan/tpch_results.csv",
+  "output_path": "./resources/calibration_results/scan/calibration_results.csv",
+  "calibration_runs": 1,
+  "encodings": ["Dictionary", "Unencoded", "FrameOfReference", "RunLength", "FixedStringDictionary", "LZ4"],
+  "calibrate_vector_compression_types": true,
+  "data_types": ["int", "long", "float", "double", "string"],
+  "selectivities": [0.001, 0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+  "calibrate_scans": true,
+  "calibrate_joins": false,
+  "run_tpch": false
+}

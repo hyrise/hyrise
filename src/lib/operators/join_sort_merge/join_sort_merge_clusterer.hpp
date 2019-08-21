@@ -31,13 +31,16 @@ struct ClusterOutput {
 namespace opossum {
 
 /*
+* The JoinSortMergeClusterer clusters a given pair of tables into joinable clusters. It clusters either
+* either using (i) radix clustering or (ii) range clustering.
+* (i)  The radix clustering algorithm clusters on the basis
+*      of the least significant bits of the values because the values there are much more evenly distributed than for the
+*      most significant bits. As a result, equal values always get moved to the same cluster and the clusters are each
+*      sorted but there is no order over clusters. This is okay for the equi join, because we are only interested
+*      in equality.
+* (ii) In the case of a non-equi join however, complete sortedness is required, because join matches exist
+*      beyond cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi-join.
 *
-* Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis
-* of the least significant bits of the values because the values there are much more evenly distributed than for the
-* most significant bits. As a result, equal values always get moved to the same cluster and the clusters are
-* sorted in themselves but not in between the clusters. This is okay for the equi join, because we are only interested
-* in equality. In the case of a non-equi join however, complete sortedness is required, because join matches exist
-* beyond cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi-join.
 * General clustering process:
 * -> Input chunks are materialized and sorted. Every value is stored together with its row id.
 * -> Then, either radix clustering or range clustering is performed.
@@ -455,15 +458,18 @@ class JoinSortMergeClusterer {
   ClusterOutput<T> execute() {
     ClusterOutput<T> output;
 
+    // TODO: fix comment
     /** First, chunks are fully materialized and sorted. The clusters are sorted for two reasons:
      *  (i)  Writes to clusters are usually sped up (very much for range clustering,
      *       for radix partitioning when values occur multiple times)
      *  (ii) We can efficiently sort the resulting output clusters efficiently with in place
      *       merging as each chunk's values (sorted) are written in sequential order, hence the
      *       cluster is partially sorted.
+     *  When radix clustering is used, no samples need to be gathered.
      */
-    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
-    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+    ColumnMaterializer<T> left_column_materializer(true, _materialize_null_left, !_equi_case);
+    ColumnMaterializer<T> right_column_materializer(true, _materialize_null_right, !_equi_case);
+
     auto [materialized_left_segments, null_rows_left, samples_left] =
         left_column_materializer.materialize(_input_table_left, _left_column_id);
     auto [materialized_right_segments, null_rows_right, samples_right] =
