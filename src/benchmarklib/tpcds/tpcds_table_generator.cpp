@@ -74,7 +74,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   mk_w_catalog_sales_master(nullptr, 0, 1);
 
   auto distributions_string = std::string{"DISTRIBUTIONS"};
-  auto distributions_value = std::string{"../resources/benchmark/tpcds/tpcds.idx"};
+  auto distributions_value = std::string{"resources/benchmark/tpcds/tpcds.idx"};
   set_str(distributions_string.data(), distributions_value.data());
 
   for (auto table_id = 0; table_id <= MAX_TABLE; table_id++) {
