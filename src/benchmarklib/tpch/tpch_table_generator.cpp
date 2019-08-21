@@ -12,7 +12,6 @@ extern "C" {
 #include "benchmark_config.hpp"
 #include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
 #include "table_builder.hpp"
 #include "utils/timer.hpp"
 

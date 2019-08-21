@@ -4,8 +4,6 @@
 #include <utility>
 #include <vector>
 
-#include "concurrency/transaction_manager.hpp"
-
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 

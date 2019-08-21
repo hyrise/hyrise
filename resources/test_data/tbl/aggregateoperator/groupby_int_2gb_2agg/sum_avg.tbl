@@ -1,5 +1,5 @@
 a|b|SUM(c)|AVG(d)
-int|float|long|double
+int|float|long_null|double_null
 12345|456.7|44|20.35
 12345|457.7|63|32.95
 123|458.7|40|3

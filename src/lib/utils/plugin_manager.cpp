@@ -2,7 +2,6 @@
 
 #include <filesystem>
 
-#include "storage/storage_manager.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
 
@@ -47,8 +46,6 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
   plugin->start();
 }
-
-void PluginManager::reset() { get() = PluginManager(); }
 
 void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin = _plugins.find(name);

@@ -460,7 +460,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           if (input_table_type == InputTableType::SharedPosList) {
             const auto pos_list = std::make_shared<PosList>();
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-              pos_list->emplace_back(chunk_id, chunk_offset);
+              pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
 
             for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -471,7 +471,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
             for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
               const auto pos_list = std::make_shared<PosList>();
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-                pos_list->emplace_back(chunk_id, chunk_offset);
+                pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
 
               reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
@@ -580,7 +580,7 @@ TEST_P(JoinTestRunner, TestJoin) {
   expected_table = expected_output_table_iter->second;
 
   table_difference_message = check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict,
-                                               FloatComparisonMode::AbsoluteDifference);
+                                               FloatComparisonMode::AbsoluteDifference, IgnoreNullable::No);
   if (table_difference_message) {
     print_configuration_info();
     FAIL();

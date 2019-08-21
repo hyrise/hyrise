@@ -5,6 +5,7 @@
 
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
@@ -20,8 +21,6 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -33,7 +32,6 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table_column_definition.hpp"
 #include "utils/load_table.hpp"
 
@@ -733,7 +731,7 @@ TEST_F(CardinalityEstimatorTest, Sort) {
 }
 
 TEST_F(CardinalityEstimatorTest, StoredTable) {
-  StorageManager::get().add_table("t", load_table("resources/test_data/tbl/int.tbl"));
+  Hyrise::get().storage_manager.add_table("t", load_table("resources/test_data/tbl/int.tbl"));
   EXPECT_EQ(estimator.estimate_cardinality(StoredTableNode::make("t")), 3);
 }
 
@@ -798,12 +796,6 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
 
   const auto insert_lqp = InsertNode::make("t", node_a);
   EXPECT_EQ(estimator.estimate_cardinality(insert_lqp), 0.0f);
-
-  const auto show_columns_lqp = ShowColumnsNode::make("t");
-  EXPECT_EQ(estimator.estimate_cardinality(show_columns_lqp), 0.0f);
-
-  const auto show_tables_lqp = ShowTablesNode::make();
-  EXPECT_EQ(estimator.estimate_cardinality(show_tables_lqp), 0.0f);
 
   EXPECT_EQ(estimator.estimate_cardinality(DeleteNode::make(node_a)), 0.0f);
   EXPECT_EQ(estimator.estimate_cardinality(DropViewNode::make("v", false)), 0.0f);

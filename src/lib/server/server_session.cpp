@@ -11,10 +11,8 @@
 
 #include "SQLParserResult.h"
 
-#include "concurrency/transaction_manager.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
-#include "storage/storage_manager.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
 #include "tasks/server/execute_server_prepared_statement_task.hpp"
@@ -23,6 +21,7 @@
 #include "tasks/server/parse_server_prepared_statement_task.hpp"
 
 #include "client_connection.hpp"
+#include "hyrise.hpp"
 #include "query_response_builder.hpp"
 #include "then_operator.hpp"
 #include "types.hpp"
@@ -195,7 +194,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
   };
 
   // A simple query command invalidates unnamed statements and portals
-  if (StorageManager::get().has_prepared_plan("")) StorageManager::get().drop_prepared_plan("");
+  if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
   _portals.erase("");
 
   return create_sql_pipeline() >> then >> [this, load_table_file,
@@ -213,17 +212,17 @@ template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_command(const ParsePacket& parse_info) {
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
-  if (StorageManager::get().has_prepared_plan(parse_info.statement_name)) {
+  if (Hyrise::get().storage_manager.has_prepared_plan(parse_info.statement_name)) {
     AssertInput(parse_info.statement_name.empty(),
                 "Named prepared statements must be explicitly closed before they can be redefined.");
-    StorageManager::get().drop_prepared_plan(parse_info.statement_name);
+    Hyrise::get().storage_manager.drop_prepared_plan(parse_info.statement_name);
   }
 
   auto task = std::make_shared<ParseServerPreparedStatementTask>(parse_info.query);
   return _task_runner->dispatch_server_task(task) >> then >>
          [=](std::unique_ptr<PreparedPlan> prepared_plan) {
            // We know that SQLPipeline is set because the load table command is not allowed in this context
-           StorageManager::get().add_prepared_plan(parse_info.statement_name, std::move(prepared_plan));
+           Hyrise::get().storage_manager.add_prepared_plan(parse_info.statement_name, std::move(prepared_plan));
          } >>
          then >> [this]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
 }
@@ -231,12 +230,12 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(const BindPacket& packet) {
   // Not using Assert() since it includes file:line info that we don't want to hard code in tests
-  AssertInput(StorageManager::get().has_prepared_plan(packet.statement_name),
+  AssertInput(Hyrise::get().storage_manager.has_prepared_plan(packet.statement_name),
               "The specified statement does not exist.");
 
-  const auto prepared_plan = StorageManager::get().get_prepared_plan(packet.statement_name);
+  const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(packet.statement_name);
 
-  if (packet.statement_name.empty()) StorageManager::get().drop_prepared_plan(packet.statement_name);
+  if (packet.statement_name.empty()) Hyrise::get().storage_manager.drop_prepared_plan(packet.statement_name);
 
   auto portal_name = packet.destination_portal;
 
@@ -291,7 +290,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction) _transaction = TransactionManager::get().new_transaction_context();
+  if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
 
   physical_plan->set_transaction_context_recursively(_transaction);
 

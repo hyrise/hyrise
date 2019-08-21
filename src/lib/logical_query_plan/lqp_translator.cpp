@@ -30,6 +30,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
@@ -48,8 +49,6 @@
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
-#include "operators/maintenance/show_columns.hpp"
-#include "operators/maintenance/show_tables.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/product.hpp"
@@ -63,10 +62,8 @@
 #include "operators/validate.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
-#include "show_columns_node.hpp"
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
@@ -125,8 +122,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Union:              return _translate_union_node(node);
 
       // Maintenance operators
-    case LQPNodeType::ShowTables:         return _translate_show_tables_node(node);
-    case LQPNodeType::ShowColumns:        return _translate_show_columns_node(node);
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
@@ -201,7 +196,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto table_name = stored_table_node->table_name;
-  const auto table = StorageManager::get().get_table(table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
 
   const auto chunk_count = table->chunk_count();
@@ -443,19 +438,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   return std::make_shared<Validate>(input_operator);
-}
-
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(!node->left_input(), "ShowTables should not have an input operator.");
-  return std::make_shared<ShowTables>();
-}
-
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(!node->left_input(), "ShowColumns should not have an input operator.");
-  const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
-  return std::make_shared<ShowColumns>(show_columns_node->table_name);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(

@@ -34,7 +34,8 @@ class OperatorsJoinHashTest : public BaseTest {
   }
 
   void SetUp() override {
-    const auto dummy_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data);
+    const auto dummy_table =
+        std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
     dummy_input = std::make_shared<TableWrapper>(dummy_table);
   }
 

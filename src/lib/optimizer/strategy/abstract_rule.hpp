@@ -13,8 +13,6 @@ class AbstractRule {
  public:
   virtual ~AbstractRule() = default;
 
-  virtual std::string name() const = 0;
-
   /**
    * This function applies the concrete Optimizer Rule to an LQP.
    * apply_to() is intended to be called recursively by the concrete rule.

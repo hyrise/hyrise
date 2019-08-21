@@ -5,11 +5,11 @@
 
 #include "base_test.hpp"
 
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -18,10 +18,10 @@ class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("column_1", DataType::Int);
-    column_definitions.emplace_back("column_2", DataType::String);
+    column_definitions.emplace_back("column_1", DataType::Int, true);
+    column_definitions.emplace_back("column_2", DataType::String, false);
     _t = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size);
-    StorageManager::get().add_table(_table_name, _t);
+    Hyrise::get().storage_manager.add_table(_table_name, _t);
 
     _gt = std::make_shared<GetTable>(_table_name);
     _gt->execute();
@@ -80,7 +80,7 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
 
 TEST_F(OperatorsPrintTest, FilledTable) {
   const size_t chunk_count = 117;
-  auto tab = StorageManager::get().get_table(_table_name);
+  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
   for (size_t i = 0; i < _chunk_size * chunk_count; i++) {
     // char 97 is an 'a'. Modulo 26 to stay within the alphabet.
     tab->append({static_cast<int>(i % _chunk_size), pmr_string(1, 97 + static_cast<int>(i / _chunk_size) % 26)});
@@ -114,7 +114,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
   uint16_t min = 8;
   uint16_t max = 20;
 
-  auto tab = StorageManager::get().get_table(_table_name);
+  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
 
   auto pr_wrap = std::make_shared<PrintWrapper>(_gt);
   auto print_lengths = pr_wrap->test_column_string_widths(min, max);
@@ -157,7 +157,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValue) {
 
 TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   auto print_wrap = std::make_shared<PrintWrapper>(_gt);
-  auto tab = StorageManager::get().get_table(_table_name);
+  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
 
   pmr_string cell_string = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
   auto input = AllTypeVariant{cell_string};
@@ -190,7 +190,7 @@ TEST_F(OperatorsPrintTest, MVCCFlag) {
       "=== Columns\n"
       "|column_1|column_2||        MVCC        |\n"
       "|     int|  string||_BEGIN|_END  |_TID  |\n"
-      "|not null|not null||      |      |      |\n";
+      "|    null|not null||      |      |      |\n";
 
   EXPECT_EQ(output.str(), expected_output);
   EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
@@ -244,7 +244,7 @@ TEST_F(OperatorsPrintTest, DirectInstantiations) {
       "=== Columns\n"
       "|column_1|column_2|\n"
       "|     int|  string|\n"
-      "|not null|not null|\n";
+      "|    null|not null|\n";
 
   std::ostringstream output_ss_op_inst;
   Print::print(_gt, PrintFlags::None, output_ss_op_inst);
@@ -300,7 +300,7 @@ TEST_F(OperatorsPrintTest, SegmentType) {
 }
 
 TEST_F(OperatorsPrintTest, EmptyTable) {
-  auto tab = StorageManager::get().get_table(_table_name);
+  auto tab = Hyrise::get().storage_manager.get_table(_table_name);
   Segments empty_segments;
   auto column_1 = std::make_shared<opossum::ValueSegment<int>>();
   auto column_2 = std::make_shared<opossum::ValueSegment<pmr_string>>();
@@ -319,7 +319,7 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
       "=== Columns\n"
       "|column_1|column_2|\n"
       "|     int|  string|\n"
-      "|not null|not null|\n"
+      "|    null|not null|\n"
       "=== Chunk 0 ===\n"
       "Empty chunk.\n";
 

@@ -103,8 +103,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_table_op_filtered() {
     TableColumnDefinitions table_column_definitions;
-    table_column_definitions.emplace_back("a", DataType::Int);
-    table_column_definitions.emplace_back("b", DataType::Int);
+    table_column_definitions.emplace_back("a", DataType::Int, false);
+    table_column_definitions.emplace_back("b", DataType::Int, false);
 
     std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::References);
 
@@ -133,7 +133,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   std::shared_ptr<TableWrapper> get_table_op_with_n_dict_entries(const int num_entries) {
     // Set up dictionary encoded table with a dictionary consisting of num_entries entries.
     TableColumnDefinitions table_column_definitions;
-    table_column_definitions.emplace_back("a", DataType::Int);
+    table_column_definitions.emplace_back("a", DataType::Int, false);
 
     std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data);
 

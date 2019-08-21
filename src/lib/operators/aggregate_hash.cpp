@@ -111,7 +111,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   ChunkOffset chunk_offset{0};
   segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
-    auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID(chunk_id, chunk_offset));
+    auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
 
     /**
     * If the value is NULL, the current aggregate value does not change.
@@ -623,7 +623,8 @@ void AggregateHash::_write_groupby_output(PosList& pos_list) {
   // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
   for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
-                                            input_table->column_data_type(column_id));
+                                            input_table->column_data_type(column_id),
+                                            input_table->column_is_nullable(column_id));
 
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;

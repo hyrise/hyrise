@@ -9,13 +9,13 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -25,7 +25,7 @@ class ReferenceSegmentTest : public BaseTest {
   virtual void SetUp() {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, true);
-    column_definitions.emplace_back("b", DataType::Float);
+    column_definitions.emplace_back("b", DataType::Float, false);
 
     _test_table = std::make_shared<opossum::Table>(column_definitions, TableType::Data, 3);
     _test_table->append({123, 456.7f});
@@ -35,14 +35,14 @@ class ReferenceSegmentTest : public BaseTest {
     _test_table->append({12345, 458.7f});
 
     TableColumnDefinitions column_definitions2;
-    column_definitions2.emplace_back("a", DataType::Int);
-    column_definitions2.emplace_back("b", DataType::Int);
+    column_definitions2.emplace_back("a", DataType::Int, false);
+    column_definitions2.emplace_back("b", DataType::Int, false);
     _test_table_dict = std::make_shared<opossum::Table>(column_definitions2, TableType::Data, 5, UseMvcc::Yes);
     for (int i = 0; i <= 24; i += 2) _test_table_dict->append({i, 100 + i});
 
     ChunkEncoder::encode_chunks(_test_table_dict, {ChunkID{0}, ChunkID{1}});
 
-    StorageManager::get().add_table("test_table_dict", _test_table_dict);
+    Hyrise::get().storage_manager.add_table("test_table_dict", _test_table_dict);
   }
 
  public:
