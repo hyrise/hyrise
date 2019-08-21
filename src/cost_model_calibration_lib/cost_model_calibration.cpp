@@ -19,7 +19,7 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
     : _configuration(configuration) {}
 
 void CostModelCalibration::run_tpch6_costing() {
-  CostModelCalibrationTableGenerator tableGenerator{_configuration, 100000};
+  CostModelCalibrationTableGenerator tableGenerator{_configuration, 100'000};
 
   _write_csv_header(_configuration.output_path);
 
@@ -42,6 +42,7 @@ void CostModelCalibration::run() {
   if (!_configuration.run_tpch) {
     tableGenerator.load_calibration_tables();
     tableGenerator.generate_calibration_tables();
+    std::cout << "Starting Calibration" << std::endl;
     _calibrate();
     std::cout << "Finished Calibration" << std::endl;
   } else {
@@ -90,8 +91,10 @@ void CostModelCalibration::_calibrate() {
   for (const auto& table_specification : _configuration.table_specifications) {
     table_names.emplace_back(std::make_pair(table_specification.table_name, table_specification.table_size));
   }
-  for (const auto& table_name : _configuration.generated_tables) {
-    table_names.emplace_back(table_name, StorageManager::get().get_table(table_name)->row_count());
+  if (!_configuration.calibrate_joins) {
+    for (const auto& table_name : _configuration.generated_tables) {
+      table_names.emplace_back(table_name, StorageManager::get().get_table(table_name)->row_count());
+    }
   }
 
   const auto& columns = _configuration.columns;
