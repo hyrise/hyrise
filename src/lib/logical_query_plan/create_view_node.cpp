@@ -25,6 +25,12 @@ std::string CreateViewNode::description() const {
   return stream.str();
 }
 
+size_t CreateViewNode::_on_hash() const {
+  auto hash = boost::hash_value(view_name);
+  boost::hash_combine(hash, if_not_exists);
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> CreateViewNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return CreateViewNode::make(view_name, view->deep_copy(), if_not_exists);
 }

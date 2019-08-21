@@ -1,6 +1,7 @@
 #include "abstract_lqp_node.hpp"
 
 #include <algorithm>
+#include <unordered_map>
 
 #include "boost/functional/hash.hpp"
 #include "expression/abstract_expression.hpp"
@@ -70,29 +71,7 @@ AbstractLQPNode::~AbstractLQPNode() {
 
 size_t AbstractLQPNode::hash() const {
   auto hash = boost::hash_value(type);
-  for (const auto& expression : node_expressions) {
-    boost::hash_combine(hash, expression->hash());
-  }
   boost::hash_combine(hash, _on_hash());
-
-  switch (type) {
-    case LQPNodeType::Aggregate:
-    case LQPNodeType::Delete:
-    case LQPNodeType::Insert:
-    case LQPNodeType::Limit:
-    case LQPNodeType::Sort:
-    case LQPNodeType::Update:
-    case LQPNodeType::Validate:
-      boost::hash_combine(hash, left_input()->hash());
-      break;
-    case LQPNodeType::Join:
-      boost::hash_combine(hash, left_input()->hash());
-      boost::hash_combine(hash, right_input()->hash());
-      break;
-    default:
-      break;  // explicitly do nothing
-  }
-
   return hash;
 }
 

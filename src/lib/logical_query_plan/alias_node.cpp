@@ -32,6 +32,14 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expres
   return node_expressions;
 }
 
+size_t AliasNode::_on_hash() const {
+  size_t hash{0};
+  for (const auto& alias : aliases) {
+    boost::hash_combine(hash, boost::hash_value(alias));
+  }
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> AliasNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<AliasNode>(expressions_copy_and_adapt_to_different_lqp(node_expressions, node_mapping),
                                      aliases);

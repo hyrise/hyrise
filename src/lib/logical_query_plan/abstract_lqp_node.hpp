@@ -184,4 +184,21 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);
 
+// Wrapper around node->hash(), to enable hash based containers containing std::shared_ptr<AbstractLQPNode>
+struct LQPNodeSharedPtrHash final {
+  size_t operator()(const std::shared_ptr<AbstractLQPNode>& node) const { return node->hash(); }
+};
+
+// Wrapper around AbstractLQPNode::operator==(), to enable hash based containers containing
+// std::shared_ptr<AbstractLQPNode>
+struct LQPNodeSharedPtrEqual final {
+  size_t operator()(const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs) const {
+    return lhs == rhs || *lhs == *rhs;
+  }
+};
+
+template <typename Value>
+using LQPNodeUnorderedMap =
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, Value, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;
+
 }  // namespace opossum

@@ -19,6 +19,8 @@ std::string CreatePreparedPlanNode::description() const {
   return stream.str();
 }
 
+size_t CreatePreparedPlanNode::_on_hash() const { return boost::hash_value(name); }
+
 std::shared_ptr<AbstractLQPNode> CreatePreparedPlanNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return CreatePreparedPlanNode::make(name, prepared_plan);
 }

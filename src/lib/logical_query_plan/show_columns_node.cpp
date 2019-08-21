@@ -27,6 +27,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ShowColumnsNode::column_
 
 bool ShowColumnsNode::is_column_nullable(const ColumnID column_id) const { return false; }
 
+size_t ShowColumnsNode::_on_hash() const { return boost::hash_value(table_name); }
+
 std::shared_ptr<AbstractLQPNode> ShowColumnsNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return ShowColumnsNode::make(table_name);
 }

@@ -84,6 +84,14 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
+size_t MockNode::_on_hash() const {
+  size_t hash{0};
+  for (const auto& pruned_column_id : _pruned_column_ids) {
+    boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+  }
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto mock_node = MockNode::make(_column_definitions);
   mock_node->set_table_statistics(_table_statistics);
