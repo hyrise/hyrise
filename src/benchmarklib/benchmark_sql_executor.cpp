@@ -11,7 +11,10 @@ namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix)
     : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {
-  if (_sqlite_wrapper) _sqlite_wrapper->raw_execute_query("BEGIN TRANSACTION");
+  if (_sqlite_wrapper) {
+    _sqlite_wrapper->raw_execute_query("BEGIN TRANSACTION");
+    _sqlite_transaction_open = true;
+  }
 }
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(
@@ -45,18 +48,30 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   return {pipeline_status, result_table};
 }
 
+BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
+  // If the benchmark item did not call commit or rollback, we need to close the sqlite transaction so that the
+  // next item can start a new one:
+  if (_sqlite_transaction_open) _sqlite_wrapper->raw_execute_query("COMMIT TRANSACTION");
+}
+
 void BenchmarkSQLExecutor::commit() {
   DebugAssert(transaction_context, "Can only explicitly commit transaction if auto-commit is disabled");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
   transaction_context->commit();
-  if (_sqlite_wrapper) _sqlite_wrapper->raw_execute_query("COMMIT TRANSACTION");
+  if (_sqlite_wrapper) {
+    _sqlite_transaction_open = false;
+    _sqlite_wrapper->raw_execute_query("COMMIT TRANSACTION");
+  }
 }
 
 void BenchmarkSQLExecutor::rollback() {
   DebugAssert(transaction_context, "Can only explicitly roll back transaction if auto-commit is disabled");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
   transaction_context->rollback();
-  if (_sqlite_wrapper) _sqlite_wrapper->raw_execute_query("ROLLBACK TRANSACTION");
+  if (_sqlite_wrapper) {
+    _sqlite_transaction_open = false;
+    _sqlite_wrapper->raw_execute_query("ROLLBACK TRANSACTION");
+  }
 }
 
 void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {

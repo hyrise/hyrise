@@ -57,7 +57,7 @@ bool TPCCPayment::_on_execute() {
       _sql_executor.execute(std::string{"UPDATE WAREHOUSE SET W_YTD = "} + std::to_string(w_ytd + h_amount) +
                             " WHERE W_ID = " + std::to_string(w_id));
   if (pipeline_status != SQLPipelineStatus::Success) {
-      _sql_executor.rollback();
+    _sql_executor.rollback();
     return false;
   }
 
@@ -76,7 +76,7 @@ bool TPCCPayment::_on_execute() {
       _sql_executor.execute(std::string{"UPDATE DISTRICT SET D_YTD = "} + std::to_string(d_ytd + h_amount) +
                             " WHERE D_W_ID = " + std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   if (district_update_pair.first != SQLPipelineStatus::Success) {
-      _sql_executor.rollback();
+    _sql_executor.rollback();
     return false;
   }
 
@@ -119,7 +119,7 @@ bool TPCCPayment::_on_execute() {
                             ", C_PAYMENT_CNT = C_PAYMENT_CNT + 1 WHERE C_W_ID = " + std::to_string(w_id) +
                             " AND C_D_ID = " + std::to_string(c_d_id) + " AND C_ID = " + std::to_string(c_id));
   if (customer_update_balance_pair.first != SQLPipelineStatus::Success) {
-      _sql_executor.rollback();
+    _sql_executor.rollback();
     return false;
   }
 

@@ -17,6 +17,8 @@ class BenchmarkSQLExecutor {
   BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                        const std::optional<std::string>& visualize_prefix);
 
+  ~BenchmarkSQLExecutor();
+
   // This executes the given SQL query, records its metrics and returns a single table (the same as
   // SQLPipeline::get_result_table() would).
   // If visualization and/or verification are enabled, these are transparently done as well.
@@ -45,6 +47,8 @@ class BenchmarkSQLExecutor {
   const bool _enable_jit;
   const std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
   const std::optional<std::string> _visualize_prefix;
+
+  bool _sqlite_transaction_open{false};
 };
 
 }  // namespace opossum
