@@ -9,8 +9,6 @@
 
 namespace opossum {
 
-std::string DisjunctionToUnionRule::name() const { return "Disjunction to Union Rule"; }
-
 void DisjunctionToUnionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "DisjunctionToUnionRule needs root to hold onto");
 

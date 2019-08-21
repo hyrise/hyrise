@@ -1,6 +1,6 @@
 #include "drop_table.hpp"
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 
 namespace opossum {
 
@@ -15,8 +15,8 @@ const std::string DropTable::description(DescriptionMode description_mode) const
 
 std::shared_ptr<const Table> DropTable::_on_execute() {
   // If IF EXISTS is not set and the table is not found, StorageManager throws an exception
-  if (!if_exists || StorageManager::get().has_table(table_name)) {
-    StorageManager::get().drop_table(table_name);
+  if (!if_exists || Hyrise::get().storage_manager.has_table(table_name)) {
+    Hyrise::get().storage_manager.drop_table(table_name);
   }
 
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table

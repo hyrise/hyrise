@@ -16,7 +16,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT

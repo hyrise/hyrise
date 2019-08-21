@@ -1,0 +1,12 @@
+table|chunk_id|column_id|column_name|column_data_type|encoding
+string|int|int|string|string|string_null
+int_int|0|0|a|int|null
+int_int|0|1|b|int|null
+int_int|1|0|a|int|null
+int_int|1|1|b|int|null
+int_int_int_null|0|0|a|int|RunLength
+int_int_int_null|0|1|b|int|Dictionary
+int_int_int_null|0|2|c|int|null
+int_int_int_null|1|0|a|int|null
+int_int_int_null|1|1|b|int|null
+int_int_int_null|1|2|c|int|null

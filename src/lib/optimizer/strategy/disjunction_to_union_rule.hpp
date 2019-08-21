@@ -15,7 +15,6 @@ namespace opossum {
  *   two semi-joins.
  */
 class DisjunctionToUnionRule : public AbstractRule {
-  std::string name() const override;
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 };
 
