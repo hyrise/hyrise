@@ -74,8 +74,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   mk_w_catalog_sales_master(nullptr, 0, 1);
 
   auto distributions_string = std::string{"DISTRIBUTIONS"};
-  // PATH_TO_TPCDS_IDX is set to "${CMAKE_BINARY_DIR}/tpcds.idx" in CMakeLists.txt
-  auto distributions_value = std::string{PATH_TO_TPCDS_IDX};
+  auto distributions_value = std::string{"../resources/benchmark/tpcds/tpcds.idx"};
   set_str(distributions_string.data(), distributions_value.data());
 
   for (auto table_id = 0; table_id <= MAX_TABLE; table_id++) {
@@ -128,7 +127,7 @@ pmr_string zip_to_string(int32_t zip) {
 
 // dsdgen deliberately creates NULL values if nullCheck(column_id) is true, resolve functions mimic that
 std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
-  if (date_id <= 0 || nullCheck(column_id)) {
+  if (nullCheck(column_id) || date_id <= 0) {
     return std::nullopt;
   }
 

@@ -16,9 +16,10 @@ struct ColumnMeta {
 };
 
 // Strategies on how to deal with unquoted null Strings ("...,Null,...") in csv files:
-// RejectNullStrings: An unquoted null string causes an exception - only empty field is allowed as null value.
-// NullStringAsValue: An unquoted null string is parsed as a string - "Null".
-// NullStringAsNull: An unquoted null string is parsed as a null value.
+// RejectNullStrings: An unquoted null string (case-insensitive) causes an exception - only empty
+//  field is allowed as null value.
+// NullStringAsValue: An unquoted null string is parsed as a string - eg. "Null", case is not changed.
+// NullStringAsNull: An unquoted null string (case-insensitive) is parsed as a null value.
 enum class NullHandling { RejectNullStrings, NullStringAsNull, NullStringAsValue };
 
 struct ParseConfig {

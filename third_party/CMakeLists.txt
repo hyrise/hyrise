@@ -347,5 +347,4 @@ target_include_directories(tpcds_dbgen
 target_compile_definitions(
   tpcds_dbgen
   PUBLIC
-  -DLINUX
-  -DWITH_CLEANUP_FUNCTION)
+  -DLINUX)
