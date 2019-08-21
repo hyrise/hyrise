@@ -939,7 +939,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsToNonReciprocalSemiJoin) {
+TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsSemiJoinWithoutReduction) {
   // SELECT * FROM larger WHERE EXISTS (SELECT * FROM smaller WHERE larger.b = smaller.a)
 
   const auto parameter = correlated_parameter_(ParameterID{0}, large_node_a);
@@ -966,7 +966,7 @@ TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsToNonReciprocalSemiJoin
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsToReciprocalSemiJoin) {
+TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsToSemiJoinWithReduction) {
   // SELECT * FROM smaller WHERE EXISTS (SELECT * FROM larger WHERE larger.b = smaller.a)
 
   const auto parameter = correlated_parameter_(ParameterID{0}, small_node_a);
@@ -995,7 +995,7 @@ TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsToReciprocalSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedNotExistsToReciprocalSemiJoin) {
+TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedNotExistsToSemiJoinWithReduction) {
   // SELECT * FROM smaller WHERE NOT EXISTS (SELECT * FROM larger WHERE larger.b = smaller.a)
 
   const auto parameter = correlated_parameter_(ParameterID{0}, small_node_a);

@@ -570,28 +570,30 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   if (pull_up_result.adapted_lqp) {
     const auto& estimator = cost_estimator->cardinality_estimator;
-    const auto left_side_cardinality = estimator->estimate_cardinality(join_node->left_input());
-    const auto right_side_cardinality = estimator->estimate_cardinality(join_node->right_input());
-    const auto& first_join_predicate = join_predicates[0];
+    const auto probe_side_cardinality = estimator->estimate_cardinality(join_node->left_input());
+    const auto build_side_cardinality = estimator->estimate_cardinality(join_node->right_input());
+    const auto& primary_join_predicate = join_predicates[0];
 
-    bool first_join_predicate_is_equals = false;
-    if (const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(first_join_predicate)) {
+    bool primary_join_predicate_is_equals = false;
+    if (const auto predicate_expression =
+            std::dynamic_pointer_cast<BinaryPredicateExpression>(primary_join_predicate)) {
       if (predicate_expression->predicate_condition == PredicateCondition::Equals) {
-        first_join_predicate_is_equals = true;
+        primary_join_predicate_is_equals = true;
       }
     }
 
     if ((join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
          join_mode == JoinMode::AntiNullAsFalse) &&
-        right_side_cardinality > left_side_cardinality * 10 && first_join_predicate_is_equals) {
+        build_side_cardinality > probe_side_cardinality * 10 && build_side_cardinality > 1'000 &&
+        primary_join_predicate_is_equals) {
       // Semi/Anti joins are currently handled by the hash join, which performs badly if the right side is much
       // bigger than the left side. For that case, we add a second semi join on the right side, which throws out all
-      // values that will not be found by the primary predicate of the later join, anyway. However, we can only throw
-      // away values on the build side if the first predicate is an equals predicate. For an example, see TPC-H query
-      // 21. That query is the main reason this part exists. As such, the threshold is somewhat arbitrary. If we start
-      // to see more of those cases, we can try and find a more complex heuristic. For a lack of a better name, we call
-      // this "reciprocal semi joins".
-      const auto pre_join_node = JoinNode::make(JoinMode::Semi, first_join_predicate);
+      // values that will not be found by the primary (first) predicate of the later join, anyway. However, we can only
+      // throw away values on the build side if the primary predicate is an equals predicate. For an example, see TPC-H
+      // query 21. That query is the main reason this part exists. The current thresholds are somewhat arbitrary. If we
+      // start to see more of those cases, we can try and find a more complex heuristic. We call this "semi join
+      // reduction".
+      const auto pre_join_node = JoinNode::make(JoinMode::Semi, primary_join_predicate);
       lqp_insert_node(join_node, LQPInputSide::Right, pre_join_node);
       pre_join_node->set_right_input(join_node->left_input());
     }
