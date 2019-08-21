@@ -87,7 +87,7 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
 
         column_encodings_S.push_back(SegmentEncodingSpec{EncodingType::Dictionary});
 
-        column_names_S.push_back(std::string("_") + std::to_string(distinct_value_count));
+        column_names_S.push_back("S_" + std::to_string(table_def_S.table_size) + "_" + std::to_string(distinct_value_count));
       }
 
       const auto table_name_S = _configuration.table_generation_name_prefix + std::to_string(table_def_S.table_size) + "_S";
@@ -115,7 +115,7 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
 
         column_encodings_R.push_back(SegmentEncodingSpec{EncodingType::Dictionary});
 
-        column_names_R.push_back(std::string("_") + std::to_string(distinct_value_count));
+        column_names_R.push_back("R_" + std::to_string(table_def_R.table_size) + "_" + std::to_string(distinct_value_count));
       }
 
       const auto table_name_R = _configuration.table_generation_name_prefix + std::to_string(table_def_R.table_size) + "_R";
