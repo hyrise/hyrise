@@ -37,6 +37,12 @@ const std::optional<CostModelFeatures> CalibrationFeatureExtractor::extract_feat
       calibration_result.table_scan_features = _extract_features_for_operator(index_scan_op);
       break;
     }
+    case OperatorType::JoinHash: {
+      const auto join_hash_op = std::static_pointer_cast<const AbstractJoinOperator>(op);
+      calibration_result.join_features = _extract_features_for_operator(join_hash_op);
+      break;
+    }
+
     case OperatorType::GetTable:
       // No need to add specific features
       break;
@@ -256,6 +262,7 @@ const JoinFeatures CalibrationFeatureExtractor::_extract_features_for_operator(
 
   // TODO(Sven): Remove. Is already covered by features.operator_type
   //  features.join_type = op->type();
+
   features.left_join_column = _extract_features_for_column_expression(left_table, left_column_expression, "left");
   features.right_join_column = _extract_features_for_column_expression(right_table, right_column_expression, "right");
 
