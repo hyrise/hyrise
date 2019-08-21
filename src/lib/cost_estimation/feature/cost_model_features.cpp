@@ -27,6 +27,20 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
     {"selectivity", selectivity},
     {"operator_description", operator_description},
     {"previous_operator", previous_operator},
+    // {"first_column_segment_encoding", static_cast<int32_t>(0)},
+    // {"first_column_segment_vector_compression", static_cast<int32_t>(255)},
+    // {"first_column_is_reference_segment", false},
+    // {"first_column_data_type", pmr_string("")},
+    // {"first_column_memory_usage_bytes", static_cast<int64_t>(0)},
+    // {"first_column_distinct_value_count", static_cast<int64_t>(0)},
+    // {"second_column_segment_encoding", static_cast<int32_t>(0)},
+    // {"second_column_segment_vector_compression", static_cast<int32_t>(255)},
+    // {"second_column_is_reference_segment", false},
+    // {"second_column_data_type", pmr_string("")},
+    // {"second_column_memory_usage_bytes", static_cast<int64_t>(0)},
+    // {"second_column_distinct_value_count", static_cast<int64_t>(0)},
+
+// second_column_data_type,second_column_distinct_value_count,second_column_is_reference_segment,second_column_memory_usage_bytes,second_column_segment_encoding,second_column_segment_vector_compression
     // DISABLED UNTIL NECESSARY FOR ColVsCol Scan or JOIN {"total_row_count", static_cast<int64_t>(total_row_count)},
     // DISABLED UNTIL NECESSARY FOR JOIN {"logical_cost_sort_merge", logical_cost_sort_merge},
     // DISABLED UNTIL NECESSARY FOR JOIN {"logical_cost_hash", logical_cost_hash}
@@ -34,9 +48,15 @@ const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const
   // clang-format on
 
   // std::map::merge() not supported yet by Clang - C++17
-  const auto serialized_table_scan_features = table_scan_features.serialize();
+  // if (operator_type == OperatorType::TableScan) {
+  // const auto serialized_table_scan_features = table_scan_features.serialize();
+  // features.insert(serialized_table_scan_features.begin(), serialized_table_scan_features.end());
+  // }
 
-  features.insert(serialized_table_scan_features.begin(), serialized_table_scan_features.end());
+  // if (operator_type == OperatorType::JoinHash) {
+  const auto serialized_join_features = join_features.serialize();
+  features.insert(serialized_join_features.begin(), serialized_join_features.end());
+  // }
 
   return features;
 }
