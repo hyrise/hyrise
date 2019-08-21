@@ -1,5 +1,7 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_SOURCE_DIR}/third_party)
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/third_party
+)
 
 set(
     SOURCES
@@ -55,7 +57,6 @@ set(
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
-add_definitions (-DPATH_TO_TPCDS_IDX=\"${CMAKE_SOURCE_DIR}/third_party/tpcds-kit/tools/tpcds.idx\")
 
 target_link_libraries(
     hyriseBenchmarkLib

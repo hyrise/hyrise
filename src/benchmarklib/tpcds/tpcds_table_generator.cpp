@@ -36,8 +36,10 @@ extern "C" {
 #include <tpcds-kit/tools/w_web_site.h>
 }
 
-#include <benchmark_config.hpp>
-#include <table_builder.hpp>
+#include "benchmark_config.hpp"
+#include "operators/import_binary.hpp"
+#include "table_builder.hpp"
+#include "utils/timer.hpp"
 
 namespace {
 using namespace opossum;  // NOLINT
@@ -57,11 +59,11 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
 
   // init_rand from genrand.c, adapted
   {
-    auto nSeed = get_int(rng_seed_string.data());
+    auto n_seed = get_int(rng_seed_string.data());
     auto skip = INT_MAX / MAX_COLUMN;
     for (auto i = 0; i < MAX_COLUMN; i++) {
-      Streams[i].nInitialSeed = nSeed + skip * i;
-      Streams[i].nSeed = nSeed + skip * i;
+      Streams[i].nInitialSeed = n_seed + skip * i;
+      Streams[i].nSeed = n_seed + skip * i;
       Streams[i].nUsed = 0;
     }
   }
@@ -72,8 +74,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   mk_w_catalog_sales_master(nullptr, 0, 1);
 
   auto distributions_string = std::string{"DISTRIBUTIONS"};
-  // PATH_TO_TPCDS_IDX is set to "${CMAKE_BINARY_DIR}/tpcds.idx" in CMakeLists.txt
-  auto distributions_value = std::string{PATH_TO_TPCDS_IDX};
+  auto distributions_value = std::string{"resources/benchmark/tpcds/tpcds.idx"};
   set_str(distributions_string.data(), distributions_value.data());
 
   for (auto table_id = 0; table_id <= MAX_TABLE; table_id++) {
@@ -101,12 +102,12 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
 
   if (k_first_row != 1) {
     row_skip(table_id, static_cast<int>(k_first_row - 1));
-    if (tdefs.flags & FL_PARENT) {
+    if (tdefs.flags & FL_PARENT) {  // NOLINT
       row_skip(tdefs.nParam, static_cast<int>(k_first_row - 1));
     }
   }
 
-  if (tdefs.flags & FL_SMALL) {
+  if (tdefs.flags & FL_SMALL) {  // NOLINT
     resetCountCount();
   }
 
@@ -126,7 +127,7 @@ pmr_string zip_to_string(int32_t zip) {
 
 // dsdgen deliberately creates NULL values if nullCheck(column_id) is true, resolve functions mimic that
 std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
-  if (date_id <= 0 || nullCheck(column_id)) {
+  if (nullCheck(column_id) || date_id <= 0) {
     return std::nullopt;
   }
 
@@ -176,174 +177,194 @@ std::optional<pmr_string> resolve_street_name(int column_id, const ds_addr_t& ad
 // decimal, float -> float
 // ds_addr_t -> corresponding types for types in struct ds_addr_t, see address.h
 
+// in tpcds most columns are nullable, so we pass std::optional<?> as type
+
 // clang-format off
-const auto call_center_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto call_center_column_names = boost::hana::make_tuple("cc_call_center_sk", "cc_call_center_id", "cc_rec_start_date", "cc_rec_end_date", "cc_closed_date_sk", "cc_open_date_sk", "cc_name", "cc_class", "cc_employees", "cc_sq_ft", "cc_hours", "cc_manager", "cc_mkt_id", "cc_mkt_class", "cc_mkt_desc", "cc_market_manager", "cc_division", "cc_division_name", "cc_company", "cc_company_name", "cc_street_number", "cc_street_name", "cc_street_type", "cc_suite_number", "cc_city", "cc_county", "cc_state", "cc_zip", "cc_country", "cc_gmt_offset", "cc_tax_percentage"); // NOLINT
+const auto call_center_column_types = boost::hana::tuple<     tpcds_key_t         , pmr_string          , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT
+const auto call_center_column_names = boost::hana::make_tuple("cc_call_center_sk" , "cc_call_center_id" , "cc_rec_start_date"       , "cc_rec_end_date"         , "cc_closed_date_sk"        , "cc_open_date_sk"          , "cc_name"                 , "cc_class"                , "cc_employees"         , "cc_sq_ft"             , "cc_hours"                , "cc_manager"              , "cc_mkt_id"            , "cc_mkt_class"            , "cc_mkt_desc"             , "cc_market_manager"       , "cc_division"          , "cc_division_name"        , "cc_company"           , "cc_company_name"         , "cc_street_number"        , "cc_street_name"          , "cc_street_type"          , "cc_suite_number"         , "cc_city"                 , "cc_county"               , "cc_state"                , "cc_zip"                  , "cc_country"              , "cc_gmt_offset"      , "cc_tax_percentage"); // NOLINT
 
-const auto catalog_page_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
-const auto catalog_page_column_names = boost::hana::make_tuple("cp_catalog_page_sk", "cp_catalog_page_id", "cp_start_date_sk", "cp_end_date_sk", "cp_department", "cp_catalog_number", "cp_catalog_page_number", "cp_description", "cp_type"); // NOLINT
+const auto catalog_page_column_types = boost::hana::tuple<     tpcds_key_t          , pmr_string           , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>   , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
+const auto catalog_page_column_names = boost::hana::make_tuple("cp_catalog_page_sk" , "cp_catalog_page_id" , "cp_start_date_sk"         , "cp_end_date_sk"           , "cp_department"           , "cp_catalog_number"    , "cp_catalog_page_number" , "cp_description"          , "cp_type"); // NOLINT
 
-const auto catalog_returns_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto catalog_returns_column_names = boost::hana::make_tuple("cr_returned_date_sk", "cr_returned_time_sk", "cr_item_sk", "cr_refunded_customer_sk", "cr_refunded_cdemo_sk", "cr_refunded_hdemo_sk", "cr_refunded_addr_sk", "cr_returning_customer_sk", "cr_returning_cdemo_sk", "cr_returning_hdemo_sk", "cr_returning_addr_sk", "cr_call_center_sk", "cr_catalog_page_sk", "cr_ship_mode_sk", "cr_warehouse_sk", "cr_reason_sk", "cr_order_number", "cr_return_quantity", "cr_return_amount", "cr_return_tax", "cr_return_amt_inc_tax", "cr_fee", "cr_return_ship_cost", "cr_refunded_cash", "cr_reversed_charge", "cr_store_credit", "cr_net_loss"); // NOLINT
+const auto catalog_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>(); // NOLINT
+const auto catalog_returns_column_names = boost::hana::make_tuple("cr_returned_date_sk"      , "cr_returned_time_sk"      , "cr_item_sk" , "cr_refunded_customer_sk"  , "cr_refunded_cdemo_sk"     , "cr_refunded_hdemo_sk"     , "cr_refunded_addr_sk"      , "cr_returning_customer_sk" , "cr_returning_cdemo_sk"    , "cr_returning_hdemo_sk"    , "cr_returning_addr_sk"     , "cr_call_center_sk"        , "cr_catalog_page_sk"       , "cr_ship_mode_sk"          , "cr_warehouse_sk"          , "cr_reason_sk"             , "cr_order_number" , "cr_return_quantity"   , "cr_return_amount"   , "cr_return_tax"      , "cr_return_amt_inc_tax" , "cr_fee"             , "cr_return_ship_cost" , "cr_refunded_cash"   , "cr_reversed_charge" , "cr_store_credit"    , "cr_net_loss"); // NOLINT
 
-const auto catalog_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto catalog_sales_column_names = boost::hana::make_tuple("cs_sold_date_sk", "cs_sold_time_sk", "cs_ship_date_sk", "cs_bill_customer_sk", "cs_bill_cdemo_sk", "cs_bill_hdemo_sk", "cs_bill_addr_sk", "cs_ship_customer_sk", "cs_ship_cdemo_sk", "cs_ship_hdemo_sk", "cs_ship_addr_sk", "cs_call_center_sk", "cs_catalog_page_sk", "cs_ship_mode_sk", "cs_warehouse_sk", "cs_item_sk", "cs_promo_sk", "cs_order_number", "cs_quantity", "cs_wholesale_cost", "cs_list_price", "cs_sales_price", "cs_ext_discount_amt", "cs_ext_sales_price", "cs_ext_wholesale_cost", "cs_ext_list_price", "cs_ext_tax", "cs_coupon_amt", "cs_ext_ship_cost", "cs_net_paid", "cs_net_paid_inc_tax", "cs_net_paid_inc_ship", "cs_net_paid_inc_ship_tax", "cs_net_profit"); // NOLINT
+const auto catalog_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>   , std::optional<float>       , std::optional<float>>(); // NOLINT
+const auto catalog_sales_column_names = boost::hana::make_tuple("cs_sold_date_sk"          , "cs_sold_time_sk"          , "cs_ship_date_sk"          , "cs_bill_customer_sk"      , "cs_bill_cdemo_sk"         , "cs_bill_hdemo_sk"         , "cs_bill_addr_sk"          , "cs_ship_customer_sk"      , "cs_ship_cdemo_sk"         , "cs_ship_hdemo_sk"         , "cs_ship_addr_sk"          , "cs_call_center_sk"        , "cs_catalog_page_sk"       , "cs_ship_mode_sk"          , "cs_warehouse_sk"          , "cs_item_sk" , "cs_promo_sk"              , "cs_order_number" , "cs_quantity"          , "cs_wholesale_cost"  , "cs_list_price"      , "cs_sales_price"     , "cs_ext_discount_amt" , "cs_ext_sales_price" , "cs_ext_wholesale_cost" , "cs_ext_list_price"  , "cs_ext_tax"         , "cs_coupon_amt"      , "cs_ext_ship_cost"   , "cs_net_paid"        , "cs_net_paid_inc_tax" , "cs_net_paid_inc_ship" , "cs_net_paid_inc_ship_tax" , "cs_net_profit"); // NOLINT
 
-const auto customer_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>>(); // NOLINT
-const auto customer_column_names = boost::hana::make_tuple("c_customer_sk", "c_customer_id", "c_current_cdemo_sk", "c_current_hdemo_sk", "c_current_addr_sk", "c_first_shipto_date_sk", "c_first_sales_date_sk", "c_salutation", "c_first_name", "c_last_name", "c_preferred_cust_flag", "c_birth_day", "c_birth_month", "c_birth_year", "c_birth_country", "c_login", "c_email_address", "c_last_review_date"); // NOLINT
+const auto customer_column_types = boost::hana::tuple<     tpcds_key_t     , pmr_string      , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<int32_t>   , std::optional<int32_t>  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t>>(); // NOLINT
+const auto customer_column_names = boost::hana::make_tuple("c_customer_sk" , "c_customer_id" , "c_current_cdemo_sk"       , "c_current_hdemo_sk"       , "c_current_addr_sk"        , "c_first_shipto_date_sk" , "c_first_sales_date_sk" , "c_salutation"            , "c_first_name"            , "c_last_name"             , "c_preferred_cust_flag"   , "c_birth_day"          , "c_birth_month"        , "c_birth_year"         , "c_birth_country"         , "c_login"                 , "c_email_address"         , "c_last_review_date"); // NOLINT
 
-const auto customer_address_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<pmr_string>>(); // NOLINT
-const auto customer_address_column_names = boost::hana::make_tuple("ca_address_sk", "ca_address_id", "ca_street_number", "ca_street_name", "ca_street_type", "ca_suite_number", "ca_city", "ca_county", "ca_state", "ca_zip", "ca_country", "ca_gmt_offset", "ca_location_type"); // NOLINT
+const auto customer_address_column_types = boost::hana::tuple<     tpcds_key_t     , pmr_string      , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<pmr_string>>(); // NOLINT
+const auto customer_address_column_names = boost::hana::make_tuple("ca_address_sk" , "ca_address_id" , "ca_street_number"        , "ca_street_name"          , "ca_street_type"          , "ca_suite_number"         , "ca_city"                 , "ca_county"               , "ca_state"                , "ca_zip"                  , "ca_country"              , "ca_gmt_offset"      , "ca_location_type"); // NOLINT
 
-const auto customer_demographics_column_types = boost::hana::tuple<tpcds_key_t, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
-const auto customer_demographics_column_names = boost::hana::make_tuple("cd_demo_sk", "cd_gender", "cd_marital_status", "cd_education_status", "cd_purchase_estimate", "cd_credit_rating", "cd_dep_count", "cd_dep_employed_count", "cd_dep_college_count"); // NOLINT
+const auto customer_demographics_column_types = boost::hana::tuple<     tpcds_key_t  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>  , std::optional<int32_t>>(); // NOLINT
+const auto customer_demographics_column_names = boost::hana::make_tuple("cd_demo_sk" , "cd_gender"               , "cd_marital_status"       , "cd_education_status"     , "cd_purchase_estimate" , "cd_credit_rating"        , "cd_dep_count"         , "cd_dep_employed_count" , "cd_dep_college_count"); // NOLINT
 
-const auto date_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
-const auto date_column_names = boost::hana::make_tuple("d_date_sk", "d_date_id", "d_date", "d_month_seq", "d_week_seq", "d_quarter_seq", "d_year", "d_dow", "d_moy", "d_dom", "d_qoy", "d_fy_year", "d_fy_quarter_seq", "d_fy_week_seq", "d_day_name", "d_quarter_name", "d_holiday", "d_weekend", "d_following_holiday", "d_first_dom", "d_last_dom", "d_same_day_ly", "d_same_day_lq", "d_current_day", "d_current_week", "d_current_month", "d_current_quarter", "d_current_year"); // NOLINT
+const auto date_column_types = boost::hana::tuple<     tpcds_key_t , pmr_string  , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
+const auto date_column_names = boost::hana::make_tuple("d_date_sk" , "d_date_id" , "d_date"                  , "d_month_seq"          , "d_week_seq"           , "d_quarter_seq"        , "d_year"               , "d_dow"                , "d_moy"                , "d_dom"                , "d_qoy"                , "d_fy_year"            , "d_fy_quarter_seq"     , "d_fy_week_seq"        , "d_day_name"              , "d_quarter_name"          , "d_holiday"               , "d_weekend"               , "d_following_holiday"     , "d_first_dom"          , "d_last_dom"           , "d_same_day_ly"        , "d_same_day_lq"        , "d_current_day"           , "d_current_week"          , "d_current_month"         , "d_current_quarter"       , "d_current_year"); // NOLINT
 
-const auto household_demographics_column_types = boost::hana::tuple<tpcds_key_t, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
-const auto household_demographics_column_names = boost::hana::make_tuple("hd_demo_sk", "hd_income_band_sk", "hd_buy_potential", "hd_dep_count", "hd_vehicle_count"); // NOLINT
+const auto household_demographics_column_types = boost::hana::tuple<     tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t>>(); // NOLINT
+const auto household_demographics_column_names = boost::hana::make_tuple("hd_demo_sk" , "hd_income_band_sk"        , "hd_buy_potential"        , "hd_dep_count"         , "hd_vehicle_count"); // NOLINT
 
-const auto income_band_column_types = boost::hana::tuple<int32_t, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
-const auto income_band_column_names = boost::hana::make_tuple("ib_income_band_sk", "ib_lower_bound", "ib_upper_bound"); // NOLINT
+const auto income_band_column_types = boost::hana::tuple<     int32_t             , std::optional<int32_t> , std::optional<int32_t>>(); // NOLINT
+const auto income_band_column_names = boost::hana::make_tuple("ib_income_band_sk" , "ib_lower_bound"       , "ib_upper_bound"); // NOLINT
 
-const auto inventory_column_types = boost::hana::tuple<tpcds_key_t, tpcds_key_t, tpcds_key_t, std::optional<int32_t>>(); // NOLINT
-const auto inventory_column_names = boost::hana::make_tuple("inv_date_sk", "inv_item_sk", "inv_warehouse_sk", "inv_quantity_on_hand"); // NOLINT
+const auto inventory_column_types = boost::hana::tuple<     tpcds_key_t   , tpcds_key_t   , tpcds_key_t        , std::optional<int32_t>>(); // NOLINT
+const auto inventory_column_names = boost::hana::make_tuple("inv_date_sk" , "inv_item_sk" , "inv_warehouse_sk" , "inv_quantity_on_hand"); // NOLINT
 
-const auto item_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>>(); // NOLINT
-const auto item_column_names = boost::hana::make_tuple("i_item_sk", "i_item_id", "i_rec_start_date", "i_rec_end_date", "i_item_desc", "i_current_price", "i_wholesale_cost", "i_brand_id", "i_brand", "i_class_id", "i_class", "i_category_id", "i_category", "i_manufact_id", "i_manufact", "i_size", "i_formulation", "i_color", "i_units", "i_container", "i_manager_id", "i_product_name"); // NOLINT
+const auto item_column_types = boost::hana::tuple<     tpcds_key_t , pmr_string  , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string>>(); // NOLINT
+const auto item_column_names = boost::hana::make_tuple("i_item_sk" , "i_item_id" , "i_rec_start_date"        , "i_rec_end_date"          , "i_item_desc"             , "i_current_price"    , "i_wholesale_cost"   , "i_brand_id"               , "i_brand"                 , "i_class_id"               , "i_class"                 , "i_category_id"            , "i_category"              , "i_manufact_id"            , "i_manufact"              , "i_size"                  , "i_formulation"           , "i_color"                 , "i_units"                 , "i_container"             , "i_manager_id"             , "i_product_name"); // NOLINT
 
-const auto promotion_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<float>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
-const auto promotion_column_names = boost::hana::make_tuple("p_promo_sk", "p_promo_id", "p_start_date_sk", "p_end_date_sk", "p_item_sk", "p_cost", "p_response_target", "p_promo_name", "p_channel_dmail", "p_channel_email", "p_channel_catalog", "p_channel_tv", "p_channel_radio", "p_channel_press", "p_channel_event", "p_channel_demo", "p_channel_details", "p_purpose", "p_discount_active"); // NOLINT
+const auto promotion_column_types = boost::hana::tuple<     tpcds_key_t  , pmr_string   , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<float> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
+const auto promotion_column_names = boost::hana::make_tuple("p_promo_sk" , "p_promo_id" , "p_start_date_sk"          , "p_end_date_sk"            , "p_item_sk"                , "p_cost"             , "p_response_target"    , "p_promo_name"            , "p_channel_dmail"         , "p_channel_email"         , "p_channel_catalog"       , "p_channel_tv"            , "p_channel_radio"         , "p_channel_press"         , "p_channel_event"         , "p_channel_demo"          , "p_channel_details"       , "p_purpose"               , "p_discount_active"); // NOLINT
 
-const auto reason_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>>(); // NOLINT
-const auto reason_column_names = boost::hana::make_tuple("r_reason_sk", "r_reason_id", "r_reason_desc"); // NOLINT
+const auto reason_column_types = boost::hana::tuple<     tpcds_key_t   , pmr_string    , std::optional<pmr_string>>(); // NOLINT
+const auto reason_column_names = boost::hana::make_tuple("r_reason_sk" , "r_reason_id" , "r_reason_desc"); // NOLINT
 
-const auto ship_mode_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
-const auto ship_mode_column_names = boost::hana::make_tuple("sm_ship_mode_sk", "sm_ship_mode_id", "sm_type", "sm_code", "sm_carrier", "sm_contract"); // NOLINT
+const auto ship_mode_column_types = boost::hana::tuple<     tpcds_key_t       , pmr_string        , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
+const auto ship_mode_column_names = boost::hana::make_tuple("sm_ship_mode_sk" , "sm_ship_mode_id" , "sm_type"                 , "sm_code"                 , "sm_carrier"              , "sm_contract"); // NOLINT
 
-const auto store_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto store_column_names = boost::hana::make_tuple("s_store_sk", "s_store_id", "s_rec_start_date", "s_rec_end_date", "s_closed_date_sk", "s_store_name", "s_number_employees", "s_floor_space", "s_hours", "s_manager", "s_market_id", "s_geography_class", "s_market_desc", "s_market_manager", "s_division_id", "s_division_name", "s_company_id", "s_company_name", "s_street_number", "s_street_name", "s_street_type", "s_suite_number", "s_city", "s_county", "s_state", "s_zip", "s_country", "s_gmt_offset", "s_tax_precentage"); // NOLINT
+const auto store_column_types = boost::hana::tuple<     tpcds_key_t  , pmr_string   , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT
+const auto store_column_names = boost::hana::make_tuple("s_store_sk" , "s_store_id" , "s_rec_start_date"        , "s_rec_end_date"          , "s_closed_date_sk"         , "s_store_name"            , "s_number_employees"   , "s_floor_space"        , "s_hours"                 , "s_manager"               , "s_market_id"          , "s_geography_class"       , "s_market_desc"           , "s_market_manager"        , "s_division_id"            , "s_division_name"         , "s_company_id"             , "s_company_name"          , "s_street_number"         , "s_street_name"           , "s_street_type"           , "s_suite_number"          , "s_city"                  , "s_county"                , "s_state"                 , "s_zip"                   , "s_country"               , "s_gmt_offset"       , "s_tax_precentage"); // NOLINT
 
-const auto store_returns_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto store_returns_column_names = boost::hana::make_tuple("sr_returned_date_sk", "sr_return_time_sk", "sr_item_sk", "sr_customer_sk", "sr_cdemo_sk", "sr_hdemo_sk", "sr_addr_sk", "sr_store_sk", "sr_reason_sk", "sr_ticket_number", "sr_return_quantity", "sr_return_amt", "sr_return_tax", "sr_return_amt_inc_tax", "sr_fee", "sr_return_ship_cost", "sr_refunded_cash", "sr_reversed_charge", "sr_store_credit", "sr_net_loss"); // NOLINT
+const auto store_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t        , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>(); // NOLINT
+const auto store_returns_column_names = boost::hana::make_tuple("sr_returned_date_sk"      , "sr_return_time_sk"        , "sr_item_sk" , "sr_customer_sk"           , "sr_cdemo_sk"              , "sr_hdemo_sk"              , "sr_addr_sk"               , "sr_store_sk"              , "sr_reason_sk"             , "sr_ticket_number" , "sr_return_quantity"   , "sr_return_amt"      , "sr_return_tax"      , "sr_return_amt_inc_tax" , "sr_fee"             , "sr_return_ship_cost" , "sr_refunded_cash"   , "sr_reversed_charge" , "sr_store_credit"    , "sr_net_loss"); // NOLINT
 
-const auto store_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto store_sales_column_names = boost::hana::make_tuple("ss_sold_date_sk", "ss_sold_time_sk", "ss_item_sk", "ss_customer_sk", "ss_cdemo_sk", "ss_hdemo_sk", "ss_addr_sk", "ss_store_sk", "ss_promo_sk", "ss_ticket_number", "ss_quantity", "ss_wholesale_cost", "ss_list_price", "ss_sales_price", "ss_ext_discount_amt", "ss_ext_sales_price", "ss_ext_wholesale_cost", "ss_ext_list_price", "ss_ext_tax", "ss_coupon_amt", "ss_net_paid", "ss_net_paid_inc_tax", "ss_net_profit"); // NOLINT
+const auto store_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t        , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>>(); // NOLINT
+const auto store_sales_column_names = boost::hana::make_tuple("ss_sold_date_sk"          , "ss_sold_time_sk"          , "ss_item_sk" , "ss_customer_sk"           , "ss_cdemo_sk"              , "ss_hdemo_sk"              , "ss_addr_sk"               , "ss_store_sk"              , "ss_promo_sk"              , "ss_ticket_number" , "ss_quantity"          , "ss_wholesale_cost"  , "ss_list_price"      , "ss_sales_price"     , "ss_ext_discount_amt" , "ss_ext_sales_price" , "ss_ext_wholesale_cost" , "ss_ext_list_price"  , "ss_ext_tax"         , "ss_coupon_amt"      , "ss_net_paid"        , "ss_net_paid_inc_tax" , "ss_net_profit"); // NOLINT
 
-const auto time_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>>(); // NOLINT
-const auto time_column_names = boost::hana::make_tuple("t_time_sk", "t_time_id", "t_time", "t_hour", "t_minute", "t_second", "t_am_pm", "t_shift", "t_sub_shift", "t_meal_time"); // NOLINT
+const auto time_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string  , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string>>(); // NOLINT
+const auto time_column_names = boost::hana::make_tuple("t_time_sk"      , "t_time_id" , "t_time"               , "t_hour"               , "t_minute"             , "t_second"             , "t_am_pm"                 , "t_shift"                 , "t_sub_shift"             , "t_meal_time"); // NOLINT
 
-const auto warehouse_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>>(); // NOLINT
-const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk", "w_warehouse_id", "w_warehouse_name", "w_warehouse_sq_ft", "w_street_number", "w_street_name", "w_street_type", "w_suite_number", "w_city", "w_county", "w_state", "w_zip", "w_country", "w_gmt_offset"); // NOLINT
+const auto warehouse_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string       , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float>>(); // NOLINT
+const auto warehouse_column_names = boost::hana::make_tuple("w_warehouse_sk" , "w_warehouse_id" , "w_warehouse_name"        , "w_warehouse_sq_ft"    , "w_street_number"         , "w_street_name"           , "w_street_type"           , "w_suite_number"          , "w_city"                  , "w_county"                , "w_state"                 , "w_zip"                   , "w_country"               , "w_gmt_offset"); // NOLINT
 
-const auto web_page_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>, std::optional<int32_t>>(); // NOLINT
-const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk", "wp_web_page_id", "wp_rec_start_date", "wp_rec_end_date", "wp_creation_date_sk", "wp_access_date_sk", "wp_autogen_flag", "wp_customer_sk", "wp_url", "wp_type", "wp_char_count", "wp_link_count", "wp_image_count", "wp_max_ad_count"); // NOLINT
+const auto web_page_column_types = boost::hana::tuple<     tpcds_key_t      , pmr_string       , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t> , std::optional<int32_t>>(); // NOLINT
+const auto web_page_column_names = boost::hana::make_tuple("wp_web_page_sk" , "wp_web_page_id" , "wp_rec_start_date"       , "wp_rec_end_date"         , "wp_creation_date_sk"      , "wp_access_date_sk"        , "wp_autogen_flag"         , "wp_customer_sk"           , "wp_url"                  , "wp_type"                 , "wp_char_count"        , "wp_link_count"        , "wp_image_count"       , "wp_max_ad_count"); // NOLINT
 
-const auto web_returns_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto web_returns_column_names = boost::hana::make_tuple("wr_returned_date_sk", "wr_returned_time_sk", "wr_item_sk", "wr_refunded_customer_sk", "wr_refunded_cdemo_sk", "wr_refunded_hdemo_sk", "wr_refunded_addr_sk", "wr_returning_customer_sk", "wr_returning_cdemo_sk", "wr_returning_hdemo_sk", "wr_returning_addr_sk", "wr_web_page_sk", "wr_reason_sk", "wr_order_number", "wr_return_quantity", "wr_return_amt", "wr_return_tax", "wr_return_amt_inc_tax", "wr_fee", "wr_return_ship_cost", "wr_refunded_cash", "wr_reversed_charge", "wr_account_credit", "wr_net_loss"); // NOLINT
+const auto web_returns_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>>(); // NOLINT
+const auto web_returns_column_names = boost::hana::make_tuple("wr_returned_date_sk"      , "wr_returned_time_sk"      , "wr_item_sk" , "wr_refunded_customer_sk"  , "wr_refunded_cdemo_sk"     , "wr_refunded_hdemo_sk"     , "wr_refunded_addr_sk"      , "wr_returning_customer_sk" , "wr_returning_cdemo_sk"    , "wr_returning_hdemo_sk"    , "wr_returning_addr_sk"     , "wr_web_page_sk"           , "wr_reason_sk"             , "wr_order_number" , "wr_return_quantity"   , "wr_return_amt"      , "wr_return_tax"      , "wr_return_amt_inc_tax" , "wr_fee"             , "wr_return_ship_cost" , "wr_refunded_cash"   , "wr_reversed_charge" , "wr_account_credit"  , "wr_net_loss"); // NOLINT
 
-const auto web_sales_column_types = boost::hana::tuple<std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, tpcds_key_t, std::optional<int32_t>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto web_sales_column_names = boost::hana::make_tuple("ws_sold_date_sk", "ws_sold_time_sk", "ws_ship_date_sk", "ws_item_sk", "ws_bill_customer_sk", "ws_bill_cdemo_sk", "ws_bill_hdemo_sk", "ws_bill_addr_sk", "ws_ship_customer_sk", "ws_ship_cdemo_sk", "ws_ship_hdemo_sk", "ws_ship_addr_sk", "ws_web_page_sk", "ws_web_site_sk", "ws_ship_mode_sk", "ws_warehouse_sk", "ws_promo_sk", "ws_order_number", "ws_quantity", "ws_wholesale_cost", "ws_list_price", "ws_sales_price", "ws_ext_discount_amt", "ws_ext_sales_price", "ws_ext_wholesale_cost", "ws_ext_list_price", "ws_ext_tax", "ws_coupon_amt", "ws_ext_ship_cost", "ws_net_paid", "ws_net_paid_inc_tax", "ws_net_paid_inc_ship", "ws_net_paid_inc_ship_tax", "ws_net_profit"); // NOLINT
+const auto web_sales_column_types = boost::hana::tuple<     std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t  , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , tpcds_key_t       , std::optional<int32_t> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float> , std::optional<float>    , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float> , std::optional<float>  , std::optional<float>   , std::optional<float>       , std::optional<float>>(); // NOLINT
+const auto web_sales_column_names = boost::hana::make_tuple("ws_sold_date_sk"          , "ws_sold_time_sk"          , "ws_ship_date_sk"          , "ws_item_sk" , "ws_bill_customer_sk"      , "ws_bill_cdemo_sk"         , "ws_bill_hdemo_sk"         , "ws_bill_addr_sk"          , "ws_ship_customer_sk"      , "ws_ship_cdemo_sk"         , "ws_ship_hdemo_sk"         , "ws_ship_addr_sk"          , "ws_web_page_sk"           , "ws_web_site_sk"           , "ws_ship_mode_sk"          , "ws_warehouse_sk"          , "ws_promo_sk"              , "ws_order_number" , "ws_quantity"          , "ws_wholesale_cost"  , "ws_list_price"      , "ws_sales_price"     , "ws_ext_discount_amt" , "ws_ext_sales_price" , "ws_ext_wholesale_cost" , "ws_ext_list_price"  , "ws_ext_tax"         , "ws_coupon_amt"      , "ws_ext_ship_cost"   , "ws_net_paid"        , "ws_net_paid_inc_tax" , "ws_net_paid_inc_ship" , "ws_net_paid_inc_ship_tax" , "ws_net_profit"); // NOLINT
 
-const auto web_site_column_types = boost::hana::tuple<tpcds_key_t, pmr_string, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<tpcds_key_t>, std::optional<tpcds_key_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<int32_t>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<pmr_string>, std::optional<float>, std::optional<float>>(); // NOLINT
-const auto web_site_column_names = boost::hana::make_tuple("web_site_sk", "web_site_id", "web_rec_start_date", "web_rec_end_date", "web_name", "web_open_date_sk", "web_close_date_sk", "web_class", "web_manager", "web_mkt_id", "web_mkt_class", "web_mkt_desc", "web_market_manager", "web_company_id", "web_company_name", "web_street_number", "web_street_name", "web_street_type", "web_suite_number", "web_city", "web_county", "web_state", "web_zip", "web_country", "web_gmt_offset", "web_tax_percentage"); // NOLINT
+const auto web_site_column_types = boost::hana::tuple<     tpcds_key_t   , pmr_string    , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<tpcds_key_t> , std::optional<tpcds_key_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<int32_t> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<pmr_string> , std::optional<float> , std::optional<float>>(); // NOLINT
+const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_site_id" , "web_rec_start_date"      , "web_rec_end_date"        , "web_name"                , "web_open_date_sk"         , "web_close_date_sk"        , "web_class"               , "web_manager"             , "web_mkt_id"           , "web_mkt_class"           , "web_mkt_desc"            , "web_market_manager"      , "web_company_id"       , "web_company_name"        , "web_street_number"       , "web_street_name"         , "web_street_type"         , "web_suite_number"        , "web_city"                , "web_county"              , "web_state"               , "web_zip"                 , "web_country"             , "web_gmt_offset"     , "web_tax_percentage"); // NOLINT
 // clang-format on
 }  // namespace
 
 namespace opossum {
 
 TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
-    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)) {
+    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
 TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
                                          const std::shared_ptr<BenchmarkConfig>& benchmark_config, int rng_seed)
-    : AbstractTableGenerator(benchmark_config) {
+    : AbstractTableGenerator(benchmark_config), _scale_factor{scale_factor} {
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
-  const auto max_rows = std::numeric_limits<ds_key_t>::max();
+  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
-  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>();
+  // try to load cached tables
+  const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);
+  if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
+    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
+      const auto table_name = table_file.path().stem();
+      auto timer = Timer{};
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
 
-  table_info_by_name["call_center"].table = generate_call_center(max_rows);
-  std::cout << "call_center table generated" << std::endl;
+      auto table_info = BenchmarkTableInfo{};
+      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.loaded_from_binary = true;
+      table_info_by_name[table_name] = table_info;
 
-  table_info_by_name["catalog_page"].table = generate_catalog_page(max_rows);
-  std::cout << "catalog_page table generated" << std::endl;
+      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
+    }
 
-  auto catalog_sales_and_returns = generate_catalog_sales_and_returns(max_rows);
-  std::cout << "catalog_sales table generated" << std::endl;
-  std::cout << "catalog_returns table generated" << std::endl;
-  table_info_by_name["catalog_sales"].table = catalog_sales_and_returns.first;
-  table_info_by_name["catalog_returns"].table = catalog_sales_and_returns.second;
+    return table_info_by_name;
+  }
 
-  table_info_by_name["customer"].table = generate_customer(max_rows);
-  std::cout << "customer table generated" << std::endl;
+  for (const auto& table_name : {"call_center", "catalog_page", "customer_address", "customer", "customer_demographics",
+                                 "date_dim", "household_demographics", "income_band", "inventory", "item", "promotion",
+                                 "reason", "ship_mode", "store", "time_dim", "warehouse", "web_page", "web_site"}) {
+    table_info_by_name[table_name].table = _generate_table(table_name);
+  }
 
-  table_info_by_name["customer_address"].table = generate_customer_address(max_rows);
-  std::cout << "customer_address table generated" << std::endl;
+  for (const auto& [sales_table_name, returns_table_name] : std::vector<std::pair<std::string, std::string>>{
+           {"catalog_sales", "catalog_returns"}, {"store_sales", "store_returns"}, {"web_sales", "web_returns"}}) {
+    auto catalog_sales_and_returns = _generate_sales_and_returns_tables(sales_table_name);
+    table_info_by_name[sales_table_name].table = catalog_sales_and_returns.first;
+    table_info_by_name[returns_table_name].table = catalog_sales_and_returns.second;
+  }
 
-  table_info_by_name["customer_demographics"].table = generate_customer_demographics(max_rows);
-  std::cout << "customer_demographics table generated" << std::endl;
-
-  table_info_by_name["date"].table = generate_date(max_rows);
-  std::cout << "date table generated" << std::endl;
-
-  table_info_by_name["household_demographics"].table = generate_household_demographics(max_rows);
-  std::cout << "household_demographics table generated" << std::endl;
-
-  table_info_by_name["income_band"].table = generate_income_band(max_rows);
-  std::cout << "income_band table generated" << std::endl;
-
-  table_info_by_name["inventory"].table = generate_inventory(max_rows);
-  std::cout << "inventory table generated" << std::endl;
-
-  table_info_by_name["item"].table = generate_item(max_rows);
-  std::cout << "item table generated" << std::endl;
-
-  table_info_by_name["promotion"].table = generate_promotion(max_rows);
-  std::cout << "promotion table generated" << std::endl;
-
-  table_info_by_name["reason"].table = generate_reason(max_rows);
-  std::cout << "reason table generated" << std::endl;
-
-  table_info_by_name["ship_mode"].table = generate_ship_mode(max_rows);
-  std::cout << "ship_mode table generated" << std::endl;
-
-  table_info_by_name["store"].table = generate_store(max_rows);
-  std::cout << "store table generated" << std::endl;
-
-  auto store_sales_and_returns = generate_store_sales_and_returns(max_rows);
-  std::cout << "store_sales table generated" << std::endl;
-  std::cout << "store_returns table generated" << std::endl;
-  table_info_by_name["store_sales"].table = store_sales_and_returns.first;
-  table_info_by_name["store_returns"].table = store_sales_and_returns.second;
-
-  table_info_by_name["time"].table = generate_time(max_rows);
-  std::cout << "time table generated" << std::endl;
-
-  table_info_by_name["warehouse"].table = generate_warehouse(max_rows);
-  std::cout << "warehouse table generated" << std::endl;
-
-  table_info_by_name["web_page"].table = generate_web_page(max_rows);
-  std::cout << "web_page table generated" << std::endl;
-
-  auto web_sales_and_returns = generate_web_sales_and_returns(max_rows);
-  std::cout << "web_sales table generated" << std::endl;
-  std::cout << "web_returns table generated" << std::endl;
-  table_info_by_name["web_sales"].table = web_sales_and_returns.first;
-  table_info_by_name["web_returns"].table = web_sales_and_returns.second;
-
-  table_info_by_name["web_site"].table = generate_web_site(max_rows);
-  std::cout << "web_site table generated" << std::endl;
-
-  tpcds_cleanup();
+  if (_benchmark_config->cache_binary_tables) {
+    std::filesystem::create_directories(cache_directory);
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";
+    }
+  }
 
   return table_info_by_name;
+}
+
+std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& table_name) {
+  if (table_name == "call_center") {
+    return generate_call_center();
+  } else if (table_name == "catalog_page") {
+    return generate_catalog_page();
+  } else if (table_name == "customer_address") {
+    return generate_customer_address();
+  } else if (table_name == "customer") {
+    return generate_customer();
+  } else if (table_name == "customer_demographics") {
+    return generate_customer_demographics();
+  } else if (table_name == "date_dim") {
+    return generate_date_dim();
+  } else if (table_name == "household_demographics") {
+    return generate_household_demographics();
+  } else if (table_name == "income_band") {
+    return generate_income_band();
+  } else if (table_name == "inventory") {
+    return generate_inventory();
+  } else if (table_name == "item") {
+    return generate_item();
+  } else if (table_name == "promotion") {
+    return generate_promotion();
+  } else if (table_name == "reason") {
+    return generate_reason();
+  } else if (table_name == "ship_mode") {
+    return generate_ship_mode();
+  } else if (table_name == "store") {
+    return generate_store();
+  } else if (table_name == "time_dim") {
+    return generate_time_dim();
+  } else if (table_name == "warehouse") {
+    return generate_warehouse();
+  } else if (table_name == "web_page") {
+    return generate_web_page();
+  } else if (table_name == "web_site") {
+    return generate_web_site();
+  } else {
+    Assert(false, "unexpected table name: " + table_name);
+  }
+}
+
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::_generate_sales_and_returns_tables(
+    const std::string& sales_table_name) {
+  if (sales_table_name == "catalog_sales") {
+    return generate_catalog_sales_and_returns();
+  } else if (sales_table_name == "store_sales") {
+    return generate_store_sales_and_returns();
+  } else if (sales_table_name == "web_sales") {
+    return generate_web_sales_and_returns();
+  } else {
+    Assert(false, "unexpected sales table name: " + sales_table_name);
+  }
 }
 
 std::shared_ptr<Table> TpcdsTableGenerator::generate_call_center(ds_key_t max_rows) const {
@@ -439,9 +460,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
     {
       mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + i, 0);
-      int nLineitems;
-      genrand_integer(&nLineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
-      for (auto j = 1; j <= nLineitems; j++) {
+      int n_lineitems;
+      genrand_integer(&n_lineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
+      for (auto j = 1; j <= n_lineitems; j++) {
         int was_returned = 0;
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
@@ -609,7 +630,7 @@ std::shared_ptr<Table> TpcdsTableGenerator::generate_customer_demographics(ds_ke
   return customer_demographics_builder.finish_table();
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_date(ds_key_t max_rows) const {
+std::shared_ptr<Table> TpcdsTableGenerator::generate_date_dim(ds_key_t max_rows) const {
   auto [date_first, date_count] = prepare_for_table(DATE);
   date_count = std::min(date_count, max_rows);
 
@@ -857,9 +878,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     {
       mk_w_store_sales_master(&store_sales, store_sales_first + i, 0);
 
-      int nLineitems;
-      genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
-      for (auto j = 1; j <= nLineitems; j++) {
+      int n_lineitems;
+      genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
+      for (auto j = 1; j <= n_lineitems; j++) {
         int was_returned = 0;
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
@@ -922,7 +943,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
   return {store_sales_builder.finish_table(), store_returns_builder.finish_table()};
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_time(ds_key_t max_rows) const {
+std::shared_ptr<Table> TpcdsTableGenerator::generate_time_dim(ds_key_t max_rows) const {
   auto [time_first, time_count] = prepare_for_table(TIME);
   time_count = std::min(time_count, max_rows);
 
@@ -1015,9 +1036,9 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::g
     {
       mk_w_web_sales_master(&web_sales, web_sales_first + i, 0);
 
-      int nLineitems;
-      genrand_integer(&nLineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
-      for (auto j = 1; j <= nLineitems; j++) {
+      int n_lineitems;
+      genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
+      for (auto j = 1; j <= n_lineitems; j++) {
         int was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 
