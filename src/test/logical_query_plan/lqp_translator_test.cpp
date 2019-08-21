@@ -12,6 +12,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
@@ -22,8 +23,6 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -38,8 +37,6 @@
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/drop_table.hpp"
-#include "operators/maintenance/show_columns.hpp"
-#include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -50,7 +47,6 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
@@ -67,13 +63,14 @@ class LQPTranslatorTest : public BaseTest {
     table_int_float5 = load_table("resources/test_data/tbl/int_float5.tbl");
     table_alias_name = load_table("resources/test_data/tbl/table_alias_name.tbl");
 
-    StorageManager::get().add_table("table_int_float", table_int_float);
-    StorageManager::get().add_table("table_int_string", table_int_string);
-    StorageManager::get().add_table("table_int_float2", table_int_float2);
-    StorageManager::get().add_table("table_int_float5", table_int_float5);
-    StorageManager::get().add_table("table_alias_name", table_alias_name);
-    StorageManager::get().add_table("int_float_chunked", load_table("resources/test_data/tbl/int_float.tbl", 1));
-    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("int_float_chunked"));
+    Hyrise::get().storage_manager.add_table("table_int_float", table_int_float);
+    Hyrise::get().storage_manager.add_table("table_int_string", table_int_string);
+    Hyrise::get().storage_manager.add_table("table_int_float2", table_int_float2);
+    Hyrise::get().storage_manager.add_table("table_int_float5", table_int_float5);
+    Hyrise::get().storage_manager.add_table("table_alias_name", table_alias_name);
+    Hyrise::get().storage_manager.add_table("int_float_chunked",
+                                            load_table("resources/test_data/tbl/int_float.tbl", 1));
+    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");
     int_float_a = int_float_node->get_column("a");
@@ -408,7 +405,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -442,7 +439,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -479,7 +476,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -563,36 +560,6 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinNestedLoop) {
   EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{0}, ColumnID{1}));
   EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::LessThan);
   EXPECT_EQ(join_op->mode(), JoinMode::Inner);
-}
-
-TEST_F(LQPTranslatorTest, ShowTablesNode) {
-  /**
-   * Build LQP and translate to PQP
-   */
-  const auto show_tables_node = ShowTablesNode::make();
-  const auto op = LQPTranslator{}.translate_node(show_tables_node);
-
-  /**
-   * Check PQP
-   */
-  const auto show_tables_op = std::dynamic_pointer_cast<ShowTables>(op);
-  ASSERT_TRUE(show_tables_op);
-  EXPECT_EQ(show_tables_op->name(), "ShowTables");
-}
-
-TEST_F(LQPTranslatorTest, ShowColumnsNode) {
-  /**
-   * Build LQP and translate to PQP
-   */
-  const auto show_column_node = ShowColumnsNode::make("table_a");
-  const auto op = LQPTranslator{}.translate_node(show_column_node);
-
-  /**
-   * Check PQP
-   */
-  const auto show_columns_op = std::dynamic_pointer_cast<ShowColumns>(op);
-  ASSERT_TRUE(show_columns_op);
-  EXPECT_EQ(show_columns_op->name(), "ShowColumns");
 }
 
 TEST_F(LQPTranslatorTest, AggregateNodeSimple) {

@@ -21,8 +21,8 @@
 
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export_binary.hpp"
@@ -42,12 +42,10 @@
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
-#include "utils/plugin_manager.hpp"
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -520,7 +518,7 @@ int Console::_load_table(const std::string& args) {
 
   out("Loading " + std::string(filepath) + " into table \"" + tablename + "\"\n");
 
-  auto& storage_manager = StorageManager::get();
+  auto& storage_manager = Hyrise::get().storage_manager;
   if (storage_manager.has_table(tablename)) {
     storage_manager.drop_table(tablename);
     out("Table " + tablename + " already existed. Replacing it.\n");
@@ -538,7 +536,7 @@ int Console::_load_table(const std::string& args) {
     try {
       auto table = load_table(filepath);
 
-      StorageManager::get().add_table(tablename, table);
+      Hyrise::get().storage_manager.add_table(tablename, table);
     } catch (const std::exception& exception) {
       out("Error: Exception thrown while importing TBL:\n  " + std::string(exception.what()) + "\n");
       return ReturnCode::Error;
@@ -567,7 +565,7 @@ int Console::_load_table(const std::string& args) {
   }
 
   // Check if the specified encoding can be used
-  const auto& table = StorageManager::get().get_table(tablename);
+  const auto& table = Hyrise::get().storage_manager.get_table(tablename);
   bool supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     if (!encoding_supports_data_type(encoding_type->second, table->column_data_type(column_id))) {
@@ -579,7 +577,7 @@ int Console::_load_table(const std::string& args) {
 
   if (supported) {
     out("Encoding \"" + tablename + "\" using " + encoding + "\n");
-    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table(tablename), encoding_type->second);
+    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table(tablename), encoding_type->second);
   }
 
   return ReturnCode::Ok;
@@ -597,7 +595,7 @@ int Console::_export_table(const std::string& args) {
   const std::string& tablename = arguments[0];
   const std::string& filepath = arguments[1];
 
-  auto& storage_manager = StorageManager::get();
+  auto& storage_manager = Hyrise::get().storage_manager;
   if (!storage_manager.has_table(tablename)) {
     out("Error: Table does not exist in StorageManager");
     return ReturnCode::Error;
@@ -778,16 +776,22 @@ int Console::_visualize(const std::string& input) {
     } break;
   }
 
-  auto ret = system("./scripts/planviz/is_iterm2.sh");
+  auto scripts_dir = std::string{"./scripts/"};
+  auto ret = system((scripts_dir + "planviz/is_iterm2.sh 2>/dev/null").c_str());
   if (ret != 0) {
-    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};  // NOLINT
+    // Try in parent directory
+    scripts_dir = std::string{"."} + scripts_dir;
+    ret = system((scripts_dir + "planviz/is_iterm2.sh").c_str());
+  }
+  if (ret != 0) {
+    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};
     msg += img_filename + "\n";
     out(msg);
 
     return ReturnCode::Ok;
   }
 
-  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + img_filename;
+  auto cmd = scripts_dir + "/planviz/imgcat.sh " + img_filename;
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
 
@@ -892,7 +896,7 @@ int Console::_begin_transaction(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  _explicitly_created_transaction_context = TransactionManager::get().new_transaction_context();
+  _explicitly_created_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
   out("New transaction (" + transaction_id + ") started.\n");
@@ -961,7 +965,7 @@ int Console::_load_plugin(const std::string& args) {
   const std::filesystem::path plugin_path(plugin_path_str);
   const auto plugin_name = plugin_name_from_path(plugin_path);
 
-  PluginManager::get().load_plugin(plugin_path);
+  Hyrise::get().plugin_manager.load_plugin(plugin_path);
 
   out("Plugin (" + plugin_name + ") successfully loaded.\n");
 
@@ -979,7 +983,7 @@ int Console::_unload_plugin(const std::string& input) {
 
   const std::string& plugin_name = arguments[0];
 
-  PluginManager::get().unload_plugin(plugin_name);
+  Hyrise::get().plugin_manager.unload_plugin(plugin_name);
 
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache. For example, a plugin might create indexes which lead to query plans
@@ -1089,7 +1093,7 @@ bool Console::_handle_rollback() {
 int main(int argc, char** argv) {
   // Make sure the TransactionManager is initialized before the console so that we don't run into destruction order
   // problems (#1635)
-  opossum::TransactionManager::get();
+  opossum::Hyrise::get();
 
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();

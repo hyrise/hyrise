@@ -1,4 +1,4 @@
 c_name|c_custkey|o_orderkey|o_orderdate|o_totalprice|SUM(l_quantity)
-string|int|int|string|float|double
+string|int|int|string|float|double_null
 Customer#000000334|334|29158|1995-10-21|441562|305
 Customer#000000089|89|6882|1997-04-09|389431|303

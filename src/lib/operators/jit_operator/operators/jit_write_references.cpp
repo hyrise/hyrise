@@ -110,7 +110,7 @@ const std::vector<JitWriteReferences::OutputColumn>& JitWriteReferences::output_
 }
 
 void JitWriteReferences::_consume(JitRuntimeContext& context) const {
-  context.output_pos_list->emplace_back(context.chunk_id, context.chunk_offset);
+  context.output_pos_list->emplace_back(RowID{context.chunk_id, context.chunk_offset});
 }
 
 }  // namespace opossum

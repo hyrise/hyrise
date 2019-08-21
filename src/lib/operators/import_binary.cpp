@@ -12,10 +12,10 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "import_export/binary.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "utils/assert.hpp"
 
@@ -89,14 +89,14 @@ T ImportBinary::_read_value(std::ifstream& file) {
 }
 
 std::shared_ptr<const Table> ImportBinary::_on_execute() {
-  if (_tablename && StorageManager::get().has_table(*_tablename)) {
-    return StorageManager::get().get_table(*_tablename);
+  if (_tablename && Hyrise::get().storage_manager.has_table(*_tablename)) {
+    return Hyrise::get().storage_manager.get_table(*_tablename);
   }
 
   const auto table = read_binary(_filename);
 
   if (_tablename) {
-    StorageManager::get().add_table(*_tablename, table);
+    Hyrise::get().storage_manager.add_table(*_tablename, table);
   }
 
   return table;

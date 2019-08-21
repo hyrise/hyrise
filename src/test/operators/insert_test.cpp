@@ -6,15 +6,14 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -30,13 +29,13 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   auto table_name = "test_table";
   auto t = load_table("resources/test_data/tbl/float_int.tbl");
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-  StorageManager::get().add_table(table_name, t);
+  Hyrise::get().storage_manager.add_table(table_name, t);
 
   auto gt = std::make_shared<GetTable>(table_name);
   gt->execute();
 
   auto ins = std::make_shared<Insert>(table_name, gt);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   ins->set_transaction_context(context);
 
@@ -61,17 +60,17 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
 
   // 3 Rows, chunk_size = 4
   auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
-  StorageManager::get().add_table(t_name, t);
+  Hyrise::get().storage_manager.add_table(t_name, t);
 
   // 10 Rows
   auto t2 = load_table("resources/test_data/tbl/10_ints.tbl");
-  StorageManager::get().add_table(t_name2, t2);
+  Hyrise::get().storage_manager.add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
   context->commit();
@@ -87,17 +86,17 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
 
   // 3 Rows
   auto t = load_table("resources/test_data/tbl/int.tbl", 2u);
-  StorageManager::get().add_table(t_name, t);
+  Hyrise::get().storage_manager.add_table(t_name, t);
 
   // 10 Rows
   auto t2 = load_table("resources/test_data/tbl/10_ints.tbl", 3u);
-  StorageManager::get().add_table(t_name2, t2);
+  Hyrise::get().storage_manager.add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
   context->commit();
@@ -113,18 +112,18 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
 
   // 3 Rows
   auto t = load_table("resources/test_data/tbl/int.tbl", 2u);
-  StorageManager::get().add_table(t_name, t);
+  Hyrise::get().storage_manager.add_table(t_name, t);
   opossum::ChunkEncoder::encode_all_chunks(t);
 
   // 10 Rows
   auto t2 = load_table("resources/test_data/tbl/10_ints.tbl");
-  StorageManager::get().add_table(t_name2, t2);
+  Hyrise::get().storage_manager.add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
   context->commit();
@@ -138,13 +137,13 @@ TEST_F(OperatorsInsertTest, Rollback) {
   auto t_name = "test3";
 
   auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
-  StorageManager::get().add_table(t_name, t);
+  Hyrise::get().storage_manager.add_table(t_name, t);
 
   auto gt1 = std::make_shared<GetTable>(t_name);
   gt1->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt1);
-  auto context1 = TransactionManager::get().new_transaction_context();
+  auto context1 = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context1);
   ins->execute();
   context1->rollback();
@@ -152,7 +151,7 @@ TEST_F(OperatorsInsertTest, Rollback) {
   auto gt2 = std::make_shared<GetTable>(t_name);
   gt2->execute();
   auto validate = std::make_shared<Validate>(gt2);
-  auto context2 = TransactionManager::get().new_transaction_context();
+  auto context2 = Hyrise::get().transaction_manager.new_transaction_context();
   validate->set_transaction_context(context2);
   validate->execute();
 
@@ -164,16 +163,16 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   auto t_name2 = "test2";
 
   auto t = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
-  StorageManager::get().add_table(t_name, t);
+  Hyrise::get().storage_manager.add_table(t_name, t);
 
   auto t2 = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
-  StorageManager::get().add_table(t_name2, t2);
+  Hyrise::get().storage_manager.add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
   context->commit();
@@ -190,16 +189,16 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   auto t_name2 = "test2";
 
   auto t = load_table("resources/test_data/tbl/int_float_with_null.tbl", 3u);
-  StorageManager::get().add_table(t_name, t);
+  Hyrise::get().storage_manager.add_table(t_name, t);
 
   auto t2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
-  StorageManager::get().add_table(t_name2, t2);
+  Hyrise::get().storage_manager.add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
   context->commit();
@@ -219,16 +218,16 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   auto t_name2 = "test2";
 
   auto t = load_table("resources/test_data/tbl/int_float.tbl", 3u);
-  StorageManager::get().add_table(t_name, t);
+  Hyrise::get().storage_manager.add_table(t_name, t);
 
   auto t2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
-  StorageManager::get().add_table(t_name2, t2);
+  Hyrise::get().storage_manager.add_table(t_name2, t2);
 
   auto gt2 = std::make_shared<GetTable>(t_name2);
   gt2->execute();
 
   auto ins = std::make_shared<Insert>(t_name, gt2);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   EXPECT_THROW(ins->execute(), std::logic_error);
   context->rollback();
@@ -238,7 +237,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto t_name = "test1";
 
   auto t = load_table("resources/test_data/tbl/float_with_null.tbl", 4u);
-  StorageManager::get().add_table(t_name, t);
+  Hyrise::get().storage_manager.add_table(t_name, t);
 
   auto dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
   dummy_wrapper->execute();
@@ -248,7 +247,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   projection->execute();
 
   auto ins = std::make_shared<Insert>(t_name, projection);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
   ins->execute();
   context->commit();
@@ -267,7 +266,7 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
 
   const auto target_table =
       std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
-  StorageManager::get().add_table("target_table", target_table);
+  Hyrise::get().storage_manager.add_table("target_table", target_table);
 
   const auto table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
 
@@ -275,7 +274,7 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   table_wrapper->execute();
 
   const auto insert = std::make_shared<Insert>("target_table", table_wrapper);
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   insert->set_transaction_context(context);
   insert->execute();
   context->commit();

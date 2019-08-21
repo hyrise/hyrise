@@ -19,7 +19,6 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
@@ -180,7 +179,8 @@ TEST_F(ExpressionEvaluatorToPosListTest, ExistsUncorrelated) {
   const auto table_wrapper_all = std::make_shared<TableWrapper>(Projection::dummy_table());
   const auto subquery_returning_all = pqp_subquery_(table_wrapper_all, DataType::Int, false);
 
-  const auto empty_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data);
+  const auto empty_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
   const auto table_wrapper_empty = std::make_shared<TableWrapper>(empty_table);
   const auto subquery_returning_none = pqp_subquery_(table_wrapper_empty, DataType::Int, false);
 

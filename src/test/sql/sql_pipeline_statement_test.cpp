@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "cache/cache.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
@@ -19,7 +20,6 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace {
 // This function is a slightly hacky way to check whether an LQP was optimized. This relies on JoinOrderingRule and
@@ -42,29 +42,29 @@ class SQLPipelineStatementTest : public BaseTest {
  protected:
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    StorageManager::get().add_table("table_a", _table_a);
+    Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
-    StorageManager::get().add_table("table_b", _table_b);
+    Hyrise::get().storage_manager.add_table("table_b", _table_b);
 
     _table_int = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
-    StorageManager::get().add_table("table_int", _table_int);
+    Hyrise::get().storage_manager.add_table("table_int", _table_int);
 
     TableColumnDefinitions column_definitions;
-    column_definitions.emplace_back("a", DataType::Int);
-    column_definitions.emplace_back("b", DataType::Float);
-    column_definitions.emplace_back("bb", DataType::Float);
+    column_definitions.emplace_back("a", DataType::Int, false);
+    column_definitions.emplace_back("b", DataType::Float, false);
+    column_definitions.emplace_back("bb", DataType::Float, false);
     _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
 
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
 
-    _int_float_column_definitions.emplace_back("a", DataType::Int);
-    _int_float_column_definitions.emplace_back("b", DataType::Float);
+    _int_float_column_definitions.emplace_back("a", DataType::Int, false);
+    _int_float_column_definitions.emplace_back("b", DataType::Float, false);
 
-    _int_int_int_column_definitions.emplace_back("a", DataType::Int);
-    _int_int_int_column_definitions.emplace_back("b", DataType::Int);
-    _int_int_int_column_definitions.emplace_back("c", DataType::Int);
+    _int_int_int_column_definitions.emplace_back("a", DataType::Int, false);
+    _int_int_int_column_definitions.emplace_back("b", DataType::Int, false);
+    _int_int_int_column_definitions.emplace_back("c", DataType::Int, false);
 
     _select_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_select_query_a, _select_parse_result.get());
@@ -121,7 +121,7 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
@@ -144,7 +144,7 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithCustomTransactionContext) {
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement(
       _select_parse_result);
 
@@ -163,7 +163,7 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
 
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   // No transaction context
   auto sql_pipeline1 = SQLPipelineBuilder{_select_query_a}.with_optimizer(optimizer).create_pipeline_statement();
@@ -413,7 +413,7 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanWithoutMVCC) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetQueryPlanWithCustomTransactionContext) {
-  auto context = TransactionManager::get().new_transaction_context();
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement();
   const auto& plan = sql_pipeline.get_physical_plan();
 
@@ -526,7 +526,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTransactionFailureExplicitTransac
   _table_a->get_chunk(ChunkID{0})->get_scoped_mvcc_data_lock()->tids[0] = TransactionID{17};
 
   const auto sql = "UPDATE table_a SET a = 1";
-  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();

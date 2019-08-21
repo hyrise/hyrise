@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- TPC-DS scale factor is " << scale_factor << std::endl;
 
-  std::string query_path = "third_party/tpcds-result-reproduction/query_qualification";
+  std::string query_path = "resources/benchmark/tpcds/tpcds-result-reproduction/query_qualification";
 
   Assert(std::filesystem::is_directory(query_path), "Query path (" + query_path + ") has to be a directory.");
   Assert(std::filesystem::exists(std::filesystem::path{query_path + "/01.sql"}), "Queries have to be available.");
@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
   auto query_generator = std::make_unique<FileBasedBenchmarkItemRunner>(config, query_path, filename_blacklist());
   if (config->verify) {
     query_generator->load_dedicated_expected_results(
-        std::filesystem::path{"third_party/tpcds-result-reproduction/answer_sets_tbl"});
+        std::filesystem::path{"resources/benchmark/tpcds/tpcds-result-reproduction/answer_sets_tbl"});
   }
   auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator),

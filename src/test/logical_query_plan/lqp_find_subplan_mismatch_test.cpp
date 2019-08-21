@@ -1,5 +1,6 @@
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -14,14 +15,11 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
 #include "testing_assert.hpp"
@@ -53,7 +51,7 @@ class LQPFindSubplanMismatchTest : public BaseTest {
   };
 
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    Hyrise::get().storage_manager.add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
 
     _init_query_nodes(_query_nodes_lhs);
     _init_query_nodes(_query_nodes_rhs);

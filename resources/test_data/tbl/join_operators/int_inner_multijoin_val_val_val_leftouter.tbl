@@ -1,5 +1,5 @@
 a|b|a|b|a|b
-int|int|int|int|int|int
+int|int|int_null|int_null|int|int
 6|16|6|9|6|7
 7|0|7|1|7|1
 7|0|7|1|7|17

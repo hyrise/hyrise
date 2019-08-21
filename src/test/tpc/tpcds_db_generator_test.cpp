@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "import_export/csv_parser.hpp"
-#include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -99,16 +99,16 @@ TEST(TpcdsTableGeneratorTest, GenerateAndStoreRowCounts) {
                                                               {"web_sales", 719620},
                                                               {"web_site", 30}};
 
-  EXPECT_EQ(StorageManager::get().tables().size(), 0);
+  EXPECT_EQ(Hyrise::get().storage_manager.tables().size(), 0);
 
   TpcdsTableGenerator(1, Chunk::DEFAULT_SIZE, 0).generate_and_store();
 
   for (const auto& [name, size] : expected_sizes) {
     SCOPED_TRACE("checking table " + std::string{name});
-    EXPECT_EQ(StorageManager::get().get_table(name)->row_count(), size);
+    EXPECT_EQ(Hyrise::get().storage_manager.get_table(name)->row_count(), size);
   }
 
-  StorageManager::reset();
+  Hyrise::reset();
 }
 
 }  // namespace opossum
