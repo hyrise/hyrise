@@ -19,7 +19,9 @@
 namespace opossum {
 
 JitCodeSpecializer::JitCodeSpecializer(JitRepository& repository)
-    : _repository{repository}, _llvm_context{_repository.llvm_context()} {}
+    : _repository{repository ? repository : JitRepository{}}, _llvm_context{_repository.llvm_context()} {
+  Hyrise::get().register_jit_repository(std::make_shared<JitRepository>(repository))
+}
 
 std::unique_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
     const std::string& root_function_name, const std::shared_ptr<const JitRuntimePointer>& runtime_this,

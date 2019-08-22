@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+class JitRepository;
+
 class Hyrise : public Singleton<Hyrise> {
  public:
   // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
@@ -24,6 +26,10 @@ class Hyrise : public Singleton<Hyrise> {
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
   Topology topology;
+
+  std::shared_ptr<JitRepository> jit_repository;
+
+  void register_jit_repository(std::shared_ptr<JitRepository> repository) { jit_repository = repository; }
 
  private:
   Hyrise() {
