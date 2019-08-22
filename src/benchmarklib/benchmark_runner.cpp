@@ -60,7 +60,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   if (_config.verify) {
     // We could support this if we opened multiple sqlite connections with their own transactions. So far, we have not
     // seen a reason to do so. Here is a decription on how we could do that: https://www.sqlite.org/inmemorydb.html
-    // Note the comment after "If two or more distinct but shareable in-memory databases are needed in a single process".
+    // Note the comment after "If two or more distinct but shareable in-memory databases are needed in a single
+    // process".
     Assert(!_config.enable_scheduler,
            "Cannot combine SQLite verification with parallel execution. Remove either --verify or --scheduler.");
 
