@@ -5,7 +5,6 @@
 
 #include <stack>
 
-#include "hyrise.hpp"
 #include "jit_compiler.hpp"
 #include "jit_repository.hpp"
 #include "jit_runtime_pointer.hpp"
@@ -25,7 +24,7 @@ class JitRTTIHelper {
 
 class JitCodeSpecializer {
  public:
-  explicit JitCodeSpecializer(JitRepository& repository = *Hyrise::get().jit_repository);
+  explicit JitCodeSpecializer(JitRepository& repository = JitRepository::get());
 
   // Specializes the given function with the provided runtime information.
   // The root_function_name must be the mangled name of the function to be specialized. This function must exist in the

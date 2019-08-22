@@ -39,7 +39,9 @@ struct MaterializedNUMAPartition {
   std::vector<std::shared_ptr<MaterializedSegmentNUMA<T>>> materialized_segments;
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
-      : node_id{node_id}, alloc{Hyrise::get().topology.get_memory_resource(node_id)}, materialized_segments(reserve_size) {}
+      : node_id{node_id},
+        alloc{Hyrise::get().topology.get_memory_resource(node_id)},
+        materialized_segments(reserve_size) {}
 
   MaterializedNUMAPartition() {}
 
