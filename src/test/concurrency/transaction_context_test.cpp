@@ -21,14 +21,13 @@ namespace opossum {
 
 class TransactionContextTest : public BaseTest {
  public:
-  std::string table_name;
+  static constexpr auto table_name = "test_table";
 
  protected:
   void SetUp() override {
-    table_name = "test_table";
     auto t = load_table("resources/test_data/tbl/float_int.tbl");
     // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
-    StorageManager::get().add_table(table_name, t);
+    Hyrise::get().storage_manager.add_table(table_name, t);
   }
 
   TransactionManager& manager() { return Hyrise::get().transaction_manager; }

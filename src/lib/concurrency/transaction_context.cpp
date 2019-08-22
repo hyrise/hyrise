@@ -104,9 +104,7 @@ void TransactionContext::commit() {
 }
 
 void TransactionContext::_abort() {
-  const auto from_phase = TransactionPhase::Active;
-  const auto to_phase = TransactionPhase::Aborted;
-  _transition(from_phase, to_phase);
+  _transition(TransactionPhase::Active, TransactionPhase::Aborted);
 
   _wait_for_active_operators_to_finish();
 }
@@ -132,9 +130,7 @@ void TransactionContext::_prepare_commit() {
               }()),
               "All read/write operators need to be in state Executed (especially not Failed).");
 
-  const auto from_phase = TransactionPhase::Active;
-  const auto to_phase = TransactionPhase::Committing;
-  _transition(from_phase, to_phase);
+  _transition(TransactionPhase::Active, TransactionPhase::Committing);
 
   _wait_for_active_operators_to_finish();
 
