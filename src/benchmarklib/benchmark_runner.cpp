@@ -38,13 +38,13 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
-    Topology::use_default_topology(config.cores);
+    Hyrise::get().topology.use_default_topology(config.cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
-    std::cout << Topology::get();
+    std::cout << Hyrise::get().topology;
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
-    for (const auto& node : Topology::get().nodes()) {
+    for (const auto& node : Hyrise::get().topology.nodes()) {
       numa_cores_per_node.push_back(node.cpus.size());
     }
     _context.push_back({"utilized_cores_per_numa_node", numa_cores_per_node});

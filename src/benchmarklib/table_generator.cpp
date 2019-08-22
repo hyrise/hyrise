@@ -14,7 +14,7 @@
 
 #include "tbb/concurrent_vector.h"
 
-#include "scheduler/topology.hpp"
+#include "hyrise.hpp"
 
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -120,8 +120,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   for (ChunkID chunk_index{0}; chunk_index < num_chunks; ++chunk_index) {
 #if HYRISE_NUMA_SUPPORT
     if (numa_distribute_chunks) {
-      auto memory_resource = Topology::get().get_memory_resource(node_id);
-      node_id = (node_id + 1) % Topology::get().nodes().size();
+      auto memory_resource = Hyrise::get().topology.get_memory_resource(node_id);
+      node_id = (node_id + 1) % Hyrise::get().topology.nodes().size();
 
       // create allocators for the node
       allocator_ptr_base_segment = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{memory_resource};

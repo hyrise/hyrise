@@ -19,7 +19,6 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "storage/chunk.hpp"

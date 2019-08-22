@@ -8,11 +8,11 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "join_mpsm/radix_cluster_sort_numa.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "scheduler/topology.hpp"
 #include "storage/abstract_segment_visitor.hpp"
 #include "storage/dictionary_segment.hpp"
 
@@ -183,7 +183,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   **/
   ClusterID _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
-    const size_t numa_nodes = Topology::get().nodes().size();
+    const size_t numa_nodes = Hyrise::get().topology.nodes().size();
     return ClusterID{static_cast<ClusterID::base_type>(std::pow(2, std::floor(std::log2(numa_nodes))))};
   }
 

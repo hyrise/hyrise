@@ -8,8 +8,8 @@
 
 #include "abstract_task.hpp"
 #include "current_scheduler.hpp"
+#include "hyrise.hpp"
 #include "task_queue.hpp"
-#include "topology.hpp"
 #include "worker.hpp"
 
 #include "uid_allocator.hpp"
@@ -28,15 +28,15 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
-  _workers.reserve(Topology::get().num_cpus());
-  _queues.reserve(Topology::get().nodes().size());
+  _workers.reserve(Hyrise::get().topology.num_cpus());
+  _queues.reserve(Hyrise::get().topology.nodes().size());
 
-  for (auto node_id = NodeID{0}; node_id < Topology::get().nodes().size(); node_id++) {
+  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
     auto queue = std::make_shared<TaskQueue>(node_id);
 
     _queues.emplace_back(queue);
 
-    auto& topology_node = Topology::get().nodes()[node_id];
+    auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
     for (auto& topology_cpu : topology_node.cpus) {
       _workers.emplace_back(std::make_shared<Worker>(queue, _worker_id_allocator->allocate(), topology_cpu.cpu_id));

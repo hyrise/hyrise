@@ -15,7 +15,6 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
@@ -396,7 +395,7 @@ TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
 
-  Topology::use_fake_numa_topology(8, 4);
+  Hyrise::get().topology.use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   const auto& [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
@@ -407,7 +406,7 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
 TEST_F(SQLPipelineTest, CleanupWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
 
-  Topology::use_fake_numa_topology(8, 4);
+  Hyrise::get().topology.use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   sql_pipeline.get_result_table();
 
@@ -420,7 +419,7 @@ TEST_F(SQLPipelineTest, CleanupWithScheduler) {
 TEST_F(SQLPipelineTest, DisabledCleanupWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.dont_cleanup_temporaries().create_pipeline();
 
-  Topology::use_fake_numa_topology(8, 4);
+  Hyrise::get().topology.use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   sql_pipeline.get_result_table();
 

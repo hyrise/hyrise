@@ -5,7 +5,6 @@
 
 #include "base_test.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "sql/sql_plan_cache.hpp"
 
 #include "server/server.hpp"
