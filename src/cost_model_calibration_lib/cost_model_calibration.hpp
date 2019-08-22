@@ -22,6 +22,7 @@ class CostModelCalibration {
                              const std::vector<cost_model::CostModelFeatures>& features);
   void _calibrate();
   void _run_tpch();
+  void _run_tpcc();
   void _write_csv_header(const std::string& output_path);
 
   const CalibrationConfiguration _configuration;
