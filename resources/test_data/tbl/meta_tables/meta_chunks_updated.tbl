@@ -1,0 +1,6 @@
+table|chunk_id|rows|invalid_rows|cleanup_commit_id
+string|int|long|long|long_null
+int_int|0|2|1|null
+int_int|1|2|0|null
+int_int_int_null|0|4|0|null
+int_int_int_null|1|1|0|null

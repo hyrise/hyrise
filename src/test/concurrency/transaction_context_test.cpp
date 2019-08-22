@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
@@ -31,7 +31,7 @@ class TransactionContextTest : public BaseTest {
     StorageManager::get().add_table(table_name, t);
   }
 
-  TransactionManager& manager() { return TransactionManager::get(); }
+  TransactionManager& manager() { return Hyrise::get().transaction_manager; }
 };
 
 /**

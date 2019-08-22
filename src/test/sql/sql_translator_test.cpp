@@ -8,6 +8,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -24,8 +25,6 @@
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -34,10 +33,10 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
+#include "utils/meta_table_manager.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 using namespace std::string_literals;            // NOLINT
@@ -47,11 +46,11 @@ namespace opossum {
 class SQLTranslatorTest : public BaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
-    StorageManager::get().add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
-    StorageManager::get().add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
-    StorageManager::get().add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
-    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
+    Hyrise::get().storage_manager.add_table("int_float", load_table("resources/test_data/tbl/int_float.tbl"));
+    Hyrise::get().storage_manager.add_table("int_string", load_table("resources/test_data/tbl/int_string.tbl"));
+    Hyrise::get().storage_manager.add_table("int_float2", load_table("resources/test_data/tbl/int_float2.tbl"));
+    Hyrise::get().storage_manager.add_table("int_float5", load_table("resources/test_data/tbl/int_float5.tbl"));
+    Hyrise::get().storage_manager.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");
@@ -1766,16 +1765,30 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 
 TEST_F(SQLTranslatorTest, ShowTables) {
   const auto actual_lqp = compile_query("SHOW TABLES");
-  const auto expected_lqp = ShowTablesNode::make();
+
+  const auto expected_lqp = StoredTableNode::make(MetaTableManager::META_PREFIX + "tables");
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, ShowColumns) {
   const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
-  const auto expected_lqp = ShowColumnsNode::make("int_float");
+
+  // clang-format off
+  const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
+  const auto table_name_column = stored_table_node->get_column("table");
+  const auto expected_lqp =
+      PredicateNode::make(equals_(table_name_column, "int_float"),
+        stored_table_node);
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DMLOnMetatables) {
+  EXPECT_THROW(compile_query("UPDATE meta_tables SET table_name = 'foo';"), InvalidInputException);
+  EXPECT_THROW(compile_query("DELETE FROM meta_tables;"), InvalidInputException);
+  EXPECT_THROW(compile_query("INSERT INTO meta_tables SELECT * FROM meta_tables;"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, InsertValues) {
@@ -2181,7 +2194,7 @@ TEST_F(SQLTranslatorTest, Execute) {
   const auto prepared_plan = std::make_shared<PreparedPlan>(
       prepared_plan_lqp, std::vector<ParameterID>{ParameterID{0}, ParameterID{1}, ParameterID{3}});
 
-  StorageManager::get().add_prepared_plan("some_prepared_plan", prepared_plan);
+  Hyrise::get().storage_manager.add_prepared_plan("some_prepared_plan", prepared_plan);
 
   const auto actual_lqp = compile_query("EXECUTE some_prepared_plan ('Hello', 1, 42)");
 
@@ -2208,7 +2221,7 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
 
-  StorageManager::get().add_prepared_plan("another_prepared_plan", prepared_plan);
+  Hyrise::get().storage_manager.add_prepared_plan("another_prepared_plan", prepared_plan);
 
   const auto actual_lqp = compile_query("EXECUTE another_prepared_plan ()");
 

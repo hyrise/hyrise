@@ -474,7 +474,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
 
 std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   Assert(item_id < 22u, "item_id out of range");
-  return std::string("TPC-H ") + std::to_string(item_id + 1);
+  return std::string("TPC-H ") + (item_id + 1 < 10 ? "0" : "") + std::to_string(item_id + 1);
 }
 
 std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkItemID item_id,

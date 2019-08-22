@@ -14,7 +14,7 @@ void TestPlugin::start() {
   sm.add_table("DummyTable", table);
 }
 
-void TestPlugin::stop() { StorageManager::get().drop_table("DummyTable"); }
+void TestPlugin::stop() { Hyrise::get().storage_manager.drop_table("DummyTable"); }
 
 EXPORT_PLUGIN(TestPlugin)
 

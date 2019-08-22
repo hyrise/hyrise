@@ -6,12 +6,12 @@
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/storage_manager.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -20,10 +20,10 @@ namespace opossum {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl", 1));
-    StorageManager::get().add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl", 1));
+    Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_float.tbl", 1));
+    Hyrise::get().storage_manager.add_table("t_b", load_table("resources/test_data/tbl/int_float.tbl", 1));
 
-    const auto& table_t_a = StorageManager::get().get_table("t_a");
+    const auto& table_t_a = Hyrise::get().storage_manager.get_table("t_a");
     ChunkEncoder::encode_all_chunks(table_t_a);
     table_t_a->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
     table_t_a->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a2");

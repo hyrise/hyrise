@@ -166,14 +166,14 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const BaseSegment& segment
            */
           if (position_filter || predicate_condition == PredicateCondition::NotEquals) {
             for (; begin != end; ++begin) {
-              matches[output_idx++] = RowID(chunk_id, begin->chunk_offset());
+              matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
             }
           } else {
             const auto first_offset = begin->chunk_offset();
             const auto distance = std::distance(begin, end);
 
             for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
-              matches[output_idx++] = RowID(chunk_id, first_offset + chunk_offset);
+              matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
             }
           }
         });
