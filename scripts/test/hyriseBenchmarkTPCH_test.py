@@ -21,15 +21,15 @@ def main():
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Dictionary'"
   arguments["--compression"] = "'Fixed-size byte-aligned'"
-  arguments["--scheduler"] = "false"
-  arguments["--clients"] = "1"
+  arguments["--scheduler"] = "true"
+  arguments["--clients"] = "4"
   arguments["--cache_binary_tables"] = "false"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
+  benchmark.expect("Running in multi-threaded mode using all available cores")
+  benchmark.expect("4 simulated clients are scheduling items in parallel")
   benchmark.expect("Writing benchmark results to 'json_output.txt'")
-  benchmark.expect("Running in single-threaded mode")
-  benchmark.expect("1 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Shuffled' mode")
   benchmark.expect("Encoding is 'Dictionary'")
   benchmark.expect("Chunk size is 100000")
@@ -41,6 +41,8 @@ def main():
   benchmark.expect("TPCH scale factor is 0.01")
   benchmark.expect("Using prepared statements: yes")
   benchmark.expect("Preparing queries")
+  benchmark.expect("Multi-threaded Topology:")
+  benchmark.expect("-> Executed")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
@@ -76,6 +78,8 @@ def main():
   arguments["--warmup"] = "10"
   arguments["--encoding"] = "'LZ4'"
   arguments["--compression"] = "'SIMD-BP128'"
+  arguments["--scheduler"] = "false"
+  arguments["--clients"] = "1"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
   arguments["--visualize"] = "true"
@@ -83,8 +87,8 @@ def main():
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
-  benchmark.expect("Running in multi-threaded mode using all available cores")
-  benchmark.expect("4 simulated clients are scheduling items in parallel")
+  benchmark.expect("Running in single-threaded mode")
+  benchmark.expect("1 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Ordered' mode")
   benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'LZ4'")
@@ -95,7 +99,6 @@ def main():
   benchmark.expect("Benchmarking Queries: \[ 2, 4, 6, \]")
   benchmark.expect("TPCH scale factor is 0.005")
   benchmark.expect("Using prepared statements: no")
-  benchmark.expect("Multi-threaded Topology:")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
