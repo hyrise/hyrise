@@ -90,7 +90,7 @@ void TransactionContext::commit() {
 
   // No modifications made, nothing to commit, no need to acquire a commit ID
   if (_rw_operators.empty()) {
-    _phase = TransactionPhase::Committed;
+    _transition(TransactionPhase::Active, TransactionPhase::Committed);
     return;
   }
 
@@ -118,7 +118,7 @@ void TransactionContext::_mark_as_rolled_back() {
               }()),
               "All read/write operators need to have been rolled back.");
 
-  _phase = TransactionPhase::RolledBack;
+  _transition(TransactionPhase::Aborted, TransactionPhase::RolledBack);
 }
 
 void TransactionContext::_prepare_commit() {
@@ -150,7 +150,7 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
   _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback](auto transaction_id) {
     // If the transaction context still exists, set its phase to Committed.
     if (auto context_ptr = context_weak_ptr.lock()) {
-      context_ptr->_phase = TransactionPhase::Committed;
+      context_ptr->_transition(TransactionPhase::Committing, TransactionPhase::Committed);
     }
 
     if (callback) callback(transaction_id);
