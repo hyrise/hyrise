@@ -10,6 +10,7 @@
 #include "table_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
+// #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
 
 #include "operators/print.hpp"
@@ -188,6 +189,34 @@ void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_fact
 
     std::cout << "Encoded table " << table_name << " successfully." << std::endl;
   }
+}
+
+void CostModelCalibrationTableGenerator::load_tpcds_tables(const float scale_factor, const EncodingType encoding) const {
+  // const auto tables = opossum::TpcdsTableGenerator(scale_factor, _chunk_size).generate();
+
+  // for (auto& tpcds_table : tables) {
+  //   const auto& table_name = tpcds_table.first;
+  //   const auto& table = tpcds_table.second.table;
+
+  //   //    if (table_name != "lineitem") continue;
+
+  //   ChunkEncodingSpec chunk_spec;
+  //   const auto column_count = table->column_count();
+  //   for (size_t i = 0; i < column_count; ++i) {
+  //     chunk_spec.push_back(encoding);
+  //   }
+
+  //   ChunkEncoder::encode_all_chunks(table, chunk_spec);
+  //   auto& storage_manager = StorageManager::get();
+
+  //   if (storage_manager.has_table(table_name)) {
+  //     storage_manager.drop_table(table_name);
+  //   }
+
+  //   storage_manager.add_table(table_name, table);
+
+  //   std::cout << "Encoded table " << table_name << " successfully." << std::endl;
+  // }
 }
 
 }  // namespace opossum

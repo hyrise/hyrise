@@ -33,6 +33,7 @@ struct CalibrationConfiguration {
   bool calibrate_scans;
   bool calibrate_joins;
   bool run_tpch;
+  bool run_tpcds;
 
   std::vector<CalibrationColumnSpecification> columns;
   std::vector<std::string> generated_tables;
@@ -52,6 +53,7 @@ inline void to_json(nlohmann::json& j, const CalibrationConfiguration& s) {
                      {"calibrate_scans", s.calibrate_scans},
                      {"calibrate_joins", s.calibrate_joins},
                      {"run_tpch", s.run_tpch},
+                     {"run_tpcds", s.run_tpcds},
                      {"columns", s.columns}};
 }
 
@@ -88,6 +90,7 @@ inline void from_json(const nlohmann::json& j, CalibrationConfiguration& configu
   configuration.calibrate_scans = j.value("calibrate_scans", true);
   configuration.calibrate_joins = j.value("calibrate_joins", false);
   configuration.run_tpch = j.value("run_tpch", false);
+  configuration.run_tpcds = j.value("run_tpcds", false);
 
   const auto encoding_strings = j.at("encodings").get<std::vector<std::string>>();
 
