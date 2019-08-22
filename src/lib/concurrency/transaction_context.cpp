@@ -39,6 +39,8 @@ TransactionContext::~TransactionContext() {
                 const auto committed_or_rolled_back =
                     _phase == TransactionPhase::Committed || _phase == TransactionPhase::RolledBack;
                 return !has_registered_operators || committed_or_rolled_back;
+                // Note: When thrown during stack unwinding, this exception might hide previous exceptions. If you are
+                // seeing this, either use a debugger and break on exceptions or disable this exception as a trial.
               }()),
               "Has registered operators but has neither been committed nor rolled back.");
 
