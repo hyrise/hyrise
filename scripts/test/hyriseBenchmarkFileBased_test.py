@@ -47,9 +47,6 @@ def main():
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
-  if benchmark.before.count('Verification failed'):
-    return_error = True
-
   if not glob.glob(arguments["--table_path"].replace("'", '') + "*.bin"):
     print ("ERROR: Cannot find binary tables in " + arguments["--table_path"])
     return_error = True
@@ -105,6 +102,9 @@ def main():
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
+
+  if benchmark.before.count('Verification failed'):
+    return_error = True
 
   if return_error:
     sys.exit(1)

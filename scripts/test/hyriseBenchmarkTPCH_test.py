@@ -47,8 +47,6 @@ def main():
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
-  if benchmark.before.count('Verification failed'):
-    return_error = True
     
   if not os.path.isfile(arguments["--output"].replace("'", "")):
     print ("ERROR: Cannot find output file " + arguments["--output"])
@@ -80,8 +78,6 @@ def main():
   arguments["--compression"] = "'SIMD-BP128'"
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
-  arguments["--scheduler"] = "true"
-  arguments["--clients"] = "4"
   arguments["--visualize"] = "true"
   arguments["--verify"] = "true"
 
@@ -102,6 +98,9 @@ def main():
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
+
+  if benchmark.before.count('Verification failed'):
+    return_error = True
 
   if return_error:
     sys.exit(1)
