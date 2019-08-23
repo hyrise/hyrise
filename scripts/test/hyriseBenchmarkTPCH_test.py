@@ -40,8 +40,8 @@ def main():
   benchmark.expect("Benchmarking Queries: \[ 1, 13, 19, \]")
   benchmark.expect("TPCH scale factor is 0.01")
   benchmark.expect("Using prepared statements: yes")
-  benchmark.expect("Preparing queries")
   benchmark.expect("Multi-threaded Topology:")
+  benchmark.expect("Preparing queries")
   benchmark.expect("-> Executed")
 
   close_benchmark(benchmark)
