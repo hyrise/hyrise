@@ -79,7 +79,7 @@ void Session::_handle_simple_query() {
   const auto& query = _postgres_handler.read_query_packet();
 
   // A simple query command invalidates unnamed statements and portals
-  if (StorageManager::get().has_prepared_plan("")) StorageManager::get().drop_prepared_plan("");
+  if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
   _portals.erase("");
 
   const auto [result_table, query_type] = execute_pipeline(query);
@@ -107,12 +107,12 @@ void Session::_handle_parse_command() {
 void Session::_handle_bind_command() {
   const auto parameters = _postgres_handler.read_bind_packet();
       // Not using Assert() since it includes file:line info that we don't want to hard code in tests
-  AssertInput(StorageManager::get().has_prepared_plan(parameters.statement_name),
+  AssertInput(Hyrise::get().storage_manager.has_prepared_plan(parameters.statement_name),
               "The specified statement does not exist.");
 
-  const auto prepared_plan = StorageManager::get().get_prepared_plan(parameters.statement_name);
+  const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(parameters.statement_name);
 
-  if (parameters.statement_name.empty()) StorageManager::get().drop_prepared_plan(parameters.statement_name);
+  if (parameters.statement_name.empty()) Hyrise::get().storage_manager.drop_prepared_plan(parameters.statement_name);
 
 
   // Named portals must be explicitly closed before they can be redefined by another Bind message,
@@ -153,7 +153,7 @@ void Session::_handle_execute() {
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction) _transaction = TransactionManager::get().new_transaction_context();
+  if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
   physical_plan->set_transaction_context_recursively(_transaction);
 
 

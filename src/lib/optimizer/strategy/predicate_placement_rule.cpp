@@ -13,8 +13,6 @@
 
 namespace opossum {
 
-std::string PredicatePlacementRule::name() const { return "Predicate Placement Rule"; }
-
 void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
@@ -31,14 +29,43 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
   const auto input_node = current_node->input(input_side);
   if (!input_node) return;  // Allow calling without checks
 
+  // A helper method for cases where the input_node does not allow us to proceed
+  const auto handle_barrier = [&]() {
+    _insert_nodes(current_node, input_side, push_down_nodes);
+
+    if (input_node->left_input()) {
+      auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes);
+    }
+    if (input_node->right_input()) {
+      auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes);
+    }
+  };
+
+  if (input_node->output_count() > 1) {
+    // We cannot push predicates past input_node as doing so would also filter the predicates from the "other" side.
+    handle_barrier();
+    return;
+  }
+
   switch (input_node->type) {
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(input_node);
 
       if (!_is_expensive_predicate(predicate_node->predicate())) {
         push_down_nodes.emplace_back(predicate_node);
+
+        // As predicate_node might be the input to multiple nodes, remember those nodes before we untie predicate_node
+        const auto output_relations = predicate_node->output_relations();
+
         lqp_remove_node(predicate_node);
         _push_down_traversal(current_node, input_side, push_down_nodes);
+
+        // Restore the output relationships
+        for (const auto& [output_node, output_side] : output_relations) {
+          output_node->set_input(output_side, current_node->input(input_side));
+        }
       } else {
         _push_down_traversal(input_node, input_side, push_down_nodes);
       }
@@ -91,16 +118,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
     default: {
       // All not explicitly handled node types are barriers and we do not push predicates past them.
-      _insert_nodes(current_node, input_side, push_down_nodes);
-
-      if (input_node->left_input()) {
-        auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-        _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes);
-      }
-      if (input_node->right_input()) {
-        auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-        _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes);
-      }
+      handle_barrier();
     }
   }
 }

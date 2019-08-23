@@ -10,7 +10,6 @@
 #include "lqp_view.hpp"
 #include "prepared_plan.hpp"
 #include "types.hpp"
-#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -19,7 +18,7 @@ class AbstractLQPNode;
 
 // The StorageManager is a singleton that maintains all tables
 // by mapping table names to table instances.
-class StorageManager : public Singleton<StorageManager> {
+class StorageManager : public Noncopyable {
  public:
   /**
    * @defgroup Manage Tables
@@ -56,24 +55,12 @@ class StorageManager : public Singleton<StorageManager> {
   const std::map<std::string, std::shared_ptr<PreparedPlan>>& prepared_plans() const;
   /** @} */
 
-  // deletes the entire StorageManager and creates a new one, used especially in tests
-  // This can lead to a lot of issues if there are still running tasks / threads that
-  // want to access a resource. You should be very sure that this is what you want.
-  // Have a look at base_test.hpp to see the correct order of resetting things.
-  static void reset();
-
   // For debugging purposes mostly, dump all tables as csv
   void export_all_tables_as_csv(const std::string& path);
 
-  StorageManager(StorageManager&&) = delete;
-
  protected:
-  StorageManager() {}
-
-  friend class Singleton;
-
-  const StorageManager& operator=(const StorageManager&) = delete;
-  StorageManager& operator=(StorageManager&&) = default;
+  StorageManager() = default;
+  friend class Hyrise;
 
   // Tables can currently not be modified concurrently
   std::map<std::string, std::shared_ptr<Table>> _tables;

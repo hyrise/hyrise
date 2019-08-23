@@ -1,6 +1,7 @@
 #include "stored_table_node.hpp"
 
 #include "expression/lqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/storage_manager.hpp"
@@ -14,7 +15,7 @@ StoredTableNode::StoredTableNode(const std::string& table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {}
 
 LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
-  const auto table = StorageManager::get().get_table(table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
   const auto column_id = table->column_id_by_name(name);
   return {shared_from_this(), column_id};
 }
@@ -37,7 +38,7 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 
   // It is valid for an LQP to not use any of the table's columns (e.g., SELECT 5 FROM t). We still need to include at
   // least one column in the output of this node, which is used by Table::size() to determine the number of 5's.
-  const auto stored_column_count = StorageManager::get().get_table(table_name)->column_count();
+  const auto stored_column_count = Hyrise::get().storage_manager.get_table(table_name)->column_count();
   Assert(pruned_column_ids.size() < stored_column_count, "Cannot exclude all columns from Table.");
 
   _pruned_column_ids = pruned_column_ids;
@@ -49,7 +50,7 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
 const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
 
 std::string StoredTableNode::description() const {
-  const auto stored_table = StorageManager::get().get_table(table_name);
+  const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
   std::ostringstream stream;
   stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
@@ -63,7 +64,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
   // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
   // that in the constructor and (b) because we don't have column pruning information in the constructor
   if (!_column_expressions) {
-    const auto table = StorageManager::get().get_table(table_name);
+    const auto table = Hyrise::get().storage_manager.get_table(table_name);
 
     // Build `_expression` with respect to the `_pruned_column_ids`
     _column_expressions.emplace(table->column_count() - _pruned_column_ids.size());
@@ -87,14 +88,14 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
 }
 
 bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
-  const auto table = StorageManager::get().get_table(table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
   return table->column_is_nullable(column_id);
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 
-  const auto table = StorageManager::get().get_table(table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
   auto stored_indexes_statistics = table->indexes_statistics();
 
   if (_pruned_column_ids.empty()) {

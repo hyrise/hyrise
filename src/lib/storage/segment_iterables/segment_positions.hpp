@@ -46,16 +46,16 @@ class AbstractSegmentPosition {
  * Used in most segment iterators.
  */
 template <typename T>
-class SegmentPosition : public AbstractSegmentPosition<T> {
+class SegmentPosition final : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = true;
 
   SegmentPosition(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
       : _value{value}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
-  const T& value() const final { return _value; }
-  bool is_null() const final { return _null_value; }
-  ChunkOffset chunk_offset() const final { return _chunk_offset; }
+  const T& value() const { return _value; }
+  bool is_null() const { return _null_value; }
+  ChunkOffset chunk_offset() const { return _chunk_offset; }
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
@@ -70,16 +70,16 @@ class SegmentPosition : public AbstractSegmentPosition<T> {
  * Used when an underlying segment (or data structure) cannot be null.
  */
 template <typename T>
-class NonNullSegmentPosition : public AbstractSegmentPosition<T> {
+class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
  public:
   static constexpr bool Nullable = false;
 
   NonNullSegmentPosition(const T& value, const ChunkOffset& chunk_offset)
       : _value{value}, _chunk_offset{chunk_offset} {}
 
-  const T& value() const final { return _value; }
-  bool is_null() const final { return false; }
-  ChunkOffset chunk_offset() const final { return _chunk_offset; }
+  const T& value() const { return _value; }
+  bool is_null() const { return false; }
+  ChunkOffset chunk_offset() const { return _chunk_offset; }
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
@@ -94,16 +94,16 @@ class NonNullSegmentPosition : public AbstractSegmentPosition<T> {
  *
  * @see NullValueVectorIterable
  */
-class IsNullSegmentPosition : public AbstractSegmentPosition<boost::blank> {
+class IsNullSegmentPosition final : public AbstractSegmentPosition<boost::blank> {
  public:
   static constexpr bool Nullable = true;
 
   IsNullSegmentPosition(const bool null_value, const ChunkOffset& chunk_offset)
       : _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
-  const boost::blank& value() const final { return _blank; }
-  bool is_null() const final { return _null_value; }
-  ChunkOffset chunk_offset() const final { return _chunk_offset; }
+  const boost::blank& value() const { return _blank; }
+  bool is_null() const { return _null_value; }
+  ChunkOffset chunk_offset() const { return _chunk_offset; }
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization

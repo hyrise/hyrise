@@ -3,13 +3,13 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/get_table.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
@@ -27,8 +27,8 @@ class ExpressionTest : public BaseTest {
   void SetUp() {
     table_int_float = load_table("resources/test_data/tbl/int_float.tbl");
     table_int_float_with_null = load_table("resources/test_data/tbl/int_float_with_null.tbl");
-    StorageManager::get().add_table("int_float", table_int_float);
-    StorageManager::get().add_table("int_float_with_null", table_int_float_with_null);
+    Hyrise::get().storage_manager.add_table("int_float", table_int_float);
+    Hyrise::get().storage_manager.add_table("int_float_with_null", table_int_float_with_null);
 
     int_float_node = StoredTableNode::make("int_float");
     a = {int_float_node, ColumnID{0}};

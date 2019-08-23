@@ -5,9 +5,9 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/import_binary.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -67,7 +67,7 @@ TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
 
   ChunkEncoder::encode_all_chunks(expected_table);
 
-  StorageManager::get().add_table("table_a", expected_table);
+  Hyrise::get().storage_manager.add_table("table_a", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/StringDictionarySegment.bin");
   importer->execute();
@@ -111,7 +111,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
 
   ChunkEncoder::encode_all_chunks(expected_table);
 
-  StorageManager::get().add_table("expected_table", expected_table);
+  Hyrise::get().storage_manager.add_table("expected_table", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesDictionarySegment.bin");
   importer->execute();
@@ -135,7 +135,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
 
   ChunkEncoder::encode_chunks(expected_table, {ChunkID{0}});
 
-  StorageManager::get().add_table("expected_table", expected_table);
+  Hyrise::get().storage_manager.add_table("expected_table", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesMixColumn.bin");
   importer->execute();
@@ -203,7 +203,7 @@ TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), expected_table);
 }
 
 TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
@@ -215,7 +215,7 @@ TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), retriever->get_output());
 }
 
 TEST_F(OperatorsImportBinaryTest, InvalidColumnType) {

@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -17,7 +18,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
@@ -44,7 +44,7 @@ class OperatorDeepCopyTest : public BaseTest {
     _table_wrapper_d->execute();
 
     _test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    StorageManager::get().add_table("aNiceTestTable", _test_table);
+    Hyrise::get().storage_manager.add_table("aNiceTestTable", _test_table);
   }
 
   std::shared_ptr<Table> _test_table;
@@ -186,7 +186,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
   // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
   // this suite. The test is very confusing and error-prone with explicit operators as above.
   const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
-  StorageManager::get().add_table("table_3int", table);
+  Hyrise::get().storage_manager.add_table("table_3int", table);
 
   const std::string subquery_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
   const TableColumnDefinitions column_definitions = {

@@ -8,7 +8,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "tasks/server/pipeline_execution_task.hpp"
 #include "tasks/server/parse_prepared_statement_task.hpp"
 #include "tasks/server/bind_prepared_statement_task.hpp"
@@ -116,16 +116,16 @@ std::string build_command_complete_message(std::shared_ptr<const AbstractOperato
 void setup_prepared_plan(const std::string& statement_name, const std::string& query) {
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
-  if (StorageManager::get().has_prepared_plan(statement_name)) {
+  if (Hyrise::get().storage_manager.has_prepared_plan(statement_name)) {
     AssertInput(statement_name.empty(),
                 "Named prepared statements must be explicitly closed before they can be redefined.");
-    StorageManager::get().drop_prepared_plan(statement_name);
+    Hyrise::get().storage_manager.drop_prepared_plan(statement_name);
   }
 
   auto task = std::make_shared<ParsePreparedStatementTask>(query);
   CurrentScheduler::schedule_and_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
 
-  StorageManager::get().add_prepared_plan(statement_name, std::move(task->get_plan()));
+  Hyrise::get().storage_manager.add_prepared_plan(statement_name, std::move(task->get_plan()));
 }
 
 std::shared_ptr<AbstractOperator> bind_plan(const std::shared_ptr<PreparedPlan> prepared_plan, const std::vector<AllTypeVariant>& parameters) {

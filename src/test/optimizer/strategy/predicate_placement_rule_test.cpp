@@ -12,6 +12,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "testing_assert.hpp"
@@ -24,17 +25,17 @@ namespace opossum {
 class PredicatePlacementRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("resources/test_data/tbl/int_float.tbl"));
+    Hyrise::get().storage_manager.add_table("a", load_table("resources/test_data/tbl/int_float.tbl"));
     _table_a = std::make_shared<StoredTableNode>("a");
     _a_a = LQPColumnReference(_table_a, ColumnID{0});
     _a_b = LQPColumnReference(_table_a, ColumnID{1});
 
-    StorageManager::get().add_table("b", load_table("resources/test_data/tbl/int_float2.tbl"));
+    Hyrise::get().storage_manager.add_table("b", load_table("resources/test_data/tbl/int_float2.tbl"));
     _table_b = std::make_shared<StoredTableNode>("b");
     _b_a = LQPColumnReference(_table_b, ColumnID{0});
     _b_b = LQPColumnReference(_table_b, ColumnID{1});
 
-    StorageManager::get().add_table("c", load_table("resources/test_data/tbl/int_float3.tbl"));
+    Hyrise::get().storage_manager.add_table("c", load_table("resources/test_data/tbl/int_float3.tbl"));
     _table_c = std::make_shared<StoredTableNode>("c");
     _c_a = LQPColumnReference(_table_c, ColumnID{0});
     _c_b = LQPColumnReference(_table_c, ColumnID{1});
@@ -123,13 +124,84 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
   PredicateNode::make(greater_than_(_a_a, _a_b),
     SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
       _table_a));
-  // clang-format on
 
-  // clang-format off
   const auto expected_lqp =
   SortNode::make(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending},
     PredicateNode::make(greater_than_(_a_a, _a_b),
       _table_a));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
+  // If the predicate cannot be pushed down and is effectively re-inserted at the same position, make sure that
+  // its outputs are correctly restored.
+  // clang-format off
+  const auto input_sub_lqp =
+  PredicateNode::make(greater_than_(_a_a, 1),
+    ValidateNode::make(
+      _table_a));
+
+  const auto input_lqp =
+  UpdateNode::make("int_float",
+    input_sub_lqp,
+    ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
+      input_sub_lqp));
+
+  const auto expected_sub_lqp =
+  PredicateNode::make(greater_than_(_a_a, 1),
+    ValidateNode::make(
+      _table_a));
+
+  const auto expected_lqp =
+  UpdateNode::make("int_float",
+    expected_sub_lqp,
+    ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
+      expected_sub_lqp));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondTest) {
+  // We should stop pushing down predicates once we reached a node with multiple outputs
+  // clang-format off
+  const auto input_common_node =
+  PredicateNode::make(greater_than_(_a_a, 1),
+    ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+      _table_a));
+
+  const auto input_lqp =
+  UnionNode::make(UnionMode::All,
+    PredicateNode::make(greater_than_(_a_a, 2),
+      PredicateNode::make(less_than_(_a_b, 5),
+       ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(3.2, DataType::Float)),
+        input_common_node))),
+    PredicateNode::make(greater_than_(_a_a, 10),
+      PredicateNode::make(less_than_(_a_b, 50),
+       ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(5.2, DataType::Float)),
+        input_common_node))));
+
+  const auto expected_common_node =
+  PredicateNode::make(greater_than_(_a_a, 1),
+    ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+      _table_a));
+
+  const auto expected_lqp =
+  UnionNode::make(UnionMode::All,
+    ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(3.2, DataType::Float)),
+      PredicateNode::make(greater_than_(_a_a, 2),
+        PredicateNode::make(less_than_(_a_b, 5),
+          expected_common_node))),
+    ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(5.2, DataType::Float)),
+      PredicateNode::make(greater_than_(_a_a, 10),
+        PredicateNode::make(less_than_(_a_b, 50),
+          expected_common_node))));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

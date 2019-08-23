@@ -7,7 +7,6 @@
 #include <unordered_set>
 
 #include "types.hpp"
-#include "utils/singleton.hpp"
 
 /**
  * MVCC overview
@@ -48,12 +47,10 @@ class TransactionContext;
  * which represents the current global visibility of records.
  * The TransactionManager is thread-safe.
  */
-class TransactionManager : public Singleton<TransactionManager> {
+class TransactionManager : public Noncopyable {
   friend class TransactionManagerTest;
 
  public:
-  static void reset();
-
   CommitID last_commit_id() const;
 
   /**
@@ -68,9 +65,12 @@ class TransactionManager : public Singleton<TransactionManager> {
 
  private:
   TransactionManager();
+  ~TransactionManager();
 
-  friend class Singleton;
+  friend class Hyrise;
   friend class TransactionContext;
+
+  TransactionManager& operator=(TransactionManager&& transaction_manager) noexcept;
 
   std::shared_ptr<CommitContext> _new_commit_context();
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);
