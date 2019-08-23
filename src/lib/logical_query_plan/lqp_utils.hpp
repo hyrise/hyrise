@@ -40,7 +40,12 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
                       const std::shared_ptr<AbstractLQPNode>& replacement_node);
 
-void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node);
+/**
+ * Removes a node from the plan, using the output of its left input as input for its output nodes. Unless
+ * allow_right_input is set, the node must not have a right input. If allow_right_input is set, the caller has to
+ * retie that right input of the node (or reinsert the node at a different position where the right input is valid
+ */ 
+void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, bool allow_right_input = false);
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
                      const std::shared_ptr<AbstractLQPNode>& node);

@@ -328,8 +328,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
         case JoinMode::Semi:
         case JoinMode::AntiNullAsTrue:
         case JoinMode::AntiNullAsFalse:
-          // TODO(anybody) Implement estimation of Semi/Anti joins
-          return left_input_table_statistics;
+          {
+            const auto selectivity = .5;
+            std::vector<std::shared_ptr<BaseAttributeStatistics>> output_column_statistics{};
+            for (const auto& input_column_statistics : left_input_table_statistics->column_statistics) {
+              output_column_statistics.emplace_back(input_column_statistics);  // TODO ??
+            }
+            const auto table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), left_input_table_statistics->row_count * selectivity);
+            return table_statistics;
+          }
 
         // For now, handle outer joins just as inner joins
         // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches.
