@@ -407,7 +407,7 @@ TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoPullPastDiamond) {
+TEST_F(BetweenCompositionTest, NoPullPastDiamondPredicate) {
   // clang-format off
   const auto predicate_node =
   PredicateNode::make(greater_than_equals_(_a_a, 200),

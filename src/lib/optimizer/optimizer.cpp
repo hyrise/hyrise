@@ -100,11 +100,13 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
-  // Run after JoinOrderingRule because it leads to a call of JoinGraphBuilder::_parse_union(), which reverts the
-  // changes of the DisjunctionToUnionRule
-  optimizer->add_rule(std::make_unique<DisjunctionToUnionRule>());
-
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+
+  // Run after
+  //  - JoinOrderingRule because it leads to a call of JoinGraphBuilder::_parse_union(), which reverts the
+  //    changes of the DisjunctionToUnionRule
+  //  - BetweenCompositionRule because it would crash the reformulated TPC-H 7 (#1813)
+  optimizer->add_rule(std::make_unique<DisjunctionToUnionRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
