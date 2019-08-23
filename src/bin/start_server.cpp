@@ -1,6 +1,6 @@
 #include "cxxopts.hpp"
 
-#include "boost_server/server.hpp"
+#include "server/server.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "tpch/tpch_table_generator.hpp"

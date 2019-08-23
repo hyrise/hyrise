@@ -180,7 +180,6 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     tasks/chunk_compression_task_test.cpp
-    tasks/load_server_file_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp

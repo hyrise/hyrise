@@ -1,8 +1,8 @@
 // #include <gmock/gmock.h>
 // #include <boost/asio/ip/tcp.hpp>
-// #include <boost_server/session.hpp>
+// #include <server/session.hpp>
 // // The template is ServerSessionImpl defined and default-instantiated in the .cpp, we include it here to mock it
-// #include <boost_server/session.cpp>  // NOLINT
+// #include <server/session.cpp>  // NOLINT
 // #include "base_test.hpp"
 // #include "mock_connection.hpp"
 // #include "mock_task_runner.hpp"
@@ -293,8 +293,8 @@
 //       .WillOnce(Return(ByMove(boost::make_ready_future(std::string("")))));
 
   // The session executes the SQLPipeline using another scheduled task
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerPreparedStatementTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table().second))));
+  // EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerPreparedStatementTask>>()))
+  //     .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table().second))));
 
 //   // It sends the row data (one message per row)
 //   EXPECT_CALL(*_connection, send_data_row(_)).Times(3);

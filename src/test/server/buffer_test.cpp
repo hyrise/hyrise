@@ -7,7 +7,7 @@
 
 // #include "mock_connection.hpp"
 
-#include "boost_server/buffer.hpp"
+#include "server/buffer.hpp"
 
 namespace opossum {
 

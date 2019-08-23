@@ -8,7 +8,7 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_plan_cache.hpp"
 
-#include "boost_server/server.hpp"
+#include "server/server.hpp"
 
 namespace opossum {
 

@@ -2,30 +2,12 @@
 add_executable(
     hyriseServer
 
-    server.cpp
+    start_server.cpp
 )
 target_link_libraries(
     hyriseServer
     hyrise
     hyriseBenchmarkLib
-)
-
-# Configure boost server
-    add_executable(
-    hyriseServerBoost
-
-    start_boost_server.cpp
-)
-target_link_libraries(
-    hyriseServerBoost
-    hyrise
-    hyriseBenchmarkLib
-)
-target_include_directories(
-    hyriseServerBoost
-
-    PUBLIC
-    ${Boost_INCLUDE_DIRS}
 )
 
 # Configure playground

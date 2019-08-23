@@ -1,40 +1,41 @@
 #include "server.hpp"
 
-#include <boost/asio/placeholders.hpp>
-#include <boost/bind.hpp>
-
-#include "client_connection.hpp"
-#include "server_session.hpp"
-#include "task_runner.hpp"
-#include "then_operator.hpp"
+#include <boost/thread.hpp>
+#include <iostream>
+#include <boost/thread/scoped_thread.hpp>
 
 namespace opossum {
 
-using opossum::then_operator::then;
+Server::Server(const uint16_t port)
+    : _socket(_io_service), _acceptor(_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {}
 
-Server::Server(boost::asio::io_service& io_service, uint16_t port)
-    : _io_service(io_service),
-      _acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-      _socket(io_service) {
-  _accept_next_connection();
+void Server::_accept_new_session() {
+  // TODO(all): How much error handling to we want?
+
+  // auto start_session = boost::bind(&Server::_start_session, this, boost::asio::placeholders::error);
+  auto start_session = boost::bind(&Server::_start_session, this);
+  _acceptor.async_accept(_socket, start_session);
 }
 
-void Server::_accept_next_connection() {
-  _acceptor.async_accept(_socket, boost::bind(&Server::_start_session, this, boost::asio::placeholders::error));
+// void Server::_start_session(boost::system::error_code error) {
+void Server::_start_session() {
+  // if (!error) {
+    boost::scoped_thread(boost::thread([=] {
+      // Sockets cannot be copied. After moving the _socket object the object will be in the same state as before.
+      auto session = Session(std::move(_socket));
+      session.start();
+    }));
+  // }
+  _accept_new_session();
 }
 
-void Server::_start_session(boost::system::error_code error) {
-  if (!error) {
-    auto connection = std::make_shared<ClientConnection>(std::move(_socket));
-    auto task_runner = std::make_shared<TaskRunner>(_io_service);
-    auto session = std::make_shared<ServerSession>(connection, task_runner);
-    // Start the session and release it once it has terminated
-    session->start() >> then >> [=]() mutable { session.reset(); };
-  }
-
-  _accept_next_connection();
+void Server::run() {
+  _accept_new_session();
+  std::cout << "Server starting on port " << get_port() << std::endl;
+  _io_service.run();
 }
 
-uint16_t Server::get_port_number() { return _acceptor.local_endpoint().port(); }
+void Server::shutdown() { _io_service.stop(); }
 
+uint16_t Server::get_port() const { return _acceptor.local_endpoint().port(); }
 }  // namespace opossum

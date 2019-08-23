@@ -3,23 +3,29 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include "server_session.hpp"
+#include "session.hpp"
 
 namespace opossum {
 
 class Server {
  public:
-  Server(boost::asio::io_service& io_service, uint16_t port);
+  explicit Server(const uint16_t port);
 
-  uint16_t get_port_number();
+  // Return port
+  uint16_t get_port() const;
 
- protected:
-  void _accept_next_connection();
-  void _start_session(boost::system::error_code error);
+  void shutdown();
 
-  boost::asio::io_service& _io_service;
-  boost::asio::ip::tcp::acceptor _acceptor;
+  // Start boost io_service. This call is blocking.
+  void run();
+
+ private:
+  void _accept_new_session();
+
+  void _start_session();
+
+  boost::asio::io_service _io_service;
   boost::asio::ip::tcp::socket _socket;
+  boost::asio::ip::tcp::acceptor _acceptor;
 };
-
 }  // namespace opossum

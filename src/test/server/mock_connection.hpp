@@ -4,8 +4,8 @@
 // #include <boost/thread/future.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio.hpp>
-#include "boost_server/buffer.hpp"
-#include <boost_server/postgres_handler.hpp>
+#include "server/buffer.hpp"
+#include "server/postgres_handler.hpp"
 
 
 namespace opossum {
