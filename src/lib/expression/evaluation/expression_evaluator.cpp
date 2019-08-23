@@ -153,7 +153,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     const AbstractExpression& expression) {
   // First, look in the cache
   const auto expression_ptr = expression.shared_from_this();
-  const auto cached_result_iter = _cached_expression_results.find(expression.shared_from_this());
+  const auto cached_result_iter = _cached_expression_results.find(expression_ptr);
   if (cached_result_iter != _cached_expression_results.end()) {
     return std::static_pointer_cast<ExpressionResult<Result>>(cached_result_iter->second);
   }

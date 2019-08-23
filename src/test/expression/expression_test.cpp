@@ -403,6 +403,7 @@ TEST_F(ExpressionTest, EqualsAndHash) {
 
     std::shared_ptr<AbstractExpression> deep_copy;
     if (!std::dynamic_pointer_cast<PQPSubqueryExpression>(first_expression)) {
+      // The deep copy of a PQPSubqueryExpression is not equal to its source, see the comment in _shallow_equals.
       deep_copy = first_expression->deep_copy();
       EXPECT_EQ(*first_expression, *deep_copy);
       EXPECT_EQ(first_expression->hash(), deep_copy->hash());
@@ -411,10 +412,10 @@ TEST_F(ExpressionTest, EqualsAndHash) {
     for (auto second_iter = first_iter + 1; second_iter != expressions.end(); ++second_iter) {
       const auto& [second_line, second_expression] = *second_iter;
       SCOPED_TRACE(std::string{"Second expression from line "} + std::to_string(second_line));
-      EXPECT_NE(*first_expression, *(second_expression));
-      EXPECT_NE(*second_expression, *(first_expression));
+      EXPECT_NE(*first_expression, *second_expression);
+      EXPECT_NE(*second_expression, *first_expression);
       if (deep_copy) {
-        EXPECT_NE(*(second_expression), *deep_copy);
+        EXPECT_NE(*second_expression, *deep_copy);
       }
     }
   }
