@@ -44,7 +44,7 @@ std::string PQPSubqueryExpression::as_column_name() const {
 
 bool PQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
   // For deep copies of this expression, the PQP is recreated. It is not only difficult to correctly compare PQPs, but
-  // it also has unclear semantics. is an executed PQP equal to a non-executed one? How about two executed ones?
+  // it also has unclear semantics. Is an executed PQP equal to a non-executed one? How about two executed ones?
   // As such, we only report equality if two PQPSubqueryExpression refer to the very same PQP, meaning that a deep copy
   // is not equal to its source. If this ever becomes an issue, it should be easy to spot.
   DebugAssert(dynamic_cast<const PQPSubqueryExpression*>(&expression),
