@@ -110,7 +110,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
-  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
+//  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 

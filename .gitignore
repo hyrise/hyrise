@@ -35,6 +35,12 @@ provider.hpp
 /*.csv
 /*.csv.meta
 
+# Ignore generated and cached TPC-DS tables
+*.csv
+*.bin
+
+/third_party/tpc-ds-tool/
+
 # CLion cmake directory
 cmake-build-*
 
