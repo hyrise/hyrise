@@ -17,7 +17,8 @@ void AbstractReadWriteOperator::execute() {
   DebugAssert(transaction_context()->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
 
-  transaction_context()->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
+  transaction_context()->register_read_write_operator(
+      std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
   try {
     AbstractOperator::execute();
