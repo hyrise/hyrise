@@ -15,16 +15,20 @@ namespace opossum {
 class AliasNodeTest : public ::testing::Test {
  public:
   void SetUp() override {
-    const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
+    mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
 
     a = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, ColumnID{0}});
     b = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, ColumnID{1}});
-    const auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{{b, a}};
 
-    const auto aliases = std::vector<std::string>{"x", "y"};
+    aliases = {"x", "y"};
+    expressions = {b, a};
 
     alias_node = AliasNode::make(expressions, aliases, mock_node);
   }
+
+  std::vector<std::string> aliases;
+  std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  std::shared_ptr<MockNode> mock_node;
 
   std::shared_ptr<AbstractExpression> a, b;
   std::shared_ptr<AliasNode> alias_node;
@@ -41,6 +45,25 @@ TEST_F(AliasNodeTest, ShallowEqualsAndCopy) {
   const auto node_mapping = lqp_create_node_mapping(alias_node, alias_node_copy);
 
   EXPECT_TRUE(alias_node->shallow_equals(*alias_node_copy, node_mapping));
+}
+
+TEST_F(AliasNodeTest, Hash) {
+  const auto alias_node_copy = alias_node->deep_copy();
+  EXPECT_EQ(alias_node->hash(), alias_node_copy->hash());
+
+  const auto alias_node_other_aliases = AliasNode::make(expressions, std::vector<std::string>{"a", "b"}, mock_node);
+  EXPECT_NE(alias_node->hash(), alias_node_other_aliases->hash());
+
+  const auto other_mock_node =
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "named");
+  const auto expr_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{0}});
+  const auto expr_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{1}});
+  const auto other_expressions = std::vector<std::shared_ptr<AbstractExpression>>{expr_a, expr_b};
+  const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
+  // TODO(anyone) take expressions into account for the hash code calculation
+  EXPECT_EQ(alias_node->hash(), alias_node_other_expressions->hash());
+  const auto alias_node_other_left_input = AliasNode::make(expressions, aliases, other_mock_node);
+  EXPECT_NE(alias_node->hash(), alias_node_other_left_input->hash());
 }
 
 }  // namespace opossum

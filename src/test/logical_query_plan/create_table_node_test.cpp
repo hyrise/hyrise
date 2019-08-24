@@ -2,6 +2,7 @@
 
 #include "logical_query_plan/create_table_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -31,9 +32,9 @@ TEST_F(CreateTableNodeTest, Description) {
 TEST_F(CreateTableNodeTest, NodeExpressions) { ASSERT_EQ(create_table_node->node_expressions.size(), 0u); }
 
 TEST_F(CreateTableNodeTest, Equals) {
-  EXPECT_EQ(*create_table_node, *create_table_node);
+  const auto deep_copy_node = create_table_node->deep_copy();
+  EXPECT_EQ(*create_table_node, *deep_copy_node);
 
-  const auto same_create_table_node = CreateTableNode::make("some_table", false, input_node);
   const auto different_create_table_node_a = CreateTableNode::make("some_table2", false, input_node);
   const auto different_create_table_node_b = CreateTableNode::make("some_table", true, input_node);
 
@@ -46,6 +47,24 @@ TEST_F(CreateTableNodeTest, Equals) {
   EXPECT_NE(*different_create_table_node_a, *create_table_node);
   EXPECT_NE(*different_create_table_node_b, *create_table_node);
   EXPECT_NE(*different_create_table_node_c, *create_table_node);
+}
+
+TEST_F(CreateTableNodeTest, Hash) {
+  const auto deep_copy_node = create_table_node->deep_copy();
+  EXPECT_EQ(create_table_node->hash(), deep_copy_node->hash());
+
+  const auto different_create_table_node_a = CreateTableNode::make("some_table2", false, input_node);
+  const auto different_create_table_node_b = CreateTableNode::make("some_table", true, input_node);
+
+  TableColumnDefinitions different_column_definitions;
+  different_column_definitions.emplace_back("a", DataType::Int, false);
+  const auto different_input_node =
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
+  const auto different_create_table_node_c = CreateTableNode::make("some_table", false, different_input_node);
+
+  EXPECT_NE(different_create_table_node_a->hash(), create_table_node->hash());
+  EXPECT_NE(different_create_table_node_b->hash(), create_table_node->hash());
+  EXPECT_NE(different_create_table_node_c->hash(), create_table_node->hash());
 }
 
 TEST_F(CreateTableNodeTest, Copy) { EXPECT_EQ(*create_table_node, *create_table_node->deep_copy()); }

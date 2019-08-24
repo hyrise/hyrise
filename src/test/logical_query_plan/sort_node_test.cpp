@@ -60,6 +60,20 @@ TEST_F(SortNodeTest, Equals) {
   EXPECT_EQ(*_sort_node, *sort_c);
 }
 
+TEST_F(SortNodeTest, Hash) {
+  const auto sort_a =
+      SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Descending}, _table_node);
+  const auto sort_b = SortNode::make(
+      expression_vector(_a_d, _a_f, _a_i),
+      std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending});
+  const auto sort_c =
+      SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Ascending}, _table_node);
+
+  EXPECT_NE(_sort_node->hash(), sort_a->hash());
+  EXPECT_NE(_sort_node->hash(), sort_b->hash());
+  EXPECT_EQ(_sort_node->hash(), sort_c->hash());
+}
+
 TEST_F(SortNodeTest, Copy) {
   EXPECT_EQ(*_sort_node->deep_copy(), *_sort_node);
 

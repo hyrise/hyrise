@@ -26,6 +26,11 @@ TEST_F(InsertNodeTest, Equals) {
   EXPECT_NE(*_insert_node, *InsertNode::make("table_b"));
 }
 
+TEST_F(InsertNodeTest, Hash) {
+  EXPECT_EQ(_insert_node->hash(), InsertNode::make("table_a")->hash());
+  EXPECT_NE(_insert_node->hash(), InsertNode::make("table_b")->hash());
+}
+
 TEST_F(InsertNodeTest, NodeExpressions) { EXPECT_TRUE(_insert_node->node_expressions.empty()); }
 
 TEST_F(InsertNodeTest, ColumnExpressions) { EXPECT_TRUE(_insert_node->column_expressions().empty()); }

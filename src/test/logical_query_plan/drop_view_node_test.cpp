@@ -25,6 +25,14 @@ TEST_F(DropViewNodeTest, Equals) {
   EXPECT_NE(*_drop_view_node, *different_drop_view_node);
 }
 
+TEST_F(DropViewNodeTest, Hash) {
+  const auto same_drop_view_node = DropViewNode::make("some_view", false);
+  const auto different_drop_view_node = DropViewNode::make("some_view2", false);
+
+  EXPECT_EQ(_drop_view_node->hash(), same_drop_view_node->hash());
+  EXPECT_NE(_drop_view_node->hash(), different_drop_view_node->hash());
+}
+
 TEST_F(DropViewNodeTest, Copy) { EXPECT_EQ(*_drop_view_node->deep_copy(), *_drop_view_node); }
 
 TEST_F(DropViewNodeTest, NodeExpressions) { ASSERT_EQ(_drop_view_node->node_expressions.size(), 0u); }

@@ -90,6 +90,23 @@ TEST_F(StoredTableNodeTest, Equals) {
   EXPECT_EQ(*different_node_c, *different_node_c2);
 }
 
+TEST_F(StoredTableNodeTest, Hash) {
+  const auto different_node_a = StoredTableNode::make("t_b");
+  different_node_a->set_pruned_chunk_ids({ChunkID{2}});
+
+  const auto different_node_b = StoredTableNode::make("t_a");
+
+  const auto different_node_c = StoredTableNode::make("t_b");
+  different_node_c->set_pruned_column_ids({ColumnID{1}});
+  const auto different_node_c2 = StoredTableNode::make("t_b");
+  different_node_c2->set_pruned_column_ids({ColumnID{1}});
+
+  EXPECT_NE(_stored_table_node->hash(), different_node_a->hash());
+  EXPECT_NE(_stored_table_node->hash(), different_node_b->hash());
+  EXPECT_NE(_stored_table_node->hash(), different_node_c->hash());
+  EXPECT_EQ(different_node_c->hash(), different_node_c2->hash());
+}
+
 TEST_F(StoredTableNodeTest, Copy) {
   EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
 
