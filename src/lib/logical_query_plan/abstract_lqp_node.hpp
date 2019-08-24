@@ -146,6 +146,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool operator==(const AbstractLQPNode& rhs) const;
   bool operator!=(const AbstractLQPNode& rhs) const;
 
+  /**
+   *  Hashes the LQPNodeType and combines the result with the hash of _on_hash()
+   *  which is implemented individually depending on the derived type.
+   *  Node expressions are not taken into account since combining the hashes of the
+   *  expressions can lead to unequal hash codes, even if lqp nodes are sementically
+   *  equal.
+   */
   size_t hash() const;
 
   const LQPNodeType type;
@@ -161,6 +168,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
  protected:
+  /**
+   * Override to hash data fields in derived types. No override needed if derived expression has no
+   * data members.
+   */
   virtual size_t _on_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
