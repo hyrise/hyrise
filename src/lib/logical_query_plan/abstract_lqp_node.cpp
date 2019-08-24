@@ -70,8 +70,18 @@ AbstractLQPNode::~AbstractLQPNode() {
 }
 
 size_t AbstractLQPNode::hash() const {
-  auto hash = boost::hash_value(type);
-  boost::hash_combine(hash, _on_hash());
+  size_t hash{0};
+
+  visit_lqp(std::const_pointer_cast<AbstractLQPNode>(shared_from_this()), [&hash](const auto& node) {
+    if (node) {
+      boost::hash_combine(hash, boost::hash_value(node->type));
+      boost::hash_combine(hash, node->_on_hash());
+      return LQPVisitation::VisitInputs;
+    } else {
+      return LQPVisitation::DoNotVisitInputs;
+    }
+  });
+
   return hash;
 }
 

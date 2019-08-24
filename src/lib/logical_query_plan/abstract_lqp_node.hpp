@@ -147,11 +147,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool operator!=(const AbstractLQPNode& rhs) const;
 
   /**
-   *  Hashes the LQPNodeType and combines the result with the hash of _on_hash()
-   *  which is implemented individually depending on the derived type.
-   *  Node expressions are not taken into account since combining the hashes of the
-   *  expressions can lead to unequal hash codes, even if lqp nodes are sementically
-   *  equal.
+   *  Builds a hash code by hashing the node type combined with specific member variables of
+   *  derived classes (see _on_hash()) and the hash codes of non-empty input nodes recursively.
+   *  Node expressions are not taken into account since combining the hashes of the expressions
+   *  can lead to unequal hash codes, even if lqp nodes are sementically equal.
    */
   size_t hash() const;
 
