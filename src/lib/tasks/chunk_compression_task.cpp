@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 #include "types.hpp"
@@ -20,7 +20,7 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
     : _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
 void ChunkCompressionTask::_on_execute() {
-  auto table = StorageManager::get().get_table(_table_name);
+  auto table = Hyrise::get().storage_manager.get_table(_table_name);
 
   Assert(table, "Table does not exist.");
 

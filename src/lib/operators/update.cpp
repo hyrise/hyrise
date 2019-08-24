@@ -7,9 +7,9 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "delete.hpp"
+#include "hyrise.hpp"
 #include "insert.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
 #include "table_wrapper.hpp"
 #include "utils/assert.hpp"
 
@@ -23,7 +23,7 @@ Update::Update(const std::string& table_to_update_name, const std::shared_ptr<Ab
 const std::string Update::name() const { return "Update"; }
 
 std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
-  const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
+  const auto table_to_update = Hyrise::get().storage_manager.get_table(_table_to_update_name);
 
   // 0. Validate input
   DebugAssert(context, "Update needs a transaction context");

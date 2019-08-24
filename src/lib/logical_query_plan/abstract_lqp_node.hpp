@@ -27,8 +27,6 @@ enum class LQPNodeType {
   Predicate,
   Projection,
   Root,
-  ShowColumns,
-  ShowTables,
   Sort,
   StaticTable,
   StoredTable,

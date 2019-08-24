@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "testing_assert.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -74,26 +74,26 @@ TEST(TPCHTableGeneratorTest, TableContents) {
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("region").table, load_table(dir_002 + "region.tbl", chunk_size));
 }
 
-TEST(TPCHTableGeneratorTest, GenerateAndStore) {
-  EXPECT_FALSE(StorageManager::get().has_table("part"));
-  EXPECT_FALSE(StorageManager::get().has_table("supplier"));
-  EXPECT_FALSE(StorageManager::get().has_table("partsupp"));
-  EXPECT_FALSE(StorageManager::get().has_table("customer"));
-  EXPECT_FALSE(StorageManager::get().has_table("orders"));
-  EXPECT_FALSE(StorageManager::get().has_table("nation"));
-  EXPECT_FALSE(StorageManager::get().has_table("region"));
+TEST(TpchTableGeneratorTest, GenerateAndStore) {
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("part"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("supplier"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("partsupp"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("customer"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("orders"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("nation"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("region"));
 
   // Small scale factor
   TPCHTableGenerator(0.01f, Chunk::DEFAULT_SIZE).generate_and_store();
 
-  EXPECT_TRUE(StorageManager::get().has_table("part"));
-  EXPECT_TRUE(StorageManager::get().has_table("supplier"));
-  EXPECT_TRUE(StorageManager::get().has_table("partsupp"));
-  EXPECT_TRUE(StorageManager::get().has_table("customer"));
-  EXPECT_TRUE(StorageManager::get().has_table("orders"));
-  EXPECT_TRUE(StorageManager::get().has_table("nation"));
-  EXPECT_TRUE(StorageManager::get().has_table("region"));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("part"));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("supplier"));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("partsupp"));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("customer"));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("orders"));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("nation"));
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("region"));
 
-  StorageManager::reset();
+  Hyrise::reset();
 }
 }  // namespace opossum
