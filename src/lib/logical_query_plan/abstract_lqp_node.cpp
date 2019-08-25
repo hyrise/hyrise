@@ -74,6 +74,9 @@ size_t AbstractLQPNode::hash() const {
 
   visit_lqp(std::const_pointer_cast<AbstractLQPNode>(shared_from_this()), [&hash](const auto& node) {
     if (node) {
+      for (const auto& expression : node->node_expressions) {
+        boost::hash_combine(hash, expression->hash());
+      }
       boost::hash_combine(hash, boost::hash_value(node->type));
       boost::hash_combine(hash, node->_on_hash());
       return LQPVisitation::VisitInputs;
