@@ -79,7 +79,9 @@ size_t AbstractLQPNode::hash() const {
       }
       boost::hash_combine(hash, boost::hash_value(node->type));
       boost::hash_combine(hash, node->_on_hash());
-      return LQPVisitation::VisitInputs;
+      // WIP
+      return LQPVisitation::DoNotVisitInputs;
+      // return LQPVisitation::VisitInputs;
     } else {
       return LQPVisitation::DoNotVisitInputs;
     }
