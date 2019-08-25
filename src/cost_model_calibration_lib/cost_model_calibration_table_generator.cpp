@@ -192,7 +192,7 @@ void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_fact
 }
 
 void CostModelCalibrationTableGenerator::load_tpcds_tables(const float scale_factor, const EncodingType encoding) const {
-  const auto tables = opossum::TpccTableGenerator(100'000, 2).generate_all_tables();
+  const auto tables = opossum::TpccTableGenerator(100'000, 10).generate_all_tables();
 
   for (auto& tpcds_table : tables) {
     const auto& table_name = tpcds_table.first;
