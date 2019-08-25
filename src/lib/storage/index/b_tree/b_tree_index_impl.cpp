@@ -71,11 +71,15 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
     if (position.is_null()) {
       index_null_postings.emplace_back(position.chunk_offset());
     } else {
-      values.push_back(std::make_pair(position.chunk_offset(), position.value()));
+      values.push_back({position.chunk_offset(), position.value()});
     }
   });
 
   index_null_postings.shrink_to_fit();
+
+  if (values.empty()) {
+    return;
+  }
 
   // Sort
   std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
@@ -85,16 +89,14 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
   }
 
   // Build index
-  if (!values.empty()) {
-    DataType current_value = values[0].second;
-    _btree[current_value] = 0;
-    _add_to_heap_memory_usage(current_value);
-    for (size_t i = 0; i < values.size(); i++) {
-      if (values[i].second != current_value) {
-        current_value = values[i].second;
-        _btree[current_value] = i;
-        _add_to_heap_memory_usage(current_value);
-      }
+  DataType current_value = values[0].second;
+  _btree[current_value] = 0;
+  _add_to_heap_memory_usage(current_value);
+  for (size_t i = 0; i < values.size(); i++) {
+    if (values[i].second != current_value) {
+      current_value = values[i].second;
+      _btree[current_value] = i;
+      _add_to_heap_memory_usage(current_value);
     }
   }
 }

@@ -20,11 +20,11 @@ class GroupKeyIndexTest;
  * The GroupKeyIndex works on a single dictionary compressed segment.
  * It uses three structures, one being a postings list containing record positions (ie ChunkOffsets)
  * for non-null values in the attribute vector, the second is a postings list containing record positions
- * for null vlaues and the third structure is an index offset, mapping value-ids to offsets
+ * for null values and the third structure is an index offset, mapping value-ids to offsets
  * in the postings list.
  * For the offset structure, the posting structures are considered as one overall structure with null postings
  * at the end. 
- * For null values, an additional structure is used for storing the record positions.
+ * For null values, the `_index_null_postings` vector of AbstractIndex is used for storing the record positions.
  * Since this structure only contains null value positions, a further structure for mapping value-ids to
  * offsets isn't needed. 
  *
@@ -48,7 +48,7 @@ class GroupKeyIndexTest;
  *  +----+-----------+------------+---------+----------------+----------------+
  * 
  * Null is represented in the Attribute Vector by a ValueID which is the highest available
- * ValueID in the dictionary + 1, i.e. ValieID{6} in this example.
+ * ValueID in the dictionary + 1, i.e. ValueID{6} in this example.
  * x¹: Starting offset for null values in the null postings list can be calculated by 
  *     the offset minus the number of non-null values in the segment to index.
  * x²: Mark for the ending position.

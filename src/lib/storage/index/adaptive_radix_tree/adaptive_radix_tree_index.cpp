@@ -93,12 +93,13 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_of
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
-  if (!values.empty()) {
+  if (values.empty()) {
+    return nullptr;
+  } else {
     _chunk_offsets.reserve(values.size());
     auto begin = _chunk_offsets.cbegin();
     return _bulk_insert(values, static_cast<size_t>(0u), begin);
   }
-  return nullptr;
 }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
