@@ -23,8 +23,8 @@ size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : AbstractIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
-      _indexed_segment(segments_to_index.empty()
-                           ? nullptr
+      _indexed_segment(segments_to_index.empty()  // Empty segment list is illegal
+                           ? nullptr              // but range check needed for accessing the first segment
                            : std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
   Assert(static_cast<bool>(_indexed_segment), "AdaptiveRadixTree only works with dictionary segments for now");
   Assert((segments_to_index.size() == 1), "AdaptiveRadixTree only works with a single segment");

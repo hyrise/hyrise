@@ -16,8 +16,8 @@ size_t GroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOf
 
 GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : AbstractIndex{get_index_type_of<GroupKeyIndex>()},
-      _indexed_segment(segments_to_index.empty()
-                           ? nullptr
+      _indexed_segment(segments_to_index.empty()  // Empty segment list is illegal
+                           ? nullptr              // but range check needed for accessing the first segment
                            : std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index[0])) {
   Assert(static_cast<bool>(_indexed_segment), "GroupKeyIndex only works with dictionary segments_to_index.");
   Assert((segments_to_index.size() == 1), "GroupKeyIndex only works with a single segment.");
