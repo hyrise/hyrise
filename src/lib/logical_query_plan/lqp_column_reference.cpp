@@ -37,7 +37,7 @@ std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_refe
 namespace std {
 
 size_t hash<opossum::LQPColumnReference>::operator()(const opossum::LQPColumnReference& column_reference) const {
-  auto hash = boost::hash_value(column_reference.original_node().get());
+  auto hash = boost::hash_value(column_reference.original_node()->hash());
   boost::hash_combine(hash, static_cast<size_t>(column_reference.original_column_id()));
   return hash;
 }

@@ -62,7 +62,7 @@ TEST_F(PredicateNodeTest, Hash) {
   EXPECT_NE(other_predicate_node_b->hash(), _predicate_node->hash());
   EXPECT_NE(other_predicate_node_c->hash(), _predicate_node->hash());
   EXPECT_NE(other_predicate_node_d->hash(), _predicate_node->hash());
-  EXPECT_EQ(other_predicate_node_e->hash(), _predicate_node->hash()); 
+  EXPECT_EQ(other_predicate_node_e->hash(), _predicate_node->hash());
 }
 
 TEST_F(PredicateNodeTest, Copy) { EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node); }

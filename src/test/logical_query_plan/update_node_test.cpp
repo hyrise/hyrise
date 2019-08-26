@@ -39,12 +39,15 @@ TEST_F(UpdateNodeTest, Equals) {
   const auto other_update_node_c = UpdateNode::make("table_a", other_mock_node, _mock_node);
   const auto other_update_node_d = UpdateNode::make("table_a", _mock_node, other_mock_node);
   const auto other_update_node_e = UpdateNode::make("table_a", other_mock_node, other_mock_node);
+  const auto other_update_node_f = UpdateNode::make("table_a", other_mock_node);
 
   EXPECT_EQ(*_update_node, *other_update_node_a);
   EXPECT_NE(*_update_node, *other_update_node_b);
   EXPECT_NE(*_update_node, *other_update_node_c);
   EXPECT_NE(*_update_node, *other_update_node_d);
   EXPECT_NE(*_update_node, *other_update_node_e);
+  EXPECT_NE(*_update_node, *other_update_node_f);
+  EXPECT_NE(*other_update_node_e, *other_update_node_f);
 }
 
 TEST_F(UpdateNodeTest, Hash) {
@@ -55,13 +58,16 @@ TEST_F(UpdateNodeTest, Hash) {
   const auto other_update_node_c = UpdateNode::make("table_a", other_mock_node, _mock_node);
   const auto other_update_node_d = UpdateNode::make("table_a", _mock_node, other_mock_node);
   const auto other_update_node_e = UpdateNode::make("table_a", other_mock_node, other_mock_node);
+  const auto other_update_node_f = UpdateNode::make("table_a", other_mock_node);
 
   EXPECT_EQ(_update_node->hash(), other_update_node_a->hash());
-  // TODO(anyone) for the following 4 assertions: take column definitions for MockNode hash into account
   EXPECT_NE(_update_node->hash(), other_update_node_b->hash());
   EXPECT_NE(_update_node->hash(), other_update_node_c->hash());
   EXPECT_NE(_update_node->hash(), other_update_node_d->hash());
+  // TODO(anyone) take ColumnDefinitions into account for MockNode hash
   EXPECT_NE(_update_node->hash(), other_update_node_e->hash());
+  EXPECT_NE(_update_node->hash(), other_update_node_f->hash());
+  EXPECT_NE(other_update_node_e->hash(), other_update_node_f->hash());
 }
 
 TEST_F(UpdateNodeTest, Copy) { EXPECT_EQ(*_update_node->deep_copy(), *_update_node); }
