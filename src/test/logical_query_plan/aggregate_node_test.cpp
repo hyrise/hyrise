@@ -57,39 +57,6 @@ TEST_F(AggregateNodeTest, Description) {
   EXPECT_EQ(description, "[Aggregate] GroupBy: [a, c] Aggregates: [SUM(a + b), SUM(a + c)]");
 }
 
-TEST_F(AggregateNodeTest, Hash) {
-  const auto same_aggregate_node = AggregateNode::make(
-      expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
-  EXPECT_EQ(_aggregate_node->hash(), same_aggregate_node->hash());
-
-  const auto different_aggregate_node_a =
-      AggregateNode::make(expression_vector(_a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
-  // different size of group by expressions
-  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_a->hash());
-
-  const auto different_aggregate_node_b = AggregateNode::make(
-      expression_vector(_a, _c), expression_vector(sum_(add_(_a, 2)), sum_(add_(_a, _c))), _mock_node);
-  // TODO(anyone) take expressions into account for the hash code calculation
-  EXPECT_EQ(_aggregate_node->hash(), different_aggregate_node_b->hash());
-
-  const auto different_aggregate_node_c = AggregateNode::make(
-      expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c)), min_(_a)), _mock_node);
-  // TODO(anyone) take expressions into account for the hash code calculation
-  EXPECT_EQ(_aggregate_node->hash(), different_aggregate_node_c->hash());
-
-  const auto different_aggregate_node_d = AggregateNode::make(
-      expression_vector(_a, _a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
-  // TODO(anyone) take expressions into account for the hash code calculation
-  EXPECT_EQ(_aggregate_node->hash(), different_aggregate_node_d->hash());
-
-  const auto mock_node_2 = MockNode::make(
-      MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "other_name");
-  const auto different_aggregate_node_e = AggregateNode::make(
-      expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), mock_node_2);
-  // left input node is has different hash
-  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_e->hash());
-}
-
 TEST_F(AggregateNodeTest, Equals) {
   const auto same_aggregate_node = AggregateNode::make(
       expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
@@ -112,6 +79,28 @@ TEST_F(AggregateNodeTest, Equals) {
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_b);
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_c);
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_d);
+}
+
+TEST_F(AggregateNodeTest, Hash) {
+  const auto same_aggregate_node = AggregateNode::make(
+      expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
+
+  EXPECT_EQ(_aggregate_node->hash(), same_aggregate_node->hash());
+
+  // Build slightly different aggregate nodes
+  const auto different_aggregate_node_a =
+      AggregateNode::make(expression_vector(_a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
+  const auto different_aggregate_node_b = AggregateNode::make(
+      expression_vector(_a, _c), expression_vector(sum_(add_(_a, 2)), sum_(add_(_a, _c))), _mock_node);
+  const auto different_aggregate_node_c = AggregateNode::make(
+      expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c)), min_(_a)), _mock_node);
+  const auto different_aggregate_node_d = AggregateNode::make(
+      expression_vector(_a, _a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
+
+  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_a->hash());
+  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_b->hash());
+  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_c->hash());
+  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_d->hash());
 }
 
 TEST_F(AggregateNodeTest, Copy) {

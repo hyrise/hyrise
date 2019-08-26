@@ -92,10 +92,8 @@ TEST_F(JoinNodeTest, Hash) {
   const auto other_join_node_c = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
   const auto other_join_node_d = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
-  // TODO(anyone) take join expressions into account for hash code calculation
-  EXPECT_EQ(other_join_node_a->hash(), _inner_join_node->hash());
-  // TODO(anyone) take join expressions into account for hash code calculation
-  EXPECT_EQ(other_join_node_b->hash(), _inner_join_node->hash());
+  EXPECT_NE(other_join_node_a->hash(), _inner_join_node->hash());
+  EXPECT_NE(other_join_node_b->hash(), _inner_join_node->hash());
   EXPECT_NE(other_join_node_c->hash(), _inner_join_node->hash());
   EXPECT_EQ(other_join_node_d->hash(), _inner_join_node->hash());
 }

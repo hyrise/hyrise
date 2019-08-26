@@ -47,6 +47,24 @@ TEST_F(AliasNodeTest, ShallowEqualsAndCopy) {
   EXPECT_TRUE(alias_node->shallow_equals(*alias_node_copy, node_mapping));
 }
 
+TEST_F(AliasNodeTest, Equals) {
+  const auto alias_node_copy = alias_node->deep_copy();
+  EXPECT_EQ(*alias_node, *alias_node_copy);
+
+  const auto alias_node_other_aliases = AliasNode::make(expressions, std::vector<std::string>{"a", "b"}, mock_node);
+  EXPECT_NE(*alias_node, *alias_node_other_aliases);
+
+  const auto other_mock_node =
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "named");
+  const auto expr_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{0}});
+  const auto expr_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{1}});
+  const auto other_expressions = std::vector<std::shared_ptr<AbstractExpression>>{expr_a, expr_b};
+  const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
+  EXPECT_NE(*alias_node, *alias_node_other_expressions);
+  const auto alias_node_other_left_input = AliasNode::make(expressions, aliases, other_mock_node);
+  EXPECT_NE(*alias_node, *alias_node_other_left_input);
+}
+
 TEST_F(AliasNodeTest, Hash) {
   const auto alias_node_copy = alias_node->deep_copy();
   EXPECT_EQ(alias_node->hash(), alias_node_copy->hash());
@@ -60,8 +78,7 @@ TEST_F(AliasNodeTest, Hash) {
   const auto expr_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{1}});
   const auto other_expressions = std::vector<std::shared_ptr<AbstractExpression>>{expr_a, expr_b};
   const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
-  // TODO(anyone) take expressions into account for the hash code calculation
-  EXPECT_EQ(alias_node->hash(), alias_node_other_expressions->hash());
+  EXPECT_NE(alias_node->hash(), alias_node_other_expressions->hash());
   const auto alias_node_other_left_input = AliasNode::make(expressions, aliases, other_mock_node);
   EXPECT_NE(alias_node->hash(), alias_node_other_left_input->hash());
 }
