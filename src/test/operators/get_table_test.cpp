@@ -4,11 +4,12 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
-#include "storage/storage_manager.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -16,7 +17,14 @@ namespace opossum {
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("int_int_float", load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+    Hyrise::get().storage_manager.add_table("int_int_float",
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+
+    const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
+    ChunkEncoder::encode_all_chunks(table);
+    table->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a");
+    table->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b1");
+    table->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b2");
   }
 };
 
@@ -60,11 +68,17 @@ TEST_F(OperatorsGetTableTest, PrunedChunks) {
 
   get_table->execute();
 
-  auto original_table = StorageManager::get().get_table("int_int_float");
+  auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto table = get_table->get_output();
   EXPECT_EQ(table->chunk_count(), ChunkID(2));
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 0u), original_table->get_value<int>(ColumnID(0), 1u));
   EXPECT_EQ(table->get_value<int>(ColumnID(0), 1u), original_table->get_value<int>(ColumnID(0), 3u));
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indexes(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indexes(column_ids_1).size(), 2u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indexes(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indexes(column_ids_1).size(), 2u);
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumns) {
@@ -77,6 +91,16 @@ TEST_F(OperatorsGetTableTest, PrunedColumns) {
   EXPECT_EQ(table->column_count(), 2u);
   EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 9);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 10.5f);
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indexes(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indexes(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indexes(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indexes(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{2})->get_indexes(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{2})->get_indexes(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{3})->get_indexes(column_ids_0).size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{3})->get_indexes(column_ids_1).size(), 0u);
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
@@ -90,13 +114,19 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
   EXPECT_EQ(table->get_value<int>(ColumnID{0}, 0u), 10);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 0u), 10.5f);
   EXPECT_EQ(table->get_value<float>(ColumnID{1}, 1u), 9.5f);
+  const auto column_ids_0 = std::vector<ColumnID>{ColumnID{0}};
+  const auto column_ids_1 = std::vector<ColumnID>{ColumnID{1}};
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indexes(column_ids_0).size(), 2u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_indexes(column_ids_1).size(), 0u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indexes(column_ids_0).size(), 2u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_indexes(column_ids_1).size(), 0u);
 }
 
 TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
   auto context = std::make_shared<TransactionContext>(1u, 3u);
 
-  auto original_table = StorageManager::get().get_table("int_int_float");
+  auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto chunk = original_table->get_chunk(ChunkID{0});
 
   chunk->set_cleanup_commit_id(CommitID{2u});
@@ -110,7 +140,7 @@ TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
 }
 
 TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
-  auto original_table = StorageManager::get().get_table("int_int_float");
+  auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
@@ -152,7 +182,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
 
 TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   // 1. --- Physical deletion of a chunk
-  auto original_table = StorageManager::get().get_table("int_int_float");
+  auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
@@ -187,7 +217,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
 
   auto context2 = std::make_shared<TransactionContext>(1u, 3u);
 
-  auto modified_table = StorageManager::get().get_table("int_int_float");
+  auto modified_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto chunk = modified_table->get_chunk(ChunkID{1});
 
   chunk->set_cleanup_commit_id(CommitID{2u});

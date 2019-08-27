@@ -6,7 +6,8 @@
 
 #include "operators/print.hpp"
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
+#include "utils/meta_table_manager.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 
@@ -19,7 +20,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
 
   // SQLite does not support adding primary keys, so we rename the table, create an empty one from the provided
   // schema and copy the data.
-  for (const auto& table_name : StorageManager::get().table_names()) {
+  for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
     sqlite_wrapper->raw_execute_query(
         std::string{"ALTER TABLE "}.append(table_name).append(" RENAME TO ").append(table_name).append("_unindexed"));
   }
@@ -36,7 +37,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   sqlite_wrapper->raw_execute_query(create_indices_sql);
 
   // Copy over data
-  for (const auto& table_name : StorageManager::get().table_names()) {
+  for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
     Timer per_table_time;
     std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 

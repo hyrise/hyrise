@@ -13,7 +13,6 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 

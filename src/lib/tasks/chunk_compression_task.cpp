@@ -3,9 +3,9 @@
 #include <string>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 #include "types.hpp"
@@ -20,14 +20,14 @@ ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const 
     : _table_name{table_name}, _chunk_ids{chunk_ids} {}
 
 void ChunkCompressionTask::_on_execute() {
-  auto table = StorageManager::get().get_table(_table_name);
+  auto table = Hyrise::get().storage_manager.get_table(_table_name);
 
   Assert(table, "Table does not exist.");
 
   for (auto chunk_id : _chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
-
-    auto chunk = table->get_chunk(chunk_id);
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
     DebugAssert(_chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");

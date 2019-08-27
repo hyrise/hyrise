@@ -11,10 +11,8 @@
 
 #include "SQLParserResult.h"
 
-#include "concurrency/transaction_manager.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
-#include "storage/storage_manager.hpp"
 #include "tasks/server/bind_server_prepared_statement_task.hpp"
 #include "tasks/server/create_pipeline_task.hpp"
 #include "tasks/server/execute_server_prepared_statement_task.hpp"
@@ -23,6 +21,7 @@
 #include "tasks/server/parse_server_prepared_statement_task.hpp"
 
 #include "client_connection.hpp"
+#include "hyrise.hpp"
 #include "query_response_builder.hpp"
 #include "then_operator.hpp"
 #include "types.hpp"
@@ -51,60 +50,60 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::start() {
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_perform_session_startup() {
-  return _connection->receive_startup_packet_header() >> then >> [=](uint32_t startup_packet_length) {
+  return _connection->receive_startup_packet_header() >> then >> [this](uint32_t startup_packet_length) {
     if (startup_packet_length == 0) {
       // This is a request for SSL, deny it and wait for the next startup packet
-      return _connection->send_ssl_denied() >> then >> [=]() { return _perform_session_startup(); };
+      return _connection->send_ssl_denied() >> then >> [this]() { return _perform_session_startup(); };
     }
 
     return _connection->receive_startup_packet_body(startup_packet_length) >> then >>
-           [=]() { return _connection->send_auth(); } >> then >>
+           [this]() { return _connection->send_auth(); } >> then >>
            // We need to provide some random server version > 9 here, because some clients require it.
-           [=]() { return _connection->send_parameter_status("server_version", "9.5"); } >> then >>
-           [=]() { return _connection->send_parameter_status("client_encoding", "UTF8"); } >> then >>
-           [=]() { return _connection->send_ready_for_query(); };
+           [this]() { return _connection->send_parameter_status("server_version", "9.5"); } >> then >>
+           [this]() { return _connection->send_parameter_status("client_encoding", "UTF8"); } >> then >>
+           [this]() { return _connection->send_ready_for_query(); };
   };
 }
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_requests() {
-  auto process_command = [=](RequestHeader request) {
+  auto process_command = [this](RequestHeader request) {
     switch (request.message_type) {
       case NetworkMessageType::SimpleQueryCommand: {
         return _connection->receive_simple_query_packet_body(request.payload_length) >> then >>
-               [=](std::string sql) { return _handle_simple_query_command(sql); } >> then >>
-               [=]() { return _connection->send_ready_for_query(); };
+               [this](std::string sql) { return _handle_simple_query_command(sql); } >> then >>
+               [this]() { return _connection->send_ready_for_query(); };
       }
 
       case NetworkMessageType::ParseCommand: {
         return _connection->receive_parse_packet_body(request.payload_length) >> then >>
-               [=](ParsePacket parse_packet) { return _handle_parse_command(parse_packet); };
+               [this](ParsePacket parse_packet) { return _handle_parse_command(parse_packet); };
       }
 
       case NetworkMessageType::BindCommand: {
         return _connection->receive_bind_packet_body(request.payload_length) >> then >>
-               [=](BindPacket bind_packet) { return _handle_bind_command(bind_packet); };
+               [this](BindPacket bind_packet) { return _handle_bind_command(bind_packet); };
       }
 
       case NetworkMessageType::DescribeCommand: {
         return _connection->receive_describe_packet_body(request.payload_length) >> then >>
-               [=](std::string portal) { return _handle_describe_command(portal); };
+               [this](std::string portal) { return _handle_describe_command(portal); };
       }
 
       case NetworkMessageType::SyncCommand: {
         return _connection->receive_sync_packet_body(request.payload_length) >> then >>
-               [=]() { return _handle_sync_command(); } >> then >>
-               [=]() { return _connection->send_ready_for_query(); };
+               [this]() { return _handle_sync_command(); } >> then >>
+               [this]() { return _connection->send_ready_for_query(); };
       }
 
       case NetworkMessageType::FlushCommand: {
         return _connection->receive_flush_packet_body(request.payload_length) >> then >>
-               [=]() { return _handle_flush_command(); };
+               [this]() { return _handle_flush_command(); };
       }
 
       case NetworkMessageType::ExecuteCommand: {
         return _connection->receive_execute_packet_body(request.payload_length) >> then >>
-               [=](std::string portal) { return _handle_execute_command(portal); };
+               [this](std::string portal) { return _handle_execute_command(portal); };
       }
 
       default:
@@ -152,25 +151,26 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
   Assert(result_table_pair.first == SQLPipelineStatus::Success, "Server cannot handle failed transactions yet");
   const auto result_table = result_table_pair.second;
 
-  auto send_row_data = [=]() {
+  auto send_row_data = [this, result_table]() {
     // If there is no result table, e.g. after an INSERT command, we cannot send row data
     if (!result_table) return boost::make_ready_future<uint64_t>(0);
 
     auto row_description = QueryResponseBuilder::build_row_description(result_table);
 
-    return _connection->send_row_description(row_description) >> then >> [=]() {
+    return _connection->send_row_description(row_description) >> then >> [this, result_table]() {
       return QueryResponseBuilder::send_query_response(
-          [=](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
+          [this, result_table](const std::vector<std::string>& row) { return _connection->send_data_row(row); },
+          *result_table);
     };
   };
 
-  auto send_command_complete = [=](uint64_t row_count) {
+  auto send_command_complete = [this, sql_pipeline](uint64_t row_count) {
     auto root_op = sql_pipeline->get_physical_plans().front();
     auto complete_message = QueryResponseBuilder::build_command_complete_message(*root_op, row_count);
     return _connection->send_command_complete(complete_message);
   };
 
-  return send_row_data() >> then >> send_command_complete >> then >> [=]() {
+  return send_row_data() >> then >> send_command_complete >> then >> [this, sql_pipeline]() {
     auto execution_info = QueryResponseBuilder::build_execution_info_message(sql_pipeline);
     return _connection->send_notice(execution_info);
   };
@@ -178,31 +178,32 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string& sql) {
-  auto create_sql_pipeline = [=]() {
+  auto create_sql_pipeline = [this, sql]() {
     return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true));
   };
 
-  auto load_table_file = [=](std::string& file_name, std::string& table_name) {
+  auto load_table_file = [this](std::string& file_name, std::string& table_name) {
     auto task = std::make_shared<LoadServerFileTask>(file_name, table_name);
     return _task_runner->dispatch_server_task(task) >> then >>
-           [=]() { return _connection->send_notice("Successfully loaded " + table_name); };
+           [this, table_name]() { return _connection->send_notice("Successfully loaded " + table_name); };
   };
 
-  auto execute_sql_pipeline = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
+  auto execute_sql_pipeline = [this](std::shared_ptr<SQLPipeline> sql_pipeline) {
     auto task = std::make_shared<ExecuteServerQueryTask>(sql_pipeline);
     return _task_runner->dispatch_server_task(task) >> then >> [=]() { return sql_pipeline; };
   };
 
   // A simple query command invalidates unnamed statements and portals
-  if (StorageManager::get().has_prepared_plan("")) StorageManager::get().drop_prepared_plan("");
+  if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
   _portals.erase("");
 
-  return create_sql_pipeline() >> then >> [=](std::unique_ptr<CreatePipelineResult> result) {
+  return create_sql_pipeline() >> then >> [this, load_table_file,
+                                           execute_sql_pipeline](std::unique_ptr<CreatePipelineResult> result) {
     if (result->load_table) {
       return load_table_file(result->load_table->first, result->load_table->second);
     } else {
       return execute_sql_pipeline(result->sql_pipeline) >> then >>
-             [=](std::shared_ptr<SQLPipeline> sql_pipeline) { return _send_simple_query_response(sql_pipeline); };
+             [this](std::shared_ptr<SQLPipeline> sql_pipeline) { return _send_simple_query_response(sql_pipeline); };
     }
   };
 }
@@ -211,30 +212,30 @@ template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_command(const ParsePacket& parse_info) {
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
-  if (StorageManager::get().has_prepared_plan(parse_info.statement_name)) {
+  if (Hyrise::get().storage_manager.has_prepared_plan(parse_info.statement_name)) {
     AssertInput(parse_info.statement_name.empty(),
                 "Named prepared statements must be explicitly closed before they can be redefined.");
-    StorageManager::get().drop_prepared_plan(parse_info.statement_name);
+    Hyrise::get().storage_manager.drop_prepared_plan(parse_info.statement_name);
   }
 
   auto task = std::make_shared<ParseServerPreparedStatementTask>(parse_info.query);
   return _task_runner->dispatch_server_task(task) >> then >>
          [=](std::unique_ptr<PreparedPlan> prepared_plan) {
            // We know that SQLPipeline is set because the load table command is not allowed in this context
-           StorageManager::get().add_prepared_plan(parse_info.statement_name, std::move(prepared_plan));
+           Hyrise::get().storage_manager.add_prepared_plan(parse_info.statement_name, std::move(prepared_plan));
          } >>
-         then >> [=]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
+         then >> [this]() { return _connection->send_status_message(NetworkMessageType::ParseComplete); };
 }
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(const BindPacket& packet) {
   // Not using Assert() since it includes file:line info that we don't want to hard code in tests
-  AssertInput(StorageManager::get().has_prepared_plan(packet.statement_name),
+  AssertInput(Hyrise::get().storage_manager.has_prepared_plan(packet.statement_name),
               "The specified statement does not exist.");
 
-  const auto prepared_plan = StorageManager::get().get_prepared_plan(packet.statement_name);
+  const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(packet.statement_name);
 
-  if (packet.statement_name.empty()) StorageManager::get().drop_prepared_plan(packet.statement_name);
+  if (packet.statement_name.empty()) Hyrise::get().storage_manager.drop_prepared_plan(packet.statement_name);
 
   auto portal_name = packet.destination_portal;
 
@@ -250,8 +251,10 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
 
   auto task = std::make_shared<BindServerPreparedStatementTask>(prepared_plan, packet.params);
   return _task_runner->dispatch_server_task(task) >> then >>
-         [=](std::shared_ptr<AbstractOperator> physical_plan) { _portals.emplace(portal_name, physical_plan); } >>
-         then >> [=]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };
+         [this, portal_name](std::shared_ptr<AbstractOperator> physical_plan) {
+           _portals.emplace(portal_name, physical_plan);
+         } >>
+         then >> [this]() { return _connection->send_status_message(NetworkMessageType::BindComplete); };
 }
 
 template <typename TConnection, typename TTaskRunner>
@@ -287,13 +290,13 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction) _transaction = TransactionManager::get().new_transaction_context();
+  if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
 
   physical_plan->set_transaction_context_recursively(_transaction);
 
   return _task_runner->dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(physical_plan)) >>
          then >>
-         [=](std::shared_ptr<const Table> result_table) {
+         [this](std::shared_ptr<const Table> result_table) {
            // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
            if (!result_table) {
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
@@ -301,12 +304,13 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
            }
 
            const auto row_description = QueryResponseBuilder::build_row_description(result_table);
-           return _connection->send_row_description(row_description) >> then >> [=]() {
+           return _connection->send_row_description(row_description) >> then >> [this, result_table]() {
              return QueryResponseBuilder::send_query_response(
-                 [=](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
+                 [this](const std::vector<std::string>& row) { return _connection->send_data_row(row); },
+                 *result_table);
            };
          } >>
-         then >> [=](uint64_t row_count) {
+         then >> [this, physical_plan](uint64_t row_count) {
            auto complete_message = QueryResponseBuilder::build_command_complete_message(*physical_plan, row_count);
            return _connection->send_command_complete(complete_message);
          };

@@ -37,7 +37,6 @@ class AbstractLQPNode;
  */
 class ExpressionReductionRule : public AbstractRule {
  public:
-  std::string name() const override;
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
   /**

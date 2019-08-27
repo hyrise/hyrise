@@ -9,6 +9,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -21,7 +22,6 @@
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -32,8 +32,8 @@ class IndexScanRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     table = load_table("resources/test_data/tbl/int_int_int.tbl");
-    StorageManager::get().add_table("a", table);
-    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("a"));
+    Hyrise::get().storage_manager.add_table("a", table);
+    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("a"));
 
     rule = std::make_shared<IndexScanRule>();
 
@@ -137,6 +137,20 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   table->create_index<GroupKeyIndex>({ColumnID{2}});
+
+  generate_mock_statistics(1'000'000);
+
+  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
+  predicate_node_0->set_left_input(stored_table_node);
+
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
+  auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_0);
+  EXPECT_EQ(predicate_node_0->scan_type, ScanType::IndexScan);
+}
+
+TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
+  table->create_index<GroupKeyIndex>({ColumnID{2}});
+  stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   generate_mock_statistics(1'000'000);
 

@@ -195,9 +195,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         return;
       }
 
-      if (JoinOperator::supports(configuration.join_mode, configuration.predicate_condition,
-                                 configuration.data_type_left, configuration.data_type_right,
-                                 !configuration.secondary_predicates.empty())) {
+      if (JoinOperator::supports({configuration.join_mode, configuration.predicate_condition,
+                                  configuration.data_type_left, configuration.data_type_right,
+                                  !configuration.secondary_predicates.empty()})) {
         configurations.emplace_back(configuration);
       }
     };
@@ -460,7 +460,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           if (input_table_type == InputTableType::SharedPosList) {
             const auto pos_list = std::make_shared<PosList>();
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-              pos_list->emplace_back(chunk_id, chunk_offset);
+              pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
 
             for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -471,7 +471,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
             for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
               const auto pos_list = std::make_shared<PosList>();
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-                pos_list->emplace_back(chunk_id, chunk_offset);
+                pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
 
               reference_segments.emplace_back(std::make_shared<ReferenceSegment>(table, column_id, pos_list));
@@ -580,7 +580,7 @@ TEST_P(JoinTestRunner, TestJoin) {
   expected_table = expected_output_table_iter->second;
 
   table_difference_message = check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict,
-                                               FloatComparisonMode::AbsoluteDifference);
+                                               FloatComparisonMode::AbsoluteDifference, IgnoreNullable::No);
   if (table_difference_message) {
     print_configuration_info();
     FAIL();
@@ -591,7 +591,7 @@ TEST_P(JoinTestRunner, TestJoin) {
 INSTANTIATE_TEST_CASE_P(JoinNestedLoop, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinHash, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinSortMerge, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()), );  // NOLINT
-INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
+// INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinMPSM, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinMPSM>()), );  // NOLINT
 // clang-format on
 

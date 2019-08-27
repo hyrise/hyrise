@@ -3,8 +3,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/maintenance/drop_table.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -33,22 +33,22 @@ TEST_F(DropTableTest, NameAndDescription) {
 }
 
 TEST_F(DropTableTest, Execute) {
-  StorageManager::get().add_table("t", table);
+  Hyrise::get().storage_manager.add_table("t", table);
   drop_table->execute();
-  EXPECT_FALSE(StorageManager::get().has_table("t"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
 }
 
 TEST_F(DropTableTest, NoSuchTable) { EXPECT_THROW(drop_table->execute(), std::logic_error); }
 
 TEST_F(DropTableTest, ExecuteWithIfExists) {
-  StorageManager::get().add_table("t", table);
+  Hyrise::get().storage_manager.add_table("t", table);
   auto drop_table_if_exists_1 = std::make_shared<DropTable>("t", true);
   drop_table_if_exists_1->execute();
-  EXPECT_FALSE(StorageManager::get().has_table("t"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
 
   auto drop_table_if_exists_2 = std::make_shared<DropTable>("t", true);
   EXPECT_NO_THROW(drop_table_if_exists_2->execute());
-  EXPECT_FALSE(StorageManager::get().has_table("t"));
+  EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
 }
 
 }  // namespace opossum

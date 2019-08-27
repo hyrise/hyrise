@@ -59,7 +59,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   // The number of the current group-by-combination. Used as offset when storing values
   uint64_t aggregate_group_index = 0u;
 
-  const auto& chunks = sorted_table->chunks();
+  const auto chunk_count = sorted_table->chunk_count();
 
   std::optional<AggregateType> current_primary_aggregate;
   std::vector<AggregateType> current_secondary_aggregates{};
@@ -80,9 +80,11 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
       } else {
         // Group is spread over multiple chunks
         uint64_t count = 0;
-        count += chunks[current_group_begin_pointer.chunk_id]->size() - current_group_begin_pointer.chunk_offset;
-        for (auto chunk_id = current_group_begin_pointer.chunk_id + 1; chunk_id < group_boundary.chunk_id; chunk_id++) {
-          count += chunks[chunk_id]->size();
+        count += sorted_table->get_chunk(current_group_begin_pointer.chunk_id)->size() -
+                 current_group_begin_pointer.chunk_offset;
+        for (auto chunk_id = ChunkID{current_group_begin_pointer.chunk_id + 1}; chunk_id < group_boundary.chunk_id;
+             chunk_id++) {
+          count += sorted_table->get_chunk(chunk_id)->size();
         }
         count += group_boundary.chunk_offset + 1;
         value_count_with_null = count;
@@ -94,10 +96,10 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
       aggregate_group_index++;
     }
     // Compute value count with null values for the last iteration
-    value_count_with_null =
-        chunks[current_group_begin_pointer.chunk_id]->size() - current_group_begin_pointer.chunk_offset;
-    for (size_t chunk_id = current_group_begin_pointer.chunk_id + 1; chunk_id < chunks.size(); chunk_id++) {
-      value_count_with_null += chunks[chunk_id]->size();
+    value_count_with_null = sorted_table->get_chunk(current_group_begin_pointer.chunk_id)->size() -
+                            current_group_begin_pointer.chunk_offset;
+    for (auto chunk_id = ChunkID{current_group_begin_pointer.chunk_id + 1}; chunk_id < chunk_count; chunk_id++) {
+      value_count_with_null += sorted_table->get_chunk(chunk_id)->size();
     }
 
   } else {
@@ -119,8 +121,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
     auto group_boundary_iter = group_boundaries.cbegin();
     const auto column_id = _aggregates[aggregate_index];
     const auto column = column_id.column;
-    for (const auto& chunk : chunks) {
-      auto segment = chunk->get_segment(*column);
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto segment = sorted_table->get_chunk(chunk_id)->get_segment(*column);
       segment_iterate<ColumnType>(*segment, [&](const auto& position) {
         const auto row_id = RowID{current_chunk_id, position.chunk_offset()};
         const auto is_new_group = !group_boundaries.empty() && row_id == *group_boundary_iter;
@@ -286,7 +288,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   // Create group by column definitions
   for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
-                                            input_table->column_data_type(column_id), true);
+                                            input_table->column_data_type(column_id),
+                                            input_table->column_is_nullable(column_id));
   }
 
   // Create aggregate column definitions
@@ -392,13 +395,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    *               So in total, group_boundaries will contain one element less than there are groups.
    */
   std::set<RowID> group_boundaries;
-  const auto& chunks = sorted_table->chunks();
+  const auto chunk_count = sorted_table->chunk_count();
   for (const auto& column_id : _groupby_column_ids) {
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
       std::optional<ColumnDataType> previous_value;
-      ChunkID chunk_id{0};
 
       /*
        * Initialize previous_value to the first value in the table, so we avoid considering it a value change.
@@ -406,7 +408,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
        * For the reasoning behind it see above.
        * We are aware that operator[] is slow, however, for one value it should be faster than segment_iterate_filtered.
        */
-      const auto& first_segment = chunks[0]->get_segment(column_id);
+      const auto& first_segment = sorted_table->get_chunk(ChunkID{0})->get_segment(column_id);
       const auto& first_value = (*first_segment)[0];
       if (variant_is_null(first_value)) {
         previous_value.reset();
@@ -415,8 +417,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       }
 
       // Iterate over all chunks and insert RowIDs when values change
-      for (const auto& chunk : chunks) {
-        const auto& segment = chunk->get_segment(column_id);
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto& segment = sorted_table->get_chunk(chunk_id)->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           if (previous_value.has_value() == position.is_null() ||
               (previous_value.has_value() && !position.is_null() && position.value() != *previous_value)) {
@@ -428,7 +430,6 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
             }
           }
         });
-        chunk_id++;
       }
     });
   }
@@ -458,7 +459,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
           group_boundary_iter++;
         }
 
-        const auto& chunk = chunks[group_start.chunk_id];
+        const auto chunk = sorted_table->get_chunk(group_start.chunk_id);
         const auto& segment = chunk->get_segment(column_id);
 
         /*

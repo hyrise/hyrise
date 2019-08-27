@@ -19,11 +19,13 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, bool use_prepared_statements,
                           float scale_factor, const std::vector<BenchmarkItemID>& items);
 
+  void on_tables_loaded() override;
+
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
 
  protected:
-  void _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
+  bool _on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) override;
 
   // Runs the PREPARE queries if _use_prepared_statements is set, otherwise does nothing
   void _prepare_queries() const;

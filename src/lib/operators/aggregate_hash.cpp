@@ -111,7 +111,7 @@ void AggregateHash::_aggregate_segment(ChunkID chunk_id, ColumnID column_index, 
 
   ChunkOffset chunk_offset{0};
   segment_iterate<ColumnDataType>(base_segment, [&](const auto& position) {
-    auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID(chunk_id, chunk_offset));
+    auto& result = get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
 
     /**
     * If the value is NULL, the current aggregate value does not change.
@@ -183,11 +183,15 @@ void AggregateHash::_aggregate() {
     // Create the actual data structure
     keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
     keys_per_chunk.reserve(input_table->chunk_count());
-    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+    const auto chunk_count = input_table->chunk_count();
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = input_table->get_chunk(chunk_id);
+      if (!chunk) continue;
+
       if constexpr (std::is_same_v<AggregateKey, std::vector<AggregateKeyEntry>>) {
-        keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey(_groupby_column_ids.size()));
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
       } else {
-        keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey{});
+        keys_per_chunk.emplace_back(chunk->size(), AggregateKey{});
       }
     }
 
@@ -228,8 +232,11 @@ void AggregateHash::_aggregate() {
                                          std::equal_to<ColumnDataType>, decltype(allocator)>(allocator);
         AggregateKeyEntry id_counter = 1u;
 
-        for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+        const auto chunk_count = input_table->chunk_count();
+        for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
           const auto chunk_in = input_table->get_chunk(chunk_id);
+          if (!chunk_in) continue;
+
           const auto base_segment = chunk_in->get_segment(column_id);
 
           ChunkOffset chunk_offset{0};
@@ -298,8 +305,10 @@ void AggregateHash::_aggregate() {
   }
 
   // Process Chunks and perform aggregations
-  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    auto chunk_in = input_table->get_chunk(chunk_id);
+  const auto chunk_count = input_table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk_in = input_table->get_chunk(chunk_id);
+    if (!chunk_in) continue;
 
     const auto& hash_keys = keys_per_chunk[chunk_id];
 
@@ -614,7 +623,8 @@ void AggregateHash::_write_groupby_output(PosList& pos_list) {
   // For each GROUP BY column, resolve its type, iterate over its values, and add them to a new output ValueSegment
   for (const auto& column_id : _groupby_column_ids) {
     _output_column_definitions.emplace_back(input_table->column_name(column_id),
-                                            input_table->column_data_type(column_id));
+                                            input_table->column_data_type(column_id),
+                                            input_table->column_is_nullable(column_id));
 
     resolve_data_type(input_table->column_data_type(column_id), [&](const auto typed_value) {
       using ColumnDataType = typename decltype(typed_value)::type;

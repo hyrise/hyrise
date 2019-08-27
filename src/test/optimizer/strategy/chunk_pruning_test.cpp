@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -21,7 +22,6 @@
 #include "statistics/generate_pruning_statistics.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -35,7 +35,7 @@ namespace opossum {
 class ChunkPruningTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    auto& storage_manager = StorageManager::get();
+    auto& storage_manager = Hyrise::get().storage_manager;
     storage_manager.add_table("compressed", load_table("resources/test_data/tbl/int_float2.tbl", 2u));
     storage_manager.add_table("long_compressed", load_table("resources/test_data/tbl/25_ints_sorted.tbl", 25u));
     storage_manager.add_table("run_length_compressed", load_table("resources/test_data/tbl/10_ints.tbl", 5u));
@@ -43,8 +43,9 @@ class ChunkPruningTest : public StrategyBaseTest {
     storage_manager.add_table("fixed_string_compressed", load_table("resources/test_data/tbl/string.tbl", 3u));
 
     for (const auto& [name, table] : storage_manager.tables()) {
-      for (const auto& chunk : table->chunks()) {
-        chunk->mark_immutable();
+      const auto chunk_count = table->chunk_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        table->get_chunk(chunk_id)->mark_immutable();
       }
       generate_chunk_pruning_statistics(table);
     }
@@ -104,7 +105,7 @@ TEST_F(ChunkPruningTest, BetweenPruningTest) {
 }
 
 TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
-  auto table = StorageManager::get().get_table("uncompressed");
+  auto table = Hyrise::get().storage_manager.get_table("uncompressed");
   auto chunk = table->get_chunk(ChunkID(0));
   EXPECT_FALSE(chunk->pruning_statistics());
 

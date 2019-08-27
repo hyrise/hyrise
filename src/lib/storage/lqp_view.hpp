@@ -15,7 +15,7 @@ class AbstractLQPNode;
  */
 class LQPView {
  public:
-  LQPView(const std::shared_ptr<AbstractLQPNode>& lqp, const std::unordered_map<ColumnID, std::string>& column_names);
+  LQPView(const std::shared_ptr<AbstractLQPNode>& lqp, std::unordered_map<ColumnID, std::string> column_names);
 
   std::shared_ptr<LQPView> deep_copy() const;
   bool deep_equals(const LQPView& other) const;

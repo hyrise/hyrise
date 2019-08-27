@@ -1,5 +1,5 @@
 a|b|MIN(c)|MAX(d)
-int|float|int|float
+int|float|int_null|float_null
 12345|456.7|20|28.3
 12345|457.7|30|48.7
 123|458.7|20|4.9

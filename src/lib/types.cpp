@@ -14,6 +14,14 @@ bool is_binary_predicate_condition(const PredicateCondition predicate_condition)
          predicate_condition == PredicateCondition::In || predicate_condition == PredicateCondition::NotIn;
 }
 
+bool is_binary_numeric_predicate_condition(const PredicateCondition predicate_condition) {
+  return predicate_condition == PredicateCondition::Equals || predicate_condition == PredicateCondition::NotEquals ||
+         predicate_condition == PredicateCondition::LessThan ||
+         predicate_condition == PredicateCondition::LessThanEquals ||
+         predicate_condition == PredicateCondition::GreaterThan ||
+         predicate_condition == PredicateCondition::GreaterThanEquals;
+}
+
 bool is_between_predicate_condition(PredicateCondition predicate_condition) {
   return predicate_condition == PredicateCondition::BetweenInclusive ||
          predicate_condition == PredicateCondition::BetweenLowerExclusive ||
@@ -93,6 +101,38 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
   }
 }
 
+std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const PredicateCondition predicate_condition) {
+  switch (predicate_condition) {
+    case PredicateCondition::BetweenInclusive:
+      return {PredicateCondition::GreaterThanEquals, PredicateCondition::LessThanEquals};
+    case PredicateCondition::BetweenLowerExclusive:
+      return {PredicateCondition::GreaterThan, PredicateCondition::LessThanEquals};
+    case PredicateCondition::BetweenUpperExclusive:
+      return {PredicateCondition::GreaterThanEquals, PredicateCondition::LessThan};
+    case PredicateCondition::BetweenExclusive:
+      return {PredicateCondition::GreaterThan, PredicateCondition::LessThan};
+    default:
+      Fail("Input was not a between condition");
+  }
+}
+
+PredicateCondition conditions_to_between(const PredicateCondition lower, const PredicateCondition upper) {
+  if (lower == PredicateCondition::GreaterThan) {
+    if (upper == PredicateCondition::LessThan) {
+      return PredicateCondition::BetweenExclusive;
+    } else if (upper == PredicateCondition::LessThanEquals) {
+      return PredicateCondition::BetweenLowerExclusive;
+    }
+  } else if (lower == PredicateCondition::GreaterThanEquals) {
+    if (upper == PredicateCondition::LessThan) {
+      return PredicateCondition::BetweenUpperExclusive;
+    } else if (upper == PredicateCondition::LessThanEquals) {
+      return PredicateCondition::BetweenInclusive;
+    }
+  }
+  Fail("Unexpected PredicateCondition");
+}
+
 const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
     make_bimap<PredicateCondition, std::string>({
         {PredicateCondition::Equals, "="},
@@ -135,7 +175,7 @@ const boost::bimap<TableType, std::string> table_type_to_string =
     make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
 
 const boost::bimap<UnionMode, std::string> union_mode_to_string =
-    make_bimap<UnionMode, std::string>({{UnionMode::Positions, "UnionPositions"}});
+    make_bimap<UnionMode, std::string>({{UnionMode::All, "UnionAll"}, {UnionMode::Positions, "UnionPositions"}});
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {
   return stream << predicate_condition_to_string.left.at(predicate_condition);

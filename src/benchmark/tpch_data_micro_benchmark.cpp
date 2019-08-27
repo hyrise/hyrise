@@ -3,6 +3,7 @@
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -19,7 +20,6 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -32,7 +32,7 @@ class TableWrapper;
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
-    auto& sm = StorageManager::get();
+    auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 2.0f;
 
     auto benchmark_config = BenchmarkConfig::get_default_config();

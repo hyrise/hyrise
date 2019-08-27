@@ -29,13 +29,12 @@ enum class OutputColumnOrder { BuildFirstProbeSecond, ProbeFirstBuildSecond, Pro
 
 namespace opossum {
 
-bool JoinHash::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                        DataType right_data_type, bool secondary_predicates) {
+bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
   // Secondary predicates in AntiNullAsTrue are not supported, because implementing them is cumbersome and we couldn't
   // so far determine a case/query where we'd need them.
-  return predicate_condition == PredicateCondition::Equals && join_mode != JoinMode::FullOuter &&
-         (join_mode != JoinMode::AntiNullAsTrue || !secondary_predicates);
+  return config.predicate_condition == PredicateCondition::Equals && config.join_mode != JoinMode::FullOuter &&
+         (config.join_mode != JoinMode::AntiNullAsTrue || !config.secondary_predicates);
 }
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
@@ -107,10 +106,10 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
-  Assert(supports(_mode, _primary_predicate.predicate_condition,
-                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                  !_secondary_predicates.empty()),
+  Assert(supports({_mode, _primary_predicate.predicate_condition,
+                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
          "JoinHash doesn't support these parameters");
 
   std::shared_ptr<const Table> build_input_table;
@@ -331,6 +330,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           radix_build_column = partition_radix_parallel<BuildColumnType, HashedType, false>(
               materialized_build_column, build_chunk_offsets, histograms_build_column, _radix_bits);
         }
+        // After the data in materialized_build_column has been partitioned, it is not needed anymore.
+        materialized_build_column.clear();
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_build_column = std::move(materialized_build_column);
@@ -370,6 +371,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           radix_probe_column = partition_radix_parallel<ProbeColumnType, HashedType, false>(
               materialized_probe_column, probe_chunk_offsets, histograms_probe_column, _radix_bits);
         }
+        // After the data in materialized_probe_column has been partitioned, it is not needed anymore.
+        materialized_probe_column.clear();
       } else {
         // short cut: skip radix partitioning and use materialized data directly
         radix_probe_column = std::move(materialized_probe_column);
@@ -450,6 +453,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
+
+    // After probing, the partitioned columns are not needed anymore.
+    radix_build_column.clear();
+    radix_probe_column.clear();
 
     /**
      * 3. Write output Table
