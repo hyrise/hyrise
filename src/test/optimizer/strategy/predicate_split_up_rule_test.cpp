@@ -23,20 +23,11 @@ class PredicateSplitUpRuleTest : public StrategyBaseTest {
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
-    c_a = node_c->get_column("a");
-
-    node_d = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "d");
-    d_a = node_d->get_column("a");
-
-    node_e = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "e");
-    e_a = node_e->get_column("a");
-
     rule = std::make_shared<PredicateSplitUpRule>();
   }
 
-  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e;
-  LQPColumnReference a_a, a_b, b_a, b_b, c_a, d_a, e_a;
+  std::shared_ptr<MockNode> node_a, node_b;
+  LQPColumnReference a_a, a_b, b_a, b_b;
   std::shared_ptr<PredicateSplitUpRule> rule;
 };
 
@@ -67,37 +58,18 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpConjunctionInPredicateNode) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicateSplitUpRuleTest, TwoExistsToUnion) {
-  // SELECT * FROM a WHERE EXISTS (
-  //   SELECT * FROM b WHERE b.a = a.a
-  // ) OR EXISTS (
-  //   SELECT * FROM c WHERE c.a = a.a
-  // )
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
-
+TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleDisjunctionInPredicateNode) {
+  // SELECT * FROM a WHERE a < 3 OR a >= 5
   // clang-format off
-  const auto subquery_lqp_a =
-  PredicateNode::make(equals_(b_a, parameter),
-    node_b);
-
-  const auto subquery_a = lqp_subquery_(subquery_lqp_a, std::make_pair(ParameterID{0}, a_a));
-
-  const auto subquery_lqp_b =
-  PredicateNode::make(equals_(c_a, parameter),
-    node_c);
-
-  const auto subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, a_a));
-
   const auto input_lqp =
-  PredicateNode::make(or_(exists_(subquery_a), exists_(subquery_b)),
+  PredicateNode::make(or_(less_than_(a_a, value_(3)), greater_than_equals_(a_a, value_(5))),
     node_a);
 
   const auto expected_lqp =
   UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(exists_(subquery_a),
+    PredicateNode::make(less_than_(a_a, value_(3)),
       node_a),
-    PredicateNode::make(exists_(subquery_b),
+    PredicateNode::make(greater_than_equals_(a_a, value_(5)),
       node_a));
   // clang-format on
 
@@ -106,59 +78,24 @@ TEST_F(PredicateSplitUpRuleTest, TwoExistsToUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicateSplitUpRuleTest, FourExistsToUnion) {
-  // SELECT * FROM a WHERE EXISTS (
-  //   SELECT * FROM b WHERE b.a = a.a
-  // ) OR EXISTS (
-  //   SELECT * FROM c WHERE c.a = a.a
-  // ) OR EXISTS (
-  //   SELECT * FROM d WHERE d.a = a.a
-  // ) OR EXISTS (
-  //   SELECT * FROM e WHERE e.a = a.a
-  // )
-
-  const auto parameter = correlated_parameter_(ParameterID{0}, a_a);
-
+TEST_F(PredicateSplitUpRuleTest, SplitUpComplexDisjunctionInPredicateNode) {
+  // SELECT * FROM a WHERE b = 7 OR a < 3 OR a >= 5 OR 9 < b
   // clang-format off
-  const auto subquery_lqp_a =
-  PredicateNode::make(equals_(b_a, parameter),
-    node_b);
-
-  const auto subquery_a = lqp_subquery_(subquery_lqp_a, std::make_pair(ParameterID{0}, a_a));
-
-  const auto subquery_lqp_b =
-  PredicateNode::make(equals_(c_a, parameter),
-    node_c);
-
-  const auto subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, a_a));
-
-  const auto subquery_lqp_c =
-  PredicateNode::make(equals_(d_a, parameter),
-    node_d);
-
-  const auto subquery_c = lqp_subquery_(subquery_lqp_c, std::make_pair(ParameterID{0}, a_a));
-
-  const auto subquery_lqp_d =
-  PredicateNode::make(equals_(e_a, parameter),
-    node_e);
-
-  const auto subquery_d = lqp_subquery_(subquery_lqp_d, std::make_pair(ParameterID{0}, a_a));
-
   const auto input_lqp =
-  PredicateNode::make(or_(exists_(subquery_a), or_(exists_(subquery_b), or_(exists_(subquery_c), exists_(subquery_d)))),
+  PredicateNode::make(or_(equals_(a_b, value_(7)), or_(less_than_(a_a, value_(3)), or_(greater_than_equals_(a_a, value_(5)), less_than_(9, a_b)))),  // NOLINT
     node_a);
 
   const auto expected_lqp =
   UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(exists_(subquery_a),
+    PredicateNode::make(equals_(a_b, value_(7)),
       node_a),
     UnionNode::make(UnionMode::Positions,
-      PredicateNode::make(exists_(subquery_b),
+      PredicateNode::make(less_than_(a_a, value_(3)),
         node_a),
       UnionNode::make(UnionMode::Positions,
-        PredicateNode::make(exists_(subquery_c),
+        PredicateNode::make(greater_than_equals_(a_a, value_(5)),
           node_a),
-        PredicateNode::make(exists_(subquery_d),
+        PredicateNode::make(less_than_(9, a_b),
           node_a))));
   // clang-format on
 
