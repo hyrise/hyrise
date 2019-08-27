@@ -98,7 +98,7 @@ class AbstractVisualizer {
     // By now, the pen widths are set to either the number of rows (for edges) or the execution time in ns (for
     // vertices). As some plans have only operators that take microseconds and others take minutes, normalize this
     // so that the thickest pen has a width of max_normalized_width and the thinnest one has a width of 1. Using
-    // a logarithm makes the operators that follow the most expensive one more visible. Not sure if this is
+    // a logarithm makes the operators that follow the most expensive one more visible. Not sure if this is what
     // statisticians would do, but it makes for beautiful images.
     const auto normalize_penwidths = [&](auto iter_pair) {
       const auto max_normalized_width = 8.0;
