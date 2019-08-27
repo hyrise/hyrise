@@ -30,6 +30,7 @@ namespace opossum {
  */
 class TpcdsTableGenerator final : public AbstractTableGenerator {
  public:
+  // rng seed 19620718 is the same dsdgen uses as default
   explicit TpcdsTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                                int rng_seed = 19620718);
   TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
