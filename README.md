@@ -1,10 +1,12 @@
-[![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise-mp/hyrise/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/hyrise-mp%2Fhyrise/activity/)
-[![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise-mp/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
+[![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise/hyrise/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/hyrise%2Fhyrise/activity/)
+[![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
+[![CodeFactor](https://www.codefactor.io/repository/github/hyrise/hyrise/badge)](https://www.codefactor.io/repository/github/hyrise/hyrise)
 
-# Welcome to the Hyrise Master Project 2019
+# Welcome to Hyrise
 
-This is the repository for the master project **Parallelization and
-Query Plan Optimizations for the TPC-DS benchmark** of the Hasso Plattner Institute in the summer semester 2019. The original Hyrise repository can be found [here](https://github.com/hyrise/hyrise).
+This is the repository for the current Hyrise version, which has been rewritten from scratch. The new code base is easier to setup, to understand, and to contribute to. As of now, not all features of the old version are supported yet - we are working on that.
+
+Papers that were published before October 2017 were based on the previous version of Hyrise, which can be found [here](https://github.com/hyrise/hyrise-v1).
 
 ## Supported Benchmarks
 We support a number of benchmarks out of the box. This makes it easy to generate performance numbers without having to set up the data generation, loading CSVs, and finding a query runner. You can run them using the `./hyriseBenchmark*` binaries.
@@ -130,7 +132,6 @@ Contact: firstname.lastname@hpi.de
 -   Tom       Lichtenstein
 -   Alexander Löser
 -   Jan       Mattfeld
--   Julian    Menzler
 -   Arne      Mayer
 -   Julian    Menzler
 -   Torben    Meyer
