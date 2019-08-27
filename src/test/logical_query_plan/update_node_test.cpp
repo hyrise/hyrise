@@ -64,7 +64,6 @@ TEST_F(UpdateNodeTest, Hash) {
   EXPECT_NE(_update_node->hash(), other_update_node_b->hash());
   EXPECT_NE(_update_node->hash(), other_update_node_c->hash());
   EXPECT_NE(_update_node->hash(), other_update_node_d->hash());
-  // TODO(anyone) take ColumnDefinitions into account for MockNode hash
   EXPECT_NE(_update_node->hash(), other_update_node_e->hash());
   EXPECT_NE(_update_node->hash(), other_update_node_f->hash());
   EXPECT_NE(other_update_node_e->hash(), other_update_node_f->hash());

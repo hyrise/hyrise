@@ -64,8 +64,7 @@ TEST_F(CreateTableNodeTest, Hash) {
 
   EXPECT_NE(different_create_table_node_a->hash(), create_table_node->hash());
   EXPECT_NE(different_create_table_node_b->hash(), create_table_node->hash());
-  // TODO(anyone) StaticTableNode's hash code should take the table into account (at least table definitions)
-  // EXPECT_NE(different_create_table_node_c->hash(), create_table_node->hash());
+  EXPECT_NE(different_create_table_node_c->hash(), create_table_node->hash());
 }
 
 TEST_F(CreateTableNodeTest, Copy) { EXPECT_EQ(*create_table_node, *create_table_node->deep_copy()); }

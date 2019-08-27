@@ -27,6 +27,8 @@ std::string StaticTableNode::description() const {
   return stream.str();
 }
 
+size_t StaticTableNode::_on_hash() const { return boost::hash_value(table); }
+
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return StaticTableNode::make(table);
 }

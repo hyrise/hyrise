@@ -72,9 +72,9 @@ TEST_F(MockNodeTest, Hash) {
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Long, "a"}, {DataType::String, "b"}}, "mock_name");
   const auto different_mock_node_2 =
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "other_name");
-  // TODO(anyone) take column definitions into account for hash code calculation
-  EXPECT_EQ(_mock_node_b->hash(), different_mock_node_1->hash());
-  EXPECT_NE(_mock_node_b->hash(), different_mock_node_2->hash());
+
+  EXPECT_NE(_mock_node_b->hash(), different_mock_node_1->hash());
+  EXPECT_EQ(_mock_node_b->hash(), different_mock_node_2->hash());
   EXPECT_EQ(_mock_node_b->hash(), same_mock_node_b->hash());
 }
 
