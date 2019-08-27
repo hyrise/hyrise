@@ -33,9 +33,10 @@ bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& node
 
   /**
    * Step 2:
-   *    - Split up qualifying PredicateNodes into multiple consecutive PredicateNodes. We have to do this in a
-   *      second pass because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
-   *      bugs.
+   *    - Split up PredicateNodes with conjunctive chains (e.g., `PredicateNode(a AND b AND c)`) as their scan
+   *      expression into multiple consecutive PredicateNodes
+   *      (e.g. `PredicateNode(c) -> PredicateNode(b) -> PredicateNode(a)`). We have to do this in a second pass because
+   *      manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to bugs.
    */
   for (const auto& [predicate_node, flat_conjunction] : predicate_nodes_to_flat_conjunctions) {
     for (const auto& predicate_expression : flat_conjunction) {
@@ -73,9 +74,9 @@ bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& node)
 
   /**
    * Step 2:
-   *    - Split up qualifying PredicateNodes into n-1 consecutive UnionNodes and n PredicateNodes. We have to do this in
-   *      a second pass because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
-   *      bugs.
+   *    - Split up PredicateNodes with disjunctive chains (e.g., `PredicateNode(a OR b OR c)`) as their scan expression
+   *      into n-1 consecutive UnionNodes and n PredicateNodes. We have to do this in a second pass because manipulating
+   *      the LQP within `visit_lqp()`, while theoretically possible, is prone to bugs.
    */
   for (const auto& [predicate_node, flat_disjunction] : predicate_nodes_to_flat_disjunctions) {
     auto previous_union_node = UnionNode::make(UnionMode::Positions);
