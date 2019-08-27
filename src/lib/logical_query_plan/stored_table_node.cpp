@@ -107,7 +107,7 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   // Update index statistics
   // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
   // when remove(iterator) invalidates the iterator.
-  // TODO test fix
+  // TODO(anyone): Theoretically, we could keep multi-column indexes where only the last column was pruned
   pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
                                                  [&](auto& statistics) {
                                                    for (auto& original_column_id : statistics.column_ids) {
