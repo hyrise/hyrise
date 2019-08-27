@@ -274,4 +274,18 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   return table_info_by_name;
 }
 
+AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() const {
+  return {
+    {"part", {{"p_partkey"}}},
+    {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
+    // TODO multi-column indexes are currently not used by the index scan rule and the translator
+    {"partsupp", {{"ps_partkey", "ps_suppkey"}, {"ps_suppkey"}}},  // ps_partkey is subset of {ps_partkey, ps_suppkey}
+    {"customer", {{"c_custkey"}, {"c_nationkey"}}},
+    {"orders", {{"o_orderkey"}, {"o_custkey"}}},
+    {"lineitem", {{"l_orderkey", "l_linenumber"}, {"l_partkey", "l_suppkey"}}},
+    {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
+    {"region", {{"r_regionkey"}}},
+  };
+}
+
 }  // namespace opossum

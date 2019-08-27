@@ -37,6 +37,9 @@ class TPCHTableGenerator final : public AbstractTableGenerator {
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
+ protected:
+  IndexesByTable _indexes_by_table() const override;
+
  private:
   float _scale_factor;
 };

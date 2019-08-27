@@ -40,12 +40,15 @@ struct TableGenerationMetrics {
   std::chrono::nanoseconds encoding_duration{};
   std::chrono::nanoseconds binary_caching_duration{};
   std::chrono::nanoseconds store_duration{};
+  std::chrono::nanoseconds index_duration{};
 };
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);
 
 class AbstractTableGenerator {
  public:
+  using IndexesByTable = std::map<std::string, std::vector<std::vector<std::string>>>;
+
   explicit AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config);
   virtual ~AbstractTableGenerator() = default;
 
@@ -61,6 +64,9 @@ class AbstractTableGenerator {
   static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_t chunk_size);
 
  protected:
+  // Creates indexes, expects the table to have been added to the StorageManager and, if requested, encoded
+  virtual IndexesByTable _indexes_by_table() const;
+
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 };
 
