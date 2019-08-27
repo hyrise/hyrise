@@ -140,6 +140,6 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
   return std::make_shared<BenchmarkConfig>(config);
 }
 
-AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; };
+AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; }
 
 }  // namespace opossum
