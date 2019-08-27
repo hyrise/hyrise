@@ -9,9 +9,9 @@ namespace opossum {
 
 bool PredicateSplitUpRule::splitConjunction(const std::shared_ptr<AbstractLQPNode>& node) const {
   /**
-  * Step 1:
-  *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
-  */
+   * Step 1:
+   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
+   */
   auto predicate_nodes_to_flat_conjunctions =
       std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 

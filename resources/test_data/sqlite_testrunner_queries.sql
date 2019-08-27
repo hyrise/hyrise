@@ -78,7 +78,7 @@ SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 < a;
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 40 OR b >= 50 AND b <= 95;
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 40 AND c <= 35 AND b >= 49 AND a >= 21 AND b <= 95 AND c <= 40 AND c >= 23;
 
--- Scans with potential for disjunction to union reformulation
+-- Scans with potential for predicate split-up
 SELECT a FROM mixed WHERE 1 OR 3 > 2;
 SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_100 AS c WHERE c.b = a.b)
 SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS c WHERE c.b + 1 = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS d WHERE d.b + 2 = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS e WHERE e.b + 3 = a.b)
