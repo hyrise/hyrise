@@ -4,6 +4,8 @@
 
 namespace opossum {
 
+
+// TODO(jj): merge class doc
 /**
  * This rule turns PredicateNodes with conjunctive chains (e.g. `PredicateNode(a AND b AND c)`) as their scan expression
  *    into multiple consecutive PredicateNodes (e.g. `PredicateNode(c) -> PredicateNode(b) -> PredicateNode(a)`).

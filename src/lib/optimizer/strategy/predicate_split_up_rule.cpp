@@ -2,7 +2,6 @@
 
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
-#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/union_node.hpp"
 
@@ -13,38 +12,6 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
 
   /**
    * Step 1:
-   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
-   */
-  auto predicate_nodes_to_flat_conjunctions =
-      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
-
-  visit_lqp(root, [&](const auto& sub_node) {
-    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
-      const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
-
-      if (flat_conjunction.size() > 1) {
-        predicate_nodes_to_flat_conjunctions.emplace_back(predicate_node, flat_conjunction);
-      }
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
-
-  /**
-   * Step 2:
-   *    - Split up qualifying PredicateNodes into multiple consecutive PredicateNodes. We have to do this in a
-   *      second pass because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
-   *      bugs.
-   */
-  for (const auto& [predicate_node, flat_conjunction] : predicate_nodes_to_flat_conjunctions) {
-    for (const auto& predicate_expression : flat_conjunction) {
-      lqp_insert_node(predicate_node, LQPInputSide::Left, PredicateNode::make(predicate_expression));
-    }
-    lqp_remove_node(predicate_node);
-  }
-
-  /**
-   * Step 3:
    *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_disjunctions`
    */
   auto predicate_nodes_to_flat_disjunctions =
@@ -63,7 +30,7 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
   });
 
   /**
-   * Step 4:
+   * Step 2:
    *    - Split up qualifying PredicateNodes into n-1 consecutive UnionNodes and n PredicateNodes. We have to do this in
    *      a second pass because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
    *      bugs.
@@ -82,6 +49,38 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
       next_union_node->set_right_input(PredicateNode::make(predicate_expression, left_input));
       previous_union_node = next_union_node;
     }
+  }
+
+  /**
+   * Step 3:
+   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
+   */
+  auto predicate_nodes_to_flat_conjunctions =
+      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
+
+  visit_lqp(root, [&](const auto& sub_node) {
+    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
+      const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
+
+      if (flat_conjunction.size() > 1) {
+        predicate_nodes_to_flat_conjunctions.emplace_back(predicate_node, flat_conjunction);
+      }
+    }
+
+    return LQPVisitation::VisitInputs;
+  });
+
+  /**
+   * Step 4:
+   *    - Split up qualifying PredicateNodes into multiple consecutive PredicateNodes. We have to do this in a
+   *      second pass because manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to
+   *      bugs.
+   */
+  for (const auto& [predicate_node, flat_conjunction] : predicate_nodes_to_flat_conjunctions) {
+    for (const auto& predicate_expression : flat_conjunction) {
+      lqp_insert_node(predicate_node, LQPInputSide::Left, PredicateNode::make(predicate_expression));
+    }
+    lqp_remove_node(predicate_node);
   }
 }
 
