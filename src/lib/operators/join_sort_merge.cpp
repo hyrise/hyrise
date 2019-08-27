@@ -98,6 +98,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _cluster_count = _determine_number_of_clusters();
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
+
+    DebugAssert(std::ispow2(_cluster_count) && _primary_predicate_condition == PredicateCondition::Equals, "The cluster count should be a power of two for radix clustering.");
   }
 
  protected:

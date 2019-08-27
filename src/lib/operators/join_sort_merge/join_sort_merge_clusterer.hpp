@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <bit>
 #include <cstring>
 #include <map>
 #include <memory>
@@ -88,6 +89,58 @@ class JoinSortMergeClusterer {
     return std::hash<T2>{}(value) & radix_bitmask;
   }
 
+  static void merge_partially_sorted_materialized_segment(MaterializedSegment<T>& materialized_segment,
+                                                          std::unique_ptr<std::vector<size_t>> sorted_run_start_positions) {
+    if (materialized_segment.size() < 2 || sorted_run_start_positions->size() < 2) {
+      // Trivial cases for early outs.
+      return;
+    }
+    DebugAssert(!sorted_run_start_positions->empty(), "List of sorted runs to merge cannot be empty.");
+    DebugAssert((*sorted_run_start_positions)[0] == 0, "First sorted run does not start at the beginning.");
+    DebugAssert(std::is_sorted(sorted_run_start_positions->begin(), sorted_run_start_positions->end()),
+                "Positions of the sorted runs need to be sorted ascendingly.");
+
+    size_t estimated_cost_full_sorting =
+        static_cast<size_t>(materialized_segment.size() * std::log2(materialized_segment.size()));
+    size_t estimated_cost_partial_sorting =
+        static_cast<size_t>(sorted_run_start_positions->size() / 2 * materialized_segment.size());
+
+    std::cout << "Estimating merge costs with " << estimated_cost_full_sorting << " and " << estimated_cost_partial_sorting << std::endl;
+
+    // The factor of 1.5 has been determine on a MacBook Pro and accounts for the sequential
+    // access patterns of the partial sorting over the random access patterns of std::sort.
+    if (estimated_cost_full_sorting * 1.5 < estimated_cost_partial_sorting) {
+      std::sort(materialized_segment.begin(), materialized_segment.end(),
+                [](auto& left, auto& right) { return left.value < right.value; });
+      return;
+    }
+
+    /**
+     * To sort the partially sorted lists, we merge two sorted lists in each iteration.
+     * The `first` iterator stays at the very beginning of the input segment, while the
+     * `middle` and `last` are the next two positions from the `sorted_run_start_positions`
+     * vector (note, `last` points behind the last position to sort).
+     * We first add a position which denotes segment.end() (i.e., segment.size()) to the
+     * position list to ease the assignments within the loop.
+     */
+    // TODO: this function needs to take and own sorted_run_start_positions ... otherwise it sucks
+    sorted_run_start_positions->push_back(materialized_segment.size());
+
+    auto first = materialized_segment.begin();
+    auto merge_step = size_t{0};
+    for (;;) {
+      auto middle = first + (*sorted_run_start_positions)[merge_step + 1];
+      auto last = first + (*sorted_run_start_positions)[merge_step + 2];
+      std::inplace_merge(first, middle, last, [](auto& left, auto& right) { return left.value < right.value; });
+
+      ++merge_step;
+
+      if (last == materialized_segment.end()) {
+        break;
+      }
+    }
+  }
+
  protected:
   /**
   * The SegmentInformation structure is used to gather statistics regarding a segments's values
@@ -159,72 +212,22 @@ class JoinSortMergeClusterer {
   static MaterializedSegmentList<T> _concatenate_materialized_segments(
       const MaterializedSegmentList<T>& materialized_segments) {
     auto output = MaterializedSegment<T>();
-    std::vector<size_t> sorted_run_start_positions;
+    auto sorted_run_start_positions = std::make_unique<std::vector<size_t>>();
 
     auto current_start_position = size_t{0};
     // Reserve the required space and copy the data to the output
     output.reserve(_materialized_table_size(materialized_segments));
     for (const auto& materialized_segment : materialized_segments) {
       output.insert(output.end(), materialized_segment->cbegin(), materialized_segment->cend());
-      sorted_run_start_positions.push_back(current_start_position);
+      sorted_run_start_positions->push_back(current_start_position);
       current_start_position += materialized_segment->size();
     }
 
-    merge_partially_sorted_materialized_segment(output, sorted_run_start_positions);
+    merge_partially_sorted_materialized_segment(output, std::move(sorted_run_start_positions));
 
     const auto shared = std::make_shared<MaterializedSegment<T>>(output);
 
     return {shared};
-  }
-
-  // TODO(Bouncner): Add test
-  static void merge_partially_sorted_materialized_segment(MaterializedSegment<T>& materialized_segment,
-                                                          std::vector<size_t>& sorted_run_start_positions) {
-    if (materialized_segment.size() < 2 || sorted_run_start_positions.size() < 2) {
-      // Trivial cases for early outs.
-      return;
-    }
-    DebugAssert(!sorted_run_start_positions.empty(), "List of sorted runs to merge cannot be empty.");
-    DebugAssert(sorted_run_start_positions[0] == 0, "First sorted run does not start at the beginning.");
-    DebugAssert(std::is_sorted(sorted_run_start_positions.begin(), sorted_run_start_positions.end()),
-                "Positions of the sorted runs need to be sorted ascendingly.");
-
-    size_t estimated_cost_full_sorting =
-        static_cast<size_t>(materialized_segment.size() * std::log2(materialized_segment.size()));
-    size_t estimated_cost_partial_sorting =
-        static_cast<size_t>(sorted_run_start_positions.size() / 2 * materialized_segment.size());
-
-    // The factor of 1.5 has been determine on a MacBook Pro and accounts for the sequential
-    // access patterns of the partial sorting over the random access patterns of std::sort.
-    if (estimated_cost_full_sorting * 1.5 < estimated_cost_partial_sorting) {
-      std::sort(materialized_segment.begin(), materialized_segment.end(),
-                [](auto& left, auto& right) { return left.value < right.value; });
-      return;
-    }
-
-    /**
-     * To sort the partially sorted lists, we merge two sorted lists in each iteration.
-     * The `first` iterator stays at the very beginning of the input segment, while the
-     * `middle` and `last` are the next two positions from the `sorted_run_start_positions`
-     * vector (note, `last` points behind the last position to sort).
-     * We first add a position which denotes segment.end() (i.e., segment.size()) to the
-     * position list to ease the assignments within the loop.
-     */
-    sorted_run_start_positions.push_back(materialized_segment.size());
-
-    auto first = materialized_segment.begin();
-    auto merge_step = size_t{0};
-    for (;;) {
-      auto middle = first + sorted_run_start_positions[merge_step + 1];
-      auto last = first + sorted_run_start_positions[merge_step + 2];
-      std::inplace_merge(first, middle, last, [](auto& left, auto& right) { return left.value < right.value; });
-
-      ++merge_step;
-
-      if (last == materialized_segment.end()) {
-        break;
-      }
-    }
   }
 
   /**
@@ -321,18 +324,13 @@ class JoinSortMergeClusterer {
     auto segment_id = size_t{0};
     for (const auto& segment : output) {
       auto job = std::make_shared<JobTask>([&, segment, segment_id] {
-        if (_equi_case) {
-          std::sort(segment->begin(), segment->end(),
-                [](auto& left, auto& right) { return left.value < right.value; });
-        } else {
-          std::vector<size_t> sorted_run_start_positions;
-          for (auto chunk_id = ChunkID{0}; chunk_id < materialized_input_segments.size(); ++chunk_id) {
-            const auto& segment_information = table_information.segment_information[chunk_id];
-            sorted_run_start_positions.push_back(segment_information.insert_position[segment_id] -
-                                                 segment_information.cluster_histogram[segment_id]);
-          }
-          merge_partially_sorted_materialized_segment(*segment, sorted_run_start_positions);
+        auto sorted_run_start_positions = std::make_unique<std::vector<size_t>>();
+        for (auto chunk_id = ChunkID{0}; chunk_id < materialized_input_segments.size(); ++chunk_id) {
+          const auto& segment_information = table_information.segment_information[chunk_id];
+          sorted_run_start_positions->push_back(segment_information.insert_position[segment_id] -
+                                               segment_information.cluster_histogram[segment_id]);
         }
+        merge_partially_sorted_materialized_segment(*segment, std::move(sorted_run_start_positions));
 
         DebugAssert(std::is_sorted(segment->begin(), segment->end(),
                                      [](auto& left, auto& right) { return left.value < right.value; }),
@@ -358,6 +356,9 @@ class JoinSortMergeClusterer {
   **/
   MaterializedSegmentList<T> _radix_cluster(const MaterializedSegmentList<T>& materialized_segments) {
     const auto radix_bitmask = _cluster_count - 1;
+    if (!std::ispow2(_cluster_count)) {
+      PerformanceWarning("The cluster count should be a power of two for radix clustering.");
+    }
     return _cluster(materialized_segments, [=](const T& value) { return get_radix<T>(value, radix_bitmask); });
   }
 
@@ -465,8 +466,10 @@ class JoinSortMergeClusterer {
      *  (ii) We can efficiently sort the resulting output clusters efficiently with in place
      *       merging as each chunk's values (sorted) are written in sequential order, hence the
      *       cluster is partially sorted.
-     *  When radix clustering is used, no samples need to be gathered.
+     *  For equality join, we neither need the columns sorted nor samples being gathered.
      */
+    // ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left, !_equi_case);
+    // ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right, !_equi_case);
     ColumnMaterializer<T> left_column_materializer(true, _materialize_null_left, !_equi_case);
     ColumnMaterializer<T> right_column_materializer(true, _materialize_null_right, !_equi_case);
 
