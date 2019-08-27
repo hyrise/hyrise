@@ -537,6 +537,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
+  // TODO move to new rule
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. Check that one exists and move it to the front.
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>();
