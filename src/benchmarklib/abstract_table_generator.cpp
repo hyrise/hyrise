@@ -103,7 +103,11 @@ void AbstractTableGenerator::generate_and_store() {
             << format_duration(metrics.store_duration) << ")" << std::endl;
 
   std::cout << "- Creating indexes" << std::endl;
-  for (const auto& [table_name, indexes] : _indexes_by_table()) {
+  const auto& indexes_by_table = _indexes_by_table();
+  if (indexes_by_table.empty()) {
+    std::cout << "-  No indexes defined by benchmark" << std::endl;
+  }
+  for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
     for (const auto& index_columns : indexes) {
