@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "storage/storage_manager.hpp"
+#include "hyrise.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -35,7 +35,7 @@ GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_c
 const std::string GetTable::name() const { return "GetTable"; }
 
 const std::string GetTable::description(DescriptionMode description_mode) const {
-  const auto stored_table = StorageManager::get().get_table(_name);
+  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
@@ -66,7 +66,7 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
 void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> GetTable::_on_execute() {
-  const auto stored_table = StorageManager::get().get_table(_name);
+  const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
   /**
    * Build a sorted vector (`excluded_chunk_ids`) of physically/logically deleted and pruned ChunkIDs
@@ -160,6 +160,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     } else {
       auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
       auto output_segments_iter = output_segments.begin();
+      auto output_indexes = Indexes{};
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
       for (auto stored_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
@@ -170,11 +171,15 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         }
 
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
+        auto indexes = stored_chunk->get_indexes({*output_segments_iter});
+        if (!indexes.empty()) {
+          output_indexes.insert(std::end(output_indexes), std::begin(indexes), std::end(indexes));
+        }
         ++output_segments_iter;
       }
 
-      *output_chunks_iter =
-          std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(), stored_chunk->get_allocator());
+      *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
+                                                    stored_chunk->get_allocator(), std::move(output_indexes));
     }
 
     ++output_chunks_iter;

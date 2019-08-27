@@ -90,7 +90,7 @@ boost::future<void> QueryResponseBuilder::_send_query_response_chunks(const send
                                                                       ChunkID current_chunk_id) {
   if (current_chunk_id == table.chunk_count()) return boost::make_ready_future();
 
-  const auto& chunk = table.get_chunk(current_chunk_id);
+  const auto chunk = table.get_chunk(current_chunk_id);
 
   return _send_query_response_rows(send_row, *chunk, ChunkOffset{0}) >> then >>
          std::bind(QueryResponseBuilder::_send_query_response_chunks, send_row, std::ref(table),

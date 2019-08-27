@@ -3,12 +3,12 @@
 #include "strategy_base_test.hpp"
 #include "testing_assert.hpp"
 
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/insert_limit_in_exists_rule.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -18,8 +18,8 @@ namespace opossum {
 class ExistsInsertLimitInExistsRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_int2.tbl"));
-    StorageManager::get().add_table("table_b", load_table("resources/test_data/tbl/int_int3.tbl"));
+    Hyrise::get().storage_manager.add_table("table_a", load_table("resources/test_data/tbl/int_int2.tbl"));
+    Hyrise::get().storage_manager.add_table("table_b", load_table("resources/test_data/tbl/int_int3.tbl"));
 
     node_table_a = StoredTableNode::make("table_a");
     node_table_a_col_a = node_table_a->get_column("a");

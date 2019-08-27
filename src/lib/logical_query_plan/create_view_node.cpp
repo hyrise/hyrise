@@ -14,7 +14,13 @@ CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_p
 std::string CreateViewNode::description() const {
   std::ostringstream stream;
   stream << "[CreateView] " << (if_not_exists ? "IfNotExists " : "");
-  stream << "Name: '" << view_name << "' (\n" << *view->lqp << ")";
+  stream << "Name: " << view_name << ", Columns: ";
+
+  for (const auto& [column_id, column_name] : view->column_names) {
+    stream << column_name << " ";
+  }
+
+  stream << "FROM (\n" << *view->lqp << ")";
 
   return stream.str();
 }

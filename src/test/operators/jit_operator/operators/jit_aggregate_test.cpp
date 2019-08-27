@@ -40,7 +40,7 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
 
   for (const auto& column_definition : column_definitions) {
     _aggregate->add_groupby_column(column_definition.name,
-                                   JitTupleEntry(column_definition.data_type, column_definition.nullable, 0));
+                                   JitTupleEntry(column_definition.data_type, !column_definition.nullable, 0));
   }
 
   auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
@@ -50,16 +50,16 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
 // Make sure that aggregates are added to the output table with correct data type and nullability (e.g., count
 // aggregates should be non-nullable and of type long independent of the type and nullability of the input value).
 TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
-  _aggregate->add_aggregate_column("count", JitTupleEntry(DataType::String, false, 0), AggregateFunction::Count);
-  _aggregate->add_aggregate_column("count_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::Count);
-  _aggregate->add_aggregate_column("max", JitTupleEntry(DataType::Float, false, 0), AggregateFunction::Max);
-  _aggregate->add_aggregate_column("max_nullable", JitTupleEntry(DataType::Double, true, 0), AggregateFunction::Max);
-  _aggregate->add_aggregate_column("min", JitTupleEntry(DataType::Long, false, 0), AggregateFunction::Min);
-  _aggregate->add_aggregate_column("min_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::Min);
-  _aggregate->add_aggregate_column("avg", JitTupleEntry(DataType::Float, false, 0), AggregateFunction::Avg);
-  _aggregate->add_aggregate_column("avg_nullable", JitTupleEntry(DataType::Double, true, 0), AggregateFunction::Avg);
-  _aggregate->add_aggregate_column("sum", JitTupleEntry(DataType::Long, false, 0), AggregateFunction::Sum);
-  _aggregate->add_aggregate_column("sum_nullable", JitTupleEntry(DataType::Int, true, 0), AggregateFunction::Sum);
+  _aggregate->add_aggregate_column("count", JitTupleEntry(DataType::String, true, 0), AggregateFunction::Count);
+  _aggregate->add_aggregate_column("count_nullable", JitTupleEntry(DataType::Int, false, 0), AggregateFunction::Count);
+  _aggregate->add_aggregate_column("max", JitTupleEntry(DataType::Float, true, 0), AggregateFunction::Max);
+  _aggregate->add_aggregate_column("max_nullable", JitTupleEntry(DataType::Double, false, 0), AggregateFunction::Max);
+  _aggregate->add_aggregate_column("min", JitTupleEntry(DataType::Long, true, 0), AggregateFunction::Min);
+  _aggregate->add_aggregate_column("min_nullable", JitTupleEntry(DataType::Int, false, 0), AggregateFunction::Min);
+  _aggregate->add_aggregate_column("avg", JitTupleEntry(DataType::Float, true, 0), AggregateFunction::Avg);
+  _aggregate->add_aggregate_column("avg_nullable", JitTupleEntry(DataType::Double, false, 0), AggregateFunction::Avg);
+  _aggregate->add_aggregate_column("sum", JitTupleEntry(DataType::Long, true, 0), AggregateFunction::Sum);
+  _aggregate->add_aggregate_column("sum_nullable", JitTupleEntry(DataType::Int, false, 0), AggregateFunction::Sum);
 
   const auto output_table = _aggregate->create_output_table(Table{TableColumnDefinitions{}, TableType::Data});
 
@@ -82,18 +82,18 @@ TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
   // Test case is only run in debug mode as checks are DebugAsserts, which are not present in release mode.
   if constexpr (HYRISE_DEBUG) {
     EXPECT_THROW(
-        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::String, false, 0), AggregateFunction::Avg),
+        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::String, true, 0), AggregateFunction::Avg),
         std::logic_error);
     EXPECT_THROW(
-        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::String, true, 0), AggregateFunction::Sum),
+        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::String, false, 0), AggregateFunction::Sum),
         std::logic_error);
     EXPECT_THROW(
-        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Null, false, 0), AggregateFunction::Min),
+        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Null, true, 0), AggregateFunction::Min),
         std::logic_error);
     EXPECT_THROW(
-        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Null, true, 0), AggregateFunction::Max),
+        _aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Null, false, 0), AggregateFunction::Max),
         std::logic_error);
-    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Int, false, 0),
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", JitTupleEntry(DataType::Int, true, 0),
                                                   AggregateFunction::CountDistinct),
                  std::logic_error);
   }
@@ -156,8 +156,8 @@ TEST_F(JitAggregateTest, GroupsNullValues) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
-  const auto tuple_entry_a = JitTupleEntry(DataType::Int, true, 0);
-  const auto tuple_entry_b = JitTupleEntry(DataType::Int, true, 1);
+  const auto tuple_entry_a = JitTupleEntry(DataType::Int, false, 0);
+  const auto tuple_entry_b = JitTupleEntry(DataType::Int, false, 1);
 
   _aggregate->add_groupby_column("a", tuple_entry_a);
   _aggregate->add_groupby_column("b", tuple_entry_b);
@@ -187,8 +187,8 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
-  const auto tuple_entry_a = JitTupleEntry(DataType::Int, false, 0);
-  const auto tuple_entry_b = JitTupleEntry(DataType::Int, true, 1);
+  const auto tuple_entry_a = JitTupleEntry(DataType::Int, true, 0);
+  const auto tuple_entry_b = JitTupleEntry(DataType::Int, false, 1);
 
   // We compute an aggregate of each type on the same input value.
   _aggregate->add_groupby_column("groupby", tuple_entry_a);
@@ -250,7 +250,7 @@ TEST_F(JitAggregateTest, NoGroupByColumns) {
   JitRuntimeContext context;
   context.tuple.resize(1);
 
-  const auto tuple_entry = JitTupleEntry(DataType::Int, false, 0);
+  const auto tuple_entry = JitTupleEntry(DataType::Int, true, 0);
 
   // We compute an aggregate of each type.
   _aggregate->add_aggregate_column("count", tuple_entry, AggregateFunction::Count);
@@ -286,8 +286,8 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
-  const auto tuple_entry_a = JitTupleEntry(DataType::Int, false, 0);
-  const auto tuple_entry_b = JitTupleEntry(DataType::Int, true, 1);
+  const auto tuple_entry_a = JitTupleEntry(DataType::Int, true, 0);
+  const auto tuple_entry_b = JitTupleEntry(DataType::Int, false, 1);
 
   // We compute an aggregate of each type on the same input value.
   _aggregate->add_groupby_column("groupby", tuple_entry_a);
@@ -317,7 +317,7 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
   JitRuntimeContext context;
   context.tuple.resize(1);
 
-  const auto tuple_entry = JitTupleEntry(DataType::Int, false, 0);
+  const auto tuple_entry = JitTupleEntry(DataType::Int, true, 0);
 
   // We compute an aggregate of each type on the same input value.
   _aggregate->add_aggregate_column("count", tuple_entry, AggregateFunction::Count);
@@ -339,6 +339,52 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
   auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
   expected_output_table->append({int64_t{0}, NullValue{}, NullValue{}, NullValue{}, NullValue{}});
   EXPECT_TABLE_EQ_ORDERED(output_table, expected_output_table);
+}
+
+TEST_F(JitAggregateTest, UpdateNullableInformationBeforeSpecialization) {
+  // The nullable information of the aggregate and group by expressions must be updated before specialization
+
+  const auto input_table = Table::create_dummy_table(TableColumnDefinitions{{"a", DataType::Int, false},
+                                                                            {"b", DataType::Long, true},
+                                                                            {"c", DataType::Float, false},
+                                                                            {"d", DataType::String, true}});
+
+  // Create tuple entries without setting the correct nullable information
+  const JitTupleEntry tuple_entry_a{DataType::Int, false, 0};
+  const JitTupleEntry tuple_entry_b{DataType::Long, false, 1};
+  const JitTupleEntry tuple_entry_c{DataType::Float, false, 2};
+  const JitTupleEntry tuple_entry_d{DataType::String, false, 3};
+
+  JitAggregate jit_aggregate;
+  jit_aggregate.add_aggregate_column("min_a", tuple_entry_a, AggregateFunction::Min);
+  jit_aggregate.add_aggregate_column("count_b", tuple_entry_b, AggregateFunction::Count);
+  jit_aggregate.add_groupby_column("c", tuple_entry_c);
+  jit_aggregate.add_groupby_column("d", tuple_entry_d);
+
+  // An aggregate column contains the information for its input (tuple_entry) and its output (hashmap_entry).
+  // Only the input information has to be updated before specialization.
+  {
+    const auto aggregate_columns = jit_aggregate.aggregate_columns();
+    // min(?) is always nullable
+    EXPECT_FALSE(aggregate_columns[0].hashmap_entry.guaranteed_non_null);
+    // count(?) is never nullable
+    EXPECT_TRUE(aggregate_columns[1].hashmap_entry.guaranteed_non_null);
+  }
+
+  // Update nullable information
+  // a and c are not nullable, b and d are nullable
+  std::vector<bool> tuple_non_nullable_information{true, false, true, false};
+  jit_aggregate.before_specialization(*input_table, tuple_non_nullable_information);
+
+  const auto aggregate_columns = jit_aggregate.aggregate_columns();
+  EXPECT_TRUE(aggregate_columns[0].tuple_entry.guaranteed_non_null);
+  EXPECT_FALSE(aggregate_columns[1].tuple_entry.guaranteed_non_null);
+
+  const auto& groupby_columns = jit_aggregate.groupby_columns();
+  EXPECT_TRUE(groupby_columns[0].tuple_entry.guaranteed_non_null);
+  EXPECT_TRUE(groupby_columns[0].hashmap_entry.guaranteed_non_null);
+  EXPECT_FALSE(groupby_columns[1].tuple_entry.guaranteed_non_null);
+  EXPECT_FALSE(groupby_columns[1].hashmap_entry.guaranteed_non_null);
 }
 
 }  // namespace opossum

@@ -8,8 +8,7 @@
 #include "table.hpp"
 #include "types.hpp"
 
-#include "statistics/chunk_statistics/chunk_statistics.hpp"
-#include "statistics/chunk_statistics/segment_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
@@ -99,8 +98,6 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   Assert((chunk_encoding_spec.size() == chunk->column_count()),
          "Number of column encoding specs must match the chunk’s column count.");
 
-  const auto chunk_statistics = chunk->statistics();
-  std::vector<std::shared_ptr<SegmentStatistics>> column_statistics;
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
@@ -109,15 +106,12 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
     const auto encoded_segment = encode_segment(base_segment, data_type, spec);
     chunk->replace_segment(column_id, encoded_segment);
-
-    if (!chunk_statistics) {
-      column_statistics.push_back(SegmentStatistics::build_statistics(data_type, encoded_segment));
-    }
   }
 
   chunk->mark_immutable();
-  if (!chunk_statistics) {
-    chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
+
+  if (!chunk->pruning_statistics()) {
+    generate_chunk_pruning_statistics(chunk);
   }
 
   if (chunk->has_mvcc_data()) {
@@ -140,10 +134,10 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
-    auto chunk = table->get_chunk(chunk_id);
     const auto& chunk_encoding_spec = chunk_encoding_specs.at(chunk_id);
-
     encode_chunk(chunk, column_data_types, chunk_encoding_spec);
   }
 }
@@ -154,7 +148,8 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
-    auto chunk = table->get_chunk(chunk_id);
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
     encode_chunk(chunk, column_data_types, segment_encoding_spec);
   }
@@ -166,10 +161,11 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   const auto chunk_count = static_cast<size_t>(table->chunk_count());
   Assert(chunk_encoding_specs.size() == chunk_count, "Number of encoding specs must match table’s chunk count.");
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
-    const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
+    const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
     encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
 }
@@ -180,8 +176,11 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
          "Number of encoding specs must match table’s column count.");
   const auto column_types = table->column_data_types();
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
+  const auto chunk_count = table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
     encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
 }
@@ -190,8 +189,10 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const SegmentEncodingSpec& segment_encoding_spec) {
   const auto column_types = table->column_data_types();
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
+  const auto chunk_count = table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
     encode_chunk(chunk, column_types, segment_encoding_spec);
   }

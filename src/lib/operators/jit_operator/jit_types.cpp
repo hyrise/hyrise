@@ -38,8 +38,7 @@ namespace opossum {
   }
 
 #define JIT_VARIANT_VECTOR_GET_VECTOR(r, d, type)                                                                 \
-  template <>                                                                                                     \
-  /* NOLINTNEXTLINE(bugprone-macro-parentheses) - clang-tidy does not like & for reference */                     \
+  template <> /* NOLINTNEXTLINE(bugprone-macro-parentheses) - clang-tidy does not like & for reference */         \
   std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)>& JitVariantVector::get_vector<BOOST_PP_TUPLE_ELEM(3, 0, type)>() { \
     return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                       \
   }
@@ -61,14 +60,14 @@ BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO_WITH_VALUE_I
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET_VECTOR, _, JIT_DATA_TYPE_INFO_WITH_VALUE_ID)
 
-JitTupleEntry::JitTupleEntry(const DataType data_type, const bool is_nullable, const size_t tuple_index)
-    : data_type{data_type}, is_nullable{is_nullable}, tuple_index{tuple_index} {}
+JitTupleEntry::JitTupleEntry(const DataType data_type, const bool guaranteed_non_null, const size_t tuple_index)
+    : data_type{data_type}, guaranteed_non_null{guaranteed_non_null}, tuple_index{tuple_index} {}
 
 JitTupleEntry::JitTupleEntry(const std::pair<const DataType, const bool> data_type, const size_t tuple_index)
-    : data_type{data_type.first}, is_nullable{data_type.second}, tuple_index{tuple_index} {}
+    : data_type{data_type.first}, guaranteed_non_null{data_type.second}, tuple_index{tuple_index} {}
 
 bool JitTupleEntry::is_null(JitRuntimeContext& context) const {
-  return is_nullable && context.tuple.is_null(tuple_index);
+  return !guaranteed_non_null && context.tuple.is_null(tuple_index);
 }
 
 void JitTupleEntry::set_is_null(const bool is_null, JitRuntimeContext& context) const {
@@ -76,14 +75,15 @@ void JitTupleEntry::set_is_null(const bool is_null, JitRuntimeContext& context) 
 }
 
 bool JitTupleEntry::operator==(const JitTupleEntry& other) const {
-  return data_type == other.data_type && is_nullable == other.is_nullable && tuple_index == other.tuple_index;
+  return data_type == other.data_type && guaranteed_non_null == other.guaranteed_non_null &&
+         tuple_index == other.tuple_index;
 }
 
-JitHashmapEntry::JitHashmapEntry(const DataType data_type, const bool is_nullable, const size_t column_index)
-    : data_type{data_type}, is_nullable{is_nullable}, column_index{column_index} {}
+JitHashmapEntry::JitHashmapEntry(const DataType data_type, const bool guaranteed_non_null, const size_t column_index)
+    : data_type{data_type}, guaranteed_non_null{guaranteed_non_null}, column_index{column_index} {}
 
 bool JitHashmapEntry::is_null(const size_t index, JitRuntimeContext& context) const {
-  return is_nullable && context.hashmap.columns[column_index].is_null(index);
+  return !guaranteed_non_null && context.hashmap.columns[column_index].is_null(index);
 }
 
 void JitHashmapEntry::set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const {

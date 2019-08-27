@@ -6,12 +6,12 @@
 namespace opossum {
 
 class AbstractLQPNode;
+class AbstractCostEstimator;
+class AbstractCardinalityEstimator;
 
 class AbstractRule {
  public:
   virtual ~AbstractRule() = default;
-
-  virtual std::string name() const = 0;
 
   /**
    * This function applies the concrete Optimizer Rule to an LQP.
@@ -19,6 +19,8 @@ class AbstractRule {
    * The optimizer will pass the immutable LogicalPlanRootNode to this function.
    */
   virtual void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const = 0;
+
+  std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
  protected:
   /**

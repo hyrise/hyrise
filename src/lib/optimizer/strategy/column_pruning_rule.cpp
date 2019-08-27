@@ -22,8 +22,6 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
-
 void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
   // This EXCLUDES columns that are merely forwarded by Projections throughout the LQP
@@ -53,7 +51,7 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
     });
   };
 
-  // Search the entire LQP for columns used in the node expressions, i.e. search for columns that are necessary for
+  // Search the entire LQP for columns used in AbstractLQPNode::node_expressions, i.e. columns that are necessary for
   // the "functioning" of the LQP.
   visit_lqp(lqp, [&](const auto& node) {
     switch (node->type) {
@@ -71,9 +69,8 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
       case LQPNodeType::Limit:
       case LQPNodeType::Predicate:
       case LQPNodeType::Root:
-      case LQPNodeType::ShowColumns:
-      case LQPNodeType::ShowTables:
       case LQPNodeType::Sort:
+      case LQPNodeType::StaticTable:
       case LQPNodeType::StoredTable:
       case LQPNodeType::Union:
       case LQPNodeType::Validate:

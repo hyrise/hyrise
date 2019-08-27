@@ -5,16 +5,17 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/import_binary.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
 class OperatorsImportBinaryTest : public BaseTest {};
 
 TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
-  auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float}}, TableType::Data, 5);
+  auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -27,7 +28,7 @@ TEST_F(OperatorsImportBinaryTest, SingleChunkSingleFloatColumn) {
 
 TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::Float);
+  column_definitions.emplace_back("a", DataType::Float, false);
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   expected_table->append({5.5f});
   expected_table->append({13.0f});
@@ -42,7 +43,7 @@ TEST_F(OperatorsImportBinaryTest, MultipleChunkSingleFloatColumn) {
 
 TEST_F(OperatorsImportBinaryTest, StringValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   expected_table->append({"This"});
   expected_table->append({"is"});
@@ -57,7 +58,7 @@ TEST_F(OperatorsImportBinaryTest, StringValueSegment) {
 
 TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10, UseMvcc::Yes);
   expected_table->append({"This"});
   expected_table->append({"is"});
@@ -66,7 +67,7 @@ TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
 
   ChunkEncoder::encode_all_chunks(expected_table);
 
-  StorageManager::get().add_table("table_a", expected_table);
+  Hyrise::get().storage_manager.add_table("table_a", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/StringDictionarySegment.bin");
   importer->execute();
@@ -76,11 +77,11 @@ TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
@@ -96,11 +97,11 @@ TEST_F(OperatorsImportBinaryTest, AllTypesValueSegment) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
@@ -110,7 +111,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
 
   ChunkEncoder::encode_all_chunks(expected_table);
 
-  StorageManager::get().add_table("expected_table", expected_table);
+  Hyrise::get().storage_manager.add_table("expected_table", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesDictionarySegment.bin");
   importer->execute();
@@ -120,11 +121,11 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
 
 TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Long);
-  column_definitions.emplace_back("d", DataType::Float);
-  column_definitions.emplace_back("e", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
@@ -134,7 +135,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
 
   ChunkEncoder::encode_chunks(expected_table, {ChunkID{0}});
 
-  StorageManager::get().add_table("expected_table", expected_table);
+  Hyrise::get().storage_manager.add_table("expected_table", expected_table);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesMixColumn.bin");
   importer->execute();
@@ -149,8 +150,8 @@ TEST_F(OperatorsImportBinaryTest, FileDoesNotExist) {
 
 TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("FirstColumn", DataType::Int);
-  column_definitions.emplace_back("SecondColumn", DataType::String);
+  column_definitions.emplace_back("FirstColumn", DataType::Int, false);
+  column_definitions.emplace_back("SecondColumn", DataType::String, false);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30'000);
 
@@ -162,7 +163,7 @@ TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
 
 TEST_F(OperatorsImportBinaryTest, EmptyStringsValueSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
 
@@ -180,7 +181,7 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsValueSegment) {
 
 TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionarySegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("a", DataType::String, false);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
 
@@ -202,7 +203,7 @@ TEST_F(OperatorsImportBinaryTest, SaveToStorageManager) {
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), expected_table);
 }
 
 TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
@@ -214,7 +215,7 @@ TEST_F(OperatorsImportBinaryTest, FallbackToRetrieveFromStorageManager) {
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), retriever->get_output());
 }
 
 TEST_F(OperatorsImportBinaryTest, InvalidColumnType) {

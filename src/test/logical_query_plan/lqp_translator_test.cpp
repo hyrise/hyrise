@@ -12,6 +12,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_prepared_plan_node.hpp"
 #include "logical_query_plan/create_table_node.hpp"
@@ -22,9 +23,8 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/aggregate_hash.hpp"
@@ -37,17 +37,17 @@
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/drop_table.hpp"
-#include "operators/maintenance/show_columns.hpp"
-#include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
-#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -63,13 +63,14 @@ class LQPTranslatorTest : public BaseTest {
     table_int_float5 = load_table("resources/test_data/tbl/int_float5.tbl");
     table_alias_name = load_table("resources/test_data/tbl/table_alias_name.tbl");
 
-    StorageManager::get().add_table("table_int_float", table_int_float);
-    StorageManager::get().add_table("table_int_string", table_int_string);
-    StorageManager::get().add_table("table_int_float2", table_int_float2);
-    StorageManager::get().add_table("table_int_float5", table_int_float5);
-    StorageManager::get().add_table("table_alias_name", table_alias_name);
-    StorageManager::get().add_table("int_float_chunked", load_table("resources/test_data/tbl/int_float.tbl", 1));
-    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("int_float_chunked"));
+    Hyrise::get().storage_manager.add_table("table_int_float", table_int_float);
+    Hyrise::get().storage_manager.add_table("table_int_string", table_int_string);
+    Hyrise::get().storage_manager.add_table("table_int_float2", table_int_float2);
+    Hyrise::get().storage_manager.add_table("table_int_float5", table_int_float5);
+    Hyrise::get().storage_manager.add_table("table_alias_name", table_alias_name);
+    Hyrise::get().storage_manager.add_table("int_float_chunked",
+                                            load_table("resources/test_data/tbl/int_float.tbl", 1));
+    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");
     int_float_a = int_float_node->get_column("a");
@@ -88,14 +89,6 @@ class LQPTranslatorTest : public BaseTest {
     int_float5_node = StoredTableNode::make("table_int_float5");
     int_float5_a = int_float5_node->get_column("a");
     int_float5_d = int_float5_node->get_column("d");
-  }
-
-  const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
-    return index_scan->_included_chunk_ids;
-  }
-
-  const std::vector<ChunkID> get_excluded_chunk_ids(const std::shared_ptr<const TableScan>& table_scan) {
-    return table_scan->_excluded_chunk_ids;
   }
 
   std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
@@ -412,7 +405,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -426,17 +419,17 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
    * Check PQP
    */
-  const auto union_op = std::dynamic_pointer_cast<UnionPositions>(op);
+  const auto union_op = std::dynamic_pointer_cast<UnionAll>(op);
   ASSERT_TRUE(union_op);
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
+  EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   const auto b = PQPColumnExpression::from_table(*table, "b");
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
 }
 
@@ -446,7 +439,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -460,18 +453,18 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
    * Check PQP
    */
-  const auto union_op = std::dynamic_pointer_cast<UnionPositions>(op);
+  const auto union_op = std::dynamic_pointer_cast<UnionAll>(op);
   ASSERT_TRUE(union_op);
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
+  EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
   EXPECT_EQ(index_scan_op->input_left()->type(), OperatorType::GetTable);
 
   const auto b = PQPColumnExpression::from_table(*table, "b");
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);
-  EXPECT_EQ(get_excluded_chunk_ids(table_scan_op), index_chunk_ids);
+  EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(b, 42, 1337));
 }
 
@@ -483,7 +476,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
    */
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
-  const auto table = StorageManager::get().get_table("int_float_chunked");
+  const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -567,36 +560,6 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinNestedLoop) {
   EXPECT_EQ(join_op->primary_predicate().column_ids, ColumnIDPair(ColumnID{0}, ColumnID{1}));
   EXPECT_EQ(join_op->primary_predicate().predicate_condition, PredicateCondition::LessThan);
   EXPECT_EQ(join_op->mode(), JoinMode::Inner);
-}
-
-TEST_F(LQPTranslatorTest, ShowTablesNode) {
-  /**
-   * Build LQP and translate to PQP
-   */
-  const auto show_tables_node = ShowTablesNode::make();
-  const auto op = LQPTranslator{}.translate_node(show_tables_node);
-
-  /**
-   * Check PQP
-   */
-  const auto show_tables_op = std::dynamic_pointer_cast<ShowTables>(op);
-  ASSERT_TRUE(show_tables_op);
-  EXPECT_EQ(show_tables_op->name(), "ShowTables");
-}
-
-TEST_F(LQPTranslatorTest, ShowColumnsNode) {
-  /**
-   * Build LQP and translate to PQP
-   */
-  const auto show_column_node = ShowColumnsNode::make("table_a");
-  const auto op = LQPTranslator{}.translate_node(show_column_node);
-
-  /**
-   * Check PQP
-   */
-  const auto show_columns_op = std::dynamic_pointer_cast<ShowColumns>(op);
-  ASSERT_TRUE(show_columns_op);
-  EXPECT_EQ(show_columns_op->name(), "ShowColumns");
 }
 
 TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
@@ -804,16 +767,36 @@ TEST_F(LQPTranslatorTest, CreateTable) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Float, true);
 
-  const auto lqp = CreateTableNode::make("t", column_definitions, false);
+  const auto lqp =
+      CreateTableNode::make("t", false, StaticTableNode::make(Table::create_dummy_table(column_definitions)));
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   EXPECT_EQ(pqp->type(), OperatorType::CreateTable);
-  EXPECT_EQ(pqp->input_left(), nullptr);
 
   const auto create_table = std::dynamic_pointer_cast<CreateTable>(pqp);
   EXPECT_EQ(create_table->table_name, "t");
-  EXPECT_EQ(create_table->column_definitions, column_definitions);
+
+  // CreateTable input must be executed to enable access to column definitions
+  create_table->mutable_input_left()->execute();
+  EXPECT_EQ(create_table->column_definitions(), column_definitions);
+}
+
+TEST_F(LQPTranslatorTest, StaticTable) {
+  auto column_definitions = TableColumnDefinitions{};
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Float, true);
+
+  const auto dummy_table = Table::create_dummy_table(column_definitions);
+
+  const auto lqp = StaticTableNode::make(dummy_table);
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  EXPECT_EQ(pqp->type(), OperatorType::TableWrapper);
+
+  const auto table_wrapper = std::dynamic_pointer_cast<TableWrapper>(pqp);
+  EXPECT_EQ(table_wrapper->table, dummy_table);
 }
 
 TEST_F(LQPTranslatorTest, DropTable) {

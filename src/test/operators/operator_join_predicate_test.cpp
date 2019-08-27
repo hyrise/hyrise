@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 
@@ -24,7 +25,7 @@ class OperatorJoinPredicateTest : public ::testing::Test {
   LQPColumnReference a_a, a_b, b_a, b_b;
 };
 
-TEST_F(OperatorJoinPredicateTest, Conversion) {
+TEST_F(OperatorJoinPredicateTest, FromExpression) {
   const auto predicate_a = OperatorJoinPredicate::from_expression(*equals_(a_a, b_b), *node_a, *node_b);
   ASSERT_TRUE(predicate_a);
   EXPECT_EQ(predicate_a->column_ids.first, ColumnID{0});
@@ -38,7 +39,7 @@ TEST_F(OperatorJoinPredicateTest, Conversion) {
   EXPECT_EQ(predicate_b->predicate_condition, PredicateCondition::GreaterThan);
 }
 
-TEST_F(OperatorJoinPredicateTest, ConversionImpossible) {
+TEST_F(OperatorJoinPredicateTest, FromExpressionImpossible) {
   const auto predicate_a = OperatorJoinPredicate::from_expression(*equals_(a_a, a_b), *node_a, *node_b);
   ASSERT_FALSE(predicate_a);
 

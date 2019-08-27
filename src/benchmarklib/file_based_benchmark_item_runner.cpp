@@ -42,8 +42,14 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
   std::sort(_queries.begin(), _queries.end(), [](const Query& lhs, const Query& rhs) { return lhs.name < rhs.name; });
 }
 
-void FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  sql_executor.execute(_queries[item_id].sql);
+bool FileBasedBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+  std::shared_ptr<const Table> expected_result_table = nullptr;
+  if (!_dedicated_expected_results.empty()) {
+    expected_result_table = _dedicated_expected_results[item_id];
+  }
+
+  const auto [status, table] = sql_executor.execute(_queries[item_id].sql, expected_result_table);
+  return status == SQLPipelineStatus::Success;
 }
 
 std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {

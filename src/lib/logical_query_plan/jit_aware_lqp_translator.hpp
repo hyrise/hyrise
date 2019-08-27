@@ -52,7 +52,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
    * @param use_actual_value  Specifies whether a column should either load an actual value or a value id
    * @return                  Translated expression
    */
-  std::shared_ptr<const JitExpression> _try_translate_expression_to_jit_expression(
+  std::shared_ptr<JitExpression> _try_translate_expression_to_jit_expression(
       const std::shared_ptr<AbstractExpression>& expression, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node, const bool use_actual_value = true) const;
 

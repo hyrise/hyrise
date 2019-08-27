@@ -15,9 +15,13 @@ namespace opossum {
 class StorageTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    column_definitions.emplace_back("column_1", DataType::Int);
-    column_definitions.emplace_back("column_2", DataType::String);
+    column_definitions.emplace_back("column_1", DataType::Int, false);
+    column_definitions.emplace_back("column_2", DataType::String, false);
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  }
+
+  static tbb::concurrent_vector<std::shared_ptr<Chunk>>& get_chunks(std::shared_ptr<Table>& table) {
+    return table->_chunks;
   }
 
   std::shared_ptr<Table> t;
@@ -118,7 +122,7 @@ TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
   t->append({4, "Hello,"});
   t->append({6, "world"});
 
-  auto chunk = t->get_chunk(ChunkID{0});
+  const auto chunk = t->get_chunk(ChunkID{0});
 
   const auto values = std::vector<CommitID>{1u, 2u};
 
@@ -215,7 +219,8 @@ TEST_F(StorageTableTest, StableChunks) {
   table->append({100, "Hello"});
 
   // The address of the first shared_ptr control object
-  const auto first_chunk = &table->chunks()[0];
+  const auto& chunks_vector = get_chunks(table);
+  const auto first_chunk = &chunks_vector[0];
 
   for (auto i = 1; i < 10; ++i) {
     table->append({i, "Hello"});
@@ -223,7 +228,7 @@ TEST_F(StorageTableTest, StableChunks) {
 
   // The vector should have been resized / expanded by now
 
-  EXPECT_EQ(first_chunk, &table->chunks()[0]);
+  EXPECT_EQ(first_chunk, &chunks_vector[0]);
   EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[0], AllTypeVariant{100});
 }
 

@@ -10,6 +10,7 @@ SELECT 22 / 5 AS col;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
+SELECT * FROM mixed WHERE a > d AND b > 1;
 SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
@@ -23,6 +24,9 @@ SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
 SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b + c < c * b - 100;
+SELECT * FROM mixed WHERE id > b;
+SELECT * FROM mixed WHERE id = b;
+SELECT * FROM mixed WHERE id IN (SELECT 14) AND b > (SELECT 15) AND b < (SELECT 98);
 SELECT * FROM mixed WHERE id >= 5.5;
 SELECT * FROM mixed WHERE id BETWEEN 5.5 AND 8;
 SELECT * FROM mixed WHERE id < 5.5;
@@ -91,9 +95,25 @@ SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
 SELECT 2 / 0, b / 0, 50 / id FROM mixed;
 SELECT 2 % 0, b % 0, 50 % id FROM mixed;
 
+-- Aliases
+SELECT R.a, S.a FROM mixed AS R, mixed AS S;
+SELECT a AS x FROM mixed WHERE a > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY a;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING a > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
+SELECT a AS x, SUM(b) FROM mixed GROUP BY x HAVING x > 10;
+SELECT a AS a1, a AS a2 FROM mixed;
+SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM mixed;
+SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed;
+SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed GROUP BY a;
+SELECT a1, b2, a3 FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM mixed) AS R;
+SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed) AS R;
+SELECT b AS b1, b AS b2 FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > b1)
+
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
--- SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
+SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
 SELECT a AS x, b AS y FROM mixed ORDER BY x, y;
 SELECT b + 13 AS t FROM mixed ORDER BY a, b ASC;
 SELECT * FROM mixed ORDER BY a, b DESC;
@@ -112,6 +132,8 @@ SELECT * FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".d;
 
 -- JOIN
 SELECT "left".a, "left".b, "right".a, "right".b FROM mixed AS "left" JOIN mixed_null AS "right" ON "left".b = "right".b;
+SELECT "left".a1, "left".a2, "right".a1 FROM (SELECT a AS a1, a AS a2 FROM mixed) AS "left" JOIN (SELECT a AS a1, a AS a2 FROM mixed_null) AS "right" ON "left".a1 = "right".a2;
+SELECT "left".e, "left".f, "right".a, "right".b FROM (SELECT a AS e, b as f FROM mixed) AS "left" JOIN mixed_null AS "right" ON "left".f = "right".b;
 SELECT * FROM mixed AS "left" LEFT JOIN mixed_null AS "right" ON "left".b = "right".b;
 SELECT b.*, a.* FROM mixed AS a JOIN mixed AS b ON a.id = b.id WHERE a.id > 50;
 SELECT * FROM mixed AS "left" INNER JOIN mixed_null AS "right" ON "left".b = "right".b;
@@ -119,7 +141,7 @@ SELECT * FROM mixed NATURAL JOIN (SELECT id FROM id_int_int_int_100) AS T2;
 SELECT * FROM mixed NATURAL JOIN (SELECT c AS foo, id FROM id_int_int_int_100) AS T2;
 SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mixed AS "right" ON "left".a = "right".a) t where t.a > 0;
 SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5;
-SELECT l.id, r.id + 10 AS a FROM (SELECT id + 5 AS id FROM mixed WHERE id > 90) AS l LEFT JOIN mixed AS r ON l.id = r.id
+SELECT l.new_id, r.id + 10 AS a FROM (SELECT id + 5 AS new_id FROM mixed WHERE new_id > 90) AS l LEFT JOIN mixed AS r ON l.new_id = r.id
 SELECT (SELECT r.id AS a FROM (SELECT id + 5 AS id FROM mixed) AS l LEFT JOIN mixed AS r ON l.id = r.id WHERE l.id >= 100 LIMIT 1) + 5 AS a
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a < t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a > t2.a;
@@ -132,7 +154,7 @@ SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a <= t2.a AND t1.b = t2.b AND t1.c > t2.c;
 SELECT * FROM mixed AS t1 JOIN mixed_null AS t2 ON t1.a >= t2.a AND t1.b = t2.b AND t1.c < t2.c;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b = t2.b;
-SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b < t2.b;
+--SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b < t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b <= t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b > t2.b;
 SELECT * FROM mixed AS t1 LEFT JOIN mixed_null AS t2 ON t1.a = t2.a AND t1.b >= t2.b;
@@ -149,7 +171,13 @@ SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a <= t2.a;
 SELECT * FROM id_int_int_int_100 AS t1 LEFT JOIN id_int_int_int_100 AS t2 ON t1.a >= t2.a;
 
--- SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
+-- JOIN on string column
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a = m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a != m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.a < m2.a AND m1.d > m2.d WHERE m1.id > 50
+SELECT * FROM mixed AS m1 LEFT JOIN mixed AS m2 ON m1.a = m2.a WHERE m2.a NOT IN ('a', 'b')
+
+SELECT * FROM mixed AS m1 JOIN mixed AS m2 ON m1.id * 3 = m2.id - 5 OR m1.id > 20;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
 
 -- JOIN multiple tables
@@ -191,7 +219,6 @@ SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT SUM(min_a) FROM (SELECT 
 SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
-SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
 
 -- DISTINCT
 SELECT DISTINCT a FROM mixed;
@@ -206,6 +233,7 @@ SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON
 SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT id_int_int_int_100.* FROM id_int_int_int_100 JOIN mixed ON id_int_int_int_100.a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.a GROUP BY c_custkey, c_name HAVING COUNT(sub.a) >= 2;
 
 -- COUNT(*)
+SELECT COUNT(*) FROM mixed;
 SELECT COUNT(*) FROM mixed GROUP BY a;
 SELECT a, COUNT(*) FROM mixed GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
@@ -279,6 +307,7 @@ INSERT INTO mixed_null (b, c, a, d) SELECT b, c, a, d FROM mixed WHERE id < 13; 
 CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view1;
 CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view2 WHERE a > 10;
 CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) AS cd FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view3 WHERE foo > 10;
+CREATE VIEW alias_view AS SELECT a AS a1, a AS a2 FROM id_int_int_int_100 WHERE a > 10; SELECT a1, a2 FROM alias_view;
 
 -- NULL Semantics
 SELECT * FROM mixed WHERE b IS NOT NULL;
@@ -302,18 +331,16 @@ SELECT * FROM id_int_int_int_100 WHERE a * 10 IN (SELECT b FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a * 10 NOT IN (SELECT b FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
-SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15); -- fails because cost estimators crashes when used on an LQP containing a DummyTableNode (#1500)
-SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11); -- fails because cost estimators crashes when used on an LQP containing a DummyTableNode (#1500)
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
 
 -- Correlated parameter in WHERE statement
 SELECT * FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > id_int_int_int_100.b)
+SELECT * FROM id_int_int_int_100 t1 WHERE (SELECT MIN(t2.id + 10) FROM id_int_int_int_100 t2 WHERE t2.id = t1.id) > 20;
 
 -- Subqueries in FROM statement
 SELECT * FROM (SELECT t1.id FROM id_int_int_int_100 t1 JOIN id_int_int_int_100 t2 ON t1.id + 1 = t2.id) AS s1, id_int_int_int_100 t3 WHERE s1.id + 5 = t3.id;
 SELECT * FROM id_int_int_int_100 t1 WHERE id < 9 AND (SELECT MIN(t2.id + 10) FROM (SELECT * FROM id_int_int_int_100 t3 WHERE t3.id > t1.id + 90) AS s1, id_int_int_int_100 t2 WHERE t2.id = t1.id + 90) > 5;
-
--- Correlated parameter (t2.id) in FROM clause of subselect
-SELECT * FROM id_int_int_int_100 t1 WHERE (SELECT MIN(t2.id + 10) FROM id_int_int_int_100 t2 WHERE t2.id = t1.id) > 20;
 
 -- cannot test these because we cannot handle empty query results here
 ---- SELECT * FROM mixed WHERE b IS NULL;
@@ -332,6 +359,7 @@ SELECT * FROM id_int_int_int_100 t1 WHERE (SELECT MIN(t2.id + 10) FROM id_int_in
 SELECT CASE WHEN id < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END AS case_column FROM mixed;
 SELECT CASE WHEN id + 3.4 < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END AS case_column FROM mixed;
 SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_column FROM mixed;
+SELECT a, CASE WHEN a IS NULL THEN 1 ELSE 2 END FROM mixed_null GROUP BY a
 
 -- IN
 SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)
@@ -388,7 +416,8 @@ SELECT * FROM id_int_int_int_100 AS r WHERE NOT EXISTS (SELECT a FROM id_int_int
 SELECT * FROM id_int_int_int_100 WHERE EXISTS (SELECT a FROM id_int_int_int_50 WHERE EXISTS (SELECT b FROM mixed))
 SELECT * FROM id_int_int_int_100 AS r WHERE EXISTS (SELECT s.a FROM id_int_int_int_50 AS s WHERE s.b = r.b AND s.c < r.c)
 
--- Cannot test the following expressions, because sqlite doesn't support them:
+-- Cannot test the following (expressions), because sqlite doesn't support them:
 --  * EXTRACT
 --  * CONCAT
 --  * PREPARE/EXECUTE
+--  rename columns in FROM clause

@@ -34,7 +34,8 @@ class OperatorsJoinHashTest : public BaseTest {
   }
 
   void SetUp() override {
-    const auto dummy_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data);
+    const auto dummy_table =
+        std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
     dummy_input = std::make_shared<TableWrapper>(dummy_table);
   }
 
@@ -60,7 +61,7 @@ TEST_F(OperatorsJoinHashTest, DISABLED_ChunkCount /* #698 */) {
                                          std::vector<OperatorJoinPredicate>{}, 10);
   join->execute();
 
-  // While radix clustering is well-suited for very large tables, it also yield many output tables.
+  // While radix clustering is well-suited for very large tables, it also yields many output tables.
   // This test checks whether we create more chunks that existing in the input (which should not be the case).
   EXPECT_TRUE(join->get_output()->chunk_count() <=
               std::max(_table_tpch_orders_scanned->get_output()->chunk_count(),
@@ -105,6 +106,15 @@ TEST_F(OperatorsJoinHashTest, DeepCopy) {
   EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
   EXPECT_NE(join_operator_copy->input_left(), nullptr);
   EXPECT_NE(join_operator_copy->input_right(), nullptr);
+}
+
+TEST(OperatorsJoinHashTestStatic, RadixBitCalculation) {
+  // Simple cases: handle minimal inputs and very large inputs
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 1), 0ul);
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(0, 1), 0ul);
+  EXPECT_EQ(JoinHash::calculate_radix_bits<int>(1, 0), 0ul);
+  EXPECT_TRUE(JoinHash::calculate_radix_bits<int>(std::numeric_limits<size_t>::max(),
+                                                  std::numeric_limits<size_t>::max()) > 0ul);
 }
 
 }  // namespace opossum

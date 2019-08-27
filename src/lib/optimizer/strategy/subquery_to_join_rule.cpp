@@ -469,8 +469,6 @@ SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated
   return pull_up_correlated_predicates_recursive(node, parameter_mapping, result_cache, false).first;
 }
 
-std::string SubqueryToJoinRule::name() const { return "Subquery to Join Rule"; }
-
 void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
   // To do this, we

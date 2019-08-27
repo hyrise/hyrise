@@ -5,14 +5,16 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "statistics/generate_table_statistics.hpp"
+#include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
+#include "utils/meta_table_manager.hpp"
 
 namespace opossum {
 
@@ -24,7 +26,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
     Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   }
 
-  table->set_table_statistics(std::make_shared<TableStatistics>(generate_table_statistics(*table)));
+  table->set_table_statistics(TableStatistics::from_table(*table));
   _tables.emplace(name, std::move(table));
 }
 
@@ -34,13 +36,24 @@ void StorageManager::drop_table(const std::string& name) {
 }
 
 std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
+  if (Hyrise::get().meta_table_manager.is_meta_table_name(name)) {
+    return Hyrise::get().meta_table_manager.generate_table(name.substr(MetaTableManager::META_PREFIX.size()));
+  }
+
   const auto iter = _tables.find(name);
   Assert(iter != _tables.end(), "No such table named '" + name + "'");
 
   return iter->second;
 }
 
-bool StorageManager::has_table(const std::string& name) const { return _tables.count(name); }
+bool StorageManager::has_table(const std::string& name) const {
+  if (Hyrise::get().meta_table_manager.is_meta_table_name(name)) {
+    const auto& meta_table_names = Hyrise::get().meta_table_manager.table_names();
+    return std::binary_search(meta_table_names.begin(), meta_table_names.end(),
+                              name.substr(MetaTableManager::META_PREFIX.size()));
+  }
+  return _tables.count(name);
+}
 
 std::vector<std::string> StorageManager::table_names() const {
   std::vector<std::string> table_names;
@@ -130,8 +143,6 @@ void StorageManager::drop_prepared_plan(const std::string& name) {
 const std::map<std::string, std::shared_ptr<PreparedPlan>>& StorageManager::prepared_plans() const {
   return _prepared_plans;
 }
-
-void StorageManager::reset() { get() = StorageManager{}; }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};

@@ -16,6 +16,7 @@
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -32,7 +33,6 @@
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/storage_manager.hpp"
 #include "types.hpp"
 
 using namespace std::string_literals;  // NOLINT
@@ -235,10 +235,10 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
         // COUNT(*)
         DebugAssert(aggregate_expression->aggregate_function == AggregateFunction::Count,
                     "Only the aggregate function COUNT can have no arguments");
-        // JitAggregate requires one value for each aggregate function. This value is ignored for COUNT so that the
-        // first value in the tuple can be used.
-        const size_t tuple_index{0};
-        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), {DataType::Long, false, tuple_index},
+        // JitAggregate requires one value for each aggregate function. Since COUNT(*) does not specify a value, a
+        // constant value is used.
+        auto constant_value = read_tuples->add_literal_value(AllTypeVariant{0});
+        aggregate->add_aggregate_column(aggregate_expression->as_column_name(), constant_value,
                                         aggregate_expression->aggregate_function);
       } else {
         const auto jit_expression =
@@ -309,14 +309,15 @@ bool is_between_jit_expression_type_upper_inclusive(JitExpressionType jit_expres
          jit_expression_type == JitExpressionType::BetweenLowerExclusive;
 }
 
-std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
+std::shared_ptr<JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
     const std::shared_ptr<AbstractExpression>& expression, JitReadTuples& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node, const bool use_actual_value) const {
   const auto input_node_column_id = input_node->find_column_id(*expression);
   if (input_node_column_id) {
-    const auto tuple_entry = jit_source.add_input_column(
-        expression->data_type(), input_node->is_column_nullable(input_node->get_column_id(*expression)),
-        *input_node_column_id, use_actual_value);
+    // The correct nullable information is set when the JitOperatorWrapper is executed with access to the input table.
+    const bool guaranteed_non_null = false;
+    const auto tuple_entry = jit_source.add_input_column(expression->data_type(), guaranteed_non_null,
+                                                         *input_node_column_id, use_actual_value);
     return std::make_shared<JitExpression>(tuple_entry);
   }
 
@@ -350,7 +351,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
         }
       }
 
-      std::vector<std::shared_ptr<const JitExpression>> jit_expression_arguments;
+      std::vector<std::shared_ptr<JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression->arguments) {
         const auto jit_expression =
             _try_translate_expression_to_jit_expression(argument, jit_source, input_node, !use_value_ids);
@@ -439,7 +440,17 @@ bool JitAwareLQPTranslator::_expression_is_jittable(const std::shared_ptr<Abstra
     }
     case ExpressionType::Aggregate: {
       const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(expression);
-      // We do not support the count distinct function yet.
+      switch (aggregate_expression->aggregate_function) {
+        case AggregateFunction::Min:
+        case AggregateFunction::Max:
+        case AggregateFunction::Sum:
+        case AggregateFunction::Avg:
+        case AggregateFunction::Count:
+          return true;
+        case AggregateFunction::CountDistinct:
+        case AggregateFunction::StandardDeviationSample:
+          return false;
+      }
       return aggregate_expression->aggregate_function != AggregateFunction::CountDistinct;
     }
     case ExpressionType::Arithmetic:

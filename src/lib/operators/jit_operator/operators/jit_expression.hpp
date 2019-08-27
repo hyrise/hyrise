@@ -46,11 +46,11 @@ class JitExpression {
   // Create a value JitExpression which returns the stored variant value
   explicit JitExpression(const JitTupleEntry& tuple_entry, const AllTypeVariant& variant);
   // Create a unary JitExpression
-  JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
+  JitExpression(const std::shared_ptr<JitExpression>& child, const JitExpressionType expression_type,
                 const size_t result_tuple_index);
   // Create a binary JitExpression
-  JitExpression(const std::shared_ptr<const JitExpression>& left_child, const JitExpressionType expression_type,
-                const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index);
+  JitExpression(const std::shared_ptr<JitExpression>& left_child, const JitExpressionType expression_type,
+                const std::shared_ptr<JitExpression>& right_child, const size_t result_tuple_index);
 
   std::string to_string() const;
 
@@ -59,7 +59,7 @@ class JitExpression {
 
   /* The compute_and_store() function does not return the result, but stores it in the _result_entry tuple entry.
    * The function MUST be called before the result value in the runtime tuple can safely be accessed through the
-   * _result_entry.
+   * result_entry.
    * The _result_entry itself, however, can safely be passed around before (e.g. by calling the result() function),
    * since it only abstractly represents the result slot in the runtime tuple.
    */
@@ -73,10 +73,16 @@ class JitExpression {
   template <typename ResultValueType>
   std::optional<ResultValueType> compute(JitRuntimeContext& context) const;
 
-  const std::shared_ptr<const JitExpression> left_child;
-  const std::shared_ptr<const JitExpression> right_child;
+  /* Recursively update the nullable information of the result entries.
+   * The nullability information is not available during the creation of JitExpressions so that this information must
+   * be updated in all JitExpressions once this information is available before the specialization.
+   */
+  void update_nullable_information(std::vector<bool>& tuple_non_nullable_information);
+
+  const std::shared_ptr<JitExpression> left_child;
+  const std::shared_ptr<JitExpression> right_child;
   const JitExpressionType expression_type;
-  const JitTupleEntry result_entry;
+  JitTupleEntry result_entry;
   bool use_value_ids = false;
 
  private:

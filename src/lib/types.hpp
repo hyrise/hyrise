@@ -48,11 +48,19 @@ STRONG_TYPEDEF(size_t, ParameterID);
 
 namespace opossum {
 
+// Float aliases used in cardinality estimations/statistics
+using Cardinality = float;
+using DistinctCount = float;
+using Selectivity = float;
+
+// Cost that an AbstractCostModel assigns to an Operator/LQP node. The unit of the Cost is left to the Cost estimator
+// and could be, e.g., "Estimated Runtime" or "Estimated Memory Usage" (though the former is by far the most common)
+using Cost = float;
+
 // We use polymorphic memory resources to allow containers (e.g., vectors, or strings) to retrieve their memory from
 // different memory sources. These sources are, for example, specific NUMA nodes or non-volatile memory. Without PMR,
 // we would need to explicitly make the allocator part of the class. This would make DRAM and NVM containers type-
 // incompatible. Thanks to PMR, the type is erased and both can co-exist.
-
 template <typename T>
 using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 
@@ -116,14 +124,6 @@ constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max(
 struct RowID {
   ChunkID chunk_id{INVALID_CHUNK_ID};
   ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
-
-  RowID() = default;
-
-  RowID(const ChunkID chunk_id, const ChunkOffset chunk_offset) : chunk_id(chunk_id), chunk_offset(chunk_offset) {
-    DebugAssert((chunk_offset == INVALID_CHUNK_OFFSET) == (chunk_id == INVALID_CHUNK_ID),
-                "If you pass in one of the arguments as INVALID/NULL, the other has to be INVALID/NULL as well. This "
-                "makes sure there is just one value representing an invalid row id.");
-  }
 
   // Faster than row_id == ROW_ID_NULL, since we only compare the ChunkOffset
   bool is_null() const { return chunk_offset == INVALID_CHUNK_OFFSET; }
@@ -205,6 +205,9 @@ enum class PredicateCondition {
 // @return whether the PredicateCondition takes exactly two arguments
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
 
+// @return whether the PredicateCondition takes exactly two arguments and is not one of LIKE or IN
+bool is_binary_numeric_predicate_condition(const PredicateCondition predicate_condition);
+
 bool is_between_predicate_condition(PredicateCondition predicate_condition);
 
 bool is_lower_inclusive_between(PredicateCondition predicate_condition);
@@ -217,6 +220,12 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
 // ">" becomes "<=" etc.
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
+// Split up, e.g., BetweenUpperExclusive into {GreaterThanEquals, LessThan}
+std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const PredicateCondition predicate_condition);
+
+// Join, e.g., {GreaterThanEquals, LessThan} into BetweenUpperExclusive
+PredicateCondition conditions_to_between(const PredicateCondition lower, const PredicateCondition upper);
+
 // Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
 // AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
 //                      dropped. This behavior mirrors NOT IN.
@@ -224,13 +233,11 @@ PredicateCondition inverse_predicate_condition(const PredicateCondition predicat
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
-enum class UnionMode { Positions };
+enum class UnionMode { Positions, All };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
-
-enum class HistogramType { EqualWidth, EqualHeight, EqualDistinctCount };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 

@@ -181,7 +181,7 @@ struct JitRuntimeContext {
 // It only knows how to access the value from the runtime context.
 class JitTupleEntry {
  public:
-  JitTupleEntry(const DataType data_type, const bool is_nullable, const size_t tuple_index);
+  JitTupleEntry(const DataType data_type, const bool guaranteed_non_null, const size_t tuple_index);
   JitTupleEntry(const std::pair<const DataType, const bool> data_type, const size_t tuple_index);
 
   template <typename T>
@@ -203,7 +203,7 @@ class JitTupleEntry {
   bool operator==(const JitTupleEntry& other) const;
 
   const DataType data_type;
-  const bool is_nullable;
+  bool guaranteed_non_null;
   const size_t tuple_index;
 };
 
@@ -225,7 +225,7 @@ class JitTupleEntry {
 // processing).
 class JitHashmapEntry {
  public:
-  JitHashmapEntry(const DataType data_type, const bool is_nullable, const size_t column_index);
+  JitHashmapEntry(const DataType data_type, const bool guaranteed_non_null, const size_t column_index);
 
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
   __attribute__((optnone)) pmr_string get(const size_t index, JitRuntimeContext& context) const {
@@ -248,7 +248,7 @@ class JitHashmapEntry {
   void set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const;
 
   const DataType data_type;
-  const bool is_nullable;
+  bool guaranteed_non_null;
   const size_t column_index;
 };
 

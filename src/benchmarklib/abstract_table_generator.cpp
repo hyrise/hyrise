@@ -2,8 +2,8 @@
 
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
+#include "hyrise.hpp"
 #include "operators/export_binary.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
@@ -15,6 +15,8 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
           {"binary_caching_duration", metrics.binary_caching_duration.count()},
           {"store_duration", metrics.store_duration.count()}};
 }
+
+BenchmarkTableInfo::BenchmarkTableInfo(const std::shared_ptr<Table>& table) : table(table) {}
 
 AbstractTableGenerator::AbstractTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : _benchmark_config(benchmark_config) {}
@@ -46,6 +48,14 @@ void AbstractTableGenerator::generate_and_store() {
    * Write the Tables into binary files if required
    */
   if (_benchmark_config->cache_binary_tables) {
+    for (auto& [table_name, table_info] : table_info_by_name) {
+      const auto& table = table_info.table;
+      if (table->chunk_count() > 1 && table->get_chunk(ChunkID{0})->size() != _benchmark_config->chunk_size) {
+        std::cout << "- WARNING: " << table_name << " was loaded from binary, but has a mismatching chunk size of "
+                  << table->get_chunk(ChunkID{0})->size() << std::endl;
+      }
+    }
+
     std::cout << "- Writing tables into binary files if necessary" << std::endl;
 
     for (auto& [table_name, table_info] : table_info_by_name) {
@@ -75,7 +85,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Add the Tables to the StorageManager
    */
   std::cout << "- Adding tables to StorageManager and generating statistics " << std::endl;
-  auto& storage_manager = StorageManager::get();
+  auto& storage_manager = Hyrise::get().storage_manager;
   for (auto& [table_name, table_info] : table_info_by_name) {
     std::cout << "-  Adding '" << table_name << "' " << std::flush;
     Timer per_table_timer;
@@ -88,6 +98,13 @@ void AbstractTableGenerator::generate_and_store() {
 
   std::cout << "- Adding tables to StorageManager and generating statistics done ("
             << format_duration(metrics.store_duration) << ")" << std::endl;
+}
+
+std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config_with_chunk_size(
+    ChunkOffset chunk_size) {
+  auto config = BenchmarkConfig::get_default_config();
+  config.chunk_size = chunk_size;
+  return std::make_shared<BenchmarkConfig>(config);
 }
 
 }  // namespace opossum

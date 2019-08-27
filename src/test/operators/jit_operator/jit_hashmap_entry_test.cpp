@@ -7,21 +7,21 @@ class JitHashmapEntryTest : public BaseTest {};
 
 TEST_F(JitHashmapEntryTest, Accessors) {
   {
-    JitHashmapEntry hashmap_entry{DataType::String, false, 123u};
+    JitHashmapEntry hashmap_entry{DataType::String, true, 123u};
     ASSERT_EQ(hashmap_entry.data_type, DataType::String);
-    ASSERT_FALSE(hashmap_entry.is_nullable);
+    ASSERT_TRUE(hashmap_entry.guaranteed_non_null);
     ASSERT_EQ(hashmap_entry.column_index, 123u);
   }
   {
-    JitHashmapEntry hashmap_entry{DataType::Int, true, 456u};
+    JitHashmapEntry hashmap_entry{DataType::Int, false, 456u};
     ASSERT_EQ(hashmap_entry.data_type, DataType::Int);
-    ASSERT_TRUE(hashmap_entry.is_nullable);
+    ASSERT_FALSE(hashmap_entry.guaranteed_non_null);
     ASSERT_EQ(hashmap_entry.column_index, 456u);
   }
   {
-    JitHashmapEntry hashmap_entry{DataType::Double, true, 789u};
+    JitHashmapEntry hashmap_entry{DataType::Double, false, 789u};
     ASSERT_EQ(hashmap_entry.data_type, DataType::Double);
-    ASSERT_TRUE(hashmap_entry.is_nullable);
+    ASSERT_FALSE(hashmap_entry.guaranteed_non_null);
     ASSERT_EQ(hashmap_entry.column_index, 789u);
   }
 }
@@ -63,7 +63,7 @@ TEST_F(JitHashmapEntryTest, IsNullAndSetIsNull) {
   {
     const auto column_index = static_cast<size_t>(std::rand()) % 3;
     const auto row_index = static_cast<size_t>(std::rand()) % 10;
-    JitHashmapEntry hashmap_entry{DataType::Int, true, column_index};
+    JitHashmapEntry hashmap_entry{DataType::Int, false, column_index};
     const auto is_null_in = false;
     hashmap_entry.set_is_null(is_null_in, row_index, context);
     const auto is_null_out = hashmap_entry.is_null(row_index, context);
@@ -72,7 +72,7 @@ TEST_F(JitHashmapEntryTest, IsNullAndSetIsNull) {
   {
     const auto column_index = static_cast<size_t>(std::rand()) % 3;
     const auto row_index = static_cast<size_t>(std::rand()) % 10;
-    JitHashmapEntry hashmap_entry{DataType::Int, true, column_index};
+    JitHashmapEntry hashmap_entry{DataType::Int, false, column_index};
     const auto is_null_in = true;
     hashmap_entry.set_is_null(is_null_in, row_index, context);
     const auto is_null_out = hashmap_entry.is_null(row_index, context);

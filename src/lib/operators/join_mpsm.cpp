@@ -37,11 +37,10 @@ STRONG_TYPEDEF(uint32_t, ClusterID);
 
 namespace opossum {
 
-bool JoinMPSM::supports(JoinMode join_mode, PredicateCondition predicate_condition, DataType left_data_type,
-                        DataType right_data_type, bool secondary_predicates) {
-  return predicate_condition == PredicateCondition::Equals && left_data_type == right_data_type &&
-         join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue &&
-         join_mode != JoinMode::AntiNullAsFalse && !secondary_predicates;
+bool JoinMPSM::supports(const JoinConfiguration config) {
+  return config.predicate_condition == PredicateCondition::Equals && config.left_data_type == config.right_data_type &&
+         config.join_mode != JoinMode::Semi && config.join_mode != JoinMode::AntiNullAsTrue &&
+         config.join_mode != JoinMode::AntiNullAsFalse && !config.secondary_predicates;
 }
 
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
@@ -51,11 +50,11 @@ JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
     : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, primary_predicate, secondary_predicates) {}
 
 std::shared_ptr<const Table> JoinMPSM::_on_execute() {
-  Assert(supports(_mode, _primary_predicate.predicate_condition,
-                  input_table_left()->column_data_type(_primary_predicate.column_ids.first),
-                  input_table_right()->column_data_type(_primary_predicate.column_ids.second),
-                  !_secondary_predicates.empty()),
-         "JoinHash doesn't support these parameters");
+  Assert(supports({_mode, _primary_predicate.predicate_condition,
+                   input_table_left()->column_data_type(_primary_predicate.column_ids.first),
+                   input_table_right()->column_data_type(_primary_predicate.column_ids.second),
+                   !_secondary_predicates.empty(), input_table_left()->type(), input_table_right()->type()}),
+         "JoinMPSM doesn't support these parameters");
 
   // Check column types
   const auto& left_column_type = input_table_left()->column_data_type(_primary_predicate.column_ids.first);

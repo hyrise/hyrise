@@ -1,0 +1,6 @@
+a|b|STDDEV_SAMP(c)|STDDEV_SAMP(d)
+int|float|double_null|double_null
+12345|456.7|2.82842|11.24299
+12345|457.7|2.12132|22.27386
+123|458.7|0.0|2.68700
+12|350.7|null|null

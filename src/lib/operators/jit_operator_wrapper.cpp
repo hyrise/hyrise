@@ -49,6 +49,8 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   Assert(_source(), "JitOperatorWrapper does not have a valid source node.");
   Assert(_sink(), "JitOperatorWrapper does not have a valid sink node.");
 
+  _prepare_and_specialize_operator_pipeline();
+
   const auto in_table = input_left()->get_output();
 
   auto out_table = _sink()->create_output_table(*in_table);
@@ -59,12 +61,14 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
     context.snapshot_commit_id = transaction_context()->snapshot_commit_id();
   }
 
-  _prepare_and_specialize_operator_pipeline();
-
   _source()->before_query(*in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
 
-  for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count() && context.limit_rows; ++chunk_id) {
+  const auto chunk_count = in_table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count && context.limit_rows; ++chunk_id) {
+    const auto chunk = in_table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
     bool use_specialized_function = _source()->before_chunk(*in_table, chunk_id, _input_parameter_values, context);
     if (use_specialized_function) {
       _specialized_function_wrapper->execute_func(_source().get(), context);
@@ -86,14 +90,12 @@ void JitOperatorWrapper::_prepare_and_specialize_operator_pipeline() {
   if (_specialized_function_wrapper->execute_func) return;
 
   const auto in_table = input_left()->get_output();
-  _source()->before_specialization(*in_table);
 
   const auto jit_operators = _specialized_function_wrapper->jit_operators;
 
+  std::vector<bool> tuple_non_nullable_information;
   for (auto& jit_operator : jit_operators) {
-    if (auto jit_validate = std::dynamic_pointer_cast<JitValidate>(jit_operator)) {
-      jit_validate->input_table_type = input_left()->get_output()->type();
-    }
+    jit_operator->before_specialization(*in_table, tuple_non_nullable_information);
   }
 
   // Connect operators to a chain

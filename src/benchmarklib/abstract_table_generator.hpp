@@ -12,6 +12,9 @@ namespace opossum {
 class BenchmarkConfig;
 
 struct BenchmarkTableInfo {
+  BenchmarkTableInfo() = default;
+  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& table);
+
   std::shared_ptr<Table> table;
 
   // Set if the table has a binary/textual file path associated with it. E.g., if the table was loaded from such a file
@@ -54,6 +57,8 @@ class AbstractTableGenerator {
   virtual std::unordered_map<std::string, BenchmarkTableInfo> generate() = 0;
 
   TableGenerationMetrics metrics;
+
+  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_t chunk_size);
 
  protected:
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
