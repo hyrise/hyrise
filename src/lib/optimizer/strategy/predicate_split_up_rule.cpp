@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& node) const {
+bool PredicateSplitUpRule::splitConjunction(const std::shared_ptr<AbstractLQPNode>& node) const {
   /**
   * Step 1:
   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
@@ -48,7 +48,7 @@ bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& node
   return true;
 }
 
-bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& node) const {
+bool PredicateSplitUpRule::splitDisjunction(const std::shared_ptr<AbstractLQPNode>& node) const {
   /**
    * Step 1:
    *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_disjunctions`
@@ -100,7 +100,7 @@ bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& node)
 void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
 
-  while (splitAnd(root) || splitOr(root)) {
+  while (splitConjunction(root) || splitDisjunction(root)) {
   }  // Split nested predicates as long as possible
 }
 

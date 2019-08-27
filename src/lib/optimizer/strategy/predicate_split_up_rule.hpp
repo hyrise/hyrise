@@ -27,16 +27,14 @@ class PredicateSplitUpRule : public AbstractRule {
 
  private:
   /**
-   * Split up conjunctions.
    * @return true if the LQP was changed
    */
-  bool splitAnd(const std::shared_ptr<AbstractLQPNode>& node) const;
+  bool splitConjunction(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   /**
-   * Split up disjunctions.
    * @return true if the LQP was changed
    */
-  bool splitOr(const std::shared_ptr<AbstractLQPNode>& node) const;
+  bool splitDisjunction(const std::shared_ptr<AbstractLQPNode>& node) const;
 };
 
 }  // namespace opossum
