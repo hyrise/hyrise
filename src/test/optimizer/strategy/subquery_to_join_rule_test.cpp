@@ -16,6 +16,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "optimizer/strategy/join_predicate_ordering_rule.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
 #include "utils/load_table.hpp"
 
@@ -886,7 +887,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedExistsToSemiJoin) {
     node_d);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(d_b, e_b), greater_than_(d_c, e_c)),
+  JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(d_c, e_c), equals_(d_b, e_b)),
     node_d,
     ProjectionNode::make(expression_vector(e_a, e_c, e_b),
       node_e));
@@ -1068,7 +1069,7 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedComparatorToSemiJoin) {
     node_a);
 
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Semi, expression_vector(equals_(a_b, b_b), greater_than_(a_a, sum_(b_a))),
+  JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, sum_(b_a)), equals_(a_b, b_b)),
     node_a,
     AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
       node_b));
@@ -1099,7 +1100,7 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   PredicateNode::make(greater_than_(d_a, subquery),
     node_d);
 
-  const auto join_predicates = expression_vector(equals_(d_c, e_c), greater_than_(d_a, sum_(e_a)), equals_(d_b, e_b));
+  const auto join_predicates = expression_vector(greater_than_(d_a, sum_(e_a)), equals_(d_c, e_c), equals_(d_b, e_b));
 
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, join_predicates,
@@ -1130,7 +1131,7 @@ TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredic
   PredicateNode::make(greater_than_(d_a, subquery),
     node_d);
 
-  const auto join_predicates = expression_vector(equals_(d_b, e_b), greater_than_(d_a, sum_(e_a)));
+  const auto join_predicates = expression_vector(greater_than_(d_a, sum_(e_a)), equals_(d_b, e_b));
 
   const auto expected_lqp =
   JoinNode::make(JoinMode::Semi, join_predicates,
@@ -1177,8 +1178,8 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH17) {
   AliasNode::make(expression_vector(div_(sum_(l_extendedprice), value_(7))), std::vector<std::string>{"avg_yearly"},
     ProjectionNode::make(expression_vector(div_(sum_(l_extendedprice), value_(7))),
       AggregateNode::make(expression_vector(), expression_vector(sum_(l_extendedprice)),
-        JoinNode::make(JoinMode::Semi, expression_vector(equals_(p_partkey, l_partkey),
-                                                         less_than_(l_quantity, mul_(value_(0.2), avg_(l_quantity)))),
+        JoinNode::make(JoinMode::Semi, expression_vector(less_than_(l_quantity, mul_(value_(0.2), avg_(l_quantity))),
+                                                         equals_(p_partkey, l_partkey)),
           JoinNode::make(JoinMode::Inner, equals_(p_partkey, l_partkey),
             ProjectionNode::make(expression_vector(l_partkey, l_quantity, l_extendedprice),
               lineitem),
@@ -1245,8 +1246,8 @@ TEST_F(SubqueryToJoinRuleTest, OptimizeTPCH20) {
             nation)))));
 
   const auto join_predicates = expression_vector(
-    equals_(ps_partkey, l_partkey),
     greater_than_(ps_availqty, mul_(value_(0.5), sum_(l_quantity))),
+    equals_(ps_partkey, l_partkey),
     equals_(ps_suppkey, l_suppkey));
 
   const auto expected_lqp =
