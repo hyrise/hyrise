@@ -3,7 +3,6 @@
 #include <chrono>
 
 #include "encoding_config.hpp"
-#include "utils/null_streambuf.hpp"
 
 namespace opossum {
 
