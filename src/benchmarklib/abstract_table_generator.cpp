@@ -3,9 +3,9 @@
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
+#include "operators/export_binary.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "operators/export_binary.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
@@ -130,8 +130,7 @@ void AbstractTableGenerator::generate_and_store() {
     }
   }
   metrics.index_duration = timer.lap();
-  std::cout << "- Creating indexes done ("
-            << format_duration(metrics.index_duration) << ")" << std::endl;
+  std::cout << "- Creating indexes done (" << format_duration(metrics.index_duration) << ")" << std::endl;
 }
 
 std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config_with_chunk_size(
@@ -141,6 +140,6 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
   return std::make_shared<BenchmarkConfig>(config);
 }
 
-AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const {return {};};
+AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; };
 
 }  // namespace opossum

@@ -108,19 +108,22 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
   // when remove(iterator) invalidates the iterator.
   // TODO test fix
-  pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(), [&](auto& statistics) {
-    for (auto& original_column_id : statistics.column_ids) {
-      const auto& updated_column_id = column_id_mapping[original_column_id];
-      if (!updated_column_id) {
-        // Indexed column was pruned - remove index from statistics
-        return true;
-      } else {
-        // Update column id
-        original_column_id = *updated_column_id;
-      }
-    }
-    return false;
-  }), pruned_indexes_statistics.end());
+  pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
+                                                 [&](auto& statistics) {
+                                                   for (auto& original_column_id : statistics.column_ids) {
+                                                     const auto& updated_column_id =
+                                                         column_id_mapping[original_column_id];
+                                                     if (!updated_column_id) {
+                                                       // Indexed column was pruned - remove index from statistics
+                                                       return true;
+                                                     } else {
+                                                       // Update column id
+                                                       original_column_id = *updated_column_id;
+                                                     }
+                                                   }
+                                                   return false;
+                                                 }),
+                                  pruned_indexes_statistics.end());
 
   return pruned_indexes_statistics;
 }
