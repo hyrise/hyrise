@@ -8,12 +8,12 @@
 namespace opossum {
 
 bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& root) const {
- /**
- * Step 1:
- *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
- */
+  /**
+  * Step 1:
+  *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
+  */
   auto predicate_nodes_to_flat_conjunctions =
-  std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
+      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
   visit_lqp(root, [&](const auto& sub_node) {
     if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
@@ -48,12 +48,12 @@ bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& root
 }
 
 bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& root) const {
- /**
- * Step 1:
- *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_disjunctions`
- */
+  /**
+   * Step 1:
+   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_disjunctions`
+   */
   auto predicate_nodes_to_flat_disjunctions =
-  std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
+      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
   visit_lqp(root, [&](const auto& sub_node) {
     if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
@@ -99,7 +99,8 @@ bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& root)
 void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
 
-  while (splitAnd(root) || splitOr(root)) {} // Split nested predicates as long as possible
+  while (splitAnd(root) || splitOr(root)) {
+  }  // Split nested predicates as long as possible
 }
 
 }  // namespace opossum

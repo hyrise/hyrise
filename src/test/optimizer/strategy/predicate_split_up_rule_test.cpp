@@ -2,9 +2,9 @@
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/predicate_split_up_rule.hpp"
 #include "testing_assert.hpp"
 
@@ -236,7 +236,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimplyNestedConjunctionsAndDisjunctions)
   // SELECT * FROM a WHERE (a > 10 OR a < 8) AND (b <= 7 OR 11 = b)
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))),
+  PredicateNode::make(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))),  // NOLINT
     node_a);
 
   const auto lower_union_node =
@@ -265,7 +265,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpDeeplyNestedConjunctionsAndDisjunctions)
   // ) WHERE (a > 10 OR a < 8) AND (b <= 7 OR 11 = b) OR ((a = 5 AND b = 7) AND 13 = 13)
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(or_(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))), and_(and_(equals_(a_a, 5), greater_than_(a_b, 7)), equals_(13, 13))),
+  PredicateNode::make(or_(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))), and_(and_(equals_(a_a, 5), greater_than_(a_b, 7)), equals_(13, 13))),  // NOLINT
     ProjectionNode::make(expression_vector(a_b, a_a),
       PredicateNode::make(and_(equals_(a_a, a_b), greater_than_(a_a, 3)),
         node_a)));
