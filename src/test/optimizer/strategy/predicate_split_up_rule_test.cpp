@@ -41,6 +41,9 @@ class PredicateSplitUpRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(PredicateSplitUpRuleTest, SplitUpConjunctionInPredicateNode) {
+  // SELECT * FROM (
+  //   SELECT a, b FROM a WHERE 13 = 13 AND (a = b AND a = 3)
+  // ) WHERE a = 5 AND b = 7
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(and_(equals_(a_a, 5), greater_than_(a_b, 7)),
@@ -222,6 +225,33 @@ TEST_F(PredicateSplitUpRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
       union_node),
     ProjectionNode::make(expression_vector(a_b),
       union_node));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions) {
+  // SELECT * FROM a WHERE (a > 10 OR a < 8) AND (b <= 7 OR 11 = b)
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))),
+    node_a);
+
+  const auto lower_union_node =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(greater_than_(a_a, value_(10)),
+      node_a),
+    PredicateNode::make(less_than_(a_a, value_(8)),
+      node_a));
+
+  const auto expected_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(less_than_equals_(a_b, 7),
+      lower_union_node),
+    PredicateNode::make(equals_(value_(11), a_b),
+      lower_union_node));
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);

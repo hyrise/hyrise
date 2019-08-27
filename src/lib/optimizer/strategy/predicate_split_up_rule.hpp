@@ -34,7 +34,13 @@ namespace opossum {
  *   semi-joins.
  */
 class PredicateSplitUpRule : public AbstractRule {
+ public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
+
+ private:
+  // TODO(jj): add doc
+  bool splitAnd(const std::shared_ptr<AbstractLQPNode>& root) const;
+  bool splitOr(const std::shared_ptr<AbstractLQPNode>& root) const;
 };
 
 }  // namespace opossum
