@@ -10,7 +10,6 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "optimizer/strategy/disjunction_to_union_rule.hpp"
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
@@ -104,10 +103,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Run after
   //  - JoinOrderingRule because it leads to a call of JoinGraphBuilder::_parse_union(), which reverts the
-  //    changes of the DisjunctionToUnionRule
+  //    changes of the disjunction to union reformulation
   //  - BetweenCompositionRule because it would crash the reformulated TPC-H 7 (#1813)
-  optimizer->add_rule(std::make_unique<DisjunctionToUnionRule>());
-
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
