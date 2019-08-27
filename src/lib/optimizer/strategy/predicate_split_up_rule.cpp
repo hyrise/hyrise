@@ -99,12 +99,7 @@ bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& root)
 void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
 
-  bool disjunctions_found = true;
-  bool conjunctions_found = true;
-  while (conjunctions_found || disjunctions_found) {
-    conjunctions_found = splitAnd(root);
-    disjunctions_found = splitOr(root);
-  } // todo(jj): test recursive rule
+  while (splitAnd(root) || splitOr(root)) {} // Split nested predicates as long as possible
 }
 
 }  // namespace opossum
