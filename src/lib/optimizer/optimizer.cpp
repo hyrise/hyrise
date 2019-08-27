@@ -108,6 +108,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   //  - BetweenCompositionRule because it would crash the reformulated TPC-H 7 (#1813)
   optimizer->add_rule(std::make_unique<DisjunctionToUnionRule>());
 
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
