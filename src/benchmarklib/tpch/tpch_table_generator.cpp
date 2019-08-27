@@ -278,7 +278,7 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
   return {
       {"part", {{"p_partkey"}}},
       {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
-      // TODO multi-column indexes are currently not used by the index scan rule and the translator
+      // TODO(anyone): multi-column indexes are currently not used by the index scan rule and the translator
       {"partsupp", {{"ps_partkey", "ps_suppkey"}, {"ps_suppkey"}}},  // ps_partkey is subset of {ps_partkey, ps_suppkey}
       {"customer", {{"c_custkey"}, {"c_nationkey"}}},
       {"orders", {{"o_orderkey"}, {"o_custkey"}}},
