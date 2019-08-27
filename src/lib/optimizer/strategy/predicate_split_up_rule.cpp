@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& root) const {
+bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& node) const {
   /**
   * Step 1:
   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
@@ -15,7 +15,7 @@ bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& root
   auto predicate_nodes_to_flat_conjunctions =
       std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
-  visit_lqp(root, [&](const auto& sub_node) {
+  visit_lqp(node, [&](const auto& sub_node) {
     if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
       const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
 
@@ -47,7 +47,7 @@ bool PredicateSplitUpRule::splitAnd(const std::shared_ptr<AbstractLQPNode>& root
   return true;
 }
 
-bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& root) const {
+bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& node) const {
   /**
    * Step 1:
    *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_disjunctions`
@@ -55,7 +55,7 @@ bool PredicateSplitUpRule::splitOr(const std::shared_ptr<AbstractLQPNode>& root)
   auto predicate_nodes_to_flat_disjunctions =
       std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
 
-  visit_lqp(root, [&](const auto& sub_node) {
+  visit_lqp(node, [&](const auto& sub_node) {
     if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
       const auto flat_disjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::Or);
 

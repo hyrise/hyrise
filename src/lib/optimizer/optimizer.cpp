@@ -90,11 +90,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
-  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
-
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
