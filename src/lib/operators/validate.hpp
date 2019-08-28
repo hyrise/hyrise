@@ -33,6 +33,8 @@ class Validate : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+
+  bool _is_chunk_visible(TransactionID our_tid, CommitID snapshot_commit_id, const MvccData& mvcc_data);
 };
 
 }  // namespace opossum

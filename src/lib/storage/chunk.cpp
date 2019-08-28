@@ -102,6 +102,22 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indexes(
   return result;
 }
 
+void Chunk::optimize_mvcc() {
+  auto mvcc = get_scoped_mvcc_data_lock();
+
+  if (mvcc->begin_cids.size() == 0) {
+    return;
+  }
+
+  const auto max_begin_cid = *(std::max_element(mvcc->begin_cids.begin(), mvcc->begin_cids.end()));
+  const auto max_end_cid = *(std::max_element(mvcc->end_cids.begin(), mvcc->end_cids.end()));
+  const auto max_tid = *(std::max_element(mvcc->tids.begin(), mvcc->tids.end()));
+
+  mvcc->max_begin_cid = max_begin_cid;
+  mvcc->max_end_cid = max_end_cid;
+  mvcc->max_tid = max_tid;
+}
+
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
   return get_indexes(segments);

@@ -200,7 +200,12 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   }
 #endif
 
-  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
+
+  auto c = std::make_shared<Chunk>(segments, mvcc_data, alloc);
+  _chunks.push_back(c);
+
+  if (mvcc_data)
+    c->optimize_mvcc();
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {

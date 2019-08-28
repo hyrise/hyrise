@@ -22,6 +22,10 @@ struct MvccData {
   pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
   pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
 
+  std::optional<CommitID> max_begin_cid;
+  std::optional<CommitID> max_end_cid;
+  std::optional<copyable_atomic<TransactionID>> max_tid;
+
   explicit MvccData(const size_t size, CommitID begin_commit_id);
 
   size_t size() const;

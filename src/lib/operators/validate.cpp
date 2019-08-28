@@ -51,6 +51,14 @@ std::shared_ptr<const Table> Validate::_on_execute() {
   Fail("Validate can't be called without a transaction context.");
 }
 
+bool Validate::_is_chunk_visible(TransactionID our_tid, CommitID snapshot_commit_id, const MvccData& mvcc_data) {
+  const auto row_tid = mvcc_data.max_tid->load();
+  const auto max_begin_cid = mvcc_data.max_begin_cid;
+  const auto max_end_cid = mvcc_data.max_end_cid;
+
+  return snapshot_commit_id < max_end_cid && ((snapshot_commit_id >= max_begin_cid) != (row_tid == our_tid));
+}
+
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
   DebugAssert(transaction_context, "Validate requires a valid TransactionContext.");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
@@ -64,6 +72,24 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
   const auto chunk_count = in_table->chunk_count();
+
+
+  if (in_table->type() == TableType::Data) {
+    ChunkID visible_chunks = ChunkID{0};
+
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk_in = in_table->get_chunk(chunk_id);
+      DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
+      const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
+
+      if (!_is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) break;
+
+      ++visible_chunks;
+    }
+
+    if (visible_chunks == chunk_count) return in_table;
+
+  }
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
@@ -127,11 +153,21 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
       pos_list_out->guarantee_single_chunk();
 
-      // Generate pos_list_out.
-      auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
-      for (auto i = 0u; i < chunk_size; i++) {
-        if (opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
-          pos_list_out->emplace_back(RowID{chunk_id, i});
+      if (_is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
+        // return;
+        auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
+        pos_list_out->resize(chunk_size);
+        for (auto i = 0u; i < chunk_size; i++) {
+          (*pos_list_out)[i] = RowID{chunk_id, i};
+        }
+      } else {
+
+        // Generate pos_list_out.
+        auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
+        for (auto i = 0u; i < chunk_size; i++) {
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
+            pos_list_out->emplace_back(RowID{chunk_id, i});
+          }
         }
       }
 
