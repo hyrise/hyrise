@@ -169,7 +169,7 @@ TEST_F(PredicateSplitUpRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicateSplitUpRuleTest, SplitUpSimplyNestedConjunctionsAndDisjunctions) {
+TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions) {
   // SELECT * FROM a WHERE (a > 10 OR a < 8) AND (b <= 7 OR 11 = b)
   // clang-format off
   const auto input_lqp =
@@ -196,7 +196,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimplyNestedConjunctionsAndDisjunctions)
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicateSplitUpRuleTest, SplitUpDeeplyNestedConjunctionsAndDisjunctions) {
+TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions) {
   // SELECT * FROM (
   //   SELECT a, b FROM a WHERE a = b AND a = 3
   // ) WHERE (a > 10 OR a < 8) AND (b <= 7 OR 11 = b) OR ((a = 5 AND b = 7) AND 13 = 13)

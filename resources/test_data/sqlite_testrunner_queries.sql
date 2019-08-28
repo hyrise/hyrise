@@ -83,6 +83,8 @@ SELECT a FROM mixed WHERE 1 OR 3 > 2;
 SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_100 AS c WHERE c.b = a.b)
 SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS c WHERE c.b + 1 = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS d WHERE d.b + 2 = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS e WHERE e.b + 3 = a.b)
 SELECT * FROM (SELECT a.a FROM id_int_int_int_100 AS a, mixed AS b WHERE a.a = b.b OR a.b = b.c) r JOIN (SELECT a.b FROM id_int_int_int_100 AS a, mixed AS b WHERE a.a = b.b OR a.b = b.c) s ON r.a = s.b
+SELECT * FROM mixed WHERE (b > 10 OR b < 8) AND (c <= 7 OR 11 = c)
+SELECT * FROM (SELECT b, c FROM mixed WHERE b = c AND b = 3) WHERE (b > 10 OR b < 8) AND (c <= 7 OR 11 = c) OR ((b = 5 AND c = 7) AND 13 = 13)
 
 -- Projection
 SELECT a FROM mixed;
