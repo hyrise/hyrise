@@ -18,8 +18,8 @@
 
 namespace opossum {
 
-JitCodeSpecializer::JitCodeSpecializer(std::shared_ptr<JitRepository> repository)
-    : _repository{repository ? repository : JitRepository::make_shared()}, _llvm_context{_repository->llvm_context()} {
+JitCodeSpecializer::JitCodeSpecializer(std::shared_ptr<JitRepository>& repository)
+    : _repository{repository ? repository : JitRepository::_make_shared()}, _llvm_context{_repository->llvm_context()} {
   if (!Hyrise::get().jit_repository) {
     Hyrise::get().set_jit_repository(_repository);
   }

@@ -46,7 +46,7 @@ class JitRepository : public Noncopyable {
   friend class JitCodeSpecializer;
   friend class ResolveConditionTest;
 
-  static std::shared_ptr<JitRepository> make_shared();
+  static std::shared_ptr<JitRepository> _make_shared();
 
   std::shared_ptr<llvm::LLVMContext> _llvm_context;
   std::unique_ptr<llvm::Module> _module;

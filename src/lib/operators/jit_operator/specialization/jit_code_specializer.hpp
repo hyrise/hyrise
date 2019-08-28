@@ -25,7 +25,7 @@ class JitRTTIHelper {
 
 class JitCodeSpecializer {
  public:
-  explicit JitCodeSpecializer(std::shared_ptr<JitRepository> repository = Hyrise::get().jit_repository);
+  explicit JitCodeSpecializer(std::shared_ptr<JitRepository>& repository = Hyrise::get().jit_repository);
 
   // Specializes the given function with the provided runtime information.
   // The root_function_name must be the mangled name of the function to be specialized. This function must exist in the
