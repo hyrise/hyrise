@@ -26,6 +26,8 @@ struct MvccData {
   std::optional<CommitID> max_end_cid;
   std::optional<copyable_atomic<TransactionID>> max_tid;
 
+  std::atomic<bool> dirty = false;
+
   explicit MvccData(const size_t size, CommitID begin_commit_id);
 
   size_t size() const;

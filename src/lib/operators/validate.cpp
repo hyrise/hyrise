@@ -82,7 +82,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
 
-      if (chunk_in->invalid_row_count() > 0) break;
+      if (mvcc_data->dirty) break;
       if (!_is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) break;
 
       ++visible_chunks;
@@ -154,7 +154,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
       pos_list_out->guarantee_single_chunk();
 
-      if (_is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
+      if (!mvcc_data->dirty && _is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
         // return;
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
         pos_list_out->resize(chunk_size);
