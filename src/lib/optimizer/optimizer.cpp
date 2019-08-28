@@ -6,10 +6,7 @@
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
-#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "strategy/between_composition_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
@@ -21,7 +18,6 @@
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
-#include "utils/performance_warning.hpp"
 
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUBQUERY LQPS
@@ -99,8 +95,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
-  // Run after the JoinOrderingRule because it leads to a call of JoinGraphBuilder::_parse_union(), which reverts the
-  // changes of the disjunction to union reformulation.
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
