@@ -8,10 +8,6 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
-#include "operators/print.hpp"
-
-// TODO remove cout stuff
-
 namespace opossum {
 
 void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -21,20 +17,19 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
     return;
   }
 
+  const auto join_mode = std::static_pointer_cast<JoinNode>(node)->join_mode;
+
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
   const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
-
-  std::cout << "found a multi predicate join with these predicates and predicted cardinalities:\n";
 
   // Estimate selectivity of a predicate by getting cardinalities for a join node joining only on that one predicate.
   auto predicate_cardinalities = std::unordered_map<std::shared_ptr<AbstractExpression>, Cardinality>{};
   for (const auto& predicate : node->node_expressions) {
-    auto single_predicate_join = JoinNode::make(JoinMode::Left, predicate);
+    const auto single_predicate_join = JoinNode::make(join_mode, predicate);
     single_predicate_join->set_left_input(node->left_input());
     single_predicate_join->set_right_input(node->right_input());
 
     predicate_cardinalities[predicate] = caching_cardinality_estimator->estimate_cardinality(single_predicate_join);
-    std::cout << predicate->as_column_name() << ": " << predicate_cardinalities[predicate] << "\n";
   }
 
   // Sort predicates by descending selectivity.
@@ -45,10 +40,7 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
 
   // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
   // join predicate. Check that one exists and move it to the front.
-  const auto join_mode = std::static_pointer_cast<JoinNode>(node)->join_mode;
-  std::cout << "checking join mode\n";
   if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
-    std::cout << "found semi/anti join\n";
     auto first_equals_predicate =
         std::find_if(node->node_expressions.begin(), node->node_expressions.end(),
                      [](const std::shared_ptr<AbstractExpression>& expression) {
@@ -57,7 +49,7 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
                      });
 
     Assert(first_equals_predicate != node->node_expressions.end(),
-           "Semi/anti joins require at least one Equals predicate at the moment.");
+           "Semi/anti joins require at least one equals predicate at the moment.");
 
     while (first_equals_predicate != node->node_expressions.begin()) {
       std::iter_swap(first_equals_predicate, first_equals_predicate - 1);
@@ -66,7 +58,7 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
 
     Assert(std::static_pointer_cast<AbstractPredicateExpression>(node->node_expressions.front())->predicate_condition ==
                PredicateCondition::Equals,
-           "The primary join predicate must be Equals for semi/anti join.");
+           "The primary join predicate must be equals for semi/anti join.");
   }
 
   _apply_to_inputs(node);
