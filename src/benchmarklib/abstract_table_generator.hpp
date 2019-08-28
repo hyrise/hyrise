@@ -58,7 +58,7 @@ class AbstractTableGenerator {
 
   TableGenerationMetrics metrics;
 
-  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_t chunk_size);
+  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(ChunkOffset chunk_size);
 
  protected:
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
