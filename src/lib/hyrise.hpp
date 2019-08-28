@@ -12,6 +12,7 @@
 namespace opossum {
 
 class JitRepository;
+class BenchmarkRunner;
 
 class Hyrise : public Singleton<Hyrise> {
  public:
@@ -26,6 +27,8 @@ class Hyrise : public Singleton<Hyrise> {
 
   void set_jit_repository(std::shared_ptr<JitRepository> repo) { jit_repository = repo; }
 
+  void set_benchmark_runner(std::shared_ptr<BenchmarkRunner> runner) { benchmark_runner = runner; }
+
   PluginManager plugin_manager;
   StorageManager storage_manager;
   TransactionManager transaction_manager;
@@ -34,6 +37,7 @@ class Hyrise : public Singleton<Hyrise> {
   CurrentScheduler current_scheduler;
 
   std::shared_ptr<JitRepository> jit_repository;
+  std::shared_ptr<BenchmarkRunner> benchmark_runner;
 
  private:
   Hyrise() {
