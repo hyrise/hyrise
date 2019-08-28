@@ -80,7 +80,14 @@ TEST_F(AliasNodeTest, Hash) {
   const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
   EXPECT_NE(alias_node->hash(), alias_node_other_expressions->hash());
   const auto alias_node_other_left_input = AliasNode::make(expressions, aliases, other_mock_node);
-  EXPECT_NE(alias_node->hash(), alias_node_other_left_input->hash());
+  // alias_node == alias_node_other_left_input is true (see AliasNodeTest/Equals)
+  // but the hash codes of these nodes are not equal.
+  EXPECT_EQ(alias_node->hash(), alias_node_other_left_input->hash());
+  // the following assertions clearify why the nodes are not equal but their hashes are
+  EXPECT_NE(*a, *expr_a);
+  EXPECT_NE(*b, *expr_b);
+  EXPECT_EQ(a->hash(), expr_a->hash());
+  EXPECT_EQ(b->hash(), expr_b->hash());
 }
 
 }  // namespace opossum
