@@ -35,6 +35,7 @@
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "scheduler/no_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
@@ -763,10 +764,10 @@ int Console::_change_runtime_setting(const std::string& input) {
 
   if (property == "scheduler") {
     if (value == "on") {
-      CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+      Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
       out("Scheduler turned on\n");
     } else if (value == "off") {
-      CurrentScheduler::set(nullptr);
+      Hyrise::get().current_scheduler.set(std::make_shared<NoScheduler>());
       out("Scheduler turned off\n");
     } else {
       out("Usage: scheduler (on|off)\n");

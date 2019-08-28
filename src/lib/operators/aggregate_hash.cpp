@@ -13,6 +13,7 @@
 
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -268,7 +269,7 @@ void AggregateHash::_aggregate() {
     jobs.back()->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().current_scheduler.wait_for_tasks(jobs);
 
   /*
   AGGREGATION PHASE

@@ -14,6 +14,7 @@
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
 #include "current_scheduler.hpp"
+#include "hyrise.hpp"
 #include "task_queue.hpp"
 
 namespace {
@@ -48,7 +49,7 @@ void Worker::operator()() {
 
   _set_affinity();
 
-  while (CurrentScheduler::get()->active()) {
+  while (Hyrise::get().current_scheduler.get()->active()) {
     _work();
   }
 }
@@ -59,7 +60,7 @@ void Worker::_work() {
   if (!task) {
     // Simple work stealing without explicitly transferring data between nodes.
     auto work_stealing_successful = false;
-    for (auto& queue : CurrentScheduler::get()->queues()) {
+    for (auto& queue : Hyrise::get().current_scheduler.get()->queues()) {
       if (queue == _queue) {
         continue;
       }
@@ -93,7 +94,8 @@ void Worker::_work() {
 void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
 
 void Worker::join() {
-  Assert(!CurrentScheduler::get()->active(), "Worker can't be join()-ed while the scheduler is still active");
+  Assert(!Hyrise::get().current_scheduler.get()->active(),
+         "Worker can't be join()-ed while the scheduler is still active");
   _thread.join();
 }
 

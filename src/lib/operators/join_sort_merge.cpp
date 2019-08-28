@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
@@ -786,7 +787,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       jobs.back()->schedule();
     }
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().current_scheduler.wait_for_tasks(jobs);
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.

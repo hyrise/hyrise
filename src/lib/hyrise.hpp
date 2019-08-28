@@ -2,6 +2,7 @@
 
 #include "boost/container/pmr/memory_resource.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -17,9 +18,11 @@ class Hyrise : public Singleton<Hyrise> {
   // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
   // creating new ones. This is used especially in tests and can lead to a lot of
   // issues if there are still running tasks / threads that want to access a resource.
-  // You should be very sure that this is what you want. Have a look at base_test.hpp
-  // to see the correct order of resetting things.
-  static void reset() { get() = Hyrise{}; }
+  // You should be very sure that this is what you want.
+  static void reset() {
+    Hyrise::get().current_scheduler.get()->finish();
+    get() = Hyrise{};
+  }
 
   void set_jit_repository(std::shared_ptr<JitRepository> repo) { jit_repository = repo; }
 
@@ -28,6 +31,7 @@ class Hyrise : public Singleton<Hyrise> {
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
   Topology topology;
+  CurrentScheduler current_scheduler;
 
   std::shared_ptr<JitRepository> jit_repository;
 
@@ -48,6 +52,7 @@ class Hyrise : public Singleton<Hyrise> {
     transaction_manager = TransactionManager{};
     meta_table_manager = MetaTableManager{};
     topology = Topology{};
+    current_scheduler = CurrentScheduler{};
   }
   friend class Singleton;
 };

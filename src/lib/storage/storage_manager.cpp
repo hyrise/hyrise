@@ -163,7 +163,7 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
     job_task->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(tasks);
+  Hyrise::get().current_scheduler.wait_for_tasks(tasks);
 }
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {

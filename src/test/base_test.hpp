@@ -65,9 +65,6 @@ class BaseTestWithParam
    * GTest runs the destructor right after TearDown(): https://github.com/abseil/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown
    */
   ~BaseTestWithParam() {
-    // Reset scheduler first so that all tasks are done before we kill the StorageManager
-    CurrentScheduler::set(nullptr);
-
     Hyrise::reset();
     SQLPipelineBuilder::default_pqp_cache = nullptr;
     SQLPipelineBuilder::default_lqp_cache = nullptr;

@@ -19,6 +19,7 @@
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -163,7 +164,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     job_task->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().current_scheduler.wait_for_tasks(jobs);
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "import_export/csv_converter.hpp"
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
@@ -81,7 +82,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     tasks.back()->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(tasks);
+  Hyrise::get().current_scheduler.wait_for_tasks(tasks);
 
   for (auto& segments : segments_by_chunks) {
     DebugAssert(!segments.empty(), "Empty chunks shouldn't occur when importing CSV");

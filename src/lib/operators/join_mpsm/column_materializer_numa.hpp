@@ -108,7 +108,7 @@ class ColumnMaterializerNUMA {
       jobs.back()->schedule(numa_node_id);
     }
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().current_scheduler.wait_for_tasks(jobs);
 
     for (auto& partition : (*output)) {
       // removes null pointers, this is important since we currently opt against using mutexes so we have sparse vectors

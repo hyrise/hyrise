@@ -1,5 +1,4 @@
 #include "node_queue_scheduler.hpp"
-
 #include <cstdlib>
 #include <iostream>
 #include <memory>

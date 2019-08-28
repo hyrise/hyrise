@@ -1,0 +1,31 @@
+#pragma once
+
+#include "abstract_scheduler.hpp"
+#include "abstract_task.hpp"
+
+namespace opossum {
+
+class NoScheduler : public AbstractScheduler {
+  friend class CurrentScheduler;
+
+ public:
+  void begin() override {}
+
+  void wait_for_all_tasks() override {}
+
+  void finish() override {}
+
+  bool active() const override { return false; }
+
+  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override { return _queues; }
+
+  void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
+                SchedulePriority priority = SchedulePriority::Default) override {
+    if (task->is_ready()) task->execute();
+  }
+
+ private:
+  std::vector<std::shared_ptr<TaskQueue>> _queues = std::vector<std::shared_ptr<TaskQueue>>{};
+};
+
+}  // namespace opossum

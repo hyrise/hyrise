@@ -25,6 +25,7 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
+#include "hyrise.hpp"
 #include "like_matcher.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
@@ -942,7 +943,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
   row_pqp->set_parameters(parameters);
 
   const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp, CleanupTemporaries::Yes);
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().current_scheduler.schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
 }

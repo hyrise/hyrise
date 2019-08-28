@@ -4,6 +4,8 @@
 
 #include "expression/between_expression.hpp"
 
+#include "hyrise.hpp"
+
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
@@ -55,7 +57,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     }
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().current_scheduler.wait_for_tasks(jobs);
 
   return _out_table;
 }
