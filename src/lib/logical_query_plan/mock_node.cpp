@@ -90,8 +90,8 @@ size_t MockNode::_on_hash() const {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
   }
   for (const auto& [type, column_name] : _column_definitions) {
-    boost::hash_combine(hash, boost::hash_value(type));
-    boost::hash_combine(hash, boost::hash_value(column_name));
+    boost::hash_combine(hash, type);
+    boost::hash_combine(hash, column_name);
   }
   return hash;
 }

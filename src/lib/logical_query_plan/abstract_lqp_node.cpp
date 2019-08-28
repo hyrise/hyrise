@@ -77,7 +77,7 @@ size_t AbstractLQPNode::hash() const {
       for (const auto& expression : node->node_expressions) {
         boost::hash_combine(hash, expression->hash());
       }
-      boost::hash_combine(hash, boost::hash_value(node->type));
+      boost::hash_combine(hash, node->type);
       boost::hash_combine(hash, node->_on_hash());
       // since visit_lqp is used, the hash for an already visited node is not combined with
       // the overall hash again, even if the same node is used as left and right input node (diamond structure).
