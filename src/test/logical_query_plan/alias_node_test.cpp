@@ -80,10 +80,14 @@ TEST_F(AliasNodeTest, Hash) {
   const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
   EXPECT_NE(alias_node->hash(), alias_node_other_expressions->hash());
   const auto alias_node_other_left_input = AliasNode::make(expressions, aliases, other_mock_node);
-  // alias_node == alias_node_other_left_input is true (see AliasNodeTest/Equals)
-  // but the hash codes of these nodes are not equal.
+  // alias_node == alias_node_other_left_input is false (see AliasNodeTest/Equals)
+  // but the hash codes of these nodes are equal.
   EXPECT_EQ(alias_node->hash(), alias_node_other_left_input->hash());
-  // the following assertions clearify why the nodes are not equal but their hashes are
+  // Semantically equal LQPColumnExpressions which use semantically equal LQPColumnReferences are evaluated
+  // as not equal if the original node of the LQPColumnReferences are semantically equal but not identical
+  // (= different StoredTableNode pointers).
+  // The hash function does not take the actual pointer into account, so the hashes of
+  // semantically equal LQPColumnReferences are equal.
   EXPECT_NE(*a, *expr_a);
   EXPECT_NE(*b, *expr_b);
   EXPECT_EQ(a->hash(), expr_a->hash());
