@@ -78,6 +78,7 @@ def main():
   arguments["--warmup"] = "10"
   arguments["--encoding"] = "'LZ4'"
   arguments["--compression"] = "'SIMD-BP128'"
+  arguments["--indexes"] = "false"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
   arguments["--visualize"] = "true"
