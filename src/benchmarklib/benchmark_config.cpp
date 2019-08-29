@@ -3,7 +3,7 @@
 namespace opossum {
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const ChunkOffset chunk_size,
-                                 const EncodingConfig& encoding_config, const size_t max_runs,
+                                 const EncodingConfig& encoding_config, const bool indexes, const size_t max_runs,
                                  const Duration& max_duration, const Duration& warmup_duration,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
                                  const uint32_t cores, const uint32_t clients, const bool enable_visualization,
@@ -12,6 +12,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const Chunk
     : benchmark_mode(benchmark_mode),
       chunk_size(chunk_size),
       encoding_config(encoding_config),
+      indexes(indexes),
       max_runs(max_runs),
       max_duration(max_duration),
       warmup_duration(warmup_duration),
