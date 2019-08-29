@@ -39,6 +39,7 @@ class TPCHTableGenerator final : public AbstractTableGenerator {
 
  protected:
   IndexesByTable _indexes_by_table() const override;
+  SortOrderByTable _sort_order_by_table() const override;
 
  private:
   float _scale_factor;

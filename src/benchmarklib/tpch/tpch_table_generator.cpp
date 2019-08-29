@@ -288,4 +288,9 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
   };
 }
 
+AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
+  // Allowed as per TPC-H Specification, paragraph 1.5.2
+  return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
+}
+
 }  // namespace opossum
