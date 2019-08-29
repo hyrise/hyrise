@@ -120,6 +120,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
         if (!mvcc_data->dirty && _is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
           // *pos_list_out = pos_list_in.copy();
+          pos_list_out->resize(pos_list_in.size());
           std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
           // auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
           // pos_list_out->resize(chunk_size);
