@@ -23,8 +23,6 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
               "_referencing_table needs to reference another table");
   DebugAssert(_referencing_table->column_count() > 0, "_referencing_table needs columns to determine referenced table");
 
-  context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
-
   _transaction_id = context->transaction_id();
 
   for (ChunkID chunk_id{0}; chunk_id < _referencing_table->chunk_count(); ++chunk_id) {

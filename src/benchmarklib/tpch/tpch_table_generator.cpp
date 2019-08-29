@@ -147,12 +147,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
-  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * scale);
-  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * scale);
-  const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
-  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
-  const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
-  const auto region_count = static_cast<size_t>(tdefs[REGION].base);
+  const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);
+  const auto order_count = static_cast<ChunkOffset>(tdefs[ORDER].base * scale);
+  const auto part_count = static_cast<ChunkOffset>(tdefs[PART].base * scale);
+  const auto supplier_count = static_cast<ChunkOffset>(tdefs[SUPP].base * scale);
+  const auto nation_count = static_cast<ChunkOffset>(tdefs[NATION].base);
+  const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
