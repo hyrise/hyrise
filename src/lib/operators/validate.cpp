@@ -118,9 +118,20 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        for (auto row_id : pos_list_in) {
-          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
-            pos_list_out->emplace_back(row_id);
+        if (!mvcc_data->dirty && _is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
+          // *pos_list_out = pos_list_in.copy();
+          std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
+          // auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
+          // pos_list_out->resize(chunk_size);
+          // for (auto i = 0u; i < chunk_size; i++) {
+          //   (*pos_list_out)[i] = RowID{chunk_id, i};
+          // }
+        } else {
+
+          for (auto row_id : pos_list_in) {
+            if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+              pos_list_out->emplace_back(row_id);
+            }
           }
         }
 
@@ -147,7 +158,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         output_segments.push_back(ref_segment_out);
       }
 
-      // Otherwise we have a Value- or DictionarySegment and simply iterate over all rows to build a poslist.
+      // Otherwise we have a non-reference Segment and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = in_table;
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
