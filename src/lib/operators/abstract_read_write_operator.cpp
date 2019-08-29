@@ -12,13 +12,13 @@ AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
 
 void AbstractReadWriteOperator::execute() {
   DebugAssert(!_output, "Operator has already been executed");
-
   Assert(static_cast<bool>(transaction_context()),
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
-
   DebugAssert(transaction_context()->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
-
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
+
+  transaction_context()->register_read_write_operator(
+      std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
   try {
     AbstractOperator::execute();
