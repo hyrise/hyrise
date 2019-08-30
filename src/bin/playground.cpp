@@ -21,10 +21,10 @@ int main() {
   // const auto scheduler = std::make_shared<NodeQueueScheduler>();
   // CurrentScheduler::set(scheduler);
 
-  std::cout << "algorithm,list_length,execution_duration,rows" << std::endl;
+  std::cout << "strategy,list_length,execution_duration,rows" << std::endl;
 
-  const auto run = [](const std::string& name, const InExpressionRewriteRule::Algorithm algorithm) {
-    InExpressionRewriteRule::forced_algorithm = algorithm;
+  const auto run = [](const std::string& name, const InExpressionRewriteRule::Strategy strategy) {
+    InExpressionRewriteRule::strategy = strategy;
 
     auto warmup = true;
 
@@ -55,10 +55,10 @@ int main() {
     }
   };
 
-  run("ExpressionEvaluator", InExpressionRewriteRule::Algorithm::ExpressionEvaluator);
-  run("Join", InExpressionRewriteRule::Algorithm::Join);
-  run("Auto", InExpressionRewriteRule::Algorithm::Auto);
-  run("Disjunction", InExpressionRewriteRule::Algorithm::Disjunction);
+  run("ExpressionEvaluator", InExpressionRewriteRule::Strategy::ExpressionEvaluator);
+  run("Join", InExpressionRewriteRule::Strategy::Join);
+  run("Auto", InExpressionRewriteRule::Strategy::Auto);
+  run("Disjunction", InExpressionRewriteRule::Strategy::Disjunction);
 
   return 0;
 }
