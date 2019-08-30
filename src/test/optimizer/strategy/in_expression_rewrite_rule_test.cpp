@@ -22,12 +22,15 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
 
     auto hundred_elements = std::vector<std::shared_ptr<AbstractExpression>>{};
     for (auto i = 0; i < 100; ++i) hundred_elements.emplace_back(value_(i));
-    hundred_element_in_expression = std::make_shared<InExpression>(PredicateCondition::In, col, std::make_shared<ListExpression>(hundred_elements));
+    hundred_element_in_expression =
+        std::make_shared<InExpression>(PredicateCondition::In, col, std::make_shared<ListExpression>(hundred_elements));
   }
 
  public:
   std::shared_ptr<MockNode> node;
-  std::shared_ptr<AbstractExpression> col, single_element_in_expression, five_element_in_expression, five_element_not_in_expression, hundred_element_in_expression, duplicate_element_in_expression, different_types_in_expression, null_in_expression;
+  std::shared_ptr<AbstractExpression> col, single_element_in_expression, five_element_in_expression,
+      five_element_not_in_expression, hundred_element_in_expression, duplicate_element_in_expression,
+      different_types_in_expression, null_in_expression;
 };
 
 TEST_F(InExpressionRewriteRuleTest, ExpressionEvaluatorStrategy) {
@@ -181,7 +184,8 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     table->append({5});
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
-    const auto expected_lqp = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(col, right_col), node, static_table_node);
+    const auto expected_lqp =
+        JoinNode::make(JoinMode::AntiNullAsTrue, equals_(col, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
@@ -267,4 +271,4 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 }
 
-}
+}  // namespace opossum

@@ -49,7 +49,8 @@ int main() {
       }
 
       std::cout << name << "," << list_length << ","
-                << pipeline.metrics().statement_metrics[0]->plan_execution_duration.count() << "," << result_table.second->row_count() << std::endl;
+                << pipeline.metrics().statement_metrics[0]->plan_execution_duration.count() << ","
+                << result_table.second->row_count() << std::endl;
 
       // PQPVisualizer{}.visualize(pipeline.get_physical_plans(), name + std::to_string(list_length) + ".png");
     }
@@ -62,4 +63,3 @@ int main() {
 
   return 0;
 }
-

@@ -20,12 +20,7 @@ class InExpressionRewriteRule : public AbstractRule {
 
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
-  enum class Strategy {
-    Auto,
-    ExpressionEvaluator,
-    Join,
-    Disjunction
-  };
+  enum class Strategy { Auto, ExpressionEvaluator, Join, Disjunction };
   static inline Strategy strategy{Strategy::Disjunction};
 };
 

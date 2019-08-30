@@ -20,11 +20,12 @@ using namespace opossum::expression_functional;  // NOLINT
 
 void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
                      const std::shared_ptr<AbstractExpression>& left_value,
-                     const std::vector<std::shared_ptr<AbstractExpression>>& elements, DataType data_type, const bool is_negated) {
+                     const std::vector<std::shared_ptr<AbstractExpression>>& elements, DataType data_type,
+                     const bool is_negated) {
   const auto list_as_table =
       std::make_shared<Table>(TableColumnDefinitions{{"right_values", data_type, false}}, TableType::Data);
 
-  resolve_data_type(data_type, [&](const auto data_type_t){
+  resolve_data_type(data_type, [&](const auto data_type_t) {
     using ColumnDataType = typename decltype(data_type_t)::type;
     auto right_values = pmr_concurrent_vector<ColumnDataType>{};
     right_values.reserve(elements.size());
@@ -83,9 +84,7 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 namespace opossum {
 
-void InExpressionRewriteRule::apply_to(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
-
+void InExpressionRewriteRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (strategy == Strategy::ExpressionEvaluator) {
     // This is the default anyway, i.e., what the SQLTranslator gave us
     return;
@@ -132,7 +131,8 @@ void InExpressionRewriteRule::apply_to(
       // Disjunctive predicates could theoretically handle differing types, but that makes it hard to elimated
       // duplicates. Better be safe and let the ExpressionEvaluator handle this rare case.
 
-      Assert(strategy == Strategy::Auto || strategy == Strategy::ExpressionEvaluator, "Could not apply strategy as types mismatch");
+      Assert(strategy == Strategy::Auto || strategy == Strategy::ExpressionEvaluator,
+             "Could not apply strategy as types mismatch");
 
       return LQPVisitation::VisitInputs;
     }
@@ -158,4 +158,3 @@ void InExpressionRewriteRule::apply_to(
 }
 
 }  // namespace opossum
-
