@@ -238,7 +238,7 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringAsNull) {
   auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/null_literal.csv");
   importer->execute();
 
@@ -247,7 +247,27 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 
   expected_table->append({1, "Hello"});
   expected_table->append({NULL_VALUE, "World"});
-  expected_table->append({2, NULL_VALUE});
+  expected_table->append({3, NULL_VALUE});
+  expected_table->append({4, NULL_VALUE});
+  expected_table->append({5, NULL_VALUE});
+  expected_table->append({6, "!"});
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringAsValue) {
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/null_literal_as_string.csv");
+  importer->execute();
+
+  TableColumnDefinitions column_definitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+
+  expected_table->append({1, "Hello"});
+  expected_table->append({NULL_VALUE, "World"});
+  expected_table->append({3, "null"});
+  expected_table->append({4, "Null"});
+  expected_table->append({5, "NULL"});
+  expected_table->append({6, "!"});
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }

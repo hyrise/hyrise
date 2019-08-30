@@ -65,7 +65,7 @@ class PosHashTable {
   using SmallPosList = boost::container::small_vector<RowID, 1>;
 
  public:
-  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)  // TODO explicitly test this
+  explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
       : _hash_table(), _pos_lists(max_size), _mode(mode) {
     _hash_table.reserve(max_size);
   }
@@ -81,10 +81,11 @@ class PosHashTable {
         pos_list.emplace_back(row_id);
       }
     } else {
+      DebugAssert(_hash_table.size() < _pos_lists.size(), "Hash table too big for pre-allocated data structures");
       auto& pos_list = _pos_lists[_hash_table.size()];
       pos_list.push_back(row_id);
       _hash_table.emplace(casted_value, _hash_table.size());
-      Assert(_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
+      DebugAssert(_hash_table.size() < std::numeric_limits<Offset>::max(), "Hash table too big for offset");
     }
   }
 
@@ -95,6 +96,8 @@ class PosHashTable {
       pos_list.shrink_to_fit();
     }
 
+    // For very small hash tables, a linear search performs better. In that case, replace the hash table with a vector
+    // of value/offset pairs.  The boundary was determined experimentally and chosen conservatively.
     if (_hash_table.size() <= 10) {
       _values = std::vector<std::pair<HashedType, Offset>>{};
       _values->reserve(_hash_table.size());

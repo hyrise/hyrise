@@ -95,6 +95,33 @@ class AbstractVisualizer {
     Assert(ret > 0, "mkstemp failed");
     std::ofstream file(tmpname);
 
+    // By now, the pen widths are set to either the number of rows (for edges) or the execution time in ns (for
+    // vertices). As some plans have only operators that take microseconds and others take minutes, normalize this
+    // so that the thickest pen has a width of max_normalized_width and the thinnest one has a width of 1. Using
+    // a logarithm makes the operators that follow the most expensive one more visible. Not sure if this is what
+    // statisticians would do, but it makes for beautiful images.
+    const auto normalize_penwidths = [&](auto iter_pair) {
+      const auto max_normalized_width = 8.0;
+      const auto log_base = std::log(1.5);
+      double max_unnormalized_width = 0.0;
+      for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
+        max_unnormalized_width = std::max(max_unnormalized_width, std::log(_graph[*iter].pen_width) / log_base);
+      }
+      if (max_unnormalized_width == 0.0) {
+        // All widths are the same, don't do anything
+        return;
+      }
+
+      double offset = max_unnormalized_width - (max_normalized_width - 1.0);
+
+      for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
+        auto& pen_width = _graph[*iter].pen_width;
+        pen_width = 1.0 + std::max(0.0, std::log(pen_width) / log_base - offset);
+      }
+    };
+    normalize_penwidths(boost::vertices(_graph));
+    normalize_penwidths(boost::edges(_graph));
+
     boost::write_graphviz_dp(file, _graph, _properties);
 
     auto renderer = _graphviz_config.renderer;

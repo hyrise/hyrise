@@ -1,0 +1,7 @@
+table|name|data_type|nullable
+string|string|string|int
+int_int|a|int|0
+int_int|b|int|0
+int_int_int_null|a|int|1
+int_int_int_null|b|int|1
+int_int_int_null|c|int|1
