@@ -66,8 +66,6 @@ TEST_F(InExpressionRewriteRuleTest, ExpressionEvaluatorStrategy) {
 }
 
 TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
-  // Note that the order of predicates is technically undefined as we use an ExpressionUnorderedSet.
-  // However, the actual order seems stable enough for a test.
   auto rule = std::make_shared<InExpressionRewriteRule>();
   rule->strategy = InExpressionRewriteRule::Strategy::Disjunction;
 
@@ -83,6 +81,19 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
     // clang-format off
+    // Account for different order produced by ExpressionUnorderedSet
+#ifdef __GLIBCXX__
+    const auto expected_lqp =
+      UnionNode::make(UnionMode::All,
+        UnionNode::make(UnionMode::All,
+          UnionNode::make(UnionMode::All,
+            UnionNode::make(UnionMode::All,
+              PredicateNode::make(equals_(col_a, 5), node),
+              PredicateNode::make(equals_(col_a, 3), node)),
+            PredicateNode::make(equals_(col_a, 2), node)),
+          PredicateNode::make(equals_(col_a, 4), node)),
+        PredicateNode::make(equals_(col_a, 1), node));
+#else
     const auto expected_lqp =
       UnionNode::make(UnionMode::All,
         UnionNode::make(UnionMode::All,
@@ -93,6 +104,7 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
             PredicateNode::make(equals_(col_a, 3), node)),
           PredicateNode::make(equals_(col_a, 2), node)),
         PredicateNode::make(equals_(col_a, 1), node));
+#endif
     // clang-format on
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
