@@ -2,7 +2,7 @@
 #include <sstream>
 
 #include "../benchmarklib/benchmark_config.hpp"
-#include "optimizer/strategy/in_expression_to_join_rule.hpp"
+#include "optimizer/strategy/in_expression_rewrite_rule.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
@@ -18,8 +18,8 @@ int main() {
 
   std::cout << "algorithm,list_length,execution_duration" << std::endl;
 
-  const auto run = [](const std::string& name, const InExpressionToJoinRule::Algorithm algorithm) {
-    InExpressionToJoinRule::forced_algorithm = algorithm;
+  const auto run = [](const std::string& name, const InExpressionRewriteRule::Algorithm algorithm) {
+    InExpressionRewriteRule::forced_algorithm = algorithm;
 
     auto warmup = true;
 
@@ -50,10 +50,10 @@ int main() {
     }
   };
 
-  run("ExpressionEvaluator", InExpressionToJoinRule::Algorithm::ExpressionEvaluator);
-  run("Join", InExpressionToJoinRule::Algorithm::Join);
-  run("Auto", InExpressionToJoinRule::Algorithm::Auto);
-  run("Disjunction", InExpressionToJoinRule::Algorithm::Disjunction);
+  run("ExpressionEvaluator", InExpressionRewriteRule::Algorithm::ExpressionEvaluator);
+  run("Join", InExpressionRewriteRule::Algorithm::Join);
+  run("Auto", InExpressionRewriteRule::Algorithm::Auto);
+  run("Disjunction", InExpressionRewriteRule::Algorithm::Disjunction);
 
   return 0;
 }

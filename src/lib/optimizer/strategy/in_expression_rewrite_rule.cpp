@@ -73,7 +73,7 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 namespace opossum {
 
-void InExpressionRewriteJoinRule::apply_to(
+void InExpressionRewriteRule::apply_to(
     const std::shared_ptr<AbstractLQPNode>& node) const {  // TODO rename to top_node
   if (forced_algorithm == Algorithm::ExpressionEvaluator) return;
 
