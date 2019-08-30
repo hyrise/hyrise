@@ -7,101 +7,79 @@
 
 namespace opossum {
 
-bool PredicateSplitUpRule::_splitConjunction(const std::shared_ptr<AbstractLQPNode>& node) const {
-  /**
-   * Step 1:
-   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_conjunctions`
-   */
-  auto predicate_nodes_to_flat_conjunctions =
-      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
-
-  visit_lqp(node, [&](const auto& sub_node) {
-    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
-      const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
-
-      if (flat_conjunction.size() > 1) {
-        predicate_nodes_to_flat_conjunctions.emplace_back(predicate_node, flat_conjunction);
-      }
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
-
-  if (predicate_nodes_to_flat_conjunctions.empty()) {
+bool PredicateSplitUpRule::_splitConjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
+  const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
+  if (flat_conjunction.size() <= 1) {
     return false;
   }
 
   /**
-   * Step 2:
-   *    - Split up PredicateNodes with conjunctive chains (e.g., `PredicateNode(a AND b AND c)`) as their scan
-   *      expression into multiple consecutive PredicateNodes
-   *      (e.g. `PredicateNode(c) -> PredicateNode(b) -> PredicateNode(a)`). We have to do this in a second pass because
-   *      manipulating the LQP within `visit_lqp()`, while theoretically possible, is prone to bugs.
+   * Split up PredicateNode with conjunctive chain (e.g., `PredicateNode(a AND b AND c)`) as its scan expression into
+   * multiple consecutive PredicateNodes (e.g. `PredicateNode(c) -> PredicateNode(b) -> PredicateNode(a)`).
    */
-  for (const auto& [predicate_node, flat_conjunction] : predicate_nodes_to_flat_conjunctions) {
-    for (const auto& predicate_expression : flat_conjunction) {
-      lqp_insert_node(predicate_node, LQPInputSide::Left, PredicateNode::make(predicate_expression));
-    }
-    lqp_remove_node(predicate_node);
+  for (const auto& predicate_expression : flat_conjunction) {
+    const auto& new_predicate_node = PredicateNode::make(predicate_expression);
+    lqp_insert_node(predicate_node, LQPInputSide::Left, new_predicate_node);
+    _splitDisjunction(new_predicate_node);
   }
+  lqp_remove_node(predicate_node);
 
   return true;
 }
 
-bool PredicateSplitUpRule::_splitDisjunction(const std::shared_ptr<AbstractLQPNode>& node) const {
-  /**
-   * Step 1:
-   *    - Collect PredicateNodes that can be split up into multiple ones into `predicate_nodes_to_flat_disjunctions`
-   */
-  auto predicate_nodes_to_flat_disjunctions =
-      std::vector<std::pair<std::shared_ptr<PredicateNode>, std::vector<std::shared_ptr<AbstractExpression>>>>{};
-
-  visit_lqp(node, [&](const auto& sub_node) {
-    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
-      const auto flat_disjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::Or);
-
-      if (flat_disjunction.size() > 1) {
-        predicate_nodes_to_flat_disjunctions.emplace_back(predicate_node, flat_disjunction);
-      }
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
-
-  if (predicate_nodes_to_flat_disjunctions.empty()) {
-    return false;
+void PredicateSplitUpRule::_splitDisjunction(const std::shared_ptr<PredicateNode> &predicate_node) const {
+  const auto flat_disjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::Or);
+  if (flat_disjunction.size() <= 1) {
+    return;
   }
 
   /**
-   * Step 2:
-   *    - Split up PredicateNodes with disjunctive chains (e.g., `PredicateNode(a OR b OR c)`) as their scan expression
-   *      into n-1 consecutive UnionNodes and n PredicateNodes. We have to do this in a second pass because manipulating
-   *      the LQP within `visit_lqp()`, while theoretically possible, is prone to bugs.
+   * Split up PredicateNode with disjunctive chain (e.g., `PredicateNode(a OR b OR c)`) as their scan expression into
+   * n-1 consecutive UnionNodes and n PredicateNodes.
    */
-  for (const auto& [predicate_node, flat_disjunction] : predicate_nodes_to_flat_disjunctions) {
-    auto previous_union_node = UnionNode::make(UnionMode::Positions);
-    const auto left_input = predicate_node->left_input();
-    lqp_replace_node(predicate_node, previous_union_node);
-    previous_union_node->set_left_input(PredicateNode::make(flat_disjunction[0], left_input));
-    previous_union_node->set_right_input(PredicateNode::make(flat_disjunction[1], left_input));
+  auto previous_union_node = UnionNode::make(UnionMode::Positions);
+  const auto left_input = predicate_node->left_input();
+  lqp_replace_node(predicate_node, previous_union_node);
 
-    for (auto disjunction_idx = size_t{2}; disjunction_idx < flat_disjunction.size(); ++disjunction_idx) {
-      const auto& predicate_expression = flat_disjunction[disjunction_idx];
-      auto next_union_node = UnionNode::make(UnionMode::Positions);
-      lqp_insert_node(previous_union_node, LQPInputSide::Right, next_union_node);
-      next_union_node->set_right_input(PredicateNode::make(predicate_expression, left_input));
-      previous_union_node = next_union_node;
-    }
+  auto new_predicate_node = PredicateNode::make(flat_disjunction[0], left_input);
+  previous_union_node->set_left_input(new_predicate_node);
+  _splitConjunction(new_predicate_node);
+
+  new_predicate_node = PredicateNode::make(flat_disjunction[1], left_input);
+  previous_union_node->set_right_input(new_predicate_node);
+  _splitConjunction(new_predicate_node);
+
+  for (auto disjunction_idx = size_t{2}; disjunction_idx < flat_disjunction.size(); ++disjunction_idx) {
+    const auto &predicate_expression = flat_disjunction[disjunction_idx];
+    auto next_union_node = UnionNode::make(UnionMode::Positions);
+    lqp_insert_node(previous_union_node, LQPInputSide::Right, next_union_node);
+
+    new_predicate_node = PredicateNode::make(predicate_expression, left_input);
+    next_union_node->set_right_input(new_predicate_node);
+    _splitConjunction(new_predicate_node);
+
+    previous_union_node = next_union_node;
   }
-
-  return true;
 }
 
 void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
 
-  while (_splitConjunction(root) || _splitDisjunction(root)) {
-  }  // Split nested predicates as long as possible
+  auto predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+  visit_lqp(root, [&](const auto& sub_node) {
+    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
+      predicate_nodes.emplace_back(predicate_node);
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
+  // _splitConjunction() and _splitDisjunction() split up logical expressions by calling each other recursively
+  for (const auto& predicate_node : predicate_nodes) {
+    if(!_splitConjunction(predicate_node)) {
+      // If there is no conjunction at the top level, try to split disjunction first
+      _splitDisjunction(predicate_node);
+    };
+  }
 }
 
 }  // namespace opossum

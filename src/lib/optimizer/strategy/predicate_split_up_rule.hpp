@@ -1,6 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include "abstract_rule.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 
 namespace opossum {
 
@@ -27,14 +30,10 @@ class PredicateSplitUpRule : public AbstractRule {
 
  private:
   /**
-   * @return true if the LQP was changed
+   * @return true if a conjunction was split up
    */
-  bool _splitConjunction(const std::shared_ptr<AbstractLQPNode>& node) const;
-
-  /**
-   * @return true if the LQP was changed
-   */
-  bool _splitDisjunction(const std::shared_ptr<AbstractLQPNode>& node) const;
+  bool _splitConjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
+  void _splitDisjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
 };
 
 }  // namespace opossum

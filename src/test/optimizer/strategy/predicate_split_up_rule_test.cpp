@@ -34,7 +34,7 @@ class PredicateSplitUpRuleTest : public StrategyBaseTest {
 TEST_F(PredicateSplitUpRuleTest, SplitUpConjunctionInPredicateNode) {
   // SELECT * FROM (
   //   SELECT a, b FROM a WHERE a = b AND a = 3
-  // ) WHERE (a = 5 AND b = 7) AND 13 = 13
+  // ) WHERE (a = 5 AND b > 7) AND 13 = 13
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(and_(equals_(a_a, 5), greater_than_(a_b, 7)),
@@ -199,7 +199,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions)
 TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions) {
   // SELECT * FROM (
   //   SELECT a, b FROM a WHERE a = b AND a = 3
-  // ) WHERE (a > 10 OR a < 8) AND (b <= 7 OR 11 = b) OR ((a = 5 AND b = 7) AND 13 = 13)
+  // ) WHERE ((a > 10 OR a < 8) AND (b <= 7 OR 11 = b)) OR ((a = 5 AND b > 7) AND 13 = 13)
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(or_(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))), and_(and_(equals_(a_a, 5), greater_than_(a_b, 7)), equals_(13, 13))),  // NOLINT
