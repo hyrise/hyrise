@@ -12,8 +12,6 @@
 #include "logical_query_plan/union_node.hpp"
 #include "storage/table.hpp"
 
-// TODO measure with TPC-DS query 8
-
 namespace {
 using namespace opossum;                         // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
