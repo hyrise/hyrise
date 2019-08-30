@@ -19,21 +19,23 @@ using namespace opossum::expression_functional;  // NOLINT
 void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
                      const std::shared_ptr<AbstractExpression>& left_value,
                      const std::vector<std::shared_ptr<AbstractExpression>>& elements, DataType data_type) {
-  // TODO test NULL
-  auto right_values = std::vector<AllTypeVariant>{};
-  right_values.reserve(elements.size());
-
-  for (const auto& element : elements) {
-    const auto& variant = static_cast<ValueExpression&>(*element).value;
-    right_values.emplace_back(variant);
-  }
-
   const auto list_as_table =
       std::make_shared<Table>(TableColumnDefinitions{{"right_values", data_type, true}}, TableType::Data);
 
-  for (auto& right_value : right_values) {
-    list_as_table->append({right_value});
-  }
+  resolve_data_type(data_type, [&](const auto data_type_t){
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    auto right_values = pmr_concurrent_vector<ColumnDataType>(elements.size());
+
+    auto element_idx = size_t{0};
+    for (const auto& element : elements) {
+      // TODO test for NULL
+      right_values[element_idx] = boost::get<ColumnDataType>(static_cast<ValueExpression&>(*element).value);
+      element_idx++;
+    }
+
+    const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(right_values));
+    list_as_table->append_chunk({value_segment});
+  });
 
   const auto static_table_node = std::make_shared<StaticTableNode>(list_as_table);
   const auto list_column = std::make_shared<LQPColumnExpression>(LQPColumnReference{static_table_node, ColumnID{0}});
@@ -72,6 +74,8 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 }  // namespace
 
 namespace opossum {
+
+// TODO measure with TPC-DS query 8
 
 void InExpressionRewriteRule::apply_to(
     const std::shared_ptr<AbstractLQPNode>& node) const {  // TODO rename to top_node
@@ -125,7 +129,7 @@ void InExpressionRewriteRule::apply_to(
       if (elements.size() < 3) {
         // Also keeps plan visualizations from becoming messy
         rewrite_to_disjunction(sub_node, in_expression->value(), elements, *common_data_type);
-      } else if (common_data_type && elements.size() > 500) {
+      } else if (common_data_type && elements.size() > 40) {
         rewrite_to_join(sub_node, in_expression->value(), elements, *common_data_type);
       }
     }
@@ -135,3 +139,4 @@ void InExpressionRewriteRule::apply_to(
 }
 
 }  // namespace opossum
+
