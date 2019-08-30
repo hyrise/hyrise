@@ -36,7 +36,7 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
         continue;
       }
 
-      right_values.emplace_back(boost::get<ColumnDataType>(static_cast<ValueExpression&>(*element).value));
+      right_values.push_back(boost::get<ColumnDataType>(static_cast<ValueExpression&>(*element).value));
     }
 
     const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(right_values));
