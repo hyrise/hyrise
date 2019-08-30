@@ -10,27 +10,29 @@ namespace opossum {
 
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
-    node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "col"}});
-    col = lqp_column_(node->get_column("col"));
+    node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "col_a"}, {DataType::Float, "col_b"}});
+    col_a = lqp_column_(node->get_column("col_a"));
+    col_b = lqp_column_(node->get_column("col_b"));
 
-    single_element_in_expression = in_(col, list_(1));
-    five_element_in_expression = in_(col, list_(1, 2, 3, 4, 5));
-    five_element_not_in_expression = not_in_(col, list_(1, 2, 3, 4, 5));
-    duplicate_element_in_expression = in_(col, list_(1, 2, 1));
-    different_types_in_expression = in_(col, list_(1, 2.0f));
-    null_in_expression = in_(col, list_(1, NULL_VALUE));
+    single_element_in_expression = in_(col_a, list_(1));
+    five_element_in_expression = in_(col_a, list_(1, 2, 3, 4, 5));
+    five_element_not_in_expression = not_in_(col_a, list_(1, 2, 3, 4, 5));
+    duplicate_element_in_expression = in_(col_a, list_(1, 2, 1));
+    different_types_on_left_and_right_side_expression = in_(col_b, list_(1, 2));
+    different_types_on_right_side_expression = in_(col_a, list_(1, 2.0f));
+    null_in_expression = in_(col_a, list_(1, NULL_VALUE));
 
     auto hundred_elements = std::vector<std::shared_ptr<AbstractExpression>>{};
     for (auto i = 0; i < 100; ++i) hundred_elements.emplace_back(value_(i));
-    hundred_element_in_expression =
-        std::make_shared<InExpression>(PredicateCondition::In, col, std::make_shared<ListExpression>(hundred_elements));
+    hundred_element_in_expression = std::make_shared<InExpression>(PredicateCondition::In, col_a,
+                                                                   std::make_shared<ListExpression>(hundred_elements));
   }
 
  public:
   std::shared_ptr<MockNode> node;
-  std::shared_ptr<AbstractExpression> col, single_element_in_expression, five_element_in_expression,
+  std::shared_ptr<AbstractExpression> col_a, col_b, single_element_in_expression, five_element_in_expression,
       five_element_not_in_expression, hundred_element_in_expression, duplicate_element_in_expression,
-      different_types_in_expression, null_in_expression;
+      different_types_on_left_and_right_side_expression, different_types_on_right_side_expression, null_in_expression;
 };
 
 TEST_F(InExpressionRewriteRuleTest, ExpressionEvaluatorStrategy) {
@@ -72,7 +74,7 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
   {
     const auto input_lqp = PredicateNode::make(single_element_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
-    const auto expected_lqp = PredicateNode::make(equals_(col, 1), node);
+    const auto expected_lqp = PredicateNode::make(equals_(col_a, 1), node);
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
   }
 
@@ -86,11 +88,11 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
         UnionNode::make(UnionMode::All,
           UnionNode::make(UnionMode::All,
             UnionNode::make(UnionMode::All,
-              PredicateNode::make(equals_(col, 5), node),
-              PredicateNode::make(equals_(col, 4), node)),
-            PredicateNode::make(equals_(col, 3), node)),
-          PredicateNode::make(equals_(col, 2), node)),
-        PredicateNode::make(equals_(col, 1), node));
+              PredicateNode::make(equals_(col_a, 5), node),
+              PredicateNode::make(equals_(col_a, 4), node)),
+            PredicateNode::make(equals_(col_a, 3), node)),
+          PredicateNode::make(equals_(col_a, 2), node)),
+        PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
@@ -107,14 +109,19 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     // clang-format off
     const auto expected_lqp =
       UnionNode::make(UnionMode::All,
-        PredicateNode::make(equals_(col, 2), node),
-        PredicateNode::make(equals_(col, 1), node));
+        PredicateNode::make(equals_(col_a, 2), node),
+        PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
   }
 
   {
-    const auto input_lqp = PredicateNode::make(different_types_in_expression, node);
+    const auto input_lqp = PredicateNode::make(different_types_on_left_and_right_side_expression, node);
+    EXPECT_THROW(StrategyBaseTest::apply_rule(rule, input_lqp), std::logic_error);
+  }
+
+  {
+    const auto input_lqp = PredicateNode::make(different_types_on_right_side_expression, node);
     EXPECT_THROW(StrategyBaseTest::apply_rule(rule, input_lqp), std::logic_error);
   }
 
@@ -126,8 +133,8 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     // clang-format off
     const auto expected_lqp =
       UnionNode::make(UnionMode::All,
-        PredicateNode::make(equals_(col, NULL_VALUE), node),
-        PredicateNode::make(equals_(col, 1), node));
+        PredicateNode::make(equals_(col_a, NULL_VALUE), node),
+        PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
   }
@@ -146,7 +153,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     table->append({1});
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
-    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col, right_col), node, static_table_node);
+    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
@@ -165,7 +172,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     table->append({5});
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
-    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col, right_col), node, static_table_node);
+    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
@@ -185,7 +192,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
     const auto expected_lqp =
-        JoinNode::make(JoinMode::AntiNullAsTrue, equals_(col, right_col), node, static_table_node);
+        JoinNode::make(JoinMode::AntiNullAsTrue, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
@@ -195,7 +202,12 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
   // duplicate elimination. We don't see any potential in eliminating duplicates, as we have not seen any, yet.
 
   {
-    const auto input_lqp = PredicateNode::make(different_types_in_expression, node);
+    const auto input_lqp = PredicateNode::make(different_types_on_left_and_right_side_expression, node);
+    EXPECT_THROW(StrategyBaseTest::apply_rule(rule, input_lqp), std::logic_error);
+  }
+
+  {
+    const auto input_lqp = PredicateNode::make(different_types_on_right_side_expression, node);
     EXPECT_THROW(StrategyBaseTest::apply_rule(rule, input_lqp), std::logic_error);
   }
 
@@ -208,7 +220,7 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
     table->append({1});
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
-    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col, right_col), node, static_table_node);
+    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
@@ -217,13 +229,12 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
 
 TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   auto rule = std::make_shared<InExpressionRewriteRule>();
-  rule->strategy = InExpressionRewriteRule::Strategy::Auto;
 
   {
     // Disjunction for single element
     const auto input_lqp = PredicateNode::make(single_element_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
-    const auto expected_lqp = PredicateNode::make(equals_(col, 1), node);
+    const auto expected_lqp = PredicateNode::make(equals_(col_a, 1), node);
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
   }
 
@@ -236,7 +247,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
   {
     // ExpressionEvaluator for differing types
-    const auto input_lqp = PredicateNode::make(different_types_in_expression, node);
+    const auto input_lqp = PredicateNode::make(different_types_on_right_side_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     EXPECT_EQ(result_lqp, input_lqp);
   }
@@ -251,7 +262,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     for (auto i = 0; i < 100; ++i) table->append({i});
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_({static_table_node, ColumnID{0}});
-    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col, right_col), node, static_table_node);
+    const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
@@ -264,8 +275,8 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     // clang-format off
     const auto expected_lqp =
       UnionNode::make(UnionMode::All,
-        PredicateNode::make(equals_(col, NULL_VALUE), node),
-        PredicateNode::make(equals_(col, 1), node));
+        PredicateNode::make(equals_(col_a, NULL_VALUE), node),
+        PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
   }

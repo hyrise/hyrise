@@ -148,7 +148,7 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(or_(a_and_b, a_and_c),
-    PredicateNode::make(in_(a, list_(5)),
+    PredicateNode::make(like_(s, "RED%"),
       PredicateNode::make(equals_(3, add_(4, 3)),
         mock_node)));
   // clang-format on
@@ -158,7 +158,7 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   // clang-format off
   const auto expected_lqp =
   PredicateNode::make(and_(a, or_(b, c)),
-    PredicateNode::make(equals_(a, 5),
+    PredicateNode::make(between_upper_exclusive_(s, "RED", "REE"),
       PredicateNode::make(equals_(3, 7),
         mock_node)));
   // clang-format on

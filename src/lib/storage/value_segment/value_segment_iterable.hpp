@@ -51,7 +51,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   const ValueSegment<T>& _segment;
 
  private:
-  class NonNullIterator final : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> {
+  class NonNullIterator : public BaseSegmentIterator<NonNullIterator, NonNullSegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
@@ -90,7 +90,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ChunkOffset _chunk_offset;
   };
 
-  class Iterator final : public BaseSegmentIterator<Iterator, SegmentPosition<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator, SegmentPosition<T>> {
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
@@ -137,7 +137,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     ChunkOffset _chunk_offset;
   };
 
-  class NonNullPointAccessIterator final
+  class NonNullPointAccessIterator
       : public BasePointAccessSegmentIterator<NonNullPointAccessIterator, SegmentPosition<T>> {
    public:
     using ValueType = T;

@@ -7,7 +7,12 @@ namespace opossum {
 class AbstractLQPNode;
 class PredicateNode;
 
-// TODO Doc
+// Depending on the size and type of an IN expression `a IN (...)`, this rule rewrites the expression to
+// - a bunch of disjunctive predicate and union nodes (equivalent to `a = 1 OR a = 2`) if the right side has up to
+//   MAX_ELEMENTS_FOR_DISJUNCTION elements and the elements are of the same type.
+// - a semi/anti join (with the list of IN values being stored in a temporary table) if the right side has more than
+//   MIN_ELEMENTS_FOR_JOIN elements and the elements are of the same type.
+// Otherwise, the IN expression is untouched and will be handled by the ExpressionEvaluator.
 
 class InExpressionRewriteRule : public AbstractRule {
  public:
@@ -20,8 +25,10 @@ class InExpressionRewriteRule : public AbstractRule {
 
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
+  // Instead of using the automatic behavior described above, the three strategies may be chosen explicitly, too. This
+  // is helpful for testing and benchmarks. Note that it does not circumvent the restrictions on the element type.
   enum class Strategy { Auto, ExpressionEvaluator, Join, Disjunction };
-  static inline Strategy strategy{Strategy::Disjunction};
+  Strategy strategy{Strategy::Auto};
 };
 
 }  // namespace opossum
