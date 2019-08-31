@@ -77,6 +77,9 @@ struct JoinTestConfiguration {
   // Only for JoinHash
   std::optional<size_t> radix_bits;
 
+  // Only for JoinIndex
+  std::optional<IndexSide> index_side{std::nullopt};
+
   void swap_input_sides() {
     std::swap(input_left, input_right);
     std::swap(data_type_left, data_type_right);
@@ -163,6 +166,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}}};
+    const auto all_index_sides = std::vector{IndexSide::Left, IndexSide::Right};
 
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
@@ -195,10 +199,32 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         return;
       }
 
-      if (JoinOperator::supports({configuration.join_mode, configuration.predicate_condition,
-                                  configuration.data_type_left, configuration.data_type_right,
-                                  !configuration.secondary_predicates.empty()})) {
-        configurations.emplace_back(configuration);
+      JoinConfiguration support_configuration{configuration.join_mode, configuration.predicate_condition,
+                                              configuration.data_type_left, configuration.data_type_right,
+                                              !configuration.secondary_predicates.empty()};
+
+      if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
+        for (const auto& index_side : all_index_sides) {
+          auto index_join_configuration = support_configuration;
+          // The supports function of the join index required an index side and the inputs table types.
+          // Therefore the configuration must be adapted accordingly.
+          const auto table_type_left =
+              (configuration.input_left.table_type == InputTableType::Data ? TableType::Data : TableType::References);
+          const auto table_type_right =
+              (configuration.input_right.table_type == InputTableType::Data ? TableType::Data : TableType::References);
+
+          index_join_configuration.left_table_type = table_type_left;
+          index_join_configuration.right_table_type = table_type_right;
+          index_join_configuration.index_side = index_side;
+
+          if (JoinOperator::supports(index_join_configuration)) {
+            configurations.emplace_back(configuration);
+          }
+        }
+      } else {
+        if (JoinOperator::supports(support_configuration)) {
+          configurations.emplace_back(configuration);
+        }
       }
     };
 
@@ -496,6 +522,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 };  // namespace opossum
 
 TEST_P(JoinTestRunner, TestJoin) {
+  // TODO(anyone) for the case std::is_same_v<JoinOperator, JoinHash>
+  //  - add indexes
+  //  - add performace data evaluation
   const auto configuration = GetParam();
 
   const auto input_table_left = get_table(configuration.input_left);
@@ -591,8 +620,8 @@ TEST_P(JoinTestRunner, TestJoin) {
 INSTANTIATE_TEST_CASE_P(JoinNestedLoop, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinHash, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinSortMerge, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()), );  // NOLINT
-// INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinMPSM, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinMPSM>()), );  // NOLINT
-// clang-format on
+    // clang-format on
 
 }  // namespace opossum
