@@ -88,9 +88,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
           const auto move_to_right =
               expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->right_input());
 
-          if (!move_to_left && !move_to_right) {
+          if (!move_to_left && !move_to_right && join_node->join_mode == JoinMode::Inner) {
             // The current predicate could not be pushed down to either side. If we cannot push it down, we might be
-            // able to create additional predicates that perform some pre-filtering before the tuples reach the join.
+            // able to create additional predicates that perform some pre-selection before the tuples reach the join.
             // An example can be found in TPC-H query 7, with the predicate
             //   (n1.name = 'DE' AND n2.name = 'FR') OR (n1.name = 'FR' AND n2.n_name = 'DE'
             // We cannot push it to either n1 or n2 as the selected values depend on the result of the other table.
@@ -98,19 +98,24 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             // that reach the joins from all countries to just two. This behavior is also described in the TPC-H
             // Analyzed paper as "CP4.2b: Join-Dependent Expression Filter Pushdown".
             //
-            // For now, this is indiscriminate. For predicates that throw out only few rows, it might actually
+            // For now, this is indiscriminate. For predicates that throw out only few rows, it might actually  // TODO TPC-H 13 seems to regress - evaluate
             // hurt the performance as the predicate will be evaluated twice. Once we see such a case, we could
-            // estimate the selectivity of the predicate and decide whether it is worth creating a pre-join reduction.
+            // estimate the selectivity of the predicate and decide whether it is worth creating a pre-join predicate.
             //
             // Here are the rules that determine whether we can create a pre-join predicate for the tables l or r with
             // predicates that operate on l (l1, l2), r (r1, r2), or are independent of either table (u1, u2). To
-            // produce a predicate for a table, it is required that each expression in the disjunction has a filter for
-            // that table:
+            // produce a predicate for a table, it is required that each expression in the disjunction has a predicate 
+            // for that table:
             //
-            // (l1 AND r2) OR (l2 AND r1) -> push down (l1 OR l2) to left, (r1 OR r2) to right (example from above)
-            // (l1 AND u1) OR (l2 AND u2) -> push down (l1 OR l2) to left
-            // (l1 AND u1) OR (r2 AND u2) -> push down nothing
-            // (l1 AND l2 AND u1) ...     -> push down (l1 AND l2) to left
+            // (l1 AND r1) OR (l2)        -> create predicate (l1 OR l2) on left side, everything on right side might
+            //                               qualify, so do not create a predicate there
+            // (l1 AND r2) OR (l2 AND r1) -> create (l1 OR l2) on left, (r1 OR r2) on right (example from above)
+            // (l1 AND u1) OR (r1 AND u2) -> do nothing
+            // You will also find these examples in the tests.
+            //
+            // For now, this rule deals only with inner joins. It might also work for other join types, but the
+            // implications of creating a pre-join predicate on the NULL-producing side need to be carefully thought
+            // through once the need arises.
             //
             // NAMING:
             // Input
@@ -138,10 +143,14 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               // Fill left/right_conjunction
               const auto inner_conjunction = flatten_logical_expressions(expression_in_disjunction, LogicalOperator::And);
               for (const auto& expression_in_conjunction : inner_conjunction) {
-                if (expression_evaluable_on_lqp(expression_in_conjunction, *join_node->left_input()) && !aborted_left_side) {
+                const auto evaluable_on_left_side = expression_evaluable_on_lqp(expression_in_conjunction, *join_node->left_input());
+                const auto evaluable_on_right_side = expression_evaluable_on_lqp(expression_in_conjunction, *join_node->right_input());
+
+                // We can only work with expressions that are specific to one side.
+                if (evaluable_on_left_side && !evaluable_on_right_side && !aborted_left_side) {
                   left_conjunction.emplace_back(expression_in_conjunction);
                 }
-                if (expression_evaluable_on_lqp(expression_in_conjunction, *join_node->right_input()) && !aborted_right_side) {
+                if (evaluable_on_right_side && !evaluable_on_left_side && !aborted_right_side) {
                   right_conjunction.emplace_back(expression_in_conjunction);
                 }
               }

@@ -476,4 +476,85 @@ TEST_F(PredicatePlacementRuleTest, DoNotMoveUncorrelatedPredicates) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnLeftSide) {
+  // SELECT * FROM a JOIN b on a.a = b.a WHERE (a.b = 1 AND b.a = 2) OR (a.b = 2) should lead to
+  // (b = 1 OR b = 2) being created on the left side of the join. We cannot filter the right side, because
+  // all tuples qualify for the second part of the disjunction.
+
+  // clang-format off
+  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_a_b, 1), equals_(_b_a, 2)), equals_(_a_b, 2)),
+    JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+      _table_a,
+      _table_b));
+
+  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_a_b, 1), equals_(_b_a, 2)), equals_(_a_b, 2)),
+    JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+      PredicateNode::make(or_(equals_(_a_b, 1), equals_(_a_b, 2)),
+        _table_a),
+      _table_b));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnBothSides) {
+  // SELECT * FROM a JOIN b on a.a = b.a WHERE (a.b = 1 AND b.a = 2) OR (a.b = 2 AND b.a = 1) should lead to
+  // (b = 1 OR b = 2) being created on the both sides of the join
+
+  // clang-format off
+  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_a_b, 1), equals_(_b_a, 2)), and_(equals_(_a_b, 2), equals_(_b_a, 1))),  // NOLINT
+    JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+      _table_a,
+      _table_b));
+
+  const auto expected_lqp = PredicateNode::make(or_(and_(equals_(_a_b, 1), equals_(_b_a, 2)), and_(equals_(_a_b, 2), equals_(_b_a, 1))),  // NOLINT
+    JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+      PredicateNode::make(or_(equals_(_a_b, 1), equals_(_a_b, 2)),
+        _table_a),
+      PredicateNode::make(or_(equals_(_b_a, 2), equals_(_b_a, 1)),
+        _table_b)));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfNonInner) {
+  // Similar to the previous test, but we do not do anything (yet) because it uses a non-inner join
+
+  // clang-format off
+  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_a_b, 1), equals_(_b_a, 2)), and_(equals_(_a_b, 2), equals_(_b_a, 1))),  // NOLINT
+    JoinNode::make(JoinMode::Left, equals_(_a_a, _b_a),
+      _table_a,
+      _table_b));
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
+  // SELECT * FROM a JOIN b on a.a = b.a WHERE (a.b = 1 AND ? = 2) OR (b.a = 2 AND ? = 1) should not lead to a pre-join
+  // being created, as we cannot make any assumptions about the two predicates that do not belong to any table
+
+  // clang-format off
+  const auto input_lqp = PredicateNode::make(or_(and_(equals_(_a_b, 1), equals_(placeholder_(ParameterID{0}), 2)), and_(equals_(_b_a, 2), equals_(placeholder_(ParameterID{1}), 1))),  // NOLINT
+    JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+      _table_a,
+      _table_b));
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
