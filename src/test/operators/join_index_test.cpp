@@ -260,7 +260,7 @@ TYPED_TEST(JoinIndexTest, OuterJoin) {
 
 TYPED_TEST(JoinIndexTest, OuterJoinWithNull) {
   if constexpr (std::is_same_v<TypeParam, CompositeGroupKeyIndex>) {
-    return;  // CompositeGroupKeyIndex is currently not null-aware
+    return;  // CompositeGroupKeyIndex is currently not null-aware (#1818)
   }
 
   this->test_join_output(this->_table_wrapper_m, this->_table_wrapper_n,
