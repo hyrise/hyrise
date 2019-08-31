@@ -23,31 +23,37 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   Assert((segments_to_index.size() == 1), "GroupKeyIndex only works with a single segment.");
 
   // 1) Initialize the index_offset:
-  //    Set the index_offset to size of the dictionary + 2 (plus one for null and plus one to mark the ending position)
+  //    Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position)
   //    and set all offsets to 0.
   //    Using `_index_offsets`, we want to count the occurences of each ValueID of the attribute vector (AV).
-  //    The ValueID for null in an AV is the highest available ValueID in the dictionary + 1.
-  //    `unique_values_count` returns the size of dictionary which does not store a ValueID for null.
-  //    Therefore we have `unique_values_count` + 1 (for null) ValueIDs for which we want to count the occurrences.
-  _index_offsets = std::vector<ChunkOffset>(
-      _indexed_segment->unique_values_count() + 1u /*for null*/ + 1u /*to mark the ending position */, 0u);
+  //    The ValueID for NULL in an AV is the highest available ValueID in the dictionary + 1.
+  //    `unique_values_count` returns the size of dictionary which does not store a ValueID for NULL.
+  //    Therefore we have `unique_values_count` ValueIDs (null value id is not included)
+  //    for which we want to count the occurrences.
+  _index_offsets =
+      std::vector<ChunkOffset>(_indexed_segment->unique_values_count() + 1u /*to mark the ending position */, 0u);
 
   // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (i.e. value ids)
   //    and count the occurrences of each value id at their respective position in the dictionary,
   //    i.e. the position in the _index_offsets
+  const auto null_value_id = _indexed_segment->null_value_id();
+  auto null_count = 0u;
+
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](auto& attribute_vector) {
     for (const auto value_id : attribute_vector) {
-      _index_offsets[value_id + 1u]++;
+      if (static_cast<ValueID>(value_id) != null_value_id) {
+        _index_offsets[value_id + 1u]++;
+      } else {
+        ++null_count;
+      }
     }
   });
 
-  const auto null_value_id = _indexed_segment->unique_values_count();
-  const auto null_count = _index_offsets[null_value_id + 1u];
   const auto non_null_count = _indexed_segment->size() - null_count;
 
-  // 3) Set the _index_postings and _index_null_postings
+  // 3) Set the _index_postings and _index_null_positions
   _index_postings = std::vector<ChunkOffset>(non_null_count);
-  _index_null_postings = std::vector<ChunkOffset>(null_count);
+  _index_null_positions = std::vector<ChunkOffset>(null_count);
 
   // 4) Create offsets for the postings in _index_offsets
   std::partial_sum(_index_offsets.begin(), _index_offsets.end(), _index_offsets.begin());
@@ -58,16 +64,17 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 
   // 5b) Iterate once again over the attribute vector to obtain the write-offsets
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](auto& attribute_vector) {
-    auto value_id_it = attribute_vector.cbegin();
+    auto value_id_iter = attribute_vector.cbegin();
+    auto null_positions_iter = _index_null_positions.begin();
     auto position = 0u;
-    for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++position) {
-      const auto& value_id = static_cast<ValueID>(*value_id_it);
+    for (; value_id_iter != attribute_vector.cend(); ++value_id_iter, ++position) {
+      const auto& value_id = static_cast<ValueID>(*value_id_iter);
 
       if (value_id != null_value_id) {
         _index_postings[index_offset_copy[value_id]] = position;
       } else {
-        const auto null_postings_offset = index_offset_copy[value_id] - non_null_count;
-        _index_null_postings[null_postings_offset] = position;
+        *null_positions_iter = position;
+        ++null_positions_iter;
       }
 
       // increase the write-offset in the copy by one to ensure that further writes
@@ -79,10 +86,8 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Group Key Index expects exactly one input value");
-
-  if (variant_is_null(values[0])) {
-    return null_cbegin();
-  }
+  // the caller is responsible for not passing a null value
+  Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
 
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   return _get_postings_iterator_at(value_id);
@@ -90,10 +95,8 @@ GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVar
 
 GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Group Key Index expects exactly one input value");
-
-  if (variant_is_null(values[0])) {
-    return null_cend();
-  }
+  // the caller is responsible for not passing a null value
+  Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
 
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
   return _get_postings_iterator_at(value_id);

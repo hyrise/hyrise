@@ -59,17 +59,17 @@ AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }
 
 AbstractIndex::Iterator AbstractIndex::cend() const { return _cend(); }
 
-AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _index_null_postings.cbegin(); }
+AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _index_null_positions.cbegin(); }
 
-AbstractIndex::Iterator AbstractIndex::null_cend() const { return _index_null_postings.cend(); }
+AbstractIndex::Iterator AbstractIndex::null_cend() const { return _index_null_positions.cend(); }
 
 SegmentIndexType AbstractIndex::type() const { return _type; }
 
 size_t AbstractIndex::memory_consumption() const {
   size_t bytes{0u};
   bytes += _memory_consumption();
-  bytes += sizeof(std::vector<ChunkOffset>);  // _index_null_postings
-  bytes += sizeof(ChunkOffset) * _index_null_postings.capacity();
+  bytes += sizeof(std::vector<ChunkOffset>);  // _index_null_positions
+  bytes += sizeof(ChunkOffset) * _index_null_positions.capacity();
   bytes += sizeof(_type);
   return bytes;
 }

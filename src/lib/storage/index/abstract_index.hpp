@@ -113,7 +113,7 @@ class AbstractIndex : private Noncopyable {
   Iterator cbegin() const;
 
   /**
-   * Returns an Iterator past the position of the greatest indexed non-null element. This is useful for open
+   * Returns an Iterator past the position of the largest indexed non-null element. This is useful for open
    * end range queries.
    * Iterating from cbegin() to cend() will result in a position list with ordered values.
    * Calls _cend() of the most derived class.
@@ -124,7 +124,6 @@ class AbstractIndex : private Noncopyable {
   /**
    * Returns an Iterator to the position of the first element equal to null.
    * Iterating from null_cbegin() to null_cend() will result in a position list with all null values.
-   * Calls _null_cbegin() of the most derived class.
    *
    * @return An Iterator on the position of the first element equal to null.
    */
@@ -133,7 +132,6 @@ class AbstractIndex : private Noncopyable {
   /**
    * Returns an Iterator past the position of the last element equal to null.
    * Iterating from null_cbegin() to null_cend() will result in a position list with all null values.
-   * Calls _null_cend() of the most derived class.
    *
    * @return An Iterator on the position of the first element equal to null.
    */
@@ -157,7 +155,7 @@ class AbstractIndex : private Noncopyable {
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
-  std::vector<ChunkOffset> _index_null_postings;  // null positions in the corresponding segment
+  std::vector<ChunkOffset> _index_null_positions;  // null positions in the corresponding segment
 
  private:
   const SegmentIndexType _type;

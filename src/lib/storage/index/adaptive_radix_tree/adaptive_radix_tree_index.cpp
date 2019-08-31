@@ -34,31 +34,29 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
   std::vector<std::pair<BinaryComparable, ChunkOffset>> pairs_to_insert;
   pairs_to_insert.reserve(_indexed_segment->attribute_vector()->size());
 
-  const auto null_value_id = _indexed_segment->unique_values_count();
-  _index_null_postings.reserve(_indexed_segment->attribute_vector()->size());
+  const auto null_value_id = _indexed_segment->null_value_id();
+  _index_null_positions.reserve(_indexed_segment->attribute_vector()->size());
 
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](const auto& attribute_vector) {
     auto chunk_offset = ChunkOffset{0u};
-    auto value_id_it = attribute_vector.cbegin();
-    for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++chunk_offset) {
-      if (*value_id_it == null_value_id) {
-        _index_null_postings.emplace_back(chunk_offset);
+    auto value_id_iter = attribute_vector.cbegin();
+    for (; value_id_iter != attribute_vector.cend(); ++value_id_iter, ++chunk_offset) {
+      if (static_cast<ValueID>(*value_id_iter) == null_value_id) {
+        _index_null_positions.emplace_back(chunk_offset);
       } else {
-        pairs_to_insert.emplace_back(BinaryComparable(ValueID{*value_id_it}), chunk_offset);
+        pairs_to_insert.emplace_back(BinaryComparable(ValueID{*value_id_iter}), chunk_offset);
       }
     }
   });
 
-  _index_null_postings.shrink_to_fit();
+  _index_null_positions.shrink_to_fit();
   _root = _bulk_insert(pairs_to_insert);
 }
 
 AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
-
-  if (variant_is_null(values[0])) {
-    return null_cbegin();
-  }
+  // the caller is responsible for not passing a null value
+  Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
 
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
@@ -72,10 +70,8 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<A
 
 AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
-
-  if (variant_is_null(values[0])) {
-    return null_cend();
-  }
+  // the caller is responsible for not passing a null value
+  Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
 
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {

@@ -183,31 +183,31 @@ class SingleSegmentIndexTest : public BaseTest {
   std::shared_ptr<AbstractIndex> index_string_empty = nullptr;
 
   // index null postings
-  std::vector<ChunkOffset>* index_int_no_nulls_null_postings;
-  std::vector<ChunkOffset>* index_int_no_nulls_2_null_postings;
-  std::vector<ChunkOffset>* index_int_nulls_null_postings;
-  std::vector<ChunkOffset>* index_int_mixed_null_postings;
-  std::vector<ChunkOffset>* index_int_empty_null_postings;
+  std::vector<ChunkOffset>* index_int_no_nulls_null_positions;
+  std::vector<ChunkOffset>* index_int_no_nulls_2_null_positions;
+  std::vector<ChunkOffset>* index_int_nulls_null_positions;
+  std::vector<ChunkOffset>* index_int_mixed_null_positions;
+  std::vector<ChunkOffset>* index_int_empty_null_positions;
 
-  std::vector<ChunkOffset>* index_long_no_nulls_null_postings;
-  std::vector<ChunkOffset>* index_long_nulls_null_postings;
-  std::vector<ChunkOffset>* index_long_mixed_null_postings;
-  std::vector<ChunkOffset>* index_long_empty_null_postings;
+  std::vector<ChunkOffset>* index_long_no_nulls_null_positions;
+  std::vector<ChunkOffset>* index_long_nulls_null_positions;
+  std::vector<ChunkOffset>* index_long_mixed_null_positions;
+  std::vector<ChunkOffset>* index_long_empty_null_positions;
 
-  std::vector<ChunkOffset>* index_float_no_nulls_null_postings;
-  std::vector<ChunkOffset>* index_float_nulls_null_postings;
-  std::vector<ChunkOffset>* index_float_mixed_null_postings;
-  std::vector<ChunkOffset>* index_float_empty_null_postings;
+  std::vector<ChunkOffset>* index_float_no_nulls_null_positions;
+  std::vector<ChunkOffset>* index_float_nulls_null_positions;
+  std::vector<ChunkOffset>* index_float_mixed_null_positions;
+  std::vector<ChunkOffset>* index_float_empty_null_positions;
 
-  std::vector<ChunkOffset>* index_double_no_nulls_null_postings;
-  std::vector<ChunkOffset>* index_double_nulls_null_postings;
-  std::vector<ChunkOffset>* index_double_mixed_null_postings;
-  std::vector<ChunkOffset>* index_double_empty_null_postings;
+  std::vector<ChunkOffset>* index_double_no_nulls_null_positions;
+  std::vector<ChunkOffset>* index_double_nulls_null_positions;
+  std::vector<ChunkOffset>* index_double_mixed_null_positions;
+  std::vector<ChunkOffset>* index_double_empty_null_positions;
 
-  std::vector<ChunkOffset>* index_string_no_nulls_null_postings;
-  std::vector<ChunkOffset>* index_string_nulls_null_postings;
-  std::vector<ChunkOffset>* index_string_mixed_null_postings;
-  std::vector<ChunkOffset>* index_string_empty_null_postings;
+  std::vector<ChunkOffset>* index_string_no_nulls_null_positions;
+  std::vector<ChunkOffset>* index_string_nulls_null_positions;
+  std::vector<ChunkOffset>* index_string_mixed_null_positions;
+  std::vector<ChunkOffset>* index_string_empty_null_positions;
 };
 
 // List of indexes to test
@@ -302,7 +302,7 @@ TYPED_TEST(SingleSegmentIndexTest, LowerBoundTest) {
   // A1, B4, C2, D2
   EXPECT_EQ(this->index_int_mixed->lower_bound({2}), this->index_int_mixed->cbegin() + 1);
   // A1, B1, C1, D2
-  EXPECT_EQ(this->index_int_mixed->lower_bound({NULL_VALUE}), this->index_int_mixed->null_cbegin());
+  EXPECT_THROW(this->index_int_mixed->lower_bound({NULL_VALUE}), std::logic_error);
   // A1, B2, C1, D2
   EXPECT_EQ(this->index_int_mixed->lower_bound({0}), this->index_int_mixed->cbegin());
   // A1, B3, C1, D2
@@ -325,7 +325,7 @@ TYPED_TEST(SingleSegmentIndexTest, UpperBoundTest) {
   // A1, B4, C2, D2
   EXPECT_EQ(this->index_int_mixed->upper_bound({2}), this->index_int_mixed->cbegin() + 1);
   // A1, B1, C1, D2
-  EXPECT_EQ(this->index_int_mixed->upper_bound({NULL_VALUE}), this->index_int_mixed->null_cend());
+  EXPECT_THROW(this->index_int_mixed->upper_bound({NULL_VALUE}), std::logic_error);
   // A1, B2, C1, D2
   EXPECT_EQ(this->index_int_mixed->upper_bound({0}), this->index_int_mixed->cbegin() + 1);
   // A1, B3, C1, D2

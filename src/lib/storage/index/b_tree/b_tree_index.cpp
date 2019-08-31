@@ -17,27 +17,23 @@ BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& se
   Assert(static_cast<bool>(_indexed_segment), "BTreeIndex requires segments_to_index not to be empty.");
   Assert((segments_to_index.size() == 1), "BTreeIndex only works with a single segment.");
   _impl = make_shared_by_data_type<BaseBTreeIndexImpl, BTreeIndexImpl>(_indexed_segment->data_type(), _indexed_segment,
-                                                                       _index_null_postings);
+                                                                       _index_null_positions);
 }
 
 size_t BTreeIndex::_memory_consumption() const { return _impl->memory_consumption(); }
 
 BTreeIndex::Iterator BTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert(!values.empty(), "Value vector has to be non-empty.");
-
-  if (variant_is_null(values[0])) {
-    return null_cbegin();
-  }
+  // the caller is responsible for not passing a null value
+  Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
 
   return _impl->lower_bound(values);
 }
 
 BTreeIndex::Iterator BTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   Assert(!values.empty(), "Value vector has to be non-empty.");
-
-  if (variant_is_null(values[0])) {
-    return null_cend();
-  }
+  // the caller is responsible for not passing a null value
+  Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
 
   return _impl->upper_bound(values);
 }
