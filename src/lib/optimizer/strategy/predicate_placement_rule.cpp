@@ -89,21 +89,36 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               expression_evaluable_on_lqp(push_down_node->predicate(), *join_node->right_input());
 
           if (!move_to_left && !move_to_right) {
-            // TODO Doc
+            // The current predicate could not be pushed down to either side. If we cannot push it down, we might be
+            // able to create additional predicates that perform some pre-filtering before the tuples reach the join.
+            // An example can be found in TPC-H query 7, with the predicate
+            //   (n1.name = 'DE' AND n2.name = 'FR') OR (n1.name = 'FR' AND n2.n_name = 'DE'
+            // We cannot push it to either n1 or n2 as the selected values depend on the result of the other table.
+            // However, we can create a predicate (n1.name = 'DE' OR n1.name = 'FR') and reduce the number of tuples
+            // that reach the joins from all countries to just two. This behavior is also described in the TPC-H
+            // Analyzed paper as "CP4.2b: Join-Dependent Expression Filter Pushdown".
+            //
             // For now, this is indiscriminate. For predicates that throw out only few rows, it might actually
-            // hurt the performance as the predicate will be evaluated twice. In case we see such a case, we could
+            // hurt the performance as the predicate will be evaluated twice. Once we see such a case, we could
             // estimate the selectivity of the predicate and decide whether it is worth creating a pre-join reduction.
             //
-            // A more complicated future optimization would be for the join sides to produce a discriminator column,
-            // telling us which of the condition(s) was true. This could save us from evaluating complex conditions
-            // twice. However, as (1) a predicate node cannot produce columns and (2) we do not have column types that
-            // hold multiple values, we will not address that any time soon.
-            // TODO Move to own function
-
-            // (l1 AND r2) OR (l2 AND r1) -> push down l1 OR l2 to left, r1 OR r2 to right
-            // (l1 AND u1) OR (l2 AND u2) -> push down l1 OR l2 to left
+            // Here are the rules that determine whether we can create a pre-join predicate for the tables l or r with
+            // predicates that operate on l (l1, l2), r (r1, r2), or are independent of either table (u1, u2). To
+            // produce a predicate for a table, it is required that each expression in the disjunction has a filter for
+            // that table:
+            //
+            // (l1 AND r2) OR (l2 AND r1) -> push down (l1 OR l2) to left, (r1 OR r2) to right (example from above)
+            // (l1 AND u1) OR (l2 AND u2) -> push down (l1 OR l2) to left
             // (l1 AND u1) OR (r2 AND u2) -> push down nothing
-            // (l1 AND l2 AND u1) ...     -> abort, we cannot find a condition for the right side as `u1` can only be considered `true` for the left side
+            // (l1 AND l2 AND u1) ...     -> push down (l1 AND l2) to left
+            //
+            // NAMING:
+            // Input
+            // (l1 AND r2) OR (l2 AND r1)
+            // ^^^^^^^^^^^    ^^^^^^^^^^^ outer_disjunction holds two (or more) elements from flattening the OR.
+            //                            One of these elements is called expression_in_disjunction.
+            //  ^^     ^^                 inner_conjunction holds two (or more) elements from flattening the AND.
+            //                            One of these elements is called expression_in_conjunction.
 
             std::vector<std::shared_ptr<AbstractExpression>> left_disjunction{};
             std::vector<std::shared_ptr<AbstractExpression>> right_disjunction{};
@@ -115,28 +130,29 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
             const auto outer_disjunction = flatten_logical_expressions(push_down_node->predicate(), LogicalOperator::Or);
             for (const auto& expression_in_disjunction : outer_disjunction) {
-              std::cout << expression_in_disjunction->as_column_name() << std::endl;
-
+              // For the current expression_in_disjunction, these hold the PredicateExpressions that need to be true
+              // on the left/right side
               std::vector<std::shared_ptr<AbstractExpression>> left_conjunction{};
               std::vector<std::shared_ptr<AbstractExpression>> right_conjunction{};
 
+              // Fill left/right_conjunction
               const auto inner_conjunction = flatten_logical_expressions(expression_in_disjunction, LogicalOperator::And);
               for (const auto& expression_in_conjunction : inner_conjunction) {
-                std::cout << "  " << expression_in_conjunction->as_column_name() << ": ";
                 if (expression_evaluable_on_lqp(expression_in_conjunction, *join_node->left_input()) && !aborted_left_side) {
                   left_conjunction.emplace_back(expression_in_conjunction);
-                  std::cout << "l";
                 }
                 if (expression_evaluable_on_lqp(expression_in_conjunction, *join_node->right_input()) && !aborted_right_side) {
                   right_conjunction.emplace_back(expression_in_conjunction);
-                  std::cout << "r";
                 }
-                std::cout << std::endl;
               }
 
               if (!left_conjunction.empty()) {
+                // If we have found one or more predicates for the left side, connect them using AND and add them to
+                // the disjunction that will be pushed to the left side.
                 left_disjunction.emplace_back(inflate_logical_expressions(left_conjunction, LogicalOperator::And));
               } else {
+                // If, within the current expression_in_disjunction, we have not found a matching predicate for the
+                // left side, all tuples for the left side qualify and it makes no sense to create a filter.
                 aborted_left_side = true;
                 left_disjunction.clear();
               }
@@ -149,25 +165,23 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             }
 
             if (!left_disjunction.empty()) {
-              Assert(!aborted_left_side, ""); // TODO
+              // Connect all options (e.g., l.name = 'DE' and l.name = 'FR') with a disjunction, create a predicate,
+              // and add it to the list of nodes that will be pushed to the left side
               const auto left_expression = inflate_logical_expressions(left_disjunction, LogicalOperator::Or);
-              std::cout << "Push to left: " << left_expression->as_column_name() << std::endl;
               const auto pre_filter_predicate_node = PredicateNode::make(left_expression);
               left_push_down_nodes.emplace_back(pre_filter_predicate_node);
             }
 
             if (!right_disjunction.empty()) {
-              Assert(!aborted_right_side, ""); // TODO
               const auto right_expression = inflate_logical_expressions(right_disjunction, LogicalOperator::Or);
-              std::cout << "Push to right: " << right_expression->as_column_name() << std::endl;
               const auto pre_filter_predicate_node = PredicateNode::make(right_expression);
               right_push_down_nodes.emplace_back(pre_filter_predicate_node);
             }
 
             _insert_nodes(current_node, input_side, {push_down_node});
-          }
 
-          if (move_to_left && move_to_right) {
+            // End of the pre-join filter code
+          } else if (move_to_left && move_to_right) {
             // Do not push down uncorrelated predicates
             _insert_nodes(current_node, input_side, {push_down_node});
           } else {
