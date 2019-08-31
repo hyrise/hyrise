@@ -15,6 +15,13 @@ struct ColumnMeta {
   bool nullable = false;
 };
 
+// Strategies on how to deal with unquoted null Strings ("...,Null,...") in csv files:
+// RejectNullStrings: An unquoted null string (case-insensitive) causes an exception - only empty
+//  field is allowed as null value.
+// NullStringAsValue: An unquoted null string is parsed as a string - eg. "Null", case is not changed.
+// NullStringAsNull: An unquoted null string (case-insensitive) is parsed as a null value.
+enum class NullHandling { RejectNullStrings, NullStringAsNull, NullStringAsValue };
+
 struct ParseConfig {
   char delimiter = '\n';
   char separator = ',';
@@ -22,11 +29,10 @@ struct ParseConfig {
   char escape = '"';
   char delimiter_escape = '\\';
 
-  // If this is set to true, "4.3" will not be accepted as a value for a float column
+  // If this is set to true, "4.3" will not be accepted as a value for a float column.
   bool reject_quoted_nonstrings = true;
 
-  // If this is set to true, an unquoted null string causes an exception (only empty field is allowed as null value)
-  bool reject_null_strings = true;
+  NullHandling null_handling = NullHandling::RejectNullStrings;
 
   // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
   bool rfc_mode = true;

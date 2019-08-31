@@ -107,9 +107,9 @@ class TableBuilder {
   // types is a list of equal length defining respective column types
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
-  TableBuilder(const size_t chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const size_t estimated_rows = 0)
-      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)) {
+  TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
+               const ChunkOffset estimated_rows = 0)
+      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
@@ -142,11 +142,12 @@ class TableBuilder {
     return _table;
   }
 
-  void append_row(DataTypes&&... new_values) {
-    auto values_tuple = boost::hana::make_tuple(std::forward<DataTypes>(new_values)...);
+  template <typename... Types>
+  void append_row(Types&&... new_values) {
+    auto values_tuple = boost::hana::make_tuple(std::forward<Types>(new_values)...);
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(_value_vectors) == boost::hana::size(values_tuple));
 
-    // Create tuples ([&values0, &null_values0, value0], [&values1, &null_values1, value1], ...)
+    // Create tuples ([&values0, &null_values0, new_value0], [&values1, &null_values1, new_value1], ...)
     auto value_vectors_and_null_value_vectors_and_values = boost::hana::zip_with(
         [](auto& values, auto& null_values, auto&& value) {
           return boost::hana::make_tuple(std::reference_wrapper(values), std::reference_wrapper(null_values),
@@ -158,23 +159,27 @@ class TableBuilder {
     boost::hana::for_each(value_vectors_and_null_value_vectors_and_values, [](auto& values_and_null_values_and_value) {
       auto& values = values_and_null_values_and_value[boost::hana::llong_c<0>].get();
       auto& null_values = values_and_null_values_and_value[boost::hana::llong_c<1>].get();
-      auto& optional_or_value_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
+
+      // the type of optional_or_value is either std::optional<T> or just T, hence the variable name
+      auto& optional_or_value = values_and_null_values_and_value[boost::hana::llong_c<2>];
 
       constexpr auto column_is_nullable = std::decay_t<decltype(null_values)>::has_value;
-      auto value_is_null = table_builder::is_null(optional_or_value_value);
+      auto value_is_null = table_builder::is_null(optional_or_value);
 
       DebugAssert(column_is_nullable || !value_is_null, "cannot insert null value into not-null-column");
 
       if (value_is_null) {
         values.emplace_back();
       } else {
-        values.emplace_back(std::move(table_builder::get_value(optional_or_value_value)));
+        values.emplace_back(std::move(table_builder::get_value(optional_or_value)));
       }
 
       if constexpr (column_is_nullable) {
         null_values.value().emplace_back(value_is_null);
       }
     });
+
+    _row_count++;
 
     // The reason why we can't put the for_each lambda's code into zip_with's lambda is the following:
     // boost::hana's higher order functions (like zip_with) do not guarantee the order of execution of a passed
@@ -186,9 +191,14 @@ class TableBuilder {
     }
   }
 
+  size_t row_count() const { return _row_count; }
+
  private:
   std::shared_ptr<Table> _table;
-  size_t _estimated_rows_per_chunk;
+  ChunkOffset _estimated_rows_per_chunk;
+
+  // _table->row_count() only counts completed chunks but we want the total number of rows added to this table builder
+  size_t _row_count;
 
   boost::hana::tuple<std::vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
   boost::hana::tuple<table_builder::OptionalConstexpr<std::vector<bool>, (table_builder::is_optional<DataTypes>())>...>

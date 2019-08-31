@@ -41,3 +41,5 @@ cmake-build-*
 # llvm coverage information
 default.profdata
 default.profraw
+
+tpcds_cached_tables/
