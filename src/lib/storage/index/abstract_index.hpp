@@ -155,7 +155,7 @@ class AbstractIndex : private Noncopyable {
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
-  std::vector<ChunkOffset> _index_null_positions;  // null positions in the corresponding segment
+  std::vector<ChunkOffset> _index_null_positions;
 
  private:
   const SegmentIndexType _type;
