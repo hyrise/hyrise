@@ -120,7 +120,10 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates, configuration.radix_bits);
-    } else {
+    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
+      return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
+                                            configuration.secondary_predicates, *configuration.index_side);
+    }else {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates);
     }
@@ -445,11 +448,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     return "resources/test_data/tbl/join_test_runner/input_table_"s + side_str + "_" + table_size_str + ".tbl";
   }
 
-  static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
+  static std::shared_ptr<Table> get_table(const InputTableConfiguration& key, const std::optional<IndexSide> index_side = std::nullopt) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
       const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
-      std::ignore = side;
       std::ignore = table_size;
 
       auto table = load_table(get_table_path(key), chunk_size);
@@ -510,6 +512,19 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         table = reference_table;
       }
 
+      /**
+       * To sufficiently test IndexJoins, indexes has to be created. Therefore, if index_side is set in the configuration,
+       * indexes for the table have to be created. The index type is either GroupKeyIndex for dictionary segmetns or 
+       * BTreeIndex for non-dictionary segments.
+       */
+      if(index_side && (side == InputSide::Left) == (*index_side == IndexSide::Left)) {
+        if (encoding_type == EncodingType::Dictionary || encoding_type == EncodingType::FixedStringDictionary) {
+          // TODO create GroupKeyIndexes
+        } else {
+          // TODO create BTree indexes
+        }
+      }
+      
       input_table_iter = input_tables.emplace(key, table).first;
     }
 
@@ -523,12 +538,11 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
 TEST_P(JoinTestRunner, TestJoin) {
   // TODO(anyone) for the case std::is_same_v<JoinOperator, JoinHash>
-  //  - add indexes
   //  - add performace data evaluation
   const auto configuration = GetParam();
 
-  const auto input_table_left = get_table(configuration.input_left);
-  const auto input_table_right = get_table(configuration.input_right);
+  const auto input_table_left = get_table(configuration.input_left, configuration.index_side);
+  const auto input_table_right = get_table(configuration.input_right, configuration.index_side);
 
   const auto input_operator_left = std::make_shared<TableWrapper>(input_table_left);
   const auto input_operator_right = std::make_shared<TableWrapper>(input_table_right);

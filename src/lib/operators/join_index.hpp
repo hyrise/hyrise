@@ -46,6 +46,8 @@ class JoinIndex : public AbstractJoinOperator {
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
   };
 
+  const std::string description(DescriptionMode description_mode) const override;
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
