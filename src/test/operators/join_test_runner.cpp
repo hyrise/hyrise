@@ -120,10 +120,11 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates, configuration.radix_bits);
-    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
+    } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT(readability/braces)
+      Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
-                                            configuration.secondary_predicates, *configuration.index_side);
-    }else {
+                                         configuration.secondary_predicates, *configuration.index_side);
+    } else {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates);
     }
@@ -196,35 +197,43 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     };
     // clang-format on
 
-    const auto add_configuration_if_supported = [&](const auto& configuration) {
-      // String vs non-String comparisons are not supported in Hyrise and therefore cannot be tested
-      if ((configuration.data_type_left == DataType::String) != (configuration.data_type_right == DataType::String)) {
-        return;
-      }
-
-      JoinConfiguration support_configuration{configuration.join_mode, configuration.predicate_condition,
-                                              configuration.data_type_left, configuration.data_type_right,
-                                              !configuration.secondary_predicates.empty()};
-
+    /**
+     * Returns a set of adapted configurations is the join type provides further configuration possibilities
+     * which are should be tested.
+     * Else a vector containing only the passed configuration is returned.
+     */
+    const auto build_join_type_specific_variations = [&](const auto& configuration) {
       if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
-        for (const auto& index_side : all_index_sides) {
-          auto index_join_configuration = support_configuration;
-          // The supports function of the join index required an index side and the inputs table types.
-          // Therefore the configuration must be adapted accordingly.
-          const auto table_type_left =
-              (configuration.input_left.table_type == InputTableType::Data ? TableType::Data : TableType::References);
-          const auto table_type_right =
-              (configuration.input_right.table_type == InputTableType::Data ? TableType::Data : TableType::References);
-
-          index_join_configuration.left_table_type = table_type_left;
-          index_join_configuration.right_table_type = table_type_right;
-          index_join_configuration.index_side = index_side;
-
-          if (JoinOperator::supports(index_join_configuration)) {
-            configurations.emplace_back(configuration);
-          }
+        std::vector<JoinTestConfiguration> variations(all_index_sides.size(), configuration);
+        for (uint8_t index{0}; index < all_index_sides.size(); ++index) {
+          variations[index].index_side = all_index_sides[index];
         }
-      } else {
+        return variations;
+        return std::vector{configuration};
+      }
+    };
+
+    const auto add_configurations_if_supported = [&](const auto& configuration_candidates) {
+      for (const auto& configuration : configuration_candidates) {
+        // String vs non-String comparisons are not supported in Hyrise and therefore cannot be tested
+        if ((configuration.data_type_left == DataType::String) != (configuration.data_type_right == DataType::String)) {
+          return;
+        }
+
+        const auto table_type_left =
+            (configuration.input_left.table_type == InputTableType::Data ? TableType::Data : TableType::References);
+        const auto table_type_right =
+            (configuration.input_right.table_type == InputTableType::Data ? TableType::Data : TableType::References);
+
+        JoinConfiguration support_configuration{configuration.join_mode,
+                                                configuration.predicate_condition,
+                                                configuration.data_type_left,
+                                                configuration.data_type_right,
+                                                !configuration.secondary_predicates.empty(),
+                                                table_type_left,
+                                                table_type_right,
+                                                configuration.index_side};
+
         if (JoinOperator::supports(support_configuration)) {
           configurations.emplace_back(configuration);
         }
@@ -240,7 +249,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         join_test_configuration.data_type_left = data_type_left;
         join_test_configuration.data_type_right = data_type_right;
 
-        add_configuration_if_supported(join_test_configuration);
+        add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
       }
     }
 
@@ -258,7 +267,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               join_test_configuration.input_right.table_size = right_table_size;
               join_test_configuration.secondary_predicates = secondary_predicates;
 
-              add_configuration_if_supported(join_test_configuration);
+              add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
             }
           }
         }
@@ -278,7 +287,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           join_test_configuration.input_left.table_size = left_table_size;
           join_test_configuration.input_right.table_size = right_table_size;
 
-          add_configuration_if_supported(join_test_configuration);
+          add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
         }
       }
     }
@@ -294,7 +303,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           join_test_configuration.input_left.chunk_size = chunk_size;
           join_test_configuration.input_right.chunk_size = chunk_size;
 
-          add_configuration_if_supported(join_test_configuration);
+          add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
         }
       }
     }
@@ -308,7 +317,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         join_test_configuration.data_type_right = data_type;
         join_test_configuration.join_mode = join_mode;
 
-        add_configuration_if_supported(join_test_configuration);
+        add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
       }
     }
 
@@ -323,7 +332,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         join_test_configuration.nullable_right = true;
         join_test_configuration.predicate_condition = predicate_condition;
 
-        add_configuration_if_supported(join_test_configuration);
+        add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
       }
     }
 
@@ -338,7 +347,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
         join_test_configuration.swap_input_sides();
 
-        add_configuration_if_supported(join_test_configuration);
+        add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
       }
     }
 
@@ -352,7 +361,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           join_test_configuration.input_right.table_type = right_input_table_type;
           join_test_configuration.input_right.table_size = table_size;
 
-          add_configuration_if_supported(join_test_configuration);
+          add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
         }
       }
     }
@@ -372,7 +381,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               join_test_configuration.swap_input_sides();
             }
 
-            add_configuration_if_supported(join_test_configuration);
+            add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
           }
         }
       }
@@ -398,7 +407,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               join_test_configuration.nullable_right = nullable;
               join_test_configuration.predicate_condition = predicate_condition;
 
-              add_configuration_if_supported(join_test_configuration);
+              add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
             }
           }
         }
@@ -424,7 +433,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                   join_test_configuration.input_right.chunk_size = chunk_size;
                   join_test_configuration.radix_bits = radix_bits;
 
-                  add_configuration_if_supported(join_test_configuration);
+                  add_configurations_if_supported(build_join_type_specific_variations(join_test_configuration));
                 }
               }
             }
@@ -448,7 +457,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     return "resources/test_data/tbl/join_test_runner/input_table_"s + side_str + "_" + table_size_str + ".tbl";
   }
 
-  static std::shared_ptr<Table> get_table(const InputTableConfiguration& key, const std::optional<IndexSide> index_side = std::nullopt) {
+  static std::shared_ptr<Table> get_table(const InputTableConfiguration& key,
+                                          const std::optional<IndexSide> index_side = std::nullopt) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
       const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
@@ -517,14 +527,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        * indexes for the table have to be created. The index type is either GroupKeyIndex for dictionary segmetns or 
        * BTreeIndex for non-dictionary segments.
        */
-      if(index_side && (side == InputSide::Left) == (*index_side == IndexSide::Left)) {
+      if (index_side && (side == InputSide::Left) == (*index_side == IndexSide::Left)) {
         if (encoding_type == EncodingType::Dictionary || encoding_type == EncodingType::FixedStringDictionary) {
           // TODO create GroupKeyIndexes
         } else {
           // TODO create BTree indexes
         }
       }
-      
+
       input_table_iter = input_tables.emplace(key, table).first;
     }
 
@@ -557,6 +567,23 @@ TEST_P(JoinTestRunner, TestJoin) {
 
   const auto join_op = configuration.join_operator_factory->create_operator(input_operator_left, input_operator_right,
                                                                             primary_predicate, configuration);
+
+  // TODO debug code
+  std::cout << "====================== JoinOperator ========================" << std::endl;
+  std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
+  std::cout << "===================== Left Input Table =====================" << std::endl;
+  Print::print(input_table_left, PrintFlags::IgnoreChunkBoundaries);
+  std::cout << "Chunk size: " << configuration.input_left.chunk_size << std::endl;
+  std::cout << "Table type: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
+  std::cout << get_table_path(configuration.input_left) << std::endl;
+  std::cout << std::endl;
+  std::cout << "===================== Right Input Table ====================" << std::endl;
+  Print::print(input_table_right, PrintFlags::IgnoreChunkBoundaries);
+  std::cout << "Chunk size: " << configuration.input_right.chunk_size << std::endl;
+  std::cout << "Table size: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
+  std::cout << get_table_path(configuration.input_right) << std::endl;
+  std::cout << std::endl;
+  // TODO end debug code
 
   auto expected_output_table_iter = expected_output_tables.find(configuration);
 
@@ -634,7 +661,7 @@ TEST_P(JoinTestRunner, TestJoin) {
 INSTANTIATE_TEST_CASE_P(JoinNestedLoop, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinHash, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinSortMerge, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()), );  // NOLINT
-INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
+// INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
 INSTANTIATE_TEST_CASE_P(JoinMPSM, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinMPSM>()), );  // NOLINT
     // clang-format on
 
