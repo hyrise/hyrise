@@ -21,6 +21,8 @@ size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOf
       return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::BTree:
       return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
+    case SegmentIndexType::Invalid:
+      Fail("SegmentIndexType is invalid.");
   }
 }
 
