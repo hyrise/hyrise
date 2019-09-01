@@ -9,9 +9,9 @@ namespace opossum {
 
 template <typename DataType>
 BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseSegment>& segments_to_index,
-                                         std::vector<ChunkOffset>& index_null_positions)
+                                         std::vector<ChunkOffset>& null_positions)
     : _heap_bytes_used{0} {
-  _bulk_insert(segments_to_index, index_null_positions);
+  _bulk_insert(segments_to_index, null_positions);
 }
 
 template <typename DataType>
@@ -62,20 +62,20 @@ size_t BTreeIndexImpl<DataType>::memory_consumption() const {
 
 template <typename DataType>
 void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegment>& segment,
-                                            std::vector<ChunkOffset>& index_null_positions) {
+                                            std::vector<ChunkOffset>& null_positions) {
   std::vector<std::pair<ChunkOffset, DataType>> values;
-  index_null_positions.reserve(values.size());
+  null_positions.reserve(values.size());
 
   // Materialize
   segment_iterate<DataType>(*segment, [&](const auto& position) {
     if (position.is_null()) {
-      index_null_positions.emplace_back(position.chunk_offset());
+      null_positions.emplace_back(position.chunk_offset());
     } else {
       values.push_back({position.chunk_offset(), position.value()});
     }
   });
 
-  index_null_positions.shrink_to_fit();
+  null_positions.shrink_to_fit();
 
   if (values.empty()) {
     return;

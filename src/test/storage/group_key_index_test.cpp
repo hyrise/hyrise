@@ -41,7 +41,7 @@ class GroupKeyIndexTest : public BaseTest {
 
     index_offsets = &(index->_index_offsets);
     index_postings = &(index->_index_postings);
-    index_null_positions = &(index->_index_null_positions);
+    index_null_positions = &(index->_null_positions);
   }
 
   std::shared_ptr<GroupKeyIndex> index = nullptr;
@@ -98,8 +98,8 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   //  - `_index_offsets`, 7 elements, each 4 bytes        ->  28 bytes
   //  - `_index_postings`                                 ->  24 bytes
   //  - `_index_postings`, 8 elements, each 4 bytes       ->  32 bytes
-  //  - `_index_null_positions`                            ->  24 bytes
-  //  - `_index_null_positions`, 4 elements, each 4 bytes  ->  16 bytes
+  //  - `_null_positions`                            ->  24 bytes
+  //  - `_null_positions`, 4 elements, each 4 bytes  ->  16 bytes
   //  - `_type`                                           ->   1 byte
   //  - sum                                               >> 165 bytes
   EXPECT_EQ(index->memory_consumption(), 165u);
@@ -111,8 +111,8 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   //  - `_index_offsets`, 1 elements, each 4 bytes        ->   4 bytes
   //  - `_index_postings`                                 ->  24 bytes
   //  - `_index_postings`, 0 elements, each 4 bytes       ->   0 bytes
-  //  - `_index_null_positions`                            ->  24 bytes
-  //  - `_index_null_positions`, 2 elements, each 4 bytes  ->   8 bytes
+  //  - `_null_positions`                            ->  24 bytes
+  //  - `_null_positions`, 2 elements, each 4 bytes  ->   8 bytes
   //  - `_type`                                           ->   1 byte
   //  - sum                                               >> 101 bytes
   EXPECT_EQ(index_int_nulls->memory_consumption(), 101u);
@@ -124,8 +124,8 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   //  - `_index_offsets`, 3 elements, each 4 bytes        ->  12 bytes
   //  - `_index_postings`                                 ->  24 bytes
   //  - `_index_postings`, 2 elements, each 4 bytes       ->   8 bytes
-  //  - `_index_null_positions`                            ->  24 bytes
-  //  - `_index_null_positions`, 0 elements, each 4 bytes  ->   0 bytes
+  //  - `_null_positions`                            ->  24 bytes
+  //  - `_null_positions`, 0 elements, each 4 bytes  ->   0 bytes
   //  - `_type`                                           ->   1 byte
   //  - sum                                               >> 109 bytes
   EXPECT_EQ(index_int_no_nulls->memory_consumption(), 109u);
@@ -137,8 +137,8 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   //  - `_index_offsets`, 1 elements, each 4 bytes        ->   4 bytes
   //  - `_index_postings`                                 ->  24 bytes
   //  - `_index_postings`, 0 elements, each 4 bytes       ->   0 bytes
-  //  - `_index_null_positions`                            ->  24 bytes
-  //  - `_index_null_positions`, 0 elements, each 4 bytes  ->   0 bytes
+  //  - `_null_positions`                            ->  24 bytes
+  //  - `_null_positions`, 0 elements, each 4 bytes  ->   0 bytes
   //  - `_type`                                           ->   1 byte
   //  - sum                                               >>  93 bytes
   EXPECT_EQ(index_int_empty->memory_consumption(), 93u);

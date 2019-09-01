@@ -35,21 +35,21 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
   pairs_to_insert.reserve(_indexed_segment->attribute_vector()->size());
 
   const auto null_value_id = _indexed_segment->null_value_id();
-  _index_null_positions.reserve(_indexed_segment->attribute_vector()->size());
+  _null_positions.reserve(_indexed_segment->attribute_vector()->size());
 
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](const auto& attribute_vector) {
     auto chunk_offset = ChunkOffset{0u};
     auto value_id_iter = attribute_vector.cbegin();
     for (; value_id_iter != attribute_vector.cend(); ++value_id_iter, ++chunk_offset) {
       if (static_cast<ValueID>(*value_id_iter) == null_value_id) {
-        _index_null_positions.emplace_back(chunk_offset);
+        _null_positions.emplace_back(chunk_offset);
       } else {
         pairs_to_insert.emplace_back(BinaryComparable(ValueID{*value_id_iter}), chunk_offset);
       }
     }
   });
 
-  _index_null_positions.shrink_to_fit();
+  _null_positions.shrink_to_fit();
   _root = _bulk_insert(pairs_to_insert);
 }
 

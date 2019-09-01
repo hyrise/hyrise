@@ -21,8 +21,6 @@ size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOf
       return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case SegmentIndexType::BTree:
       return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
-    default:
-      Fail("estimate_memory_consumption() is not implemented for the given index type");
   }
 }
 
@@ -59,17 +57,17 @@ AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }
 
 AbstractIndex::Iterator AbstractIndex::cend() const { return _cend(); }
 
-AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _index_null_positions.cbegin(); }
+AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _null_positions.cbegin(); }
 
-AbstractIndex::Iterator AbstractIndex::null_cend() const { return _index_null_positions.cend(); }
+AbstractIndex::Iterator AbstractIndex::null_cend() const { return _null_positions.cend(); }
 
 SegmentIndexType AbstractIndex::type() const { return _type; }
 
 size_t AbstractIndex::memory_consumption() const {
   size_t bytes{0u};
   bytes += _memory_consumption();
-  bytes += sizeof(std::vector<ChunkOffset>);  // _index_null_positions
-  bytes += sizeof(ChunkOffset) * _index_null_positions.capacity();
+  bytes += sizeof(std::vector<ChunkOffset>);  // _null_positions
+  bytes += sizeof(ChunkOffset) * _null_positions.capacity();
   bytes += sizeof(_type);
   return bytes;
 }

@@ -22,11 +22,11 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   Assert(static_cast<bool>(_indexed_segment), "GroupKeyIndex only works with dictionary segments_to_index.");
   Assert((segments_to_index.size() == 1), "GroupKeyIndex only works with a single segment.");
 
-  // 1) Initialize the index_offset:
-  //    Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position)
+  // 1) Creating _index_offsets:
+  //    Create _index_offsets with a size of the dictionary + 1 (plus one to mark the ending position)
   //    and set all offsets to 0.
   //    Using `_index_offsets`, we want to count the occurences of each ValueID of the attribute vector (AV).
-  //    The ValueID for NULL in an AV is the highest available ValueID in the dictionary + 1.
+  //    The ValueID for NULL in an attribute vector is the highest available ValueID in the dictionary + 1.
   //    `unique_values_count` returns the size of dictionary which does not store a ValueID for NULL.
   //    Therefore we have `unique_values_count` ValueIDs (null value id is not included)
   //    for which we want to count the occurrences.
@@ -51,9 +51,9 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 
   const auto non_null_count = _indexed_segment->size() - null_count;
 
-  // 3) Set the _index_postings and _index_null_positions
+  // 3) Set the _index_postings and _null_positions
   _index_postings = std::vector<ChunkOffset>(non_null_count);
-  _index_null_positions = std::vector<ChunkOffset>(null_count);
+  _null_positions = std::vector<ChunkOffset>(null_count);
 
   // 4) Create offsets for the postings in _index_offsets
   std::partial_sum(_index_offsets.begin(), _index_offsets.end(), _index_offsets.begin());
@@ -65,7 +65,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   // 5b) Iterate once again over the attribute vector to obtain the write-offsets
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](auto& attribute_vector) {
     auto value_id_iter = attribute_vector.cbegin();
-    auto null_positions_iter = _index_null_positions.begin();
+    auto null_positions_iter = _null_positions.begin();
     auto position = 0u;
     for (; value_id_iter != attribute_vector.cend(); ++value_id_iter, ++position) {
       const auto& value_id = static_cast<ValueID>(*value_id_iter);

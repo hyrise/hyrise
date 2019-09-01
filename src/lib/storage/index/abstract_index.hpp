@@ -104,36 +104,40 @@ class AbstractIndex : private Noncopyable {
   Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
 
   /**
-   * Returns an Iterator to the position of the smallest indexed non-null element. This is useful for range queries
+   * Returns an Iterator to the position of the smallest indexed non-NULL element. This is useful for range queries
    * with no specified begin.
    * Iterating from cbegin() to cend() will result in a position list with ordered values.
    * Calls _cbegin() of the most derived class.
-   * @return an Iterator on the position of first element of the Index.
+   * @return An Iterator on the position of first non-NULL element of the Index.
    */
   Iterator cbegin() const;
 
   /**
-   * Returns an Iterator past the position of the largest indexed non-null element. This is useful for open
+   * Returns an Iterator past the position of the largest indexed non-NULL element. This is useful for open
    * end range queries.
    * Iterating from cbegin() to cend() will result in a position list with ordered values.
    * Calls _cend() of the most derived class.
-   * @return an Iterator on the end of the index (one after the last element).
+   * @return An Iterator on the end of the non-NULL elements (one after the last element).
    */
   Iterator cend() const;
 
   /**
-   * Returns an Iterator to the position of the first element equal to null.
-   * Iterating from null_cbegin() to null_cend() will result in a position list with all null values.
+   * Returns an Iterator to the first NULL.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
+   * NULL handing is currently only supported for single-column indexes.
+   * We do not have a concept for multi-column NULL handling yet. #1818
    *
-   * @return An Iterator on the position of the first element equal to null.
+   * @return An Iterator on the position of the first NULL.
    */
   Iterator null_cbegin() const;
 
   /**
-   * Returns an Iterator past the position of the last element equal to null.
+   * Returns an Iterator past the position of the last NULL.
    * Iterating from null_cbegin() to null_cend() will result in a position list with all null values.
+   * NULL handing is currently only supported for single-column indexes.
+   * We do not have a concept for multi-column NULL handling yet. #1818
    *
-   * @return An Iterator on the position of the first element equal to null.
+   * @return An Iterator on the end of the NULLs (one after the last NULL).
    */
   Iterator null_cend() const;
 
@@ -155,7 +159,7 @@ class AbstractIndex : private Noncopyable {
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
-  std::vector<ChunkOffset> _index_null_positions;
+  std::vector<ChunkOffset> _null_positions;
 
  private:
   const SegmentIndexType _type;

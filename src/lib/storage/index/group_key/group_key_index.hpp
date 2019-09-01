@@ -19,25 +19,25 @@ class GroupKeyIndexTest;
  *
  * The GroupKeyIndex works on a single dictionary compressed segment.
  * It uses three structures, one being a postings list containing record positions (ie ChunkOffsets)
- * for non-null values in the attribute vector, the second is a postings list containing record positions
- * for null values and the third structure is an index offset, mapping non-null-value-ids to offsets
- * in the postings list.
- * For null values, the `_index_null_positions` vector of AbstractIndex is used for storing the record positions.
- * Since this structure only contains null value positions, a structure for mapping null-value-ids to
+ * for non-NULL values in the attribute vector, the second is a postings list containing record positions
+ * for NULL values (structure of the base class `AbstractIndex`) and the third structure is an index offset,
+ * mapping non-NULL-value-ids to offsets in the postings list.
+ * For NULL values, the `_null_positions` vector of AbstractIndex is used for storing the record positions.
+ * Since this structure only contains NULL value positions, a structure for mapping NULL-value-ids to
  * offsets isn't needed. 
  *
  * An example structure along with the corresponding dictionary segment might look like this:
  *  +----+-----------+------------+---------+----------------+----------------+
- *  | (i)| Attribute | Dictionary |  Index  | Index Postings | Index Postings |
- *  |    |  Vector   |            | Offsets | (non-null)     | (null)         |
+ *  | (i)| Attribute | Dictionary |  Index  | Index Postings | NULL Positions |
+ *  |    |  Vector   |            | Offsets | (non-NULL)     | [x²]           |
  *  +----+-----------+------------+---------+----------------+----------------+
  *  |  0 |         6 | apple    ------->  0 ------------>  7 |              0 | ie NULL can be found at i = 0, 5, 6 and 11
  *  |  1 |         4 | charlie  ------->  1 ------------>  8 |              5 |
  *  |  2 |         2 | delta    ------->  3 ----------|    9 |              6 |
  *  |  3 |         3 | frank    ------->  5 --------| |->  2 |             11 |
- *  |  4 |         2 | hotel    ------->  6 ------| |      4 |                |                 
+ *  |  4 |         2 | hotel    ------->  6 ------| |      4 |                |       
  *  |  5 |         6 | inbox    ------->  7 ----| | |--->  3 |                |
- *  |  6 |         6 |            | (x¹)  8 |   | |----->  1 |                |
+ *  |  6 |         6 |            | [x¹]  8 |   | |----->  1 |                |
  *  |  7 |         0 |            |         |   |-------> 10 |                |  
  *  |  8 |         1 |            |         |                |                |
  *  |  9 |         1 |            |         |                |                |
@@ -47,6 +47,7 @@ class GroupKeyIndexTest;
  * 
  * NULL is represented in the Attribute Vector by ValueID{dictionary.size()}, i.e., ValueID{6} in this example.
  * x¹: Mark for the ending position.
+ * x²: NULL positions are stored in `_null_positions` of the AbstractIndex
  *
  * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey-Index
  */
@@ -93,6 +94,6 @@ class GroupKeyIndex : public AbstractIndex {
  private:
   const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
   std::vector<ChunkOffset> _index_offsets;   // maps value-ids to offsets in _index_postings
-  std::vector<ChunkOffset> _index_postings;  // non-null record positions in the attribute vector
+  std::vector<ChunkOffset> _index_postings;  // non-NULL record positions in the attribute vector
 };
 }  // namespace opossum
