@@ -90,19 +90,4 @@ TEST_F(AliasNodeTest, HashEquals) {
   // hash code calculation. Therefore, the hash codes of `a` and `expr_a` are equal.
 }
 
-TEST_F(AliasNodeTest, Hash) {
-  const auto alias_node_copy = alias_node->deep_copy();
-  EXPECT_EQ(alias_node->hash(), alias_node_copy->hash());
-
-  const auto alias_node_other_aliases = AliasNode::make(expressions, std::vector<std::string>{"a", "b"}, mock_node);
-  EXPECT_NE(alias_node->hash(), alias_node_other_aliases->hash());
-
-  const auto other_mock_node =
-      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "named");
-  const auto expr_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{0}});
-  const auto expr_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{other_mock_node, ColumnID{1}});
-  const auto other_expressions = std::vector<std::shared_ptr<AbstractExpression>>{expr_a, expr_b};
-  const auto alias_node_other_expressions = AliasNode::make(other_expressions, aliases, mock_node);
-}
-
 }  // namespace opossum
