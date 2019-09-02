@@ -13,17 +13,11 @@ class DropTableNodeTest : public ::testing::Test {
 
 TEST_F(DropTableNodeTest, Description) { EXPECT_EQ(drop_table_node->description(), "[DropTable] Name: 'some_table'"); }
 
-TEST_F(DropTableNodeTest, Equals) {
+TEST_F(DropTableNodeTest, HashEquals) {
   EXPECT_EQ(*drop_table_node, *drop_table_node);
 
   const auto different_drop_table_node = DropTableNode::make("some_table2", false);
   EXPECT_NE(*different_drop_table_node, *drop_table_node);
-}
-
-TEST_F(DropTableNodeTest, Hash) {
-  EXPECT_EQ(drop_table_node->hash(), drop_table_node->deep_copy()->hash());
-
-  const auto different_drop_table_node = DropTableNode::make("some_table2", false);
   EXPECT_NE(different_drop_table_node->hash(), drop_table_node->hash());
 }
 

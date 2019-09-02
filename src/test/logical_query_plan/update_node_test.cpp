@@ -29,7 +29,7 @@ TEST_F(UpdateNodeTest, Description) { EXPECT_EQ(_update_node->description(), "[U
 
 TEST_F(UpdateNodeTest, TableName) { EXPECT_EQ(_update_node->table_name, "table_a"); }
 
-TEST_F(UpdateNodeTest, Equals) {
+TEST_F(UpdateNodeTest, HashEquals) {
   EXPECT_EQ(*_update_node, *_update_node);
 
   const auto other_mock_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Long, "a"}}));
@@ -48,17 +48,6 @@ TEST_F(UpdateNodeTest, Equals) {
   EXPECT_NE(*_update_node, *other_update_node_e);
   EXPECT_NE(*_update_node, *other_update_node_f);
   EXPECT_NE(*other_update_node_e, *other_update_node_f);
-}
-
-TEST_F(UpdateNodeTest, Hash) {
-  const auto other_mock_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Long, "a"}}));
-
-  const auto other_update_node_a = UpdateNode::make("table_a", _mock_node, _mock_node);
-  const auto other_update_node_b = UpdateNode::make("table_b", _mock_node, _mock_node);
-  const auto other_update_node_c = UpdateNode::make("table_a", other_mock_node, _mock_node);
-  const auto other_update_node_d = UpdateNode::make("table_a", _mock_node, other_mock_node);
-  const auto other_update_node_e = UpdateNode::make("table_a", other_mock_node, other_mock_node);
-  const auto other_update_node_f = UpdateNode::make("table_a", other_mock_node);
 
   EXPECT_EQ(_update_node->hash(), other_update_node_a->hash());
   EXPECT_NE(_update_node->hash(), other_update_node_b->hash());

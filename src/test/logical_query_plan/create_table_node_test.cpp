@@ -31,7 +31,7 @@ TEST_F(CreateTableNodeTest, Description) {
 
 TEST_F(CreateTableNodeTest, NodeExpressions) { ASSERT_EQ(create_table_node->node_expressions.size(), 0u); }
 
-TEST_F(CreateTableNodeTest, Equals) {
+TEST_F(CreateTableNodeTest, HashEquals) {
   const auto deep_copy_node = create_table_node->deep_copy();
   EXPECT_EQ(*create_table_node, *deep_copy_node);
 
@@ -47,20 +47,6 @@ TEST_F(CreateTableNodeTest, Equals) {
   EXPECT_NE(*different_create_table_node_a, *create_table_node);
   EXPECT_NE(*different_create_table_node_b, *create_table_node);
   EXPECT_NE(*different_create_table_node_c, *create_table_node);
-}
-
-TEST_F(CreateTableNodeTest, Hash) {
-  const auto deep_copy_node = create_table_node->deep_copy();
-  EXPECT_EQ(*create_table_node, *deep_copy_node);
-
-  const auto different_create_table_node_a = CreateTableNode::make("some_table2", false, input_node);
-  const auto different_create_table_node_b = CreateTableNode::make("some_table", true, input_node);
-
-  TableColumnDefinitions different_column_definitions;
-  different_column_definitions.emplace_back("a", DataType::Int, false);
-  const auto different_input_node =
-      std::make_shared<StaticTableNode>(Table::create_dummy_table(different_column_definitions));
-  const auto different_create_table_node_c = CreateTableNode::make("some_table", false, different_input_node);
 
   EXPECT_NE(different_create_table_node_a->hash(), create_table_node->hash());
   EXPECT_NE(different_create_table_node_b->hash(), create_table_node->hash());

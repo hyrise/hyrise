@@ -39,7 +39,7 @@ TEST_F(ProjectionNodeTest, Description) {
   EXPECT_EQ(_projection_node->description(), "[Projection] c, a, b, b + c, a + c");
 }
 
-TEST_F(ProjectionNodeTest, Equals) {
+TEST_F(ProjectionNodeTest, HashEquals) {
   EXPECT_EQ(*_projection_node, *_projection_node);
 
   const auto different_projection_node_a =
@@ -48,6 +48,9 @@ TEST_F(ProjectionNodeTest, Equals) {
       ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c)), _mock_node);
   EXPECT_NE(*_projection_node, *different_projection_node_a);
   EXPECT_NE(*_projection_node, *different_projection_node_b);
+
+  EXPECT_NE(_projection_node->hash(), different_projection_node_a->hash());
+  EXPECT_NE(_projection_node->hash(), different_projection_node_b->hash());
 }
 
 TEST_F(ProjectionNodeTest, Copy) { EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node); }

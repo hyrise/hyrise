@@ -71,7 +71,7 @@ TEST_F(StoredTableNodeTest, ColumnExpressions) {
   EXPECT_EQ(*_stored_table_node->column_expressions().at(0u), *lqp_column_(_b));
 }
 
-TEST_F(StoredTableNodeTest, Equals) {
+TEST_F(StoredTableNodeTest, HashEquals) {
   EXPECT_EQ(*_stored_table_node, *_stored_table_node);
 
   const auto different_node_a = StoredTableNode::make("t_b");
@@ -88,18 +88,6 @@ TEST_F(StoredTableNodeTest, Equals) {
   EXPECT_NE(*_stored_table_node, *different_node_b);
   EXPECT_NE(*_stored_table_node, *different_node_c);
   EXPECT_EQ(*different_node_c, *different_node_c2);
-}
-
-TEST_F(StoredTableNodeTest, Hash) {
-  const auto different_node_a = StoredTableNode::make("t_b");
-  different_node_a->set_pruned_chunk_ids({ChunkID{2}});
-
-  const auto different_node_b = StoredTableNode::make("t_a");
-
-  const auto different_node_c = StoredTableNode::make("t_b");
-  different_node_c->set_pruned_column_ids({ColumnID{1}});
-  const auto different_node_c2 = StoredTableNode::make("t_b");
-  different_node_c2->set_pruned_column_ids({ColumnID{1}});
 
   EXPECT_NE(_stored_table_node->hash(), different_node_a->hash());
   EXPECT_NE(_stored_table_node->hash(), different_node_b->hash());

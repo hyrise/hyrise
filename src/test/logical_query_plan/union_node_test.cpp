@@ -42,7 +42,7 @@ TEST_F(UnionNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_union_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
 }
 
-TEST_F(UnionNodeTest, Equals) {
+TEST_F(UnionNodeTest, HashEquals) {
   auto same_union_node = UnionNode::make(UnionMode::Positions);
   same_union_node->set_left_input(_mock_node1);
   same_union_node->set_right_input(_mock_node1);
@@ -66,24 +66,6 @@ TEST_F(UnionNodeTest, Equals) {
   EXPECT_NE(*_union_node, *different_union_node_3);
   EXPECT_NE(*_union_node, *UnionNode::make(UnionMode::Positions));
   EXPECT_NE(*_union_node, *UnionNode::make(UnionMode::All));
-}
-
-TEST_F(UnionNodeTest, Hash) {
-  auto same_union_node = UnionNode::make(UnionMode::Positions);
-  same_union_node->set_left_input(_mock_node1);
-  same_union_node->set_right_input(_mock_node1);
-  auto different_union_node = UnionNode::make(UnionMode::All);
-  different_union_node->set_left_input(_mock_node1);
-  different_union_node->set_right_input(_mock_node1);
-  auto different_union_node_1 = UnionNode::make(UnionMode::Positions);
-  different_union_node_1->set_left_input(_mock_node1);
-  different_union_node_1->set_right_input(_mock_node2);
-  auto different_union_node_2 = UnionNode::make(UnionMode::Positions);
-  different_union_node_2->set_left_input(_mock_node2);
-  different_union_node_2->set_right_input(_mock_node1);
-  auto different_union_node_3 = UnionNode::make(UnionMode::Positions);
-  different_union_node_3->set_left_input(_mock_node2);
-  different_union_node_3->set_right_input(_mock_node2);
 
   EXPECT_EQ(_union_node->hash(), same_union_node->hash());
   EXPECT_NE(_union_node->hash(), different_union_node->hash());

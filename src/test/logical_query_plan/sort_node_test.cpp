@@ -44,7 +44,7 @@ TEST_F(SortNodeTest, Descriptions) {
   EXPECT_EQ(sort_c->description(), "[Sort] d (DescendingNullsFirst), f (AscendingNullsLast), i (DescendingNullsLast)");
 }
 
-TEST_F(SortNodeTest, Equals) {
+TEST_F(SortNodeTest, HashEquals) {
   EXPECT_EQ(*_sort_node, *_sort_node);
 
   const auto sort_a =
@@ -58,16 +58,6 @@ TEST_F(SortNodeTest, Equals) {
   EXPECT_NE(*_sort_node, *sort_a);
   EXPECT_NE(*_sort_node, *sort_b);
   EXPECT_EQ(*_sort_node, *sort_c);
-}
-
-TEST_F(SortNodeTest, Hash) {
-  const auto sort_a =
-      SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Descending}, _table_node);
-  const auto sort_b = SortNode::make(
-      expression_vector(_a_d, _a_f, _a_i),
-      std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending});
-  const auto sort_c =
-      SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Ascending}, _table_node);
 
   EXPECT_NE(_sort_node->hash(), sort_a->hash());
   EXPECT_NE(_sort_node->hash(), sort_b->hash());

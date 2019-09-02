@@ -33,7 +33,7 @@ TEST_F(CreateViewNodeTest, Description) {
             ")");
 }
 
-TEST_F(CreateViewNodeTest, Equals) {
+TEST_F(CreateViewNodeTest, HashEquals) {
   EXPECT_EQ(*_create_view_node, *_create_view_node);
   EXPECT_EQ(*_create_view_node, *_create_view_node->deep_copy());
 
@@ -48,22 +48,9 @@ TEST_F(CreateViewNodeTest, Equals) {
   EXPECT_NE(*different_create_view_node_a, *_create_view_node);
   EXPECT_NE(*different_create_view_node_b, *_create_view_node);
   EXPECT_NE(*different_create_view_node_c, *_create_view_node);
-}
-
-TEST_F(CreateViewNodeTest, Hash) {
-  EXPECT_EQ(_create_view_node->hash(), _create_view_node->deep_copy()->hash());
-
-  const auto different_create_view_node_a = CreateViewNode::make("some_view2", _view, false);
-
-  const auto different_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
-  const auto different_view =
-      std::make_shared<LQPView>(different_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"b"}}});
-  const auto different_create_view_node_b = CreateViewNode::make("some_view", different_view, false);
-  const auto different_create_view_node_c = CreateViewNode::make("some_view", _view, true);
 
   EXPECT_NE(different_create_view_node_a->hash(), _create_view_node->hash());
-  // TODO(anyone) take view into account for the hash code
-  EXPECT_EQ(different_create_view_node_b->hash(), _create_view_node->hash());
+  EXPECT_NE(different_create_view_node_b->hash(), _create_view_node->hash());
   EXPECT_NE(different_create_view_node_c->hash(), _create_view_node->hash());
 }
 

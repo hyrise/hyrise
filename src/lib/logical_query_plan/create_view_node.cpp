@@ -27,6 +27,7 @@ std::string CreateViewNode::description() const {
 
 size_t CreateViewNode::_shallow_hash() const {
   auto hash = boost::hash_value(view_name);
+  boost::hash_combine(hash, view);
   boost::hash_combine(hash, if_not_exists);
   return hash;
 }
