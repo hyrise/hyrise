@@ -63,7 +63,10 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
 }
 
 /*
-  size_t memory_consumption() const;
+  Test cases:
+    IndexMemoryConsumption
+  Tested functions:
+    size_t memory_consumption() const;
   
   |    Characteristic               | Block 1 | Block 2 |
   |---------------------------------|---------|---------|

@@ -70,7 +70,13 @@ TEST_F(BTreeIndexTest, IndexProbes) {
 // Only strings exceeding this size (15 for libstdc++ and 22 for libc++) are stored on the heap.
 
 /*
-  size_t memory_consumption() const;
+  Test cases:
+    MemoryConsumptionVeryShortStringNoNulls
+    MemoryConsumptionVeryShortStringNulls
+    MemoryConsumptionVeryShortStringMixed
+    MemoryConsumptionVeryShortStringEmpty
+  Tested functions:
+    size_t memory_consumption() const;
   
   |    Characteristic               | Block 1 | Block 2 |
   |---------------------------------|---------|---------|

@@ -215,7 +215,10 @@ typedef ::testing::Types<AdaptiveRadixTreeIndex, BTreeIndex, /*CompositeGroupKey
 TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 /*
-  bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
+  Test cases:
+    IsIndexForTest
+  Tested functions:
+    bool is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
   
   | Characteristic     |   Block 1  | Block 2 | Block 3 | Block 4 | Block 5 |
   |--------------------|------------|---------|---------|---------|---------|
@@ -262,7 +265,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
 }
 
 /*
-  Test case suits:
+  Test cases:
     LowerBoundTest
     UpperBoundTest
   Tested functions:
@@ -341,7 +344,7 @@ TYPED_TEST(SingleSegmentIndexTest, UpperBoundTest) {
 }
 
 /*
-  Test case suits:
+  Test cases:
     CBeginCEndTest
     NullCBeginCEndTest
 
