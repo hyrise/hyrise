@@ -41,7 +41,7 @@ class GroupKeyIndexTest : public BaseTest {
 
     value_start_offsets = &(index->_value_start_offsets);
     positions = &(index->_positions);
-    index_null_positions = &(index->_null_positions);
+    null_positions = &(index->_null_positions);
   }
 
   std::shared_ptr<GroupKeyIndex> index = nullptr;
@@ -54,7 +54,7 @@ class GroupKeyIndexTest : public BaseTest {
    */
   std::vector<ChunkOffset>* value_start_offsets;
   std::vector<ChunkOffset>* positions;
-  std::vector<ChunkOffset>* index_null_positions;
+  std::vector<ChunkOffset>* null_positions;
 };
 
 TEST_F(GroupKeyIndexTest, IndexOffsets) {
@@ -159,16 +159,16 @@ TEST_F(GroupKeyIndexTest, IndexPostings) {
     EXPECT_EQ(1u, expected_positions[i].count(positions->at(i)));
   }
 
-  for (size_t i = 0; i < index_null_positions->size(); ++i) {
-    EXPECT_EQ(1u, expected_null_positions[i].count(index_null_positions->at(i)));
+  for (size_t i = 0; i < null_positions->size(); ++i) {
+    EXPECT_EQ(1u, expected_null_positions[i].count(null_positions->at(i)));
   }
 }
 
 TEST_F(GroupKeyIndexTest, IteratorBeginEnd) {
   EXPECT_EQ(index->cbegin(), positions->cbegin());
   EXPECT_EQ(index->cend(), positions->cbegin() + 8u);
-  EXPECT_EQ(index->null_cbegin(), index_null_positions->cbegin());
-  EXPECT_EQ(index->null_cend(), index_null_positions->cbegin() + 4u);
+  EXPECT_EQ(index->null_cbegin(), null_positions->cbegin());
+  EXPECT_EQ(index->null_cend(), null_positions->cbegin() + 4u);
   EXPECT_EQ(index->lower_bound({"inbox"}), positions->cbegin() + 7u);
   EXPECT_EQ(index->upper_bound({"inbox"}), positions->cbegin() + 8u);
   EXPECT_EQ(index->lower_bound({"hyrise"}), positions->cbegin() + 7u);
