@@ -68,7 +68,9 @@ class LQPTranslator {
       const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  // Cache operator subtrees by LQP node hash to avoid executing identical operators redundantly
+  // Cache operator subtrees by LQP node to avoid redundantly executing
+  //   - identical operators (operators below a diamond shape)
+  //   - equal but not identical operators
   mutable LQPNodeUnorderedMap<std::shared_ptr<AbstractOperator>> _operator_by_lqp_node;
 };
 

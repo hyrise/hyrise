@@ -31,7 +31,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   const size_t aggregate_expressions_begin_idx;
 
  protected:
-  size_t _on_hash() const override;
+  size_t _shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };

@@ -90,6 +90,15 @@ TEST_F(AliasNodeTest, Hash) {
   // semantically equal LQPColumnReferences are equal.
   EXPECT_NE(*a, *expr_a);
   EXPECT_NE(*b, *expr_b);
+  // The expressions under test are not equal since for the AbstractExpression's `operator==`, `_shallow_equals` of
+  // the derived class is called. The equal check of two LQPColumnExpression checkes the equality of the included
+  // LQPColumnReferences, i.e., calls `LQPColumnReference::operator==`.
+  // For the equality check of two LQPColumnReferences, the included original nodes (StoredTableNode) have to be
+  // identical (equal pointer) and the column ids have to be equal.
+  // Since the original nodes of the LQPColumnReferences of the expressions under test are not identical,
+  // the equality check fails.
+  // The hash function on the other hand uses shallow_hash of the LQPReference, where the pointer is not used for the
+  // hash code calculation. Therefore, the hash codes of `a` and `expr_a` are equal.
   EXPECT_EQ(a->hash(), expr_a->hash());
   EXPECT_EQ(b->hash(), expr_b->hash());
 }

@@ -146,7 +146,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    *  Builds a hash code by hashing the node type combined with specific member variables of
-   *  derived classes (see _on_hash()) and the hash codes of non-empty input nodes recursively.
+   *  derived classes (see _shallow_hash()) and the hash codes of non-empty input nodes recursively.
    *  Node expressions are not taken into account since combining the hashes of the expressions
    *  can lead to unequal hash codes, even if lqp nodes are sementically equal.
    */
@@ -169,7 +169,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * Override to hash data fields in derived types. No override needed if derived expression has no
    * data members.
    */
-  virtual size_t _on_hash() const;
+  virtual size_t _shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 

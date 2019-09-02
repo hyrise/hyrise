@@ -78,7 +78,7 @@ size_t AbstractLQPNode::hash() const {
         boost::hash_combine(hash, expression->hash());
       }
       boost::hash_combine(hash, node->type);
-      boost::hash_combine(hash, node->_on_hash());
+      boost::hash_combine(hash, node->_shallow_hash());
       // since visit_lqp is used, the hash for an already visited node is not combined with
       // the overall hash again, even if the same node is used as left and right input node (diamond structure).
       // Therefore, a node that has only one (left) input node could have the same hash as a node with two
@@ -94,7 +94,7 @@ size_t AbstractLQPNode::hash() const {
   return hash;
 }
 
-size_t AbstractLQPNode::_on_hash() const { return 0; }
+size_t AbstractLQPNode::_shallow_hash() const { return 0; }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
 

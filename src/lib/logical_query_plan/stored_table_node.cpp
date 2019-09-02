@@ -122,7 +122,7 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   return stored_indexes_statistics;
 }
 
-size_t StoredTableNode::_on_hash() const {
+size_t StoredTableNode::_shallow_hash() const {
   size_t hash{0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {

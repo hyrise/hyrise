@@ -19,7 +19,7 @@ std::string CreateTableNode::description() const {
   return stream.str();
 }
 
-size_t CreateTableNode::_on_hash() const {
+size_t CreateTableNode::_shallow_hash() const {
   auto hash = boost::hash_value(table_name);
   boost::hash_combine(hash, if_not_exists);
   return hash;
