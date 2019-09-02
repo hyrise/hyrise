@@ -182,7 +182,7 @@ class SingleSegmentIndexTest : public BaseTest {
   std::shared_ptr<AbstractIndex> index_string_mixed = nullptr;
   std::shared_ptr<AbstractIndex> index_string_empty = nullptr;
 
-  // index null postings
+  // index NULL positions
   std::vector<ChunkOffset>* index_int_no_nulls_null_positions;
   std::vector<ChunkOffset>* index_int_no_nulls_2_null_positions;
   std::vector<ChunkOffset>* index_int_nulls_null_positions;
@@ -272,7 +272,7 @@ TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
   | Characteristic      |       Block 1  |        Block 2 |        Block 3 |          Block 4 | Block 5 |
   |---------------------|----------------|----------------|----------------|------------------|---------|
   |[A] value data type  |            Int |           Long |          Float |           Double |  String |     
-  |[B] value type       |           null | smallest value | largest value  | non-edge value   |    none |
+  |[B] value type       |           NULL | smallest value | largest value  | non-edge value   |    none |
   |                     |                | in segment     | in segment     | (either smallest |
   |                     |                |                |                | nor largest)     |
   |[C] value is in seg. |           true |          false |
@@ -355,7 +355,7 @@ TYPED_TEST(SingleSegmentIndexTest, UpperBoundTest) {
   |---------------------|----------|---------|---------|---------|---------|
   |[A] value data type  |      Int |    Long |   Float |  Double |  String |     
   |[B] nulls only       |     true |   false |
-  |[C] non-nulls only   |     true |   false |
+  |[C] non-NULLs only   |     true |   false |
   |[D] index is empty   |     true |   false |
 
   Base Choice:

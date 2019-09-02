@@ -55,13 +55,13 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
 
 AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
-  // the caller is responsible for not passing a null value
+  // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
 
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else if (_root) {  // _root is nullptr if the index contains null postings only
+  } else if (_root) {  // _root is nullptr if the index contains NULL positions only
     return _root->lower_bound(BinaryComparable(value_id), 0);
   } else {
     return _cend();
@@ -70,13 +70,13 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<A
 
 AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
-  // the caller is responsible for not passing a null value
+  // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
 
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else if (_root) {  // _root is nullptr if the index contains null postings only
+  } else if (_root) {  // _root is nullptr if the index contains NULL positions only
     return _root->lower_bound(BinaryComparable(value_id), 0);
   } else {
     return _cend();

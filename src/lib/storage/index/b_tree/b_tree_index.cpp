@@ -24,7 +24,7 @@ size_t BTreeIndex::_memory_consumption() const { return _impl->memory_consumptio
 
 BTreeIndex::Iterator BTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert(!values.empty(), "Value vector has to be non-empty.");
-  // the caller is responsible for not passing a null value
+  // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
 
   return _impl->lower_bound(values);
@@ -32,7 +32,7 @@ BTreeIndex::Iterator BTreeIndex::_lower_bound(const std::vector<AllTypeVariant>&
 
 BTreeIndex::Iterator BTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   Assert(!values.empty(), "Value vector has to be non-empty.");
-  // the caller is responsible for not passing a null value
+  // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
 
   return _impl->upper_bound(values);

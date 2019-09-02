@@ -39,8 +39,8 @@ class GroupKeyIndexTest : public BaseTest {
 
     index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment}));
 
-    index_offsets = &(index->_index_offsets);
-    index_postings = &(index->_index_postings);
+    value_start_offsets = &(index->_value_start_offsets);
+    positions = &(index->_positions);
     index_null_positions = &(index->_null_positions);
   }
 
@@ -52,14 +52,14 @@ class GroupKeyIndexTest : public BaseTest {
    * private scope. In order to minimize the friend classes of CompositeGroupKeyIndex the fixture
    * is used as proxy. Since the variables are set in setup() references are not possible.
    */
-  std::vector<ChunkOffset>* index_offsets;
-  std::vector<ChunkOffset>* index_postings;
+  std::vector<ChunkOffset>* value_start_offsets;
+  std::vector<ChunkOffset>* positions;
   std::vector<ChunkOffset>* index_null_positions;
 };
 
 TEST_F(GroupKeyIndexTest, IndexOffsets) {
   auto expected_offsets = std::vector<ChunkOffset>{0, 1, 3, 5, 6, 7, 8};
-  EXPECT_EQ(expected_offsets, *index_offsets);
+  EXPECT_EQ(expected_offsets, *value_start_offsets);
 }
 
 /*
@@ -68,8 +68,8 @@ TEST_F(GroupKeyIndexTest, IndexOffsets) {
   |    Characteristic               | Block 1 | Block 2 |
   |---------------------------------|---------|---------|
   |[A] index is empty               |    true |   false |
-  |[B] index has null positions     |    true |   false |
-  |[C] index has non-null positions |    true |   false |
+  |[B] index has NULL positions     |    true |   false |
+  |[C] index has non-NULL positions |    true |   false |
   
   Base Choice:
     A2, B1, C1
@@ -94,10 +94,10 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   // A2, B1, C1
   // expected memory consumption:
   //  - `_indexed_segments`, shared pointer               ->  16 bytes
-  //  - `_index_offsets`                                  ->  24 bytes
-  //  - `_index_offsets`, 7 elements, each 4 bytes        ->  28 bytes
-  //  - `_index_postings`                                 ->  24 bytes
-  //  - `_index_postings`, 8 elements, each 4 bytes       ->  32 bytes
+  //  - `_value_start_offsets`                                  ->  24 bytes
+  //  - `_value_start_offsets`, 7 elements, each 4 bytes        ->  28 bytes
+  //  - `_positions`                                 ->  24 bytes
+  //  - `_positions`, 8 elements, each 4 bytes       ->  32 bytes
   //  - `_null_positions`                            ->  24 bytes
   //  - `_null_positions`, 4 elements, each 4 bytes  ->  16 bytes
   //  - `_type`                                           ->   1 byte
@@ -107,10 +107,10 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   // A2, B1, C2
   // expected memory consumption:
   //  - `_indexed_segments`, shared pointer               ->  16 bytes
-  //  - `_index_offsets`                                  ->  24 bytes
-  //  - `_index_offsets`, 1 elements, each 4 bytes        ->   4 bytes
-  //  - `_index_postings`                                 ->  24 bytes
-  //  - `_index_postings`, 0 elements, each 4 bytes       ->   0 bytes
+  //  - `_value_start_offsets`                                  ->  24 bytes
+  //  - `_value_start_offsets`, 1 elements, each 4 bytes        ->   4 bytes
+  //  - `_positions`                                 ->  24 bytes
+  //  - `_positions`, 0 elements, each 4 bytes       ->   0 bytes
   //  - `_null_positions`                            ->  24 bytes
   //  - `_null_positions`, 2 elements, each 4 bytes  ->   8 bytes
   //  - `_type`                                           ->   1 byte
@@ -120,10 +120,10 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   // A2, B2, C1
   // expected memory consumption:
   //  - `_indexed_segments`, shared pointer               ->  16 bytes
-  //  - `_index_offsets`                                  ->  24 bytes
-  //  - `_index_offsets`, 3 elements, each 4 bytes        ->  12 bytes
-  //  - `_index_postings`                                 ->  24 bytes
-  //  - `_index_postings`, 2 elements, each 4 bytes       ->   8 bytes
+  //  - `_value_start_offsets`                                  ->  24 bytes
+  //  - `_value_start_offsets`, 3 elements, each 4 bytes        ->  12 bytes
+  //  - `_positions`                                 ->  24 bytes
+  //  - `_positions`, 2 elements, each 4 bytes       ->   8 bytes
   //  - `_null_positions`                            ->  24 bytes
   //  - `_null_positions`, 0 elements, each 4 bytes  ->   0 bytes
   //  - `_type`                                           ->   1 byte
@@ -133,10 +133,10 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
   // A1, B2, C2
   // expected memory consumption:
   //  - `_indexed_segments`, shared pointer               ->  16 bytes
-  //  - `_index_offsets`                                  ->  24 bytes
-  //  - `_index_offsets`, 1 elements, each 4 bytes        ->   4 bytes
-  //  - `_index_postings`                                 ->  24 bytes
-  //  - `_index_postings`, 0 elements, each 4 bytes       ->   0 bytes
+  //  - `_value_start_offsets`                                  ->  24 bytes
+  //  - `_value_start_offsets`, 1 elements, each 4 bytes        ->   4 bytes
+  //  - `_positions`                                 ->  24 bytes
+  //  - `_positions`, 0 elements, each 4 bytes       ->   0 bytes
   //  - `_null_positions`                            ->  24 bytes
   //  - `_null_positions`, 0 elements, each 4 bytes  ->   0 bytes
   //  - `_type`                                           ->   1 byte
@@ -145,18 +145,18 @@ TEST_F(GroupKeyIndexTest, IndexMemoryConsumption) {
 }
 
 TEST_F(GroupKeyIndexTest, IndexPostings) {
-  // check if there are no duplicates in postings
-  auto distinct_values = std::unordered_set<ChunkOffset>(index_postings->begin(), index_postings->end());
-  EXPECT_TRUE(distinct_values.size() == index_postings->size());
+  // check if there are no duplicates in positions
+  auto distinct_values = std::unordered_set<ChunkOffset>(positions->begin(), positions->end());
+  EXPECT_TRUE(distinct_values.size() == positions->size());
 
-  // check if the correct postings are present for each value-id
-  auto expected_postings =
+  // check if the correct positions are present for each value-id
+  auto expected_positions =
       std::vector<std::unordered_set<ChunkOffset>>{{7}, {8, 9}, {8, 9}, {2, 4}, {2, 4}, {3}, {1}, {10}};
   auto expected_null_positions =
       std::vector<std::unordered_set<ChunkOffset>>{{0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}};
 
-  for (size_t i = 0; i < index_postings->size(); ++i) {
-    EXPECT_EQ(1u, expected_postings[i].count(index_postings->at(i)));
+  for (size_t i = 0; i < positions->size(); ++i) {
+    EXPECT_EQ(1u, expected_positions[i].count(positions->at(i)));
   }
 
   for (size_t i = 0; i < index_null_positions->size(); ++i) {
@@ -165,16 +165,16 @@ TEST_F(GroupKeyIndexTest, IndexPostings) {
 }
 
 TEST_F(GroupKeyIndexTest, IteratorBeginEnd) {
-  EXPECT_EQ(index->cbegin(), index_postings->cbegin());
-  EXPECT_EQ(index->cend(), index_postings->cbegin() + 8u);
+  EXPECT_EQ(index->cbegin(), positions->cbegin());
+  EXPECT_EQ(index->cend(), positions->cbegin() + 8u);
   EXPECT_EQ(index->null_cbegin(), index_null_positions->cbegin());
   EXPECT_EQ(index->null_cend(), index_null_positions->cbegin() + 4u);
-  EXPECT_EQ(index->lower_bound({"inbox"}), index_postings->cbegin() + 7u);
-  EXPECT_EQ(index->upper_bound({"inbox"}), index_postings->cbegin() + 8u);
-  EXPECT_EQ(index->lower_bound({"hyrise"}), index_postings->cbegin() + 7u);
-  EXPECT_EQ(index->upper_bound({"hyrise"}), index_postings->cbegin() + 7u);
-  EXPECT_EQ(index->lower_bound({"lamp"}), index_postings->cbegin() + 8u);
-  EXPECT_EQ(index->upper_bound({"lamp"}), index_postings->cbegin() + 8u);
+  EXPECT_EQ(index->lower_bound({"inbox"}), positions->cbegin() + 7u);
+  EXPECT_EQ(index->upper_bound({"inbox"}), positions->cbegin() + 8u);
+  EXPECT_EQ(index->lower_bound({"hyrise"}), positions->cbegin() + 7u);
+  EXPECT_EQ(index->upper_bound({"hyrise"}), positions->cbegin() + 7u);
+  EXPECT_EQ(index->lower_bound({"lamp"}), positions->cbegin() + 8u);
+  EXPECT_EQ(index->upper_bound({"lamp"}), positions->cbegin() + 8u);
   EXPECT_THROW(index->lower_bound({NULL_VALUE}), std::logic_error);
   EXPECT_THROW(index->upper_bound({NULL_VALUE}), std::logic_error);
 }

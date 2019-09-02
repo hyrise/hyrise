@@ -133,7 +133,7 @@ class AbstractIndex : private Noncopyable {
 
   /**
    * Returns an Iterator past the position of the last NULL.
-   * Iterating from null_cbegin() to null_cend() will result in a position list with all null values.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
    * NULL handing is currently only supported for single-column indexes.
    * We do not have a concept for multi-column NULL handling yet. #1818
    *

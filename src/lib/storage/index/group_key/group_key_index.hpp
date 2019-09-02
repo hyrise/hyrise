@@ -18,13 +18,12 @@ class GroupKeyIndexTest;
 /**
  *
  * The GroupKeyIndex works on a single dictionary compressed segment.
- * It uses three structures, one being a postings list containing record positions (ie ChunkOffsets)
- * for non-NULL values in the attribute vector, the second is a postings list containing record positions
- * for NULL values (structure of the base class `AbstractIndex`) and the third structure is an index offset,
- * mapping non-NULL-value-ids to offsets in the postings list.
- * For NULL values, the `_null_positions` vector of AbstractIndex is used for storing the record positions.
- * Since this structure only contains NULL value positions, a structure for mapping NULL-value-ids to
- * offsets isn't needed. 
+ * Besides the AbstractIndex's positions list containing record positions for NULL values (`_null_positions`),
+ * this specialized index uses two additional structures. The first is a positions list containing record positions
+ * (ie ChunkOffsets) for non-NULL values in the attribute vector, the second is a structure mapping non-NULL-value-ids
+ * to the start offsets in the positions list.
+ * Since the AbstractIndex's NULL position list only contains NULL value positions, a structure for mapping
+ * NULL-value-ids to offsets isn't needed. 
  *
  * An example structure along with the corresponding dictionary segment might look like this:
  *  +----+-----------+------------+---------+----------------+----------------+
@@ -82,10 +81,10 @@ class GroupKeyIndex : public AbstractIndex {
 
   /**
    *
-   * @returns an iterator pointing to the the first ChunkOffset in the postings-vector
+   * @returns an iterator pointing to the the first ChunkOffset in the positions-vector
    * that belongs to a given value-id.
    */
-  Iterator _get_postings_iterator_at(ValueID value_id) const;
+  Iterator _get_positions_iterator_at(ValueID value_id) const;
 
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const;
 
@@ -93,7 +92,7 @@ class GroupKeyIndex : public AbstractIndex {
 
  private:
   const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
-  std::vector<ChunkOffset> _index_offsets;   // maps value-ids to offsets in _index_postings
-  std::vector<ChunkOffset> _index_postings;  // non-NULL record positions in the attribute vector
+  std::vector<ChunkOffset> _value_start_offsets;  // maps value-ids to offsets in _positions
+  std::vector<ChunkOffset> _positions;            // non-NULL record positions in the attribute vector
 };
 }  // namespace opossum

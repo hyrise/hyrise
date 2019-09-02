@@ -75,8 +75,8 @@ TEST_F(BTreeIndexTest, IndexProbes) {
   |    Characteristic               | Block 1 | Block 2 |
   |---------------------------------|---------|---------|
   |[A] index is empty               |    true |   false |
-  |[B] index has null positions     |    true |   false |
-  |[C] index has non-null positions |    true |   false |
+  |[B] index has NULL positions     |    true |   false |
+  |[C] index has non-NULL positions |    true |   false |
   
   Base Choice:
     A2, B1, C1
@@ -97,10 +97,10 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
 #ifdef __GLIBCXX__
   // libstdc++:
   //   840 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead (index non-null postings)
-  // +  44 number of non-null elements (11) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   0 number of null elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index non-NULL positions)
+  // +  44 number of non-NULL elements (11) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 933
   EXPECT_EQ(index->memory_consumption(), 933u);
@@ -109,8 +109,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNoNulls) {
   //   848 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   0 number of null elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 941
   EXPECT_EQ(index->memory_consumption(), 941u);
@@ -128,10 +128,10 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNulls) {
 #ifdef __GLIBCXX__
   // libstdc++:
   //    24 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead (index non-null postings)
-  // +   0 number of non-null elements (0) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   8 number of null elements (2) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index non-NULL positions)
+  // +   0 number of non-NULL elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   8 number of NULL elements (2) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // =  81
   EXPECT_EQ(index->memory_consumption(), 81u);
@@ -141,8 +141,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringNulls) {
   //    ?? (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +   0 number of elements (0) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   8 number of null elements (2) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   8 number of NULL elements (2) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   EXPECT_GT(index->memory_consumption(), 57u);
 #endif
@@ -160,10 +160,10 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringMixed) {
 #ifdef __GLIBCXX__
   // libstdc++:
   //   840 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead (index non-null postings)
-  // +  44 number of non-null elements (11) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +  20 number of null elements (5) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index non-NULL positions)
+  // +  44 number of non-NULL elements (11) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +  20 number of NULL elements (5) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 953
   EXPECT_EQ(index->memory_consumption(), 953u);
@@ -172,8 +172,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringMixed) {
   //   848 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  44 number of elements (11) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +  20 number of null elements (5) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +  20 number of NULL elements (5) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 961
   EXPECT_EQ(index->memory_consumption(), 961u);
@@ -190,10 +190,10 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringEmpty) {
 #ifdef __GLIBCXX__
   // libstdc++:
   //    24 (reported by cpp_btree implementation)
-  // +  24 std::vector<ChunkOffset> object overhead (index non-null postings)
-  // +   0 number of non-null elements (0) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   0 number of null elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index non-NULL positions)
+  // +   0 number of non-NULL elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // =  73
   EXPECT_EQ(index->memory_consumption(), 73u);
@@ -203,8 +203,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringEmpty) {
   //    ?? (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +   0 number of elements (0) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   0 number of null elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   EXPECT_GT(index->memory_consumption(), 49u);
 #endif
@@ -220,8 +220,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
   //   841 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   0 number of null elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 921
   EXPECT_EQ(index->memory_consumption(), 921u);
@@ -230,8 +230,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
   //   264 (reported by cpp_btree implementation)
   // +  24 std::vector<ChunkOffset> object overhead
   // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   0 number of null elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 345
   EXPECT_EQ(index->memory_consumption(), 345u);
@@ -259,8 +259,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   // +   20 "frankfrankfrankfrank"
   // +   20 "inboxinboxinboxinbox"
   // +   25 "hotelhotelhotelhotelhotel"
-  // +   24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +    0 number of null elements (0) * sizeof(ChunkOffset) (4)
+  // +   24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +    0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +    1 SegmentIndexType
   // = 1047
   EXPECT_EQ(index->memory_consumption(), 1047u);
@@ -270,8 +270,8 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
   // +  24 std::vector<ChunkOffset> object overhead
   // +  32 number of elements (8) * sizeof(ChunkOffset) (4)
   // +  25 "hotelhotelhotelhotelhotel"
-  // +  24 std::vector<ChunkOffset> object overhead (index null postings)
-  // +   0 number of null elements (0) * sizeof(ChunkOffset) (4)
+  // +  24 std::vector<ChunkOffset> object overhead (index NULL positions)
+  // +   0 number of NULL elements (0) * sizeof(ChunkOffset) (4)
   // +   1 SegmentIndexType
   // = 370
   EXPECT_EQ(index->memory_consumption(), 370u);

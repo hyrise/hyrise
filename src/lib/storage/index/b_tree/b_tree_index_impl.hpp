@@ -36,7 +36,7 @@ class BaseBTreeIndexImpl : public Noncopyable {
 
 /**
 * Implementation: https://code.google.com/archive/p/cpp-btree/
-* Note: does not support null values right now.
+* Note: does not support NULL values right now.
 */
 template <typename DataType>
 class BTreeIndexImpl : public BaseBTreeIndexImpl {
