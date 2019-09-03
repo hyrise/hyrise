@@ -2,7 +2,7 @@
 
 #include "boost/container/pmr/memory_resource.hpp"
 #include "concurrency/transaction_manager.hpp"
-#include "scheduler/no_scheduler.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -64,7 +64,7 @@ class Hyrise : public Singleton<Hyrise> {
     transaction_manager = TransactionManager{};
     meta_table_manager = MetaTableManager{};
     topology = Topology{};
-    scheduler = std::make_shared<NoScheduler>();
+    scheduler = std::make_shared<ImmediateExecutionScheduler>();
   }
   friend class Singleton;
 };

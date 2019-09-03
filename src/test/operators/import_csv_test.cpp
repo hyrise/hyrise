@@ -9,7 +9,7 @@
 #include "storage/table.hpp"
 
 #
-#include "scheduler/no_scheduler.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 
@@ -136,7 +136,7 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
 
   Hyrise::get().scheduler->finish();
   EXPECT_TABLE_EQ_ORDERED(importer->get_operator()->get_output(), expected_table);
-  Hyrise::get().set_scheduler(std::make_shared<NoScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
 
 TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {

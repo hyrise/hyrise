@@ -54,13 +54,13 @@ class AbstractScheduler {
 template <typename TaskType>
 void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
   DebugAssert(([&]() {
-    for (auto& task : tasks) {
-      if (!task->is_scheduled()) {
-        return false;
-      }
-    }
-    return true;
-  }()),
+                for (auto& task : tasks) {
+                  if (!task->is_scheduled()) {
+                    return false;
+                  }
+                }
+                return true;
+              }()),
               "In order to wait for a task’s completion, it needs to have been scheduled first.");
 
   /**

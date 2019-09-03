@@ -315,7 +315,8 @@ set(
     scheduler/job_task.hpp
     scheduler/node_queue_scheduler.cpp
     scheduler/node_queue_scheduler.hpp
-    scheduler/no_scheduler.hpp
+    scheduler/immediate_execution_scheduler.cpp
+    scheduler/immediate_execution_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
     scheduler/task_queue.cpp

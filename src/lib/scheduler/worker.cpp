@@ -94,8 +94,7 @@ void Worker::_work() {
 void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
 
 void Worker::join() {
-  Assert(!Hyrise::get().scheduler->active(),
-         "Worker can't be join()-ed while the scheduler is still active");
+  Assert(!Hyrise::get().scheduler->active(), "Worker can't be join()-ed while the scheduler is still active");
   _thread.join();
 }
 

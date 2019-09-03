@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-class NoScheduler : public AbstractScheduler {
+class ImmediateExecutionScheduler : public AbstractScheduler {
  public:
   void begin() override {}
 
@@ -18,9 +18,7 @@ class NoScheduler : public AbstractScheduler {
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override { return _queues; }
 
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                SchedulePriority priority = SchedulePriority::Default) override {
-    if (task->is_ready()) task->execute();
-  }
+                SchedulePriority priority = SchedulePriority::Default) override;
 
  private:
   std::vector<std::shared_ptr<TaskQueue>> _queues = std::vector<std::shared_ptr<TaskQueue>>{};
