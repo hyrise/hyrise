@@ -36,7 +36,8 @@ class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
     a_y = node_a->get_column("y");
     a_z = node_a->get_column("z");
 
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}, {DataType::Int, "z"}}, "b");
+    node_b = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}, {DataType::Int, "z"}}, "b");
     b_x = node_b->get_column("x");
     b_y = node_b->get_column("y");
     b_z = node_b->get_column("z");
@@ -49,20 +50,19 @@ class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
 
 TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
   set_statistics_for_mock_node(node_b, 100,
-    {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
-     GenericHistogram<int32_t>::with_single_bin(30, 70, 100, 5),
-     GenericHistogram<int32_t>::with_single_bin(10, 50, 100, 5)});
+                               {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
+                                GenericHistogram<int32_t>::with_single_bin(30, 70, 100, 5),
+                                GenericHistogram<int32_t>::with_single_bin(10, 50, 100, 5)});
 
   // Assuming equals_(a_y, b_y) < equals_(a_z, b_z) < equals_(a_x, b_x) wrt. estimated cardinality. This might
   //  change when our cardinality estimator changes. In that case the histograms should be updated.
   const auto expected_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x));
   const auto expected_lqp = JoinNode::make(JoinMode::Inner, expected_join_predicates, node_a, node_b);
 
-  for (const auto& input_join_predicates : {
-    expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x)),
-    expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z)),
-    expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z))
-  }) {
+  for (const auto& input_join_predicates :
+       {expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x)),
+        expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z)),
+        expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z))}) {
     auto predicates_string = std::stringstream{};
     predicates_string << "input predicates: ";
     for (const auto& predicate : input_join_predicates) {
@@ -81,18 +81,20 @@ TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
   GTEST_SKIP();  // will fail until proper estimation for semi joins and not-equals join predicates are implemented
 
   set_statistics_for_mock_node(node_b, 100,
-    {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
-     GenericHistogram<int32_t>::with_single_bin(-30, 10, 100, 5),
-     GenericHistogram<int32_t>::with_single_bin(30, 70, 100, 5)});
+                               {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
+                                GenericHistogram<int32_t>::with_single_bin(-30, 10, 100, 5),
+                                GenericHistogram<int32_t>::with_single_bin(30, 70, 100, 5)});
 
   // Assuming greater_than_(a_z, b_z) < greater_than_(a_x, b_x) < equals_(a_y, b_y) wrt. estimated cardinality.
   //  This might change when our cardinality estimator changes. In that case the histograms should be updated.
   //  The equals predicate must come first, because semi joins are only supported by hash joins, which require
   //  their primary predicate to be equals.
-  const auto expected_join_predicates = expression_vector(equals_(a_y, b_y), greater_than_(a_z, b_z), greater_than_(a_x, b_x));
+  const auto expected_join_predicates =
+      expression_vector(equals_(a_y, b_y), greater_than_(a_z, b_z), greater_than_(a_x, b_x));
   const auto expected_lqp = JoinNode::make(JoinMode::Semi, expected_join_predicates, node_a, node_b);
 
-  const auto input_join_predicates = expression_vector(greater_than_(a_x, b_x), equals_(a_y, b_y), greater_than_(a_z, b_z));
+  const auto input_join_predicates =
+      expression_vector(greater_than_(a_x, b_x), equals_(a_y, b_y), greater_than_(a_z, b_z));
   const auto input_lqp = JoinNode::make(JoinMode::Semi, input_join_predicates, node_a, node_b);
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

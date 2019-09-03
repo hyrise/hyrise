@@ -103,8 +103,7 @@ class BaseTestWithParam
   }
 
   static void set_statistics_for_mock_node(
-      const std::shared_ptr<MockNode>& mock_node,
-      const size_t row_count,
+      const std::shared_ptr<MockNode>& mock_node, const size_t row_count,
       const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
     const auto& column_definitions = mock_node->column_definitions();
     auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_definitions.size());
