@@ -4,6 +4,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <scheduler/job_task.hpp>
+#include <scheduler/current_scheduler.hpp>
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_segment.hpp"
@@ -55,17 +57,51 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context, "Validate requires a valid TransactionContext.");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
-  const auto in_table = input_table_left();
-
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-  output_chunks.reserve(in_table->chunk_count());
+  const auto chunk_count = input_table_left()->chunk_count();
 
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
-  const auto chunk_count = in_table->chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk_in = in_table->get_chunk(chunk_id);
+  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::vector<std::shared_ptr<Chunk>>> job_results;
+  auto job_chunk_id_start = ChunkID{0};
+  auto job_row_count = uint32_t{0};
+  for (auto chunk_id = job_chunk_id_start; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = input_table_left()->get_chunk(chunk_id);
+    job_row_count += chunk->size();
+
+    if(job_row_count >= Chunk::DEFAULT_SIZE || chunk_id == (chunk_count - 1)) {
+      auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
+      output_chunks.reserve(chunk_id - job_chunk_id_start);
+      job_results.emplace_back(output_chunks);
+
+      jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks] {
+        _process_chunks(job_chunk_id_start, chunk_id, our_tid, snapshot_commit_id, output_chunks);
+      }));
+      jobs.back()->schedule();
+
+      job_chunk_id_start = chunk_id + 1;
+      job_row_count = uint32_t{0};
+    }
+  }
+
+  // Merge results
+  CurrentScheduler::wait_for_tasks(jobs);
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
+  output_chunks.reserve(chunk_count);
+  for(const auto& chunk_vector : job_results) {
+    for(const auto& chunk : chunk_vector) {
+      output_chunks.emplace_back(chunk);
+    }
+  }
+
+  return std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, std::move(output_chunks));
+}
+
+void Validate::_process_chunks(const ChunkID chunk_id_start, const ChunkID chunk_id_end, const TransactionID our_tid, const TransactionID snapshot_commit_id, std::vector<std::shared_ptr<Chunk>>& output_chunks) {
+
+  for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
+    const auto chunk_in = input_table_left()->get_chunk(chunk_id);
     Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
 
     Segments output_segments;
@@ -122,7 +158,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       // Otherwise we have a Value- or DictionarySegment and simply iterate over all rows to build a poslist.
     } else {
-      referenced_table = in_table;
+      referenced_table = input_table_left();
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
       pos_list_out->guarantee_single_chunk();
@@ -146,8 +182,6 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
     }
   }
-
-  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
 }  // namespace opossum
