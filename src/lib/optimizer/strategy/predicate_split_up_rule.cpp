@@ -7,6 +7,8 @@
 
 namespace opossum {
 
+PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunction) : _split_disjunction(split_disjunction) {}
+
 bool PredicateSplitUpRule::_splitConjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
   if (flat_conjunction.size() <= 1) {
@@ -28,6 +30,10 @@ bool PredicateSplitUpRule::_splitConjunction(const std::shared_ptr<PredicateNode
 }
 
 void PredicateSplitUpRule::_splitDisjunction(const std::shared_ptr<PredicateNode> &predicate_node) const {
+  if (!_split_disjunction) {
+    return;
+  }
+
   const auto flat_disjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::Or);
   if (flat_disjunction.size() <= 1) {
     return;

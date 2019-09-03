@@ -26,6 +26,7 @@ namespace opossum {
  */
 class PredicateSplitUpRule : public AbstractRule {
  public:
+  explicit PredicateSplitUpRule(const bool split_disjunction = true);
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 
  private:
@@ -34,6 +35,8 @@ class PredicateSplitUpRule : public AbstractRule {
    */
   bool _splitConjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
   void _splitDisjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
+
+  bool _split_disjunction;
 };
 
 }  // namespace opossum
