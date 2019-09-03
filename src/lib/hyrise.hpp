@@ -32,10 +32,6 @@ class Hyrise : public Singleton<Hyrise> {
     scheduler->begin();
   }
 
-  void set_jit_repository(std::shared_ptr<JitRepository> repo) { jit_repository = repo; }
-
-  void set_benchmark_runner(std::shared_ptr<BenchmarkRunner> runner) { benchmark_runner = runner; }
-
   PluginManager plugin_manager;
   StorageManager storage_manager;
   TransactionManager transaction_manager;
@@ -43,9 +39,9 @@ class Hyrise : public Singleton<Hyrise> {
   Topology topology;
 
   std::shared_ptr<AbstractScheduler> scheduler;
-
   std::shared_ptr<JitRepository> jit_repository;
-  std::shared_ptr<BenchmarkRunner> benchmark_runner;
+
+  std::weak_ptr<BenchmarkRunner> benchmark_runner;
 
  private:
   Hyrise() {

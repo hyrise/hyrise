@@ -134,6 +134,6 @@ int main(int argc, char* argv[]) {
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(
       *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
-  Hyrise::get().set_benchmark_runner(benchmark_runner);
+  Hyrise::get().benchmark_runner = benchmark_runner;
   Hyrise::get().benchmark_runner->run();
 }
