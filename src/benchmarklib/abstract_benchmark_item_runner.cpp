@@ -38,13 +38,13 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
   }
 }
 
-bool AbstractBenchmarkItemRunner::items_with_dedicated_results() {
+bool AbstractBenchmarkItemRunner::item_without_dedicated_result() {
   for (const auto& dedicated_result : _dedicated_expected_results) {
     if (!dedicated_result) {
-      return false;
+      return true;
     }
   }
-  return true;
+  return false;
 }
 
 void AbstractBenchmarkItemRunner::on_tables_loaded() {}
