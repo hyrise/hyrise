@@ -10,6 +10,8 @@
 #include "operators/join_verification.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
 
@@ -49,8 +51,9 @@ struct InputTableConfiguration {
   size_t table_size{};
   InputTableType table_type{};
   EncodingType encoding_type{EncodingType::Unencoded};
+  bool has_indexes{false};
 
-  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type, encoding_type); }
+  auto to_tuple() const { return std::tie(side, chunk_size, table_size, table_type, encoding_type, has_indexes); }
 };
 
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
@@ -204,9 +207,19 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
      */
     const auto build_join_type_specific_variations = [&](const auto& configuration) {
       if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {
-        std::vector<JoinTestConfiguration> variations(all_index_sides.size(), configuration);
-        for (uint8_t index{0}; index < all_index_sides.size(); ++index) {
-          variations[index].index_side = all_index_sides[index];
+        // using factor 2 since has_indexes can either be true or false.
+        std::vector<JoinTestConfiguration> variations(all_index_sides.size() /* TODO * 2 */, configuration);
+        uint8_t variation_index{0};
+        for (const auto& index_side : all_index_sides) {
+          for (const auto& has_indexes : {true /* TODO , false*/}) {
+            variations[variation_index].index_side = all_index_sides[variation_index];
+            if (index_side == IndexSide::Left) {
+              variations[variation_index].input_left.has_indexes = has_indexes;
+            } else {
+              variations[variation_index].input_right.has_indexes = has_indexes;
+            }
+            ++variation_index;
+          }
         }
         return variations;
       }
@@ -449,7 +462,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
+    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, has_indexes] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
@@ -457,11 +470,11 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     return "resources/test_data/tbl/join_test_runner/input_table_"s + side_str + "_" + table_size_str + ".tbl";
   }
 
-  static std::shared_ptr<Table> get_table(const InputTableConfiguration& key,
-                                          const std::optional<IndexSide> index_side = std::nullopt) {
+  static std::shared_ptr<Table> get_table(const InputTableConfiguration& key) {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
-      const auto& [side, chunk_size, table_size, input_table_type, encoding_type] = key;
+      const auto& [side, chunk_size, table_size, input_table_type, encoding_type, has_indexes] = key;
+      std::ignore = side;
       std::ignore = table_size;
 
       auto table = load_table(get_table_path(key), chunk_size);
@@ -527,11 +540,15 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        * indexes for the table have to be created. The index type is either GroupKeyIndex for dictionary segmetns or 
        * BTreeIndex for non-dictionary segments.
        */
-      if (index_side && (side == InputSide::Left) == (*index_side == IndexSide::Left)) {
+      if (has_indexes) {
         if (encoding_type == EncodingType::Dictionary || encoding_type == EncodingType::FixedStringDictionary) {
-          // TODO create GroupKeyIndexes
+          for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+            table->create_index<GroupKeyIndex>({column_id});
+          }
         } else {
-          // TODO create BTree indexes
+          for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+            table->create_index<BTreeIndex>({column_id});
+          }
         }
       }
 
@@ -551,8 +568,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   //  - add performace data evaluation
   const auto configuration = GetParam();
 
-  const auto input_table_left = get_table(configuration.input_left, configuration.index_side);
-  const auto input_table_right = get_table(configuration.input_right, configuration.index_side);
+  const auto input_table_left = get_table(configuration.input_left);
+  const auto input_table_right = get_table(configuration.input_right);
 
   const auto input_operator_left = std::make_shared<TableWrapper>(input_table_left);
   const auto input_operator_right = std::make_shared<TableWrapper>(input_table_right);
@@ -575,12 +592,14 @@ TEST_P(JoinTestRunner, TestJoin) {
   Print::print(input_table_left, PrintFlags::IgnoreChunkBoundaries);
   std::cout << "Chunk size: " << configuration.input_left.chunk_size << std::endl;
   std::cout << "Table type: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
+  std::cout << "Has indexes: " << (input_table_left->indexes_statistics().empty() ? "false" : "true") << std::endl;
   std::cout << get_table_path(configuration.input_left) << std::endl;
   std::cout << std::endl;
   std::cout << "===================== Right Input Table ====================" << std::endl;
   Print::print(input_table_right, PrintFlags::IgnoreChunkBoundaries);
   std::cout << "Chunk size: " << configuration.input_right.chunk_size << std::endl;
   std::cout << "Table size: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
+  std::cout << "Has indexes: " << (input_table_right->indexes_statistics().empty() ? "false" : "true") << std::endl;
   std::cout << get_table_path(configuration.input_right) << std::endl;
   std::cout << std::endl;
   // TODO end debug code
@@ -605,12 +624,14 @@ TEST_P(JoinTestRunner, TestJoin) {
     Print::print(input_table_left, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.input_left.chunk_size << std::endl;
     std::cout << "Table type: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
+    std::cout << "Has indexes: " << (input_table_left->indexes_statistics().empty() ? "false" : "true") << std::endl;
     std::cout << get_table_path(configuration.input_left) << std::endl;
     std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
     Print::print(input_table_right, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.input_right.chunk_size << std::endl;
     std::cout << "Table size: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
+    std::cout << "Has indexes: " << (input_table_right->indexes_statistics().empty() ? "false" : "true") << std::endl;
     std::cout << get_table_path(configuration.input_right) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
