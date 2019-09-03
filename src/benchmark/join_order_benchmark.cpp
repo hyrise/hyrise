@@ -121,10 +121,10 @@ int main(int argc, char* argv[]) {
 
   if (benchmark_config->verify) {
     add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql",
-                          Hyrise::get().benchmark_runner->sqlite_wrapper);
+                          benchmark_runner->sqlite_wrapper);
   }
 
   std::cout << "done." << std::endl;
 
-  Hyrise::get().benchmark_runner->run();
+  benchmark_runner->run();
 }
