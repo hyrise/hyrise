@@ -78,7 +78,7 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
 }
 
 TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
-  GTEST_SKIP();  // will fail until proper estimation for semi joins and not-equals join predicates are implemented
+  GTEST_SKIP();  // Will fail until we can estimate cardinalities for semi joins and not-equals join predicates.
 
   set_statistics_for_mock_node(node_b, 100,
                                {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
