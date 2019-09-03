@@ -103,7 +103,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         output_chunks.emplace_back(chunk);
       }
     }
-  } else {
+  } else if(job_results.size() > 0) {
+    Assert(job_results.size() == 1, "Direct execution should not produce multiple result vectors.");
     output_chunks = *job_results.front();
   }
 
