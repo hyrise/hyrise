@@ -4,12 +4,12 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <scheduler/job_task.hpp>
-#include <scheduler/current_scheduler.hpp>
 
 #include "concurrency/transaction_context.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
+#include "scheduler/job_task.hpp"
+#include "scheduler/current_scheduler.hpp"
 
 namespace opossum {
 
@@ -71,28 +71,39 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     job_row_count += chunk->size();
 
     if(job_row_count >= Chunk::DEFAULT_SIZE || chunk_id == (chunk_count - 1)) {
+      bool execute_directly = job_chunk_id_start == 0 && chunk_id == (chunk_count - 1);
+
       auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
       output_chunks.reserve(chunk_id - job_chunk_id_start);
-      job_results.emplace_back(output_chunks);
+      job_results.push_back(output_chunks);
 
-      jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks] {
+      if(execute_directly) {
         _process_chunks(job_chunk_id_start, chunk_id, our_tid, snapshot_commit_id, output_chunks);
-      }));
-      jobs.back()->schedule();
+      } else {
+        jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks] {
+          _process_chunks(job_chunk_id_start, chunk_id, our_tid, snapshot_commit_id, output_chunks);
+        }));
+        jobs.back()->schedule();
 
-      job_chunk_id_start = chunk_id + 1;
-      job_row_count = uint32_t{0};
+        job_chunk_id_start = chunk_id + 1;
+        job_row_count = uint32_t{0};
+      }
     }
   }
 
-  // Merge results
-  CurrentScheduler::wait_for_tasks(jobs);
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
   output_chunks.reserve(chunk_count);
-  for(const auto& chunk_vector : job_results) {
-    for(const auto& chunk : chunk_vector) {
-      output_chunks.emplace_back(chunk);
+
+  if(jobs.size() > 0) {
+    // Merge job results
+    CurrentScheduler::wait_for_tasks(jobs);
+    for (const auto& chunk_vector : job_results) {
+      for (const auto& chunk : chunk_vector) {
+        output_chunks.emplace_back(chunk);
+      }
     }
+  } else {
+    output_chunks = job_results.front();
   }
 
   return std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, std::move(output_chunks));
