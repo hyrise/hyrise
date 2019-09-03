@@ -5,6 +5,9 @@
 
 namespace opossum {
 
+/**
+ * Instead of actually scheduling, the ImmediateExecutionScheduler executes its tasks immediately.
+ */
 class ImmediateExecutionScheduler : public AbstractScheduler {
  public:
   void begin() override {}
