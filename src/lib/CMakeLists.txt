@@ -311,8 +311,6 @@ set(
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp
-    scheduler/current_scheduler.cpp
-    scheduler/current_scheduler.hpp
     scheduler/job_task.cpp
     scheduler/job_task.hpp
     scheduler/node_queue_scheduler.cpp

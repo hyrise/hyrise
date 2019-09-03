@@ -9,7 +9,7 @@
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#include "scheduler/current_scheduler.hpp"
+#
 #include "scheduler/job_task.hpp"
 #include "scheduler/no_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -100,7 +100,7 @@ class SchedulerTest : public BaseTest {
           jobs.emplace_back(job);
         }
 
-        Hyrise::get().current_scheduler.wait_for_tasks(jobs);
+        Hyrise::get().scheduler->wait_for_tasks(jobs);
       });
       task->schedule();
       tasks.emplace_back(task);
@@ -113,17 +113,17 @@ class SchedulerTest : public BaseTest {
  */
 TEST_F(SchedulerTest, BasicTest) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   std::atomic_uint counter{0};
 
   increment_counter_in_subtasks(counter);
 
-  Hyrise::get().current_scheduler.get()->finish();
+  Hyrise::get().scheduler->finish();
 
   ASSERT_EQ(counter, 30u);
 
-  Hyrise::get().current_scheduler.set(std::make_shared<NoScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NoScheduler>());
 }
 
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
@@ -134,39 +134,39 @@ TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
 
 TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   std::atomic_uint counter{0u};
 
   stress_linear_dependencies(counter);
 
-  Hyrise::get().current_scheduler.get()->finish();
+  Hyrise::get().scheduler->finish();
 
   ASSERT_EQ(counter, 3u);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   std::atomic_uint counter{0u};
 
   stress_multiple_dependencies(counter);
 
-  Hyrise::get().current_scheduler.get()->finish();
+  Hyrise::get().scheduler->finish();
 
   ASSERT_EQ(counter, 4u);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   std::atomic_uint counter{0};
 
   stress_diamond_dependencies(counter);
 
-  Hyrise::get().current_scheduler.get()->finish();
+  Hyrise::get().scheduler->finish();
 
   ASSERT_EQ(counter, 7u);
 }
@@ -191,7 +191,7 @@ TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
 
 TEST_F(SchedulerTest, MultipleOperators) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
   Hyrise::get().storage_manager.add_table("table", test_table);
@@ -207,7 +207,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   gt_task->schedule();
   ts_task->schedule();
 
-  Hyrise::get().current_scheduler.get()->finish();
+  Hyrise::get().scheduler->finish();
 
   auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
@@ -221,41 +221,41 @@ TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
     GTEST_SKIP();
   }
   Hyrise::get().topology.use_non_numa_topology(4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(1, Hyrise::get().current_scheduler.get()->queues().size());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(1, Hyrise::get().scheduler->queues().size());
 
   Hyrise::get().topology.use_fake_numa_topology(4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(4, Hyrise::get().current_scheduler.get()->queues().size());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(4, Hyrise::get().scheduler->queues().size());
 
   Hyrise::get().topology.use_fake_numa_topology(4, 2);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(2, Hyrise::get().current_scheduler.get()->queues().size());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(2, Hyrise::get().scheduler->queues().size());
 
   Hyrise::get().topology.use_fake_numa_topology(4, 4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(1, Hyrise::get().current_scheduler.get()->queues().size());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  EXPECT_EQ(1, Hyrise::get().scheduler->queues().size());
 
-  Hyrise::get().current_scheduler.get()->finish();
+  Hyrise::get().scheduler->finish();
 }
 
 TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
   Hyrise::get().topology.use_default_topology(1);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto task_done = false;
   auto task = std::make_shared<JobTask>([&task_done]() {
     auto subtask = std::make_shared<JobTask>([&task_done]() { task_done = true; });
 
     subtask->schedule();
-    Hyrise::get().current_scheduler.wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
+    Hyrise::get().scheduler->wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
   });
 
   task->schedule();
-  Hyrise::get().current_scheduler.wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
+  Hyrise::get().scheduler->wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
   EXPECT_TRUE(task_done);
 
-  Hyrise::get().current_scheduler.get()->finish();
+  Hyrise::get().scheduler->finish();
 }
 
 }  // namespace opossum

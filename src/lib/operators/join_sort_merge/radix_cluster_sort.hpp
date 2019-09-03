@@ -194,7 +194,7 @@ class RadixClusterSort {
       job->schedule();
     }
 
-    Hyrise::get().current_scheduler.wait_for_tasks(histogram_jobs);
+    Hyrise::get().scheduler->wait_for_tasks(histogram_jobs);
 
     // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
     for (auto& chunk_information : table_information.chunk_information) {
@@ -228,7 +228,7 @@ class RadixClusterSort {
       job->schedule();
     }
 
-    Hyrise::get().current_scheduler.wait_for_tasks(cluster_jobs);
+    Hyrise::get().scheduler->wait_for_tasks(cluster_jobs);
 
     return output_table;
   }

@@ -21,7 +21,7 @@ class /* #1357 */ DISABLED_ServerTestRunner : public BaseTest {
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     // Set scheduler so that the server can execute the tasks on separate threads.
-    Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
     uint16_t server_port = 0;
     std::mutex mutex{};

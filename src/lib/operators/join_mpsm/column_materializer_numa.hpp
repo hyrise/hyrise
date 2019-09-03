@@ -9,7 +9,7 @@
 #include "hyrise.hpp"
 #include "memory/numa_memory_resource.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/current_scheduler.hpp"
+#
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
@@ -108,7 +108,7 @@ class ColumnMaterializerNUMA {
       jobs.back()->schedule(numa_node_id);
     }
 
-    Hyrise::get().current_scheduler.wait_for_tasks(jobs);
+    Hyrise::get().scheduler->wait_for_tasks(jobs);
 
     for (auto& partition : (*output)) {
       // removes null pointers, this is important since we currently opt against using mutexes so we have sparse vectors

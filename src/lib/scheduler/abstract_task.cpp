@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_scheduler.hpp"
-#include "current_scheduler.hpp"
+#
 #include "hyrise.hpp"
 #include "task_queue.hpp"
 #include "utils/tracing/probes.hpp"
@@ -61,7 +61,7 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 void AbstractTask::schedule(NodeID preferred_node_id) {
   _mark_as_scheduled();
 
-  Hyrise::get().current_scheduler.get()->schedule(shared_from_this(), preferred_node_id, _priority);
+  Hyrise::get().scheduler->schedule(shared_from_this(), preferred_node_id, _priority);
 }
 
 void AbstractTask::_join() {

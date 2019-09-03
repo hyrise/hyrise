@@ -23,7 +23,6 @@
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
@@ -164,7 +163,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     job_task->schedule();
   }
 
-  Hyrise::get().current_scheduler.wait_for_tasks(jobs);
+  Hyrise::get().scheduler->wait_for_tasks(jobs);
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

@@ -29,7 +29,7 @@
 #include "like_matcher.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/current_scheduler.hpp"
+#
 #include "scheduler/operator_task.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
@@ -943,7 +943,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
   row_pqp->set_parameters(parameters);
 
   const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp, CleanupTemporaries::Yes);
-  Hyrise::get().current_scheduler.schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler->schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
 }

@@ -11,7 +11,6 @@
 #include "hyrise.hpp"
 #include "join_mpsm/radix_cluster_sort_numa.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment_visitor.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -401,7 +400,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       jobs.back()->schedule(static_cast<NodeID>(cluster_number));
     }
 
-    Hyrise::get().current_scheduler.wait_for_tasks(jobs);
+    Hyrise::get().scheduler->wait_for_tasks(jobs);
   }
 
   /**

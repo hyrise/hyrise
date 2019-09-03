@@ -8,7 +8,7 @@
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv_parser.hpp"
-#include "scheduler/current_scheduler.hpp"
+#
 #include "scheduler/node_queue_scheduler.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

@@ -9,7 +9,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
-#include "scheduler/current_scheduler.hpp"
+#
 #include "scheduler/job_task.hpp"
 #include "statistics/generate_pruning_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -163,7 +163,7 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
     job_task->schedule();
   }
 
-  Hyrise::get().current_scheduler.wait_for_tasks(tasks);
+  Hyrise::get().scheduler->wait_for_tasks(tasks);
 }
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager) {

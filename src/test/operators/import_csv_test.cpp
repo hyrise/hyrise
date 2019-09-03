@@ -8,7 +8,7 @@
 #include "operators/import_csv.hpp"
 #include "storage/table.hpp"
 
-#include "scheduler/current_scheduler.hpp"
+#
 #include "scheduler/no_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
@@ -122,7 +122,7 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
 
 TEST_F(OperatorsImportCsvTest, Parallel) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   auto importer = std::make_shared<OperatorTask>(
       std::make_shared<ImportCsv>("resources/test_data/csv/float_int_large.csv"), CleanupTemporaries::Yes);
   importer->schedule();
@@ -134,9 +134,9 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
     expected_table->append({458.7f, 12345});
   }
 
-  Hyrise::get().current_scheduler.get()->finish();
+  Hyrise::get().scheduler->finish();
   EXPECT_TABLE_EQ_ORDERED(importer->get_operator()->get_output(), expected_table);
-  Hyrise::get().current_scheduler.set(std::make_shared<NoScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NoScheduler>());
 }
 
 TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {

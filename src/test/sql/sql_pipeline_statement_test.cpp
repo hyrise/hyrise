@@ -13,7 +13,7 @@
 #include "operators/abstract_join_operator.hpp"
 #include "operators/print.hpp"
 #include "operators/validate.hpp"
-#include "scheduler/current_scheduler.hpp"
+#
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -487,7 +487,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline_statement();
 
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  Hyrise::get().current_scheduler.set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
 

@@ -14,7 +14,7 @@
 #include "cxxopts.hpp"
 #include "hyrise.hpp"
 #include "json.hpp"
-#include "scheduler/current_scheduler.hpp"
+#
 #include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"

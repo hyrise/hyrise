@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_task.hpp"
-#include "current_scheduler.hpp"
+#
 #include "hyrise.hpp"
 #include "task_queue.hpp"
 #include "worker.hpp"

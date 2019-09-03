@@ -6,8 +6,6 @@
 namespace opossum {
 
 class NoScheduler : public AbstractScheduler {
-  friend class CurrentScheduler;
-
  public:
   void begin() override {}
 

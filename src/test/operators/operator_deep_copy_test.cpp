@@ -205,7 +205,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
 
   const auto copied_plan = sql_pipeline.get_physical_plan()->deep_copy();
   const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan, CleanupTemporaries::Yes);
-  Hyrise::get().current_scheduler.schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler->schedule_and_wait_for_tasks(tasks);
 
   const auto copied_result = tasks.back()->get_operator()->get_output();
 
