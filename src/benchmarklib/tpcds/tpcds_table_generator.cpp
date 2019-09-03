@@ -271,7 +271,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
   // try to load cached tables
-  const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);
+  const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
       const auto table_name = table_file.path().stem();
