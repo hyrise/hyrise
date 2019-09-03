@@ -63,7 +63,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
   std::vector<std::shared_ptr<JobTask>> jobs;
-  std::vector<std::vector<std::shared_ptr<Chunk>>> job_results;
+  std::vector<std::shared_ptr<std::vector<std::shared_ptr<Chunk>>>> job_results;
   auto job_chunk_id_start = ChunkID{0};
   auto job_row_count = uint32_t{0};
   for (auto chunk_id = job_chunk_id_start; chunk_id < chunk_count; ++chunk_id) {
@@ -73,14 +73,13 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     if(job_row_count >= Chunk::DEFAULT_SIZE || chunk_id == (chunk_count - 1)) {
       bool execute_directly = job_chunk_id_start == 0 && chunk_id == (chunk_count - 1);
 
-      auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-      output_chunks.reserve(chunk_id - job_chunk_id_start);
-      job_results.push_back(output_chunks);
+      auto output_chunks = std::make_shared<std::vector<std::shared_ptr<Chunk>>>();
+      output_chunks->reserve(chunk_id - job_chunk_id_start);
 
       if(execute_directly) {
         _process_chunks(job_chunk_id_start, chunk_id, our_tid, snapshot_commit_id, output_chunks);
       } else {
-        jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks] {
+        jobs.push_back(std::make_shared<JobTask>([=, this] {
           _process_chunks(job_chunk_id_start, chunk_id, our_tid, snapshot_commit_id, output_chunks);
         }));
         jobs.back()->schedule();
@@ -88,6 +87,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         job_chunk_id_start = chunk_id + 1;
         job_row_count = uint32_t{0};
       }
+
+      job_results.push_back(output_chunks);
     }
   }
 
@@ -98,18 +99,18 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     // Merge job results
     CurrentScheduler::wait_for_tasks(jobs);
     for (const auto& chunk_vector : job_results) {
-      for (const auto& chunk : chunk_vector) {
+      for (const auto& chunk : *chunk_vector) {
         output_chunks.emplace_back(chunk);
       }
     }
   } else {
-    output_chunks = job_results.front();
+    output_chunks = *job_results.front();
   }
 
   return std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
-void Validate::_process_chunks(const ChunkID chunk_id_start, const ChunkID chunk_id_end, const TransactionID our_tid, const TransactionID snapshot_commit_id, std::vector<std::shared_ptr<Chunk>>& output_chunks) {
+void Validate::_process_chunks(const ChunkID chunk_id_start, const ChunkID chunk_id_end, const TransactionID our_tid, const TransactionID snapshot_commit_id, std::shared_ptr<std::vector<std::shared_ptr<Chunk>>> output_chunks) {
 
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = input_table_left()->get_chunk(chunk_id);
@@ -190,7 +191,7 @@ void Validate::_process_chunks(const ChunkID chunk_id_start, const ChunkID chunk
     }
 
     if (!pos_list_out->empty() > 0) {
-      output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
+      output_chunks->emplace_back(std::make_shared<Chunk>(output_segments));
     }
   }
 }
