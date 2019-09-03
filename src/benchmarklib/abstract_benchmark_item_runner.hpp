@@ -39,7 +39,7 @@ class AbstractBenchmarkItemRunner {
   virtual const std::vector<BenchmarkItemID>& items() const = 0;
 
   // Returns true if an item without an associated dedicated result exists, else false.
-  bool item_without_dedicated_result();
+  bool has_item_without_dedicated_result();
 
   // Loads the dedicated expected restuls as tables into _dedicated_expected_results
   void load_dedicated_expected_results(const std::filesystem::path& expected_results_directory_path);
