@@ -57,7 +57,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   _benchmark_item_runner->on_tables_loaded();
 
-  if (_config.verify) {
+  // SQLite data is only loaded if the dedicated result set is not complete, i.e,
+  // items exist for which no dedicated result could be loaded.
+  if (_config.verify && !_benchmark_item_runner->items_with_dedicated_results()) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
     Timer timer;
 
@@ -71,6 +73,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     }
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
+  } else {
+    std::cout << "no\n";
   }
 }
 

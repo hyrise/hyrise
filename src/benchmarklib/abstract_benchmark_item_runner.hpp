@@ -38,6 +38,9 @@ class AbstractBenchmarkItemRunner {
   // Returns the BenchmarkItemIDs of all selected items
   virtual const std::vector<BenchmarkItemID>& items() const = 0;
 
+  // Returns true if a dedicated result exists for each item, else false.
+  bool items_with_dedicated_results();
+
   // Loads the dedicated expected restuls as tables into _dedicated_expected_results
   void load_dedicated_expected_results(const std::filesystem::path& expected_results_directory_path);
 

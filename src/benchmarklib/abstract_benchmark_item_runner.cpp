@@ -38,6 +38,15 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
   }
 }
 
+bool AbstractBenchmarkItemRunner::items_with_dedicated_results() {
+  for (const auto& dedicated_result : _dedicated_expected_results) {
+    if (!dedicated_result) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void AbstractBenchmarkItemRunner::on_tables_loaded() {}
 
 std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRunner::execute_item(
