@@ -3,6 +3,8 @@
 #include "strategy_base_test.hpp"
 #include "testing_assert.hpp"
 
+#include <numeric>
+
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -63,17 +65,40 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
        {expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x)),
         expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z)),
         expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z))}) {
-    auto predicates_string = std::stringstream{};
-    predicates_string << "input predicates: ";
-    for (const auto& predicate : input_join_predicates) {
-      predicates_string << '[' << predicate->as_column_name() << "] ";
-    }
-    SCOPED_TRACE(predicates_string.str());
+    SCOPED_TRACE(std::accumulate(
+      input_join_predicates.begin(), input_join_predicates.end(),
+      std::string{"input predicates: "}, [](const auto& predicates_string, const auto& predicate) {
+                                           return predicates_string + '[' + predicate->as_column_name() + "] ";
+                                         }));
 
     const auto input_lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
 
     const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+}
+
+TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
+  set_statistics_for_mock_node(node_b, 100,
+                               {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
+                                GenericHistogram<int32_t>::with_single_bin(30, 70, 100, 5),
+                                GenericHistogram<int32_t>::with_single_bin(10, 50, 100, 5)});
+
+  const auto non_equals_predicates = expression_vector(greater_than_(a_y, b_y), less_than_(a_z, b_z));
+
+  for (const auto& join_mode : {JoinMode::Inner,
+                                JoinMode::Left,
+                                JoinMode::Right,
+                                JoinMode::FullOuter}) {
+    const auto input_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
+    EXPECT_NO_THROW(StrategyBaseTest::apply_rule(_rule, input_lqp));
+  }
+
+  for (const auto& join_mode : {JoinMode::Semi,
+                                JoinMode::AntiNullAsTrue,
+                                JoinMode::AntiNullAsFalse}) {
+    const auto input_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
+    EXPECT_THROW(StrategyBaseTest::apply_rule(_rule, input_lqp), std::logic_error);
   }
 }
 

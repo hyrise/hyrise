@@ -30,7 +30,6 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
     single_predicate_join->set_right_input(node->right_input());
 
     predicate_cardinalities[predicate] = caching_cardinality_estimator->estimate_cardinality(single_predicate_join);
-    // std::cout << predicate->as_column_name() << " est. card.: " << predicate_cardinalities[predicate] << '\n';  // TODO remove
   }
 
   // Sort predicates by descending selectivity.
