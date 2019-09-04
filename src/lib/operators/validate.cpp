@@ -67,29 +67,30 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   output_chunks.reserve(chunk_count);
   std::mutex output_mutex;
 
-  auto chunk_id_job_start = ChunkID{0};
-  auto row_count_job = uint32_t{0};
-  for (auto chunk_id = chunk_id_job_start; chunk_id < chunk_count; ++chunk_id) {
+  auto job_start_chunk_id = ChunkID{0};
+  auto job_row_count = uint32_t{0};
+  for (auto chunk_id = job_start_chunk_id; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = in_table->get_chunk(chunk_id);
-    row_count_job += chunk->size();
+    job_row_count += chunk->size();
 
-    if (row_count_job >= Chunk::DEFAULT_SIZE || chunk_id == (chunk_count - 1)) {
-      // In case of one job only, execute directly.
-      bool execute_directly = chunk_id_job_start == 0 && chunk_id == (chunk_count - 1);
+    // Small chunks are bundled together to avoid unnecessary scheduling overhead.
+    if (job_row_count >= Chunk::DEFAULT_SIZE || chunk_id == (chunk_count - 1)) {
+      // Single tasks are executed directly instead of scheduling a single job.
+      bool execute_directly = job_start_chunk_id == 0 && chunk_id == (chunk_count - 1);
 
       if (execute_directly) {
-        _validate_chunks(in_table, chunk_id_job_start, chunk_id, our_tid, snapshot_commit_id, output_chunks,
+        _validate_chunks(in_table, job_start_chunk_id, chunk_id, our_tid, snapshot_commit_id, output_chunks,
                          output_mutex);
       } else {
         jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
-          _validate_chunks(in_table, chunk_id_job_start, chunk_id, our_tid, snapshot_commit_id, output_chunks,
+          _validate_chunks(in_table, job_start_chunk_id, chunk_id, our_tid, snapshot_commit_id, output_chunks,
                            output_mutex);
         }));
         jobs.back()->schedule();
 
         // Prepare next job
-        chunk_id_job_start = chunk_id + 1;
-        row_count_job = 0;
+        job_start_chunk_id = chunk_id + 1;
+        job_row_count = 0;
       }
     }
   }
