@@ -22,7 +22,9 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
   const auto caching_cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
 
-  // Estimate selectivity of a predicate by getting cardinalities for a join node joining only on that one predicate.
+  // Estimate join selectivity of a predicate by getting cardinalities for a join node joining only on that one predicate.
+  //  “The join selectivity is the ratio “number of tuples in the result/number of tuples in the cartesian product.”
+  //  See http://www.vldb.org/journal/VLDBJ6/70060191.pdf for more infos on join selectivity.
   auto predicate_cardinalities = std::unordered_map<std::shared_ptr<AbstractExpression>, Cardinality>{};
   for (const auto& predicate : node->node_expressions) {
     const auto single_predicate_join = JoinNode::make(join_mode, predicate);
@@ -32,7 +34,7 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
     predicate_cardinalities[predicate] = caching_cardinality_estimator->estimate_cardinality(single_predicate_join);
   }
 
-  // Sort predicates by ascending selectivity.
+  // Sort predicates by ascending join selectivity.
   std::sort(node->node_expressions.begin(), node->node_expressions.end(),
             [&](const std::shared_ptr<AbstractExpression>& a, const std::shared_ptr<AbstractExpression>& b) {
               return predicate_cardinalities[a] < predicate_cardinalities[b];
