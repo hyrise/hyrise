@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
-#include "scheduler/job_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 
 namespace opossum {
 
@@ -73,15 +73,17 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     const auto chunk = in_table->get_chunk(chunk_id);
     row_count_job += chunk->size();
 
-    if(row_count_job >= Chunk::DEFAULT_SIZE || chunk_id == (chunk_count - 1)) {
+    if (row_count_job >= Chunk::DEFAULT_SIZE || chunk_id == (chunk_count - 1)) {
       // In case of one job only, execute directly.
       bool execute_directly = chunk_id_job_start == 0 && chunk_id == (chunk_count - 1);
 
-      if(execute_directly) {
-        _validate_chunks(in_table, chunk_id_job_start, chunk_id, our_tid, snapshot_commit_id, output_chunks, output_mutex);
+      if (execute_directly) {
+        _validate_chunks(in_table, chunk_id_job_start, chunk_id, our_tid, snapshot_commit_id, output_chunks,
+                         output_mutex);
       } else {
         jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
-          _validate_chunks(in_table, chunk_id_job_start, chunk_id, our_tid, snapshot_commit_id, output_chunks, output_mutex);
+          _validate_chunks(in_table, chunk_id_job_start, chunk_id, our_tid, snapshot_commit_id, output_chunks,
+                           output_mutex);
         }));
         jobs.back()->schedule();
 
@@ -92,16 +94,17 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     }
   }
 
-  if(jobs.size() > 0) {
-    // Merge job results
+  if (jobs.size() > 0) {
     CurrentScheduler::wait_for_tasks(jobs);
   }
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
-void Validate::_validate_chunks(const std::shared_ptr<const Table> in_table, const ChunkID chunk_id_start, const ChunkID chunk_id_end, const TransactionID our_tid, const TransactionID snapshot_commit_id, std::vector<std::shared_ptr<Chunk>> &output_chunks, std::mutex &output_mutex) {
-
+void Validate::_validate_chunks(const std::shared_ptr<const Table> in_table, const ChunkID chunk_id_start,
+                                const ChunkID chunk_id_end, const TransactionID our_tid,
+                                const TransactionID snapshot_commit_id,
+                                std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) {
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
