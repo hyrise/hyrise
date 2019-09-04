@@ -32,7 +32,7 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
     predicate_cardinalities[predicate] = caching_cardinality_estimator->estimate_cardinality(single_predicate_join);
   }
 
-  // Sort predicates by descending selectivity.
+  // Sort predicates by ascending selectivity.
   std::sort(node->node_expressions.begin(), node->node_expressions.end(),
             [&](const std::shared_ptr<AbstractExpression>& a, const std::shared_ptr<AbstractExpression>& b) {
               return predicate_cardinalities[a] < predicate_cardinalities[b];
