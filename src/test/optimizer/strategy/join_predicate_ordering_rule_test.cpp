@@ -97,9 +97,8 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
   }
 }
 
-TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
-  GTEST_SKIP();  // Will fail until we can estimate cardinalities for semi joins and not-equals join predicates.
-
+// TODO(anyone): Enable this as soon as we can estimate cardinalities for semi joins and not-equals join predicates.
+TEST_F(JoinPredicateOrderingRuleTest, DISABLED_SemiGreaterAndEquiJoin /* #1830 */) {
   set_statistics_for_mock_node(node_b, 100,
                                {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
                                 GenericHistogram<int32_t>::with_single_bin(-30, 10, 100, 5),
