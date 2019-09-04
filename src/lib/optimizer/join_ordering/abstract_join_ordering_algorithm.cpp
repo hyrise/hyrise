@@ -59,6 +59,8 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
    * column-to-column scans after the join.
    * The primary predicate needs to be a simple "<column> <operator> <column>" predicate, otherwise the join operators
    * won't be able to execute it.
+   * NOTE: Since a multi-predicate join is currently slower than scanning the join output table, we do not emit multiple
+   *       predicates for the JoinNode, but use subsequent scans instead.
    *
    * The optimality-ensuring way to order the predicates would be to find the cheapest of the predicates.size()!
    * orders of them.
