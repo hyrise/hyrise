@@ -14,6 +14,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
+#include "strategy/predicate_merge_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
@@ -113,6 +114,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
+
+  optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
   return optimizer;
 }
