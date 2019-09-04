@@ -147,12 +147,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
-  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * scale);
-  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * scale);
-  const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
-  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
-  const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
-  const auto region_count = static_cast<size_t>(tdefs[REGION].base);
+  const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);
+  const auto order_count = static_cast<ChunkOffset>(tdefs[ORDER].base * scale);
+  const auto part_count = static_cast<ChunkOffset>(tdefs[PART].base * scale);
+  const auto supplier_count = static_cast<ChunkOffset>(tdefs[SUPP].base * scale);
+  const auto nation_count = static_cast<ChunkOffset>(tdefs[NATION].base);
+  const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
@@ -272,6 +272,25 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   }
 
   return table_info_by_name;
+}
+
+AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() const {
+  return {
+      {"part", {{"p_partkey"}}},
+      {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
+      // TODO(anyone): multi-column indexes are currently not used by the index scan rule and the translator
+      {"partsupp", {{"ps_partkey", "ps_suppkey"}, {"ps_suppkey"}}},  // ps_partkey is subset of {ps_partkey, ps_suppkey}
+      {"customer", {{"c_custkey"}, {"c_nationkey"}}},
+      {"orders", {{"o_orderkey"}, {"o_custkey"}}},
+      {"lineitem", {{"l_orderkey", "l_linenumber"}, {"l_partkey", "l_suppkey"}}},
+      {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
+      {"region", {{"r_regionkey"}}},
+  };
+}
+
+AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
+  // Allowed as per TPC-H Specification, paragraph 1.5.2
+  return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
 }
 
 }  // namespace opossum
