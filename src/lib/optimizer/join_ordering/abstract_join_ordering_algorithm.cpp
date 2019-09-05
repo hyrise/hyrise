@@ -79,10 +79,10 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
   // Categorize join predicates into those that MUST be processed as part of a join operator (because they are required
-  // to see if an outer join emits a value or a NULL) and those that can also be processed as regular after the join
-  // predicates (post-join predicates, e.g., additional join predicates for inner joins). Since the multi-predicate
-  // join is currently slower than a regular predicate (i.e., a full table scan), we only use the multi-predicate join
-  // in cases where it is required for a correct result.
+  // to see if an outer join emits a value or a NULL) and those that can also be processed as regular predicates after
+  // the join predicates (post-join predicates, e.g., additional join predicates for inner joins). Since the
+  // multi-predicate join is currently slower than a regular predicate (i.e., a full table scan), we only use it in
+  // cases where it is required for a correct result.
   auto join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto post_join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
