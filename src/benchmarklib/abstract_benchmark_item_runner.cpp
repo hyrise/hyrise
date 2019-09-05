@@ -39,7 +39,7 @@ void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
 }
 
 bool AbstractBenchmarkItemRunner::has_item_without_dedicated_result() {
-  if (items().size() > _dedicated_expected_results.size()) {
+  if (!items().empty() && _dedicated_expected_results.empty()) {
     return true;
   }
   for (const auto& dedicated_result : _dedicated_expected_results) {
