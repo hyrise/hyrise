@@ -37,11 +37,10 @@ TEST_F(PredicateMergeRuleTest, SplitUpConjunctionInPredicateNode) {
   // ) WHERE (a = 5 AND b > 7) AND 13 = 13
   // clang-format off
   const auto expected_lqp =
-  PredicateNode::make(and_(equals_(a_a, 5), greater_than_(a_b, 7)),
-    PredicateNode::make(equals_(13, 13),
+  PredicateNode::make(and_(equals_(13, 13), and_(equals_(a_a, 5), greater_than_(a_b, 7))),
       ProjectionNode::make(expression_vector(a_b, a_a),
         PredicateNode::make(and_(equals_(a_a, a_b), greater_than_(a_a, 3)),
-          node_a))));
+          node_a)));
 
   const auto input_lqp =
   PredicateNode::make(greater_than_(a_b, 7),
@@ -54,6 +53,10 @@ TEST_F(PredicateMergeRuleTest, SplitUpConjunctionInPredicateNode) {
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
+
+    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -74,6 +77,10 @@ TEST_F(PredicateMergeRuleTest, SplitUpSimpleDisjunctionInPredicateNode) {
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
+
+    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -101,6 +108,10 @@ TEST_F(PredicateMergeRuleTest, SplitUpComplexDisjunctionInPredicateNode) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
+    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -123,6 +134,10 @@ TEST_F(PredicateMergeRuleTest, SelectColumn) {
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
+
+    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -166,6 +181,10 @@ TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
+    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -193,16 +212,20 @@ TEST_F(PredicateMergeRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
+    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions) {
   // SELECT * FROM (
   //   SELECT a, b FROM a WHERE a = b AND a = 3
-  // ) WHERE ((a > 10 OR a < 8) AND (b <= 7 OR 11 = b)) OR ((a = 5 AND b > 7) AND 13 = 13)
+  // ) WHERE ((a > 10 OR a < 8) AND (b <= 7 OR 11 = b)) OR (13 = 13 AND (a = 5 AND b > 7))
   // clang-format off
   const auto expected_lqp =
-  PredicateNode::make(or_(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))), and_(and_(equals_(a_a, 5), greater_than_(a_b, 7)), equals_(13, 13))),  // NOLINT
+  PredicateNode::make(or_(and_(or_(greater_than_(a_a, value_(10)), less_than_(a_a, value_(8))), or_(less_than_equals_(a_b, 7), equals_(value_(11), a_b))), and_(equals_(13, 13), and_(equals_(a_a, 5), greater_than_(a_b, 7)))),  // NOLINT
     ProjectionNode::make(expression_vector(a_b, a_a),
       PredicateNode::make(and_(equals_(a_a, a_b), greater_than_(a_a, 3)),
         node_a)));
@@ -235,6 +258,10 @@ TEST_F(PredicateMergeRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions) 
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
+//    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+//    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+//    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -250,6 +277,10 @@ TEST_F(PredicateMergeRuleTest, NoRewriteSimplePredicate) {
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
+
+    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

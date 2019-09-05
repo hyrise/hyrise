@@ -4,6 +4,7 @@
 
 #include "abstract_rule.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 
 namespace opossum {
 
@@ -26,17 +27,17 @@ namespace opossum {
  */
 class PredicateMergeRule : public AbstractRule {
  public:
-  explicit PredicateMergeRule(const bool split_disjunction = true);
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
-  /**
-   * @return true if a conjunction was split up
-   */
-  bool _mergeConjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
-  void _mergeDisjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
-
-  bool _split_disjunction;
+//  /**
+//   * @return true if a conjunction was split up
+//   */
+//  bool _mergeConjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
+//  void _mergeDisjunction(const std::shared_ptr<UnionNode>& union_node) const;
+  std::shared_ptr<AbstractExpression> _lqp_subplan_to_boolean_expression(
+  const std::shared_ptr<AbstractLQPNode>& begin,
+  const std::optional<const std::shared_ptr<AbstractLQPNode>>& end = std::nullopt) const;
 };
 
 }  // namespace opossum

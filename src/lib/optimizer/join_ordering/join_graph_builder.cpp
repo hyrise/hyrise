@@ -1,12 +1,9 @@
 #include "join_graph_builder.hpp"
 
-#include <algorithm>
-#include <numeric>
 #include <queue>
 #include <stack>
 
 #include "expression/expression_functional.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
