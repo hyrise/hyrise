@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
 
   if (benchmark_item_runner->items().empty()) {
     std::cout << "No benchmark items provided.\n";
-    return;
+    return 1;
   }
 
   auto benchmark_runner =
