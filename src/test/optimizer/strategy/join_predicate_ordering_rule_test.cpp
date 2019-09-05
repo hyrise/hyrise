@@ -65,14 +65,7 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
        {expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x)),
         expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z)),
         expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z))}) {
-    SCOPED_TRACE(std::accumulate(input_join_predicates.begin(), input_join_predicates.end(),
-                                 std::string{"input predicates: "},
-                                 [](const auto& predicates_string, const auto& predicate) {
-                                   return predicates_string + '[' + predicate->as_column_name() + "] ";
-                                 }));
-
     const auto input_lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
-
     const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
@@ -88,6 +81,7 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
 
   for (const auto& join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
     const auto input_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
+    // TODO(anyone): Add an actual test as soon as greater_than_ and less_than_ predicates can be estimated.
     EXPECT_NO_THROW(StrategyBaseTest::apply_rule(_rule, input_lqp));
   }
 

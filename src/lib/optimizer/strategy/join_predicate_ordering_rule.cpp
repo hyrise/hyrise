@@ -1,5 +1,7 @@
 #include "join_predicate_ordering_rule.hpp"
 
+#include <algorithm>
+
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -52,10 +54,8 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
       Assert(first_equals_predicate != node->node_expressions.end(),
              "Semi/anti joins require at least one equals predicate at the moment.");
 
-      while (first_equals_predicate != node->node_expressions.begin()) {
-        std::iter_swap(first_equals_predicate, first_equals_predicate - 1);
-        first_equals_predicate -= 1;
-      }
+      // Shift all predicates before first_equals_predicate back one slot and move first_equals_predicate to the front.
+      std::rotate(node->node_expressions.begin(), first_equals_predicate, first_equals_predicate + 1);
 
       Assert(
           std::static_pointer_cast<AbstractPredicateExpression>(node->node_expressions.front())->predicate_condition ==
