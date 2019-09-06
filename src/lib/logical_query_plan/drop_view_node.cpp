@@ -16,6 +16,12 @@ DropViewNode::DropViewNode(const std::string& view_name, const bool if_exists)
 
 std::string DropViewNode::description() const { return "[Drop] View: '"s + view_name + "'"; }
 
+size_t DropViewNode::_shallow_hash() const {
+  auto hash = boost::hash_value(view_name);
+  boost::hash_combine(hash, if_exists);
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> DropViewNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return DropViewNode::make(view_name, if_exists);
 }

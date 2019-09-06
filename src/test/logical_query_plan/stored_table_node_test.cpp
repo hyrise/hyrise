@@ -76,7 +76,7 @@ TEST_F(StoredTableNodeTest, ColumnExpressions) {
   EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *lqp_column_(_c));
 }
 
-TEST_F(StoredTableNodeTest, Equals) {
+TEST_F(StoredTableNodeTest, HashEquals) {
   EXPECT_EQ(*_stored_table_node, *_stored_table_node);
 
   const auto different_node_a = StoredTableNode::make("t_b");
@@ -93,6 +93,11 @@ TEST_F(StoredTableNodeTest, Equals) {
   EXPECT_NE(*_stored_table_node, *different_node_b);
   EXPECT_NE(*_stored_table_node, *different_node_c);
   EXPECT_EQ(*different_node_c, *different_node_c2);
+
+  EXPECT_NE(_stored_table_node->hash(), different_node_a->hash());
+  EXPECT_NE(_stored_table_node->hash(), different_node_b->hash());
+  EXPECT_NE(_stored_table_node->hash(), different_node_c->hash());
+  EXPECT_EQ(different_node_c->hash(), different_node_c2->hash());
 }
 
 TEST_F(StoredTableNodeTest, Copy) {

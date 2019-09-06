@@ -57,7 +57,7 @@ TEST_F(AggregateNodeTest, Description) {
   EXPECT_EQ(description, "[Aggregate] GroupBy: [a, c] Aggregates: [SUM(a + b), SUM(a + c)]");
 }
 
-TEST_F(AggregateNodeTest, Equals) {
+TEST_F(AggregateNodeTest, HashEquals) {
   const auto same_aggregate_node = AggregateNode::make(
       expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
 
@@ -79,6 +79,11 @@ TEST_F(AggregateNodeTest, Equals) {
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_b);
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_c);
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_d);
+
+  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_a->hash());
+  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_b->hash());
+  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_c->hash());
+  EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_d->hash());
 }
 
 TEST_F(AggregateNodeTest, Copy) {
