@@ -13,8 +13,8 @@
 namespace opossum {
 
 Session::Session(Socket socket) : _socket(std::make_shared<Socket>(std::move(socket))), _postgres_handler(_socket) {
-        boost::asio::ip::tcp::no_delay tcp_no_delay(true);
-        _socket->set_option(tcp_no_delay);
+  boost::asio::ip::tcp::no_delay tcp_no_delay(true);
+  _socket->set_option(tcp_no_delay);
 }
 
 void Session::start() {
