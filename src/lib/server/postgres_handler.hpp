@@ -24,10 +24,10 @@ struct PreparedStatementParameters {
 
 class PostgresHandler {
  public:
-    // PostgresHandler::PostgresHandler(std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
+  // PostgresHandler::PostgresHandler(std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
 
   template <class T>
-  explicit PostgresHandler(std::shared_ptr<T> socket): _read_buffer(socket), _write_buffer(socket) {}
+  explicit PostgresHandler(std::shared_ptr<T> socket) : _read_buffer(socket), _write_buffer(socket) {}
   uint32_t read_startup_packet();
   void handle_startup_packet_body(const uint32_t size);
   void send_authentication();
@@ -45,6 +45,7 @@ class PostgresHandler {
   PreparedStatementParameters read_bind_packet();
   std::string read_execute_packet();
   void send_status_message(const NetworkMessageType message_type);
+
  private:
   ReadBuffer _read_buffer;
   WriteBuffer _write_buffer;

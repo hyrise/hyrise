@@ -30,7 +30,7 @@ class Session {
   void _handle_describe();
 
   void _handle_execute();
-  
+
   void _sync();
 
   std::shared_ptr<Socket> _socket;

@@ -1,19 +1,19 @@
+#include <thread>
 #include "SQLParser.h"
+#include "hyrise.hpp"
 #include "lossless_cast.hpp"
 #include "postgres_handler.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
-#include "hyrise.hpp"
-#include "tasks/server/pipeline_execution_task.hpp"
-#include "tasks/server/parse_prepared_statement_task.hpp"
 #include "tasks/server/bind_prepared_statement_task.hpp"
+#include "tasks/server/parse_prepared_statement_task.hpp"
+#include "tasks/server/pipeline_execution_task.hpp"
 #include "types.hpp"
-#include <thread>
 
 namespace opossum {
 
@@ -82,7 +82,8 @@ uint64_t send_query_response(std::shared_ptr<const Table> table, PostgresHandler
   return table->row_count();
 }
 
-std::pair<std::shared_ptr<const Table>, std::shared_ptr<const AbstractOperator>>  execute_pipeline(const std::string& sql) {
+std::pair<std::shared_ptr<const Table>, std::shared_ptr<const AbstractOperator>> execute_pipeline(
+    const std::string& sql) {
   auto sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
   const auto [pipeline_status, result_table] = sql_pipeline->get_result_table();
 
@@ -91,7 +92,8 @@ std::pair<std::shared_ptr<const Table>, std::shared_ptr<const AbstractOperator>>
   return {result_table, sql_pipeline->get_physical_plans().front()};
 }
 
-std::string build_command_complete_message(std::shared_ptr<const AbstractOperator> root_operator_type, const uint64_t row_count) {
+std::string build_command_complete_message(std::shared_ptr<const AbstractOperator> root_operator_type,
+                                           const uint64_t row_count) {
   switch (root_operator_type->type()) {
     case OperatorType::Insert: {
       // 0 is ignored OID and 1 inserted row
@@ -128,12 +130,13 @@ void setup_prepared_plan(const std::string& statement_name, const std::string& q
   Hyrise::get().storage_manager.add_prepared_plan(statement_name, std::move(task->get_plan()));
 }
 
-std::shared_ptr<AbstractOperator> bind_plan(const std::shared_ptr<PreparedPlan> prepared_plan, const std::vector<AllTypeVariant>& parameters) {
-    auto task = std::make_shared<BindPreparedStatementTask>(prepared_plan, parameters);
-    std::vector<std::shared_ptr<AbstractTask>> tasks{task};
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+std::shared_ptr<AbstractOperator> bind_plan(const std::shared_ptr<PreparedPlan> prepared_plan,
+                                            const std::vector<AllTypeVariant>& parameters) {
+  auto task = std::make_shared<BindPreparedStatementTask>(prepared_plan, parameters);
+  std::vector<std::shared_ptr<AbstractTask>> tasks{task};
+  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
-    return task->get_pqp();
+  return task->get_pqp();
 }
 
 }  // namespace opossum

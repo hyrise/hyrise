@@ -123,12 +123,12 @@ void PostgresHandler::send_row_description(const std::vector<RowDescription>& ro
 
   for (const auto& column_description : row_description) {
     _write_buffer.put_string(column_description.column_name);
-    _write_buffer.put_value<int32_t>(0u);                             // no object id
-    _write_buffer.put_value<int16_t>(0u);                             // no attribute number
-    _write_buffer.put_value<int32_t>(column_description.object_id);   // object id of type
-    _write_buffer.put_value<uint16_t>(column_description.type_width); // regular int
-    _write_buffer.put_value<int32_t>(-1);                             // no modifier
-    _write_buffer.put_value<int16_t>(0u);                             // text format
+    _write_buffer.put_value<int32_t>(0u);                              // no object id
+    _write_buffer.put_value<int16_t>(0u);                              // no attribute number
+    _write_buffer.put_value<int32_t>(column_description.object_id);    // object id of type
+    _write_buffer.put_value<uint16_t>(column_description.type_width);  // regular int
+    _write_buffer.put_value<int32_t>(-1);                              // no modifier
+    _write_buffer.put_value<int16_t>(0u);                              // text format
   }
 }
 
@@ -177,14 +177,14 @@ void PostgresHandler::send_data_row(const std::vector<std::string>& row_strings)
 }
 
 std::pair<std::string, std::string> PostgresHandler::read_parse_packet() {
-  _read_buffer.get_value<uint32_t>(); // Ignore packet size
+  _read_buffer.get_value<uint32_t>();  // Ignore packet size
 
   const std::string statement_name = _read_buffer.get_string();
   const std::string query = _read_buffer.get_string();
   const auto network_parameter_data_types = _read_buffer.get_value<uint16_t>();
 
   for (auto i = 0; i < network_parameter_data_types; i++) {
-  /*auto parameter_data_types = */ _read_buffer.get_value<uint32_t>();
+    /*auto parameter_data_types = */ _read_buffer.get_value<uint32_t>();
   }
 
   return {std::move(statement_name), std::move(query)};
@@ -201,7 +201,7 @@ PreparedStatementParameters PostgresHandler::read_bind_packet() {
   auto portal = _read_buffer.get_string();
   auto statement_name = _read_buffer.get_string();
   auto num_format_codes = _read_buffer.get_value<int16_t>();
-  
+
   // auto format_codes = std::vector<int16_t>();
   // format_codes.reserve(num_format_codes);
 
@@ -226,7 +226,7 @@ PreparedStatementParameters PostgresHandler::read_bind_packet() {
   auto num_result_column_format_codes = _read_buffer.get_value<int16_t>();
 
   for (auto i = 0; i < num_result_column_format_codes; i++) {
-  // format_codes.emplace_back(_read_buffer.get_value<int16_t>());
+    // format_codes.emplace_back(_read_buffer.get_value<int16_t>());
     _read_buffer.get_value<int16_t>();
   }
   // auto result_column_format_codes = read_values<int16_t>(num_result_column_format_codes);
@@ -239,10 +239,9 @@ void PostgresHandler::read_describe_packet() {
   const auto object_to_describe = _read_buffer.get_value<char>();
   const auto statement_or_portal_name = _read_buffer.get_string(packet_length - sizeof(uint32_t) - sizeof(char));
 
-
-    // statement descriptions are returned as two separate messages:
-// ParameterDescription and RowDescription
-// portal descriptions are just RowDescriptions
+  // statement descriptions are returned as two separate messages:
+  // ParameterDescription and RowDescription
+  // portal descriptions are just RowDescriptions
   if (object_to_describe == 'S') {
     // TODO(toni): describe portal
   }
@@ -261,6 +260,5 @@ void PostgresHandler::send_status_message(const NetworkMessageType message_type)
   _write_buffer.put_value(message_type);
   _write_buffer.put_value<uint32_t>(sizeof(uint32_t));
 }
-
 
 }  // namespace opossum

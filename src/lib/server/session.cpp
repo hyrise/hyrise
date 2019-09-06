@@ -2,13 +2,12 @@
 
 #include <iostream>
 
+#include "concurrency/transaction_manager.hpp"
 #include "hyrise_communication.cpp"
 #include "network_message_types.hpp"
 #include "postgres_handler.hpp"
-#include "tpch/tpch_table_generator.hpp"
-#include "concurrency/transaction_manager.hpp"
 #include "tasks/server/execute_prepared_statement_task.hpp"
-
+#include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
 
@@ -103,17 +102,15 @@ void Session::_handle_parse_command() {
   _postgres_handler.send_status_message(NetworkMessageType::ParseComplete);
 }
 
-
 void Session::_handle_bind_command() {
   const auto parameters = _postgres_handler.read_bind_packet();
-      // Not using Assert() since it includes file:line info that we don't want to hard code in tests
+  // Not using Assert() since it includes file:line info that we don't want to hard code in tests
   AssertInput(Hyrise::get().storage_manager.has_prepared_plan(parameters.statement_name),
               "The specified statement does not exist.");
 
   const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(parameters.statement_name);
 
   if (parameters.statement_name.empty()) Hyrise::get().storage_manager.drop_prepared_plan(parameters.statement_name);
-
 
   // Named portals must be explicitly closed before they can be redefined by another Bind message,
   // but this is not required for the unnamed portal.
@@ -131,13 +128,11 @@ void Session::_handle_bind_command() {
   _postgres_handler.send_status_message(NetworkMessageType::BindComplete);
 }
 
-void Session::_handle_describe() {
-  _postgres_handler.read_describe_packet();
-}
+void Session::_handle_describe() { _postgres_handler.read_describe_packet(); }
 
 void Session::_sync() {
   _postgres_handler.read_sync_packet();
-   if (_transaction) {
+  if (_transaction) {
     _transaction->commit();
     _transaction.reset();
   }
@@ -155,7 +150,6 @@ void Session::_handle_execute() {
 
   if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
   physical_plan->set_transaction_context_recursively(_transaction);
-
 
   auto task = std::make_shared<ExecutePreparedStatementTask>(physical_plan);
   task->execute();

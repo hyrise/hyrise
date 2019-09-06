@@ -12,19 +12,17 @@
 namespace opossum {
 
 void BindPreparedStatementTask::_on_execute() {
-    Assert(_params.size() == _prepared_plan->parameter_ids.size(), "Prepared statement parameter count mismatch");
+  Assert(_params.size() == _prepared_plan->parameter_ids.size(), "Prepared statement parameter count mismatch");
 
-    auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{_params.size()};
-    for (auto parameter_idx = size_t{0}; parameter_idx < _params.size(); ++parameter_idx) {
-      parameter_expressions[parameter_idx] = std::make_shared<ValueExpression>(_params[parameter_idx]);
-    }
+  auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{_params.size()};
+  for (auto parameter_idx = size_t{0}; parameter_idx < _params.size(); ++parameter_idx) {
+    parameter_expressions[parameter_idx] = std::make_shared<ValueExpression>(_params[parameter_idx]);
+  }
 
-    const auto lqp = _prepared_plan->instantiate(parameter_expressions);
-    _pqp = LQPTranslator{}.translate_node(lqp);
+  const auto lqp = _prepared_plan->instantiate(parameter_expressions);
+  _pqp = LQPTranslator{}.translate_node(lqp);
 }
 
-std::shared_ptr<AbstractOperator> BindPreparedStatementTask::get_pqp() {
-return _pqp;
-}
+std::shared_ptr<AbstractOperator> BindPreparedStatementTask::get_pqp() { return _pqp; }
 
 }  // namespace opossum

@@ -13,16 +13,17 @@ void Server::_accept_new_session() {
 }
 
 void Server::_start_session(const boost::system::error_code& error) {
-  if (!error) {    
+  if (!error) {
     std::thread([this] {
       // Sockets cannot be copied. After moving the _socket object the object will be in the same state as before.
       auto session = Session(std::move(_socket));
       session.start();
-    }).detach();
+    })
+        .detach();
   } else {
     std::cerr << error.category().name() << ": " << error.message() << std::endl;
   }
-  _accept_new_session();  
+  _accept_new_session();
 }
 
 void Server::run() {

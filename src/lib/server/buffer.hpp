@@ -1,8 +1,8 @@
 #pragma once
 
 #include <array>
-#include <iterator>
 #include <boost/asio.hpp>
+#include <iterator>
 #include "network_message_types.hpp"
 
 namespace opossum {
@@ -11,49 +11,48 @@ using Socket = boost::asio::ip::tcp::socket;
 
 static constexpr size_t BUFFER_SIZE = 4096u;
 
-class BufferIterator: public std::iterator<std::forward_iterator_tag, char> {
+class BufferIterator : public std::iterator<std::forward_iterator_tag, char> {
  public:
-    explicit BufferIterator(std::array<char, BUFFER_SIZE>& data, size_t position = 0) : _data(data), _position(position) {}
+  explicit BufferIterator(std::array<char, BUFFER_SIZE>& data, size_t position = 0)
+      : _data(data), _position(position) {}
 
-    BufferIterator(const BufferIterator&) = default;
+  BufferIterator(const BufferIterator&) = default;
 
-    BufferIterator& operator=(const BufferIterator& other) {
-      _position = other._position;
-      _data = other._data;
-      return *this;
-    }
+  BufferIterator& operator=(const BufferIterator& other) {
+    _position = other._position;
+    _data = other._data;
+    return *this;
+  }
 
-    bool operator==(BufferIterator other) const { return _position == other._position; }
+  bool operator==(BufferIterator other) const { return _position == other._position; }
 
-    bool operator!=(BufferIterator other) const { return !(*this == other); }
+  bool operator!=(BufferIterator other) const { return !(*this == other); }
 
-    BufferIterator& operator++() {
-      _position = (_position + 1) % BUFFER_SIZE;
-      return *this;
-    }
+  BufferIterator& operator++() {
+    _position = (_position + 1) % BUFFER_SIZE;
+    return *this;
+  }
 
-    BufferIterator operator++(int) {
-      BufferIterator retval = *this;
-      ++(*this);
-      return retval;
-    }
+  BufferIterator operator++(int) {
+    BufferIterator retval = *this;
+    ++(*this);
+    return retval;
+  }
 
-    BufferIterator& operator+(const size_t increment) {
-      _position = (_position + increment) % BUFFER_SIZE;
-      return *this;
-    };
+  BufferIterator& operator+(const size_t increment) {
+    _position = (_position + increment) % BUFFER_SIZE;
+    return *this;
+  };
 
-    BufferIterator& operator+=(const size_t increment) { return operator+(increment); }
+  BufferIterator& operator+=(const size_t increment) { return operator+(increment); }
 
-    BufferIterator::difference_type operator-(BufferIterator const& other) const {
-      return _position - other._position;
-    }
+  BufferIterator::difference_type operator-(BufferIterator const& other) const { return _position - other._position; }
 
-    reference operator*() const { return _data[_position]; }
+  reference operator*() const { return _data[_position]; }
 
-   private:
-    std::array<char, BUFFER_SIZE>& _data;
-    size_t _position;
+ private:
+  std::array<char, BUFFER_SIZE>& _data;
+  size_t _position;
 };
 
 class Buffer {
@@ -61,9 +60,7 @@ class Buffer {
   explicit Buffer(const std::shared_ptr<Socket> socket) : _socket(socket) {}
 
   // really inline?
-  inline char* data() noexcept {
-    return _data.begin();
-  }
+  inline char* data() noexcept { return _data.begin(); }
 
   // Problem: full and empty might be same state, so head == tail
   // Solution: Full state is tail + 1 == head
@@ -77,21 +74,16 @@ class Buffer {
     }
   }
 
-  inline void reset() {
-    _start_position = _current_position;
-  }
+  inline void reset() { _start_position = _current_position; }
 
-  inline bool full() {
-    return size() == (BUFFER_SIZE - 1);
-  }
+  inline bool full() { return size() == (BUFFER_SIZE - 1); }
+
  protected:
-
   std::shared_ptr<Socket> _socket;
   std::array<char, BUFFER_SIZE> _data;
   BufferIterator _start_position = BufferIterator(_data);
   BufferIterator _current_position = BufferIterator(_data);
 };
-
 
 class ReadBuffer : public Buffer {
  public:
@@ -116,7 +108,8 @@ class ReadBuffer : public Buffer {
   }
 
   template <typename T, typename std::enable_if_t<!std::is_same_v<uint16_t, T> && !std::is_same_v<int16_t, T> &&
-    !std::is_same_v<uint32_t, T> && !std::is_same_v<int32_t, T>, int> = 0>
+                                                      !std::is_same_v<uint32_t, T> && !std::is_same_v<int32_t, T>,
+                                                  int> = 0>
   T get_value() {
     _receive_if_necessary(sizeof(T));
     T network_value;
@@ -133,7 +126,6 @@ class ReadBuffer : public Buffer {
  protected:
   void _receive_if_necessary(const size_t bytes_required = 1);
 };
-
 
 class WriteBuffer : public Buffer {
  public:
@@ -160,7 +152,8 @@ class WriteBuffer : public Buffer {
   }
 
   template <typename T, typename std::enable_if_t<!std::is_same_v<uint16_t, T> && !std::is_same_v<int16_t, T> &&
-    !std::is_same_v<uint32_t, T> && !std::is_same_v<int32_t, T>, int> = 0>
+                                                      !std::is_same_v<uint32_t, T> && !std::is_same_v<int32_t, T>,
+                                                  int> = 0>
   void put_value(const T network_value) {
     _flush_if_necessary(sizeof(T));
     std::copy_n(reinterpret_cast<const char*>(&network_value), sizeof(T), _current_position);

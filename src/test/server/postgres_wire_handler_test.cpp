@@ -1,8 +1,7 @@
 #include <gmock/gmock.h>
 #include <base_test.hpp>
-#include "server/postgres_handler.hpp"
 #include "mock_connection.hpp"
-
+#include "server/postgres_handler.hpp"
 
 namespace opossum {
 
@@ -11,7 +10,6 @@ using ::testing::NiceMock;
 class PostgresHandlerTest : public BaseTest {
  protected:
   void SetUp() override {
-
     // _socket = std::make_shared<NiceMock<MockSocket>>(NiceMock<MockSocket>);
     NiceMock<MockIO> io;
     // NiceMock<MockSocket> socket(io);

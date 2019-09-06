@@ -1,12 +1,12 @@
 #include <iostream>
 
-#include "types.hpp"
 #include <boost/lexical_cast.hpp>
+#include "types.hpp"
 
 using namespace opossum;  // NOLINT
 
 int main() {
-  std::vector<char> v = {'a','2'};
+  std::vector<char> v = {'a', '2'};
   std::cout << "vector: " << v.size() << std::endl;
   float asd = 1.09234242342f;
   float asd1 = 1.099999999999f;

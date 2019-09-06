@@ -5,11 +5,9 @@ namespace opossum {
 static constexpr auto LENGTH_FIELD_SIZE = sizeof(uint32_t);
 static constexpr auto MESSAGE_TYPE_SIZE = sizeof(NetworkMessageType);
 
-
 std::string ReadBuffer::get_string() {
   auto string_end = BufferIterator(_data);
   std::string result = "";
-
 
   // First, use bytes available in buffer
   if (size() != 0) {
@@ -23,9 +21,9 @@ std::string ReadBuffer::get_string() {
 
   // String might already be complete at this point
   if (*string_end == '\0') {
-      // Skip null terminator
-      _start_position++;
-      return result;
+    // Skip null terminator
+    _start_position++;
+    return result;
   }
 
   while (*string_end != '\0') {
@@ -61,7 +59,7 @@ std::string ReadBuffer::get_string(const size_t string_length, const bool has_nu
   }
 
   // Ignore last character if it is \0
-  if(has_null_terminator) {
+  if (has_null_terminator) {
     result.pop_back();
   }
 
@@ -77,7 +75,9 @@ NetworkMessageType ReadBuffer::get_message_type() {
 
 void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
   // Already enough data present in buffer
-  if (size() >= bytes_required) { return; }
+  if (size() >= bytes_required) {
+    return;
+  }
 
   // Buffer might contain unread data, so cant read full buffer size
   const auto maximum_readable_size = BUFFER_SIZE - size() - 1;
@@ -87,11 +87,12 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
     bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&(*_current_position), maximum_readable_size),
                                    boost::asio::transfer_at_least(bytes_required - size()));
   } else {
-    bytes_read = boost::asio::read(*_socket,
-        std::array<boost::asio::mutable_buffer, 2>{
-            boost::asio::buffer(&*_current_position, std::distance(&*_current_position, _data.end())),
-            boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_start_position - 1)) },
-        boost::asio::transfer_at_least(bytes_required - size()));
+    bytes_read =
+        boost::asio::read(*_socket,
+                          std::array<boost::asio::mutable_buffer, 2>{
+                              boost::asio::buffer(&*_current_position, std::distance(&*_current_position, _data.end())),
+                              boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_start_position - 1))},
+                          boost::asio::transfer_at_least(bytes_required - size()));
   }
 
   if (!bytes_read) {
@@ -127,20 +128,21 @@ void WriteBuffer::put_string(const std::string& value, const bool terminate) {
   }
 }
 
-void WriteBuffer::flush(const size_t bytes_required){
+void WriteBuffer::flush(const size_t bytes_required) {
   const auto bytes_to_send = bytes_required ? bytes_required : size();
   size_t bytes_sent;
 
   if ((_current_position - _start_position) < 0) {
     // Data not continously stored in buffer
-    bytes_sent = boost::asio::write(*_socket,
-        std::array<boost::asio::mutable_buffer, 2>{
-            boost::asio::buffer(&*_start_position, std::distance(&*_start_position, _data.end())),
-            boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_current_position)) },
-        boost::asio::transfer_at_least(bytes_to_send));
+    bytes_sent =
+        boost::asio::write(*_socket,
+                           std::array<boost::asio::mutable_buffer, 2>{
+                               boost::asio::buffer(&*_start_position, std::distance(&*_start_position, _data.end())),
+                               boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_current_position))},
+                           boost::asio::transfer_at_least(bytes_to_send));
   } else {
     bytes_sent = boost::asio::write(*_socket, boost::asio::buffer(&*_start_position, size()),
-        boost::asio::transfer_at_least(bytes_to_send));
+                                    boost::asio::transfer_at_least(bytes_to_send));
   }
 
   if (!bytes_sent) {

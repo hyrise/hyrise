@@ -1,8 +1,8 @@
 #include "cxxopts.hpp"
 
-#include "server/server.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "server/server.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 cxxopts::Options get_server_cli_options() {
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
   opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
 
   // Generate TPC-H data with given scale factor
-  if (const auto scale_factor = parsed_options["generate_tpch"].as<float>(); scale_factor != 0.f){
+  if (const auto scale_factor = parsed_options["generate_tpch"].as<float>(); scale_factor != 0.f) {
     opossum::TPCHTableGenerator{scale_factor}.generate_and_store();
   }
 
