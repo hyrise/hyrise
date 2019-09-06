@@ -49,16 +49,16 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     _rng = std::mt19937(rd());
   }
 
-  void _search_elements(std::vector<int32_t>& values) {
+  void _search_elements(std::vector<std::optional<int32_t>>& values) {
     std::uniform_int_distribution<int32_t> uni_integer(0, std::numeric_limits<int32_t>::max());
 
     auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
     auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
 
-    std::set<int32_t> distinct_values(values.begin(), values.end());
+    std::set<std::optional<int32_t>> distinct_values(values.begin(), values.end());
 
     // create search values from given values + randomly chosen ones
-    std::set<int32_t> search_values = distinct_values;
+    std::set<std::optional<int32_t>> search_values = distinct_values;
     while (search_values.size() < distinct_values.size() * 2) {
       search_values.insert(uni_integer(_rng));
     }
@@ -66,14 +66,18 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
     for (const auto& search_value : search_values) {
       if (distinct_values.find(search_value) != distinct_values.end()) {
         // match
-        EXPECT_NE(index->lower_bound({search_value}), index->upper_bound({search_value}));
+        EXPECT_NE(index->lower_bound({*search_value}), index->upper_bound({*search_value}));
       } else {
         // no match
-        EXPECT_EQ(index->upper_bound({search_value}), index->lower_bound({search_value}));
+        EXPECT_EQ(index->upper_bound({*search_value}), index->lower_bound({*search_value}));
       }
 
-      int32_t min = *distinct_values.begin();
-      int32_t max = *distinct_values.rbegin();
+      const auto begin = distinct_values.begin();
+      const auto rbegin = distinct_values.rbegin();
+
+      Assert(*begin && *rbegin, "Optional has no value.");
+      int32_t min = **begin;
+      int32_t max = **rbegin;
 
       EXPECT_EQ(index->upper_bound({min - 1}), index->cbegin());
       EXPECT_EQ(index->upper_bound({max + 1}), index->cend());
@@ -154,7 +158,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
 
 TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   size_t test_size = 10'001;
-  std::vector<int32_t> ints(test_size);
+  std::vector<std::optional<int32_t>> ints(test_size);
   for (auto i = 0u; i < test_size; ++i) {
     ints[i] = i * 2;
   }
@@ -193,7 +197,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
-  std::vector<int32_t> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
+  std::vector<std::optional<int32_t>> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int32_t>::max()};
 
   auto segment = create_dict_segment_by_type<int32_t>(DataType::Int, values);
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseSegment>>({segment}));
@@ -220,7 +224,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfRandomInts) {
   size_t test_size = 1'000;
   std::uniform_int_distribution<int32_t> uni(1, std::numeric_limits<int32_t>::max() - 1);
 
-  std::vector<int32_t> values(test_size);
+  std::vector<std::optional<int32_t>> values(test_size);
   std::generate(values.begin(), values.end(), [this, &uni]() { return uni(_rng); });
 
   _search_elements(values);
@@ -230,7 +234,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfRandomInts) {
   size_t test_size = 5'000;
   std::exponential_distribution<double> exp(1.0);
 
-  std::vector<int32_t> values(test_size);
+  std::vector<std::optional<int32_t>> values(test_size);
   std::generate(values.begin(), values.end(), [this, &exp]() { return static_cast<int32_t>(exp(_rng)); });
 
   _search_elements(values);

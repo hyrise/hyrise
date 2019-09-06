@@ -52,12 +52,21 @@ TEST_F(MockNodeTest, OutputColumnExpression) {
   EXPECT_EQ(*_mock_node_a->column_expressions().at(1), *lqp_column_({_mock_node_a, ColumnID{2}}));
 }
 
-TEST_F(MockNodeTest, Equals) {
-  //
+TEST_F(MockNodeTest, HashEquals) {
   const auto same_mock_node_b =
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
+  const auto different_mock_node_1 =
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Long, "a"}, {DataType::String, "b"}}, "mock_name");
+  const auto different_mock_node_2 =
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "other_name");
   EXPECT_EQ(*_mock_node_b, *_mock_node_b);
+  EXPECT_NE(*_mock_node_b, *different_mock_node_1);
+  EXPECT_EQ(*_mock_node_b, *different_mock_node_2);
   EXPECT_EQ(*_mock_node_b, *same_mock_node_b);
+
+  EXPECT_NE(_mock_node_b->hash(), different_mock_node_1->hash());
+  EXPECT_EQ(_mock_node_b->hash(), different_mock_node_2->hash());
+  EXPECT_EQ(_mock_node_b->hash(), same_mock_node_b->hash());
 }
 
 TEST_F(MockNodeTest, Copy) {

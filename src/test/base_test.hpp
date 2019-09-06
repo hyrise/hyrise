@@ -42,14 +42,22 @@ class BaseTestWithParam
  protected:
   // creates a dictionary segment with the given type and values
   template <typename T>
-  static std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_type,
-                                                                           const std::vector<T>& values) {
-    auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
-    auto value_segment = std::make_shared<ValueSegment<T>>(std::move(vector_values));
+  static std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(
+      DataType data_type, const std::vector<std::optional<T>>& values) {
+    auto value_segment = std::make_shared<ValueSegment<T>>(true);
 
-    auto compressed_segment =
+    for (const auto& value : values) {
+      if (value) {
+        value_segment->append(*value);
+      } else {
+        value_segment->append(NULL_VALUE);
+      }
+    }
+
+    const auto& dict_segment =
         encode_and_compress_segment(value_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
-    return std::static_pointer_cast<DictionarySegment<T>>(compressed_segment);
+
+    return std::static_pointer_cast<DictionarySegment<T>>(dict_segment);
   }
 
   void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {

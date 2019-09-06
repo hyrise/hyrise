@@ -84,7 +84,7 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-if hash_dl != "79e4c71f8ec0dae17d6aa9182fdab835":
+if hash_dl != "270d3b5aa4338c7a452083cf4525c1cd":
     print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)

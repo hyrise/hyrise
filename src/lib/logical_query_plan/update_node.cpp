@@ -31,6 +31,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& UpdateNode::column_expre
   return empty_vector;
 }
 
+size_t UpdateNode::_shallow_hash() const { return boost::hash_value(table_name); }
+
 bool UpdateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& update_node_rhs = static_cast<const UpdateNode&>(rhs);
   return table_name == update_node_rhs.table_name;
