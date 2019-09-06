@@ -290,12 +290,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   for (const auto& table_name : {"call_center", "catalog_page", "customer_address", "customer", "customer_demographics",
                                  "date_dim", "household_demographics", "income_band", "inventory", "item", "promotion",
                                  "reason", "ship_mode", "store", "time_dim", "warehouse", "web_page", "web_site"}) {
-    table_info_by_name[table_name].table = generate_table(table_name);
+    table_info_by_name[table_name].table = _generate_table(table_name);
   }
 
   for (const auto& [sales_table_name, returns_table_name] : std::vector<std::pair<std::string, std::string>>{
            {"catalog_sales", "catalog_returns"}, {"store_sales", "store_returns"}, {"web_sales", "web_returns"}}) {
-    auto catalog_sales_and_returns = generate_sales_and_returns_tables(sales_table_name);
+    auto catalog_sales_and_returns = _generate_sales_and_returns_tables(sales_table_name);
     table_info_by_name[sales_table_name].table = catalog_sales_and_returns.first;
     table_info_by_name[returns_table_name].table = catalog_sales_and_returns.second;
   }
@@ -310,58 +310,58 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   return table_info_by_name;
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::generate_table(const std::string& table_name, ds_key_t max_rows) const {
+std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& table_name) const {
   if (table_name == "call_center") {
-    return generate_call_center(max_rows);
+    return generate_call_center();
   } else if (table_name == "catalog_page") {
-    return generate_catalog_page(max_rows);
+    return generate_catalog_page();
   } else if (table_name == "customer_address") {
-    return generate_customer_address(max_rows);
+    return generate_customer_address();
   } else if (table_name == "customer") {
-    return generate_customer(max_rows);
+    return generate_customer();
   } else if (table_name == "customer_demographics") {
-    return generate_customer_demographics(max_rows);
+    return generate_customer_demographics();
   } else if (table_name == "date_dim") {
-    return generate_date_dim(max_rows);
+    return generate_date_dim();
   } else if (table_name == "household_demographics") {
-    return generate_household_demographics(max_rows);
+    return generate_household_demographics();
   } else if (table_name == "income_band") {
-    return generate_income_band(max_rows);
+    return generate_income_band();
   } else if (table_name == "inventory") {
-    return generate_inventory(max_rows);
+    return generate_inventory();
   } else if (table_name == "item") {
-    return generate_item(max_rows);
+    return generate_item();
   } else if (table_name == "promotion") {
-    return generate_promotion(max_rows);
+    return generate_promotion();
   } else if (table_name == "reason") {
-    return generate_reason(max_rows);
+    return generate_reason();
   } else if (table_name == "ship_mode") {
-    return generate_ship_mode(max_rows);
+    return generate_ship_mode();
   } else if (table_name == "store") {
-    return generate_store(max_rows);
+    return generate_store();
   } else if (table_name == "time_dim") {
-    return generate_time_dim(max_rows);
+    return generate_time_dim();
   } else if (table_name == "warehouse") {
-    return generate_warehouse(max_rows);
+    return generate_warehouse();
   } else if (table_name == "web_page") {
-    return generate_web_page(max_rows);
+    return generate_web_page();
   } else if (table_name == "web_site") {
-    return generate_web_site(max_rows);
+    return generate_web_site();
   } else {
-    Assert(false, "unexpected table name: " + table_name);
+    Fail("Unexpected table name: " + table_name);
   }
 }
 
-std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::generate_sales_and_returns_tables(
-    const std::string& sales_table_name, ds_key_t max_rows) const {
+std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::_generate_sales_and_returns_tables(
+    const std::string& sales_table_name) const {
   if (sales_table_name == "catalog_sales") {
-    return generate_catalog_sales_and_returns(max_rows);
+    return generate_catalog_sales_and_returns();
   } else if (sales_table_name == "store_sales") {
-    return generate_store_sales_and_returns(max_rows);
+    return generate_store_sales_and_returns();
   } else if (sales_table_name == "web_sales") {
-    return generate_web_sales_and_returns(max_rows);
+    return generate_web_sales_and_returns();
   } else {
-    Assert(false, "unexpected sales table name: " + sales_table_name);
+    Fail("Unexpected sales table name: " + sales_table_name);
   }
 }
 

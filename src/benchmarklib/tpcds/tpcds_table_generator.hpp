@@ -64,11 +64,11 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
       ds_key_t max_rows = _ds_key_max) const;
   std::shared_ptr<Table> generate_web_site(ds_key_t max_rows = _ds_key_max) const;
 
-  std::shared_ptr<Table> generate_table(const std::string& table_name, ds_key_t max_rows = _ds_key_max) const;
-  std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> generate_sales_and_returns_tables(
-      const std::string& sales_table_name, ds_key_t max_rows = _ds_key_max) const;
-
  private:
+  std::shared_ptr<Table> _generate_table(const std::string& table_name) const;
+  std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> _generate_sales_and_returns_tables(
+      const std::string& sales_table_name) const;
+
   static constexpr auto _ds_key_max = std::numeric_limits<ds_key_t>::max();
   uint32_t _scale_factor;
 };
