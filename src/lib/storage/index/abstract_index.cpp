@@ -24,7 +24,7 @@ size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOf
     case SegmentIndexType::Invalid:
       Fail("SegmentIndexType is invalid.");
   }
-  Fail("GCC claims this is reachable.");
+  Fail("GCC thinks this is reachable.");
 }
 
 AbstractIndex::AbstractIndex(const SegmentIndexType type) : _type{type} {}

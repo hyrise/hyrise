@@ -14,6 +14,9 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
+// In this domain input modeling is explicitly used.
+// https://github.com/hyrise/hyrise/wiki/Input-Domain-Modeling
+
 namespace opossum {
 
 class GroupKeyIndexTest : public BaseTest {
