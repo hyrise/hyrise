@@ -10,9 +10,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/table.hpp"
-#include "tasks/server/bind_prepared_statement_task.hpp"
-#include "tasks/server/parse_prepared_statement_task.hpp"
-#include "tasks/server/pipeline_execution_task.hpp"
+#include "expression/value_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -124,19 +122,30 @@ void setup_prepared_plan(const std::string& statement_name, const std::string& q
     Hyrise::get().storage_manager.drop_prepared_plan(statement_name);
   }
 
-  auto task = std::make_shared<ParsePreparedStatementTask>(query);
-  CurrentScheduler::schedule_and_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
+  auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
+  auto sql_translator = SQLTranslator{UseMvcc::Yes};
+  const auto prepared_plans = sql_translator.translate_parser_result(*pipeline_statement.get_parsed_sql_statement());
+  Assert(prepared_plans.size() == 1u, "Only a single statement allowed in prepared statement");
 
-  Hyrise::get().storage_manager.add_prepared_plan(statement_name, std::move(task->get_plan()));
+  const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_plans[0], sql_translator.parameter_ids_of_value_placeholders());
+
+  Hyrise::get().storage_manager.add_prepared_plan(statement_name, std::move(prepared_plan));
 }
 
 std::shared_ptr<AbstractOperator> bind_plan(const std::shared_ptr<PreparedPlan> prepared_plan,
                                             const std::vector<AllTypeVariant>& parameters) {
-  auto task = std::make_shared<BindPreparedStatementTask>(prepared_plan, parameters);
-  std::vector<std::shared_ptr<AbstractTask>> tasks{task};
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
-  return task->get_pqp();
+  Assert(parameters.size() == prepared_plan->parameter_ids.size(), "Prepared statement parameter count mismatch");
+
+  auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{parameters.size()};
+  for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {
+    parameter_expressions[parameter_idx] = std::make_shared<ValueExpression>(parameters[parameter_idx]);
+  }
+
+  const auto lqp = prepared_plan->instantiate(parameter_expressions);
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  return pqp;
 }
 
 }  // namespace opossum

@@ -6,7 +6,6 @@
 #include "hyrise_communication.cpp"
 #include "network_message_types.hpp"
 #include "postgres_handler.hpp"
-#include "tasks/server/execute_prepared_statement_task.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
@@ -151,9 +150,9 @@ void Session::_handle_execute() {
   if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
   physical_plan->set_transaction_context_recursively(_transaction);
 
-  auto task = std::make_shared<ExecutePreparedStatementTask>(physical_plan);
-  task->execute();
-  auto table = task->get_result_table();
+  const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan, CleanupTemporaries::Yes);
+  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  const auto& table = tasks.back()->get_operator()->get_output();
 
   auto row_description = build_row_description(table);
   auto row_count = 0u;

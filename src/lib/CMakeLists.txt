@@ -518,14 +518,6 @@ set(
     strong_typedef.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
-
-    tasks/server/bind_prepared_statement_task.cpp
-    tasks/server/bind_prepared_statement_task.hpp
-    tasks/server/execute_prepared_statement_task.cpp
-    tasks/server/execute_prepared_statement_task.hpp
-    tasks/server/parse_prepared_statement_task.cpp
-    tasks/server/parse_prepared_statement_task.hpp
-
     type_comparison.hpp
     types.cpp
     types.hpp
