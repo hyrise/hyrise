@@ -30,7 +30,7 @@ void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     auto current_node = node;
     while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate) {
       // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-      if (current_node->outputs().size() > 1) {
+      if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
         break;
       }
 
