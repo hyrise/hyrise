@@ -8,7 +8,9 @@
 namespace opossum {
 
 /**
- * A rule that brings predicates in a multi-predicate-join into a (supposedly) efficient order.
+ * A rule that brings join predicates of a multi-predicate-join into an efficient order.
+ * Each predicate is only evaluated on tuples that passed all previous predicates, so 
+ * predicates are sorted according to their estimated cardinalities in ascending order.
  */
 class JoinPredicateOrderingRule : public AbstractRule {
  public:

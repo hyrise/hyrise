@@ -61,10 +61,22 @@ TEST_F(JoinPredicateOrderingRuleTest, InnerEquiJoin) {
   const auto expected_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x));
   const auto expected_lqp = JoinNode::make(JoinMode::Inner, expected_join_predicates, node_a, node_b);
 
-  for (const auto& input_join_predicates :
-       {expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x)),
-        expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z)),
-        expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z))}) {
+  {
+    const auto input_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_z, b_z), equals_(a_x, b_x));
+    const auto input_lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    const auto input_join_predicates = expression_vector(equals_(a_x, b_x), equals_(a_y, b_y), equals_(a_z, b_z));
+    const auto input_lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    const auto input_join_predicates = expression_vector(equals_(a_y, b_y), equals_(a_x, b_x), equals_(a_z, b_z));
     const auto input_lqp = JoinNode::make(JoinMode::Inner, input_join_predicates, node_a, node_b);
     const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -80,9 +92,12 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
   const auto non_equals_predicates = expression_vector(greater_than_(a_y, b_y), less_than_(a_z, b_z));
 
   for (const auto& join_mode : {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
+    // Might need to adjust this as soon as we can estimate cardinalities for non-equals join predicates.
+    const auto expected_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
+
     const auto input_lqp = JoinNode::make(join_mode, non_equals_predicates, node_a, node_b);
-    // TODO(anyone): Add an actual test as soon as greater_than_ and less_than_ predicates can be estimated.
-    EXPECT_NO_THROW(StrategyBaseTest::apply_rule(_rule, input_lqp));
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 
   for (const auto& join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
@@ -91,7 +106,10 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
   }
 }
 
-// TODO(anyone): Enable this as soon as we can estimate cardinalities for semi joins and not-equals join predicates.
+// TODO test moving equals to front
+// TODO integration test tpcds93
+
+// TODO(anyone): Enable this as soon as we can estimate cardinalities for semi joins and non-equals join predicates.
 TEST_F(JoinPredicateOrderingRuleTest, DISABLED_SemiGreaterAndEquiJoin /* #1830 */) {
   set_statistics_for_mock_node(node_b, 100,
                                {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
