@@ -34,7 +34,6 @@ void JoinPredicateOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
       const auto single_predicate_join = JoinNode::make(join_mode, predicate, node->left_input(), node->right_input());
       predicate_cardinalities.emplace(predicate,
                                       caching_cardinality_estimator->estimate_cardinality(single_predicate_join));
-      std::cout << predicate->as_column_name() << ": " << predicate_cardinalities[predicate] << '\n';  // TODO
     }
 
     // Sort predicates by ascending join selectivity.

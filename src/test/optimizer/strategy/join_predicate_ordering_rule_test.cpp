@@ -106,11 +106,7 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
   }
 }
 
-// TODO test moving equals to front
-// TODO integration test tpcds93
-
-// TODO(anyone): Enable this as soon as we can estimate cardinalities for semi joins and non-equals join predicates.
-TEST_F(JoinPredicateOrderingRuleTest, DISABLED_SemiGreaterAndEquiJoin /* #1830 */) {
+TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin /* #1830 */) {
   set_statistics_for_mock_node(node_b, 100,
                                {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
                                 GenericHistogram<int32_t>::with_single_bin(-30, 10, 100, 5),
@@ -121,7 +117,7 @@ TEST_F(JoinPredicateOrderingRuleTest, DISABLED_SemiGreaterAndEquiJoin /* #1830 *
   //  The equals predicate must come first, because semi joins are only supported by hash joins, which require
   //  their primary predicate to be equals.
   const auto expected_join_predicates =
-      expression_vector(equals_(a_y, b_y), greater_than_(a_z, b_z), greater_than_(a_x, b_x));
+      expression_vector(equals_(a_y, b_y), greater_than_(a_x, b_x), greater_than_(a_z, b_z));
   const auto expected_lqp = JoinNode::make(JoinMode::Semi, expected_join_predicates, node_a, node_b);
 
   const auto input_join_predicates =
