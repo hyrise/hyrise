@@ -39,7 +39,7 @@ TEST_F(ProjectionNodeTest, Description) {
   EXPECT_EQ(_projection_node->description(), "[Projection] c, a, b, b + c, a + c");
 }
 
-TEST_F(ProjectionNodeTest, HashEquals) {
+TEST_F(ProjectionNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_projection_node, *_projection_node);
 
   const auto different_projection_node_a =

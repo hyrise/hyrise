@@ -31,7 +31,7 @@ TEST_F(CreateTableNodeTest, Description) {
 
 TEST_F(CreateTableNodeTest, NodeExpressions) { ASSERT_EQ(create_table_node->node_expressions.size(), 0u); }
 
-TEST_F(CreateTableNodeTest, HashEquals) {
+TEST_F(CreateTableNodeTest, HashingAndEqualityCheck) {
   const auto deep_copy_node = create_table_node->deep_copy();
   EXPECT_EQ(*create_table_node, *deep_copy_node);
 

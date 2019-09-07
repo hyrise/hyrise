@@ -44,7 +44,7 @@ TEST_F(SortNodeTest, Descriptions) {
   EXPECT_EQ(sort_c->description(), "[Sort] d (DescendingNullsFirst), f (AscendingNullsLast), i (DescendingNullsLast)");
 }
 
-TEST_F(SortNodeTest, HashEquals) {
+TEST_F(SortNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_sort_node, *_sort_node);
 
   const auto sort_a =

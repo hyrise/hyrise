@@ -69,7 +69,7 @@ TEST_F(JoinNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_join_node->column_expressions().at(4), *lqp_column_(_t_b_y));
 }
 
-TEST_F(JoinNodeTest, HashEquals) {
+TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_join_node, *_join_node);
   EXPECT_EQ(*_inner_join_node, *_inner_join_node);
   EXPECT_EQ(*_semi_join_node, *_semi_join_node);

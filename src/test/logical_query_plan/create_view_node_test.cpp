@@ -33,7 +33,7 @@ TEST_F(CreateViewNodeTest, Description) {
             ")");
 }
 
-TEST_F(CreateViewNodeTest, HashEquals) {
+TEST_F(CreateViewNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_create_view_node, *_create_view_node);
   EXPECT_EQ(*_create_view_node, *_create_view_node->deep_copy());
 

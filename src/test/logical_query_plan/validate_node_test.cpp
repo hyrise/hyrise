@@ -18,7 +18,7 @@ class ValidateNodeTest : public BaseTest {
 
 TEST_F(ValidateNodeTest, Description) { EXPECT_EQ(_validate_node->description(), "[Validate]"); }
 
-TEST_F(ValidateNodeTest, HashEquals) {
+TEST_F(ValidateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_validate_node, *_validate_node);
 
   EXPECT_EQ(*_validate_node, *ValidateNode::make());

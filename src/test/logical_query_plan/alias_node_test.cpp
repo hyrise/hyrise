@@ -47,7 +47,7 @@ TEST_F(AliasNodeTest, ShallowEqualsAndCopy) {
   EXPECT_TRUE(alias_node->shallow_equals(*alias_node_copy, node_mapping));
 }
 
-TEST_F(AliasNodeTest, HashEquals) {
+TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   const auto alias_node_copy = alias_node->deep_copy();
   EXPECT_EQ(*alias_node, *alias_node_copy);
 
