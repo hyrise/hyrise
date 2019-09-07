@@ -17,7 +17,7 @@ namespace opossum {
  */
 class JoinPredicateOrderingRule : public AbstractRule {
  public:
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 };
 
 }  // namespace opossum
