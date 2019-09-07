@@ -115,10 +115,9 @@ struct AggregateHashSortSetup {
   // Prototypes for the aggregates
   std::vector<AggregateHashSortAggregateDefinition> aggregate_definitions;
 
-  static AggregateHashSortSetup create(const AggregateHashSortConfig& config,
-  const std::shared_ptr<const Table>& table,
-                                            const std::vector<AggregateColumnDefinition>& aggregate_column_definitions,
-                                            const std::vector<ColumnID>& group_by_column_ids) {
+  static AggregateHashSortSetup create(const AggregateHashSortConfig& config, const std::shared_ptr<const Table>& table,
+                                       const std::vector<AggregateColumnDefinition>& aggregate_column_definitions,
+                                       const std::vector<ColumnID>& group_by_column_ids) {
     Assert(!group_by_column_ids.empty(),
            "AggregateHashSort cannot operate without group by columns, use a different aggregate operator");
 
@@ -146,14 +145,13 @@ struct AggregateHashSortSetup {
       }
     }
 
-    setup.fixed_group_size =
-        divide_and_ceil(setup.variably_sized_values_begin_offset, GROUP_RUN_ELEMENT_SIZE);
+    setup.fixed_group_size = divide_and_ceil(setup.variably_sized_values_begin_offset, GROUP_RUN_ELEMENT_SIZE);
 
     for (auto& aggregate_column_definition : aggregate_column_definitions) {
       if (aggregate_column_definition.column) {
         setup.aggregate_definitions.emplace_back(aggregate_column_definition.function,
-                                                      table->column_data_type(*aggregate_column_definition.column),
-                                                      *aggregate_column_definition.column);
+                                                 table->column_data_type(*aggregate_column_definition.column),
+                                                 *aggregate_column_definition.column);
       } else {
         setup.aggregate_definitions.emplace_back(aggregate_column_definition.function);
       }
@@ -187,8 +185,7 @@ struct BasicRun : public GroupSizePolicy {
   BasicRun() = default;
 
   BasicRun(const GroupSizePolicy& group_size_policy, std::vector<std::unique_ptr<BaseAggregateRun>>&& aggregates)
-      : BasicRun(group_size_policy, std::move(aggregates)) {
-  }
+      : BasicRun(group_size_policy, std::move(aggregates)) {}
 
   BasicRun(const GroupSizePolicy& group_size_policy, std::vector<std::unique_ptr<BaseAggregateRun>>&& aggregates,
            const size_t group_capacity, const size_t group_data_capacity)
@@ -218,7 +215,8 @@ struct BasicRun : public GroupSizePolicy {
   /**
    * Schedule the aggregation of a group from the `source_run` with a group in this run
    */
-  void aggregate(const size_t target_offset, const BasicRun& source_run, const size_t source_offset, const size_t flush_threshold) {
+  void aggregate(const size_t target_offset, const BasicRun& source_run, const size_t source_offset,
+                 const size_t flush_threshold) {
     if (aggregates.empty()) {
       return;
     }
@@ -251,8 +249,8 @@ struct BasicRun : public GroupSizePolicy {
       for (auto& aggregate : aggregates) {
         aggregate->resize(new_group_count);
       }
-    } 
-    
+    }
+
     auto target_data_iter = GroupSizePolicy::get_append_iterator(*this);
 
     for (const auto source_group_idx : append_buffer) {
@@ -310,8 +308,8 @@ struct BasicRun : public GroupSizePolicy {
   /**
    * @return     Begin byte and length in bytes of the variably sized value `value_idx` in group `group_idx`
    */
-  std::pair<size_t, size_t> get_variably_sized_value_range(const AggregateHashSortSetup& setup,
-                                                           const size_t group_idx, const size_t value_idx) const {
+  std::pair<size_t, size_t> get_variably_sized_value_range(const AggregateHashSortSetup& setup, const size_t group_idx,
+                                                           const size_t value_idx) const {
     const auto [group_begin_offset, group_length] = GroupSizePolicy::get_group_range(group_idx);
 
     const auto variably_sized_column_count = setup.variably_sized_column_ids.size();
@@ -338,8 +336,8 @@ struct BasicRun : public GroupSizePolicy {
    * Materialize a Segment from this run
    */
   template <typename T>
-  std::shared_ptr<BaseSegment> materialize_group_column(const AggregateHashSortSetup& setup,
-                                                        const ColumnID column_id, const bool column_is_nullable) const {
+  std::shared_ptr<BaseSegment> materialize_group_column(const AggregateHashSortSetup& setup, const ColumnID column_id,
+                                                        const bool column_is_nullable) const {
     auto output_values = std::vector<T>(size);
 
     auto output_null_values = std::vector<bool>();
@@ -407,7 +405,7 @@ struct BasicRun : public GroupSizePolicy {
 
 template <typename Run>
 Run create_run(const AggregateHashSortSetup& setup, const size_t group_capacity = {},
-                                     const size_t group_data_capacity = {}) {
+               const size_t group_data_capacity = {}) {
   auto group_size_policy = typename Run::GroupSizePolicyType{setup, group_capacity};
 
   auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(setup.aggregate_definitions.size());
@@ -517,7 +515,7 @@ struct StaticFixedGroupSizePolicy {
     return run.group_data.begin() + group_size * run.size;
   }
 
-  template<typename Run>
+  template <typename Run>
   size_t get_required_group_data_size(const Run& run) {
     return (run.size + run.append_buffer.size()) * run.get_group_size();
   }
@@ -558,9 +556,7 @@ struct FixedSizeRemoteKey {
 inline FixedSizeRemoteKey FixedSizeRemoteKey::EMPTY_KEY{0, nullptr};
 
 #if VERBOSE
-inline std::ostream& operator<<(std::ostream& stream, const FixedSizeRemoteKey& key) {
-  return stream;
-}
+inline std::ostream& operator<<(std::ostream& stream, const FixedSizeRemoteKey& key) { return stream; }
 #endif
 
 struct FixedSizeRemoteCompare {
@@ -595,7 +591,7 @@ struct DynamicFixedGroupSizePolicy {
   DynamicFixedGroupSizePolicy(const AggregateHashSortSetup& setup, const size_t group_capacity)
       : group_size(setup.fixed_group_size) {}
 
-  template<typename Run>
+  template <typename Run>
   size_t get_required_group_data_size(const Run& run) {
     return (run.size + run.append_buffer.size()) * run.get_group_size();
   }
@@ -638,9 +634,7 @@ struct VariablySizedKey {
 inline VariablySizedKey VariablySizedKey::EMPTY_KEY{{}, nullptr, {}};
 
 #if VERBOSE
-inline std::ostream& operator<<(std::ostream& stream, const VariablySizedKey& key) {
-  return stream;
-}
+inline std::ostream& operator<<(std::ostream& stream, const VariablySizedKey& key) { return stream; }
 #endif
 
 struct VariablySizedCompare {
@@ -677,14 +671,12 @@ struct VariableGroupSizePolicy {
     return run.group_data.begin() + (run.size == 0 ? 0 : group_end_offsets[run.size - 1]);
   }
 
-  template<typename Run>
+  template <typename Run>
   size_t get_required_group_data_size(const Run& run) {
     return run.data_watermark;
   }
 
-  void resize(const size_t group_count, const size_t group_data_size) {
-    group_end_offsets.resize(group_count);
-  }
+  void resize(const size_t group_count, const size_t group_data_size) { group_end_offsets.resize(group_count); }
 
   template <typename Run>
   void schedule_append(const Run& source_run, const size_t source_group_idx) {
@@ -781,10 +773,11 @@ inline size_t configure_hash_table(const AggregateHashSortSetup& setup, const si
       std::ceil(std::min(config.hash_table_size * config.hash_table_max_load_factor, static_cast<float>(row_count)) /
                 config.hash_table_max_load_factor));
 #endif
-  
+
 #ifdef USE_STATIC_HASH_MAP
   return static_cast<size_t>(
-      std::ceil(std::min(static_cast<float>(setup.config.hash_table_size), static_cast<float>(row_count)) / setup.config.hash_table_max_load_factor));
+      std::ceil(std::min(static_cast<float>(setup.config.hash_table_size), static_cast<float>(row_count)) /
+                setup.config.hash_table_max_load_factor));
 #endif
 }
 
@@ -821,8 +814,7 @@ struct AbstractRunSource {
   size_t remaining_fetched_group_count{};
   size_t remaining_fetched_group_data_size{};
 
-  AbstractRunSource(std::vector<Run>&& runs)
-  : runs(std::move(runs)) {
+  AbstractRunSource(std::vector<Run>&& runs) : runs(std::move(runs)) {
     for (const auto& run : this->runs) {
       total_remaining_group_count += run.size;
       remaining_fetched_group_count += run.size;
@@ -848,9 +840,7 @@ struct AbstractRunSource {
   /**
    * @return Whether the read cursor is at the end of the current run
    */
-  bool end_of_run() const {
-    return runs.empty() || run_offset >= current_run().size;
-  }
+  bool end_of_run() const { return runs.empty() || run_offset >= current_run().size; }
 
   /**
    * @return  Increments the read cursor to the next group in the current run (or to the end of the run, if no more
@@ -876,11 +866,14 @@ struct AbstractRunSource {
  *
  * @return {group_count, group_data_size}
  */
-template<typename Run>
-std::pair<size_t, size_t> next_run_size(const AbstractRunSource<Run>& run_source, const size_t group_count, const RadixFanOut& radix_fan_out) {
-  const auto estimated_group_size = static_cast<float>(run_source.remaining_fetched_group_data_size) / run_source.remaining_fetched_group_count;
+template <typename Run>
+std::pair<size_t, size_t> next_run_size(const AbstractRunSource<Run>& run_source, const size_t group_count,
+                                        const RadixFanOut& radix_fan_out) {
+  const auto estimated_group_size =
+      static_cast<float>(run_source.remaining_fetched_group_data_size) / run_source.remaining_fetched_group_count;
 
-  auto group_count_per_partition = std::ceil(static_cast<float>(group_count) / std::min(radix_fan_out.partition_count, group_count));
+  auto group_count_per_partition =
+      std::ceil(static_cast<float>(group_count) / std::min(radix_fan_out.partition_count, group_count));
   auto data_size_per_partition = estimated_group_size * group_count_per_partition;
 
   if (radix_fan_out.partition_count > 1) {
@@ -899,7 +892,7 @@ std::pair<size_t, size_t> next_run_size(const AbstractRunSource<Run>& run_source
  */
 template <typename Run>
 struct Partition {
- std::vector<Run> runs;
+  std::vector<Run> runs;
 
   size_t size() const {
     return std::accumulate(runs.begin(), runs.end(), size_t{0},
@@ -912,9 +905,7 @@ template <typename Run>
 struct PartitionRunSource : public AbstractRunSource<Run> {
   using AbstractRunSource<Run>::AbstractRunSource;
 
-  bool end_of_source() const override {
-    return this->end_of_run() && this->run_idx + 1 == this->runs.size();
-  }
+  bool end_of_source() const override { return this->end_of_run() && this->run_idx + 1 == this->runs.size(); }
 
   void prefetch(const AggregateHashSortSetup& setup) override {
     // Do nothing
@@ -929,8 +920,8 @@ struct PartitionRunSource : public AbstractRunSource<Run> {
   }
 
   size_t size() const override {
-    return std::accumulate(this->runs.begin(), this->runs.end(),
-                           size_t{0}, [](const size_t count, const auto& run) { return count + run.size; });
+    return std::accumulate(this->runs.begin(), this->runs.end(), size_t{0},
+                           [](const size_t count, const auto& run) { return count + run.size; });
   }
 };
 
@@ -947,7 +938,9 @@ struct TableRunSource : public AbstractRunSource<Run> {
     this->total_remaining_group_count = table->row_count();
   }
 
-  bool end_of_source() const override { return this->run_idx + 1 >= this->runs.size() && this->end_of_run() && unfetched_row_count == 0; }
+  bool end_of_source() const override {
+    return this->run_idx + 1 >= this->runs.size() && this->end_of_run() && unfetched_row_count == 0;
+  }
 
   void prefetch(const AggregateHashSortSetup& setup) override {
     while (this->remaining_fetched_group_count < setup.config.group_prefetch_threshold && unfetched_row_count > 0) {
@@ -995,8 +988,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
    * @returns   The VariablySizedGroupRun and the end RowID, i.e., the RowID the next run starts at
    */
   static std::pair<Run, RowID> from_table_range(const AggregateHashSortSetup& setup,
-                                                const std::shared_ptr<const Table>& table,
-                                                const RowID& begin_row_id,
+                                                const std::shared_ptr<const Table>& table, const RowID& begin_row_id,
                                                 const size_t row_count) {
     using GroupSizePolicy = typename Run::GroupSizePolicyType;
 
@@ -1011,13 +1003,13 @@ struct TableRunSource : public AbstractRunSource<Run> {
      * Materialize the variably sized values separately first, then compute the size of the opaque `group_data` blob
      */
     const auto [data_per_column, value_end_offsets, variably_sized_end_row_id] =
-    materialize_variably_sized_columns(setup, table, begin_row_id, row_count);
+        materialize_variably_sized_columns(setup, table, begin_row_id, row_count);
 
     auto run = create_run<Run>(setup, row_count, 0);
 
     if constexpr (std::is_same_v<GroupSizePolicy, VariableGroupSizePolicy>) {
       run.group_end_offsets =
-      determine_group_end_offsets(setup.variably_sized_column_ids.size(), row_count, value_end_offsets);
+          determine_group_end_offsets(setup.variably_sized_column_ids.size(), row_count, value_end_offsets);
       run.group_data.resize(run.group_end_offsets.back());
     } else {
       run.group_data.resize(row_count * run.get_group_size());
@@ -1045,7 +1037,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
     } else {
       auto target_iter = run.group_data.begin() + run.get_group_size() - 1;
       for (auto group_idx = size_t{0}; group_idx < row_count; ++group_idx) {
-         *target_iter = 0;
+        *target_iter = 0;
         target_iter += run.get_group_size();
       }
     }
@@ -1058,7 +1050,8 @@ struct TableRunSource : public AbstractRunSource<Run> {
       const auto group_by_column_id = setup.fixed_size_column_ids[column_id];
       const auto base_offset = setup.fixed_size_value_offsets[column_id];
 
-      fixed_size_end_row_id = materialize_fixed_size_column(run, table, base_offset, group_by_column_id, begin_row_id, row_count);
+      fixed_size_end_row_id =
+          materialize_fixed_size_column(run, table, base_offset, group_by_column_id, begin_row_id, row_count);
     }
 
     /**
@@ -1070,7 +1063,8 @@ struct TableRunSource : public AbstractRunSource<Run> {
       for (auto group_idx = size_t{0}; group_idx < row_count; ++group_idx) {
         const auto [group_begin_offset, group_size] = run.get_group_range(group_idx);
 
-        auto* target = reinterpret_cast<char*>(run.group_data.data() + group_begin_offset + group_size) - meta_data_size;
+        auto* target =
+            reinterpret_cast<char*>(run.group_data.data() + group_begin_offset + group_size) - meta_data_size;
 
         memcpy(target, source, meta_data_size);
 
@@ -1133,8 +1127,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
    */
   static std::tuple<std::vector<uninitialized_vector<char>>, uninitialized_vector<size_t>, RowID>
   materialize_variably_sized_columns(const AggregateHashSortSetup& setup, const std::shared_ptr<const Table>& table,
-  const RowID& begin_row_id,
-                                     const size_t row_count) {
+                                     const RowID& begin_row_id, const size_t row_count) {
     const auto variably_sized_column_count = setup.variably_sized_column_ids.size();
 
     // Return values
@@ -1162,57 +1155,57 @@ struct TableRunSource : public AbstractRunSource<Run> {
 
       const auto column_iterable = ColumnIterable{table, group_by_column_id};
       end_row_id = column_iterable.for_each<pmr_string>(
-      [&](const auto& segment_position, const RowID& row_id) {
-        const auto& value = segment_position.value();
+          [&](const auto& segment_position, const RowID& row_id) {
+            const auto& value = segment_position.value();
 
-        // Determine `value_size`
-        auto value_size = size_t{};
-        if (column_is_nullable) {
-          if (segment_position.is_null()) {
-            value_size = 1;
-          } else {
-            value_size = 1 + value.size();
-          }
-        } else {
-          value_size = value.size();
-        }
+            // Determine `value_size`
+            auto value_size = size_t{};
+            if (column_is_nullable) {
+              if (segment_position.is_null()) {
+                value_size = 1;
+              } else {
+                value_size = 1 + value.size();
+              }
+            } else {
+              value_size = value.size();
+            }
 
-        while (value_size > column_remaining_data_budget_bytes) {
-          const auto target_idx = target - column_data.data();
+            while (value_size > column_remaining_data_budget_bytes) {
+              const auto target_idx = target - column_data.data();
 
-          // Grow the buffer available for the column aggressively
-          column_data.resize(column_data.size() * 4);
+              // Grow the buffer available for the column aggressively
+              column_data.resize(column_data.size() * 4);
 
-          column_remaining_data_budget_bytes = column_data.size() - target_idx;
-          target = column_data.data() + target_idx;
-        }
+              column_remaining_data_budget_bytes = column_data.size() - target_idx;
+              target = column_data.data() + target_idx;
+            }
 
-        // Set `value_end_offsets`
-        const auto previous_value_end =
-        column_id == 0 ? setup.variably_sized_values_begin_offset : *(value_end_offsets_iter - 1);
-        *value_end_offsets_iter = previous_value_end + value_size;
-        value_end_offsets_iter += variably_sized_column_count;
+            // Set `value_end_offsets`
+            const auto previous_value_end =
+                column_id == 0 ? setup.variably_sized_values_begin_offset : *(value_end_offsets_iter - 1);
+            *value_end_offsets_iter = previous_value_end + value_size;
+            value_end_offsets_iter += variably_sized_column_count;
 
-        // Write `column_data`
-        if (column_is_nullable) {
-          if (segment_position.is_null()) {
-            *target = 1;
-          } else {
-            *target = 0;
-            memcpy(target + 1, value.data(), value_size - 1);
-          }
-        } else {
-          memcpy(target, value.data(), value_size);
-        }
+            // Write `column_data`
+            if (column_is_nullable) {
+              if (segment_position.is_null()) {
+                *target = 1;
+              } else {
+                *target = 0;
+                memcpy(target + 1, value.data(), value_size - 1);
+              }
+            } else {
+              memcpy(target, value.data(), value_size);
+            }
 
-        target += value_size;
-        column_remaining_data_budget_bytes -= value_size;
+            target += value_size;
+            column_remaining_data_budget_bytes -= value_size;
 
-        ++column_row_count;
+            ++column_row_count;
 
-        return column_row_count == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
-      },
-      begin_row_id);
+            return column_row_count == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+          },
+          begin_row_id);
 
       // Cut off unused trailing storage - not necessarily, but makes testing easier
       column_data.resize(target - column_data.data());
@@ -1230,8 +1223,8 @@ struct TableRunSource : public AbstractRunSource<Run> {
    * @return    `group_end_offsets`
    */
   static uninitialized_vector<size_t> determine_group_end_offsets(
-  const size_t variably_sized_column_count, const size_t row_count,
-  const uninitialized_vector<size_t>& value_end_offsets) {
+      const size_t variably_sized_column_count, const size_t row_count,
+      const uninitialized_vector<size_t>& value_end_offsets) {
     auto group_end_offsets = uninitialized_vector<size_t>(row_count);
     const auto meta_data_size = variably_sized_column_count * sizeof(size_t);
 
@@ -1266,30 +1259,30 @@ struct TableRunSource : public AbstractRunSource<Run> {
 
     auto column_iterable = ColumnIterable{table, column_id};
     const auto end_row_id = column_iterable.for_each<ResolveDataTypeTag>(
-    [&](const auto& segment_position, const RowID& row_id) {
-      using ColumnDataType = typename std::decay_t<decltype(segment_position)>::Type;
+        [&](const auto& segment_position, const RowID& row_id) {
+          using ColumnDataType = typename std::decay_t<decltype(segment_position)>::Type;
 
-      const auto [group_begin_offset, group_size] = run.get_group_range(group_idx);
+          const auto [group_begin_offset, group_size] = run.get_group_range(group_idx);
 
-      auto* target = reinterpret_cast<char*>(&run.group_data[group_begin_offset]) + base_offset;
+          auto* target = reinterpret_cast<char*>(&run.group_data[group_begin_offset]) + base_offset;
 
-      if (column_is_nullable) {
-        if (segment_position.is_null()) {
-          *target = 1;
-          memset(target + 1, 0, sizeof(ColumnDataType));
-        } else {
-          *target = 0;
-          memcpy(target + 1, &segment_position.value(), sizeof(ColumnDataType));
-        }
-      } else {
-        memcpy(target, &segment_position.value(), sizeof(ColumnDataType));
-      }
+          if (column_is_nullable) {
+            if (segment_position.is_null()) {
+              *target = 1;
+              memset(target + 1, 0, sizeof(ColumnDataType));
+            } else {
+              *target = 0;
+              memcpy(target + 1, &segment_position.value(), sizeof(ColumnDataType));
+            }
+          } else {
+            memcpy(target, &segment_position.value(), sizeof(ColumnDataType));
+          }
 
-      ++group_idx;
+          ++group_idx;
 
-      return group_idx == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
-    },
-    begin_row_id);
+          return group_idx == row_count ? ColumnIteration::Break : ColumnIteration::Continue;
+        },
+        begin_row_id);
 
     Assert(group_idx == row_count, "Illegal row_count parameter passed");
 

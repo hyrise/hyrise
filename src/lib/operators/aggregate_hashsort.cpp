@@ -5,6 +5,7 @@
 
 #include "operators/aggregate/aggregate_hashsort_algorithm.hpp"
 #include "operators/aggregate/aggregate_hashsort_utils.hpp"
+#include "operators/aggregate/aggregate_hashsort_mt.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -81,8 +82,31 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
 
   resolve_group_size_policy(setup, [&](const auto group_size_policy_t) {
     using GroupSizePolicy = typename decltype(group_size_policy_t)::type;
+    using Run = BasicRun<GroupSizePolicy>;
 
-    const auto run_source = std::make_shared<TableRunSource<BasicRun<GroupSizePolicy>>>(setup, input_table);
+    auto current_chunk_id = ChunkID{0};
+    auto current_chunk_offset = ChunkOffset{0};
+    auto slice_begin_chunk_id = ChunkID{0};
+    auto slice_row_count = size_t{0};
+    auto tasks = std::vector<std::shared_ptr<mt::AggregateHashSortTask<Run>>>{};
+
+    const auto chunk_count = input_table->chunk_count();
+
+    while (current_chunk_id < chunk_count) {
+      const auto& chunk = input_table->get_chunk(current_chunk_id);
+      const auto remaining_rows_in_chunk = chunk->size() - current_chunk_offset;
+
+      if (slice_row_count + remaining_rows_in_chunk >= _config.initial_run_size) {
+        slice_row_count += std::min(remaining_rows_in_chunk, _config.initial_run_size - slice_row_count);
+        const auto run_source = std::make_shared<TableRunSource<Run>>(setup, input_table);
+        const auto task = std::make_shared<mt::AggregateHashSortTask<Run>>(setup, input_table, slice_begin_chunk_id);
+
+      }
+    }
+
+    auto first
+
+    const auto run_source = std::make_shared<TableRunSource<Run>>(setup, input_table);
     const auto abstract_run_source = std::static_pointer_cast<AbstractRunSource<BasicRun<GroupSizePolicy>>>(run_source);
 
     const auto output_runs = aggregate(setup, abstract_run_source, 0u);

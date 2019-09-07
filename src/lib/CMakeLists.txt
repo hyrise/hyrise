@@ -184,6 +184,7 @@ set(
     operators/aggregate/aggregate_hashsort_aggregates.hpp
     operators/aggregate/aggregate_hashsort_algorithm.hpp
     operators/aggregate/aggregate_hashsort_utils.hpp
+    operators/aggregate/aggregate_hashsort_mt.hpp
     operators/aggregate/aggregate_hashsort_config.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
