@@ -55,8 +55,8 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
    * Join two plans using a set of predicates; try to bring them into an efficient order
    *
    *
-   * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates) are executed as
-   * column-to-column scans after the join.
+   * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates") are executed as
+   * table scans (column vs column) after the join.
    * The primary predicate needs to be a simple "<column> <operator> <column>" predicate, otherwise the join operators
    * won't be able to execute it.
    *

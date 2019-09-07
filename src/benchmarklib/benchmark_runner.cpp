@@ -221,10 +221,11 @@ void BenchmarkRunner::_benchmark_ordered() {
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+    const auto duration_per_item = static_cast<float>(duration_seconds) / result.successful_runs.size();
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s)" << std::endl;
+                << items_per_second << " iter/s, " << duration_per_item << " s/iter)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }

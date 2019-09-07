@@ -110,18 +110,11 @@ class BaseTestWithParam
     return std::make_shared<TableScan>(in, predicate);
   }
 
-  static std::shared_ptr<MockNode> create_mock_node_with_statistics(
-      const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
+  static void set_statistics_for_mock_node(
+      const std::shared_ptr<MockNode>& mock_node, const size_t row_count,
       const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
-    Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
-
-    const auto mock_node = MockNode::make(column_definitions);
-
-    auto column_data_types = std::vector<DataType>{column_definitions.size()};
-    std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
-                   [&](const auto& column_definition) { return column_definition.first; });
-
-    auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{column_definitions.size()};
+    const auto& column_definitions = mock_node->column_definitions();
+    auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_definitions.size());
 
     for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
@@ -135,6 +128,16 @@ class BaseTestWithParam
 
     const auto table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
     mock_node->set_table_statistics(table_statistics);
+  }
+
+  static std::shared_ptr<MockNode> create_mock_node_with_statistics(
+      const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
+      const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
+    Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
+
+    const auto mock_node = MockNode::make(column_definitions);
+
+    set_statistics_for_mock_node(mock_node, row_count, statistics_objects);
 
     return mock_node;
   }
