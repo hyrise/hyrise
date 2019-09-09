@@ -11,7 +11,9 @@ class PredicateNode;
 // - a bunch of disjunctive predicate and union nodes (equivalent to `a = 1 OR a = 2`) if the right side has up to
 //   MAX_ELEMENTS_FOR_DISJUNCTION elements and the elements are of the same type.
 // - a semi/anti join (with the list of IN values being stored in a temporary table) if the right side has more than
-//   MIN_ELEMENTS_FOR_JOIN elements and the elements are of the same type.
+//   MIN_ELEMENTS_FOR_JOIN elements and the elements are of the same type. The exact value of MIN_ELEMENTS_FOR_JOIN
+//   also depends on the size of the input data (see #1817). Once this becomes relevant, we might want to add a cost
+//   estimator.
 // Otherwise, the IN expression is untouched and will be handled by the ExpressionEvaluator.
 
 class InExpressionRewriteRule : public AbstractRule {
