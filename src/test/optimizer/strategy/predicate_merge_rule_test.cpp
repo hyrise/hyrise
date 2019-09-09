@@ -31,7 +31,7 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
   std::shared_ptr<PredicateMergeRule> rule;
 };
 
-TEST_F(PredicateMergeRuleTest, MergePredicateAndUnion) {
+TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicate) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(equals_(a_a, value_(1)),
@@ -51,6 +51,37 @@ TEST_F(PredicateMergeRuleTest, MergePredicateAndUnion) {
   std::cout << "INPUT\n" << *input_lqp << "\n\n";
   std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
   std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
+  // clang-format off
+  const auto predicate_node =
+  PredicateNode::make(equals_(a_a, value_(3)),
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(value_(4),
+        node_a),
+      PredicateNode::make(value_(5),
+        node_a)));
+
+  const auto input_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(value_(1),
+      predicate_node),
+    PredicateNode::make(value_(2),
+      predicate_node));
+
+  const auto expected_lqp =
+  PredicateNode::make(and_(and_(or_(value_(4), value_(5)), equals_(a_a, value_(3))), or_(value_(1), value_(2))),
+    node_a);
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
+    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
