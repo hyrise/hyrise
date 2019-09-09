@@ -93,10 +93,12 @@ DataType AggregateExpression::data_type() const {
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const AggregateExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
   return aggregate_function == static_cast<const AggregateExpression&>(expression).aggregate_function;
 }
 
-size_t AggregateExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(aggregate_function)); }
+size_t AggregateExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(aggregate_function)); }
 
 bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an

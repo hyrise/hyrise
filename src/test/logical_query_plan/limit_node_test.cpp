@@ -21,10 +21,13 @@ class LimitNodeTest : public ::testing::Test {
 
 TEST_F(LimitNodeTest, Description) { EXPECT_EQ(_limit_node->description(), "[Limit] 10"); }
 
-TEST_F(LimitNodeTest, Equals) {
+TEST_F(LimitNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_limit_node, *_limit_node);
   EXPECT_EQ(*LimitNode::make(value_(10)), *_limit_node);
   EXPECT_NE(*LimitNode::make(value_(11)), *_limit_node);
+
+  EXPECT_EQ(LimitNode::make(value_(10))->hash(), _limit_node->hash());
+  EXPECT_NE(LimitNode::make(value_(11))->hash(), _limit_node->hash());
 }
 
 TEST_F(LimitNodeTest, Copy) { EXPECT_EQ(*_limit_node->deep_copy(), *_limit_node); }

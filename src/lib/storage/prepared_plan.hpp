@@ -20,6 +20,8 @@ class PreparedPlan final {
 
   std::shared_ptr<PreparedPlan> deep_copy() const;
 
+  size_t hash() const;
+
   /**
    * @return A copy of the prepared plan, with the specified @param parameters filled into the placeholders
    */
