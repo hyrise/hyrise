@@ -11,7 +11,7 @@ namespace opossum {
  * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
  * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
  * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
- * translated expressions to the translation of its children nodes which enables to add the translated expression of
+ * translated expressions to the translation of its children nodes, which enables to add the translated expression of
  * child node before its parent node to the output expression.
  */
 std::shared_ptr<AbstractExpression> PredicateMergeRule::merge_subplan(
@@ -56,7 +56,8 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::merge_subplan(
                "The new predicate node must not have two different inputs");
         predicate_node->set_right_input(nullptr);
         return merge_subplan(
-            predicate_node, std::nullopt);  // The new predicate node might be mergeable with an underlying node now
+            // The new predicate node might be mergeable with an underlying node now.
+            predicate_node, std::nullopt);
       } else {
         return nullptr;
       }
@@ -80,7 +81,6 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
         return LQPVisitation::VisitInputs;
 
       case LQPNodeType::Union:
-        //          top_nodes.emplace_back(sub_node);
         lqp_complexity++;
         return LQPVisitation::VisitInputs;
 
@@ -97,7 +97,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
   // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs with many
   // UNIONs. TODO(jj): Insert issue reference to find better heuristic
-  if (lqp_complexity > 10) {
+  if (lqp_complexity > 3) {
     merge_subplan(node, std::nullopt);
   }
 }
