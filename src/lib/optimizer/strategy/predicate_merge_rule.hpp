@@ -30,8 +30,9 @@ class PredicateMergeRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
-  std::shared_ptr<AbstractExpression> _lqp_subplan_to_boolean_expression(
-      const std::shared_ptr<AbstractLQPNode>& begin) const;
+  std::shared_ptr<AbstractExpression> merge_subplan(
+      const std::shared_ptr<AbstractLQPNode>& begin,
+      const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) const;
 };
 
 }  // namespace opossum

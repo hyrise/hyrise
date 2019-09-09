@@ -1,7 +1,6 @@
 #include "predicate_merge_rule.hpp"
 
 #include "expression/expression_functional.hpp"
-#include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -15,22 +14,22 @@ namespace opossum {
  * translated expressions to the translation of its children nodes which enables to add the translated expression of
  * child node before its parent node to the output expression.
  */
-std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
+std::shared_ptr<AbstractExpression> PredicateMergeRule::merge_subplan(
     const std::shared_ptr<AbstractLQPNode>& begin,
-    const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
+    const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) const {
   switch (begin->type) {
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
-      const auto predicate = predicate_node->predicate();
+      auto expression = predicate_node->predicate();
       // todo(jj): Add comment
-      const auto expression = subsequent_expression && begin->output_count() == 1
-                                  ? expression_functional::and_(predicate, *subsequent_expression)
-                                  : predicate;
-      const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), expression);
+      if (subsequent_expression && begin->output_count() == 1) {
+        expression_functional::and_(expression, *subsequent_expression);
+      }
+      const auto left_input_expression = merge_subplan(begin->left_input(), expression);
       if (begin->left_input()->output_count() == 1 && left_input_expression) {
         // Do not merge predicate nodes with nodes that have multiple outputs because this would unnecessarily inflate
-        // the resulting logical expression. Instead, w
-        //          std::cout << *left_input_expression << std::endl;
+        // the resulting logical expression. Instead, wait until the lower node has only one output. This is the case
+        // after a diamond was resolved.
         lqp_remove_node(begin->left_input());
         predicate_node->node_expressions[0] = left_input_expression;
         return left_input_expression;
@@ -41,18 +40,14 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
 
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
-      const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), std::nullopt);
-      const auto right_input_expression = lqp_subplan_to_boolean_expression_impl(begin->right_input(), std::nullopt);
+      const auto left_input_expression = merge_subplan(begin->left_input(), std::nullopt);
+      const auto right_input_expression = merge_subplan(begin->right_input(), std::nullopt);
       if (left_input_expression && right_input_expression) {
-        //          std::cout << *left_input_expression << std::endl;
-        //          std::cout << *right_input_expression << std::endl;
         // todo(jj): Add comment
         auto expression = expression_functional::or_(left_input_expression, right_input_expression);
-        expression = subsequent_expression && begin->output_count() == 1
-                         ? expression_functional::and_(expression, *subsequent_expression)
-                         : expression;
-
-        //          std::cout << "prepare merge" << std::endl;
+        if (subsequent_expression && begin->output_count() == 1) {
+          expression_functional::and_(expression, *subsequent_expression);
+        }
         lqp_remove_node(begin->left_input());
         lqp_remove_node(begin->right_input());
         const auto predicate_node = PredicateNode::make(expression);
@@ -60,8 +55,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
         Assert(!predicate_node->right_input() || predicate_node->left_input() == predicate_node->right_input(),
                "The new predicate node must not have two different inputs");
         predicate_node->set_right_input(nullptr);
-        //          std::cout << "merge" << std::endl;
-        return lqp_subplan_to_boolean_expression_impl(
+        return merge_subplan(
             predicate_node, std::nullopt);  // The new predicate node might be mergeable with an underlying node now
       } else {
         return nullptr;
@@ -73,23 +67,13 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
   }
 }
 
-// Function wraps the call to the lqp_subplan_to_boolean_expression_impl() function to hide its third parameter,
-// subsequent_predicate, which is only used internally.
-std::shared_ptr<AbstractExpression> PredicateMergeRule::_lqp_subplan_to_boolean_expression(
-    const std::shared_ptr<AbstractLQPNode>& begin) const {
-  return lqp_subplan_to_boolean_expression_impl(begin, std::nullopt);
-}
-
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (!node) {
     return;
   }
 
-  //  auto top_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   std::set<std::shared_ptr<AbstractLQPNode>> break_nodes;
-
-  // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs with UNIONs
-  auto needsMerge = false;
+  auto lqp_complexity = 0;
   visit_lqp(node, [&](const auto& sub_node) {
     switch (sub_node->type) {
       case LQPNodeType::Predicate:
@@ -97,7 +81,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
 
       case LQPNodeType::Union:
         //          top_nodes.emplace_back(sub_node);
-        needsMerge = true;
+        lqp_complexity++;
         return LQPVisitation::VisitInputs;
 
       default:
@@ -106,35 +90,16 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     }
   });
 
-  //  std::cout << "BBB: " << break_nodes.size() << std::endl;
   for (const auto& next_node : break_nodes) {
     apply_to(next_node->left_input());
     apply_to(next_node->right_input());
   }
 
-  //  // _splitConjunction() and _splitDisjunction() split up logical expressions by calling each other recursively
-  //  std::cout << "BBB: " << top_nodes.size() << std::endl;
-  //  for (const auto& top_node : top_nodes) {
-  if (needsMerge) {
-    _lqp_subplan_to_boolean_expression(node);
+  // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs with many
+  // UNIONs. TODO(jj): Insert issue reference to find better heuristic
+  if (lqp_complexity > 10) {
+    merge_subplan(node, std::nullopt);
   }
-  //  if (merged_expr) {
-  ////    std::cout << "AAAAA: " << *merged_expr << std::endl;
-  //  }
-
-  //    if (!_mergeConjunction(predicate_node)) {
-  //      // If there is no conjunction at the top level, try to split disjunction first
-  //      _mergeDisjunction(predicate_node);
-  //    }
-  //  }
-
-  //  if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(root)) {
-  //    _mergeConjunction(predicate_node);
-  //  } else if (const auto union_node = std::dynamic_pointer_cast<UnionNode>(root)) {
-  //    if (union_node->union_mode == UnionMode::Positions) {
-  //      _mergeDisjunction(union_node);
-  //    }
-  //  }
 }
 
 }  // namespace opossum
