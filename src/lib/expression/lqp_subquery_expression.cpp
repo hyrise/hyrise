@@ -65,16 +65,17 @@ bool LQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode&) const
 bool LQPSubqueryExpression::is_correlated() const { return !arguments.empty(); }
 
 bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const LQPSubqueryExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
   const auto& subquery_expression = static_cast<const LQPSubqueryExpression&>(expression);
-
   return *lqp == *subquery_expression.lqp && parameter_ids == subquery_expression.parameter_ids;
 }
 
-size_t LQPSubqueryExpression::_on_hash() const {
+size_t LQPSubqueryExpression::_shallow_hash() const {
   // Return 0, thus forcing a hash collision for LQPSubqueryExpressions and triggering a full equality check.
   // TODO(moritz) LQP hashing will be introduced with the JoinOrdering optimizer, until then we live with these
   //              collisions
-  return AbstractExpression::_on_hash();
+  return AbstractExpression::_shallow_hash();
 }
 
 }  // namespace opossum

@@ -19,6 +19,12 @@ std::string CreateTableNode::description() const {
   return stream.str();
 }
 
+size_t CreateTableNode::_shallow_hash() const {
+  auto hash = boost::hash_value(table_name);
+  boost::hash_combine(hash, if_not_exists);
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> CreateTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return CreateTableNode::make(table_name, if_not_exists, left_input());
 }

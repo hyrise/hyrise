@@ -25,7 +25,7 @@ size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count
 }
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
-    : BaseIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
+    : AbstractIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   Assert(!segments_to_index.empty(), "CompositeGroupKeyIndex requires at least one segment to be indexed.");
 
   if (HYRISE_DEBUG) {
@@ -109,16 +109,16 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   _keys.shrink_to_fit();
 }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);
   return _get_position_iterator_for_key(composite_key);
 }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
+AbstractIndex::Iterator CompositeGroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, true);
   return _get_position_iterator_for_key(composite_key);
 }
@@ -129,6 +129,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // retrieve the partial keys for every value except for the last one and append them into one partial-key
   for (auto column_id = ColumnID{0}; column_id < values.size() - 1; ++column_id) {
+    Assert(!variant_is_null(values[column_id]), "CompositeGroupKeyIndex doesn't support NULL handling yet.");
     auto partial_key = _indexed_segments[column_id]->lower_bound(values[column_id]);
     auto bits_of_partial_key =
         byte_width_for_fixed_size_byte_aligned_type(*_indexed_segments[column_id]->compressed_vector_type()) * CHAR_BIT;
@@ -155,7 +156,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   return result;
 }
 
-BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const VariableLengthKey& key) const {
+AbstractIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const VariableLengthKey& key) const {
   // get an iterator pointing to the search-key in the keystore
   // (use always lower_bound() since the search method is already handled within creation of composite key)
   auto key_it = std::lower_bound(_keys.cbegin(), _keys.cend(), key);

@@ -144,6 +144,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool operator==(const AbstractLQPNode& rhs) const;
   bool operator!=(const AbstractLQPNode& rhs) const;
 
+  /**
+   * @return a hash for the (sub)plan whose root this node is
+   */
+  size_t hash() const;
+
   const LQPNodeType type;
 
   /**
@@ -157,6 +162,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
 
  protected:
+  /**
+   * Override to hash data fields in derived types. No override needed if derived expression has no
+   * data members.
+   */
+  virtual size_t _shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
@@ -178,5 +188,22 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 };
 
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);
+
+// Wrapper around node->hash(), to enable hash based containers containing std::shared_ptr<AbstractLQPNode>
+struct LQPNodeSharedPtrHash final {
+  size_t operator()(const std::shared_ptr<AbstractLQPNode>& node) const { return node->hash(); }
+};
+
+// Wrapper around AbstractLQPNode::operator==(), to enable hash based containers containing
+// std::shared_ptr<AbstractLQPNode>
+struct LQPNodeSharedPtrEqual final {
+  size_t operator()(const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs) const {
+    return lhs == rhs || *lhs == *rhs;
+  }
+};
+
+template <typename Value>
+using LQPNodeUnorderedMap =
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, Value, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;
 
 }  // namespace opossum

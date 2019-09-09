@@ -85,7 +85,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   try {
     row_count = _cardinality_estimator.estimate_cardinality(from);
-    pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
+    pen_width = row_count;
   } catch (...) {
     // statistics don't exist for this edge
     row_count = NAN;
