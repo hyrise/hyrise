@@ -15,7 +15,7 @@ namespace opossum {
 
 namespace {
 
-static bool inline is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
+bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
                     const MvccData& mvcc_data) {
   const auto row_tid = mvcc_data.tids[chunk_offset].load();
   const auto begin_cid = mvcc_data.begin_cids[chunk_offset];
@@ -24,6 +24,17 @@ static bool inline is_row_visible(TransactionID our_tid, CommitID snapshot_commi
 }
 
 }  // namespace
+
+bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
+                              const CommitID begin_cid, const CommitID end_cid) {
+  // Taken from: https://github.com/hyrise/hyrise-v1/blob/master/docs/documentation/queryexecution/tx.rst
+  // auto own_insert = (our_tid == row_tid) && !(snapshot_commit_id >= begin_cid) && !(snapshot_commit_id >= end_cid);
+  // auto past_insert = (our_tid != row_tid) && (snapshot_commit_id >= begin_cid) && !(snapshot_commit_id >= end_cid);
+  // return own_insert || past_insert;
+
+  // since gcc and clang are surprisingly bad at optimizing the above boolean expression, lets do that ourselves
+  return snapshot_commit_id < end_cid && ((snapshot_commit_id >= begin_cid) != (row_tid == our_tid));
+}
 
 Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
     : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
