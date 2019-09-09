@@ -47,6 +47,14 @@ bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
+size_t StaticTableNode::_shallow_hash() const {
+  size_t hash{0};
+  for (const auto& column_definition : table->column_definitions()) {
+    boost::hash_combine(hash, column_definition.hash());
+  }
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return StaticTableNode::make(table);
 }

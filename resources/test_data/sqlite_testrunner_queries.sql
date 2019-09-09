@@ -270,6 +270,7 @@ DELETE FROM id_int_int_int_100; INSERT INTO id_int_int_int_100 VALUES (1, 2, 3, 
 DELETE FROM id_int_int_int_100 WHERE id > 75; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a > 40 OR b < 20; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a > 40; DELETE FROM id_int_int_int_100 WHERE b < 20; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a > 9000; SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE a = 5 OR b = 6 OR (a > 2 AND b > 80) OR (a = (SELECT MIN(a) FROM id_int_int_int_100)); SELECT * FROM id_int_int_int_100;
 

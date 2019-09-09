@@ -301,6 +301,8 @@ set(
     optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
+    optimizer/strategy/join_predicate_ordering_rule.cpp
+    optimizer/strategy/join_predicate_ordering_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -433,8 +435,8 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
-    storage/index/base_index.cpp
-    storage/index/base_index.hpp
+    storage/index/abstract_index.cpp
+    storage/index/abstract_index.hpp
     storage/index/b_tree/b_tree_index.cpp
     storage/index/b_tree/b_tree_index.hpp
     storage/index/b_tree/b_tree_index_impl.cpp

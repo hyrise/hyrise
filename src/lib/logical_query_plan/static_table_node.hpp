@@ -24,6 +24,8 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Bas
 
  protected:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
+
+  size_t _shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };

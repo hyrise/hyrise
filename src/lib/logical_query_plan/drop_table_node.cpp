@@ -7,6 +7,12 @@ DropTableNode::DropTableNode(const std::string& table_name, const bool if_exists
 
 std::string DropTableNode::description() const { return std::string("[DropTable] Name: '") + table_name + "'"; }
 
+size_t DropTableNode::_shallow_hash() const {
+  auto hash = boost::hash_value(table_name);
+  boost::hash_combine(hash, if_exists);
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> DropTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return DropTableNode::make(table_name, if_exists);
 }
