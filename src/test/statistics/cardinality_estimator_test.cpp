@@ -383,11 +383,54 @@ TEST_F(CardinalityEstimatorTest, JoinOuter) {
   EXPECT_EQ(estimator.estimate_cardinality(left_join_lqp), inner_join_cardinality);
 }
 
-TEST_F(CardinalityEstimatorTest, JoinSemiAnti) {
-  // Test that semi and anti joins are estimated return the left input statistics (for now)
+TEST_F(CardinalityEstimatorTest, JoinSemiHistograms) {
+  const auto left_join_column_histogram = std::make_shared<GenericHistogram<int32_t>>(
+      std::vector<int32_t>{0, 10, 20, 30, 40, 50, 60}, std::vector<int32_t>{9, 19, 29, 39, 49, 59, 69},
+      std::vector<HistogramCountType>{10, 15, 10, 20, 5, 15, 5}, std::vector<HistogramCountType>{1, 1, 3, 8, 1, 6, 1});
+  const auto left_join_column_statistics = std::make_shared<AttributeStatistics<int32_t>>();
+  left_join_column_statistics->set_statistics_object(left_join_column_histogram);
 
-  const auto semi_join_lqp = JoinNode::make(JoinMode::Semi, equals_(a_a, b_a), node_a, node_b);
-  EXPECT_EQ(estimator.estimate_statistics(semi_join_lqp), node_a->table_statistics());
+  const auto left_non_join_column_histogram = std::make_shared<GenericHistogram<int32_t>>(
+      std::vector<int32_t>{0, 5, 10}, std::vector<int32_t>{4, 9, 14}, std::vector<HistogramCountType>{20, 40, 30},
+      std::vector<HistogramCountType>{1, 1, 3});
+  const auto left_non_join_column_statistics = std::make_shared<AttributeStatistics<int32_t>>();
+  left_non_join_column_statistics->set_statistics_object(left_non_join_column_histogram);
+
+  const auto right_histogram = std::make_shared<GenericHistogram<int32_t>>(
+      std::vector<int32_t>{20, 30, 50, 70}, std::vector<int32_t>{29, 39, 69, 79},
+      std::vector<HistogramCountType>{10, 5, 10, 8}, std::vector<HistogramCountType>{7, 2, 6, 8});
+  const auto right_statistics = std::make_shared<AttributeStatistics<int32_t>>();
+  right_statistics->set_statistics_object(right_histogram);
+
+  const auto left_table_statistics =
+      TableStatistics{{left_join_column_statistics, left_non_join_column_statistics}, 90};
+  const auto right_table_statistics = TableStatistics{{right_statistics}, 33};
+
+  const auto join_estimation =
+      CardinalityEstimator::estimate_semi_join(ColumnID{0}, ColumnID{0}, left_table_statistics, right_table_statistics);
+
+  EXPECT_EQ(join_estimation->row_count, 27.5);
+  EXPECT_EQ(join_estimation->column_statistics.size(), 2);
+
+  const auto& first_column_histogram =
+      *static_cast<const AttributeStatistics<int32_t>&>(*join_estimation->column_statistics[0]).histogram;
+  EXPECT_EQ(first_column_histogram.bin_count(), 4);
+  EXPECT_EQ(first_column_histogram.bin(0), HistogramBin<int32_t>(20, 29, 10, 3));
+  EXPECT_EQ(first_column_histogram.bin(1), HistogramBin<int32_t>(30, 39, 5, 2));
+  EXPECT_EQ(first_column_histogram.bin(2), HistogramBin<int32_t>(50, 59, 7.5, 3));
+  EXPECT_EQ(first_column_histogram.bin(3), HistogramBin<int32_t>(60, 69, 5, 1));
+
+  const auto& second_column_histogram =
+      *static_cast<const AttributeStatistics<int32_t>&>(*join_estimation->column_statistics[1]).histogram;
+  EXPECT_EQ(second_column_histogram.bin_count(), 3);
+  const auto selectivity = 27.5f / 90;
+  EXPECT_EQ(second_column_histogram.bin(0), HistogramBin<int32_t>(0, 4, 20 * selectivity, 1));
+  EXPECT_EQ(second_column_histogram.bin(1), HistogramBin<int32_t>(5, 9, 40 * selectivity, 1));
+  EXPECT_EQ(second_column_histogram.bin(2), HistogramBin<int32_t>(10, 14, 30 * selectivity, 3));
+}
+
+TEST_F(CardinalityEstimatorTest, JoinAnti) {
+  // Test that anti joins are estimated return the left input statistics (for now)
 
   const auto anti_null_as_false_join_lqp = JoinNode::make(JoinMode::AntiNullAsFalse, equals_(a_a, b_a), node_a, node_b);
   EXPECT_EQ(estimator.estimate_statistics(anti_null_as_false_join_lqp), node_a->table_statistics());

@@ -31,14 +31,15 @@ bool is_predicate_type_node(const std::shared_ptr<AbstractLQPNode>& node) {
   // from multiple tables), the validate will stil be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
     const auto& join_node = static_cast<JoinNode&>(*node);
-    if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue || join_node.join_mode == JoinMode::AntiNullAsFalse) {
+    if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue ||
+        join_node.join_mode == JoinMode::AntiNullAsFalse) {
       return true;
     }
   }
 
   return false;
 }
-}
+}  // namespace
 
 namespace opossum {
 
