@@ -43,7 +43,11 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
 
-  _add_vertex(node, node->description());
+  auto node_label = node->description();
+  if (!node->comment.empty()) {
+    node_label += "\\n(" + node->comment + ")";
+  }
+  _add_vertex(node, node_label);
 
   if (node->left_input()) {
     auto left_input = node->left_input();
