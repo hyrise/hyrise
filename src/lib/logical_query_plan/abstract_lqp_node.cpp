@@ -314,7 +314,12 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
       return inputs;
     };
 
-    const auto node_print_fn = [](const auto& node2, auto& stream2) { stream2 << node2->description(); };
+    const auto node_print_fn = [](const auto& node2, auto& stream2) {
+      stream2 << node2->description();
+      if (!node2->comment.empty()) {
+        stream2 << " (" << node2->comment << ")";
+      }
+    };
 
     print_directed_acyclic_graph<const AbstractLQPNode>(root.shared_from_this(), get_inputs_fn, node_print_fn, stream);
   };

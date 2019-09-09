@@ -582,14 +582,17 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
          join_mode == JoinMode::AntiNullAsFalse) &&
         build_side_cardinality > probe_side_cardinality * 10 && build_side_cardinality > 1'000 &&
         primary_join_predicate_is_equals) {
-      // Semi/Anti joins are currently handled by the hash join, which performs badly if the right side is much
-      // bigger than the left side. For that case, we add a second semi join on the build side, which throws out all
-      // values that will not be found by the primary (first) predicate of the later join, anyway. However, we can only
-      // throw away values on the build side if the primary predicate is an equals predicate. For an example, see TPC-H
-      // query 21. That query is the main reason this part exists. The current thresholds are somewhat arbitrary. If we
-      // start to see more of those cases, we can try and find a more complex heuristic. This is also called "semi join
-      // reduction": http://www.db.in.tum.de/research/publications/conferences/semijoin.pdf
+      // Semi/Anti joins are currently handled by the hash join, which performs badly if the right side is much bigger
+      // than the left side. For that case, we add a second semi join on the build side, which throws out all values
+      // that will not be found by the primary (first) predicate of the later join, anyway. This is the case no matter
+      // if the original join is a semi or anti join. In any case, we want the reducing join introduced here to limit
+      // the input to the join operator to those values that have a chance of being relevant for the semi/anti join.
+      // However, we can only throw away values on the build side if the primary predicate is an equals predicate. For
+      // an example, see TPC-H query 21. That query is the main reason this part exists. The current thresholds are
+      // somewhat arbitrary. If we start to see more of those cases, we can try and find a more complex heuristic. This
+      // is also called "semi join reduction": http://www.db.in.tum.de/research/publications/conferences/semijoin.pdf
       const auto pre_join_node = JoinNode::make(JoinMode::Semi, primary_join_predicate);
+      pre_join_node->comment = "Semi Reduction";
       lqp_insert_node(join_node, LQPInputSide::Right, pre_join_node);
       pre_join_node->set_right_input(join_node->left_input());
     }
