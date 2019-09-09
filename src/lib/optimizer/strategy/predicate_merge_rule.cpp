@@ -88,11 +88,16 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   //  auto top_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   std::set<std::shared_ptr<AbstractLQPNode>> break_nodes;
 
+  // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs with UNIONs
+  auto needsMerge = false;
   visit_lqp(node, [&](const auto& sub_node) {
     switch (sub_node->type) {
       case LQPNodeType::Predicate:
+        return LQPVisitation::VisitInputs;
+
       case LQPNodeType::Union:
         //          top_nodes.emplace_back(sub_node);
+        needsMerge = true;
         return LQPVisitation::VisitInputs;
 
       default:
@@ -110,7 +115,9 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   //  // _splitConjunction() and _splitDisjunction() split up logical expressions by calling each other recursively
   //  std::cout << "BBB: " << top_nodes.size() << std::endl;
   //  for (const auto& top_node : top_nodes) {
-  const auto merged_expr = _lqp_subplan_to_boolean_expression(node);
+  if (needsMerge) {
+    _lqp_subplan_to_boolean_expression(node);
+  }
   //  if (merged_expr) {
   ////    std::cout << "AAAAA: " << *merged_expr << std::endl;
   //  }

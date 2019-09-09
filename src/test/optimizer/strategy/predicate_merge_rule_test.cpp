@@ -244,7 +244,7 @@ TEST_F(PredicateMergeRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicateMergeRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions) {
+TEST_F(PredicateMergeRuleTest, MergeComplexNestedConjunctionsAndDisjunctions) {
   // SELECT * FROM (
   //   SELECT a, b FROM a WHERE a = b AND a = 3
   // ) WHERE ((a > 10 OR a < 8) AND (b <= 7 OR 11 = b)) OR (13 = 13 AND (a = 5 AND b > 7))
@@ -257,9 +257,8 @@ TEST_F(PredicateMergeRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions) 
 
   const auto subquery_lqp =
   ProjectionNode::make(expression_vector(a_b, a_a),
-    PredicateNode::make(greater_than_(a_a, 3),
-      PredicateNode::make(equals_(a_a, a_b),
-        node_a)));
+    PredicateNode::make(and_(equals_(a_a, a_b), greater_than_(a_a, 3)),
+        node_a));
 
   const auto lower_union_node =
   UnionNode::make(UnionMode::Positions,
@@ -306,6 +305,22 @@ TEST_F(PredicateMergeRuleTest, NoRewriteSimplePredicate) {
   std::cout << "INPUT\n" << *input_lqp << "\n\n";
   std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
   std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicateMergeRuleTest, NoMergePredicateChains) {
+  // Pure predicate chains won't be merged since this is unlikely to improve the performance.
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(equals_(a_a, 5),
+    PredicateNode::make(equals_(13, 13)),
+      node_a);
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
