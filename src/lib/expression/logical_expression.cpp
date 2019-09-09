@@ -43,10 +43,12 @@ std::string LogicalExpression::as_column_name() const {
 DataType LogicalExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
 
 bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const LogicalExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
   return logical_operator == static_cast<const LogicalExpression&>(expression).logical_operator;
 }
 
-size_t LogicalExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(logical_operator)); }
+size_t LogicalExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(logical_operator)); }
 
 ExpressionPrecedence LogicalExpression::_precedence() const { return ExpressionPrecedence::Logical; }
 

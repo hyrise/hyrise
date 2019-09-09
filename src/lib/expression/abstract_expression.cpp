@@ -39,11 +39,11 @@ size_t AbstractExpression::hash() const {
   for (const auto& argument : arguments) {
     boost::hash_combine(hash, argument->hash());
   }
-  boost::hash_combine(hash, _on_hash());
+  boost::hash_combine(hash, _shallow_hash());
   return hash;
 }
 
-size_t AbstractExpression::_on_hash() const { return 0; }
+size_t AbstractExpression::_shallow_hash() const { return 0; }
 
 bool AbstractExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   return std::any_of(arguments.begin(), arguments.end(),
