@@ -23,10 +23,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
       const auto predicate = predicate_node->predicate();
       // todo(jj): Add comment
-      const auto expression =
-          subsequent_expression && begin->output_count() == 1
-          ? expression_functional::and_(predicate, *subsequent_expression)
-          : predicate;
+      const auto expression = subsequent_expression && begin->output_count() == 1
+                                  ? expression_functional::and_(predicate, *subsequent_expression)
+                                  : predicate;
       const auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), expression);
       if (begin->left_input()->output_count() == 1 && left_input_expression) {
         // Do not merge predicate nodes with nodes that have multiple outputs because this would unnecessarily inflate
@@ -49,10 +48,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
         //          std::cout << *right_input_expression << std::endl;
         // todo(jj): Add comment
         auto expression = expression_functional::or_(left_input_expression, right_input_expression);
-        expression =
-            subsequent_expression && begin->output_count() == 1
-            ? expression_functional::and_(expression, *subsequent_expression)
-            : expression;
+        expression = subsequent_expression && begin->output_count() == 1
+                         ? expression_functional::and_(expression, *subsequent_expression)
+                         : expression;
 
         //          std::cout << "prepare merge" << std::endl;
         lqp_remove_node(begin->left_input());
