@@ -86,24 +86,6 @@ TEST_F(ExpressionReductionRuleTest, ReduceDistributivity) {
   EXPECT_EQ(*ExpressionReductionRule::reduce_distributivity(expression_j), *and_(value_(1), and_(a, b)));
 }
 
-TEST_F(ExpressionReductionRuleTest, ReduceInWithSingleListElement) {
-  auto in_a = std::shared_ptr<AbstractExpression>(in_(5, list_(1)));
-  auto in_b = std::shared_ptr<AbstractExpression>(in_(a, list_(5)));
-  auto in_c = std::shared_ptr<AbstractExpression>(in_(5, list_(a)));
-  auto in_d = std::shared_ptr<AbstractExpression>(in_(5, list_(1, 2)));
-  auto nested_in_a = std::shared_ptr<AbstractExpression>(and_(in_(5, list_(1)), value_(0)));
-  auto non_in_a = std::shared_ptr<AbstractExpression>(add_(5, 3));
-
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_a), *equals_(5, 1));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_b), *equals_(a, 5));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_c), *equals_(5, a));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(nested_in_a), *and_(equals_(5, 1), value_(0)));
-
-  // Test expressions which reduce_in_with_single_list_element() shouldn't alter
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(in_d), *in_(5, list_(1, 2)));
-  EXPECT_EQ(*ExpressionReductionRule::reduce_in_with_single_list_element(non_in_a), *add_(5, 3));
-}
-
 TEST_F(ExpressionReductionRuleTest, ReduceConstantExpression) {
   auto expression_a = std::shared_ptr<AbstractExpression>(add_(1, add_(3, 4)));
   ExpressionReductionRule::reduce_constant_expression(expression_a);
@@ -166,7 +148,7 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(or_(a_and_b, a_and_c),
-    PredicateNode::make(in_(a, list_(5)),
+    PredicateNode::make(like_(s, "RED%"),
       PredicateNode::make(equals_(3, add_(4, 3)),
         mock_node)));
   // clang-format on
@@ -176,7 +158,7 @@ TEST_F(ExpressionReductionRuleTest, ApplyToLQP) {
   // clang-format off
   const auto expected_lqp =
   PredicateNode::make(and_(a, or_(b, c)),
-    PredicateNode::make(equals_(a, 5),
+    PredicateNode::make(between_upper_exclusive_(s, "RED", "REE"),
       PredicateNode::make(equals_(3, 7),
         mock_node)));
   // clang-format on
