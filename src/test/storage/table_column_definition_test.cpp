@@ -12,7 +12,7 @@ class TableColumnDefinitionTest : public BaseTest {
   void SetUp() override {}
 };
 
-TEST_F(TableColumnDefinitionTest, HashEquals) {
+TEST_F(TableColumnDefinitionTest, HashingAndEqualityCheck) {
   TableColumnDefinition column_definition{"a", DataType::Int, false};
   TableColumnDefinition equal_column_definition{"a", DataType::Int, false};
   TableColumnDefinition different_column_definition_a{"c", DataType::Int, false};

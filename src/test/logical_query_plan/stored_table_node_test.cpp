@@ -76,7 +76,7 @@ TEST_F(StoredTableNodeTest, ColumnExpressions) {
   EXPECT_EQ(*_stored_table_node->column_expressions().at(1u), *lqp_column_(_c));
 }
 
-TEST_F(StoredTableNodeTest, HashEquals) {
+TEST_F(StoredTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_stored_table_node, *_stored_table_node);
 
   const auto different_node_a = StoredTableNode::make("t_b");

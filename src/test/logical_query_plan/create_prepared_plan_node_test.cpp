@@ -28,7 +28,7 @@ ParameterIDs: []
 })");
 }
 
-TEST_F(CreatePreparedPlanNodeTest, HashEquals) {
+TEST_F(CreatePreparedPlanNodeTest, HashingAndEqualityCheck) {
   const auto deep_copied_node = create_prepared_plan_node->deep_copy();
   EXPECT_EQ(*create_prepared_plan_node, *deep_copied_node);
 

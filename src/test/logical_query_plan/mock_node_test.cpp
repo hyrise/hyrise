@@ -52,7 +52,7 @@ TEST_F(MockNodeTest, OutputColumnExpression) {
   EXPECT_EQ(*_mock_node_a->column_expressions().at(1), *lqp_column_({_mock_node_a, ColumnID{2}}));
 }
 
-TEST_F(MockNodeTest, HashEquals) {
+TEST_F(MockNodeTest, HashingAndEqualityCheck) {
   const auto same_mock_node_b =
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   const auto different_mock_node_1 =

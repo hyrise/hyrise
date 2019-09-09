@@ -42,7 +42,7 @@ TEST_F(UnionNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_union_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
 }
 
-TEST_F(UnionNodeTest, HashEquals) {
+TEST_F(UnionNodeTest, HashingAndEqualityCheck) {
   auto same_union_node = UnionNode::make(UnionMode::Positions);
   same_union_node->set_left_input(_mock_node1);
   same_union_node->set_right_input(_mock_node1);
