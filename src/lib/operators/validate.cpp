@@ -68,41 +68,44 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   std::mutex output_mutex;
 
   auto job_start_chunk_id = ChunkID{0};
+  auto job_end_chunk_id = ChunkID{0};
   auto job_row_count = uint32_t{0};
-  for (auto chunk_id = job_start_chunk_id; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = in_table->get_chunk(chunk_id);
-    job_row_count += chunk->size();
+
+  while (job_end_chunk_id < chunk_count) {
+    const auto chunk = in_table->get_chunk(job_end_chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
     // Small chunks are bundled together to avoid unnecessary scheduling overhead.
-    if (job_row_count >= Chunk::DEFAULT_SIZE || chunk_id == (chunk_count - 1)) {
+    // Therefore, we count the number of rows to ensure a minimum of rows per job (default chunk size).
+    job_row_count += chunk->size();
+    if (job_row_count >= Chunk::DEFAULT_SIZE || job_end_chunk_id == (chunk_count - 1)) {
       // Single tasks are executed directly instead of scheduling a single job.
-      bool execute_directly = job_start_chunk_id == 0 && chunk_id == (chunk_count - 1);
+      bool execute_directly = job_start_chunk_id == 0 && job_end_chunk_id == (chunk_count - 1);
 
       if (execute_directly) {
-        _validate_chunks(in_table, job_start_chunk_id, chunk_id, our_tid, snapshot_commit_id, output_chunks,
+        _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                          output_mutex);
       } else {
         jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
-          _validate_chunks(in_table, job_start_chunk_id, chunk_id, our_tid, snapshot_commit_id, output_chunks,
+          _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                            output_mutex);
         }));
         jobs.back()->schedule();
 
         // Prepare next job
-        job_start_chunk_id = chunk_id + 1;
+        job_start_chunk_id = job_end_chunk_id + 1;
         job_row_count = 0;
       }
     }
+    job_end_chunk_id++;
   }
 
-  if (!jobs.empty()) {
-    CurrentScheduler::wait_for_tasks(jobs);
-  }
+  CurrentScheduler::wait_for_tasks(jobs);
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
-void Validate::_validate_chunks(const std::shared_ptr<const Table> &in_table, const ChunkID chunk_id_start,
+void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
                                 const TransactionID snapshot_commit_id,
                                 std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) {
