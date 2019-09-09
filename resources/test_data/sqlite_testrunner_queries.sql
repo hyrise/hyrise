@@ -86,6 +86,9 @@ SELECT * FROM (SELECT a.a FROM id_int_int_int_100 AS a, mixed AS b WHERE a.a = b
 SELECT * FROM mixed WHERE (b > 10 OR b < 8) AND (c <= 7 OR 11 = c)
 SELECT * FROM (SELECT b, c FROM mixed WHERE b < c AND b = 19) r WHERE (b > 10 OR b < 8) AND (c <= 60 OR 11 = c) OR ((b = 5 AND c = 7) AND 13 = 13)
 
+-- Scans with potential for predicate merge
+SELECT b FROM mixed WHERE (2 > 1 OR 2 > 0) AND b = 1;
+
 -- Projection
 SELECT a FROM mixed;
 SELECT -b as neg_b FROM mixed;

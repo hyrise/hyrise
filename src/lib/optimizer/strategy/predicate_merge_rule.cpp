@@ -42,7 +42,11 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
         if (left_input_expression && right_input_expression) {
 //          std::cout << *left_input_expression << std::endl;
 //          std::cout << *right_input_expression << std::endl;
-          const auto expression = expression_functional::or_(left_input_expression, right_input_expression);
+          auto expression = expression_functional::or_(left_input_expression, right_input_expression);
+          if (begin->output_count() == 1) {
+            // todo(jj): Add comment
+            expression = subsequent_expression ? expression_functional::and_(expression, *subsequent_expression) : expression;
+          }
 
 //          std::cout << "prepare merge" << std::endl;
           lqp_remove_node(begin->left_input());

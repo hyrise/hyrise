@@ -31,25 +31,19 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
   std::shared_ptr<PredicateMergeRule> rule;
 };
 
-TEST_F(PredicateMergeRuleTest, SplitUpConjunctionInPredicateNode) {
-  // SELECT * FROM (
-  //   SELECT a, b FROM a WHERE a = b AND a = 3
-  // ) WHERE (a = 5 AND b > 7) AND 13 = 13
+TEST_F(PredicateMergeRuleTest, MergePredicateAndUnion) {
   // clang-format off
-  const auto expected_lqp =
-  PredicateNode::make(and_(equals_(13, 13), and_(equals_(a_a, 5), greater_than_(a_b, 7))),
-      ProjectionNode::make(expression_vector(a_b, a_a),
-        PredicateNode::make(and_(equals_(a_a, a_b), greater_than_(a_a, 3)),
-          node_a)));
-
   const auto input_lqp =
-  PredicateNode::make(greater_than_(a_b, 7),
-    PredicateNode::make(equals_(a_a, 5),
-      PredicateNode::make(equals_(13, 13),
-        ProjectionNode::make(expression_vector(a_b, a_a),
-          PredicateNode::make(greater_than_(a_a, 3),
-            PredicateNode::make(equals_(a_a, a_b),
-              node_a))))));
+  PredicateNode::make(equals_(a_a, value_(1)),
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(value_(1),
+        node_a),
+      PredicateNode::make(value_(1),
+        node_a)));
+
+  const auto expected_lqp =
+  PredicateNode::make(and_(or_(value_(1), value_(1)), equals_(a_a, value_(1))),
+    node_a);
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
