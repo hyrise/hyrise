@@ -1,5 +1,6 @@
 #pragma once
 
+#include <condition_variable>
 #include <unordered_map>
 #include <vector>
 
@@ -70,6 +71,8 @@ inline bool operator==(const AggregateHashSortAggregateDefinition& lhs,
 struct AggregateHashSortSetup {
   AggregateHashSortConfig config;
 
+  TableColumnDefinitions output_column_definitions;
+
   /**
    * The data of a group in its opaque blob is physically layouted as below. Meta info is at the
    * end because it is expected to have the least entropy and we want to early-out as soon as possible when comparing
@@ -115,45 +118,54 @@ struct AggregateHashSortSetup {
   // Prototypes for the aggregates
   std::vector<AggregateHashSortAggregateDefinition> aggregate_definitions;
 
-  static AggregateHashSortSetup create(const AggregateHashSortConfig& config, const std::shared_ptr<const Table>& table,
+  // Number of tasks working on the Aggregation. Once this reached zero, the aggregation is complete
+  std::atomic_size_t global_task_counter{0};
+
+  // Output data and associated mutex
+  std::mutex output_chunks_mutex;
+  std::vector<std::shared_ptr<Chunk>> output_chunks;
+
+  std::condition_variable done_condition;
+
+  static std::shared_ptr<AggregateHashSortSetup> create(const AggregateHashSortConfig& config, const std::shared_ptr<const Table>& table,
                                        const std::vector<AggregateColumnDefinition>& aggregate_column_definitions,
                                        const std::vector<ColumnID>& group_by_column_ids) {
     Assert(!group_by_column_ids.empty(),
            "AggregateHashSort cannot operate without group by columns, use a different aggregate operator");
 
-    auto setup = AggregateHashSortSetup{};
+    auto setup = std::make_shared<AggregateHashSortSetup>();
 
-    setup.config = config;
-    setup.offsets.resize(group_by_column_ids.size());
+    setup->config = config;
+    setup->offsets.resize(group_by_column_ids.size());
 
     for (auto column_id = ColumnID{0}; column_id < group_by_column_ids.size(); ++column_id) {
       const auto group_by_column_id = group_by_column_ids[column_id];
       const auto data_type = table->column_data_type(group_by_column_id);
 
       if (data_type == DataType::String) {
-        setup.offsets[column_id] = setup.variably_sized_column_ids.size();
-        setup.variably_sized_column_ids.emplace_back(group_by_column_id);
+        setup->offsets[column_id] = setup->variably_sized_column_ids.size();
+        setup->variably_sized_column_ids.emplace_back(group_by_column_id);
       } else {
-        setup.offsets[column_id] = setup.variably_sized_values_begin_offset;
-        setup.fixed_size_column_ids.emplace_back(group_by_column_id);
-        setup.fixed_size_value_offsets.emplace_back(setup.variably_sized_values_begin_offset);
+        setup->offsets[column_id] = setup->variably_sized_values_begin_offset;
+        setup->fixed_size_column_ids.emplace_back(group_by_column_id);
+        setup->fixed_size_value_offsets.emplace_back(setup->variably_sized_values_begin_offset);
 
         if (table->column_is_nullable(group_by_column_id)) {
-          ++setup.variably_sized_values_begin_offset;  // one extra byte for the is_null flag
+          ++setup->variably_sized_values_begin_offset;  // one extra byte for the is_null flag
         }
-        setup.variably_sized_values_begin_offset += data_type_sizes.at(data_type);
+        setup->variably_sized_values_begin_offset += data_type_sizes.at(data_type);
       }
     }
 
-    setup.fixed_group_size = divide_and_ceil(setup.variably_sized_values_begin_offset, GROUP_RUN_ELEMENT_SIZE);
+    setup->fixed_group_size = divide_and_ceil(setup->variably_sized_values_begin_offset, GROUP_RUN_ELEMENT_SIZE);
 
     for (auto& aggregate_column_definition : aggregate_column_definitions) {
       if (aggregate_column_definition.column) {
-        setup.aggregate_definitions.emplace_back(aggregate_column_definition.function,
+        setup->aggregate_definitions.emplace_back(aggregate_column_definition.function,
                                                  table->column_data_type(*aggregate_column_definition.column),
                                                  *aggregate_column_definition.column);
       } else {
-        setup.aggregate_definitions.emplace_back(aggregate_column_definition.function);
+        setup->aggregate_definitions.emplace_back(aggregate_column_definition.function);
       }
     }
 

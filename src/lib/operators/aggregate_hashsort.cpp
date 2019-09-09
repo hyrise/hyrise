@@ -7,6 +7,7 @@
 #include "operators/aggregate/aggregate_hashsort_utils.hpp"
 #include "operators/aggregate/aggregate_hashsort_mt.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "storage/segment_iterate.hpp"
 
 #if !VERBOSE
@@ -71,77 +72,38 @@ void AggregateHashSort::_on_cleanup() {}
 std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
   const auto input_table = input_table_left();
 
-  const auto setup = AggregateHashSortSetup::create(_config, input_table, _aggregates, _groupby_column_ids);
+  auto setup = AggregateHashSortSetup::create(_config, input_table, _aggregates, _groupby_column_ids);
+  setup->output_column_definitions = _get_output_column_defintions();
 
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>();
-  const auto output_column_definitions = _get_output_column_defintions();
 
 #if VERBOSE
   Timer t;
 #endif
 
-  resolve_group_size_policy(setup, [&](const auto group_size_policy_t) {
+  resolve_group_size_policy(*setup, [&](const auto group_size_policy_t) {
     using GroupSizePolicy = typename decltype(group_size_policy_t)::type;
     using Run = BasicRun<GroupSizePolicy>;
 
-    auto current_chunk_id = ChunkID{0};
-    auto current_chunk_offset = ChunkOffset{0};
-    auto slice_begin_chunk_id = ChunkID{0};
-    auto slice_row_count = size_t{0};
+    const auto task_set = std::make_shared<mt::AggregateHashSortTaskSet<Run>>(setup);
     auto tasks = std::vector<std::shared_ptr<mt::AggregateHashSortTask<Run>>>{};
-
-    const auto chunk_count = input_table->chunk_count();
-
-    while (current_chunk_id < chunk_count) {
-      const auto& chunk = input_table->get_chunk(current_chunk_id);
-      const auto remaining_rows_in_chunk = chunk->size() - current_chunk_offset;
-
-      if (slice_row_count + remaining_rows_in_chunk >= _config.initial_run_size) {
-        slice_row_count += std::min(remaining_rows_in_chunk, _config.initial_run_size - slice_row_count);
-        const auto run_source = std::make_shared<TableRunSource<Run>>(setup, input_table);
-        const auto task = std::make_shared<mt::AggregateHashSortTask<Run>>(setup, input_table, slice_begin_chunk_id);
-
-      }
+    for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+      const auto input_chunk = input_table->get_chunk(chunk_id);
+      const auto run_source = std::make_shared<TableRunSource<Run>>(setup, input_chunk);
+      task_set->add_task(std::make_shared<mt::AggregateHashSortTask<Run>>(task_set, setup, run_source));
     }
 
-    auto first
+    task_set->schedule();
 
-    const auto run_source = std::make_shared<TableRunSource<Run>>(setup, input_table);
-    const auto abstract_run_source = std::static_pointer_cast<AbstractRunSource<BasicRun<GroupSizePolicy>>>(run_source);
-
-    const auto output_runs = aggregate(setup, abstract_run_source, 0u);
-
-    /**
-     * Materialize aggregate/group runs into segments
-     */
-    output_chunks.resize(output_runs.size());
-
-    for (auto run_idx = size_t{0}; run_idx < output_runs.size(); ++run_idx) {
-      auto& run = output_runs[run_idx];
-      auto output_segments = Segments{_aggregates.size() + _groupby_column_ids.size()};
-
-      // Materialize the group-by columns
-      for (auto column_id = ColumnID{0}; column_id < _groupby_column_ids.size(); ++column_id) {
-        const auto& output_column_definition = output_column_definitions[column_id];
-        resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
-          using ColumnDataType = typename decltype(data_type_t)::type;
-          output_segments[column_id] = run.template materialize_group_column<ColumnDataType>(setup,
-              column_id, output_column_definition.nullable);
-        });
-      }
-
-      // Materialize the aggregate columns
-      for (auto aggregate_idx = ColumnID{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
-        output_segments[_groupby_column_ids.size() + aggregate_idx] =
-            run.aggregates[aggregate_idx]->materialize_output(run.size);
-      }
-
-      output_chunks[run_idx] = std::make_shared<Chunk>(output_segments);
+    if (CurrentScheduler::is_set()) {
+      auto lock = std::unique_lock{setup->output_chunks_mutex};
+      setup->done_condition.wait(lock, [&]() { return setup->global_task_counter.load() == 0; });
     }
   });
 
   const auto output_table =
-      std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(output_chunks));
+      std::make_shared<Table>(output_column_definitions, TableType::Data, std::move(setup->output_chunks));
+
 #if VERBOSE
   std::cout << "Building output table with " << output_table->row_count() << " rows and " << output_table->chunk_count()
             << " chunks in " << t.lap_formatted() << std::endl;
