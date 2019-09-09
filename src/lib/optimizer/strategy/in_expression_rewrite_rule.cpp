@@ -126,13 +126,9 @@ void InExpressionRewriteRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
       }
       const auto& value_expression = static_cast<ValueExpression&>(*element);
       if (variant_is_null(value_expression.value)) continue;
-      if (!common_data_type) {
-        common_data_type = value_expression.data_type();
-      } else {
-        if (value_expression.data_type() != *common_data_type) {
-          common_data_type = std::nullopt;
-          break;
-        }
+      if (value_expression.data_type() != *common_data_type) {
+        common_data_type = std::nullopt;
+        break;
       }
     }
 
