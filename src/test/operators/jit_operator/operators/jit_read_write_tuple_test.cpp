@@ -308,7 +308,7 @@ TEST_F(JitReadWriteTupleTest, UseValueIDsFromReferenceSegment) {
   // Create reference input table
   auto input_table = std::make_shared<Table>(encoded_table->column_definitions(), TableType::References);
   auto pos_list = std::make_shared<PosList>();
-  pos_list->emplace_back(ChunkID{0}, ChunkOffset{1});
+  pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
   pos_list->guarantee_single_chunk();
   Segments segments;
   segments.push_back(std::make_shared<ReferenceSegment>(encoded_table, ColumnID{0}, pos_list));

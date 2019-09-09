@@ -1,6 +1,6 @@
 {
     "config": {
-      "reject_null_strings": false
+      "null_handling": "null_string_as_null"
     },
     "columns": [
     ]

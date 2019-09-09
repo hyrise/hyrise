@@ -16,7 +16,6 @@ namespace opossum {
  *   `l_shipmode` and `l_shipinstruct` could not be pulled below the join.
  */
 class PredicateSplitUpRule : public AbstractRule {
-  std::string name() const override;
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 };
 

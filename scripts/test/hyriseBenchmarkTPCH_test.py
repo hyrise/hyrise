@@ -21,6 +21,7 @@ def main():
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Dictionary'"
   arguments["--compression"] = "'Fixed-size byte-aligned'"
+  arguments["--indexes"] = "true"
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
   arguments["--cache_binary_tables"] = "false"
@@ -40,6 +41,7 @@ def main():
   benchmark.expect("Benchmarking Queries: \[ 1, 13, 19, \]")
   benchmark.expect("TPCH scale factor is 0.01")
   benchmark.expect("Using prepared statements: yes")
+  benchmark.expect("Creating index on customer \[ c_custkey \]")
   benchmark.expect("Preparing queries")
 
   close_benchmark(benchmark)
@@ -59,7 +61,7 @@ def main():
   return_error = check_json(not output["summary"]["table_size_in_bytes"], 0, "Table size is zero.", return_error)
   return_error = check_json(output["context"]["scale_factor"], float(arguments["--scale"]), "Scale factor doesn't match with JSON:", return_error, 0.001)
   for i in xrange(0,3):
-    return_error = check_json(output["benchmarks"][i]["name"].replace('TPC-H ', ''), arguments["--queries"].replace("'", '').split(',')[i], "Query doesn't match with JSON:", return_error)
+    return_error = check_json(output["benchmarks"][i]["name"].replace('TPC-H 0', '').replace('TPC-H ', ''), arguments["--queries"].replace("'", '').split(',')[i], "Query doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_duration"], int(arguments["--time"]) * 1e9, "Max duration doesn't match with JSON:", return_error)
   return_error = check_json(output["context"]["max_runs"], int(arguments["--runs"]), "Max runs don't match with JSON:", return_error)
   return_error = check_json(output["context"]["benchmark_mode"], arguments["--mode"].replace("'", ''), "Benchmark mode doesn't match with JSON:", return_error)
@@ -76,6 +78,7 @@ def main():
   arguments["--warmup"] = "10"
   arguments["--encoding"] = "'LZ4'"
   arguments["--compression"] = "'SIMD-BP128'"
+  arguments["--indexes"] = "false"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
   arguments["--visualize"] = "true"

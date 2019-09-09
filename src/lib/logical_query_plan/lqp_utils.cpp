@@ -217,8 +217,6 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Predicate:
       case LQPNodeType::Projection:
       case LQPNodeType::Root:
-      case LQPNodeType::ShowColumns:
-      case LQPNodeType::ShowTables:
       case LQPNodeType::Sort:
       case LQPNodeType::StaticTable:
       case LQPNodeType::StoredTable:

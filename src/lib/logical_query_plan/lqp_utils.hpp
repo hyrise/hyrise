@@ -104,12 +104,14 @@ enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
  * @tparam Visitor      Functor called with every node as a param.
  *                      Returns `LQPVisitation`
  */
-template <typename Visitor>
-void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
-  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
+template <typename Node, typename Visitor>
+void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
+  using AbstractNodeType = std::conditional_t<std::is_const_v<Node>, const AbstractLQPNode, AbstractLQPNode>;
+
+  std::queue<std::shared_ptr<AbstractNodeType>> node_queue;
   node_queue.push(lqp);
 
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+  std::unordered_set<std::shared_ptr<AbstractNodeType>> visited_nodes;
 
   while (!node_queue.empty()) {
     auto node = node_queue.front();

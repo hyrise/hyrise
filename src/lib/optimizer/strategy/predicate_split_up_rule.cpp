@@ -7,8 +7,6 @@
 
 namespace opossum {
 
-std::string PredicateSplitUpRule::name() const { return "PredicateSplitUp"; }
-
 void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
 

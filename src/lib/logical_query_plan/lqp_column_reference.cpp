@@ -37,7 +37,10 @@ std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_refe
 namespace std {
 
 size_t hash<opossum::LQPColumnReference>::operator()(const opossum::LQPColumnReference& column_reference) const {
-  auto hash = boost::hash_value(column_reference.original_node().get());
+  // It is important not to combine the pointer of the original_node with the hash code as it was done before #1795.
+  // If this pointer is combined with the return hash code, equal LQP nodes that are not identical and that have
+  // LQPColumnExpressions or child nodes with LQPColumnExpressions would have different hash codes.
+  auto hash = boost::hash_value(column_reference.original_node()->hash());
   boost::hash_combine(hash, static_cast<size_t>(column_reference.original_column_id()));
   return hash;
 }

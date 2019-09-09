@@ -45,8 +45,6 @@
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -55,6 +53,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
+#include "utils/meta_table_manager.hpp"
 
 #include "SQLParser.h"
 
@@ -304,8 +303,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const auto table_name = std::string{insert.tableName};
+  AssertInput(!Hyrise::get().meta_table_manager.is_meta_table_name(table_name), "Cannot modify meta tables");
   AssertInput(Hyrise::get().storage_manager.has_table(table_name),
               std::string{"Did not find a table with name "} + table_name);
+
   const auto target_table = Hyrise::get().storage_manager.get_table(table_name);
   auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
   auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -409,6 +410,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
+  AssertInput(!Hyrise::get().meta_table_manager.is_meta_table_name(delete_statement.tableName),
+              "Cannot modify meta tables");
   Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
@@ -423,6 +426,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name");
 
   const auto table_name = std::string{update.table->name};
+  AssertInput(!Hyrise::get().meta_table_manager.is_meta_table_name(table_name), "Cannot modify meta tables");
 
   auto translation_state = _translate_table_ref(*update.table);
 
@@ -1055,9 +1059,14 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
-      return ShowTablesNode::make();
-    case hsql::ShowType::kShowColumns:
-      return ShowColumnsNode::make(std::string(show_statement.name));
+      return StoredTableNode::make(MetaTableManager::META_PREFIX + "tables");
+    case hsql::ShowType::kShowColumns: {
+      const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
+      const auto table_name_column = lqp_column_({stored_table_node, ColumnID{0}});
+      const auto predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, table_name_column,
+                                                                         value_(show_statement.name));
+      return PredicateNode::make(predicate, stored_table_node);
+    }
     default:
       FailInput("hsql::ShowType is not supported.");
   }

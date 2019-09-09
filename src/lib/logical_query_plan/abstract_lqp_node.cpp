@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include "boost/functional/hash.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -67,6 +68,27 @@ AbstractLQPNode::~AbstractLQPNode() {
   if (_inputs[0]) _inputs[0]->_remove_output_pointer(*this);
   if (_inputs[1]) _inputs[1]->_remove_output_pointer(*this);
 }
+
+size_t AbstractLQPNode::hash() const {
+  size_t hash{0};
+
+  visit_lqp(shared_from_this(), [&hash](const auto& node) {
+    if (node) {
+      for (const auto& expression : node->node_expressions) {
+        boost::hash_combine(hash, expression->hash());
+      }
+      boost::hash_combine(hash, node->type);
+      boost::hash_combine(hash, node->_shallow_hash());
+      return LQPVisitation::VisitInputs;
+    } else {
+      return LQPVisitation::DoNotVisitInputs;
+    }
+  });
+
+  return hash;
+}
+
+size_t AbstractLQPNode::_shallow_hash() const { return 0; }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
 
@@ -292,7 +314,12 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
       return inputs;
     };
 
-    const auto node_print_fn = [](const auto& node2, auto& stream2) { stream2 << node2->description(); };
+    const auto node_print_fn = [](const auto& node2, auto& stream2) {
+      stream2 << node2->description();
+      if (!node2->comment.empty()) {
+        stream2 << " (" << node2->comment << ")";
+      }
+    };
 
     print_directed_acyclic_graph<const AbstractLQPNode>(root.shared_from_this(), get_inputs_fn, node_print_fn, stream);
   };
