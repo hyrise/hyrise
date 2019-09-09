@@ -55,4 +55,7 @@
     }                                                                                                             \
   };                                                                                                              \
   } /* NOLINT */                                                                                                  \
+  namespace opossum {                                                                                             \
+  inline std::size_t hash_value(const D& d) { return std::hash<D>()(d); }                                         \
+  } /* NOLINT */                                                                                                  \
   static_assert(true, "End call of macro with a semicolon")

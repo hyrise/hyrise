@@ -234,6 +234,50 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   EXPECT_EQ(predicate_b_node->left_input(), table_node);
 }
 
+  TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputsAboveValidate) {
+    /**
+       * If a PredicateNode has multiple outputs, it should not be considered for reordering
+       */
+    /**
+       *      _____Union___
+       *    /             /
+       * Predicate_a     /
+       *    \           /
+       *     Predicate_b
+       *         |
+       *      Validate
+       *         |
+       *       Table
+       *
+       * predicate_a should come before predicate_b - but since Predicate_b has two outputs, it can't be reordered
+       */
+
+    /**
+       * The mocked table has one column of int32_ts with the value range 0..100
+       */
+    auto table_node =
+    create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                     {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+    auto union_node = UnionNode::make(UnionMode::Positions);
+    auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
+    auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
+    auto validate_node = ValidateNode::make(table_node);
+
+    union_node->set_left_input(predicate_a_node);
+    union_node->set_right_input(predicate_b_node);
+    predicate_a_node->set_left_input(predicate_b_node);
+    predicate_b_node->set_left_input(validate_node);
+
+    const auto reordered = StrategyBaseTest::apply_rule(_rule, union_node);
+
+    EXPECT_EQ(reordered, union_node);
+    EXPECT_EQ(reordered->left_input(), predicate_a_node);
+    EXPECT_EQ(reordered->right_input(), validate_node);
+    EXPECT_EQ(predicate_a_node->left_input(), validate_node);
+    EXPECT_EQ(validate_node->left_input(), predicate_b_node);
+    EXPECT_EQ(predicate_b_node->left_input(), table_node);
+  }
+
 TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   // clang-format off
   const auto input_lqp =

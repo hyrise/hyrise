@@ -45,9 +45,7 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   const std::string name() const override { return "CommitOp"; }
 
  protected:
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override {
-    return nullptr;
-  }
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override { return nullptr; }
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
