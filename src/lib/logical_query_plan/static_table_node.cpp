@@ -29,7 +29,7 @@ std::string StaticTableNode::description() const {
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& StaticTableNode::column_expressions() const {
-  // Need to initialize the expressions lazily because (a) they will have a weak_ptr to this node and we can't obtain
+  // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain
   // that in the constructor
   if (!_column_expressions) {
     _column_expressions.emplace(table->column_count());
