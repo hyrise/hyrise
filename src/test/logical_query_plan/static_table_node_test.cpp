@@ -25,7 +25,7 @@ TEST_F(StaticTableNodeTest, Description) {
 
 TEST_F(StaticTableNodeTest, NodeExpressions) { ASSERT_EQ(static_table_node->node_expressions.size(), 0u); }
 
-TEST_F(StaticTableNodeTest, Equals) {
+TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*static_table_node, *static_table_node);
 
   const auto same_static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
@@ -38,6 +38,9 @@ TEST_F(StaticTableNodeTest, Equals) {
 
   EXPECT_EQ(*same_static_table_node, *static_table_node);
   EXPECT_NE(*different_static_table_node, *static_table_node);
+
+  EXPECT_EQ(same_static_table_node->hash(), static_table_node->hash());
+  EXPECT_NE(different_static_table_node->hash(), static_table_node->hash());
 }
 
 TEST_F(StaticTableNodeTest, Copy) { EXPECT_EQ(*static_table_node, *static_table_node->deep_copy()); }

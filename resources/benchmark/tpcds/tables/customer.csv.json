@@ -87,7 +87,7 @@
     },
     {
       "name": "c_last_review_date",
-      "type": "string",
+      "type": "int",
       "nullable": true
     }
   ],
@@ -97,7 +97,7 @@
     "escape": "\"",
     "quote": "\"",
     "reject_quoted_nonstrings": true,
-    "reject_null_strings": false,
+    "null_handling": "null_string_as_value",
     "rfc_mode": true,
     "separator": "|"
   }

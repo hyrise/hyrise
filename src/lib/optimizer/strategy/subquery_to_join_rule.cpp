@@ -471,8 +471,6 @@ SubqueryToJoinRule::PredicatePullUpResult SubqueryToJoinRule::pull_up_correlated
   return pull_up_correlated_predicates_recursive(node, parameter_mapping, result_cache, false).first;
 }
 
-std::string SubqueryToJoinRule::name() const { return "Subquery to Join Rule"; }
-
 void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // Check if `node` is a PredicateNode with a subquery and try to turn it into an anti- or semi-join.
   // To do this, we
@@ -541,24 +539,22 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
-  // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
-  // join predicate. Check that one exists and move it to the front.
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>();
   join_predicates.reserve(pull_up_result.join_predicates.size() + (predicate_node_info->join_predicate ? 1 : 0));
-  auto found_equals_predicate = false;
   if (predicate_node_info->join_predicate) {
     join_predicates.emplace_back(predicate_node_info->join_predicate);
-    found_equals_predicate = predicate_node_info->join_predicate->predicate_condition == PredicateCondition::Equals;
   }
   for (const auto& join_predicate : pull_up_result.join_predicates) {
     join_predicates.emplace_back(join_predicate);
-    if (!found_equals_predicate && join_predicate->predicate_condition == PredicateCondition::Equals) {
-      std::swap(join_predicates.front(), join_predicates.back());
-      found_equals_predicate = true;
-    }
   }
 
-  if (join_predicates.empty() || !found_equals_predicate) {
+  // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
+  // join predicate. Check that one exists, but rely on join predicate ordering rule to move it to the front.
+  if (std::find_if(join_predicates.begin(), join_predicates.end(),
+                   [](const std::shared_ptr<AbstractExpression>& expression) {
+                     return std::static_pointer_cast<AbstractPredicateExpression>(expression)->predicate_condition ==
+                            PredicateCondition::Equals;
+                   }) == join_predicates.end()) {
     _apply_to_inputs(node);
     return;
   }

@@ -36,12 +36,14 @@ DataType PQPColumnExpression::data_type() const { return _data_type; }
 bool PQPColumnExpression::requires_computation() const { return false; }
 
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
-  const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
-  if (!pqp_column_expression) return false;
-  return column_id == pqp_column_expression->column_id;
+  DebugAssert(dynamic_cast<const PQPColumnExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
+  const auto& pqp_column_expression = static_cast<const PQPColumnExpression&>(expression);
+  return column_id == pqp_column_expression.column_id && _data_type == pqp_column_expression._data_type &&
+         _nullable == pqp_column_expression._nullable && _column_name == pqp_column_expression._column_name;
 }
 
-size_t PQPColumnExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(column_id)); }
+size_t PQPColumnExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(column_id)); }
 
 bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   Fail("Nullability 'on lqp' should never be queried from a PQPColumn");

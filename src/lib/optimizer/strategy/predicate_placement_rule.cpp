@@ -13,8 +13,6 @@
 
 namespace opossum {
 
-std::string PredicatePlacementRule::name() const { return "Predicate Placement Rule"; }
-
 void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
@@ -30,6 +28,26 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes) {
   const auto input_node = current_node->input(input_side);
   if (!input_node) return;  // Allow calling without checks
+
+  // A helper method for cases where the input_node does not allow us to proceed
+  const auto handle_barrier = [&]() {
+    _insert_nodes(current_node, input_side, push_down_nodes);
+
+    if (input_node->left_input()) {
+      auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes);
+    }
+    if (input_node->right_input()) {
+      auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+      _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes);
+    }
+  };
+
+  if (input_node->output_count() > 1) {
+    // We cannot push predicates past input_node as doing so would also filter the predicates from the "other" side.
+    handle_barrier();
+    return;
+  }
 
   switch (input_node->type) {
     case LQPNodeType::Predicate: {
@@ -100,16 +118,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
     default: {
       // All not explicitly handled node types are barriers and we do not push predicates past them.
-      _insert_nodes(current_node, input_side, push_down_nodes);
-
-      if (input_node->left_input()) {
-        auto left_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-        _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes);
-      }
-      if (input_node->right_input()) {
-        auto right_push_down_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-        _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes);
-      }
+      handle_barrier();
     }
   }
 }

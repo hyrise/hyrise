@@ -96,30 +96,48 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  auto stored_indexes_statistics = table->indexes_statistics();
+  auto pruned_indexes_statistics = table->indexes_statistics();
 
   if (_pruned_column_ids.empty()) {
-    return stored_indexes_statistics;
+    return pruned_indexes_statistics;
   }
 
   const auto column_id_mapping = column_ids_after_pruning(table->column_count(), _pruned_column_ids);
 
-  // update index statistics
-  for (auto stored_index_stats_iter = stored_indexes_statistics.begin();
-       stored_index_stats_iter != stored_indexes_statistics.end();) {
-    for (auto& original_column_id : (*stored_index_stats_iter).column_ids) {
-      const auto& updated_column_id = column_id_mapping[original_column_id];
-      if (!updated_column_id) {
-        // column was pruned, we cannot use the index anymore.
-        stored_indexes_statistics.erase(stored_index_stats_iter);
-        break;
-      } else {
-        original_column_id = *updated_column_id;
-        ++stored_index_stats_iter;
-      }
-    }
+  // Update index statistics
+  // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
+  // when remove(iterator) invalidates the iterator.
+  // TODO(anyone): Theoretically, we could keep multi-column indexes where only the last column was pruned
+  pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
+                                                 [&](auto& statistics) {
+                                                   for (auto& original_column_id : statistics.column_ids) {
+                                                     const auto& updated_column_id =
+                                                         column_id_mapping[original_column_id];
+                                                     if (!updated_column_id) {
+                                                       // Indexed column was pruned - remove index from statistics
+                                                       return true;
+                                                     } else {
+                                                       // Update column id
+                                                       original_column_id = *updated_column_id;
+                                                     }
+                                                   }
+                                                   return false;
+                                                 }),
+                                  pruned_indexes_statistics.end());
+
+  return pruned_indexes_statistics;
+}
+
+size_t StoredTableNode::_shallow_hash() const {
+  size_t hash{0};
+  boost::hash_combine(hash, table_name);
+  for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
+    boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
   }
-  return stored_indexes_statistics;
+  for (const auto& pruned_column_id : _pruned_column_ids) {
+    boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+  }
+  return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

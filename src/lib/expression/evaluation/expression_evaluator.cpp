@@ -151,45 +151,67 @@ ExpressionEvaluator::ExpressionEvaluator(
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expression_to_result(
     const AbstractExpression& expression) {
+  // First, look in the cache
+  const auto expression_ptr = expression.shared_from_this();
+  const auto cached_result_iter = _cached_expression_results.find(expression_ptr);
+  if (cached_result_iter != _cached_expression_results.end()) {
+    return std::static_pointer_cast<ExpressionResult<Result>>(cached_result_iter->second);
+  }
+
+  // Ok, we have to actually work...
+  auto result = std::shared_ptr<ExpressionResult<Result>>{};
+
   switch (expression.type) {
     case ExpressionType::Arithmetic:
-      return _evaluate_arithmetic_expression<Result>(static_cast<const ArithmeticExpression&>(expression));
+      result = _evaluate_arithmetic_expression<Result>(static_cast<const ArithmeticExpression&>(expression));
+      break;
 
     case ExpressionType::Logical:
-      return _evaluate_logical_expression<Result>(static_cast<const LogicalExpression&>(expression));
+      result = _evaluate_logical_expression<Result>(static_cast<const LogicalExpression&>(expression));
+      break;
 
     case ExpressionType::Predicate:
-      return _evaluate_predicate_expression<Result>(static_cast<const AbstractPredicateExpression&>(expression));
+      result = _evaluate_predicate_expression<Result>(static_cast<const AbstractPredicateExpression&>(expression));
+      break;
 
     case ExpressionType::PQPSubquery:
-      return _evaluate_subquery_expression<Result>(*static_cast<const PQPSubqueryExpression*>(&expression));
+      result = _evaluate_subquery_expression<Result>(*static_cast<const PQPSubqueryExpression*>(&expression));
+      break;
 
     case ExpressionType::PQPColumn:
-      return _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
+      result = _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
+      break;
 
     // ValueExpression and CorrelatedParameterExpression both need to unpack an AllTypeVariant, so one functions handles
     // both
     case ExpressionType::CorrelatedParameter:
     case ExpressionType::Value:
-      return _evaluate_value_or_correlated_parameter_expression<Result>(expression);
+      result = _evaluate_value_or_correlated_parameter_expression<Result>(expression);
+      break;
 
     case ExpressionType::Function:
-      return _evaluate_function_expression<Result>(static_cast<const FunctionExpression&>(expression));
+      result = _evaluate_function_expression<Result>(static_cast<const FunctionExpression&>(expression));
+      break;
 
     case ExpressionType::Case:
-      return _evaluate_case_expression<Result>(static_cast<const CaseExpression&>(expression));
+      result = _evaluate_case_expression<Result>(static_cast<const CaseExpression&>(expression));
+      break;
 
     case ExpressionType::Cast:
-      return _evaluate_cast_expression<Result>(static_cast<const CastExpression&>(expression));
+      result = _evaluate_cast_expression<Result>(static_cast<const CastExpression&>(expression));
+      break;
 
     case ExpressionType::Exists:
-      return _evaluate_exists_expression<Result>(static_cast<const ExistsExpression&>(expression));
+      result = _evaluate_exists_expression<Result>(static_cast<const ExistsExpression&>(expression));
+      break;
 
     case ExpressionType::Extract:
-      return _evaluate_extract_expression<Result>(static_cast<const ExtractExpression&>(expression));
+      result = _evaluate_extract_expression<Result>(static_cast<const ExtractExpression&>(expression));
+      break;
 
     case ExpressionType::UnaryMinus:
-      return _evaluate_unary_minus_expression<Result>(static_cast<const UnaryMinusExpression&>(expression));
+      result = _evaluate_unary_minus_expression<Result>(static_cast<const UnaryMinusExpression&>(expression));
+      break;
 
     case ExpressionType::Aggregate:
       Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
@@ -206,7 +228,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
           "Can't evaluate an expressions still containing placeholders. Are you trying to execute a PreparedPlan "
           "without instantiating it first?");
   }
-  Fail("GCC thinks this is reachable");
+
+  // Store the result in the cache
+  _cached_expression_results.insert(cached_result_iter, {expression_ptr, result});
+
+  return std::static_pointer_cast<ExpressionResult<Result>>(result);
 }
 
 template <typename Result>
@@ -1031,7 +1057,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
                   auto matches = ExpressionEvaluator::Bool{0};
                   ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
                                           right_result.value(chunk_offset));
-                  if (matches != 0) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                  if (matches != 0) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
                 }
               } else {
                 Fail("Argument types not compatible");
@@ -1053,11 +1079,11 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             } else {  // PredicateCondition::IsNotNull
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             }
           });
@@ -1077,7 +1103,7 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           result->as_view([&](const auto& result_view) {
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
-                result_pos_list.emplace_back(_chunk_id, chunk_offset);
+                result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             }
           });
@@ -1115,13 +1141,13 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       if (subquery_expression->is_correlated()) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
           if ((subquery_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
-            result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
           }
         }
       } else {
         if ((subquery_result_tables.front()->row_count() > 0) ^ invert) {
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-            result_pos_list.emplace_back(_chunk_id, chunk_offset);
+            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
           }
         }
       }

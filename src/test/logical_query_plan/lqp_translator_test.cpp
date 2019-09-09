@@ -23,8 +23,6 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
-#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -39,8 +37,6 @@
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "operators/maintenance/create_table.hpp"
 #include "operators/maintenance/drop_table.hpp"
-#include "operators/maintenance/show_columns.hpp"
-#include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -566,36 +562,6 @@ TEST_F(LQPTranslatorTest, JoinNodeToJoinNestedLoop) {
   EXPECT_EQ(join_op->mode(), JoinMode::Inner);
 }
 
-TEST_F(LQPTranslatorTest, ShowTablesNode) {
-  /**
-   * Build LQP and translate to PQP
-   */
-  const auto show_tables_node = ShowTablesNode::make();
-  const auto op = LQPTranslator{}.translate_node(show_tables_node);
-
-  /**
-   * Check PQP
-   */
-  const auto show_tables_op = std::dynamic_pointer_cast<ShowTables>(op);
-  ASSERT_TRUE(show_tables_op);
-  EXPECT_EQ(show_tables_op->name(), "ShowTables");
-}
-
-TEST_F(LQPTranslatorTest, ShowColumnsNode) {
-  /**
-   * Build LQP and translate to PQP
-   */
-  const auto show_column_node = ShowColumnsNode::make("table_a");
-  const auto op = LQPTranslator{}.translate_node(show_column_node);
-
-  /**
-   * Check PQP
-   */
-  const auto show_columns_op = std::dynamic_pointer_cast<ShowColumns>(op);
-  ASSERT_TRUE(show_columns_op);
-  EXPECT_EQ(show_columns_op->name(), "ShowColumns");
-}
-
 TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   /**
    * Build LQP and translate to PQP
@@ -791,7 +757,9 @@ TEST_F(LQPTranslatorTest, ReuseSubqueryExpression) {
   ASSERT_NE(projection_a, nullptr);
   ASSERT_NE(projection_b, nullptr);
 
-  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, "SUBQUERY");
+  // As subquery columns without an explicit alias get the LQP/PQP address as their name, we need to retrieve it first.
+  const auto column_name = subquery_a->as_column_name();
+  const auto subquery_in_temporary_column = pqp_column_(ColumnID{1}, DataType::Int, false, column_name);
 
   EXPECT_EQ(*projection_a->expressions.at(0), *add_(subquery_in_temporary_column, 3));
 }
