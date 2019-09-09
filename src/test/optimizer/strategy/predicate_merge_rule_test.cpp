@@ -48,9 +48,9 @@ TEST_F(PredicateMergeRuleTest, MergePredicateAndUnion) {
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
 
-    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+  std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -72,9 +72,9 @@ TEST_F(PredicateMergeRuleTest, SplitUpSimpleDisjunctionInPredicateNode) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+  std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -102,9 +102,9 @@ TEST_F(PredicateMergeRuleTest, SplitUpComplexDisjunctionInPredicateNode) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+  std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -129,9 +129,9 @@ TEST_F(PredicateMergeRuleTest, SelectColumn) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+  std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -175,9 +175,9 @@ TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+  std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -206,9 +206,9 @@ TEST_F(PredicateMergeRuleTest, SplitUpSimpleNestedConjunctionsAndDisjunctions) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+  std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -252,9 +252,9 @@ TEST_F(PredicateMergeRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions) 
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-//    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-//    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-//    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+  //    std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  //    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  //    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -272,9 +272,9 @@ TEST_F(PredicateMergeRuleTest, NoRewriteSimplePredicate) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
+  std::cout << "INPUT\n" << *input_lqp << "\n\n";
+  std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+  std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
