@@ -235,6 +235,14 @@ TEST_F(ExpressionEvaluatorToValuesTest, ArithmeticsSeries) {
   // clang-format on
 }
 
+TEST_F(ExpressionEvaluatorToValuesTest, ExpressionReuse) {
+  // We can't really test that the reoccuring subexpressions are evaluated only once, but at least we have a test
+  // where reoccuring subexpressions are used.
+  // clang-format off
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add_(mul_(a, b), mul_(a, b)), {4, 12, 24, 40}));
+  // clang-format on
+}
+
 TEST_F(ExpressionEvaluatorToValuesTest, PredicatesLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*greater_than_(5, 3.3), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*greater_than_(5, 5.0), {0}));

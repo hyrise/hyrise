@@ -10,7 +10,7 @@ namespace opossum {
 AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                      const std::vector<std::string>& aliases)
     : AbstractLQPNode(LQPNodeType::Alias, expressions), aliases(aliases) {
-  Assert(expressions.size() == aliases.size(), "Specify a name for each Expression");
+  Assert(expressions.size() == aliases.size(), "Number of expressions and number of aliases has to be equal.");
 }
 
 std::string AliasNode::description() const {
@@ -30,6 +30,14 @@ std::string AliasNode::description() const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expressions() const {
   return node_expressions;
+}
+
+size_t AliasNode::_shallow_hash() const {
+  size_t hash{0};
+  for (const auto& alias : aliases) {
+    boost::hash_combine(hash, alias);
+  }
+  return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> AliasNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

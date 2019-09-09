@@ -10,7 +10,6 @@
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv_parser.hpp"
-#
 #include "scheduler/node_queue_scheduler.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -115,8 +114,13 @@ int main(int argc, char* argv[]) {
   auto benchmark_item_runner =
       std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, non_query_file_names, query_subset);
 
-  auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
-                                                            std::move(table_generator), context);
+  if (benchmark_item_runner->items().empty()) {
+    std::cout << "No items to run.\n";
+    return 1;
+  }
+
+  auto benchmark_runner =
+      BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};
   Hyrise::get().benchmark_runner = benchmark_runner;
 
   if (benchmark_config->verify) {

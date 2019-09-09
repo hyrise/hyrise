@@ -54,13 +54,19 @@ class PQPSubqueryExpressionTest : public BaseTest {
 };
 
 TEST_F(PQPSubqueryExpressionTest, DeepEquals) {
-  // Consume the result of an equality check to avoid "equality comparison result unused [-Werror,-Wunused-comparison]"
-  // errors
-  const auto dummy = [](const auto v) {};
+  EXPECT_EQ(*subquery_single_value_one_parameter, *subquery_single_value_one_parameter);
 
-  // Can't compare PQPSubqueryExpressions (since we can't compare PQPs)
-  EXPECT_ANY_THROW(dummy(*subquery_single_value_one_parameter == *subquery_single_value_one_parameter));
-  EXPECT_ANY_THROW(dummy(*subquery_table == *subquery_table));
+  // different parameters:
+  const auto parameters_b = PQPSubqueryExpression::Parameters{std::make_pair(ParameterID{2}, ColumnID{2})};
+  const auto subquery_different_parameter =
+      std::make_shared<PQPSubqueryExpression>(pqp_single_value_one_parameter, DataType::Int, false, parameters_b);
+  EXPECT_NE(*subquery_table, *subquery_different_parameter);
+
+  // different PQP:
+  const auto pqp_without_limit = pqp_single_value_one_parameter->mutable_input_left();
+  const auto subquery_different_lqp =
+      std::make_shared<PQPSubqueryExpression>(pqp_without_limit, DataType::Int, false, parameters_a);
+  EXPECT_NE(*subquery_table, *subquery_different_lqp);
 }
 
 TEST_F(PQPSubqueryExpressionTest, DeepCopy) {

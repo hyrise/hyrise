@@ -29,7 +29,7 @@ class PreparedPlanTest : public ::testing::Test {
   LQPColumnReference a_a, b_x;
 };
 
-TEST_F(PreparedPlanTest, Instantiate) {
+TEST_F(PreparedPlanTest, InstantiateHashEqual) {
   // clang-format off
   const auto placeholder_parameter_a = placeholder_(ParameterID{0});
   const auto placeholder_parameter_b = placeholder_(ParameterID{2});
@@ -67,6 +67,8 @@ TEST_F(PreparedPlanTest, Instantiate) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_EQ(*actual_lqp, *expected_lqp);
+  EXPECT_EQ(actual_lqp->hash(), expected_lqp->hash());
 }
 
 }  // namespace opossum

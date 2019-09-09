@@ -57,7 +57,9 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   _benchmark_item_runner->on_tables_loaded();
 
-  if (_config.verify) {
+  // SQLite data is only loaded if the dedicated result set is not complete, i.e,
+  // items exist for which no dedicated result could be loaded.
+  if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
     Timer timer;
 
@@ -219,10 +221,11 @@ void BenchmarkRunner::_benchmark_ordered() {
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+    const auto duration_per_item = static_cast<float>(duration_seconds) / result.successful_runs.size();
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s)" << std::endl;
+                << items_per_second << " iter/s, " << duration_per_item << " s/iter)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
@@ -401,6 +404,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value("Ordered")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
+    ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint>()->default_value("0")) // NOLINT
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
@@ -442,6 +446,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"compiler", compiler.str()},
       {"build_type", HYRISE_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
+      {"indexes", config.indexes},
       {"benchmark_mode", config.benchmark_mode == BenchmarkMode::Ordered ? "Ordered" : "Shuffled"},
       {"max_runs", config.max_runs},
       {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},

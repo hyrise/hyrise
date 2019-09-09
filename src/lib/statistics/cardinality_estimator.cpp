@@ -326,11 +326,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
         case JoinMode::Semi:
         case JoinMode::AntiNullAsTrue:
         case JoinMode::AntiNullAsFalse:
-          // TODO(anybody) Implement estimation of Semi/Anti joins
+          // TODO(anybody) Implement estimation of Semi/Anti joins. #1830
           return left_input_table_statistics;
 
         // For now, handle outer joins just as inner joins
-        // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches.
+        // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches. #1830
         case JoinMode::Left:
         case JoinMode::Right:
         case JoinMode::FullOuter:
@@ -341,7 +341,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
                                               primary_operator_join_predicate->column_ids.second,
                                               *left_input_table_statistics, *right_input_table_statistics);
 
-            // TODO(anybody) Implement estimation for non-equi joins
+            // TODO(anybody) Implement estimation for non-equi joins. #1830
             case PredicateCondition::NotEquals:
             case PredicateCondition::LessThan:
             case PredicateCondition::LessThanEquals:
@@ -368,7 +368,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
           Fail("Cross join is not a predicated join");
       }
     } else {
-      // TODO(anybody) For now, estimate a selectivity of one.
+      // TODO(anybody) For now, estimate a selectivity of one. #1830
       return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
     }
   }
