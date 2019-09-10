@@ -23,7 +23,8 @@
 #include "types.hpp"
 
 namespace {
-using namespace opossum;
+
+using namespace opossum;  // NOLINT
 
 template <typename T>
 pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& values) {
