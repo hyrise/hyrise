@@ -1,13 +1,8 @@
 #include "base_test.hpp"
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/arithmetic_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -28,7 +23,6 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
@@ -624,6 +618,31 @@ TEST_F(SQLTranslatorTest, SelectListManyAliasesDifferentForSimilarColumnsUsedInV
   const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
 
   EXPECT_LQP_EQ(result_node, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectFromView) {
+  // Define and create view
+  const auto view_node =
+      compile_query("SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
+  const auto view_columns = std::unordered_map<ColumnID, std::string>({{ColumnID{0}, "a1"}, {ColumnID{1}, "a2"}});
+  const auto view = std::make_shared<LQPView>(view_node, view_columns);
+  Hyrise::get().storage_manager.add_view("alias_view", view);
+
+  // Use the view within a query
+  const auto actual_lqp = compile_query("SELECT * FROM alias_view");
+
+  const auto aliases = std::vector<std::string>({"a1", "a2"});
+  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_a), aliases,
+    AliasNode::make(expression_vector(int_float_a, int_float_a), aliases,
+      ProjectionNode::make(expression_vector(int_float_a, int_float_a),
+        PredicateNode::make(greater_than_(int_float_a, value_(10)),
+          stored_table_node_int_float))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, WhereSimple) {
