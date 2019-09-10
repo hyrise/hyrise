@@ -9,8 +9,8 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-PredicateMergeRule::PredicateMergeRule(const size_t optimization_threshold) :
-    _optimization_threshold(optimization_threshold) {}
+PredicateMergeRule::PredicateMergeRule(const size_t optimization_threshold)
+    : _optimization_threshold(optimization_threshold) {}
 
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (!node) {
