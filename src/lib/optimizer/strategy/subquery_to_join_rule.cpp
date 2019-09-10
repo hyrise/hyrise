@@ -225,6 +225,11 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
                  std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate())) {
     result.join_mode = JoinMode::Semi;
 
+    if (const auto right_subquery_expression =
+                   std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->right_operand())) {
+      // TODO
+    }
+
     if (const auto left_subquery_expression =
             std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->left_operand())) {
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
