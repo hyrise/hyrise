@@ -26,17 +26,17 @@ namespace opossum {
  */
 class PredicateSplitUpRule : public AbstractRule {
  public:
-  explicit PredicateSplitUpRule(const bool split_disjunction = true);
+  explicit PredicateSplitUpRule(const bool should_split_disjunction = true);
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 
  private:
   /**
    * @return true if a conjunction was split up
    */
-  bool _splitConjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
-  void _splitDisjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
+  bool _split_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
+  void _split_disjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
 
-  bool _split_disjunction;
+  bool _should_split_disjunction;
 };
 
 }  // namespace opossum

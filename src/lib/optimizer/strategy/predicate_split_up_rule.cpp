@@ -7,9 +7,30 @@
 
 namespace opossum {
 
-PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunction) : _split_disjunction(split_disjunction) {}
+PredicateSplitUpRule::PredicateSplitUpRule(const bool should_split_disjunction)
+    : _should_split_disjunction(should_split_disjunction) {}
 
-bool PredicateSplitUpRule::_splitConjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
+void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+  Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
+
+  auto predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+  visit_lqp(root, [&](const auto& sub_node) {
+    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
+      predicate_nodes.emplace_back(predicate_node);
+    }
+    return LQPVisitation::VisitInputs;
+  });
+
+  // _split_conjunction() and _split_disjunction() split up logical expressions by calling each other recursively
+  for (const auto& predicate_node : predicate_nodes) {
+    if (!_split_conjunction(predicate_node)) {
+      // If there is no conjunction at the top level, try to split disjunction first
+      _split_disjunction(predicate_node);
+    }
+  }
+}
+
+bool PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
   if (flat_conjunction.size() <= 1) {
     return false;
@@ -22,15 +43,15 @@ bool PredicateSplitUpRule::_splitConjunction(const std::shared_ptr<PredicateNode
   for (const auto& predicate_expression : flat_conjunction) {
     const auto& new_predicate_node = PredicateNode::make(predicate_expression);
     lqp_insert_node(predicate_node, LQPInputSide::Left, new_predicate_node);
-    _splitDisjunction(new_predicate_node);
+    _split_disjunction(new_predicate_node);
   }
   lqp_remove_node(predicate_node);
 
   return true;
 }
 
-void PredicateSplitUpRule::_splitDisjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
-  if (!_split_disjunction) {
+void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
+  if (!_should_split_disjunction) {
     return;
   }
 
@@ -49,11 +70,11 @@ void PredicateSplitUpRule::_splitDisjunction(const std::shared_ptr<PredicateNode
 
   auto new_predicate_node = PredicateNode::make(flat_disjunction[0], left_input);
   previous_union_node->set_left_input(new_predicate_node);
-  _splitConjunction(new_predicate_node);
+  _split_conjunction(new_predicate_node);
 
   new_predicate_node = PredicateNode::make(flat_disjunction[1], left_input);
   previous_union_node->set_right_input(new_predicate_node);
-  _splitConjunction(new_predicate_node);
+  _split_conjunction(new_predicate_node);
 
   for (auto disjunction_idx = size_t{2}; disjunction_idx < flat_disjunction.size(); ++disjunction_idx) {
     const auto& predicate_expression = flat_disjunction[disjunction_idx];
@@ -62,29 +83,9 @@ void PredicateSplitUpRule::_splitDisjunction(const std::shared_ptr<PredicateNode
 
     new_predicate_node = PredicateNode::make(predicate_expression, left_input);
     next_union_node->set_right_input(new_predicate_node);
-    _splitConjunction(new_predicate_node);
+    _split_conjunction(new_predicate_node);
 
     previous_union_node = next_union_node;
-  }
-}
-
-void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
-
-  auto predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
-  visit_lqp(root, [&](const auto& sub_node) {
-    if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(sub_node)) {
-      predicate_nodes.emplace_back(predicate_node);
-    }
-    return LQPVisitation::VisitInputs;
-  });
-
-  // _splitConjunction() and _splitDisjunction() split up logical expressions by calling each other recursively
-  for (const auto& predicate_node : predicate_nodes) {
-    if (!_splitConjunction(predicate_node)) {
-      // If there is no conjunction at the top level, try to split disjunction first
-      _splitDisjunction(predicate_node);
-    }
   }
 }
 

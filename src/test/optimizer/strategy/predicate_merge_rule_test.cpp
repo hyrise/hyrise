@@ -23,41 +23,12 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
-    rule = std::make_shared<PredicateMergeRule>();
-
-    // Build a chain of diamond structures to trigger the optimization
-    // clang-format off
-    const auto diamond0 =
-    UnionNode::make(UnionMode::Positions,
-      PredicateNode::make(value_(1),
-        node_a),
-      PredicateNode::make(value_(1),
-        node_a));
-
-    const auto diamond1 =
-    UnionNode::make(UnionMode::Positions,
-      PredicateNode::make(value_(1),
-        diamond0),
-      PredicateNode::make(value_(1),
-        diamond0));
-
-    union_chain =
-    UnionNode::make(UnionMode::Positions,
-      PredicateNode::make(value_(1),
-        diamond1),
-      PredicateNode::make(value_(1),
-        diamond1));
-
-    union_chain_expression =
-      and_(and_(or_(value_(1), value_(1)), or_(value_(1), value_(1))), or_(value_(1), value_(1)));
-    // clang-format on
+    rule = std::make_shared<PredicateMergeRule>(1);
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
   LQPColumnReference a_a, a_b, b_a, b_b;
   std::shared_ptr<PredicateMergeRule> rule;
-  std::shared_ptr<AbstractLQPNode> union_chain;
-  std::shared_ptr<AbstractExpression> union_chain_expression;
 };
 
 TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicate) {
@@ -66,22 +37,18 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicate) {
   PredicateNode::make(equals_(a_a, value_(1)),
     UnionNode::make(UnionMode::Positions,
       PredicateNode::make(value_(1),
-        union_chain),
+        node_a),
       PredicateNode::make(value_(1),
-        union_chain)));
+        node_a)));
 
   const auto expected_lqp =
-  PredicateNode::make(and_(union_chain_expression, and_(or_(value_(1), value_(1)), equals_(a_a, value_(1)))),
+  PredicateNode::make(and_(or_(value_(1), value_(1)), equals_(a_a, value_(1))),
     node_a);
   // clang-format on
 
-//  const auto actual_lqp = apply_rule(rule, input_lqp);
+  const auto actual_lqp = apply_rule(rule, input_lqp);
 
-    std::cout << "INPUT\n" << *input_lqp << "\n\n";
-//    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
-    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
-
-//  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
@@ -112,7 +79,6 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
 }
 
 TEST_F(PredicateMergeRuleTest, MergeSimpleDisjunction) {
-  // SELECT * FROM a WHERE a < 3 OR a >= 5
   // clang-format off
   const auto input_lqp =
   UnionNode::make(UnionMode::Positions,
@@ -132,7 +98,6 @@ TEST_F(PredicateMergeRuleTest, MergeSimpleDisjunction) {
 }
 
 TEST_F(PredicateMergeRuleTest, MergeComplexDisjunction) {
-  // SELECT * FROM a WHERE b = 7 OR a < 3 OR a >= 5 OR 9 < b
   // clang-format off
   const auto input_lqp =
   UnionNode::make(UnionMode::Positions,
@@ -158,8 +123,6 @@ TEST_F(PredicateMergeRuleTest, MergeComplexDisjunction) {
 }
 
 TEST_F(PredicateMergeRuleTest, SelectColumn) {
-  // SELECT a FROM a WHERE 1 OR 3 > 2
-
   // clang-format off
   const auto input_lqp =
   ProjectionNode::make(expression_vector(a_a),
@@ -181,12 +144,6 @@ TEST_F(PredicateMergeRuleTest, SelectColumn) {
 }
 
 TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
-  // SELECT * FROM (
-  //   SELECT a FROM a, b WHERE a.a > b.a OR a.b > b.b
-  // ) r JOIN (
-  //   SELECT b FROM a, b WHERE a.a > b.a OR a.b > b.b
-  // ) s ON r.a = s.b
-
   const auto parameter0 = correlated_parameter_(ParameterID{0}, b_a);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, b_b);
 
@@ -223,7 +180,6 @@ TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
 }
 
 TEST_F(PredicateMergeRuleTest, MergeSimpleNestedConjunctionsAndDisjunctions) {
-  // SELECT * FROM a WHERE (a > 10 OR a < 8) AND (b <= 7 OR 11 = b)
   // clang-format off
   const auto lower_union_node =
   UnionNode::make(UnionMode::Positions,
@@ -250,9 +206,6 @@ TEST_F(PredicateMergeRuleTest, MergeSimpleNestedConjunctionsAndDisjunctions) {
 }
 
 TEST_F(PredicateMergeRuleTest, MergeComplexNestedConjunctionsAndDisjunctions) {
-  // SELECT * FROM (
-  //   SELECT a, b FROM a WHERE a = b AND a = 3
-  // ) WHERE ((a > 10 OR a < 8) AND (b <= 7 OR 11 = b)) OR (13 = 13 AND (a = 5 AND b > 7))
   // clang-format off
   const auto subquery_lqp =
   ProjectionNode::make(expression_vector(a_b, a_a),
@@ -291,8 +244,6 @@ TEST_F(PredicateMergeRuleTest, MergeComplexNestedConjunctionsAndDisjunctions) {
 }
 
 TEST_F(PredicateMergeRuleTest, NoRewriteSimplePredicate) {
-  // SELECT * FROM a WHERE a = 10
-
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(value_(10),
@@ -311,8 +262,8 @@ TEST_F(PredicateMergeRuleTest, NoRewritePredicateChains) {
   // clang-format off
   const auto input_lqp =
   PredicateNode::make(equals_(a_a, 5),
-    PredicateNode::make(equals_(13, 13)),
-      node_a);
+    PredicateNode::make(equals_(13, 13),
+      node_a));
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
