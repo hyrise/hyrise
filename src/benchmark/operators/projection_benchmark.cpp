@@ -9,7 +9,6 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "table_generator.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 

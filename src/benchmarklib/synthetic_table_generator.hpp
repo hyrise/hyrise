@@ -55,7 +55,7 @@ struct ColumnDataDistribution {
   double max_value = 1.0;
 };
 
-class TableGenerator {
+class SyntheticTableGenerator {
   // Note: numa_distribute_chunks=true only affects generated tables that use DictionaryCompression,
   // otherwise the chunks are most likely all placed on a single node. This might change in the future.
   // See the discussion here https://github.com/hyrise/hyrise/pull/402

@@ -31,7 +31,7 @@ pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& val
   result.reserve(values.size());
 
   for (const auto& value : values) {
-    result.push_back(TableGenerator::convert_integer_value<T>(value));
+    result.push_back(SyntheticTableGenerator::convert_integer_value<T>(value));
   }
 
   return result;
@@ -53,7 +53,7 @@ PolymorphicAllocator<T> get_allocator_for_type(const size_t node_id, const bool 
 
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
+std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                       const ChunkOffset chunk_size,
                                                       const SegmentEncodingSpec segment_encoding_spec) {
   auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
@@ -64,7 +64,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const size_t num_columns, 
   return table;
 }
 
-std::shared_ptr<Table> TableGenerator::generate_table(
+std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
     const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
@@ -81,7 +81,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   return table;
 }
 
-std::shared_ptr<Table> TableGenerator::generate_table(
+std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
     const std::optional<std::vector<std::string>> column_names, const UseMvcc use_mvcc,
