@@ -94,16 +94,16 @@ class SyntheticTableGenerator {
     */
   template <typename T>
   static T convert_integer_value(const int input) {
-    constexpr auto generated_string_length = size_t{10};
-    constexpr auto prefix_length = size_t{4};
-    constexpr auto variable_string_length = generated_string_length - prefix_length;
-
     if constexpr (std::is_integral_v<T>) {
       return static_cast<T>(input);
     } else if constexpr (std::is_floating_point_v<T>) {
       // floating points are slightly shifted to avoid a zero'd mantissa.
       return static_cast<T>(input) * 0.999999f;
     } else {
+      constexpr auto generated_string_length = size_t{10};
+      constexpr auto prefix_length = size_t{4};
+      constexpr auto variable_string_length = generated_string_length - prefix_length;
+
       Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
 
       const std::vector<char> chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',

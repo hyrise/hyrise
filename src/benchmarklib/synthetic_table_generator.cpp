@@ -42,7 +42,7 @@ template <typename T>
 PolymorphicAllocator<T> get_allocator_for_type(const size_t node_id, const bool distribute_round_robin = false) {
 #if HYRISE_NUMA_SUPPORT
   if (distribute_round_robin) {
-    const auto memory_resource = Topology::get().get_memory_resource(node_id);
+    const auto memory_resource = Topology::get().get_memory_resource(static_cast<int>(node_id));
     return PolymorphicAllocator<T>{memory_resource};
   }
 #endif
@@ -55,8 +55,8 @@ PolymorphicAllocator<T> get_allocator_for_type(const size_t node_id, const bool 
 namespace opossum {
 
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
-                                                      const ChunkOffset chunk_size,
-                                                      const SegmentEncodingSpec segment_encoding_spec) {
+                                                               const ChunkOffset chunk_size,
+                                                               const SegmentEncodingSpec segment_encoding_spec) {
   auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
                               {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, UseMvcc::No, false);
 
