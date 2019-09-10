@@ -25,59 +25,13 @@
 namespace {
 using namespace opossum;
 
-/**
-    * Function to cast an integer to the requested type.
-    *   - in case of long, the integer is simply casted
-    *   - in case of floating types, the integer slighlty modified
-    *     and casted to ensure a matissa that is not fully zero'd
-    *   - in case of strings, a 10 char string is created that has at least
-    *     four leading spaces to ensure that scans have to evaluate at least
-    *     the first four chars. The reason is that very often strings are
-    *     dates in ERP systems and we assume that at least the year has to be
-    *     read before a non-match can be determined. Randomized strings often
-    *     lead to unrealistically fast string scans.
-    */
-template <typename T>
-T convert_integer_value(const int input) {
-  if constexpr (std::is_integral_v<T>) {
-    return static_cast<T>(input);
-  } else if constexpr (std::is_floating_point_v<T>) {
-    // floating points are slightly shifted to avoid a zero'd mantissa.
-    return static_cast<T>(input) * 0.999999f;
-  } else {
-    // TODO(Bouncner): fix the generation of strings
-    const std::vector<const char> chars = {
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
-        'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-        'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'};
-    const size_t chars_base = chars.size();
-    Assert(static_cast<double>(input) < std::pow(chars_base, 6),
-           "Integer too large. Cannot be represented in six chars.");
-
-    pmr_string result{10, ' '};  // 10 spaces
-    if (input == 0) {
-      return result;
-    }
-
-    const size_t result_char_count =
-        std::max(1ul, static_cast<size_t>(std::ceil(std::log(input) / std::log(chars_base))));
-    size_t remainder = static_cast<size_t>(input);
-    for (auto i = size_t{0}; i < result_char_count; ++i) {
-      result[9 - i] = chars[remainder % chars_base];
-      remainder = static_cast<size_t>(remainder / chars_base);
-    }
-
-    return result;
-  }
-}
-
 template <typename T>
 pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& values) {
   pmr_concurrent_vector<T> result;
   result.reserve(values.size());
 
   for (const auto& value : values) {
-    result.push_back(convert_integer_value<T>(value));
+    result.push_back(TableGenerator::convert_integer_value<T>(value));
   }
 
   return result;
@@ -103,7 +57,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const size_t num_columns, 
                                                       const ChunkOffset chunk_size,
                                                       const SegmentEncodingSpec segment_encoding_spec) {
   auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                              {num_columns, {DataType::Int}}, num_rows, chunk_size, UseMvcc::No, false);
+                              {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, UseMvcc::No, false);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_spec);
 
@@ -114,12 +68,13 @@ std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
     const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
-    const UseMvcc use_mvcc, const bool numa_distribute_chunks) {
+    const std::optional<std::vector<std::string>> column_names, const UseMvcc use_mvcc,
+    const bool numa_distribute_chunks) {
   Assert(column_data_distributions.size() == segment_encoding_specs.size(),
          "Length of value distributions needs to equal length of column encodings.");
 
-  auto table =
-      generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, use_mvcc, numa_distribute_chunks);
+  auto table = generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, column_names,
+                              use_mvcc, numa_distribute_chunks);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_specs);
 
@@ -129,18 +84,24 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
-    const UseMvcc use_mvcc, const bool numa_distribute_chunks) {
+    const std::optional<std::vector<std::string>> column_names, const UseMvcc use_mvcc,
+    const bool numa_distribute_chunks) {
   Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
   Assert(column_data_distributions.size() == column_data_types.size(),
          "Length of value distributions needs to equal length of column data types.");
+  if (column_names) {
+    Assert(column_data_distributions.size() == column_names->size(),
+           "When set, the number of column names needs to equal number of value distributions.");
+  }
+
   const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
   // add column definitions and initialize each value vector
   TableColumnDefinitions column_definitions;
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
-    const auto column_name = "column_" + std::to_string(column_id + 1);
-    column_definitions.emplace_back(column_name, column_data_types[column_id]);
+    const auto column_name = column_names ? (*column_names)[column_id] : "column_" + std::to_string(column_id + 1);
+    column_definitions.emplace_back(column_name, column_data_types[column_id], false);
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
@@ -155,10 +116,10 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
   auto node_id = size_t{0};
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
-
     // Obtain general (non-typed) allocators
-    auto allocator_ptr_base_segment = get_allocator_for_type<std::shared_ptr<BaseSegment>>(numa_distribute_chunks, node_id);
-    auto allocator_chunk = get_allocator_for_type<Chunk>(numa_distribute_chunks, node_id);
+    auto allocator_ptr_base_segment =
+        get_allocator_for_type<std::shared_ptr<BaseSegment>>(node_id, numa_distribute_chunks);
+    auto allocator_chunk = get_allocator_for_type<Chunk>(node_id, numa_distribute_chunks);
 
     auto segments = Segments(allocator_ptr_base_segment);
 
@@ -167,10 +128,11 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
       resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
         using ColumnDataType = typename decltype(column_data_type)::type;
-        
+
         // get typed allocators
-        auto allocator_value_segment = get_allocator_for_type<ValueSegment<ColumnDataType>>(numa_distribute_chunks, node_id);
-        auto allocator = get_allocator_for_type<ColumnDataType>(numa_distribute_chunks, node_id);
+        auto allocator_value_segment =
+            get_allocator_for_type<ValueSegment<ColumnDataType>>(node_id, numa_distribute_chunks);
+        auto allocator = get_allocator_for_type<ColumnDataType>(node_id, numa_distribute_chunks);
 
         std::vector<int> values;
         values.reserve(chunk_size);
@@ -208,13 +170,15 @@ std::shared_ptr<Table> TableGenerator::generate_table(
           }
         }
 
-        // generate values according to distribution
-        for (auto row_offset = size_t{0}; row_offset < chunk_size; ++row_offset) {
+        // Generate values according to distribution. We first add min and max values to avoid hard-to-control
+        // pruning via dictionaries. In the main loop, we then run (num_rows/chunk_size)-2 times.
+        values.push_back(static_cast<int>(column_data_distribution.min_value));
+        values.push_back(static_cast<int>(column_data_distribution.max_value));
+        for (auto row_offset = size_t{0}; row_offset < chunk_size - 2; ++row_offset) {
           // bounds check
-          if (chunk_index * chunk_size + (row_offset + 1) > num_rows) {
+          if (chunk_index * chunk_size + (row_offset + 1) > num_rows - 2) {
             break;
           }
-
           values.push_back(generate_value_by_distribution_type());
         }
 
