@@ -89,7 +89,7 @@ ExpressionUnorderedSet columns_actually_used_by_node(const std::shared_ptr<Abstr
   return consumed_columns;
 }
 
-void gather_required_expressions(const std::shared_ptr<AbstractLQPNode>& node, LQPNodeUnorderedMap<ExpressionUnorderedSet>& required_expressions_by_node) {
+void gather_required_expressions(const std::shared_ptr<AbstractLQPNode>& node, std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
   const auto additional_columns = columns_actually_used_by_node(node);
   auto& required_expressions = required_expressions_by_node[node];
   required_expressions.insert(additional_columns.begin(), additional_columns.end());
@@ -115,11 +115,12 @@ void gather_required_expressions(const std::shared_ptr<AbstractLQPNode>& node, L
 }
 
 void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
-  // std::cout << *lqp << std::endl;
-
   // TODO Doc that we do not use visit_lqp here
-  LQPNodeUnorderedMap<ExpressionUnorderedSet> required_expressions_by_node;
-  // TODO add all top level expressions
+  std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
+
+  // Add top-level columns that need to be included as they are the actual output
+  required_expressions_by_node[lqp].insert(lqp->column_expressions().begin(), lqp->column_expressions().end());
+
   gather_required_expressions(lqp, required_expressions_by_node);
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
@@ -132,6 +133,7 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
         if (required_expressions.find(expression) != required_expressions.end()) {
           continue;
         }
+
         const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
         pruned_column_ids.emplace_back(column_expression->column_reference.original_column_id());
       }
@@ -141,8 +143,6 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
     }
     return LQPVisitation::VisitInputs;
   });
-
-  // std::cout << *lqp << std::endl;
 }
 
 }  // namespace opossum
