@@ -38,7 +38,7 @@ class JoinSortMergeClustererTest : public BaseTest {
   }
 
   void SetUp() override {
-    const auto dummy_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data);
+    const auto dummy_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
     dummy_input = std::make_shared<TableWrapper>(dummy_table);
   }
 
@@ -51,9 +51,9 @@ class JoinSortMergeClustererTest : public BaseTest {
 TEST_F(JoinSortMergeClustererTest, RangeClustering) {
   constexpr auto cluster_count = size_t{4};
   // TODO: table wrapper to table?
+
   // Region and orders cover single- and multi-chunk inputs
   auto clusterer = JoinSortMergeClusterer<int>(_table_tpch_region->get_output(), _table_tpch_orders->get_output(), ColumnIDPair(ColumnID{0}, ColumnID{0}), false, false, false, cluster_count);
-
   auto output = clusterer.execute();
 
   auto left_row_count = size_t{0};
@@ -89,8 +89,7 @@ TEST_F(JoinSortMergeClustererTest, RadixClusteringWithUnexpectedClusterCount) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   constexpr auto cluster_count = size_t{17};
-  auto clusterer = JoinSortMergeClusterer<int>(_table_tpch_region->get_output(), _table_tpch_region->get_output(), ColumnIDPair(ColumnID{0}, ColumnID{0}), true, false, false, cluster_count);
-  EXPECT_THROW(clusterer.execute(), std::logic_error);
+  EXPECT_THROW(JoinSortMergeClusterer<int>(_table_tpch_region->get_output(), _table_tpch_region->get_output(), ColumnIDPair(ColumnID{0}, ColumnID{0}), true, false, false, cluster_count), std::logic_error);
 }
 
 TEST_F(JoinSortMergeClustererTest, RadixClustering) {
@@ -110,56 +109,127 @@ TEST_F(JoinSortMergeClustererTest, RadixClustering) {
     auto right_cluster = output.clusters_right[cluster_id];
     left_row_count += left_cluster->size();
     right_row_count += right_cluster->size();
+
+    EXPECT_TRUE(std::is_sorted(left_cluster->begin(), left_cluster->end(), [](auto& left, auto& right) { return left.value < right.value; }));
+    EXPECT_TRUE(std::is_sorted(right_cluster->begin(), right_cluster->end(), [](auto& left, auto& right) { return left.value < right.value; }));
   }
 
   EXPECT_EQ(_table_tpch_region->get_output()->row_count(), left_row_count);
   EXPECT_EQ(_table_tpch_orders->get_output()->row_count(), right_row_count);
 }
 
-// TEST_F(JoinSortMergeClustererTest, RadixClustering) {
-  // constexpr auto cluster_count = size_t{4};
-
-  // auto clusterer = JoinSortMergeClusterer<int>(_table_tpch_orders->get_output(), _table_tpch_orders->get_output(), ColumnIDPair(ColumnID{0}, ColumnID{0}), true, false, false, cluster_count);
-  // auto output = clusterer.execute();
-  // auto right_clusters = output.clusters_right;
-
-  // auto row_count = size_t{0};
-  // EXPECT_EQ(right_clusters.size(), cluster_count);
-  // for (const auto& materialized_segment: right_clusters) {
-  //   row_count += materialized_segment->size();
-  // }
-  // EXPECT_EQ(_table_tpch_orders->get_output()->row_count(), row_count);
-// }
-
 TEST_F(JoinSortMergeClustererTest, RadixClusteringSingleValue) {
   constexpr auto cluster_count = size_t{4};
   constexpr auto rows_to_create = size_t{20};
 
-  auto column_definitions = TableColumnDefinitions{{"column_1", DataType::Int}};
+  auto column_definitions = TableColumnDefinitions{{"column_1", DataType::Int, false}};
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, 100);
   for (auto row = size_t{0}; row < rows_to_create; ++row) {
     table->append({17});
   }
 
-  // TODO: check that both sides have the same container
-
   auto clusterer = JoinSortMergeClusterer<int>(table, table, ColumnIDPair(ColumnID{0}, ColumnID{0}), true, false, false, cluster_count);
   auto output = clusterer.execute();
-  auto right_clusters = output.clusters_right;
+  
+  auto left_row_count = size_t{0};
+  auto right_row_count = size_t{0};
 
-  auto row_count = size_t{0};
-  EXPECT_EQ(right_clusters.size(), cluster_count);
-  for (const auto& materialized_segment: right_clusters) {
-    const auto segment_row_count = materialized_segment->size();
-    row_count += segment_row_count;
+  EXPECT_EQ(output.clusters_left.size(), cluster_count);
+  EXPECT_EQ(output.clusters_right.size(), cluster_count);
+  for (auto cluster_id = size_t{0}; cluster_id < output.clusters_left.size(); ++cluster_id) {
+    auto left_cluster = output.clusters_left[cluster_id];
+    auto right_cluster = output.clusters_right[cluster_id];
+    const auto left_cluster_row_count = left_cluster->size();
+    const auto right_cluster_row_count = right_cluster->size();
+    left_row_count += left_cluster_row_count;
+    right_row_count += right_cluster_row_count;
 
     // As all values of the generated table have the same value, they should be put to the same cluster
-    EXPECT_TRUE(segment_row_count == 0 || segment_row_count == rows_to_create);
+    EXPECT_TRUE(left_row_count == 0 || left_row_count == rows_to_create);
+    EXPECT_TRUE(right_row_count == 0 || right_row_count == rows_to_create);
+    EXPECT_TRUE(left_row_count == right_row_count);
   }
-  EXPECT_EQ(_table_tpch_orders->get_output()->row_count(), row_count);
+
+  EXPECT_EQ(rows_to_create, left_row_count);
+  EXPECT_EQ(rows_to_create, right_row_count);
 }
 
-TEST_F(JoinSortMergeClustererTest, ConcatenateForSingleCluster) { EXPECT_TRUE(false); }
+TEST_F(JoinSortMergeClustererTest, ConcatenateForSingleCluster) {
+  constexpr auto cluster_count = size_t{1};
+
+  auto clusterer = JoinSortMergeClusterer<int>(_table_tpch_region->get_output(), _table_tpch_orders->get_output(), ColumnIDPair(ColumnID{0}, ColumnID{1}), false, false, false, cluster_count);
+  auto output = clusterer.execute();
+
+  const auto left_single_cluster = output.clusters_left;
+  const auto right_single_cluster = output.clusters_right;
+
+  EXPECT_EQ(left_single_cluster.size(), 1);
+  EXPECT_EQ(right_single_cluster.size(), 1);
+
+  EXPECT_TRUE(std::is_sorted(left_single_cluster[0]->begin(), left_single_cluster[0]->end(),
+                             [](auto& left, auto& right) { return left.value < right.value; }));
+  EXPECT_TRUE(std::is_sorted(right_single_cluster[0]->begin(), right_single_cluster[0]->end(),
+                             [](auto& left, auto& right) { return left.value < right.value; }));
+}
+
+TEST_F(JoinSortMergeClustererTest, PickSampleValues) {
+  // TODO:cluster count of zero does not make sense
+  if (HYRISE_DEBUG) {
+    EXPECT_THROW(JoinSortMergeClusterer<int>::pick_split_values({1, 2, 4, 5}, 1), std::logic_error);
+  }
+
+  {
+    const auto result = JoinSortMergeClusterer<int>::pick_split_values({4, 5, 6, 7}, 4);
+    EXPECT_EQ(result.size(), 3);
+  }
+
+  {
+    const auto result = JoinSortMergeClusterer<int>::pick_split_values({1, 2, 4, 5}, 2);
+    EXPECT_EQ(result.size(), 1);
+    EXPECT_EQ(result.front(), 4);
+  }
+
+  {
+    const auto result = JoinSortMergeClusterer<int>::pick_split_values({1, 2, 3, 11, 12, 13, 21, 22, 23}, 3);
+    EXPECT_EQ(result.size(), 2);
+    EXPECT_EQ(result.front(), 11);
+    EXPECT_EQ(result[1], 21);
+  }
+}
+
+TEST_F(JoinSortMergeClustererTest, RangeClusterFunctorSorted) {
+  // Clusters need to be sorted for range clustering (done by ColumnMaterializer)
+  auto segment_1 = MaterializedSegment<int>{};
+  segment_1.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
+  segment_1.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 8});
+  segment_1.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 9});
+  auto segment_2 = MaterializedSegment<int>{};
+  segment_2.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 4});
+  segment_2.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 5});
+  segment_2.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 6});
+  auto segment_3 = MaterializedSegment<int>{};
+  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
+  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
+  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 2});
+  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 3});
+  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 7});
+  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 10});
+
+  auto segment_list_left = MaterializedSegmentList<int>{std::make_shared<MaterializedSegment<int>>(segment_1), std::make_shared<MaterializedSegment<int>>(segment_2)};
+  auto segment_list_right = MaterializedSegmentList<int>{std::make_shared<MaterializedSegment<int>>(segment_2), std::make_shared<MaterializedSegment<int>>(segment_3)};
+  auto result = JoinSortMergeClusterer<int>::range_cluster(segment_list_left, segment_list_right, {3, 5}, 3, {true, true});
+
+  // We expect the left being clustered (values) into (1, 2), (3, 4), (5, 6) and the right into (2), (3, 4), and (5, 6, 7)
+  EXPECT_EQ(result.first.size(), 3);
+  EXPECT_EQ(result.second.size(), 3);
+
+  EXPECT_EQ(result.first[0]->size(), 1);
+  EXPECT_EQ(result.second[0]->size(), 3);
+  EXPECT_EQ(result.first[1]->size(), 1);
+  EXPECT_EQ(result.second[1]->size(), 2);
+  EXPECT_EQ(result.first[2]->size(), 4);
+  EXPECT_EQ(result.second[2]->size(), 4);
+}
 
 TEST_F(JoinSortMergeClustererTest, SortPartiallySortedSegments) {
   // empty or small list shall not throw even for empty sorted run position vectors
@@ -185,6 +255,23 @@ TEST_F(JoinSortMergeClustererTest, SortPartiallySortedSegments) {
   segment.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 3});
   EXPECT_EQ(segment.size(), 9ul);  // ensure test data is correct
   auto positions = std::make_unique<std::vector<size_t>>(std::initializer_list<size_t>({0ul, 3ul, 6ul}));
+  JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(positions));
+
+  EXPECT_TRUE(std::is_sorted(segment.begin(), segment.end(),
+                             [](auto& left, auto& right) { return left.value < right.value; }));
+}
+
+// Test that sorted runs concisting of single values are handled properly.
+TEST_F(JoinSortMergeClustererTest, SortPartiallySortedSingleValueSegments) {
+  auto segment = MaterializedSegment<int>{};
+
+  segment.push_back({RowID{ChunkID{6u}, ChunkOffset{6u}}, 1});
+  segment.push_back({RowID{ChunkID{5u}, ChunkOffset{5u}}, 2});
+  segment.push_back({RowID{ChunkID{4u}, ChunkOffset{4u}}, 3});
+  segment.push_back({RowID{ChunkID{3u}, ChunkOffset{3u}}, 1});
+  segment.push_back({RowID{ChunkID{2u}, ChunkOffset{2u}}, 2});
+  segment.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 3});
+  auto positions = std::make_unique<std::vector<size_t>>(std::initializer_list<size_t>({0ul, 1ul, 2ul, 3ul}));
   JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(positions));
 
   EXPECT_TRUE(std::is_sorted(segment.begin(), segment.end(),
