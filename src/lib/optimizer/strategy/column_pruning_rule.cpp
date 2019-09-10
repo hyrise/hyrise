@@ -141,6 +141,19 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
       auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
       stored_table_node->set_pruned_column_ids(pruned_column_ids);
     }
+
+    if (node->type == LQPNodeType::Join) {
+      auto left_input_needed = false;
+      auto right_input_needed = false;
+
+      // TODO check all outputs
+      for (const auto& required_expression : required_expressions_by_node[node->outputs()[0]]) {
+        if (expression_evaluable_on_lqp(required_expression, *node->left_input())) left_input_needed = true;
+        if (expression_evaluable_on_lqp(required_expression, *node->right_input())) right_input_needed = true;
+      }
+      std::cout << node->description() << " - left " << left_input_needed << " right " << right_input_needed << std::endl;
+    }
+
     return LQPVisitation::VisitInputs;
   });
 }
