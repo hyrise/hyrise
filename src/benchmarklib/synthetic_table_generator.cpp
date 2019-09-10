@@ -1,4 +1,4 @@
-#include "table_generator.hpp"
+#include "synthetic_table_generator.hpp"
 
 #include <algorithm>
 #include <functional>

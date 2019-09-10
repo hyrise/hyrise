@@ -119,8 +119,7 @@ class TableGenerator {
         return result;
       }
 
-      const size_t result_char_count =
-          static_cast<size_t>(std::floor(std::log(input) / std::log(chars_base)) + 1);
+      const size_t result_char_count = static_cast<size_t>(std::floor(std::log(input) / std::log(chars_base)) + 1);
       size_t remainder = static_cast<size_t>(input);
       for (auto i = size_t{0}; i < result_char_count; ++i) {
         result[generated_string_length - 1 - i] = chars[remainder % chars_base];
