@@ -119,8 +119,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  auto benchmark_runner =
-      BenchmarkRunner{*benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context};
+  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
+    *benchmark_config, std::move(benchmark_item_runner), std::move(table_generator), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
 
   if (benchmark_config->verify) {
