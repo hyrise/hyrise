@@ -234,7 +234,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-  auto new_node = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node = UnionNode::make(UnionMode::Positions);
 
   lqp_replace_node(_nodes[5], new_node);
 

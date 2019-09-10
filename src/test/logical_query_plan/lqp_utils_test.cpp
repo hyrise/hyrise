@@ -141,8 +141,8 @@ TEST_F(LQPUtilsTest, VisitLQP) {
 TEST_F(LQPUtilsTest, VisitLQPUpwards) {
   // clang-format off
   const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{node_a,
-    PredicateNode::make(greater_than_(a_a, 4)), UnionNode::make(UnionMode::Positions),
-    PredicateNode::make(less_than_(a_a, 4)), PredicateNode::make(equals_(a_a, 4))};
+    PredicateNode::make(greater_than_(a_a, 4)), PredicateNode::make(less_than_(a_a, 4)), UnionNode::make(UnionMode::Positions),
+    PredicateNode::make(equals_(a_a, 4))};
   // clang-format on
 
   expected_nodes[4]->set_left_input(expected_nodes[3]);

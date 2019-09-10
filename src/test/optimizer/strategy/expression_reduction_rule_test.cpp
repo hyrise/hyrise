@@ -177,6 +177,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(a)", "AVG(a)"};
+    // The cast will become unnecessary once #1799 is fixed
     const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))), expected_aliases,  // NOLINT
                                 ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))),             // NOLINT
                                   AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)), stored_table_node)));                            // NOLINT
@@ -193,6 +194,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(*)", "AVG(a)"};
+    // The cast will become unnecessary once #1799 is fixed
     const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(), div_(cast_(sum_(col_a), DataType::Double), count_star_())), expected_aliases,  // NOLINT
                                 ProjectionNode::make(expression_vector(sum_(col_a), count_star_(), div_(cast_(sum_(col_a), DataType::Double), count_star_())),             // NOLINT
                                   AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_()),                                                  // NOLINT

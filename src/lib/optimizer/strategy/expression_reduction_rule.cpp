@@ -289,11 +289,11 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
     // A helper function that checks whether SUMs and COUNTs match the AVG
     const auto finder = [&](const auto& other_expression) {
-      const auto other_argument = static_cast<const AggregateExpression*>(other_expression.get().get())->argument();
+      const auto other_argument = static_cast<const AggregateExpression&>(*other_expression.get().get()).argument();
 
       if (!other_argument) {
-        // other_argument might be nullptr if we are looking at COUNT(*) - that is acceptable if the argument a to AVG
-        // is not nullable. In that case, COUNT(*) == COUNT(a).
+        // other_argument might be nullptr if we are looking at COUNT(*) - that is acceptable if the argument a in
+        // AVG(a) is not nullable. In that case, COUNT(*) == COUNT(a).
         return !avg_argument_is_nullable;
       }
 
