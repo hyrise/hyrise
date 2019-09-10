@@ -97,8 +97,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _cluster_count = _determine_number_of_clusters();
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
-
-    DebugAssert(std::ispow2(_cluster_count) && _primary_predicate_condition == PredicateCondition::Equals, "The cluster count should be a power of two for radix clustering.");
   }
 
  protected:
@@ -889,11 +887,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Executes the SortMergeJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() override {
-    bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
-    bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+    const bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::FullOuter);
+    const bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::FullOuter);
+    const bool radix_clustering = _primary_predicate_condition == PredicateCondition::Equals;
     auto clusterer = JoinSortMergeClusterer<T>(
         _sort_merge_join.input_table_left(), _sort_merge_join.input_table_right(),
-        _sort_merge_join._primary_predicate.column_ids, _primary_predicate_condition == PredicateCondition::Equals,
+        _sort_merge_join._primary_predicate.column_ids, radix_clustering,
         include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = clusterer.execute();
