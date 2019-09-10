@@ -186,6 +186,7 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
     ChunkOffset chunk_size) {
   auto config = BenchmarkConfig::get_default_config();
   config.chunk_size = chunk_size;
+  config.cache_binary_tables = true;
   return std::make_shared<BenchmarkConfig>(config);
 }
 
