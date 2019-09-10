@@ -211,6 +211,7 @@ set(
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/column_materializer.hpp
+    operators/join_sort_merge/join_sort_merge_clusterer.cpp
     operators/join_sort_merge/join_sort_merge_clusterer.hpp
     operators/limit.cpp
     operators/limit.hpp
