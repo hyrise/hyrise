@@ -5,6 +5,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
@@ -124,7 +125,7 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
   gather_required_expressions(lqp, required_expressions_by_node);
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
-  visit_lqp(lqp, [&](const auto& node) {
+  visit_lqp(lqp, [&](auto& node) {
     const auto& required_expressions = required_expressions_by_node[node];
     if (node->type == LQPNodeType::StoredTable) {
       // Prune all unused columns from a StoredTableNode
@@ -151,7 +152,51 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
         if (expression_evaluable_on_lqp(required_expression, *node->left_input())) left_input_needed = true;
         if (expression_evaluable_on_lqp(required_expression, *node->right_input())) right_input_needed = true;
       }
-      std::cout << node->description() << " - left " << left_input_needed << " right " << right_input_needed << std::endl;
+      DebugAssert(left_input_needed || right_input_needed, "Did not expect a useless join");
+
+      auto left_joins_on_unique_column = false;
+      auto right_joins_on_unique_column = false;
+
+      // TODO explain that this does not handle multi-column primary keys, yet
+      auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+      const auto& join_predicates = join_node->join_predicates();
+      for (const auto& join_predicate : join_predicates) {
+        const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
+        const auto& left_column = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->left_operand());
+        if (left_column) {
+          const auto& left_column_reference = left_column->column_reference;
+          const auto& left_stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(left_column_reference.original_node());
+          if (left_stored_table_node) {
+            const auto& left_table = Hyrise::get().storage_manager.get_table(left_stored_table_node->table_name);
+            for (const auto& left_table_constraint : left_table->get_unique_constraints()) {
+              if (left_table_constraint.columns[0] == left_column_reference.original_column_id()) {
+                left_joins_on_unique_column = true;
+                break;
+              }
+            }
+          }
+        }
+
+        // TODO dedup
+        const auto& right_column = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->right_operand());
+        if (right_column) {
+          const auto& right_column_reference = right_column->column_reference;
+          const auto& right_stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(right_column_reference.original_node());
+          if (right_stored_table_node) {
+            const auto& right_table = Hyrise::get().storage_manager.get_table(right_stored_table_node->table_name);
+            for (const auto& right_table_constraint : right_table->get_unique_constraints()) {
+              if (right_table_constraint.columns[0] == right_column_reference.original_column_id()) {
+                right_joins_on_unique_column = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      if (!right_input_needed && right_joins_on_unique_column) {
+        join_node->join_mode = JoinMode::Semi;
+      }
     }
 
     return LQPVisitation::VisitInputs;

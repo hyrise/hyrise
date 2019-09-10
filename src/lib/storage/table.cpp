@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_manager.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -266,6 +267,39 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 }
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
+
+const std::vector<TableConstraintDefinition>& Table::get_unique_constraints() const { return _constraint_definitions; }
+
+void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool primary) {
+  for (const auto& column_id : column_ids) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+    Assert(!primary || !column_is_nullable(column_id), "Column must be not nullable for primary key constraint");
+  }
+
+  Assert(column_ids.size() == std::set<ColumnID>(column_ids.begin(), column_ids.end()).size(), "Column IDs must be unique");
+
+  {
+    auto scoped_lock = acquire_append_mutex();
+    if (primary) {
+      Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                          [](const auto& constraint) { return constraint.is_primary_key; }) ==
+                 _constraint_definitions.end(),
+             "Another primary key already exists for this table.");
+    }
+
+    auto sorted_columns_ids = column_ids;
+    std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
+    TableConstraintDefinition new_constraint{sorted_columns_ids, primary};
+
+    Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                        [&new_constraint](const auto& existing_constraint) {
+                          return new_constraint.columns == existing_constraint.columns;
+                        }) == _constraint_definitions.end(),
+           "Another constraint on the same columns already exists.");
+
+    _constraint_definitions.push_back(new_constraint);
+  }
+}
 
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};

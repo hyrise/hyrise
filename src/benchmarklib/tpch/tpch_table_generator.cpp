@@ -255,14 +255,38 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    */
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-  table_info_by_name["customer"].table = customer_builder.finish_table();
-  table_info_by_name["orders"].table = order_builder.finish_table();
-  table_info_by_name["lineitem"].table = lineitem_builder.finish_table();
-  table_info_by_name["part"].table = part_builder.finish_table();
-  table_info_by_name["partsupp"].table = partsupp_builder.finish_table();
-  table_info_by_name["supplier"].table = supplier_builder.finish_table();
-  table_info_by_name["nation"].table = nation_builder.finish_table();
-  table_info_by_name["region"].table = region_builder.finish_table();
+  auto customer_table = customer_builder.finish_table();
+  customer_table->add_unique_constraint({ColumnID{0}}, true);
+  table_info_by_name["customer"].table = customer_table;
+
+  auto orders_table = order_builder.finish_table();
+  orders_table->add_unique_constraint({ColumnID{0}}, true);
+  table_info_by_name["orders"].table = orders_table;
+
+  auto lineitem_table = lineitem_builder.finish_table();
+  lineitem_table->add_unique_constraint({ColumnID{0}, ColumnID{3}}, true);
+  table_info_by_name["lineitem"].table = lineitem_table;
+
+  auto part_table = part_builder.finish_table();
+  part_table->add_unique_constraint({ColumnID{0}}, true);
+  table_info_by_name["part"].table = part_table;
+
+  auto partsupp_table = partsupp_builder.finish_table();
+  partsupp_table->add_unique_constraint({ColumnID{0}, ColumnID{1}}, true);
+  table_info_by_name["partsupp"].table = partsupp_table;
+
+  auto supplier_table = supplier_builder.finish_table();
+  supplier_table->add_unique_constraint({ColumnID{0}}, true);
+  table_info_by_name["supplier"].table = supplier_table;
+
+  auto nation_table = nation_builder.finish_table();
+  nation_table->add_unique_constraint({ColumnID{0}}, true);
+  table_info_by_name["nation"].table = nation_table;
+
+  auto region_table = region_builder.finish_table();
+  region_table->add_unique_constraint({ColumnID{0}}, true);
+  table_info_by_name["region"].table = region_table;
+
 
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);

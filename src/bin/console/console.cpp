@@ -924,7 +924,8 @@ int Console::_commit_transaction(const std::string& input) {
     return ReturnCode::Error;
   }
 
-  _explicitly_created_transaction_context->commit();
+  auto committed = _explicitly_created_transaction_context->commit();
+  Assert(committed, "Unexpected transaction failure in console");
 
   const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
   out("Transaction (" + transaction_id + ") has been committed.\n");

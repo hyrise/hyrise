@@ -158,6 +158,7 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/compressed_vector_test.cpp
+    storage/constraints_test.cpp
     storage/dictionary_segment_test.cpp
     storage/encoded_segment_test.cpp
     storage/encoded_string_segment_test.cpp

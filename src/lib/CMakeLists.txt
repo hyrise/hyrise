@@ -409,9 +409,10 @@ set(
     storage/base_segment.hpp
     storage/base_value_segment.hpp
     storage/chunk.cpp
+    storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
-    storage/chunk.hpp
+    storage/constraints/table_constraint_definition.hpp
     storage/create_iterable_from_segment.hpp
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment.cpp

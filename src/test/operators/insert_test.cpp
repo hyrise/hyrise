@@ -37,7 +37,6 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   auto ins = std::make_shared<Insert>(table_name, gt);
   auto context = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context);
-  ins->set_transaction_context(context);
 
   ins->execute();
 
