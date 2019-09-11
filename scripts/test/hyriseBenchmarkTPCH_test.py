@@ -21,6 +21,7 @@ def main():
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Dictionary'"
   arguments["--compression"] = "'Fixed-size byte-aligned'"
+  arguments["--indexes"] = "true"
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
   arguments["--cache_binary_tables"] = "false"
@@ -40,6 +41,7 @@ def main():
   benchmark.expect("Benchmarking Queries: \[ 1, 13, 19, \]")
   benchmark.expect("TPCH scale factor is 0.01")
   benchmark.expect("Using prepared statements: yes")
+  benchmark.expect("Creating index on customer \[ c_custkey \]")
   benchmark.expect("Preparing queries")
 
   close_benchmark(benchmark)
@@ -76,6 +78,7 @@ def main():
   arguments["--warmup"] = "10"
   arguments["--encoding"] = "'LZ4'"
   arguments["--compression"] = "'SIMD-BP128'"
+  arguments["--indexes"] = "false"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
   arguments["--visualize"] = "true"

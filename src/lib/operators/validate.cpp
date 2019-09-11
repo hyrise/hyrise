@@ -6,6 +6,9 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "operators/delete.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
 
@@ -52,11 +55,9 @@ std::shared_ptr<const Table> Validate::_on_execute() {
 }
 
 bool Validate::_is_chunk_visible(TransactionID our_tid, CommitID snapshot_commit_id, const MvccData& mvcc_data) {
-  const auto row_tid = mvcc_data.max_tid->load();
   const auto max_begin_cid = mvcc_data.max_begin_cid;
-  const auto max_end_cid = mvcc_data.max_end_cid;
 
-  return snapshot_commit_id < max_end_cid && ((snapshot_commit_id >= max_begin_cid) != (row_tid == our_tid));
+  return snapshot_commit_id >= max_begin_cid;
 }
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
@@ -64,34 +65,88 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
   const auto in_table = input_table_left();
-
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
-  output_chunks.reserve(in_table->chunk_count());
-
+  const auto chunk_count = in_table->chunk_count();
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
-  const auto chunk_count = in_table->chunk_count();
-
-
   if (in_table->type() == TableType::Data) {
-    ChunkID visible_chunks = ChunkID{0};
+    bool check_chunks_for_visibility = true;
 
-    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto chunk_in = in_table->get_chunk(chunk_id);
-      DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
-      const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
-
-      if (mvcc_data->dirty) break;
-      if (!_is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) break;
-
-      ++visible_chunks;
+    // Abort if there is a delete in the same transaction context
+    const auto& rw_operators = transaction_context->read_write_operators();
+    for (const auto& rw_operator : rw_operators) {
+      if (rw_operator->type() == OperatorType::Delete) check_chunks_for_visibility = false;
     }
 
-    if (visible_chunks == chunk_count) return in_table;
+    if (check_chunks_for_visibility) {
+      ChunkID visible_chunks = ChunkID{0};
+      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+        const auto chunk_in = in_table->get_chunk(chunk_id);
+        DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 
+        if (chunk_in->invalid_row_count() > 0) break;
+
+        const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
+        const auto max_begin_cid = mvcc_data->max_begin_cid;
+        if (snapshot_commit_id < max_begin_cid) break;
+
+        ++visible_chunks;
+      }
+
+      if (visible_chunks == chunk_count) return in_table;
+    }
   }
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+
+  std::cout << "continue table" << std::endl;
+  // for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::shared_ptr<Chunk>> output_chunks;
+  output_chunks.reserve(chunk_count);
+  std::mutex output_mutex;
+
+  auto job_start_chunk_id = ChunkID{0};
+  auto job_end_chunk_id = ChunkID{0};
+  auto job_row_count = uint32_t{0};
+
+  while (job_end_chunk_id < chunk_count) {
+    const auto chunk = in_table->get_chunk(job_end_chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
+    // Small chunks are bundled together to avoid unnecessary scheduling overhead.
+    // Therefore, we count the number of rows to ensure a minimum of rows per job (default chunk size).
+    job_row_count += chunk->size();
+    if (job_row_count >= Chunk::DEFAULT_SIZE || job_end_chunk_id == (chunk_count - 1)) {
+      // Single tasks are executed directly instead of scheduling a single job.
+      bool execute_directly = job_start_chunk_id == 0 && job_end_chunk_id == (chunk_count - 1);
+
+      if (execute_directly) {
+        _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
+                         output_mutex);
+      } else {
+        jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
+          _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
+                           output_mutex);
+        }));
+        jobs.back()->schedule();
+
+        // Prepare next job
+        job_start_chunk_id = job_end_chunk_id + 1;
+        job_row_count = 0;
+      }
+    }
+    job_end_chunk_id++;
+  }
+
+  CurrentScheduler::wait_for_tasks(jobs);
+
+  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
+}
+
+void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
+                                const ChunkID chunk_id_end, const TransactionID our_tid,
+                                const TransactionID snapshot_commit_id,
+                                std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) {
+  for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
 
@@ -118,23 +173,23 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (!mvcc_data->dirty && _is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
-          // *pos_list_out = pos_list_in.copy();
-          pos_list_out->resize(pos_list_in.size());
-          std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
-          // auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
-          // pos_list_out->resize(chunk_size);
-          // for (auto i = 0u; i < chunk_size; i++) {
-          //   (*pos_list_out)[i] = RowID{chunk_id, i};
-          // }
-        } else {
+        // if (!mvcc_data->dirty && _is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
+        //   // *pos_list_out = pos_list_in.copy();
+        //   pos_list_out->resize(pos_list_in.size());
+        //   std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
+        //   // auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
+        //   // pos_list_out->resize(chunk_size);
+        //   // for (auto i = 0u; i < chunk_size; i++) {
+        //   //   (*pos_list_out)[i] = RowID{chunk_id, i};
+        //   // }
+        // } else {
 
           for (auto row_id : pos_list_in) {
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               pos_list_out->emplace_back(row_id);
             }
           }
-        }
+        // }
 
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
@@ -166,14 +221,14 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
       pos_list_out->guarantee_single_chunk();
 
-      if (!mvcc_data->dirty && _is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
-        // return;
-        auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
-        pos_list_out->resize(chunk_size);
-        for (auto i = 0u; i < chunk_size; i++) {
-          (*pos_list_out)[i] = RowID{chunk_id, i};
-        }
-      } else {
+      // if (!mvcc_data->dirty && _is_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
+      //   // return;
+      //   auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
+      //   pos_list_out->resize(chunk_size);
+      //   for (auto i = 0u; i < chunk_size; i++) {
+      //     (*pos_list_out)[i] = RowID{chunk_id, i};
+      //   }
+      // } else {
 
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
@@ -182,7 +237,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
             pos_list_out->emplace_back(RowID{chunk_id, i});
           }
         }
-      }
+      // }
 
       // Create actual ReferenceSegment objects.
       for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
@@ -192,11 +247,10 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     }
 
     if (!pos_list_out->empty() > 0) {
+      std::lock_guard<std::mutex> lock(output_mutex);
       output_chunks.emplace_back(std::make_shared<Chunk>(output_segments));
     }
   }
-
-  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
 }  // namespace opossum

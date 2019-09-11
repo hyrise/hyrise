@@ -19,9 +19,6 @@ class AbstractLQPNode;
  *   `(a OR b) AND (a OR c) -> a OR (b AND c)` are currently ignored as it is has not been determined yet whether
  *   one or the other form executes faster (TODO(anybody))
  *
- * IN to Equals
- *   InExpressions with a single element in the list (`a IN (5)`) are rewritten as a normal equality scan (`a = 5`)
- *
  * Constant folding
  *   Expression involving only constants (`5 + 3 * 4`) are calculated and replaced with their result.
  *
@@ -44,13 +41,6 @@ class ExpressionReductionRule : public AbstractRule {
    * `(a AND b) OR (a AND c)` becomes `a AND (b OR c)`
    */
   static const std::shared_ptr<AbstractExpression>& reduce_distributivity(
-      std::shared_ptr<AbstractExpression>& input_expression);
-
-  /**
-   * Rewrite `a IN (5)` to `a = 5`
-   * Rewrite `a NOT IN (5)` to `a != 5`
-   */
-  static const std::shared_ptr<AbstractExpression>& reduce_in_with_single_list_element(
       std::shared_ptr<AbstractExpression>& input_expression);
 
   /**
