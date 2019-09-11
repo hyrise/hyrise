@@ -743,6 +743,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     auto right_histogram = right_input_column_statistics->histogram;
 
     if (left_histogram && right_histogram) {
+      // If we have histograms, we use the principle of inclusion to determine the number of matches between two bins.
       join_column_histogram = estimate_inner_equi_join_with_histograms(*left_histogram, *right_histogram);
       cardinality = join_column_histogram->total_count();
     } else {
@@ -835,6 +836,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
       }
 
       const auto distinct_right_histogram = distinct_right_histogram_builder.build();
+      // If we have histograms, we use the principle of inclusion to determine the number of matches between two bins.
       join_column_histogram = estimate_inner_equi_join_with_histograms(*left_histogram, *distinct_right_histogram);
       cardinality = join_column_histogram->total_count();
     } else {
