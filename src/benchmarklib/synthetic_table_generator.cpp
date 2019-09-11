@@ -173,7 +173,11 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
         }
 
         // Generate values according to distribution. We first add min and max values to avoid hard-to-control
-        // pruning via dictionaries. In the main loop, we then run (num_rows/chunk_size)-2 times.
+        /**
+        * Generate values according to distribution. We first add the given min and max values of that column to avoid
+        * early exists via dictionary pruning (no matter which values are later searched, the local segment
+        * dictionaries cannot prune them early). In the main loop, we thus execute the loop two times less.
+        **/
         values.push_back(static_cast<int>(column_data_distribution.min_value));
         values.push_back(static_cast<int>(column_data_distribution.max_value));
         for (auto row_offset = size_t{0}; row_offset < chunk_size - 2; ++row_offset) {
