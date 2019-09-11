@@ -221,7 +221,7 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
       return std::nullopt;
     }
 
-  } else if (const auto binary_predicate =
+  } else if (auto binary_predicate =
                  std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate())) {
     result.join_mode = JoinMode::Semi;
 
@@ -238,12 +238,10 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
         projection_node->set_left_input(right_subquery_expression->lqp);
         right_subquery_expression->lqp = projection_node;
 
-        const auto new_binary_predicate_expression = std::make_shared<BinaryPredicateExpression>(
+        binary_predicate.reset(new BinaryPredicateExpression(
           binary_predicate->predicate_condition,
           binary_predicate->left_operand(),
-          right_subquery_expression);
-        auto& pred_node = const_cast<PredicateNode&>(predicate_node);
-        pred_node.node_expressions[0] = new_binary_predicate_expression;
+          right_subquery_expression));
       }
     }
 
