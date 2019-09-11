@@ -14,7 +14,7 @@ class Table;
 enum class DataDistributionType { Uniform, NormalSkewed, Pareto };
 
 struct ColumnDataDistribution {
-  static ColumnDataDistribution make_uniform_config(double min, double max) {
+  static ColumnDataDistribution make_uniform_config(const double min, const double max) {
     ColumnDataDistribution c{};
     c.min_value = min;
     c.max_value = max;
@@ -22,7 +22,7 @@ struct ColumnDataDistribution {
     return c;
   }
 
-  static ColumnDataDistribution make_pareto_config(double pareto_scale = 1.0, double pareto_shape = 1.0) {
+  static ColumnDataDistribution make_pareto_config(const double pareto_scale = 1.0, const double pareto_shape = 1.0) {
     ColumnDataDistribution c{};
     c.pareto_scale = pareto_scale;
     c.pareto_shape = pareto_shape;
@@ -30,8 +30,8 @@ struct ColumnDataDistribution {
     return c;
   }
 
-  static ColumnDataDistribution make_skewed_normal_config(double skew_location = 0.0, double skew_scale = 1.0,
-                                                          double skew_shape = 0.0) {
+  static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 0.0, const double skew_scale = 1.0,
+                                                          const double skew_shape = 0.0) {
     ColumnDataDistribution c{};
     c.skew_location = skew_location;
     c.skew_scale = skew_scale;
@@ -44,15 +44,15 @@ struct ColumnDataDistribution {
 
   int num_different_values = 1'000;
 
-  double pareto_scale = 1.0;
-  double pareto_shape = 1.0;
+  double pareto_scale;
+  double pareto_shape;
 
-  double skew_location = 0.0;
-  double skew_scale = 1.0;
-  double skew_shape = 0.0;
+  double skew_location;
+  double skew_scale;
+  double skew_shape;
 
-  double min_value = 0.0;
-  double max_value = 1.0;
+  double min_value;
+  double max_value;
 };
 
 class SyntheticTableGenerator {
