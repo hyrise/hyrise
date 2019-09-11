@@ -187,17 +187,20 @@ void prune_join_node(const std::shared_ptr<AbstractLQPNode>& node, std::unordere
 }
 
 void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
-  // TODO Doc that we do not use visit_lqp here
+  // Pruning happens in two steps: In a first walk through the LQP, we identify the expressions needed by each node.
+  // Next, we walk through all identified nodes and perform the pruning.
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
 
   // Add top-level columns that need to be included as they are the actual output
   required_expressions_by_node[lqp].insert(lqp->column_expressions().begin(), lqp->column_expressions().end());
 
+  // Recursively walk through the LQP. We cannot use visit_lqp as we explicitly need to take each path through the LQP.
+  // The right side of a diamond might require additional columns - if we only visited each node once, we might miss
+  // those. However, if this every becomes a performance issue, we might come up with a better traversal algorithm.
   gather_required_expressions(lqp, required_expressions_by_node);
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
-  visit_lqp(lqp, [&](auto& node) {
-    const auto& required_expressions = required_expressions_by_node[node];
+  for (const auto& [node, required_expressions] : required_expressions_by_node) {
     if (node->type == LQPNodeType::StoredTable) {
       // Prune all unused columns from a StoredTableNode
       auto pruned_column_ids = std::vector<ColumnID>{};
@@ -217,9 +220,7 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
     if (node->type == LQPNodeType::Join) {
       prune_join_node(node, required_expressions_by_node);
     }
-
-    return LQPVisitation::VisitInputs;
-  });
+  }
 }
 
 }  // namespace opossum
