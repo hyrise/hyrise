@@ -6,6 +6,7 @@
 
 #include "constant_mappings.hpp"
 #include "expression_utils.hpp"
+#include "lqp_column_expression.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -39,7 +40,7 @@ std::string AggregateExpression::as_column_name() const {
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
     stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
-  } else if (aggregate_function == AggregateFunction::Count && !argument()) {
+  } else if (aggregate_function == AggregateFunction::Count && dynamic_cast<const LQPColumnExpression*>(&*argument())->column_reference.original_column_id() == INVALID_COLUMN_ID) {
     stream << "COUNT(*)";
   } else {
     stream << aggregate_function << "(";

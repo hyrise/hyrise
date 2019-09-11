@@ -438,7 +438,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
       compile_query("SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
-  const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
+  const auto aggregate = count_star_(stored_table_node_int_float);
+  const auto aggregates = expression_vector(aggregate, aggregate, aggregate);
 
   // clang-format off
   // #1186: Redundant AliasNode due to the SQLTranslator architecture.
@@ -446,9 +447,12 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   AliasNode::make(aggregates, aliases,
     AliasNode::make(aggregates, aliases,
       ProjectionNode::make(aggregates,
-        AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+        AggregateNode::make(expression_vector(), expression_vector(aggregate),
           stored_table_node_int_float))));
   // clang-format on
+
+    std::cout << "ACTUAL\n" << *actual_lqp << "\n\n";
+    std::cout << "EXPECTED\n" << *expected_lqp << "\n\n";
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

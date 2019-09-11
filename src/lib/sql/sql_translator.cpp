@@ -48,7 +48,6 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/lqp_view.hpp"
@@ -929,7 +928,15 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     if (!pre_aggregate_expressions.empty()) {
       const auto any_expression_not_yet_available =
           std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
-                      [&](const auto& expression) { return !_current_lqp->find_column_id(*expression); });
+                      [&](const auto& expression) {
+             if (_current_lqp->find_column_id(*expression)) {
+               return false;
+             }
+
+             // Handle COUNT(*)
+             const auto column_expression = dynamic_cast<LQPColumnExpression*>(&*expression);
+             return !column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID;
+          });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);

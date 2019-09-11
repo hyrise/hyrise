@@ -294,7 +294,8 @@ void AggregateHash::_aggregate() {
    */
   for (ColumnID column_id{0}; column_id < _aggregates.size(); ++column_id) {
     const auto& aggregate = _aggregates[column_id];
-    if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+    if (aggregate.column == INVALID_COLUMN_ID) {
+      Assert(aggregate.function == AggregateFunction::Count, "Only COUNT(*) may (and must) have an invalid ColumnID.");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
       _contexts_per_column[column_id] = context;
@@ -358,7 +359,8 @@ void AggregateHash::_aggregate() {
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
-        if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+        if (aggregate.column == INVALID_COLUMN_ID) {
+          Assert(aggregate.function == AggregateFunction::Count, "Only COUNT(*) may (and must) have an invalid ColumnID.");
           auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>(
               _contexts_per_column[column_index]);
 
@@ -472,8 +474,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   for (const auto& aggregate : _aggregates) {
     const auto column = aggregate.column;
 
-    // Output column for COUNT(*). int is chosen arbitrarily.
-    const auto data_type = !column ? DataType::Int : input_table->column_data_type(*column);
+    // Output column for COUNT(*). Int is chosen arbitrarily.
+    const auto data_type = *column == INVALID_COLUMN_ID ? DataType::Int : input_table->column_data_type(*column);
 
     resolve_data_type(
         data_type, [&, column_index](auto type) { _write_aggregate_output(type, column_index, aggregate.function); });
