@@ -123,7 +123,7 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
     // Since we have at least two chunks, this means one chunk just now reached its capacity.
     if (chunk_count() > 1) {
       auto second_last_chunk = get_chunk(ChunkID{chunk_count() - 2});
-      second_last_chunk->optimize_mvcc();
+      second_last_chunk->update_max_begin_cid();
     }
   }
 
@@ -211,7 +211,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   _chunks.push_back(c);
 
   if (mvcc_data)
-    c->optimize_mvcc();
+    c->update_max_begin_cid();
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {

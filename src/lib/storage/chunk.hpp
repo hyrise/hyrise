@@ -181,7 +181,7 @@ class Chunk : private Noncopyable {
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
-  void optimize_mvcc();
+  void update_max_begin_cid();
 
  private:
   std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;

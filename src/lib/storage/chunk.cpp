@@ -102,7 +102,7 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
   return result;
 }
 
-void Chunk::optimize_mvcc() {
+void Chunk::update_max_begin_cid() {
   auto mvcc = get_scoped_mvcc_data_lock();
 
   if (mvcc->begin_cids.size() == 0) {

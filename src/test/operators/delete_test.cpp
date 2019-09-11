@@ -37,13 +37,10 @@ class OperatorsDeleteTest : public BaseTest {
 
     _gt = std::make_shared<GetTable>(_table_name);
     _gt->execute();
-
-    _gt2 = std::make_shared<GetTable>(_table2_name);
-    _gt2->execute();
   }
 
   std::string _table_name, _table2_name;
-  std::shared_ptr<GetTable> _gt, _gt2;
+  std::shared_ptr<GetTable> _gt;
   std::shared_ptr<Table> _table, _table2;
 
   void helper(bool commit);

@@ -54,10 +54,11 @@ std::shared_ptr<const Table> Validate::_on_execute() {
   Fail("Validate can't be called without a transaction context.");
 }
 
-bool Validate::_is_chunk_visible(TransactionID our_tid, CommitID snapshot_commit_id, const MvccData& mvcc_data) {
-  const auto max_begin_cid = mvcc_data.max_begin_cid;
+bool Validate::_is_chunk_visible(const std::shared_ptr<const Chunk>& chunk, CommitID snapshot_commit_id) {
+  const auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+  const auto max_begin_cid = mvcc_data->max_begin_cid;
 
-  return snapshot_commit_id >= max_begin_cid;
+  return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
@@ -84,11 +85,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         const auto chunk_in = in_table->get_chunk(chunk_id);
         DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 
-        if (chunk_in->invalid_row_count() > 0) break;
-
-        const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
-        const auto max_begin_cid = mvcc_data->max_begin_cid;
-        if (snapshot_commit_id < max_begin_cid) break;
+        if (!_is_chunk_visible(chunk_in, snapshot_commit_id)) break;
 
         ++visible_chunks;
       }
@@ -97,7 +94,6 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     }
   }
 
-  std::cout << "continue table" << std::endl;
   // for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
   std::vector<std::shared_ptr<JobTask>> jobs;
   std::vector<std::shared_ptr<Chunk>> output_chunks;
