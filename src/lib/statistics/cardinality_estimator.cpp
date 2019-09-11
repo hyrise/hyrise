@@ -717,6 +717,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
   const auto left_data_type = left_input_table_statistics.column_data_type(left_column_id);
   const auto right_data_type = right_input_table_statistics.column_data_type(right_column_id);
 
+  // We expect both columns to be of the same type. This allows us to resolve the type only once, reducing the
+  // compile time. For differing column types and/or string columns (which we cannot handle right now), we assume that
+  // all tuples qualify. This is probably a gross overestimation, but we need to return something...
   // TODO(anybody) - Implement join estimation for differing column data types
   //               - Implement join estimation for String columns
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
@@ -794,6 +797,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
   const auto left_data_type = left_input_table_statistics.column_data_type(left_column_id);
   const auto right_data_type = right_input_table_statistics.column_data_type(right_column_id);
 
+  // We expect both columns to be of the same type. This allows us to resolve the type only once, reducing the
+  // compile time. For differing column types and/or string columns (which we cannot handle right now), we assume that
+  // all tuples qualify. This is probably a gross overestimation, but we need to return something...
   // TODO(anybody) - Implement join estimation for differing column data types
   //               - Implement join estimation for String columns
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
