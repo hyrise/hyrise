@@ -12,10 +12,10 @@
 
 namespace opossum {
 
-AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function)
-    : AbstractExpression(ExpressionType::Aggregate, {}), aggregate_function(aggregate_function) {
-  Assert(aggregate_function == AggregateFunction::Count, "Only COUNT aggregates can have no arguments");
-}
+//AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function)
+//    : AbstractExpression(ExpressionType::Aggregate, {}), aggregate_function(aggregate_function) {
+//  Assert(aggregate_function == AggregateFunction::Count, "Only COUNT aggregates can have no arguments");
+//}
 
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
                                          const std::shared_ptr<AbstractExpression>& argument)
@@ -26,11 +26,11 @@ std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
 }
 
 std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
-  if (argument()) {
+//  if (argument()) {
     return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
-  } else {
-    return std::make_shared<AggregateExpression>(aggregate_function);
-  }
+//  } else {
+//    return std::make_shared<AggregateExpression>(aggregate_function);
+//  }
 }
 
 std::string AggregateExpression::as_column_name() const {

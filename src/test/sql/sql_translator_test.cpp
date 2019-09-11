@@ -467,7 +467,6 @@ TEST_F(SQLTranslatorTest, SelectAggregatesFromSubqueries) {
   const auto aggregates = expression_vector(count_star_(), count_star_());
 
   // clang-format off
-  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   const auto expected_lqp =
   AliasNode::make(aggregates, aliases,
     JoinNode::make(JoinMode::Cross,
@@ -647,31 +646,6 @@ TEST_F(SQLTranslatorTest, SelectListManyAliasesDifferentForSimilarColumnsUsedInV
   const auto expected_lqp = CreateViewNode::make("alias_view", view, false);
 
   EXPECT_LQP_EQ(result_node, expected_lqp);
-}
-
-TEST_F(SQLTranslatorTest, SelectFromView) {
-  // Define and create view
-  const auto view_node =
-      compile_query("SELECT a AS a1, a AS a2 FROM int_float WHERE a > 10");
-  const auto view_columns = std::unordered_map<ColumnID, std::string>({{ColumnID{0}, "a1"}, {ColumnID{1}, "a2"}});
-  const auto view = std::make_shared<LQPView>(view_node, view_columns);
-  Hyrise::get().storage_manager.add_view("alias_view", view);
-
-  // Use the view within a query
-  const auto actual_lqp = compile_query("SELECT * FROM alias_view");
-
-  const auto aliases = std::vector<std::string>({"a1", "a2"});
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
-  // clang-format off
-  const auto expected_lqp =
-  AliasNode::make(expression_vector(int_float_a, int_float_a), aliases,
-    AliasNode::make(expression_vector(int_float_a, int_float_a), aliases,
-      ProjectionNode::make(expression_vector(int_float_a, int_float_a),
-        PredicateNode::make(greater_than_(int_float_a, value_(10)),
-          stored_table_node_int_float))));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, WhereSimple) {
@@ -2418,7 +2392,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupByAlias) {
       AggregateNode::make(expression_vector(int_int_int_a), expression_vector(sum_b),
         stored_table_node_int_int_int));
 
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   const auto expected_lqp =
     AliasNode::make(select_list_expressions, aliases,
       PredicateNode::make(greater_than_(sum_b, value_(10)),
@@ -2499,7 +2473,8 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
         PredicateNode::make(greater_than_equals_(int_int_int_b, value_(10)),
           wq1_lqp)));
 
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+
+  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   const auto expected_lqp =
     AliasNode::make(expression_vector(int_int_int_b), alias_z,
       wq2_lqp);

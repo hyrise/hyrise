@@ -40,7 +40,7 @@ std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const
 }
 
 std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doesn't like the suffix
-  return std::make_shared<AggregateExpression>(AggregateFunction::Count);
+  return std::make_shared<AggregateExpression>(AggregateFunction::Count, nullptr); // todo(jj): find a better way than nullptr
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& subquery_expression) {  // NOLINT - clang-tidy doesn't like the suffix

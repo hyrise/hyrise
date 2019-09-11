@@ -1366,7 +1366,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::CountDistinct:
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
-              return std::make_shared<AggregateExpression>(aggregate_function);
+              const auto a = std::make_shared<LQPColumnExpression>(LQPColumnReference{_current_lqp, ColumnID{INVALID_COLUMN_ID}});
+              return std::make_shared<AggregateExpression>(aggregate_function, a);
             } else {
               return std::make_shared<AggregateExpression>(
                   aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
