@@ -56,9 +56,6 @@ struct ColumnDataDistribution {
 };
 
 class SyntheticTableGenerator {
-  // Note: numa_distribute_chunks=true only affects generated tables that use DictionaryCompression,
-  // otherwise the chunks are most likely all placed on a single node. This might change in the future.
-  // See the discussion here https://github.com/hyrise/hyrise/pull/402
  public:
   // Simple table generation, mainly for simple tests
   std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows, const ChunkOffset chunk_size,
@@ -69,16 +66,14 @@ class SyntheticTableGenerator {
                                         const ChunkOffset chunk_size,
                                         const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
                                         const std::optional<std::vector<std::string>>& column_names = std::nullopt,
-                                        const UseMvcc use_mvcc = UseMvcc::No,
-                                        const bool numa_distribute_chunks = false);
+                                        const UseMvcc use_mvcc = UseMvcc::No);
 
   // Base function that generates the actual data
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
                                         const std::vector<DataType>& column_data_types, const size_t num_rows,
                                         const ChunkOffset chunk_size,
                                         const std::optional<std::vector<std::string>>& column_names = std::nullopt,
-                                        const UseMvcc use_mvcc = UseMvcc::No,
-                                        const bool numa_distribute_chunks = false);
+                                        const UseMvcc use_mvcc = UseMvcc::No);
 
   /**
     * Function to create a typed value from an integer. The data generation creates integers with the requested

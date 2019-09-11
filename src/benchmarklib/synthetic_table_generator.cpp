@@ -38,18 +38,6 @@ pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& val
   return result;
 }
 
-template <typename T>
-PolymorphicAllocator<T> get_allocator_for_type(const size_t node_id, const bool distribute_round_robin = false) {
-#if HYRISE_NUMA_SUPPORT
-  if (distribute_round_robin) {
-    const auto memory_resource = Topology::get().get_memory_resource(static_cast<int>(node_id));
-    return PolymorphicAllocator<T>{memory_resource};
-  }
-#endif
-
-  return PolymorphicAllocator<T>{};
-}
-
 }  // namespace
 
 namespace opossum {
@@ -58,7 +46,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) {
   auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                              {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, UseMvcc::No, false);
+                              {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, UseMvcc::No);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_spec);
 
@@ -69,13 +57,12 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
     const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
-    const std::optional<std::vector<std::string>> column_names, const UseMvcc use_mvcc,
-    const bool numa_distribute_chunks) {
+    const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc) {
   Assert(column_data_distributions.size() == segment_encoding_specs.size(),
          "Length of value distributions needs to equal length of column encodings.");
 
   auto table = generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, column_names,
-                              use_mvcc, numa_distribute_chunks);
+                              use_mvcc);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_specs);
 
@@ -85,8 +72,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
-    const std::optional<std::vector<std::string>> column_names, const UseMvcc use_mvcc,
-    const bool numa_distribute_chunks) {
+    const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc) {
   Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
   Assert(column_data_distributions.size() == column_data_types.size(),
          "Length of value distributions needs to equal length of column data types.");
@@ -113,25 +99,14 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
   pseudorandom_engine.seed(random_device());
 
-  auto node_id = size_t{0};
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
-    // Obtain general (non-typed) allocators
-    auto allocator_ptr_base_segment =
-        get_allocator_for_type<std::shared_ptr<BaseSegment>>(node_id, numa_distribute_chunks);
-    auto allocator_chunk = get_allocator_for_type<Chunk>(node_id, numa_distribute_chunks);
 
-    auto segments = Segments(allocator_ptr_base_segment);
+    Segments segments;
 
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
-      node_id = (node_id + 1) % Topology::get().nodes().size();
 
       resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
         using ColumnDataType = typename decltype(column_data_type)::type;
-
-        // get typed allocators
-        auto allocator_value_segment =
-            get_allocator_for_type<ValueSegment<ColumnDataType>>(node_id, numa_distribute_chunks);
-        auto allocator = get_allocator_for_type<ColumnDataType>(node_id, numa_distribute_chunks);
 
         std::vector<int> values;
         values.reserve(chunk_size);
@@ -172,7 +147,6 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           }
         }
 
-        // Generate values according to distribution. We first add min and max values to avoid hard-to-control
         /**
         * Generate values according to distribution. We first add the given min and max values of that column to avoid
         * early exists via dictionary pruning (no matter which values are later searched, the local segment
@@ -188,14 +162,12 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           values.push_back(generate_value_by_distribution_type());
         }
 
-        auto typed_values = create_typed_segment_values<ColumnDataType>(values);
-        segments.push_back(std::allocate_shared<ValueSegment<ColumnDataType>>(allocator_value_segment,
-                                                                              std::move(typed_values), allocator));
+        segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values)));
       });
       // add full chunk to table
       if (column_index == num_columns - 1) {
         const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-        table->append_chunk(segments, mvcc_data, allocator_chunk);
+        table->append_chunk(segments, mvcc_data);
       }
     }
   }
