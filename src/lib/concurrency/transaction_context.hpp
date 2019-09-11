@@ -107,6 +107,11 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
 
   /**
+   * Returns the read-write operators.
+   */
+  const std::vector<std::shared_ptr<AbstractReadWriteOperator>>& read_write_operators() { return _rw_operators; }
+
+  /**
    * @defgroup Update the counter of active operators
    * @{
    */

@@ -9,6 +9,8 @@
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
 #include "operators/abstract_read_only_operator.hpp"
+#include "operators/delete.hpp"
+#include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
@@ -27,6 +29,15 @@ class OperatorsValidateTest : public BaseTest {
     set_all_records_visible(*_test_table);
     set_record_invisible_for(*_test_table, RowID{ChunkID{1}, 0u}, 2u);
 
+    const auto _table2_name = "table_b";
+    const auto _test_table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
+
+    // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
+    Hyrise::get().storage_manager.add_table(_table2_name, _test_table2);
+
+    _gt = std::make_shared<GetTable>(_table2_name);
+    _gt->execute();
+
     _table_wrapper = std::make_shared<TableWrapper>(_test_table);
 
     _table_wrapper->execute();
@@ -37,6 +48,7 @@ class OperatorsValidateTest : public BaseTest {
 
   std::shared_ptr<Table> _test_table;
   std::shared_ptr<TableWrapper> _table_wrapper;
+  std::shared_ptr<GetTable> _gt;
 };
 
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
@@ -83,6 +95,35 @@ TEST_F(OperatorsValidateTest, ScanValidate) {
   validate->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), expected_result);
+}
+
+TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
+  auto t1_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  auto validate1 = std::make_shared<Validate>(_gt);
+  validate1->set_transaction_context(t1_context);
+
+  validate1->execute();
+
+  EXPECT_EQ(validate1->get_output()->row_count(), 8);
+  t1_context->commit();
+
+  auto t2_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  // Select one row for deletion
+  auto table_scan = create_table_scan(_gt, ColumnID{0}, PredicateCondition::Equals, "13");
+  table_scan->execute();
+
+  auto delete_op = std::make_shared<Delete>(table_scan);
+  delete_op->set_transaction_context(t2_context);
+  delete_op->execute();
+
+  auto validate2 = std::make_shared<Validate>(_gt);
+  validate2->set_transaction_context(t2_context);
+  validate2->execute();
+
+  EXPECT_EQ(validate2->get_output()->row_count(), 7);
+  t2_context->commit();
 }
 
 TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {

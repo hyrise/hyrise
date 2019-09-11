@@ -211,7 +211,6 @@ void Insert::_on_commit_records(const CommitID cid) {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
     auto mvcc_data = target_chunk->get_scoped_mvcc_data_lock();
 
-    mvcc_data->dirty = true;
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
       mvcc_data->begin_cids[chunk_offset] = cid;

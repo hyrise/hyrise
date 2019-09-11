@@ -119,6 +119,12 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
   if (!last_chunk || last_chunk->size() >= _max_chunk_size) {
     append_mutable_chunk();
     last_chunk = get_chunk(ChunkID{chunk_count() - 1});
+
+    // Since we have at least two chunks, this means one chunk just now reached its capacity.
+    if (chunk_count() > 1) {
+      auto second_last_chunk = get_chunk(ChunkID{chunk_count() - 2});
+      second_last_chunk->optimize_mvcc();
+    }
   }
 
   last_chunk->append(values);
