@@ -94,6 +94,8 @@ class SyntheticTableGenerator {
     *     world systems often share a common prefix (e.g., country code prefixes or dates starting with the year) where
     *     usually more chars need to be read. The observed effect was that operations on randomized strings were
     *     unexpectedly faster than seen with real-world data.
+    *     Example (shortening leading spaces): (0, 1, 2, 10, 11, 61, 62, 75) >>
+    *                                          ('   ', '  1', '  2', '  A', '  B', '  z', ' 10', ' 11', ' 1D')
     */
   template <typename T>
   static T generate_value(const int input) {
