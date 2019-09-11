@@ -1,5 +1,7 @@
 #include "predicate_placement_rule.hpp"
+
 #include "all_parameter_variant.hpp"
+#include "cost_estimation/abstract_cost_estimator.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -11,6 +13,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "statistics/cardinality_estimator.hpp"
 
 namespace opossum {
 
@@ -26,7 +29,7 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
 
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
                                                   const LQPInputSide input_side,
-                                                  std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes) {
+                                                  std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes) const {
   const auto input_node = current_node->input(input_side);
   if (!input_node) return;  // Allow calling without checks
 
@@ -104,7 +107,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             //
             // Here are the rules that determine whether we can create a pre-join predicate for the tables l or r with
             // predicates that operate on l (l1, l2), r (r1, r2), or are independent of either table (u1, u2). To
-            // produce a predicate for a table, it is required that each expression in the disjunction has a predicate 
+            // produce a predicate for a table, it is required that each expression in the disjunction has a predicate
             // for that table:
             //
             // (l1 AND r1) OR (l2)        -> create predicate (l1 OR l2) on left side, everything on right side might
@@ -133,7 +136,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             auto aborted_left_side = false;
             auto aborted_right_side = false;
 
-            const auto outer_disjunction = flatten_logical_expressions(push_down_node->predicate(), LogicalOperator::Or);
+            const auto outer_disjunction =
+                flatten_logical_expressions(push_down_node->predicate(), LogicalOperator::Or);
             for (const auto& expression_in_disjunction : outer_disjunction) {
               // For the current expression_in_disjunction, these hold the PredicateExpressions that need to be true
               // on the left/right side
@@ -141,10 +145,13 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               std::vector<std::shared_ptr<AbstractExpression>> right_conjunction{};
 
               // Fill left/right_conjunction
-              const auto inner_conjunction = flatten_logical_expressions(expression_in_disjunction, LogicalOperator::And);
+              const auto inner_conjunction =
+                  flatten_logical_expressions(expression_in_disjunction, LogicalOperator::And);
               for (const auto& expression_in_conjunction : inner_conjunction) {
-                const auto evaluable_on_left_side = expression_evaluable_on_lqp(expression_in_conjunction, *join_node->left_input());
-                const auto evaluable_on_right_side = expression_evaluable_on_lqp(expression_in_conjunction, *join_node->right_input());
+                const auto evaluable_on_left_side =
+                    expression_evaluable_on_lqp(expression_in_conjunction, *join_node->left_input());
+                const auto evaluable_on_right_side =
+                    expression_evaluable_on_lqp(expression_in_conjunction, *join_node->right_input());
 
                 // We can only work with expressions that are specific to one side.
                 if (evaluable_on_left_side && !evaluable_on_right_side && !aborted_left_side) {
@@ -173,19 +180,39 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               }
             }
 
-            if (!left_disjunction.empty()) {
-              // Connect all options (e.g., l.name = 'DE' and l.name = 'FR') with a disjunction, create a predicate,
-              // and add it to the list of nodes that will be pushed to the left side
-              const auto left_expression = inflate_logical_expressions(left_disjunction, LogicalOperator::Or);
-              const auto pre_filter_predicate_node = PredicateNode::make(left_expression);
-              left_push_down_nodes.emplace_back(pre_filter_predicate_node);
-            }
+            // const auto& cardinality_estimator = *cost_estimator->cardinality_estimator;
+            // if (!left_disjunction.empty()) {
+            //   // Connect all options (e.g., l.name = 'DE' and l.name = 'FR') with a disjunction, create a predicate,
+            //   // and add it to the list of nodes that will be pushed to the left side
+            //   const auto left_expression = inflate_logical_expressions(left_disjunction, LogicalOperator::Or);
+            //   const auto pre_filter_predicate_node = PredicateNode::make(left_expression, join_node->left_input());
 
-            if (!right_disjunction.empty()) {
-              const auto right_expression = inflate_logical_expressions(right_disjunction, LogicalOperator::Or);
-              const auto pre_filter_predicate_node = PredicateNode::make(right_expression);
-              right_push_down_nodes.emplace_back(pre_filter_predicate_node);
-            }
+            //   const auto old_cardinality = cardinality_estimator.estimate_cardinality(join_node->left_input());
+            //   const auto new_cardinality = cardinality_estimator.estimate_cardinality(pre_filter_predicate_node);
+            //   std::cout << pre_filter_predicate_node->description() << " reduces cardinality from " << old_cardinality << " to " << new_cardinality << std::endl;
+            //   // TODO dedup with right side
+
+            //   // Unset the left input, as it will be re-set later
+            //   pre_filter_predicate_node->set_left_input(nullptr);
+
+            //   left_push_down_nodes.emplace_back(pre_filter_predicate_node);
+            // }
+
+            const auto add_disjunction_to_nodes = [](const std::vector<std::shared_ptr<AbstractExpression>>& disjunction, std::vector<std::shared_ptr<AbstractExpression>> predicate_nodes) {
+              if (disjunction.empty()) return;
+
+              if (disjunction.size() <= 3) { // TODO as constant
+                // We are doing the job of the ... here, but we need to do it now so that we can add the nodes to the pushdown list. Otherwise, we would need to iteratively run both queries again and again.
+                // TODO add OR/AND flattened
+              } else {
+                const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
+                const auto predicate_node = PredicateNode::make(expression);
+                predicate_nodes.emplace_back(predicate_node);
+              }
+            };
+
+            add_disjunction_to_nodes(left_disjunction, left_push_down_nodes);
+            add_disjunction_to_nodes(right_disjunction, right_push_down_nodes);
 
             _insert_nodes(current_node, input_side, {push_down_node});
 
