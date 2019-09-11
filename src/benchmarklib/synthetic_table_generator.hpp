@@ -81,23 +81,30 @@ class SyntheticTableGenerator {
                                         const bool numa_distribute_chunks = false);
 
   /**
-    * Function to cast an integer to the requested type.
+    * Function to create a typed value from an integer. The data generation creates integers with the requested
+    * distribution and this function is used to create different types. The creation should guarantee that searching
+    * for the integer value 100 within a column of the range (0,200) should return half of all tuples, not only for
+    * ints but also for all other value types such as strings.
+    * Handling of values:
     *   - in case of long, the integer is simply casted
-    *   - in case of floating types, the integer slighlty modified
-    *     and casted to ensure a matissa that is not fully zero'd
-    *   - in case of strings, a 10 char string is created that has at least
-    *     `prefix_length` leading spaces to ensure that scans have to evaluate
-    *     at least the first four chars. The reason is that very often strings
-    *     are dates in ERP systems and we assume that at least the year has to
-    *     be read before a non-match can be determined. Randomized strings
-    *     often lead to unrealistically fast string scans.
+    *   - in case of floating types, the integer is slightly modified and casted to ensure a mantissa that is not fully
+    *     zero'd. We have stumbled about operators using radix clustering (e.g., some joins) which did not show certain
+    *     problems when all floating values had a mostly zero'd mantissa. The modification adds noise to make the
+    *     floating point values in some sense more realistic.a
+    *   - in case of strings, a 10 char string is created that has at least `prefix_length` leading spaces to ensure
+    *     that scans have to evaluate at least the first four chars. The reason is that very often strings are dates in
+    *     in ERP systems and we assume that at least the year has to be read before a non-match can be determined.
+    *     Randomized strings often lead to unrealistically fast string scans. An example would be randomized strings in
+    *     which a typical linear scan only has to read the first char in order to disqualify a tuple. Strings in real
+    *     world systems often share a common prefix (e.g., country code prefixes or dates starting with the year) where
+    *     usually more chars need to be read. The observed effect was that operations on randomized strings were
+    *     unexpectedly faster than seen with real-world data.
     */
   template <typename T>
-  static T convert_integer_value(const int input) {
+  static T generate_value(const int input) {
     if constexpr (std::is_integral_v<T>) {
       return static_cast<T>(input);
     } else if constexpr (std::is_floating_point_v<T>) {
-      // floating points are slightly shifted to avoid a zero'd mantissa.
       return static_cast<T>(input) * 0.999999f;
     } else {
       constexpr auto generated_string_length = size_t{10};

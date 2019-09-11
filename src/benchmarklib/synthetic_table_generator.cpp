@@ -32,7 +32,7 @@ pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& val
   result.reserve(values.size());
 
   for (const auto& value : values) {
-    result.push_back(SyntheticTableGenerator::convert_integer_value<T>(value));
+    result.push_back(SyntheticTableGenerator::generate_value<T>(value));
   }
 
   return result;
