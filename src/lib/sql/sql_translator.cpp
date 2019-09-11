@@ -934,7 +934,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
              }
 
              // Handle COUNT(*)
-             const auto column_expression = dynamic_cast<LQPColumnExpression*>(&*expression);
+             const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*expression);
              return !column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID;
           });
 
@@ -1373,8 +1373,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::CountDistinct:
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
-              const auto a = std::make_shared<LQPColumnExpression>(LQPColumnReference{_current_lqp, ColumnID{INVALID_COLUMN_ID}});
-              return std::make_shared<AggregateExpression>(aggregate_function, a);
+              auto stored_table_node = _current_lqp;
+              if (_current_lqp->type == LQPNodeType::Validate) {
+                stored_table_node = _current_lqp->left_input();
+              }
+              Assert(stored_table_node->type == LQPNodeType::StoredTable, "No StoredTable found below COUNT(*)");
+              const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, ColumnID{INVALID_COLUMN_ID}});
+              return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
               return std::make_shared<AggregateExpression>(
                   aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));

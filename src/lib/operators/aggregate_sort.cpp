@@ -640,7 +640,7 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
     column_name_stream << aggregate.function << "(";
   }
 
-  if (aggregate.column) {
+  if (aggregate.column != INVALID_COLUMN_ID) {
     column_name_stream << input_table_left()->column_name(*aggregate.column);
   } else {
     column_name_stream << "*";
