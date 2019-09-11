@@ -20,7 +20,9 @@
 namespace {
 using namespace opossum;  // NOLINT
 
-bool is_predicate_type_node(const std::shared_ptr<AbstractLQPNode>& node) {
+// Returns whether a certain node is a "predicate-style" node, i.e., a node that can be moved freely within a predicate
+// chain.
+bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type == LQPNodeType::Predicate) return true;
 
   // Validate can be seen as a Predicate on the MVCC column
@@ -46,12 +48,12 @@ namespace opossum {
 void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
 
-  if (is_predicate_type_node(node)) {
+  if (is_predicate_style_node(node)) {
     std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
-    while (is_predicate_type_node(current_node)) {
+    while (is_predicate_style_node(current_node)) {
       // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
       if (current_node->outputs().size() > 1) {
         break;
@@ -101,7 +103,7 @@ void PredicateReorderingRule::_reorder_predicates(
 
   // Untie predicates from LQP, so we can freely retie them
   for (auto& predicate : predicates) {
-    lqp_remove_node(predicate, true);
+    lqp_remove_node(predicate, AllowRightInput::Yes);
   }
 
   // Sort in descending order
