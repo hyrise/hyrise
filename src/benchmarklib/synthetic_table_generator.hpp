@@ -30,7 +30,8 @@ struct ColumnDataDistribution {
     return c;
   }
 
-  static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 0.0, const double skew_scale = 1.0,
+  static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 0.0,
+                                                          const double skew_scale = 1.0,
                                                           const double skew_shape = 0.0) {
     ColumnDataDistribution c{};
     c.skew_location = skew_location;

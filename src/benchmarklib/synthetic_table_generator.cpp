@@ -61,8 +61,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   Assert(column_data_distributions.size() == segment_encoding_specs.size(),
          "Length of value distributions needs to equal length of column encodings.");
 
-  auto table = generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, column_names,
-                              use_mvcc);
+  auto table =
+      generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, column_names, use_mvcc);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_specs);
 
@@ -100,11 +100,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   pseudorandom_engine.seed(random_device());
 
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
-
     Segments segments;
-
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
-
       resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
         using ColumnDataType = typename decltype(column_data_type)::type;
 
@@ -119,7 +116,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
         switch (column_data_distribution.distribution_type) {
           case DataDistributionType::Uniform: {
             const auto uniform_dist = boost::math::uniform_distribution<double>{column_data_distribution.min_value,
-                                                                          column_data_distribution.max_value};
+                                                                                column_data_distribution.max_value};
             generate_value_by_distribution_type = [uniform_dist, &probability_dist, &pseudorandom_engine]() {
               const auto probability = probability_dist(pseudorandom_engine);
               return static_cast<int>(std::round(boost::math::quantile(uniform_dist, probability)));
@@ -128,8 +125,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           }
           case DataDistributionType::NormalSkewed: {
             const auto skew_dist = boost::math::skew_normal_distribution<double>{column_data_distribution.skew_location,
-                                                                           column_data_distribution.skew_scale,
-                                                                           column_data_distribution.skew_shape};
+                                                                                 column_data_distribution.skew_scale,
+                                                                                 column_data_distribution.skew_shape};
             generate_value_by_distribution_type = [skew_dist, &probability_dist, &pseudorandom_engine]() {
               const auto probability = probability_dist(pseudorandom_engine);
               return static_cast<int>(std::round(boost::math::quantile(skew_dist, probability) * 10));
@@ -138,7 +135,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           }
           case DataDistributionType::Pareto: {
             const auto pareto_dist = boost::math::pareto_distribution<double>{column_data_distribution.pareto_scale,
-                                                                        column_data_distribution.pareto_shape};
+                                                                              column_data_distribution.pareto_shape};
             generate_value_by_distribution_type = [pareto_dist, &probability_dist, &pseudorandom_engine]() {
               const auto probability = probability_dist(pseudorandom_engine);
               return static_cast<int>(std::round(boost::math::quantile(pareto_dist, probability)));
@@ -162,7 +159,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           values.push_back(generate_value_by_distribution_type());
         }
 
-        segments.push_back(std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values)));
+        segments.push_back(
+            std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values)));
       });
       // add full chunk to table
       if (column_index == num_columns - 1) {
