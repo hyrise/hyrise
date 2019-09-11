@@ -797,7 +797,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
   // TODO(anybody) - Implement join estimation for differing column data types
   //               - Implement join estimation for String columns
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
-    return estimate_cross_join(left_input_table_statistics, right_input_table_statistics);
+    return left_input_table_statistics;
   }
 
   std::shared_ptr<TableStatistics> output_table_statistics;
