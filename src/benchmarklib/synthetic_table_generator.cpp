@@ -106,14 +106,12 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
-  std::random_device rd;
-  // using mt19937 because std::default_random engine is not guaranteed to be a sensible default
+  std::random_device random_device;
+  // Using std::mt19937 over std::default_random_engine since it provides better guarantees on the randomness
+  // of values being created (see discussion: https://stackoverflow.com/q/30240899/1147726)
   auto pseudorandom_engine = std::mt19937{};
 
-  auto probability_dist = std::uniform_real_distribution{0.0, 1.0};
-  auto generate_value_by_distribution_type = std::function<int(void)>{};
-
-  pseudorandom_engine.seed(rd());
+  pseudorandom_engine.seed(random_device());
 
   auto node_id = size_t{0};
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
@@ -139,19 +137,22 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
         values.reserve(chunk_size);
         const auto& column_data_distribution = column_data_distributions[column_index];
 
+        auto probability_dist = std::uniform_real_distribution{0.0, 1.0};
+        auto generate_value_by_distribution_type = std::function<int(void)>{};
+
         // generate distribution from column configuration
         switch (column_data_distribution.distribution_type) {
           case DataDistributionType::Uniform: {
-            auto uniform_dist = boost::math::uniform_distribution<double>{column_data_distribution.min_value,
+            const auto uniform_dist = boost::math::uniform_distribution<double>{column_data_distribution.min_value,
                                                                           column_data_distribution.max_value};
             generate_value_by_distribution_type = [uniform_dist, &probability_dist, &pseudorandom_engine]() {
               const auto probability = probability_dist(pseudorandom_engine);
-              return static_cast<int>(std::floor(boost::math::quantile(uniform_dist, probability)));
+              return static_cast<int>(std::round(boost::math::quantile(uniform_dist, probability)));
             };
             break;
           }
           case DataDistributionType::NormalSkewed: {
-            auto skew_dist = boost::math::skew_normal_distribution<double>{column_data_distribution.skew_location,
+            const auto skew_dist = boost::math::skew_normal_distribution<double>{column_data_distribution.skew_location,
                                                                            column_data_distribution.skew_scale,
                                                                            column_data_distribution.skew_shape};
             generate_value_by_distribution_type = [skew_dist, &probability_dist, &pseudorandom_engine]() {
@@ -161,11 +162,11 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             break;
           }
           case DataDistributionType::Pareto: {
-            auto pareto_dist = boost::math::pareto_distribution<double>{column_data_distribution.pareto_scale,
+            const auto pareto_dist = boost::math::pareto_distribution<double>{column_data_distribution.pareto_scale,
                                                                         column_data_distribution.pareto_shape};
             generate_value_by_distribution_type = [pareto_dist, &probability_dist, &pseudorandom_engine]() {
               const auto probability = probability_dist(pseudorandom_engine);
-              return static_cast<int>(std::floor(boost::math::quantile(pareto_dist, probability)));
+              return static_cast<int>(std::round(boost::math::quantile(pareto_dist, probability)));
             };
             break;
           }
