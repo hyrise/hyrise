@@ -295,6 +295,8 @@ set(
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
+    optimizer/strategy/in_expression_rewrite_rule.cpp
+    optimizer/strategy/in_expression_rewrite_rule.hpp
     optimizer/strategy/insert_limit_in_exists_rule.cpp
     optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
