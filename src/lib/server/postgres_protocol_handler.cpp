@@ -6,7 +6,8 @@ namespace opossum {
 
 static constexpr auto LENGTH_FIELD_SIZE = 4u;
 
-PostgresProtocolHandler::PostgresProtocolHandler(const std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
+PostgresProtocolHandler::PostgresProtocolHandler(const std::shared_ptr<Socket> socket)
+    : _read_buffer(socket), _write_buffer(socket) {}
 
 uint32_t PostgresProtocolHandler::read_startup_packet() {
   constexpr auto ssl_request_code = 80877103u;
@@ -53,7 +54,7 @@ void PostgresProtocolHandler::send_authentication() {
 }
 
 void PostgresProtocolHandler::send_parameter(const std::string& key, const std::string& value) {
-  const auto body_length = sizeof(LENGTH_FIELD_SIZE) + key.size() + value.size() + 2u /* null terminator */; 
+  const auto body_length = sizeof(LENGTH_FIELD_SIZE) + key.size() + value.size() + 2u /* null terminator */;
   _write_buffer.put_value(NetworkMessageType::ParameterStatus);
   _write_buffer.put_value<uint32_t>(body_length);
   _write_buffer.put_string(key);
@@ -74,7 +75,8 @@ void PostgresProtocolHandler::command_complete(const std::string& command_comple
   _write_buffer.put_string(command_complete_message);
 }
 
-void PostgresProtocolHandler::set_row_description_header(const uint32_t total_column_name_length, const uint16_t column_count) {
+void PostgresProtocolHandler::set_row_description_header(const uint32_t total_column_name_length,
+                                                         const uint16_t column_count) {
   _write_buffer.put_value(NetworkMessageType::RowDescription);
 
   /* Each column has the following fields within the message:
@@ -117,14 +119,14 @@ void PostgresProtocolHandler::set_row_description_header(const uint32_t total_co
 }
 
 void PostgresProtocolHandler::send_row_description(const std::string& column_name, const uint32_t object_id,
-                                           const int16_t type_width) {
-  _write_buffer.put_string(column_name);          // Column name
-  _write_buffer.put_value<int32_t>(0u);           // No object id
-  _write_buffer.put_value<int16_t>(0u);           // No attribute number
-  _write_buffer.put_value<int32_t>(object_id);    // Object id of type
-  _write_buffer.put_value<int16_t>(type_width);   // Data type size
-  _write_buffer.put_value<int32_t>(-1);           // No modifier
-  _write_buffer.put_value<int16_t>(0u);           // Text format
+                                                   const int16_t type_width) {
+  _write_buffer.put_string(column_name);         // Column name
+  _write_buffer.put_value<int32_t>(0u);          // No object id
+  _write_buffer.put_value<int16_t>(0u);          // No attribute number
+  _write_buffer.put_value<int32_t>(object_id);   // Object id of type
+  _write_buffer.put_value<int16_t>(type_width);  // Data type size
+  _write_buffer.put_value<int32_t>(-1);          // No modifier
+  _write_buffer.put_value<int16_t>(0u);          // Text format
 }
 
 void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_strings) {
@@ -173,7 +175,7 @@ void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_
 }
 
 std::pair<std::string, std::string> PostgresProtocolHandler::read_parse_packet() {
-    // TODO(toni): refac here
+  // TODO(toni): refac here
   _read_buffer.get_value<uint32_t>();  // Ignore packet size
 
   const std::string statement_name = _read_buffer.get_string();

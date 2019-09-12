@@ -3,8 +3,8 @@
 #include "storage/table.hpp"
 
 #include "hyrise.hpp"
-#include "postgres_protocol_handler.hpp"
 #include "operators/abstract_operator.hpp"
+#include "postgres_protocol_handler.hpp"
 
 #include "types.hpp"
 

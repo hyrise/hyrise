@@ -85,7 +85,8 @@ void Session::_handle_simple_query() {
     row_count = result_table->row_count();
   }
 
-  _postgres_protocol_handler->command_complete(ResponseBuilder::build_command_complete_message(root_operator_type, row_count));
+  _postgres_protocol_handler->command_complete(
+      ResponseBuilder::build_command_complete_message(root_operator_type, row_count));
   _postgres_protocol_handler->send_ready_for_query();
 }
 
