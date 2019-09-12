@@ -1,40 +1,50 @@
 #pragma once
 
-#include <boost/asio/ip/tcp.hpp>
-
 #include "postgres_handler.hpp"
+#include "concurrency/transaction_context.hpp"
+
+#include "operators/abstract_operator.hpp"
+#include "scheduler/operator_task.hpp"
 
 namespace opossum {
 
 using Socket = boost::asio::ip::tcp::socket;
 
-class AbstractOperator;
-class TransactionContext;
-
+// The session class implements the communication flow and stores session specific information such as portals.
 class Session {
  public:
   explicit Session(Socket socket);
+
+  // Start new session.
   void start();
 
  private:
+  // Establish new connection by exchanging parameters.
   void _establish_connection();
 
+  // Determine message and call the appropiate method.
   void _handle_request();
 
+  // Execute plain SQL statement.
   void _handle_simple_query();
 
+  // Parse prepared statement.
   void _handle_parse_command();
 
+  // Bind prepared statement.
   void _handle_bind_command();
 
+  // Send parameter and row description.
   void _handle_describe();
 
+  // Execute prepared statement.
   void _handle_execute();
 
+  // Commit current transaction.
   void _sync();
 
-  std::shared_ptr<Socket> _socket;
-  PostgresHandler _postgres_handler;
+  const std::shared_ptr<Socket> _socket;
+  const std::shared_ptr<PostgresHandler> _postgres_handler;
   bool _terminate_session = false;
   std::shared_ptr<TransactionContext> _transaction;
   std::unordered_map<std::string, std::shared_ptr<AbstractOperator>> _portals;

@@ -40,7 +40,6 @@ class ServerTestRunner : public BaseTest {
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(0);  // run on port 0 so the server can pick a free one
-  // std::unique_ptr<Server> _server = std::make_unique<Server>(0); // run on port 0 so the server can pick a free one
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 

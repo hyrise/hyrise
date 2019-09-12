@@ -78,24 +78,12 @@ void PostgresHandler::command_complete(const std::string& command_complete_messa
   _write_buffer.put_string(command_complete_message);
 }
 
-void PostgresHandler::send_row_description(const std::vector<RowDescription>& row_description) {
-  _write_buffer.put_value(NetworkMessageType::RowDescription);
+void PostgresHandler::set_row_description_header(const uint32_t total_column_name_length, const uint16_t column_count) {
+  _write_buffer.put_value(NetworkMessageType::RowDescription);  
 
-  auto packet_size = sizeof(uint32_t) + sizeof(htons(row_description.size()));
+  /* Each column has the following fields within the message:
+   FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
 
-  for (const auto& single_row_description : row_description) {
-    packet_size = packet_size + sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t) +
-                  single_row_description.column_name.size();
-  }
-
-  _write_buffer.put_value<uint32_t>(packet_size);
-
-  // Int16 Specifies the number of fields in a row (can be zero).
-  _write_buffer.put_value<uint16_t>(row_description.size());
-
-  /* FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
-   *
-   * Then, for each field, there is the following:
    String
    The field name.
 
@@ -121,15 +109,24 @@ void PostgresHandler::send_row_description(const std::vector<RowDescription>& ro
    be zero.
    */
 
-  for (const auto& column_description : row_description) {
-    _write_buffer.put_string(column_description.column_name);
-    _write_buffer.put_value<int32_t>(0u);                              // no object id
-    _write_buffer.put_value<int16_t>(0u);                              // no attribute number
-    _write_buffer.put_value<int32_t>(column_description.object_id);    // object id of type
-    _write_buffer.put_value<uint16_t>(column_description.type_width);  // regular int
-    _write_buffer.put_value<int32_t>(-1);                              // no modifier
-    _write_buffer.put_value<int16_t>(0u);                              // text format
-  }
+  // Total message length can be calculated this way:
+
+  // length field + column count + values for each column
+  const auto packet_size = sizeof(uint32_t) + sizeof(uint16_t) + column_count * (sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t)) + total_column_name_length;
+  _write_buffer.put_value<uint32_t>(packet_size);
+  // Int16 Specifies the number of fields in a row (can be zero).
+  _write_buffer.put_value<uint16_t>(column_count);
+
+}
+
+void PostgresHandler::send_row_description(const std::string& column_name, const uint32_t object_id, const int32_t type_width) {
+    _write_buffer.put_string(column_name);          // Column name
+    _write_buffer.put_value<int32_t>(0u);           // No object id
+    _write_buffer.put_value<int16_t>(0u);           // No attribute number
+    _write_buffer.put_value<int32_t>(object_id);    // Object id of type
+    _write_buffer.put_value<uint16_t>(type_width);  // Data type size
+    _write_buffer.put_value<int32_t>(-1);           // No modifier
+    _write_buffer.put_value<int16_t>(0u);           // Text format
 }
 
 void PostgresHandler::send_data_row(const std::vector<std::string>& row_strings) {
@@ -193,10 +190,10 @@ std::pair<std::string, std::string> PostgresHandler::read_parse_packet() {
 void PostgresHandler::read_sync_packet() {
   // This packet is empty. Hence, only read its size
   _read_buffer.get_value<uint32_t>();
-  _write_buffer.flush();
+  // _write_buffer.flush();
 }
 
-PreparedStatementParameters PostgresHandler::read_bind_packet() {
+PreparedStatementDetails PostgresHandler::read_bind_packet() {
   _read_buffer.get_value<uint32_t>();
   auto portal = _read_buffer.get_string();
   auto statement_name = _read_buffer.get_string();

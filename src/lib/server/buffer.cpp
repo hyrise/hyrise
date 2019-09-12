@@ -107,7 +107,7 @@ void WriteBuffer::put_string(const std::string& value, const bool terminate) {
   // Use available space first
   if (!full()) {
     position_in_string = std::min(BUFFER_SIZE - size() - 1, value.size());
-    std::copy_n(value.begin(), position_in_string, _current_position);
+    std::copy_n(value.cbegin(), position_in_string, _current_position);
     _current_position += position_in_string;
   }
 
@@ -115,7 +115,7 @@ void WriteBuffer::put_string(const std::string& value, const bool terminate) {
   while (position_in_string < value.size()) {
     const auto bytes_to_transfer = std::min(BUFFER_SIZE - 1, value.size() - position_in_string);
     _flush_if_necessary(bytes_to_transfer);
-    std::copy_n(value.begin() + position_in_string, bytes_to_transfer, _current_position);
+    std::copy_n(value.cbegin() + position_in_string, bytes_to_transfer, _current_position);
     _current_position += bytes_to_transfer;
     position_in_string += bytes_to_transfer;
   }

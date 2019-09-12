@@ -2,7 +2,7 @@
 add_executable(
     hyriseServer
 
-    start_server.cpp
+    server.cpp
 )
 target_link_libraries(
     hyriseServer
