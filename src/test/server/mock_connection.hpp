@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include "server/buffer.hpp"
-#include "server/postgres_handler.hpp"
+#include "server/postgres_protocol_handler.hpp"
 
 namespace opossum {
 using ::testing::_;

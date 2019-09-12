@@ -1,7 +1,7 @@
 #include <gmock/gmock.h>
 #include <base_test.hpp>
 #include "mock_connection.hpp"
-#include "server/postgres_handler.hpp"
+#include "server/postgres_protocol_handler.hpp"
 
 namespace opossum {
 

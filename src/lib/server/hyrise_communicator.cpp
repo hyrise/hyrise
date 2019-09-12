@@ -12,7 +12,7 @@
 namespace opossum {
 
 uint64_t HyriseCommunicator::send_query_response(std::shared_ptr<const Table> table,
-                                                 std::shared_ptr<PostgresHandler> postgres_handler) {
+                                                 std::shared_ptr<PostgresProtocolHandler> postgres_protocol_handler) {
   auto attribute_strings = std::vector<std::string>(table->column_count());
   const auto chunk_count = table->chunk_count();
 
@@ -24,7 +24,7 @@ uint64_t HyriseCommunicator::send_query_response(std::shared_ptr<const Table> ta
         const auto& attribute_value = (*segments[current_segment])[current_chunk_offset];
         attribute_strings[current_segment] = lossless_variant_cast<pmr_string>(attribute_value).value();
       }
-      postgres_handler->send_data_row(attribute_strings);
+      postgres_protocol_handler->send_data_row(attribute_strings);
     }
   }
   return table->row_count();

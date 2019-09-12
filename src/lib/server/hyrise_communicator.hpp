@@ -3,8 +3,7 @@
 #include "storage/table.hpp"
 
 #include "hyrise.hpp"
-#include "postgres_handler.hpp"
-// #include "scheduler/abstract_task.hpp"
+#include "postgres_protocol_handler.hpp"
 #include "operators/abstract_operator.hpp"
 
 #include "types.hpp"
@@ -14,7 +13,7 @@ namespace opossum {
 class HyriseCommunicator {
  public:
   static uint64_t send_query_response(std::shared_ptr<const Table> table,
-                                      std::shared_ptr<PostgresHandler> postgres_handler);
+                                      std::shared_ptr<PostgresProtocolHandler> postgres_protocol_handler);
 
   static std::pair<std::shared_ptr<const Table>, OperatorType> execute_pipeline(const std::string& sql);
 

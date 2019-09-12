@@ -4,18 +4,18 @@
 namespace opossum {
 
 void ResponseBuilder::build_row_description(std::shared_ptr<const Table> table,
-                                            std::shared_ptr<PostgresHandler> postgres_handler) {
+                                            std::shared_ptr<PostgresProtocolHandler> postgres_protocol_handler) {
   // Calculate sum of length of all column names
   uint32_t column_lengths_total = 0;
   for (auto& column_name : table->column_names()) {
     column_lengths_total += column_name.size();
   }
 
-  postgres_handler->set_row_description_header(column_lengths_total, table->column_count());
+  postgres_protocol_handler->set_row_description_header(column_lengths_total, table->column_count());
 
   for (ColumnID column_id{0u}; column_id < table->column_count(); ++column_id) {
     uint32_t object_id;
-    int32_t type_width;
+    int16_t type_width;
 
     switch (table->column_data_type(column_id)) {
       case DataType::Int:
@@ -42,7 +42,7 @@ void ResponseBuilder::build_row_description(std::shared_ptr<const Table> table,
         Fail("Bad DataType");
     }
 
-    postgres_handler->send_row_description(table->column_name(column_id), object_id, type_width);
+    postgres_protocol_handler->send_row_description(table->column_name(column_id), object_id, type_width);
   }
 }
 

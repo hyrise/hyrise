@@ -1,7 +1,7 @@
 #pragma once
 
 #include "concurrency/transaction_context.hpp"
-#include "postgres_handler.hpp"
+#include "postgres_protocol_handler.hpp"
 
 #include "operators/abstract_operator.hpp"
 #include "scheduler/operator_task.hpp"
@@ -44,7 +44,7 @@ class Session {
   void _sync();
 
   const std::shared_ptr<Socket> _socket;
-  const std::shared_ptr<PostgresHandler> _postgres_handler;
+  const std::shared_ptr<PostgresProtocolHandler> _postgres_protocol_handler;
   bool _terminate_session = false;
   std::shared_ptr<TransactionContext> _transaction;
   std::unordered_map<std::string, std::shared_ptr<AbstractOperator>> _portals;

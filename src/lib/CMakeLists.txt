@@ -334,8 +334,8 @@ set(
     server/hyrise_communicator.cpp
     server/hyrise_communicator.hpp
     server/network_message_types.hpp
-    server/postgres_handler.cpp
-    server/postgres_handler.hpp
+    server/postgres_protocol_handler.cpp
+    server/postgres_protocol_handler.hpp
     server/response_builder.cpp
     server/response_builder.hpp
     server/server.cpp
