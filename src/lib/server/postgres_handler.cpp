@@ -214,7 +214,7 @@ PreparedStatementDetails PostgresHandler::read_bind_packet() {
   // TODO(toni): room for refactoring here?
   std::vector<AllTypeVariant> parameter_values;
   for (auto i = 0; i < num_parameter_values; ++i) {
-    // TODO include null terminator
+    // TODO(toni): include null terminator
     const auto parameter_value_length = _read_buffer.get_value<int32_t>();
     const std::string x = _read_buffer.get_string(parameter_value_length, false);
     // auto x = _read_buffer.get_string();

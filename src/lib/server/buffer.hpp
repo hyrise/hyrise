@@ -1,8 +1,7 @@
 #pragma once
 
-#include <array>
 #include <boost/asio.hpp>
-#include <iterator>
+#include <array>
 #include "network_message_types.hpp"
 
 namespace opossum {
@@ -42,7 +41,7 @@ class BufferIterator : public std::iterator<std::forward_iterator_tag, char> {
   BufferIterator& operator+(const size_t increment) {
     _position = (_position + increment) % BUFFER_SIZE;
     return *this;
-  };
+  }
 
   BufferIterator& operator+=(const size_t increment) { return operator+(increment); }
 
