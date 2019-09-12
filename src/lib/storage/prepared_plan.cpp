@@ -5,6 +5,7 @@
 #include "expression/placeholder_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "types.hpp"
 
 namespace {
 
@@ -60,6 +61,14 @@ std::shared_ptr<PreparedPlan> PreparedPlan::deep_copy() const {
   return std::make_shared<PreparedPlan>(lqp_copy, parameter_ids);
 }
 
+size_t PreparedPlan::hash() const {
+  auto hash = lqp->hash();
+  for (const auto& parameter_id : parameter_ids) {
+    boost::hash_combine(hash, static_cast<size_t>(parameter_id));
+  }
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
     const std::vector<std::shared_ptr<AbstractExpression>>& parameters) const {
   Assert(parameters.size() == parameter_ids.size(), std::string("Incorrect number of parameters supplied - expected ") +
@@ -68,8 +77,7 @@ std::shared_ptr<AbstractLQPNode> PreparedPlan::instantiate(
 
   auto parameters_by_id = std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>{};
   for (auto parameter_idx = size_t{0}; parameter_idx < parameters.size(); ++parameter_idx) {
-    const auto parameter_id = parameter_ids[parameter_idx];
-    parameters_by_id.emplace(parameter_id, parameters[parameter_idx]);
+    parameters_by_id.emplace(parameter_ids[parameter_idx], parameters[parameter_idx]);
   }
 
   auto instantiated_lqp = lqp->deep_copy();

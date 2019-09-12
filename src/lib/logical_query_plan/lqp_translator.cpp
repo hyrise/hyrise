@@ -30,6 +30,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
@@ -51,8 +52,6 @@
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
-#include "operators/maintenance/show_columns.hpp"
-#include "operators/maintenance/show_tables.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "operators/product.hpp"
@@ -60,15 +59,14 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_all.hpp"
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
-#include "show_columns_node.hpp"
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
@@ -103,6 +101,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 
   const auto pqp = _translate_by_node_type(node->type, node);
   _operator_by_lqp_node.emplace(node, pqp);
+
   return pqp;
 }
 
@@ -127,8 +126,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
     case LQPNodeType::Union:              return _translate_union_node(node);
 
       // Maintenance operators
-    case LQPNodeType::ShowTables:         return _translate_show_tables_node(node);
-    case LQPNodeType::ShowColumns:        return _translate_show_columns_node(node);
     case LQPNodeType::CreateView:         return _translate_create_view_node(node);
     case LQPNodeType::DropView:           return _translate_drop_view_node(node);
     case LQPNodeType::CreateTable:        return _translate_create_table_node(node);
@@ -203,50 +200,28 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto table_name = stored_table_node->table_name;
-  const auto table = StorageManager::get().get_table(table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(table_name);
   std::vector<ChunkID> indexed_chunks;
 
-  // TODO(Sven): Each chunk could have different indices.. there needs to be an IndexScan for each occurring IndexType
-  // This implementation assumes there is only a single index type per table.
-  bool found_group_key_index = false;
-  bool found_btree_index = false;
-  auto chunk_count = table->chunk_count();
+  const auto chunk_count = table->chunk_count();
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    if (chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
-      found_group_key_index = true;
+    if (chunk && chunk->get_index(SegmentIndexType::GroupKey, column_ids)) {
       indexed_chunks.emplace_back(chunk_id);
     }
-    if (chunk->get_index(SegmentIndexType::BTree, column_ids)) {
-      found_btree_index = true;
-      indexed_chunks.emplace_back(chunk_id);
-    }
-    // Potentially there could be other index types, which are not handled yet.
   }
-
-  Assert(
-      found_group_key_index != found_btree_index,
-      "LQPTranslator can only handle tables that contain either BTree or GroupKey indices, but neither both nor none.");
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  std::shared_ptr<IndexScan> index_scan;
-  if (found_group_key_index) {
-    index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
-                                             predicate->predicate_condition, right_values, right_values2);
-  } else if (found_btree_index) {
-    index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::BTree, column_ids,
-                                             predicate->predicate_condition, right_values, right_values2);
-  }
-
-  Assert(index_scan, "LQPTranslator can only translate IndexScan for GroupKey and BTree Indices. Did not find either.");
+  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
+                                                predicate->predicate_condition, right_values, right_values2);
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
-  index_scan->set_included_chunk_ids(indexed_chunks);
-  table_scan->set_excluded_chunk_ids(indexed_chunks);
+  index_scan->included_chunk_ids = indexed_chunks;
+  table_scan->excluded_chunk_ids = indexed_chunks;
 
-  return std::make_shared<UnionPositions>(index_scan, table_scan);
+  return std::make_shared<UnionAll>(index_scan, table_scan);
 }
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
@@ -380,8 +355,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     if (join_operator) return;
 
-    if (JoinOperator::supports(join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
-                               right_data_type, !secondary_join_predicates.empty())) {
+    if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                                right_data_type, !secondary_join_predicates.empty()})) {
       join_operator = std::make_shared<JoinOperator>(input_left_operator, input_right_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
@@ -481,6 +456,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
   switch (union_node->union_mode) {
     case UnionMode::Positions:
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
+    case UnionMode::All:
+      return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
   }
   Fail("GCC thinks this is reachable");
 }
@@ -489,19 +466,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   return std::make_shared<Validate>(input_operator);
-}
-
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(!node->left_input(), "ShowTables should not have an input operator.");
-  return std::make_shared<ShowTables>();
-}
-
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(!node->left_input(), "ShowColumns should not have an input operator.");
-  const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
-  return std::make_shared<ShowColumns>(show_columns_node->table_name);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(

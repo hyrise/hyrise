@@ -4,8 +4,8 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "hyrise.hpp"
 #include "operators/import_csv.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 #include "scheduler/current_scheduler.hpp"
@@ -49,7 +49,8 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/string_escaped.csv");
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, 5);
+  auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String, false}}, TableType::Data, 5);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -90,7 +91,7 @@ TEST_F(OperatorsImportCsvTest, SaveToStorageManager) {
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), expected_table);
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), expected_table);
 }
 
 TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
@@ -102,14 +103,15 @@ TEST_F(OperatorsImportCsvTest, FallbackToRetrieveFromStorageManager) {
   retriever->execute();
   std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), retriever->get_output());
-  EXPECT_TABLE_EQ_ORDERED(StorageManager::get().get_table("float_table"), retriever->get_output());
+  EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("float_table"), retriever->get_output());
 }
 
 TEST_F(OperatorsImportCsvTest, EmptyStrings) {
   auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/empty_strings.csv");
   importer->execute();
 
-  TableColumnDefinitions column_definitions{{"a", DataType::String}, {"b", DataType::String}, {"c", DataType::String}};
+  TableColumnDefinitions column_definitions{
+      {"a", DataType::String, false}, {"b", DataType::String, false}, {"c", DataType::String, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   for (int i = 0; i < 8; ++i) {
     expected_table->append({"", "", ""});
@@ -125,7 +127,7 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
       std::make_shared<ImportCsv>("resources/test_data/csv/float_int_large.csv"), CleanupTemporaries::Yes);
   importer->schedule();
 
-  TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
+  TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
 
   for (int i = 0; i < 100; ++i) {
@@ -144,7 +146,8 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
   auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::DEFAULT_SIZE, std::nullopt, csv_meta);
   importer->execute();
 
-  TableColumnDefinitions column_definitions{{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
+  TableColumnDefinitions column_definitions{
+      {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   for (int i = 0; i < 8; ++i) {
     expected_table->append({1, 2, 3});
@@ -177,7 +180,7 @@ TEST_F(OperatorsImportCsvTest, MaxChunkSize) {
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0})->size(), 100U);
   EXPECT_EQ(importer->get_output()->chunk_count(), ChunkID{1});
 
-  TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
+  TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
 
   for (int i = 0; i < 100; ++i) {
@@ -194,7 +197,7 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::DEFAULT_SIZE, std::nullopt, csv_meta);
   importer->execute();
 
-  TableColumnDefinitions column_definitions{{"a", DataType::String}};
+  TableColumnDefinitions column_definitions{{"a", DataType::String, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
@@ -235,7 +238,7 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringAsNull) {
   auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/null_literal.csv");
   importer->execute();
 
@@ -244,7 +247,27 @@ TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
 
   expected_table->append({1, "Hello"});
   expected_table->append({NULL_VALUE, "World"});
-  expected_table->append({2, NULL_VALUE});
+  expected_table->append({3, NULL_VALUE});
+  expected_table->append({4, NULL_VALUE});
+  expected_table->append({5, NULL_VALUE});
+  expected_table->append({6, "!"});
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringAsValue) {
+  auto importer = std::make_shared<ImportCsv>("resources/test_data/csv/null_literal_as_string.csv");
+  importer->execute();
+
+  TableColumnDefinitions column_definitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+
+  expected_table->append({1, "Hello"});
+  expected_table->append({NULL_VALUE, "World"});
+  expected_table->append({3, "null"});
+  expected_table->append({4, "Null"});
+  expected_table->append({5, "NULL"});
+  expected_table->append({6, "!"});
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
@@ -262,14 +285,14 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   importer->execute();
 
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String);
-  column_definitions.emplace_back("b", DataType::Int);
-  column_definitions.emplace_back("c", DataType::Float);
-  column_definitions.emplace_back("d", DataType::Double);
-  column_definitions.emplace_back("e", DataType::String);
-  column_definitions.emplace_back("f", DataType::Int);
-  column_definitions.emplace_back("g", DataType::Float);
-  column_definitions.emplace_back("h", DataType::Double);
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Float, false);
+  column_definitions.emplace_back("d", DataType::Double, false);
+  column_definitions.emplace_back("e", DataType::String, false);
+  column_definitions.emplace_back("f", DataType::Int, false);
+  column_definitions.emplace_back("g", DataType::Float, false);
+  column_definitions.emplace_back("h", DataType::Double, false);
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   expected_table->append({"xxx", 23, 0.5f, 24.23, "xxx", 23, 0.5f, 24.23});
@@ -285,7 +308,7 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
   auto importer = std::make_shared<ImportCsv>(csv_file, Chunk::DEFAULT_SIZE, std::nullopt, csv_meta);
   importer->execute();
 
-  TableColumnDefinitions column_definitions{{"a", DataType::String}};
+  TableColumnDefinitions column_definitions{{"a", DataType::String, false}};
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   expected_table->append({"xxx\\\"xyz\\\""});

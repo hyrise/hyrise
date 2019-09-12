@@ -6,9 +6,9 @@
 #include <vector>
 
 #include "cache/cache.hpp"
-#include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "gtest/gtest.h"
+#include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
@@ -21,13 +21,11 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/segment_encoding_utils.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 #include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
-#include "utils/plugin_manager.hpp"
 
 namespace opossum {
 
@@ -44,14 +42,22 @@ class BaseTestWithParam
  protected:
   // creates a dictionary segment with the given type and values
   template <typename T>
-  static std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_type,
-                                                                           const std::vector<T>& values) {
-    auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
-    auto value_segment = std::make_shared<ValueSegment<T>>(std::move(vector_values));
+  static std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(
+      DataType data_type, const std::vector<std::optional<T>>& values) {
+    auto value_segment = std::make_shared<ValueSegment<T>>(true);
 
-    auto compressed_segment =
+    for (const auto& value : values) {
+      if (value) {
+        value_segment->append(*value);
+      } else {
+        value_segment->append(NULL_VALUE);
+      }
+    }
+
+    const auto& dict_segment =
         encode_and_compress_segment(value_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
-    return std::static_pointer_cast<DictionarySegment<T>>(compressed_segment);
+
+    return std::static_pointer_cast<DictionarySegment<T>>(dict_segment);
   }
 
   void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
@@ -70,9 +76,7 @@ class BaseTestWithParam
     // Reset scheduler first so that all tasks are done before we kill the StorageManager
     CurrentScheduler::set(nullptr);
 
-    PluginManager::reset();
-    StorageManager::reset();
-    TransactionManager::reset();
+    Hyrise::reset();
     SQLPipelineBuilder::default_pqp_cache = nullptr;
     SQLPipelineBuilder::default_lqp_cache = nullptr;
   }
@@ -106,18 +110,11 @@ class BaseTestWithParam
     return std::make_shared<TableScan>(in, predicate);
   }
 
-  static std::shared_ptr<MockNode> create_mock_node_with_statistics(
-      const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
+  static void set_statistics_for_mock_node(
+      const std::shared_ptr<MockNode>& mock_node, const size_t row_count,
       const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
-    Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
-
-    const auto mock_node = MockNode::make(column_definitions);
-
-    auto column_data_types = std::vector<DataType>{column_definitions.size()};
-    std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
-                   [&](const auto& column_definition) { return column_definition.first; });
-
-    auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{column_definitions.size()};
+    const auto& column_definitions = mock_node->column_definitions();
+    auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_definitions.size());
 
     for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
@@ -131,6 +128,16 @@ class BaseTestWithParam
 
     const auto table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
     mock_node->set_table_statistics(table_statistics);
+  }
+
+  static std::shared_ptr<MockNode> create_mock_node_with_statistics(
+      const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
+      const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
+    Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
+
+    const auto mock_node = MockNode::make(column_definitions);
+
+    set_statistics_for_mock_node(mock_node, row_count, statistics_objects);
 
     return mock_node;
   }

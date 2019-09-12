@@ -3,6 +3,7 @@
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "cost_estimation/feature_extractor/column_feature_extractor.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/logical_expression.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/table_statistics.hpp"
@@ -27,8 +28,7 @@ const CostModelFeatures CostEstimatorFeatureExtractor::extract_features(
       // No need to add specific features
       break;
     default: {
-      std::cout << "Unhandled LQP node type in CostModelFeatureExtractor: " << lqp_node_type_to_string.at(node_type)
-                << std::endl;
+      std::cout << "Unhandled LQP node type in CostModelFeatureExtractor." << std::endl;
     }
   }
 
@@ -119,7 +119,9 @@ const TableScanFeatures CostEstimatorFeatureExtractor::_extract_features(
     const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(table_condition);
     if (logical_expression->logical_operator == LogicalOperator::Or) {
       const auto& casted_predicate = std::dynamic_pointer_cast<LogicalExpression>(table_condition);
-      features.scan_operator_type = logical_operator_to_string.left.at(casted_predicate->logical_operator);
+      std::ostringstream lqp_stream;
+      lqp_stream << casted_predicate->logical_operator;
+      features.scan_operator_type = lqp_stream.str();
     }
   }
 

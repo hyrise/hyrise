@@ -25,7 +25,7 @@ class ChunkEncoderTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     for (auto column_id = 0u; column_id < column_count; ++column_id) {
       const auto column_name = std::to_string(column_id);
-      column_definitions.emplace_back(column_name, DataType::Int);
+      column_definitions.emplace_back(column_name, DataType::Int, false);
     }
     _table = std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
 
@@ -66,7 +66,7 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
       ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
   auto types = _table->column_data_types();
-  auto chunk = _table->get_chunk(ChunkID{0u});
+  const auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec);
 
@@ -78,7 +78,7 @@ TEST_F(ChunkEncoderTest, LeaveOneSegmentUnencoded) {
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
   auto types = _table->column_data_types();
-  auto chunk = _table->get_chunk(ChunkID{0u});
+  const auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec);
 
@@ -168,8 +168,9 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
 
   for (auto const& chunk_encoding_spec : chunk_encoding_specs) {
     ChunkEncoder::encode_all_chunks(_table, chunk_encoding_spec);
-    for (auto const& chunk : _table->chunks()) {
-      verify_encoding(chunk, chunk_encoding_spec);
+    const auto chunk_count = _table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      verify_encoding(_table->get_chunk(chunk_id), chunk_encoding_spec);
     }
   }
 }

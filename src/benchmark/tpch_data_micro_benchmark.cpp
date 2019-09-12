@@ -3,6 +3,7 @@
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -17,7 +18,6 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/storage_manager.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -30,7 +30,7 @@ class TableWrapper;
 class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) {
-    auto& sm = StorageManager::get();
+    auto& sm = Hyrise::get().storage_manager;
     const auto scale_factor = 0.001f;
     const auto default_encoding = EncodingType::Dictionary;
 
@@ -41,7 +41,7 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     if (!sm.has_table("lineitem")) {
       std::cout << "Generating TPC-H data set with scale factor " << scale_factor << " and " << default_encoding
                 << " encoding:" << std::endl;
-      TpchTableGenerator(scale_factor, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
+      TPCHTableGenerator(scale_factor, std::make_shared<BenchmarkConfig>(benchmark_config)).generate_and_store();
     }
 
     _table_wrapper_map = create_table_wrappers(sm);
@@ -271,24 +271,6 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationSmaller)(benc
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(benchmark::State& state) {
   for (auto _ : state) {
     auto join = std::make_shared<JoinHash>(
-        _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
-  }
-}
-
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationSmaller)(benchmark::State& state) {
-  for (auto _ : state) {
-    auto join = std::make_shared<JoinSortMerge>(
-        _table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
-  }
-}
-
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationLarger)(benchmark::State& state) {
-  for (auto _ : state) {
-    auto join = std::make_shared<JoinSortMerge>(
         _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
     join->execute();

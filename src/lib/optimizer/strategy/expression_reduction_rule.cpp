@@ -1,5 +1,6 @@
 #include "expression_reduction_rule.hpp"
 
+#include <algorithm>
 #include <functional>
 #include <unordered_set>
 
@@ -16,15 +17,16 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
-std::string ExpressionReductionRule::name() const { return "Expression Reduction Rule"; }
-
 void ExpressionReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   Assert(node->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
   visit_lqp(node, [&](const auto& sub_node) {
+    if (sub_node->type == LQPNodeType::Aggregate) {
+      remove_duplicate_aggregate(sub_node->node_expressions, sub_node, node);
+    }
+
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
-      reduce_in_with_single_list_element(expression);
       rewrite_like_prefix_wildcard(expression);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
@@ -141,23 +143,6 @@ const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_distr
   return input_expression;
 }
 
-const std::shared_ptr<AbstractExpression>& ExpressionReductionRule::reduce_in_with_single_list_element(
-    std::shared_ptr<AbstractExpression>& input_expression) {
-  if (const auto in_expression = std::dynamic_pointer_cast<InExpression>(input_expression)) {
-    if (const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression->set())) {
-      if (list_expression->arguments.size() == 1) {
-        input_expression = equals_(in_expression->value(), list_expression->arguments[0]);
-      }
-    }
-  }
-
-  for (auto& argument : input_expression->arguments) {
-    reduce_in_with_single_list_element(argument);
-  }
-
-  return input_expression;
-}
-
 void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<AbstractExpression>& input_expression) {
   for (auto& argument : input_expression->arguments) {
     reduce_constant_expression(argument);
@@ -240,6 +225,116 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   } else {  // binary_predicate->predicate_condition == PredicateCondition::NotLike
     input_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
                            greater_than_equals_(binary_predicate->left_operand(), upper_bound));
+  }
+}
+
+void ExpressionReductionRule::remove_duplicate_aggregate(
+    std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
+    const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node) {
+  // Create a list of all sums, counts, and averages in the aggregate node.
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums, counts, avgs;
+  for (auto& input_expression : input_expressions) {
+    if (input_expression->type != ExpressionType::Aggregate) continue;
+    auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
+    switch (aggregate_expression.aggregate_function) {
+      case AggregateFunction::Sum: {
+        sums.emplace_back(input_expression);
+        break;
+      }
+      case AggregateFunction::Count: {
+        counts.emplace_back(input_expression);
+        break;
+      }
+      case AggregateFunction::Avg: {
+        avgs.emplace_back(input_expression);
+        break;
+      }
+      default:
+        continue;
+    }
+  }
+
+  // Take a copy of what the aggregate was originally supposed to do
+  const auto original_aggregate_expressions = aggregate_node->column_expressions();
+
+  const auto& aggregate_input_node = aggregate_node->left_input();
+  auto replacements = ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>{};
+
+  // Iterate over the AVGs, check if matching SUMs and COUNTs exist, and add a suitable replacement to `replacements`.
+  for (const auto& avg_expression_ptr : avgs) {
+    const auto& avg_expression = static_cast<AggregateExpression&>(*avg_expression_ptr.get());
+
+    const auto& avg_argument = avg_expression.argument();
+    const auto avg_argument_is_nullable = avg_argument.get()->is_nullable_on_lqp(*aggregate_input_node);
+
+    // A helper function that checks whether SUMs and COUNTs match the AVG
+    const auto finder = [&](const auto& other_expression) {
+      const auto other_argument = static_cast<const AggregateExpression&>(*other_expression.get().get()).argument();
+
+      if (!other_argument) {
+        // other_argument might be nullptr if we are looking at COUNT(*) - that is acceptable if the argument a in
+        // AVG(a) is not nullable. In that case, COUNT(*) == COUNT(a).
+        return !avg_argument_is_nullable;
+      }
+
+      return other_argument == avg_argument || (other_argument && *other_argument == *avg_argument);
+    };
+
+    auto sum_it = std::find_if(sums.begin(), sums.end(), finder);
+    auto count_it = std::find_if(counts.begin(), counts.end(), finder);
+    if (sum_it != sums.end() && count_it != counts.end()) {
+      // Found matching SUM and COUNT (either COUNT(a) or COUNT(*) for a non-NULL a) - add it to the replacements list
+      // The cast will become unnecessary once #1799 is fixed
+      replacements[avg_expression_ptr] = div_(cast_(sum_it->get(), DataType::Double), count_it->get());
+    }
+  }
+
+  // No replacements possible
+  if (replacements.empty()) return;
+
+  // Back up the current column names
+  const auto& root_expressions = root_node->column_expressions();
+  auto old_column_names = std::vector<std::string>(root_expressions.size());
+  for (auto expression_idx = size_t{0}; expression_idx < root_expressions.size(); ++expression_idx) {
+    old_column_names[expression_idx] = root_expressions[expression_idx]->as_column_name();
+  }
+
+  {
+    // Remove the AVG() expression from the AggregateNode
+    auto& expressions = aggregate_node->node_expressions;
+    expressions.erase(
+        std::remove_if(expressions.begin(), expressions.end(),
+                       [&](const auto& expression) { return replacements.find(expression) != replacements.end(); }),
+        expressions.end());
+  }
+
+  // Add a ProjectionNode that calculates AVG(a) as SUM(a)/COUNT(a).
+  const auto projection_node = std::make_shared<ProjectionNode>(original_aggregate_expressions);
+  lqp_replace_node(aggregate_node, projection_node);
+  lqp_insert_node(projection_node, LQPInputSide::Left, aggregate_node);
+
+  // Now update the AVG expression in all nodes that might refer to it, starting with the ProjectionNode
+  bool updated_an_alias = false;
+  visit_lqp_upwards(projection_node, [&](const auto& node) {
+    for (auto& expression : node->node_expressions) {
+      expression_deep_replace(expression, replacements);
+    }
+
+    if (node->type == LQPNodeType::Alias) updated_an_alias = true;
+
+    return LQPVisitation::VisitInputs;
+  });
+
+  // If there is no upward AliasNode, we need to add one that renames "SUM/COUNT" to "AVG"
+  if (!updated_an_alias) {
+    auto root_expressions_replaced = root_node->column_expressions();
+
+    for (auto& expression : root_expressions_replaced) {
+      expression_deep_replace(expression, replacements);
+    }
+
+    const auto alias_node = AliasNode::make(root_expressions_replaced, old_column_names);
+    lqp_insert_node(root_node, LQPInputSide::Left, alias_node);
   }
 }
 

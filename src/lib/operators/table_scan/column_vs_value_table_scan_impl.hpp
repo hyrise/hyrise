@@ -29,6 +29,8 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
 
   std::string description() const override;
 
+  const AllTypeVariant value;
+
  protected:
   void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                    const std::shared_ptr<const PosList>& position_filter) const override;
@@ -79,8 +81,6 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
     }
   }
   /**@}*/
-
-  const AllTypeVariant _value;
 };
 
 }  // namespace opossum

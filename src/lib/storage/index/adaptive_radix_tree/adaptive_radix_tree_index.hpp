@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -26,10 +26,10 @@ class BaseDictionarySegment;
  *
  * The full specification of an ART can be found in the following paper: https://db.in.tum.de/~leis/papers/ART.pdf
  *
- * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AdaptiveRadixTree-(ART)-Index
+ * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/ART
  *
  */
-class AdaptiveRadixTreeIndex : public BaseIndex {
+class AdaptiveRadixTreeIndex : public AbstractIndex {
   friend class AdaptiveRadixTreeIndexTest;
 
   friend class AdaptiveRadixTreeIndexTest_BulkInsert_Test;
@@ -39,7 +39,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
  public:
   /**
    * Predicts the memory consumption in bytes of creating this index.
-   * See BaseIndex::estimate_memory_consumption()
+   * See AbstractIndex::estimate_memory_consumption()
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 

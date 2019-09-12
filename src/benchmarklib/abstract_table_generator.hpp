@@ -12,6 +12,9 @@ namespace opossum {
 class BenchmarkConfig;
 
 struct BenchmarkTableInfo {
+  BenchmarkTableInfo() = default;
+  explicit BenchmarkTableInfo(const std::shared_ptr<Table>& table);
+
   std::shared_ptr<Table> table;
 
   // Set if the table has a binary/textual file path associated with it. E.g., if the table was loaded from such a file
@@ -36,7 +39,9 @@ struct TableGenerationMetrics {
   std::chrono::nanoseconds generation_duration{};
   std::chrono::nanoseconds encoding_duration{};
   std::chrono::nanoseconds binary_caching_duration{};
+  std::chrono::nanoseconds sort_duration{};
   std::chrono::nanoseconds store_duration{};
+  std::chrono::nanoseconds index_duration{};
 };
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics);
@@ -55,9 +60,18 @@ class AbstractTableGenerator {
 
   TableGenerationMetrics metrics;
 
-  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(uint32_t chunk_size);
+  static std::shared_ptr<BenchmarkConfig> create_benchmark_config_with_chunk_size(ChunkOffset chunk_size);
 
  protected:
+  // Creates indexes, expects the table to have been added to the StorageManager and, if requested, encoded
+  using IndexesByTable = std::map<std::string, std::vector<std::vector<std::string>>>;
+  virtual IndexesByTable _indexes_by_table() const;
+
+  // Optionally, the benchmark may define tables (left side) that are ordered (aka. clustered) by one of their columns
+  // (right side).
+  using SortOrderByTable = std::map<std::string, std::string>;
+  virtual SortOrderByTable _sort_order_by_table() const;
+
   const std::shared_ptr<BenchmarkConfig> _benchmark_config;
 };
 

@@ -1,0 +1,10 @@
+{
+    "config": {"null_handling": "null_string_as_null"},
+    "columns": [
+        {"name": "id", 			"type": "int",		"nullable": true},
+        {"name": "person_id", 		"type": "int",		"nullable": true},
+        {"name": "info_type_id",	"type": "int",		"nullable": true},
+        {"name": "info",		"type": "string",	"nullable": true},
+        {"name": "note",		"type": "string",	"nullable": false}
+    ]
+}

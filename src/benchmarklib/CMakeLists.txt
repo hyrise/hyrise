@@ -5,8 +5,6 @@ set(
 
     tpcc/constants.hpp
     tpcc/defines.hpp
-    tpcc/helper.hpp
-    tpcc/helper.cpp
     tpcc/tpcc_random_generator.hpp
     tpcc/tpcc_table_generator.cpp
     tpcc/tpcc_table_generator.hpp
@@ -18,7 +16,9 @@ set(
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
 
-    abstract_benchmark_table_generator.hpp
+    tpcds/tpcds_table_generator.cpp
+    tpcds/tpcds_table_generator.hpp
+
     abstract_table_generator.cpp
     abstract_table_generator.hpp
     abstract_benchmark_item_runner.hpp
@@ -27,6 +27,8 @@ set(
     benchmark_config.hpp
     benchmark_item_result.cpp
     benchmark_item_result.hpp
+    benchmark_item_run_result.cpp
+    benchmark_item_run_result.hpp
     benchmark_runner.cpp
     benchmark_runner.hpp
     benchmark_sql_executor.cpp
@@ -45,8 +47,8 @@ set(
     file_based_table_generator.hpp
     random_generator.hpp
     table_builder.hpp
-    table_generator.cpp
-    table_generator.hpp
+    synthetic_table_generator.cpp
+    synthetic_table_generator.hpp
 )
 
 
@@ -56,4 +58,6 @@ add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 target_link_libraries(
     hyriseBenchmarkLib
     hyrise
-    tpch_dbgen)
+    tpch_dbgen
+    tpcds_dbgen
+)

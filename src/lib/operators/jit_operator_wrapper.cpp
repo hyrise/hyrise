@@ -64,7 +64,11 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   _source()->before_query(*in_table, _input_parameter_values, context);
   _sink()->before_query(*out_table, context);
 
-  for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count() && context.limit_rows; ++chunk_id) {
+  const auto chunk_count = in_table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count && context.limit_rows; ++chunk_id) {
+    const auto chunk = in_table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
     bool use_specialized_function = _source()->before_chunk(*in_table, chunk_id, _input_parameter_values, context);
     if (use_specialized_function) {
       _specialized_function_wrapper->execute_func(_source().get(), context);

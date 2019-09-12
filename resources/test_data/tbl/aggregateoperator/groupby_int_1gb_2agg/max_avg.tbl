@@ -1,5 +1,5 @@
 a|MAX(b)|AVG(c)
-int|float|double
+int|float_null|double_null
 12345|457.7|26.5
 123|458.7|20
 12|350.7|10

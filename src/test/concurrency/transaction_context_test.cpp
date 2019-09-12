@@ -9,18 +9,28 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_read_write_operator.hpp"
+#include "operators/delete.hpp"
+#include "operators/get_table.hpp"
+#include "operators/validate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 class TransactionContextTest : public BaseTest {
- protected:
-  void SetUp() override {}
+ public:
+  static constexpr auto table_name = "test_table";
 
-  TransactionManager& manager() { return TransactionManager::get(); }
+ protected:
+  void SetUp() override {
+    auto t = load_table("resources/test_data/tbl/float_int.tbl");
+    // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
+    Hyrise::get().storage_manager.add_table(table_name, t);
+  }
+
+  TransactionManager& manager() { return Hyrise::get().transaction_manager; }
 };
 
 /**
@@ -35,10 +45,7 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   const std::string name() const override { return "CommitOp"; }
 
  protected:
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override {
-    context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
-    return nullptr;
-  }
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override { return nullptr; }
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -86,6 +93,40 @@ TEST_F(TransactionContextTest, CommitShouldCommitAllFollowingPendingTransactions
   context_1->commit_async(empty_callback);
 
   EXPECT_EQ(context_2->commit_id(), manager().last_commit_id());
+}
+
+TEST_F(TransactionContextTest, CommitShouldIncreaseCommitIDIfReadWrite) {
+  auto context = manager().new_transaction_context();
+
+  const auto prev_last_commit_id = manager().last_commit_id();
+
+  const auto get_table_op = std::make_shared<GetTable>(table_name);
+  const auto validate_op = std::make_shared<Validate>(get_table_op);
+  const auto delete_op = std::make_shared<Delete>(validate_op);
+  delete_op->set_transaction_context_recursively(context);
+  get_table_op->execute();
+  validate_op->execute();
+  delete_op->execute();
+
+  context->commit();
+
+  EXPECT_EQ(manager().last_commit_id(), prev_last_commit_id + 1);
+}
+
+TEST_F(TransactionContextTest, CommitShouldNotIncreaseCommitIDIfReadOnly) {
+  auto context = manager().new_transaction_context();
+
+  const auto prev_last_commit_id = manager().last_commit_id();
+
+  const auto get_table_op = std::make_shared<GetTable>(table_name);
+  const auto validate_op = std::make_shared<Validate>(get_table_op);
+  validate_op->set_transaction_context_recursively(context);
+  get_table_op->execute();
+  validate_op->execute();
+
+  context->commit();
+
+  EXPECT_EQ(manager().last_commit_id(), prev_last_commit_id);
 }
 
 TEST_F(TransactionContextTest, CallbackFiresWhenCommitted) {

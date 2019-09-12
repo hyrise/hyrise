@@ -14,7 +14,8 @@ namespace opossum {
 class SortNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("table_a", load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
+    Hyrise::get().storage_manager.add_table("table_a",
+                                            load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
 
     _table_node = StoredTableNode::make("table_a");
 
@@ -43,7 +44,7 @@ TEST_F(SortNodeTest, Descriptions) {
   EXPECT_EQ(sort_c->description(), "[Sort] d (DescendingNullsFirst), f (AscendingNullsLast), i (DescendingNullsLast)");
 }
 
-TEST_F(SortNodeTest, Equals) {
+TEST_F(SortNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_sort_node, *_sort_node);
 
   const auto sort_a =
@@ -57,6 +58,10 @@ TEST_F(SortNodeTest, Equals) {
   EXPECT_NE(*_sort_node, *sort_a);
   EXPECT_NE(*_sort_node, *sort_b);
   EXPECT_EQ(*_sort_node, *sort_c);
+
+  EXPECT_NE(_sort_node->hash(), sort_a->hash());
+  EXPECT_NE(_sort_node->hash(), sort_b->hash());
+  EXPECT_EQ(_sort_node->hash(), sort_c->hash());
 }
 
 TEST_F(SortNodeTest, Copy) {

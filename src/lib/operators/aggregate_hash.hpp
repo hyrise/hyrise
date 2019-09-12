@@ -15,6 +15,7 @@
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
+#include "bytell_hash_map.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_segment_visitor.hpp"
@@ -67,8 +68,8 @@ using AggregateResultIdMapAllocator = PolymorphicAllocator<std::pair<const Aggre
 
 template <typename AggregateKey>
 using AggregateResultIdMap =
-    std::unordered_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
-                       AggregateResultIdMapAllocator<AggregateKey>>;
+    ska::bytell_hash_map<AggregateKey, AggregateResultId, std::hash<AggregateKey>, std::equal_to<AggregateKey>,
+                         AggregateResultIdMapAllocator<AggregateKey>>;
 
 /*
 The key type that is used for the aggregation map.

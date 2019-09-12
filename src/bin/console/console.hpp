@@ -108,8 +108,8 @@ class Console : public Singleton<Console> {
   // Command functions, registered to be called from the Console
   int _exit(const std::string& args);
   int _help(const std::string& args);
-  int _generate_tpcc(const std::string& tablename);
   int _generate_tpch(const std::string& args);
+  int _generate_tpcds(const std::string& args);
   int _load_table(const std::string& args);
   int _export_table(const std::string& args);
   int _exec_script(const std::string& script_file);
@@ -138,7 +138,6 @@ class Console : public Singleton<Console> {
   static char** _command_completion(const char* text, int start, int end);
   static char* _command_generator(const char* text, int state, const std::vector<std::string>& commands);
   static char* _command_generator_default(const char* text, int state);
-  static char* _command_generator_tpcc(const char* text, int state);
   static char* _command_generator_visualize(const char* text, int state);
   static char* _command_generator_setting(const char* text, int state);
   static char* _command_generator_setting_scheduler(const char* text, int state);
@@ -147,7 +146,6 @@ class Console : public Singleton<Console> {
   std::string _multiline_input;
   std::string _history_file;
   RegisteredCommands _commands;
-  std::vector<std::string> _tpcc_commands;
   std::ostream _out;
   std::ofstream _log;
   bool _verbose;

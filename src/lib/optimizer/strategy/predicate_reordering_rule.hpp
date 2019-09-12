@@ -26,9 +26,6 @@ class PredicateNode;
  */
 class PredicateReorderingRule : public AbstractRule {
  public:
-  explicit PredicateReorderingRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
-
-  std::string name() const override;
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:

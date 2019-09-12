@@ -9,7 +9,7 @@
 
 #include "base_segment.hpp"
 #include "chunk.hpp"
-#include "index/base_index.hpp"
+#include "index/abstract_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -17,8 +17,8 @@
 namespace opossum {
 
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
-             const std::optional<PolymorphicAllocator<Chunk>>& alloc)
-    : _segments(std::move(segments)), _mvcc_data(mvcc_data) {
+             const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
+    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
   Assert(!_segments.empty(),
          "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
@@ -94,38 +94,38 @@ SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
 
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
+std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
-  auto result = std::vector<std::shared_ptr<BaseIndex>>();
-  std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
+  auto result = std::vector<std::shared_ptr<AbstractIndex>>();
+  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(segments); });
   return result;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID>& column_ids) const {
+std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
-  return get_indices(segments);
+  return get_indexes(segments);
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                            const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
-  auto index_it = std::find_if(_indices.cbegin(), _indices.cend(), [&](const auto& index) {
+std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
+                                                const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
+  auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
   });
 
-  return (index_it == _indices.cend()) ? nullptr : *index_it;
+  return (index_it == _indexes.cend()) ? nullptr : *index_it;
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                            const std::vector<ColumnID>& column_ids) const {
+std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
+                                                const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
   return get_index(index_type, segments);
 }
 
-void Chunk::remove_index(const std::shared_ptr<BaseIndex>& index) {
-  auto it = std::find(_indices.cbegin(), _indices.cend(), index);
-  DebugAssert(it != _indices.cend(), "Trying to remove a non-existing index");
-  _indices.erase(it);
+void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
+  auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
+  DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index");
+  _indexes.erase(it);
 }
 
 bool Chunk::references_exactly_one_table() const {
@@ -149,9 +149,9 @@ bool Chunk::references_exactly_one_table() const {
 }
 
 void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
-  // Migrating chunks with indices is not implemented yet.
-  if (!_indices.empty()) {
-    Fail("Cannot migrate Chunk with Indices.");
+  // Migrating chunks with indexes is not implemented yet.
+  if (!_indexes.empty()) {
+    Fail("Cannot migrate Chunk with Indexes.");
   }
 
   _alloc = PolymorphicAllocator<size_t>(memory_source);

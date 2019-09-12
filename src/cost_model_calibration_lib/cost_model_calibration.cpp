@@ -9,6 +9,7 @@
 #include "cost_estimation/feature/cost_model_features.hpp"
 #include "cost_model_calibration_query_runner.hpp"
 #include "cost_model_calibration_table_generator.hpp"
+#include "hyrise.hpp"
 #include "import_export/csv_writer.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "statistics/base_attribute_statistics.hpp"
@@ -98,7 +99,7 @@ void CostModelCalibration::_calibrate() {
     table_names.emplace_back(std::make_pair(table_specification.table_name, table_specification.table_size));
   }
   for (const auto& table_name : _configuration.generated_tables) {
-    table_names.emplace_back(table_name, StorageManager::get().get_table(table_name)->row_count());
+    table_names.emplace_back(table_name, Hyrise::get().storage_manager.get_table(table_name)->row_count());
   }
 
   const auto& columns = _configuration.columns;
@@ -177,8 +178,8 @@ void CostModelCalibration::_export_segment_size_information() {
   std::ofstream segment_size_csv_file("segment_size_information.csv");
   segment_size_csv_file << "ENCODING_TYPE,VECTOR_COMPRESSION_TYPE,COMPRESSED_VECTOR_TYPE,DATA_TYPE,ROW_COUNT,ESTIMATED_DISTINCT_VALUE_COUNT,IS_NULLABLE,SIZE_IN_BYTES\n";
 
-  for (const auto& table_name : StorageManager::get().table_names()) {
-    const auto& table = StorageManager::get().get_table(table_name);
+  for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
+    const auto& table = Hyrise::get().storage_manager.get_table(table_name);
 
     for (const auto& column_def : table->column_definitions()) {
       const auto& column_name = column_def.name;

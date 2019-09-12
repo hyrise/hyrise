@@ -14,10 +14,12 @@ AbstractPredicateExpression::AbstractPredicateExpression(
 DataType AbstractPredicateExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
 
 bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const AbstractPredicateExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
   return predicate_condition == static_cast<const AbstractPredicateExpression&>(expression).predicate_condition;
 }
 
-size_t AbstractPredicateExpression::_on_hash() const {
+size_t AbstractPredicateExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<size_t>(predicate_condition));
 }
 

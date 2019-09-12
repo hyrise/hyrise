@@ -78,9 +78,7 @@ std::optional<CompressedVectorType> FrameOfReferenceSegment<T, U>::compressed_ve
 }
 
 template class FrameOfReferenceSegment<int32_t>;
-// Support for int64_t is disabled for now, because the current vector compression used by
-// the FrameOfReverence encoding can only handle vectors of uint32_t. As the delta values for
-// long segments can be larger than uint32_t, larger than 4-byte-integers are not supported.
+// int64_t disabled for now, as vector compression cannot handle 64 bit values - also in reference_segment_iterable.hpp
 // template class FrameOfReferenceSegment<int64_t>;
 
 }  // namespace opossum

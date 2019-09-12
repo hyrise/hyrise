@@ -2,6 +2,7 @@
 
 #include "calibration_feature_extractor.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/format_duration.hpp"
@@ -14,7 +15,7 @@ CostModelCalibrationQueryRunner::CostModelCalibrationQueryRunner(const Calibrati
 const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner::calibrate_query_from_lqp(
     const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // lqp->print();
-  auto transaction_context = TransactionManager::get().new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   LQPTranslator lqp_translator{};
   const auto pqp = lqp_translator.translate_node(lqp);

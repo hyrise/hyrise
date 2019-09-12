@@ -42,15 +42,15 @@ class MultiSegmentIndexTest : public BaseTest {
     return result;
   }
 
-  std::shared_ptr<BaseIndex> index_int_str = nullptr;
-  std::shared_ptr<BaseIndex> index_str_int = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_str = nullptr;
+  std::shared_ptr<AbstractIndex> index_str_int = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_int = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
 };
 
-// List of indices to test
-typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndices;
-TYPED_TEST_CASE(MultiSegmentIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+// List of indexes to test
+typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndexes;
+TYPED_TEST_CASE(MultiSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MultiSegmentIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();
@@ -198,17 +198,17 @@ TYPED_TEST(MultiSegmentIndexTest, CreateAndRetrieveUsingChunk) {
   chunk->create_index<TypeParam>({this->dict_segment_int});
   chunk->create_index<TypeParam>({this->dict_segment_int, this->dict_segment_str});
 
-  auto indices_int = chunk->get_indices({this->dict_segment_int});
-  auto indices_int_str = chunk->get_indices({this->dict_segment_int, this->dict_segment_str});
-  auto indices_str = chunk->get_indices({this->dict_segment_str});
+  auto indexes_int = chunk->get_indexes({this->dict_segment_int});
+  auto indexes_int_str = chunk->get_indexes({this->dict_segment_int, this->dict_segment_str});
+  auto indexes_str = chunk->get_indexes({this->dict_segment_str});
 
-  EXPECT_EQ(indices_int.size(), 2u);
-  EXPECT_EQ(indices_int_str.size(), 1u);
-  EXPECT_EQ(indices_str.size(), 0u);
+  EXPECT_EQ(indexes_int.size(), 2u);
+  EXPECT_EQ(indexes_int_str.size(), 1u);
+  EXPECT_EQ(indexes_str.size(), 0u);
 
-  EXPECT_TRUE(indices_int[0]->is_index_for({this->dict_segment_int}));
-  EXPECT_TRUE(indices_int[1]->is_index_for({this->dict_segment_int}));
-  EXPECT_TRUE(indices_int_str[0]->is_index_for({this->dict_segment_int, this->dict_segment_str}));
+  EXPECT_TRUE(indexes_int[0]->is_index_for({this->dict_segment_int}));
+  EXPECT_TRUE(indexes_int[1]->is_index_for({this->dict_segment_int}));
+  EXPECT_TRUE(indexes_int_str[0]->is_index_for({this->dict_segment_int, this->dict_segment_str}));
 }
 
 }  // namespace opossum

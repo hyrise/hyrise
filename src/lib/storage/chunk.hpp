@@ -23,11 +23,12 @@
 
 namespace opossum {
 
-class BaseIndex;
+class AbstractIndex;
 class BaseSegment;
 class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<BaseSegment>>;
+using Indexes = pmr_vector<std::shared_ptr<AbstractIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
@@ -48,7 +49,7 @@ class Chunk : private Noncopyable {
   static constexpr ChunkOffset DEFAULT_SIZE = 100'000;
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
 
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
@@ -97,17 +98,18 @@ class Chunk : private Noncopyable {
 
   std::shared_ptr<MvccData> mvcc_data() const;
 
-  std::vector<std::shared_ptr<BaseIndex>> get_indices(
+  std::vector<std::shared_ptr<AbstractIndex>> get_indexes(
       const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
-  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<AbstractIndex>> get_indexes(const std::vector<ColumnID>& column_ids) const;
 
-  std::shared_ptr<BaseIndex> get_index(const SegmentIndexType index_type,
-                                       const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
-  std::shared_ptr<BaseIndex> get_index(const SegmentIndexType index_type,
-                                       const std::vector<ColumnID>& column_ids) const;
+  std::shared_ptr<AbstractIndex> get_index(const SegmentIndexType index_type,
+                                           const std::vector<std::shared_ptr<const BaseSegment>>& segments) const;
+  std::shared_ptr<AbstractIndex> get_index(const SegmentIndexType index_type,
+                                           const std::vector<ColumnID>& column_ids) const;
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index) {
+  std::shared_ptr<AbstractIndex> create_index(
+      const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index) {
     DebugAssert(([&]() {
                   for (auto segment : segments_to_index) {
                     const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
@@ -118,17 +120,17 @@ class Chunk : private Noncopyable {
                 "All segments must be part of the chunk.");
 
     auto index = std::make_shared<Index>(segments_to_index);
-    _indices.emplace_back(index);
+    _indexes.emplace_back(index);
     return index;
   }
 
   template <typename Index>
-  std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids) {
+  std::shared_ptr<AbstractIndex> create_index(const std::vector<ColumnID>& column_ids) {
     const auto segments = _get_segments_for_ids(column_ids);
     return create_index<Index>(segments);
   }
 
-  void remove_index(const std::shared_ptr<BaseIndex>& index);
+  void remove_index(const std::shared_ptr<AbstractIndex>& index);
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
@@ -186,7 +188,7 @@ class Chunk : private Noncopyable {
   PolymorphicAllocator<Chunk> _alloc;
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
-  pmr_vector<std::shared_ptr<BaseIndex>> _indices;
+  Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;

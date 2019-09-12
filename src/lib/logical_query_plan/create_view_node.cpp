@@ -14,9 +14,22 @@ CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_p
 std::string CreateViewNode::description() const {
   std::ostringstream stream;
   stream << "[CreateView] " << (if_not_exists ? "IfNotExists " : "");
-  stream << "Name: '" << view_name << "' (\n" << *view->lqp << ")";
+  stream << "Name: " << view_name << ", Columns: ";
+
+  for (const auto& [column_id, column_name] : view->column_names) {
+    stream << column_name << " ";
+  }
+
+  stream << "FROM (\n" << *view->lqp << ")";
 
   return stream.str();
+}
+
+size_t CreateViewNode::_shallow_hash() const {
+  auto hash = boost::hash_value(view_name);
+  boost::hash_combine(hash, view);
+  boost::hash_combine(hash, if_not_exists);
+  return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> CreateViewNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

@@ -4,8 +4,8 @@
 #include <memory>
 
 #include "commit_context.hpp"
+#include "hyrise.hpp"
 #include "operators/abstract_read_write_operator.hpp"
-#include "transaction_manager.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -15,7 +15,7 @@ TransactionContext::TransactionContext(const TransactionID transaction_id, const
       _snapshot_commit_id{snapshot_commit_id},
       _phase{TransactionPhase::Active},
       _num_active_operators{0} {
-  TransactionManager::get()._register_transaction(snapshot_commit_id);
+  Hyrise::get().transaction_manager._register_transaction(snapshot_commit_id);
 }
 
 TransactionContext::~TransactionContext() {
@@ -39,6 +39,8 @@ TransactionContext::~TransactionContext() {
                 const auto committed_or_rolled_back =
                     _phase == TransactionPhase::Committed || _phase == TransactionPhase::RolledBack;
                 return !has_registered_operators || committed_or_rolled_back;
+                // Note: When thrown during stack unwinding, this exception might hide previous exceptions. If you are
+                // seeing this, either use a debugger and break on exceptions or disable this exception as a trial.
               }()),
               "Has registered operators but has neither been committed nor rolled back.");
 
@@ -46,7 +48,7 @@ TransactionContext::~TransactionContext() {
    * Tell the TransactionManager, which keeps track of active snapshot-commit-ids,
    * that this transaction has finished.
    */
-  TransactionManager::get()._deregister_transaction(_snapshot_commit_id);
+  Hyrise::get().transaction_manager._deregister_transaction(_snapshot_commit_id);
 }
 
 TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
@@ -88,6 +90,12 @@ void TransactionContext::commit_async(const std::function<void(TransactionID)>& 
 void TransactionContext::commit() {
   Assert(_phase == TransactionPhase::Active, "TransactionContext must be active to be committed.");
 
+  // No modifications made, nothing to commit, no need to acquire a commit ID
+  if (_rw_operators.empty()) {
+    _transition(TransactionPhase::Active, TransactionPhase::Committed);
+    return;
+  }
+
   auto committed = std::promise<void>{};
   const auto committed_future = committed.get_future();
   const auto callback = [&committed](TransactionID) { committed.set_value(); };
@@ -98,9 +106,7 @@ void TransactionContext::commit() {
 }
 
 void TransactionContext::_abort() {
-  const auto from_phase = TransactionPhase::Active;
-  const auto to_phase = TransactionPhase::Aborted;
-  _transition(from_phase, to_phase);
+  _transition(TransactionPhase::Active, TransactionPhase::Aborted);
 
   _wait_for_active_operators_to_finish();
 }
@@ -114,7 +120,7 @@ void TransactionContext::_mark_as_rolled_back() {
               }()),
               "All read/write operators need to have been rolled back.");
 
-  _phase = TransactionPhase::RolledBack;
+  _transition(TransactionPhase::Aborted, TransactionPhase::RolledBack);
 }
 
 void TransactionContext::_prepare_commit() {
@@ -126,13 +132,11 @@ void TransactionContext::_prepare_commit() {
               }()),
               "All read/write operators need to be in state Executed (especially not Failed).");
 
-  const auto from_phase = TransactionPhase::Active;
-  const auto to_phase = TransactionPhase::Committing;
-  _transition(from_phase, to_phase);
+  _transition(TransactionPhase::Active, TransactionPhase::Committing);
 
   _wait_for_active_operators_to_finish();
 
-  _commit_context = TransactionManager::get()._new_commit_context();
+  _commit_context = Hyrise::get().transaction_manager._new_commit_context();
 }
 
 void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback) {
@@ -148,13 +152,13 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
   _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback](auto transaction_id) {
     // If the transaction context still exists, set its phase to Committed.
     if (auto context_ptr = context_weak_ptr.lock()) {
-      context_ptr->_phase = TransactionPhase::Committed;
+      context_ptr->_transition(TransactionPhase::Committing, TransactionPhase::Committed);
     }
 
     if (callback) callback(transaction_id);
   });
 
-  TransactionManager::get()._try_increment_last_commit_id(_commit_context);
+  Hyrise::get().transaction_manager._try_increment_last_commit_id(_commit_context);
 }
 
 void TransactionContext::on_operator_started() { ++_num_active_operators; }

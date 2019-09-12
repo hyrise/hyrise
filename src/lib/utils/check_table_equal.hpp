@@ -25,9 +25,16 @@ enum class TypeCmpMode { Strict, Lenient };
  */
 enum class FloatComparisonMode { RelativeDifference, AbsoluteDifference };
 
+/*
+ * As SQLite has a weird type concept, we ignore (NOT) NULL constraints for tables retrieved from SQLite.
+ */
+
+enum class IgnoreNullable { Yes, No };
+
 /**
- * Helper method to compare two segments for equality. Function
- * create temporary tables and uses the check_table_equals method.
+ * Helper method to compare two segments for equality. Function creates temporary tables and uses the
+ * check_table_equals method. As NULLable information is stored in the table, not in the segment,
+ * IgnoreNullable::Yes is implied.
  */
 bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
                          const std::shared_ptr<BaseSegment>& expected_segment, OrderSensitivity order_sensitivity,
@@ -36,9 +43,9 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
 // Compares two tables for equality
 // @return  A human-readable description of the table-mismatch, if any
 //          std::nullopt if the Tables are the same
-std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& opossum_table,
+std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>& actual_table,
                                              const std::shared_ptr<const Table>& expected_table,
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
-                                             FloatComparisonMode float_comparison_mode);
+                                             FloatComparisonMode float_comparison_mode, IgnoreNullable ignore_nullable);
 
 }  // namespace opossum

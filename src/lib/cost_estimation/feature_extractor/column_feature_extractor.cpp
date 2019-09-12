@@ -1,6 +1,7 @@
 #include "column_feature_extractor.hpp"
 
 #include "expression/expression_utils.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "resolve_type.hpp"
 #include "statistics/base_attribute_statistics.hpp"
@@ -28,7 +29,7 @@ const ColumnFeatures ColumnFeatureExtractor::extract_features(
   const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
   const auto& underlying_table_name = stored_table_node->table_name;
 
-  const auto table = StorageManager::get().get_table(underlying_table_name);
+  const auto table = Hyrise::get().storage_manager.get_table(underlying_table_name);
 
   return extract_features(table, column_id, column_expression->data_type(), prefix);
 }
@@ -131,10 +132,11 @@ std::pair<SegmentEncodingSpec, bool> ColumnFeatureExtractor::_get_encoding_type_
 }
 
 size_t ColumnFeatureExtractor::_get_memory_usage_for_column(const std::shared_ptr<const Table>& table,
-                                                            ColumnID column_id) {
+                                                            const ColumnID column_id) {
   size_t memory_usage = 0;
 
-  for (const auto& chunk : table->chunks()) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto& chunk = table->get_chunk(chunk_id);
     const auto& segment = chunk->get_segment(column_id);
     memory_usage += segment->estimate_memory_usage();
   }

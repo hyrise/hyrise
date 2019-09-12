@@ -42,6 +42,12 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
+/*
+ * Recurse through the expression and replace them according to replacements, where applicable
+ */
+void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
+                             const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping);
+
 /**
  * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting column references in
  * LQPColumnExpressions according to the node_mapping
@@ -57,7 +63,7 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
                                                                                const LQPNodeMapping& node_mapping);
 
 /**
- * Makes all column references points to their equivalent in a copied LQP
+ * Makes all column references point to their equivalent in a copied LQP
  */
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping);

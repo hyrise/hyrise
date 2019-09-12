@@ -22,24 +22,13 @@ PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicat
 
 std::string PredicateNode::description() const {
   std::stringstream stream;
-  stream << "[Predicate] " << scan_type_to_string.at(scan_type) << ": " << predicate()->as_column_name();
+  stream << "[Predicate] " << predicate()->as_column_name();
   return stream.str();
 }
 
-OperatorType PredicateNode::operator_type() const {
-  switch (scan_type) {
-    case ScanType::TableScan:
-      return OperatorType::TableScan;
-    case ScanType::IndexScan:
-      return OperatorType::IndexScan;
-  }
-
-  Fail("GCC thinks this is reachable");
-}
-
-bool PredicateNode::creates_reference_segments() const { return true; }
-
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }
+
+size_t PredicateNode::_shallow_hash() const { return boost::hash_value(scan_type); }
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<PredicateNode>(expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping));

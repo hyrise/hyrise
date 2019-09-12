@@ -1,0 +1,9 @@
+{
+    "config": {"null_handling": "null_string_as_null"},
+    "columns": [
+        {"name": "id", 			"type": "int",		"nullable": false},
+        {"name": "movie_id", 		"type": "int",		"nullable": true},
+        {"name": "subject_id", 		"type": "int",		"nullable": false},
+        {"name": "status_id", 		"type": "int",		"nullable": false}
+    ]
+}

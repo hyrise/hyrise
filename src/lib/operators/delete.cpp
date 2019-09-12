@@ -4,11 +4,9 @@
 #include <string>
 
 #include "concurrency/transaction_context.hpp"
-#include "concurrency/transaction_manager.hpp"
 #include "operators/validate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -24,8 +22,6 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
   DebugAssert(_referencing_table->type() == TableType::References,
               "_referencing_table needs to reference another table");
   DebugAssert(_referencing_table->column_count() > 0, "_referencing_table needs columns to determine referenced table");
-
-  context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
   _transaction_id = context->transaction_id();
 
@@ -49,7 +45,8 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
                 "All segments of a Chunk in _referencing_table must have the same PosList");
 
     for (auto row_id : *pos_list) {
-      auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
+      const auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);
+      Assert(referenced_chunk, "Referenced chunks are not allowed to be null pointers");
 
       // Scope for the lock on the MVCC data
       {
@@ -95,7 +92,8 @@ void Delete::_on_commit_records(const CommitID cid) {
     const auto referenced_table = referencing_segment->referenced_table();
 
     for (const auto& row_id : *referencing_segment->pos_list()) {
-      auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+      const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+
       referenced_chunk->get_scoped_mvcc_data_lock()->end_cids[row_id.chunk_offset] = cid;
       referenced_chunk->increase_invalid_row_count(1);
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
@@ -114,7 +112,7 @@ void Delete::_on_rollback_records() {
     for (const auto& row_id : *referencing_segment->pos_list()) {
       auto expected = _transaction_id;
 
-      auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
+      const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       // unlock all rows locked in _on_execute
       const auto result =

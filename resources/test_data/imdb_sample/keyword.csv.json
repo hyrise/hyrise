@@ -1,0 +1,8 @@
+{
+    "config": {"null_handling": "null_string_as_null"},
+    "columns": [
+        {"name": "id", 			"type": "int",		"nullable": false},
+        {"name": "keyword", 		"type": "string",	"nullable": false},
+        {"name": "phonetic_code", 	"type": "string",	"nullable": true}
+    ]
+}

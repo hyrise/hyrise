@@ -183,10 +183,10 @@ TEST_F(JitValidateTest, ValidateOnReferenceTable) {
   context.pos_list = pos_list;
 
   // first chunk
-  (*pos_list)[0] = RowID(ChunkID(0), 0u);
-  (*pos_list)[1] = RowID(ChunkID(0), 1u);
-  (*pos_list)[2] = RowID(ChunkID(0), 2u);
-  (*pos_list)[3] = RowID(ChunkID(1), 0u);
+  (*pos_list)[0] = RowID{ChunkID(0), 0u};
+  (*pos_list)[1] = RowID{ChunkID(0), 1u};
+  (*pos_list)[2] = RowID{ChunkID(0), 2u};
+  (*pos_list)[3] = RowID{ChunkID(1), 0u};
 
   validate_row(ChunkID(0), ChunkOffset{0}, context, *expected_value_itr++, source, sink, TableType::References);
   validate_row(ChunkID(0), ChunkOffset{1}, context, *expected_value_itr++, source, sink, TableType::References);
@@ -194,10 +194,10 @@ TEST_F(JitValidateTest, ValidateOnReferenceTable) {
   validate_row(ChunkID(0), ChunkOffset{3}, context, *expected_value_itr++, source, sink, TableType::References);
 
   // second chunk
-  (*pos_list)[0] = RowID(ChunkID(1), 1u);
-  (*pos_list)[1] = RowID(ChunkID(1), 2u);
-  (*pos_list)[2] = RowID(ChunkID(2), 0u);
-  (*pos_list)[3] = RowID(ChunkID(2), 1u);
+  (*pos_list)[0] = RowID{ChunkID(1), 1u};
+  (*pos_list)[1] = RowID{ChunkID(1), 2u};
+  (*pos_list)[2] = RowID{ChunkID(2), 0u};
+  (*pos_list)[3] = RowID{ChunkID(2), 1u};
 
   validate_row(ChunkID(1), ChunkOffset{0}, context, *expected_value_itr++, source, sink, TableType::References);
   validate_row(ChunkID(1), ChunkOffset{1}, context, *expected_value_itr++, source, sink, TableType::References);

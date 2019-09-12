@@ -15,35 +15,20 @@ class Table;
 class AbstractTask;
 
 /**
- * Operator that performs a predicate search using indices
+ * Operator that performs a predicate search using indexes
  *
  * Note: Scans only the set of chunks passed to the constructor
  */
 class IndexScan : public AbstractReadOnlyOperator {
-  friend class LQPTranslatorTest;
-
  public:
   IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
             const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
             const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
 
   const std::string name() const final;
-  const std::string description(DescriptionMode description_mode) const override;
 
-  PredicateCondition predicate_condition() const;
-
-  const std::vector<ColumnID>& left_columns_ids() const;
-  const std::vector<AllTypeVariant>& right_values() const;
-  const std::vector<AllTypeVariant>& right_values2() const;
-
-  /**
-   * @brief If set, only the specified chunks will be scanned.
-   *
-   * @see TableScan::set_excluded_chunk_ids for usage
-   */
-  void set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids);
-
-  size_t get_number_of_included_chunks() const;
+  // If set, only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
+  std::vector<ChunkID> included_chunk_ids;
 
  protected:
   std::shared_ptr<const Table> _on_execute() final;
@@ -63,8 +48,6 @@ class IndexScan : public AbstractReadOnlyOperator {
   const PredicateCondition _predicate_condition;
   const std::vector<AllTypeVariant> _right_values;
   const std::vector<AllTypeVariant> _right_values2;
-
-  std::vector<ChunkID> _included_chunk_ids;
 
   std::shared_ptr<const Table> _in_table;
   std::shared_ptr<Table> _out_table;

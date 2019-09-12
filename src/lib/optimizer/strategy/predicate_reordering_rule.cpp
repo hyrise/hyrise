@@ -19,11 +19,6 @@
 
 namespace opossum {
 
-PredicateReorderingRule::PredicateReorderingRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
-    : _cost_estimator(cost_estimator) {}
-
-std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
-
 void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
 

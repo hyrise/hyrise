@@ -1,6 +1,7 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
+#include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_mpsm.hpp"
@@ -9,7 +10,6 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/storage_manager.hpp"
 #include "table_generator.hpp"
 #include "types.hpp"
 
@@ -43,8 +43,10 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table =
       table_generator->generate_table(1ul, number_of_rows, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary});
 
-  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    auto chunk = table->get_chunk(chunk_id);
+  const auto chunk_count = table->chunk_count();
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id});
@@ -71,7 +73,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
     join->execute();
   }
 
-  opossum::StorageManager::get().reset();
+  opossum::Hyrise::reset();
 }
 
 template <class C>

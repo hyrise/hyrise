@@ -6,11 +6,10 @@
 #include <utility>
 #include <vector>
 
-#include "boost/variant.hpp"
-
 #include "base_segment.hpp"
+#include "boost/variant.hpp"
 #include "chunk.hpp"
-#include "storage/index/index_info.hpp"
+#include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -24,6 +23,8 @@ class TableStatistics;
  * A Table is partitioned horizontally into a number of chunks.
  */
 class Table : private Noncopyable {
+  friend class StorageTableTest;
+
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
 
@@ -31,7 +32,7 @@ class Table : private Noncopyable {
   // segments (TableType::References). The attribute max_chunk_size is only used for data tables. If it is unset,
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
-        const std::optional<uint32_t> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
+        const std::optional<ChunkOffset> max_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
         std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No);
@@ -64,7 +65,7 @@ class Table : private Noncopyable {
   UseMvcc has_mvcc() const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
-  uint32_t max_chunk_size() const;
+  ChunkOffset max_chunk_size() const;
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
@@ -82,9 +83,6 @@ class Table : private Noncopyable {
    */
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
-
-  // Returns all Chunks
-  const tbb::concurrent_vector<std::shared_ptr<Chunk>>& chunks() const;
 
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
@@ -131,7 +129,11 @@ class Table : private Noncopyable {
     Assert(column_id < column_count(), "column_id invalid");
 
     size_t row_counter = 0u;
-    for (auto& chunk : _chunks) {
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto chunk = std::atomic_load(&_chunks[chunk_id]);
+      if (!chunk) continue;
+
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
@@ -161,17 +163,21 @@ class Table : private Noncopyable {
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
   /** @} */
 
-  std::vector<IndexInfo> get_indexes() const;
+  std::vector<IndexStatistics> indexes_statistics() const;
 
   template <typename Index>
   void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
     SegmentIndexType index_type = get_index_type_of<Index>();
 
-    for (auto& chunk : _chunks) {
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto chunk = std::atomic_load(&_chunks[chunk_id]);
+      Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+
       chunk->create_index<Index>(column_ids);
     }
-    IndexInfo i = {column_ids, name, index_type};
-    _indexes.emplace_back(i);
+    IndexStatistics index_statistics = {column_ids, name, index_type};
+    _indexes.emplace_back(index_statistics);
   }
 
   /**
@@ -183,10 +189,20 @@ class Table : private Noncopyable {
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;
-  const uint32_t _max_chunk_size;
+  const ChunkOffset _max_chunk_size;
+
+  /**
+   * To prevent data races for TableType::Data tables, we must access _chunks atomically.
+   * This is due to the existence of the MvccDeletePlugin, which might modify shared pointers from a separate thread.
+   *
+   * With C++20 we will get std::atomic<std::shared_ptr<T>>, which allows us to omit the std::atomic_load() and
+   * std::atomic_store() function calls.
+   */
+
   tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
-  std::unique_ptr<std::mutex> _append_mutex;
-  std::vector<IndexInfo> _indexes;
+
   std::shared_ptr<TableStatistics> _table_statistics;
+  std::unique_ptr<std::mutex> _append_mutex;
+  std::vector<IndexStatistics> _indexes;
 };
 }  // namespace opossum

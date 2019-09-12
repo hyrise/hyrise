@@ -9,6 +9,7 @@
 #include "calibration_query_generator_predicate.hpp"
 #include "calibration_query_generator_projection.hpp"
 #include "expression/expression_functional.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -133,7 +134,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGenerator::g
      * ColumnValue scans
      */
     for (const auto& [table_name, table_size] : _tables) {
-      auto& sm = StorageManager::get();
+      auto& sm = Hyrise::get().storage_manager;
       const auto table = sm.get_table(table_name);
 
       for (const auto& column_spec : _configuration.columns) {

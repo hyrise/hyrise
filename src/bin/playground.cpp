@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "hyrise.hpp"
+
 #include "operators/get_table.hpp"
 #include "operators/join_index.hpp"
 
@@ -11,10 +13,10 @@
 using namespace opossum;  // NOLINT
 
 int main() {
-  const auto left_table = std::make_shared<Table>(TableColumnDefinitions{{"column", DataType::Int}}, TableType::Data,
+  const auto left_table = std::make_shared<Table>(TableColumnDefinitions{{"column", DataType::Int, false}}, TableType::Data,
                                                   100'000, UseMvcc::Yes);
 
-  const auto right_table = std::make_shared<Table>(TableColumnDefinitions{{"column", DataType::Int}}, TableType::Data,
+  const auto right_table = std::make_shared<Table>(TableColumnDefinitions{{"column", DataType::Int, false}}, TableType::Data,
                                                    100'000, UseMvcc::Yes);
 
   // Create table with 600'000 rows
@@ -35,8 +37,8 @@ int main() {
   for (const auto& chunk : right_chunks) {
     chunk->template create_index<BTreeIndex>(std::vector<ColumnID>{ColumnID{0}});
   }
-  StorageManager::get().add_table("left_table", left_table);
-  StorageManager::get().add_table("right_table", right_table);
+  Hyrise::get().storage_manager.add_table("left_table", left_table);
+  Hyrise::get().storage_manager.add_table("right_table", right_table);
 
   // Run IndexJoin
   auto left_gt = std::make_shared<GetTable>("left_table");

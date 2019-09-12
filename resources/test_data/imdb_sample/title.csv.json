@@ -1,0 +1,17 @@
+{
+    "config": {"null_handling": "null_string_as_null"},
+    "columns": [
+        {"name": "id", "type": "int"},
+        {"name": "title", "type": "string"},
+        {"name": "imdb_index", "type": "string", "nullable": true},
+        {"name": "kind_id", "type": "int"},
+        {"name": "production_year", "type": "int", "nullable": true},
+        {"name": "imdb_id", "type": "int", "nullable": true},
+        {"name": "phonetic_code", "type": "string", "nullable": true},
+        {"name": "episode_of_id", "type": "int", "nullable": true},
+        {"name": "season_nr", "type": "int", "nullable": true},
+        {"name": "episode_nr", "type": "int", "nullable": true},
+        {"name": "series_years", "type": "string", "nullable": true},
+        {"name": "md5sum", "type": "string", "nullable": true}
+    ]
+}

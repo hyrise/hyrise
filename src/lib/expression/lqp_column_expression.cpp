@@ -2,9 +2,10 @@
 
 #include "boost/functional/hash.hpp"
 
+#include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
@@ -19,52 +20,61 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
 
 std::string LQPColumnExpression::as_column_name() const {
   // Even if the LQP is invalid, we still want to be able to print it as good as possible
-  if (!column_reference.original_node()) return "<Expired Column>";
+  const auto original_node = column_reference.original_node();
+  if (!original_node) return "<Expired Column>";
 
-  if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
+  if (original_node->type == LQPNodeType::StoredTable) {
     std::stringstream stream;
     stream << column_reference;
     return stream.str();
 
-  } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
-    const auto mock_node = std::static_pointer_cast<const MockNode>(column_reference.original_node());
+  } else if (original_node->type == LQPNodeType::Mock) {
+    const auto mock_node = std::static_pointer_cast<const MockNode>(original_node);
     Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
     return mock_node->column_definitions()[column_reference.original_column_id()].second;
 
+  } else if (column_reference.original_node()->type == LQPNodeType::StaticTable) {
+    const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(column_reference.original_node());
+    return static_table_node->table->column_name(column_reference.original_column_id());
   } else {
-    Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
+    Fail("Node type can not be referenced in LQPColumnExpressions");
   }
 }
 
 DataType LQPColumnExpression::data_type() const {
+  const auto original_node = column_reference.original_node();
   if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
     const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
-    const auto table = StorageManager::get().get_table(stored_table_node->table_name);
+    const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
     return table->column_data_type(column_reference.original_column_id());
 
-  } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
-    const auto mock_node = std::static_pointer_cast<const MockNode>(column_reference.original_node());
+  } else if (original_node->type == LQPNodeType::Mock) {
+    const auto mock_node = std::static_pointer_cast<const MockNode>(original_node);
     Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
     return mock_node->column_definitions()[column_reference.original_column_id()].first;
 
+  } else if (column_reference.original_node()->type == LQPNodeType::StaticTable) {
+    const auto static_table_node = std::static_pointer_cast<const StaticTableNode>(column_reference.original_node());
+    return static_table_node->table->column_data_type(column_reference.original_column_id());
   } else {
-    Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
+    Fail("Node type can not be referenced in LQPColumnExpressions");
   }
 }
 
 bool LQPColumnExpression::requires_computation() const { return false; }
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
-  const auto* lqp_column_expression = dynamic_cast<const LQPColumnExpression*>(&expression);
-  Assert(lqp_column_expression, "Expected LQPColumnExpression");
-  return column_reference == lqp_column_expression->column_reference;
+  DebugAssert(dynamic_cast<const LQPColumnExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
+  const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(expression);
+  return column_reference == lqp_column_expression.column_reference;
 }
 
-size_t LQPColumnExpression::_on_hash() const { return std::hash<LQPColumnReference>{}(column_reference); }
+size_t LQPColumnExpression::_shallow_hash() const { return std::hash<LQPColumnReference>{}(column_reference); }
 
 bool LQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   Fail(
-      "Should not be called. This should have been forwarded to StoredTable/MockNode by "
+      "Should not be called. This should have been forwarded to StoredTableNode/StaticTableNode/MockNode by "
       "AbstractExpression::is_nullable_on_lqp()");
 }
 

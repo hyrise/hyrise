@@ -6,6 +6,7 @@
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -16,13 +17,10 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
-
-std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 
 void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // we only want to follow chains of predicates
@@ -61,7 +59,7 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   /**
    * A chain of predicates followed by a stored table node was found.
    */
-  auto table = StorageManager::get().get_table(stored_table->table_name);
+  auto table = Hyrise::get().storage_manager.get_table(stored_table->table_name);
 
   std::set<ChunkID> pruned_chunk_ids;
   for (auto& predicate : predicate_nodes) {
@@ -135,11 +133,13 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 
     auto condition = operator_predicate.predicate_condition;
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-      const auto pruning_statistics = table.get_chunk(chunk_id)->pruning_statistics();
-      if (!pruning_statistics) {
-        continue;
-      }
+    const auto chunk_count = table.chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto chunk = table.get_chunk(chunk_id);
+      if (!chunk) continue;
+
+      const auto pruning_statistics = chunk->pruning_statistics();
+      if (!pruning_statistics) continue;
 
       const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
       if (_can_prune(*segment_statistics, condition, *value, value2)) {

@@ -6,10 +6,10 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
@@ -79,9 +79,7 @@ Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const
 const std::string Insert::name() const { return "Insert"; }
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
-  context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
-
-  _target_table = StorageManager::get().get_table(_target_table_name);
+  _target_table = Hyrise::get().storage_manager.get_table(_target_table_name);
 
   Assert(_target_table->max_chunk_size() > 0, "Expected max chunk size of target table to be greater than zero");
   for (ColumnID column_id{0}; column_id < _target_table->column_count(); ++column_id) {

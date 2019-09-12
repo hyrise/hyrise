@@ -9,7 +9,6 @@
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 #include "lqp_column_reference.hpp"
-#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
@@ -29,18 +28,15 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
   explicit PredicateNode(const std::shared_ptr<AbstractExpression>& predicate);
 
   std::string description() const override;
-  OperatorType operator_type() const override;
-
-  bool creates_reference_segments() const override;
 
   std::shared_ptr<AbstractExpression> predicate() const;
 
   ScanType scan_type{ScanType::TableScan};
 
  protected:
+  size_t _shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
-  //
 };
 
 }  // namespace opossum

@@ -14,7 +14,6 @@ class JoinNode;
 class JoinAlgorithmRule : public AbstractRule {
  public:
   explicit JoinAlgorithmRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
-  std::string name() const override;
 
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 

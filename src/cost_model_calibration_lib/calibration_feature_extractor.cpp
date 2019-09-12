@@ -51,8 +51,7 @@ const std::optional<CostModelFeatures> CalibrationFeatureExtractor::extract_feat
       // No need to add specific features
       break;
     default: {
-      std::cout << "Unhandled operator type in CalibrationFeatureExtractor: "
-                << operator_type_to_string.at(operator_type) << std::endl;
+      std::cout << "Unhandled operator type in CalibrationFeatureExtractor." << std::endl;
     }
   }
 
@@ -145,7 +144,7 @@ const std::optional<TableScanFeatures> CalibrationFeatureExtractor::_extract_fea
 
   const auto& table_condition = op->predicate();
   features.computable_or_column_expression_count = count_expensive_child_expressions(table_condition);
-  features.effective_chunk_count = chunk_count - op->get_number_of_excluded_chunks();
+  features.effective_chunk_count = chunk_count - op->excluded_chunk_ids.size();
 
   if (features.effective_chunk_count == 0)
     return std::nullopt;
@@ -157,7 +156,9 @@ const std::optional<TableScanFeatures> CalibrationFeatureExtractor::_extract_fea
     const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(table_condition);
     if (logical_expression->logical_operator == LogicalOperator::Or) {
       const auto& casted_predicate = std::dynamic_pointer_cast<LogicalExpression>(table_condition);
-      features.scan_operator_type = logical_operator_to_string.left.at(casted_predicate->logical_operator);
+      std::ostringstream lqp_stream;
+      lqp_stream << casted_predicate->logical_operator;
+      features.scan_operator_type = lqp_stream.str();
       //          const auto& predicate_arguments = casted_predicate->arguments;
     }
   }
@@ -243,10 +244,11 @@ void CalibrationFeatureExtractor::_extract_table_scan_features_for_predicate_exp
 }
 
 size_t CalibrationFeatureExtractor::_get_memory_usage_for_column(const std::shared_ptr<const Table>& table,
-                                                                 ColumnID column_id) {
+                                                                 const ColumnID column_id) {
   size_t memory_usage = 0;
 
-  for (const auto& chunk : table->chunks()) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto& chunk = table->get_chunk(chunk_id);
     const auto& segment = chunk->get_segment(column_id);
     memory_usage += segment->estimate_memory_usage();
   }

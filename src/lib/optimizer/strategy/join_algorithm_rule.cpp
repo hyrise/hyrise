@@ -24,8 +24,6 @@ namespace opossum {
 JoinAlgorithmRule::JoinAlgorithmRule(const std::shared_ptr<AbstractCostEstimator>& cost_estimator)
     : _cost_estimator(cost_estimator) {}
 
-std::string JoinAlgorithmRule::name() const { return "Join Algorithm Rule"; }
-
 void JoinAlgorithmRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (node->type == LQPNodeType::Join) {
     // ... "potential"_cross_join_node until this if below

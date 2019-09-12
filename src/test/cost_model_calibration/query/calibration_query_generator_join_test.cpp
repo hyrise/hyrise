@@ -18,7 +18,7 @@ namespace opossum {
 class CalibrationQueryGeneratorJoinTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto& manager = StorageManager::get();
+    auto& manager = Hyrise::get().storage_manager;
     manager.add_table("SomeTable", load_table("src/test/tables/int_int_int_string_float_calibration.tbl", 1u));
   }
 };

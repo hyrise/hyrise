@@ -1,0 +1,14 @@
+{
+    "config": {"null_handling": "null_string_as_null"},
+    "columns": [
+        {"name": "id", 			"type": "int",		"nullable": false},
+        {"name": "name", 		"type": "string",	"nullable": false},
+        {"name": "imdb_index",		"type": "string",	"nullable": true},
+        {"name": "imdb_id",		"type": "int",		"nullable": true},
+        {"name": "gender",		"type": "string",	"nullable": true},
+        {"name": "name_pcode_cf",	"type": "string",	"nullable": true},
+        {"name": "name_pcode_nf",	"type": "string",	"nullable": true},
+        {"name": "surname_pcode",	"type": "string",	"nullable": true},
+        {"name": "md5sum",		"type": "string",	"nullable": true}
+    ]
+}

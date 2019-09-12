@@ -17,9 +17,9 @@ namespace opossum {
 class Chunk;
 class Table;
 
-enum class TpchTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
+enum class TPCHTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
 
-extern std::unordered_map<opossum::TpchTable, std::string> tpch_table_names;
+extern std::unordered_map<opossum::TPCHTable, std::string> tpch_table_names;
 
 /**
  * Wrapper around the official tpch-dbgen tool, making it directly generate opossum::Table instances without having
@@ -27,15 +27,19 @@ extern std::unordered_map<opossum::TpchTable, std::string> tpch_table_names;
  *
  * NOT thread safe because the underlying tpch-dbgen is not (since it has global data and malloc races).
  */
-class TpchTableGenerator final : public AbstractTableGenerator {
+class TPCHTableGenerator final : public AbstractTableGenerator {
  public:
-  // Convenience constructor for creating a TpchTableGenerator out of a benchmarking context
-  explicit TpchTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+  // Convenience constructor for creating a TPCHTableGenerator out of a benchmarking context
+  explicit TPCHTableGenerator(float scale_factor, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
 
-  // Constructor for creating a TpchTableGenerator in a benchmark
-  explicit TpchTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
+  // Constructor for creating a TPCHTableGenerator in a benchmark
+  explicit TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
+
+ protected:
+  IndexesByTable _indexes_by_table() const override;
+  SortOrderByTable _sort_order_by_table() const override;
 
  private:
   float _scale_factor;

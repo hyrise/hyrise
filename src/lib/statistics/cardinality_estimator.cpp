@@ -8,6 +8,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -29,7 +30,6 @@
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 #include "utils/assert.hpp"
@@ -159,7 +159,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
-      const auto stored_table = StorageManager::get().get_table(stored_table_node->table_name);
+      const auto stored_table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
       output_table_statistics =
           prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
@@ -183,8 +183,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::CreateView:
     case LQPNodeType::Update:
     case LQPNodeType::Insert:
-    case LQPNodeType::ShowColumns:
-    case LQPNodeType::ShowTables:
     case LQPNodeType::Delete:
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
@@ -328,11 +326,11 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
         case JoinMode::Semi:
         case JoinMode::AntiNullAsTrue:
         case JoinMode::AntiNullAsFalse:
-          // TODO(anybody) Implement estimation of Semi/Anti joins
+          // TODO(anybody) Implement estimation of Semi/Anti joins. #1830
           return left_input_table_statistics;
 
         // For now, handle outer joins just as inner joins
-        // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches.
+        // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches. #1830
         case JoinMode::Left:
         case JoinMode::Right:
         case JoinMode::FullOuter:
@@ -343,7 +341,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
                                               primary_operator_join_predicate->column_ids.second,
                                               *left_input_table_statistics, *right_input_table_statistics);
 
-            // TODO(anybody) Implement estimation for non-equi joins
+            // TODO(anybody) Implement estimation for non-equi joins. #1830
             case PredicateCondition::NotEquals:
             case PredicateCondition::LessThan:
             case PredicateCondition::LessThanEquals:
@@ -370,7 +368,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
           Fail("Cross join is not a predicated join");
       }
     } else {
-      // TODO(anybody) For now, estimate a selectivity of one.
+      // TODO(anybody) For now, estimate a selectivity of one. #1830
       return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
     }
   }

@@ -7,7 +7,6 @@
 
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"
-#include "utils/null_streambuf.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -99,6 +98,11 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     std::cout << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
+  const auto indexes = json_config.value("indexes", default_config.indexes);
+  if (indexes) {
+    std::cout << "- Creating indexes (as defined by the benchmark)" << std::endl;
+  }
+
   // Get all other variables
   const auto chunk_size = json_config.value("chunk_size", default_config.chunk_size);
   std::cout << "- Chunk size is " << chunk_size << std::endl;
@@ -133,15 +137,23 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     std::cout << "- Not caching tables as binary files" << std::endl;
   }
 
+  const auto sql_metrics = json_config.value("sql_metrics", false);
+  if (sql_metrics) {
+    std::cout << "- Tracking SQL metrics" << std::endl;
+  } else {
+    std::cout << "- Not tracking SQL metrics" << std::endl;
+  }
+
   auto enable_jit = false;
   if constexpr (HYRISE_JIT_SUPPORT) {
     enable_jit = json_config.value("jit", default_config.enable_jit);
   }
   std::cout << "- JIT is " << (enable_jit ? "enabled" : "disabled") << std::endl;
 
-  return BenchmarkConfig{benchmark_mode,       chunk_size,       *encoding_config,    max_runs,  timeout_duration,
-                         warmup_duration,      output_file_path, enable_scheduler,    cores,     clients,
-                         enable_visualization, verify,           cache_binary_tables, enable_jit};
+  return BenchmarkConfig{
+      benchmark_mode,  chunk_size,          *encoding_config, indexes,    max_runs, timeout_duration,
+      warmup_duration, output_file_path,    enable_scheduler, cores,      clients,  enable_visualization,
+      verify,          cache_binary_tables, enable_jit,       sql_metrics};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -158,6 +170,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("mode", parse_result["mode"].as<std::string>());
   json_config.emplace("encoding", parse_result["encoding"].as<std::string>());
   json_config.emplace("compression", parse_result["compression"].as<std::string>());
+  json_config.emplace("indexes", parse_result["indexes"].as<bool>());
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
   json_config.emplace("cores", parse_result["cores"].as<uint>());
   json_config.emplace("clients", parse_result["clients"].as<uint>());
@@ -165,6 +178,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("output", parse_result["output"].as<std::string>());
   json_config.emplace("verify", parse_result["verify"].as<bool>());
   json_config.emplace("cache_binary_tables", parse_result["cache_binary_tables"].as<bool>());
+  json_config.emplace("sql_metrics", parse_result["sql_metrics"].as<bool>());
   if constexpr (HYRISE_JIT_SUPPORT) {
     json_config.emplace("jit", parse_result["jit"].as<bool>());
   }

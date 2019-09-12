@@ -50,8 +50,6 @@ enum class OperatorType {
   CreateView,
   DropTable,
   DropView,
-  ShowColumns,
-  ShowTables,
 
   Mock  // for Tests that need to Mock operators
 };

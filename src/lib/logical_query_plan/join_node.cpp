@@ -38,10 +38,6 @@ std::string JoinNode::description() const {
   std::stringstream stream;
   stream << "[Join] Mode: " << join_mode;
 
-  if (join_type) {
-    stream << " " << join_type_to_string.at(*join_type);
-  }
-
   for (const auto& predicate : join_predicates()) {
     stream << " [" << predicate->as_column_name() << "]";
   }
@@ -125,6 +121,8 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
+
+size_t JoinNode::_shallow_hash() const { return boost::hash_value(join_mode); }
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (!join_predicates().empty()) {

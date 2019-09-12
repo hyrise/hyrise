@@ -1,5 +1,6 @@
 #include "cost_model_calibration_table_generator.hpp"
 
+#include "hyrise.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/index/b_tree/b_tree_index.hpp"
@@ -38,8 +39,8 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
 
     const auto column_count = table->column_count();
-    const auto chunks = table->chunks();
-    for (const auto& chunk : chunks) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         std::vector<ColumnID> column_ids{};
         column_ids.push_back(column_id);
@@ -47,7 +48,7 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
       }
     }
 
-    StorageManager::get().add_table(table_specification.table_name, table);
+    Hyrise::get().storage_manager.add_table(table_specification.table_name, table);
 
     std::cout << "Encoded table " << table_specification.table_name << " successfully." << std::endl;
   }
@@ -79,7 +80,7 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
 
     std::cout << "done -- adding to storage manager: " << std::flush;
 
-    StorageManager::get().add_table(table_name, table);
+    Hyrise::get().storage_manager.add_table(table_name, table);
     std::cout << "done -- creating indexes: " << std::flush;
 
     for (const auto& column_spec : _configuration.columns) {
@@ -94,7 +95,7 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
 }
 
 void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_factor, const EncodingType encoding) const {
-  const auto tables = opossum::TpchTableGenerator(scale_factor, _chunk_size).generate();
+  const auto tables = opossum::TPCHTableGenerator(scale_factor, _chunk_size).generate();
 
   for (auto& tpch_table : tables) {
     const auto& table_name = tpch_table.first;
@@ -109,7 +110,7 @@ void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_fact
     }
 
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
-    auto& storage_manager = StorageManager::get();
+    auto& storage_manager = Hyrise::get().storage_manager;
 
     if (storage_manager.has_table(table_name)) {
       storage_manager.drop_table(table_name);

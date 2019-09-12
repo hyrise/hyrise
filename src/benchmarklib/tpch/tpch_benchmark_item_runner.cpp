@@ -38,8 +38,6 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
       _scale_factor(scale_factor) {
   _items.resize(22);
   std::iota(_items.begin(), _items.end(), BenchmarkItemID{0});
-
-  _prepare_queries();
 }
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
@@ -54,18 +52,23 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
                        return benchmark_item_id >= BenchmarkItemID{0} && benchmark_item_id < 22;  // NOLINT
                      }),
          "Invalid TPC-H item id");
-
-  _prepare_queries();
 }
 
 const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const { return _items; }
 
-void TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
+bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   const auto sql = build_query(item_id);
-  sql_executor.execute(sql);
+  std::shared_ptr<const Table> expected_result_table = nullptr;
+  if (!_dedicated_expected_results.empty()) {
+    expected_result_table = _dedicated_expected_results[item_id];
+  }
+
+  const auto [status, table] = sql_executor.execute(sql, expected_result_table);
+  Assert(status == SQLPipelineStatus::Success, "TPC-H items should not fail");
+  return true;
 }
 
-void TPCHBenchmarkItemRunner::_prepare_queries() const {
+void TPCHBenchmarkItemRunner::on_tables_loaded() {
   if (!_use_prepared_statements) return;
 
   std::cout << " - Preparing queries" << std::endl;
@@ -471,7 +474,7 @@ std::string TPCHBenchmarkItemRunner::_build_deterministic_query(const BenchmarkI
 
 std::string TPCHBenchmarkItemRunner::item_name(const BenchmarkItemID item_id) const {
   Assert(item_id < 22u, "item_id out of range");
-  return std::string("TPC-H ") + std::to_string(item_id + 1);
+  return std::string("TPC-H ") + (item_id + 1 < 10 ? "0" : "") + std::to_string(item_id + 1);
 }
 
 std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkItemID item_id,

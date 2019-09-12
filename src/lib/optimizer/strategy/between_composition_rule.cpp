@@ -18,8 +18,6 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string BetweenCompositionRule::name() const { return "Between Composition Rule"; }
-
 /**
  * _get_boundary takes a BinaryPredicateExpression and the corresponding PredicateNode
  * as its input and returns a standardized ColumnBoundary. This function checks where the

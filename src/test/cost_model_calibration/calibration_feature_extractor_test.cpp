@@ -63,7 +63,7 @@ TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractSimpleComparison) {
   //  EXPECT_EQ("Unencoded", calibration_example.table_scan_features.first_column.column_encoding);
   //  EXPECT_EQ("undefined", calibration_example.table_scan_features.second_column.column_encoding);
   //  EXPECT_EQ("undefined", calibration_example.table_scan_features.third_column.column_encoding);
-  EXPECT_EQ(calibration_example.table_scan_features.computable_or_column_expression_count, 2);
+  EXPECT_EQ((*calibration_example).table_scan_features.computable_or_column_expression_count, 2);
 }
 
 TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractBetween) {
@@ -79,7 +79,7 @@ TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractBetween) {
   //  EXPECT_TRUE(calibration_example.table_scan_features);
   //  EXPECT_EQ(calibration_example.table_scan_features->first_column.column_encoding, "Unencoded");
   //  EXPECT_EQ(calibration_example.table_scan_features->second_column.column_encoding, "undefined");
-  EXPECT_EQ(calibration_example.table_scan_features.computable_or_column_expression_count, 2);
+  EXPECT_EQ((*calibration_example).table_scan_features.computable_or_column_expression_count, 2);
 }
 
 TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractOr) {
@@ -96,7 +96,7 @@ TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractOr) {
   //  EXPECT_EQ(calibration_example.table_scan_features->first_column.column_encoding, "undefined");
   //  EXPECT_EQ(calibration_example.table_scan_features->second_column.column_encoding, "undefined");
   //  EXPECT_EQ(calibration_example.table_scan_features->third_column.column_encoding, "undefined");
-  EXPECT_EQ(calibration_example.table_scan_features.computable_or_column_expression_count, 5);
+  EXPECT_EQ((*calibration_example).table_scan_features.computable_or_column_expression_count, 5);
 }
 
 using JoinTypes = ::testing::Types<JoinHash, JoinIndex, JoinSortMerge, JoinNestedLoop, JoinMPSM>;

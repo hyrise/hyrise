@@ -3,6 +3,7 @@
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -11,7 +12,6 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
@@ -22,8 +22,8 @@ namespace opossum {
 class LogicalQueryPlanTest : public BaseTest {
  public:
   void SetUp() override {
-    StorageManager::get().add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl"));
-    StorageManager::get().add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
+    Hyrise::get().storage_manager.add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl"));
+    Hyrise::get().storage_manager.add_table("int_int_int", load_table("resources/test_data/tbl/int_int_int.tbl"));
 
     node_int_int = StoredTableNode::make("int_int");
     a1 = node_int_int->get_column("a");
@@ -106,6 +106,18 @@ class LogicalQueryPlanTest : public BaseTest {
   LQPColumnReference _t_b_a;
   LQPColumnReference _t_b_b;
 };
+
+TEST_F(LogicalQueryPlanTest, LQPColumnExpressionHash) {
+  const auto node_int_int_1 = StoredTableNode::make("int_int");
+  const auto node_int_int_2 = StoredTableNode::make("int_int");
+
+  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_1, ColumnID{0}});
+  const auto expression_a_1 = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_1, ColumnID{0}});
+  const auto expression_a_2 = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_2, ColumnID{0}});
+
+  EXPECT_EQ(expression_a->hash(), expression_a_1->hash());
+  EXPECT_EQ(expression_a->hash(), expression_a_2->hash());
+}
 
 TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
   ASSERT_EQ(_mock_node_a->left_input(), nullptr);
@@ -234,7 +246,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-  auto new_node = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node = UnionNode::make(UnionMode::Positions);
 
   lqp_replace_node(_nodes[5], new_node);
 

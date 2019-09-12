@@ -5,6 +5,7 @@
 #include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/storage_manager.hpp"
@@ -395,7 +396,7 @@ const std::shared_ptr<AbstractExpression> CalibrationQueryGeneratorPredicate::ge
 
   // Get an existing value from column and filter by that
   static std::mt19937 engine((std::random_device()()));
-  const auto stored_table = StorageManager::get().get_table(table->table_name);
+  const auto stored_table = Hyrise::get().storage_manager.get_table(table->table_name);
   std::uniform_int_distribution<uint64_t> row_id_dist(0, stored_table->row_count() - 1);
   const auto row_id = row_id_dist(engine);
   const auto value = stored_table->get_value<pmr_string>(column_id, row_id);

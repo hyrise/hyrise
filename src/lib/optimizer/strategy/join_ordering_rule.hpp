@@ -17,8 +17,6 @@ class AbstractCostEstimator;
  */
 class JoinOrderingRule : public AbstractRule {
  public:
-  std::string name() const override;
-
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 
  private:

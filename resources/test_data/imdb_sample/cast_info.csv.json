@@ -1,0 +1,12 @@
+{
+    "config": {"null_handling": "null_string_as_null"},
+    "columns": [
+        {"name": "id", 			"type": "int",		"nullable": false},
+        {"name": "person_id", 		"type": "int",		"nullable": false},
+        {"name": "movie_id", 		"type": "int",		"nullable": false},
+        {"name": "person_role_id", 	"type": "int", 		"nullable": true},
+        {"name": "note", 		"type": "string", 	"nullable": true},
+        {"name": "nr_order", 		"type": "int", 		"nullable": true},
+        {"name": "role_id", 		"type": "int", 		"nullable": false}
+    ]
+}
