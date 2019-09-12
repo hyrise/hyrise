@@ -1,13 +1,14 @@
 #include "session.hpp"
 
 #include "hyrise_communicator.hpp"
-#include "response_builder.hpp"
 #include "network_message_types.hpp"
+#include "response_builder.hpp"
 
 namespace opossum {
 
-Session::Session(Socket socket) : _socket(std::make_shared<Socket>(std::move(socket))),
-_postgres_handler(std::make_shared<PostgresHandler>(_socket)) {
+Session::Session(Socket socket)
+    : _socket(std::make_shared<Socket>(std::move(socket))),
+      _postgres_handler(std::make_shared<PostgresHandler>(_socket)) {
   _socket->set_option(boost::asio::ip::tcp::no_delay(true));
 }
 
@@ -66,7 +67,6 @@ void Session::_handle_request() {
       Fail("Unknown packet type");
   }
 }
-
 
 void Session::_handle_simple_query() {
   const auto& query = _postgres_handler->read_query_packet();
@@ -154,7 +154,8 @@ void Session::_handle_execute() {
     _postgres_handler->send_status_message(NetworkMessageType::NoDataResponse);
   }
 
-  _postgres_handler->command_complete(ResponseBuilder::build_command_complete_message(physical_plan->type(), row_count));
+  _postgres_handler->command_complete(
+      ResponseBuilder::build_command_complete_message(physical_plan->type(), row_count));
   // Ready for query + flush will be done after reading sync message
 }
 }  // namespace opossum

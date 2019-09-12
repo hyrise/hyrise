@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-// PostgresHandler::PostgresHandler(std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
+PostgresHandler::PostgresHandler(const std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
 
 uint32_t PostgresHandler::read_startup_packet() {
   constexpr auto ssl_request_code = 80877103u;
@@ -79,7 +79,7 @@ void PostgresHandler::command_complete(const std::string& command_complete_messa
 }
 
 void PostgresHandler::set_row_description_header(const uint32_t total_column_name_length, const uint16_t column_count) {
-  _write_buffer.put_value(NetworkMessageType::RowDescription);  
+  _write_buffer.put_value(NetworkMessageType::RowDescription);
 
   /* Each column has the following fields within the message:
    FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
@@ -112,21 +112,23 @@ void PostgresHandler::set_row_description_header(const uint32_t total_column_nam
   // Total message length can be calculated this way:
 
   // length field + column count + values for each column
-  const auto packet_size = sizeof(uint32_t) + sizeof(uint16_t) + column_count * (sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t)) + total_column_name_length;
+  const auto packet_size = sizeof(uint32_t) + sizeof(uint16_t) +
+                           column_count * (sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t)) +
+                           total_column_name_length;
   _write_buffer.put_value<uint32_t>(packet_size);
   // Int16 Specifies the number of fields in a row (can be zero).
   _write_buffer.put_value<uint16_t>(column_count);
-
 }
 
-void PostgresHandler::send_row_description(const std::string& column_name, const uint32_t object_id, const int32_t type_width) {
-    _write_buffer.put_string(column_name);          // Column name
-    _write_buffer.put_value<int32_t>(0u);           // No object id
-    _write_buffer.put_value<int16_t>(0u);           // No attribute number
-    _write_buffer.put_value<int32_t>(object_id);    // Object id of type
-    _write_buffer.put_value<uint16_t>(type_width);  // Data type size
-    _write_buffer.put_value<int32_t>(-1);           // No modifier
-    _write_buffer.put_value<int16_t>(0u);           // Text format
+void PostgresHandler::send_row_description(const std::string& column_name, const uint32_t object_id,
+                                           const int32_t type_width) {
+  _write_buffer.put_string(column_name);          // Column name
+  _write_buffer.put_value<int32_t>(0u);           // No object id
+  _write_buffer.put_value<int16_t>(0u);           // No attribute number
+  _write_buffer.put_value<int32_t>(object_id);    // Object id of type
+  _write_buffer.put_value<uint16_t>(type_width);  // Data type size
+  _write_buffer.put_value<int32_t>(-1);           // No modifier
+  _write_buffer.put_value<int16_t>(0u);           // Text format
 }
 
 void PostgresHandler::send_data_row(const std::vector<std::string>& row_strings) {

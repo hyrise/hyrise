@@ -18,10 +18,7 @@ struct PreparedStatementDetails {
 
 class PostgresHandler {
  public:
-  // PostgresHandler::PostgresHandler(std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
-
-  // template <class T>
-  explicit PostgresHandler(const std::shared_ptr<Socket> socket) : _read_buffer(socket), _write_buffer(socket) {}
+  explicit PostgresHandler(const std::shared_ptr<Socket> socket);
   uint32_t read_startup_packet();
   void handle_startup_packet_body(const uint32_t size);
   void send_authentication();

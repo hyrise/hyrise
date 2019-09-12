@@ -1,10 +1,10 @@
 
 #include "response_builder.hpp"
 
-
 namespace opossum {
 
-void ResponseBuilder::build_row_description(std::shared_ptr<const Table> table, std::shared_ptr<PostgresHandler> postgres_handler) {
+void ResponseBuilder::build_row_description(std::shared_ptr<const Table> table,
+                                            std::shared_ptr<PostgresHandler> postgres_handler) {
   // Calculate sum of length of all column names
   uint32_t column_lengths_total = 0;
   for (auto& column_name : table->column_names()) {
@@ -43,11 +43,11 @@ void ResponseBuilder::build_row_description(std::shared_ptr<const Table> table, 
     }
 
     postgres_handler->send_row_description(table->column_name(column_id), object_id, type_width);
-    }
+  }
 }
 
 std::string ResponseBuilder::build_command_complete_message(const OperatorType root_operator_type,
-                                           const uint64_t row_count) {
+                                                            const uint64_t row_count) {
   switch (root_operator_type) {
     case OperatorType::Insert: {
       // 0 is ignored OID and 1 inserted row

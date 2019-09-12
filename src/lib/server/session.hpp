@@ -1,7 +1,7 @@
 #pragma once
 
-#include "postgres_handler.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "postgres_handler.hpp"
 
 #include "operators/abstract_operator.hpp"
 #include "scheduler/operator_task.hpp"
