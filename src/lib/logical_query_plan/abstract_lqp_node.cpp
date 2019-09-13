@@ -259,6 +259,10 @@ std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
   return left_input->get_statistics();
 }
 
+OperatorType AbstractLQPNode::operator_type() const {
+  Fail("AbstractLQPNode::operator_type() not implemented.");
+}
+
 bool AbstractLQPNode::creates_reference_segments() const { return false; }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {

@@ -10,7 +10,7 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "table_generator.hpp"
+#include "synthetic_table_generator.hpp"
 #include "types.hpp"
 
 namespace {
@@ -35,7 +35,7 @@ void clear_cache() {
 namespace opossum {
 
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
-  auto table_generator = std::make_shared<TableGenerator>();
+  auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
   const auto chunk_size = static_cast<ChunkOffset>(number_of_rows / NUMBER_OF_CHUNKS);
   Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table");

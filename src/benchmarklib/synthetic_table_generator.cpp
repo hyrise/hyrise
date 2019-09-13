@@ -46,7 +46,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) {
   auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                              {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, UseMvcc::No);
+                              {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, std::nullopt, UseMvcc::No);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_spec);
 
@@ -56,22 +56,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
-    const std::vector<SegmentEncodingSpec>& segment_encoding_specs,
-    const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc) {
-  Assert(column_data_distributions.size() == segment_encoding_specs.size(),
-         "Length of value distributions needs to equal length of column encodings.");
-
-  auto table =
-      generate_table(column_data_distributions, column_data_types, num_rows, chunk_size, column_names, use_mvcc);
-
-  ChunkEncoder::encode_all_chunks(table, segment_encoding_specs);
-
-  return table;
-}
-
-std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
-    const std::vector<ColumnDataDistribution>& column_data_distributions,
-    const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
+    const std::optional<std::vector<SegmentEncodingSpec>>& segment_encoding_specs,
     const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc) {
   Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
   Assert(column_data_distributions.size() == column_data_types.size(),
@@ -79,6 +64,10 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   if (column_names) {
     Assert(column_data_distributions.size() == column_names->size(),
            "When set, the number of column names needs to equal number of value distributions.");
+  }
+  if (segment_encoding_specs) {
+    Assert(column_data_distributions.size() == segment_encoding_specs->size(),
+         "Length of value distributions needs to equal length of column encodings.");
   }
 
   const auto num_columns = column_data_distributions.size();
@@ -168,6 +157,10 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
         table->append_chunk(segments, mvcc_data);
       }
     }
+  }
+
+  if (segment_encoding_specs) {
+    ChunkEncoder::encode_all_chunks(table, *segment_encoding_specs);
   }
 
   return table;

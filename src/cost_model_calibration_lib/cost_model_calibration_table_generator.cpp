@@ -8,7 +8,7 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "table_generator.hpp"
+#include "synthetic_table_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
@@ -55,7 +55,7 @@ void CostModelCalibrationTableGenerator::load_calibration_tables() const {
 }
 
 void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
-  TableGenerator table_generator;
+  SyntheticTableGenerator table_generator;
 
   // Gather data required for table generator.
   std::vector<ColumnDataDistribution> column_data_distributions;
@@ -76,7 +76,7 @@ void CostModelCalibrationTableGenerator::generate_calibration_tables() const {
 
     std::cout << "Table >>" << table_name << "<<\tdata generation: " << std::flush;
     auto table = table_generator.generate_table(column_data_distributions, column_data_types, table_size, _chunk_size,
-                                                column_encodings, column_names, UseMvcc::Yes, false);
+                                                column_encodings, column_names, UseMvcc::Yes);
 
     std::cout << "done -- adding to storage manager: " << std::flush;
 

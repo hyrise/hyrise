@@ -60,6 +60,14 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   return _out_table;
 }
 
+PredicateCondition IndexScan::predicate_condition() const { return _predicate_condition; }
+
+const std::vector<ColumnID>& IndexScan::left_columns_ids() const { return _left_column_ids; }
+
+const std::vector<AllTypeVariant>& IndexScan::right_values() const { return _right_values; }
+
+const std::vector<AllTypeVariant>& IndexScan::right_values2() const { return _right_values2; }
+
 std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
