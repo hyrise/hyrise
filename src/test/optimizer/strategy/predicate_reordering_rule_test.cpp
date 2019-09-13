@@ -217,8 +217,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
      * The mocked table has one column of int32_ts with the value range 0..100
      */
   auto table_node =
-  create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
-                                   {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
+      create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, 100.0f,
+                                       {GenericHistogram<int32_t>::with_single_bin(0, 100, 100.0f, 100.0f)});
   auto union_node = UnionNode::make(UnionMode::Positions);
   auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
   auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
