@@ -100,7 +100,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
-              sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." # Own folder to isolate visualization
+              sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
               Utils.markStageSkippedForConditional("clangRelease")
@@ -114,11 +114,11 @@ try {
               sh "./scripts/test/hyriseConsole_test.py clang-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-              sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." # Own folder to isolate visualization
+              sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
               sh "./scripts/test/hyriseConsole_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
-              sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." # Own folder to isolate visualization
+              sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
               Utils.markStageSkippedForConditional("debugSystemTests")
@@ -162,7 +162,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
-              sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." # Own folder to isolate visualization
+              sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
             }
           } else {
               Utils.markStageSkippedForConditional("gccRelease")
