@@ -40,13 +40,13 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
   if (op->input_left()) {
     auto left = op->input_left();
     _build_subtree(left, visualized_ops);
-    _build_dataflow(left, op);
+    _build_dataflow(left, op, InputSide::Left);
   }
 
   if (op->input_right()) {
     auto right = op->input_right();
     _build_subtree(right, visualized_ops);
-    _build_dataflow(right, op);
+    _build_dataflow(right, op, InputSide::Right);
   }
 
   switch (op->type()) {
@@ -91,7 +91,7 @@ void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOp
 }
 
 void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
-                                    const std::shared_ptr<const AbstractOperator>& to) {
+                                    const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
   if (const auto& output = from->get_output()) {
@@ -104,6 +104,9 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
     info.label = stream.str();
 
     info.pen_width = output->row_count();
+    if (to->input_right() != nullptr) {
+      info.arrowhead = side == InputSide::Left ? "normallbox" : "normalrdiamond";
+    }
   }
 
   _add_edge(from, to, info);
