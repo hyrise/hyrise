@@ -110,7 +110,7 @@ def main():
     sys.exit(1)
   with open(visualization_file) as f:
     # Check whether the (a) the GetTable node exists and (b) the chunk count is correct for the given scale factor
-    if not '/4 chunk(s)' in f:
+    if not '/4 chunk(s)' in f.read():
       print ("ERROR: Did not find expected pruning information in the visualization file")
       sys.exit(1)
 
