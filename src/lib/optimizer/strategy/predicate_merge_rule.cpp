@@ -40,7 +40,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   }
 
   // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs with many
-  // UNIONs. TODO(jj): Insert issue reference to find better heuristic
+  // UNIONs.
   if (lqp_complexity >= _optimization_threshold) {
     _merge_subplan(node, std::nullopt);
   }
@@ -58,13 +58,14 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
       auto expression = predicate_node->predicate();
-      // todo(jj): Add comment
+      // Do not concatenate expressions at the bottom of a diamond because they will be concatenated later.
       if (subsequent_expression && begin->output_count() == 1) {
         expression = and_(expression, *subsequent_expression);
       }
+
       const auto left_input_expression = _merge_subplan(begin->left_input(), expression);
       if (begin->left_input()->output_count() == 1 && left_input_expression) {
-        // Do not merge predicate nodes with nodes that have multiple outputs because this would unnecessarily inflate
+        // Do not merge PredicateNodes with nodes that have multiple outputs because this would unnecessarily inflate
         // the resulting logical expression. Instead, wait until the lower node has only one output. This is the case
         // after a diamond was resolved.
         lqp_remove_node(begin->left_input());
@@ -80,11 +81,13 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
       const auto left_input_expression = _merge_subplan(begin->left_input(), std::nullopt);
       const auto right_input_expression = _merge_subplan(begin->right_input(), std::nullopt);
       if (left_input_expression && right_input_expression) {
-        // todo(jj): Add comment
         auto expression = or_(left_input_expression, right_input_expression);
+
+        // Do not concatenate expressions at the bottom of a diamond because they will be concatenated later.
         if (subsequent_expression && begin->output_count() == 1) {
           expression = and_(expression, *subsequent_expression);
         }
+
         lqp_remove_node(begin->left_input());
         lqp_remove_node(begin->right_input());
         const auto predicate_node = PredicateNode::make(expression);
@@ -92,9 +95,9 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
         Assert(!predicate_node->right_input() || predicate_node->left_input() == predicate_node->right_input(),
                "The new predicate node must not have two different inputs");
         predicate_node->set_right_input(nullptr);
-        return _merge_subplan(
-            // The new predicate node might be mergeable with an underlying node now.
-            predicate_node, std::nullopt);
+
+        // The new predicate node might be mergeable with an underlying node now.
+        return _merge_subplan(predicate_node, std::nullopt);
       } else {
         return nullptr;
       }
