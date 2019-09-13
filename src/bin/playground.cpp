@@ -29,12 +29,14 @@ int main() {
   }
 
   // Create indices
-  const auto left_chunks = left_table->chunks();
-  for (const auto& chunk : left_chunks) {
+  const auto left_chunk_count = left_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < left_chunk_count; ++chunk_id) {
+    const auto& chunk = left_table->get_chunk(chunk_id);
     chunk->template create_index<BTreeIndex>(std::vector<ColumnID>{ColumnID{0}});
   }
-  const auto right_chunks = right_table->chunks();
-  for (const auto& chunk : right_chunks) {
+  const auto right_chunk_count = right_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < right_chunk_count; ++chunk_id) {
+    const auto& chunk = right_table->get_chunk(chunk_id);
     chunk->template create_index<BTreeIndex>(std::vector<ColumnID>{ColumnID{0}});
   }
   Hyrise::get().storage_manager.add_table("left_table", left_table);

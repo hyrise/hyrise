@@ -176,7 +176,7 @@ const TableScanFeatures CalibrationFeatureExtractor::_extract_features_for_opera
   const auto predicate_condition_pointer = std::make_shared<PredicateCondition>(predicate_condition);
 
   features.scan_operator_type = predicate_condition_to_string.left.at(predicate_condition);
-  features.effective_chunk_count = op->get_number_of_included_chunks();
+  features.effective_chunk_count = op->included_chunk_ids.size();
 
   DebugAssert(left_column_ids.size() == 1, "Expected only one column for IndexScan in FeatureExtractor");
   const auto column_expression = PQPColumnExpression::from_table(*left_input_table, left_column_ids.front());

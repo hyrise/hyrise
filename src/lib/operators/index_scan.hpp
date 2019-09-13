@@ -27,6 +27,12 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   const std::string name() const final;
 
+  PredicateCondition predicate_condition() const;
+
+  const std::vector<ColumnID>& left_columns_ids() const;
+  const std::vector<AllTypeVariant>& right_values() const;
+  const std::vector<AllTypeVariant>& right_values2() const;
+
   // If set, only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
   std::vector<ChunkID> included_chunk_ids;
 

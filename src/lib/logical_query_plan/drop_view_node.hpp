@@ -5,6 +5,11 @@
 
 #include "base_non_query_node.hpp"
 
+#include "enable_make_for_lqp_node.hpp"
+#include "operators/abstract_operator.hpp"
+#include "statistics/table_statistics.hpp"
+#include "types.hpp"
+
 namespace opossum {
 
 /**
@@ -18,6 +23,8 @@ class DropViewNode : public EnableMakeForLQPNode<DropViewNode>, public BaseNonQu
 
   const std::string view_name;
   const bool if_exists;
+
+  OperatorType operator_type() const override { return OperatorType::DropView; }
 
  protected:
   size_t _shallow_hash() const override;
