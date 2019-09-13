@@ -19,9 +19,6 @@ class AbstractLQPNode;
  *   `(a OR b) AND (a OR c) -> a OR (b AND c)` are currently ignored as it is has not been determined yet whether
  *   one or the other form executes faster (TODO(anybody))
  *
- * IN to Equals
- *   InExpressions with a single element in the list (`a IN (5)`) are rewritten as a normal equality scan (`a = 5`)
- *
  * Constant folding
  *   Expression involving only constants (`5 + 3 * 4`) are calculated and replaced with their result.
  *
@@ -47,13 +44,6 @@ class ExpressionReductionRule : public AbstractRule {
       std::shared_ptr<AbstractExpression>& input_expression);
 
   /**
-   * Rewrite `a IN (5)` to `a = 5`
-   * Rewrite `a NOT IN (5)` to `a != 5`
-   */
-  static const std::shared_ptr<AbstractExpression>& reduce_in_with_single_list_element(
-      std::shared_ptr<AbstractExpression>& input_expression);
-
-  /**
    * Rewrite `5 + 3` to `8`
    */
   static void reduce_constant_expression(std::shared_ptr<AbstractExpression>& input_expression);
@@ -63,6 +53,13 @@ class ExpressionReductionRule : public AbstractRule {
    * Rewrite `a NOT LIKE 'abc%'` to `a < 'abc' OR a >= 'abcd'`
    */
   static void rewrite_like_prefix_wildcard(std::shared_ptr<AbstractExpression>& input_expression);
+
+  /**
+   * Rewrite `SELECT SUM(a), COUNT(a), AVG(a)` to `SELECT SUM(a), COUNT(a), SUM(a) / COUNT(a) AS AVG(a)`
+   */
+  static void remove_duplicate_aggregate(std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
+                                         const std::shared_ptr<AbstractLQPNode>& aggregate_node,
+                                         const std::shared_ptr<AbstractLQPNode>& root_node);
 };
 
 }  // namespace opossum

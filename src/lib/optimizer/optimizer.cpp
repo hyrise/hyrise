@@ -14,6 +14,7 @@
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
+#include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
@@ -114,6 +115,12 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+  // Before the IN predicate is rewritten, it should have been moved to a good position. Also, while the IN predicate
+  // might become a join, it is semantically more similar to a predicate. If we run this rule too early, it might
+  // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
+  // joins and would not recognize such a rewritten predicate.
+  optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 

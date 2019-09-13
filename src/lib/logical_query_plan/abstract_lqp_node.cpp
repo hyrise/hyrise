@@ -104,10 +104,17 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 }
 
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
+  DebugAssert(
+      right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union || type == LQPNodeType::Update,
+      "This node type does not accept a right input");
   set_input(LQPInputSide::Right, right);
 }
 
 void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
+  DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
+                  type == LQPNodeType::Union || type == LQPNodeType::Update,
+              "This node type does not accept a right input");
+
   // We need a reference to _inputs[input_idx], so not calling this->input(side)
   auto& current_input = _inputs[static_cast<int>(side)];
 
@@ -314,7 +321,12 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
       return inputs;
     };
 
-    const auto node_print_fn = [](const auto& node2, auto& stream2) { stream2 << node2->description(); };
+    const auto node_print_fn = [](const auto& node2, auto& stream2) {
+      stream2 << node2->description();
+      if (!node2->comment.empty()) {
+        stream2 << " (" << node2->comment << ")";
+      }
+    };
 
     print_directed_acyclic_graph<const AbstractLQPNode>(root.shared_from_this(), get_inputs_fn, node_print_fn, stream);
   };
