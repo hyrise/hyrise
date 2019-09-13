@@ -409,6 +409,20 @@ TEST_F(CardinalityEstimatorTest, JoinSemiHistograms) {
   const auto join_estimation =
       CardinalityEstimator::estimate_semi_join(ColumnID{0}, ColumnID{0}, left_table_statistics, right_table_statistics);
 
+  // Left Join Column Histogram:  |  Right Join Column Histogram:  |  Resulting Histogram
+  //                              |                                |
+  // Bin       Height  Distinct   |  Bin       Height  Distinct    |  Bin       Height  Distinct  Comment
+  // [ 0,  9]  10      1          |                                |
+  // [10, 19]  15      1          |                                |
+  // [20, 29]  10      3          |  [20, 29]  (10)    7           |  [20, 29]  10      3         100% as 3 <= 7
+  // [30, 39]  20      8          |  [30, 39]  (5)     2           |  [30, 39]  5       2         h: 20*(2/8)
+  // [40, 49]   5      1          |                                |
+  // [50, 59]  15      6          |  [50,                          |  [50, 59]  7.5     3         h: 15*((6/2)/6)
+  // [60, 69]   5      1          |       69]  (10)    6           |  [69, 69]  5       1         100% as 1 <= (6/2)
+  //                              |  [70, 79]  (8)     8           |
+  //                              |                                |
+  //                              |  (Height is ignored on right)  |      sum:  27.5
+
   EXPECT_EQ(join_estimation->row_count, 27.5);
   EXPECT_EQ(join_estimation->column_statistics.size(), 2);
 
