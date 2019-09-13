@@ -44,8 +44,8 @@ set(
     file_based_table_generator.hpp
     random_generator.hpp
     table_builder.hpp
-    table_generator.cpp
-    table_generator.hpp
+    synthetic_table_generator.cpp
+    synthetic_table_generator.hpp
 )
 
 
