@@ -7,11 +7,9 @@ namespace cost_model {
 
 const std::map<std::string, AllTypeVariant> CostModelFeatures::serialize() const {
   // clang-format off
-  // std::stringstream operator_type_stream;
-  // operator_type_stream << operator_type;
 
   std::map<std::string, AllTypeVariant> features = {
-    {"operator_type", pmr_string("operator_type_stream.str()")},
+    {"operator_type", pmr_string(operator_type_to_string.at(operator_type))},
     {"execution_time_ns", static_cast<int64_t>(execution_time_ns)},
     // DISABLED UNTIL NECESSARY FOR JOIN {"input_table_size_ratio", input_table_size_ratio},
     {"left_input_row_count", static_cast<int64_t>(left_input_row_count)},
