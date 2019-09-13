@@ -97,10 +97,10 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "./clang-release/hyriseTest clang-release"
               sh "./clang-release/hyriseSystemTest clang-release"
-              sh "cd clang-release; ../scripts/test/hyriseConsole_test.py ."
-              sh "cd clang-release; ../scripts/test/hyriseBenchmarkJoinOrder_test.py ."
-              sh "cd clang-release; ../scripts/test/hyriseBenchmarkFileBased_test.py ."
-              sh "cd clang-release; ../scripts/test/hyriseBenchmarkTPCH_test.py ."
+              sh "./scripts/test/hyriseConsole_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+              sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." # Own folder to isolate visualization
 
             } else {
               Utils.markStageSkippedForConditional("clangRelease")
@@ -111,14 +111,14 @@ try {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
               sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
-              sh "cd clang-debug; ../scripts/test/hyriseConsole_test.py ."
-              sh "cd clang-debug; ../scripts/test/hyriseBenchmarkJoinOrder_test.py ."
-              sh "cd clang-debug; ../scripts/test/hyriseBenchmarkFileBased_test.py ."
-              sh "cd clang-debug; ../scripts/test/hyriseBenchmarkTPCH_test.py ."
-              sh "cd gcc-debug; ../scripts/test/hyriseConsole_test.py ."
-              sh "cd gcc-debug; ../scripts/test/hyriseBenchmarkJoinOrder_test.py ."
-              sh "cd gcc-debug; ../scripts/test/hyriseBenchmarkFileBased_test.py ."
-              sh "cd gcc-debug; ../scripts/test/hyriseBenchmarkTPCH_test.py ."
+              sh "./scripts/test/hyriseConsole_test.py clang-debug"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+              sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." # Own folder to isolate visualization
+              sh "./scripts/test/hyriseConsole_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
+              sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." # Own folder to isolate visualization
 
             } else {
               Utils.markStageSkippedForConditional("debugSystemTests")
@@ -159,10 +159,10 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
-              sh "cd gcc-release; ../scripts/test/hyriseConsole_test.py ."
-              sh "cd gcc-release; ../scripts/test/hyriseBenchmarkJoinOrder_test.py ."
-              sh "cd gcc-release; ../scripts/test/hyriseBenchmarkFileBased_test.py ."
-              sh "cd gcc-release; ../scripts/test/hyriseBenchmarkTPCH_test.py ."
+              sh "./scripts/test/hyriseConsole_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
+              sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." # Own folder to isolate visualization
             }
           } else {
               Utils.markStageSkippedForConditional("gccRelease")
