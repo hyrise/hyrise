@@ -105,7 +105,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
 
     info.pen_width = output->row_count();
     if (to->input_right() != nullptr) {
-      info.arrowhead = side == InputSide::Left ? "normallbox" : "normalrdiamond";
+      info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
     }
   }
 

@@ -120,7 +120,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   info.label = label_stream.str();
   info.pen_width = pen_width;
   if (to->input_count() == 2) {
-    info.arrowhead = side == InputSide::Left ? "normallbox" : "normalrdiamond";
+    info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
 
   _add_edge(from, to, info);
