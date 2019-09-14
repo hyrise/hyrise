@@ -1442,7 +1442,8 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
 }
 
 TEST_F(SQLTranslatorTest, FromColumnAliasingAggregation) {
-  const auto actual_lqp = compile_query("SELECT foo + 1 FROM (SELECT a, MIN(b) FROM int_float WHERE a > 10 GROUP BY a) AS t (bar, foo)");
+  const auto actual_lqp =
+      compile_query("SELECT foo + 1 FROM (SELECT a, MIN(b) FROM int_float WHERE a > 10 GROUP BY a) AS t (bar, foo)");
 
   // clang-format off
   const auto expected_lqp =
