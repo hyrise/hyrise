@@ -15,6 +15,9 @@ class AbstractScheduler;
 class JitRepository;
 class BenchmarkRunner;
 
+// This should be the only singleton in the src/lib world. It provides a unified way of accessing components like the
+// storage manager, the transaction manager, and more. Encapsulating this in one class avoids the static initialization
+// order fiasco, which would otherwise make the initialization/destruction order hard to control.
 class Hyrise : public Singleton<Hyrise> {
  public:
   // Resets the Hyrise state by deleting its members (e.g., StorageManager) and
@@ -35,6 +38,8 @@ class Hyrise : public Singleton<Hyrise> {
 
   std::shared_ptr<JitRepository> jit_repository;
 
+  // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark
+  // result JSON.
   std::weak_ptr<BenchmarkRunner> benchmark_runner;
 
  private:
