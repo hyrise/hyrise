@@ -8,7 +8,6 @@
 
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
-#
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"

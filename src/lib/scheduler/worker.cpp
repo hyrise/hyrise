@@ -13,7 +13,6 @@
 
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
-#
 #include "hyrise.hpp"
 #include "task_queue.hpp"
 

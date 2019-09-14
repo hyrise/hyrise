@@ -8,7 +8,6 @@
 #include "operators/import_csv.hpp"
 #include "storage/table.hpp"
 
-#
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"

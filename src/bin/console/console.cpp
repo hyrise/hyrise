@@ -34,7 +34,6 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
-#
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"

@@ -14,7 +14,6 @@
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
-#
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"

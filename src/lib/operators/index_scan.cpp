@@ -7,7 +7,6 @@
 #include "hyrise.hpp"
 
 #include "scheduler/abstract_task.hpp"
-#
 #include "scheduler/job_task.hpp"
 
 #include "storage/index/abstract_index.hpp"

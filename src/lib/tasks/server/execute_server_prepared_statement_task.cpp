@@ -3,7 +3,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
-#
 #include "scheduler/operator_task.hpp"
 
 namespace opossum {

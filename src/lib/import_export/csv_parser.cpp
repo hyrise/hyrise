@@ -16,7 +16,6 @@
 #include "import_export/csv_converter.hpp"
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
-#
 #include "scheduler/job_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"

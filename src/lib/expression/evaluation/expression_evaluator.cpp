@@ -29,7 +29,6 @@
 #include "like_matcher.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
-#
 #include "scheduler/operator_task.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"

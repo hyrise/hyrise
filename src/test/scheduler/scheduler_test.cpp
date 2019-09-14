@@ -9,7 +9,6 @@
 #include "hyrise.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
-#
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"

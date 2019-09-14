@@ -11,7 +11,6 @@
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
-#
 #include "scheduler/job_task.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"

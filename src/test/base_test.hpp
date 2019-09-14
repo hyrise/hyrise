@@ -12,7 +12,6 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
-#
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/attribute_statistics.hpp"

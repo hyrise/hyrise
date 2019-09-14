@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "abstract_scheduler.hpp"
-#
 #include "hyrise.hpp"
 #include "task_queue.hpp"
 #include "utils/tracing/probes.hpp"
