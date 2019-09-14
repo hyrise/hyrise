@@ -1441,6 +1441,20 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, FromColumnAliasingAggregation) {
+  const auto actual_lqp = compile_query("SELECT foo + 1 FROM (SELECT a, MIN(b) FROM int_float WHERE a > 10 GROUP BY a) AS t (bar, foo)");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(min_(int_float_b), 1)),
+    AggregateNode::make(expression_vector(int_float_a), expression_vector(min_(int_float_b)),
+      PredicateNode::make(greater_than_(int_float_a, 10),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, FromColumnAliasingColumnsSwitchNames) {
   // Tricky: Columns "switch names". a becomes b and b becomes a
 
