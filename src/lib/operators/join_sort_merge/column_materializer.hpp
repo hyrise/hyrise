@@ -85,7 +85,7 @@ class ColumnMaterializer {
       jobs.back()->schedule();
     }
 
-    Hyrise::get().scheduler->wait_for_tasks(jobs);
+    Hyrise::get().scheduler().wait_for_tasks(jobs);
 
     auto gathered_samples = std::vector<T>();
     gathered_samples.reserve(samples_per_chunk * chunk_count);

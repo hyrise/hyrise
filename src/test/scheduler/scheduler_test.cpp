@@ -100,7 +100,7 @@ class SchedulerTest : public BaseTest {
           jobs.emplace_back(job);
         }
 
-        Hyrise::get().scheduler->wait_for_tasks(jobs);
+        Hyrise::get().scheduler().wait_for_tasks(jobs);
       });
       task->schedule();
       tasks.emplace_back(task);
@@ -119,7 +119,7 @@ TEST_F(SchedulerTest, BasicTest) {
 
   increment_counter_in_subtasks(counter);
 
-  Hyrise::get().scheduler->finish();
+  Hyrise::get().scheduler().finish();
 
   ASSERT_EQ(counter, 30u);
 
@@ -140,7 +140,7 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
 
   stress_linear_dependencies(counter);
 
-  Hyrise::get().scheduler->finish();
+  Hyrise::get().scheduler().finish();
 
   ASSERT_EQ(counter, 3u);
 }
@@ -153,7 +153,7 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
 
   stress_multiple_dependencies(counter);
 
-  Hyrise::get().scheduler->finish();
+  Hyrise::get().scheduler().finish();
 
   ASSERT_EQ(counter, 4u);
 }
@@ -166,7 +166,7 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
 
   stress_diamond_dependencies(counter);
 
-  Hyrise::get().scheduler->finish();
+  Hyrise::get().scheduler().finish();
 
   ASSERT_EQ(counter, 7u);
 }
@@ -207,7 +207,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   gt_task->schedule();
   ts_task->schedule();
 
-  Hyrise::get().scheduler->finish();
+  Hyrise::get().scheduler().finish();
 
   auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
@@ -222,21 +222,21 @@ TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
   }
   Hyrise::get().topology.use_non_numa_topology(4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(1, Hyrise::get().scheduler->queues().size());
+  EXPECT_EQ(1, Hyrise::get().scheduler().queues().size());
 
   Hyrise::get().topology.use_fake_numa_topology(4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(4, Hyrise::get().scheduler->queues().size());
+  EXPECT_EQ(4, Hyrise::get().scheduler().queues().size());
 
   Hyrise::get().topology.use_fake_numa_topology(4, 2);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(2, Hyrise::get().scheduler->queues().size());
+  EXPECT_EQ(2, Hyrise::get().scheduler().queues().size());
 
   Hyrise::get().topology.use_fake_numa_topology(4, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  EXPECT_EQ(1, Hyrise::get().scheduler->queues().size());
+  EXPECT_EQ(1, Hyrise::get().scheduler().queues().size());
 
-  Hyrise::get().scheduler->finish();
+  Hyrise::get().scheduler().finish();
 }
 
 TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
@@ -248,14 +248,14 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
     auto subtask = std::make_shared<JobTask>([&task_done]() { task_done = true; });
 
     subtask->schedule();
-    Hyrise::get().scheduler->wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
+    Hyrise::get().scheduler().wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
   });
 
   task->schedule();
-  Hyrise::get().scheduler->wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
+  Hyrise::get().scheduler().wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
   EXPECT_TRUE(task_done);
 
-  Hyrise::get().scheduler->finish();
+  Hyrise::get().scheduler().finish();
 }
 
 }  // namespace opossum

@@ -400,7 +400,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       jobs.back()->schedule(static_cast<NodeID>(cluster_number));
     }
 
-    Hyrise::get().scheduler->wait_for_tasks(jobs);
+    Hyrise::get().scheduler().wait_for_tasks(jobs);
   }
 
   /**

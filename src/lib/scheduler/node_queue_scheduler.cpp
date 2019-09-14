@@ -27,6 +27,8 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
+  DebugAssert(!_active, "Scheduler is already active");
+
   _workers.reserve(Hyrise::get().topology.num_cpus());
   _queues.reserve(Hyrise::get().topology.nodes().size());
 

@@ -227,7 +227,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
                 reinterpret_cast<uintptr_t>(this));
-  Hyrise::get().scheduler->schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
 
   if (was_rolled_back()) {
     return {SQLPipelineStatus::RolledBack, _result_table};

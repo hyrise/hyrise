@@ -10,15 +10,15 @@ namespace opossum {
  */
 class ImmediateExecutionScheduler : public AbstractScheduler {
  public:
-  void begin() override {}
+  void begin() override;
 
-  void wait_for_all_tasks() override {}
+  void wait_for_all_tasks() override;
 
-  void finish() override {}
+  void finish() override;
 
-  bool active() const override { return false; }
+  bool active() const override;
 
-  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override { return _queues; }
+  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                 SchedulePriority priority = SchedulePriority::Default) override;

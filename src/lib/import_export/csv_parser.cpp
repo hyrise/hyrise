@@ -82,7 +82,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     tasks.back()->schedule();
   }
 
-  Hyrise::get().scheduler->wait_for_tasks(tasks);
+  Hyrise::get().scheduler().wait_for_tasks(tasks);
 
   for (auto& segments : segments_by_chunks) {
     DebugAssert(!segments.empty(), "Empty chunks shouldn't occur when importing CSV");

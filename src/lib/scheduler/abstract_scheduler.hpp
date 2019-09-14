@@ -13,7 +13,7 @@ namespace opossum {
 class AbstractTask;
 class TaskQueue;
 
-class AbstractScheduler {
+class AbstractScheduler : public Noncopyable {
  public:
   virtual ~AbstractScheduler() = default;
 

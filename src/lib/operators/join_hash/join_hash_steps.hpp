@@ -308,7 +308,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     }));
     jobs.back()->schedule();
   }
-  Hyrise::get().scheduler->wait_for_tasks(jobs);
+  Hyrise::get().scheduler().wait_for_tasks(jobs);
 
   return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}, null_value_bitvector};
 }
@@ -366,7 +366,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
     jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler->wait_for_tasks(jobs);
+  Hyrise::get().scheduler().wait_for_tasks(jobs);
 
   return hash_tables;
 }
@@ -509,7 +509,7 @@ RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_contai
     jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler->wait_for_tasks(jobs);
+  Hyrise::get().scheduler().wait_for_tasks(jobs);
 
   return radix_output;
 }
@@ -667,7 +667,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
     jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler->wait_for_tasks(jobs);
+  Hyrise::get().scheduler().wait_for_tasks(jobs);
 }
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
@@ -781,7 +781,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& radix_probe_column,
     jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler->wait_for_tasks(jobs);
+  Hyrise::get().scheduler().wait_for_tasks(jobs);
 }
 
 using PosLists = std::vector<std::shared_ptr<const PosList>>;
