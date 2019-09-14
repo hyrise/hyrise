@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -84,7 +84,7 @@ class ColumnMaterializer {
       jobs.back()->schedule();
     }
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().scheduler().wait_for_tasks(jobs);
 
     auto gathered_samples = std::vector<T>();
     gathered_samples.reserve(samples_per_chunk * chunk_count);

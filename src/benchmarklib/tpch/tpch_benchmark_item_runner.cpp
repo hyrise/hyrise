@@ -297,7 +297,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 14 - 1: {
-      std::uniform_int_distribution<> date_diff_dist{0, 5*12};
+      std::uniform_int_distribution<> date_diff_dist{0, 5 * 12};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 1);
