@@ -28,11 +28,11 @@ using namespace opossum;  // NOLINT
 
 template <typename T>
 pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& values) {
-  pmr_concurrent_vector<T> result;
-  result.reserve(values.size());
+  pmr_concurrent_vector<T> result(values.size());
 
+  auto insert_position = size_t{0};
   for (const auto& value : values) {
-    result.push_back(SyntheticTableGenerator::generate_value<T>(value));
+    result[insert_position++] = SyntheticTableGenerator::generate_value<T>(value);
   }
 
   return result;
@@ -45,9 +45,8 @@ namespace opossum {
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) {
-  auto table =
-      generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                     {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, std::nullopt, UseMvcc::No);
+  auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
+                              {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, std::nullopt, UseMvcc::No);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_spec);
 
@@ -68,7 +67,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   }
   if (segment_encoding_specs) {
     Assert(column_data_distributions.size() == segment_encoding_specs->size(),
-           "Length of value distributions needs to equal length of column encodings.");
+         "Length of value distributions needs to equal length of column encodings.");
   }
 
   const auto num_columns = column_data_distributions.size();
@@ -90,8 +89,9 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   pseudorandom_engine.seed(random_device());
 
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
-    Segments segments;
+    Segments segments(num_columns);
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
+      std::cout << "segment " << column_index << std::endl;
       resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
         using ColumnDataType = typename decltype(column_data_type)::type;
 
@@ -149,19 +149,23 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           values.push_back(generate_value_by_distribution_type());
         }
 
-        segments.push_back(
-            std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values)));
+        segments[column_index] = 
+            std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
       });
       // add full chunk to table
       if (column_index == num_columns - 1) {
         const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
         table->append_chunk(segments, mvcc_data);
+        std::cout << "chunk appended" << std::endl;
+
+        // TODO: put encoding in another thread
+        std::cout << "encoding start" << std::endl;
+        if (segment_encoding_specs) {
+          ChunkEncoder::encode_chunk(table->get_chunk(ChunkID{table->chunk_count() - 1}), table->column_data_types(), *segment_encoding_specs, true);
+        }
+        std::cout << "encoding end" << std::endl;
       }
     }
-  }
-
-  if (segment_encoding_specs) {
-    ChunkEncoder::encode_all_chunks(table, *segment_encoding_specs);
   }
 
   return table;
