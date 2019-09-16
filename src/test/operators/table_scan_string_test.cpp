@@ -61,10 +61,10 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanStringTest,
-                        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary,
-                                          EncodingType::FixedStringDictionary, EncodingType::RunLength),
-                        formatter);
+INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanStringTest,
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary,
+                                           EncodingType::FixedStringDictionary, EncodingType::RunLength),
+                         formatter);
 
 TEST_P(OperatorsTableScanStringTest, ScanEquals) {
   auto scan = create_table_scan(_tw_string_compressed, ColumnID{1}, PredicateCondition::Equals, "Reeperbahn");

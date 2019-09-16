@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
-#include "scheduler/current_scheduler.hpp"
+#include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
@@ -100,7 +100,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     job_end_chunk_id++;
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().scheduler().wait_for_tasks(jobs);
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

@@ -39,14 +39,14 @@ std::ostream& operator<<(std::ostream& stream, const TopologyNode& topology_node
   return stream;
 }
 
-void Topology::use_default_topology(uint32_t max_num_cores) { Topology::get()._init_default_topology(max_num_cores); }
+void Topology::use_default_topology(uint32_t max_num_cores) { _init_default_topology(max_num_cores); }
 
-void Topology::use_numa_topology(uint32_t max_num_cores) { Topology::get()._init_numa_topology(max_num_cores); }
+void Topology::use_numa_topology(uint32_t max_num_cores) { _init_numa_topology(max_num_cores); }
 
-void Topology::use_non_numa_topology(uint32_t max_num_cores) { Topology::get()._init_non_numa_topology(max_num_cores); }
+void Topology::use_non_numa_topology(uint32_t max_num_cores) { _init_non_numa_topology(max_num_cores); }
 
 void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
-  Topology::get()._init_fake_numa_topology(max_num_workers, workers_per_node);
+  _init_fake_numa_topology(max_num_workers, workers_per_node);
 }
 
 void Topology::_init_default_topology(uint32_t max_num_cores) {
