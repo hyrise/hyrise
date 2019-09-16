@@ -587,12 +587,15 @@ TEST_P(JoinTestRunner, TestJoin) {
   }
 }
 
-// clang-format off
-INSTANTIATE_TEST_CASE_P(JoinNestedLoop, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()), );  // NOLINT
-INSTANTIATE_TEST_CASE_P(JoinHash, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()), );  // NOLINT
-INSTANTIATE_TEST_CASE_P(JoinSortMerge, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()), );  // NOLINT
-// INSTANTIATE_TEST_CASE_P(JoinIndex, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()), );  // NOLINT
-INSTANTIATE_TEST_CASE_P(JoinMPSM, JoinTestRunner, testing::ValuesIn(JoinTestRunner::create_configurations<JoinMPSM>()), );  // NOLINT
-// clang-format on
+INSTANTIATE_TEST_SUITE_P(JoinNestedLoop, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinNestedLoop>()));
+INSTANTIATE_TEST_SUITE_P(JoinHash, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()));
+INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()));
+// INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
+//                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
+INSTANTIATE_TEST_SUITE_P(JoinMPSM, JoinTestRunner,
+                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinMPSM>()));
 
 }  // namespace opossum

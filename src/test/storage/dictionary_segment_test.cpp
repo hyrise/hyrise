@@ -32,10 +32,10 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
   return string;
 };
 
-INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
-                        ::testing::Values(VectorCompressionType::SimdBp128,
-                                          VectorCompressionType::FixedSizeByteAligned),
-                        formatter);
+INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
+                         ::testing::Values(VectorCompressionType::SimdBp128,
+                                           VectorCompressionType::FixedSizeByteAligned),
+                         formatter);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vs_int->append(i);
