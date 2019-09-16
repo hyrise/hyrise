@@ -1,9 +1,9 @@
 #include "hyrise_communicator.hpp"
 
+#include "hyrise.hpp"
 #include "SQLParser.h"
 #include "expression/value_expression.hpp"
 #include "lossless_cast.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
@@ -94,7 +94,7 @@ std::shared_ptr<TransactionContext> HyriseCommunicator::get_new_transaction_cont
 std::shared_ptr<const Table> HyriseCommunicator::execute_prepared_statement(
     std::shared_ptr<AbstractOperator> physical_plan) {
   const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan, CleanupTemporaries::Yes);
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
   return tasks.back()->get_operator()->get_output();
 }
 

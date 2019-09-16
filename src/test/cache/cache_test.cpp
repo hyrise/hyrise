@@ -259,7 +259,7 @@ class CacheTest : public BaseTest {};
 // Here, all cache types are defined.
 using CacheTypes = ::testing::Types<LRUCache<int, int>, LRUKCache<2, int, int>, GDSCache<int, int>, GDFSCache<int, int>,
                                     RandomCache<int, int>>;
-TYPED_TEST_CASE(CacheTest, CacheTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(CacheTest, CacheTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(CacheTest, Size) {
   TypeParam cache(3);

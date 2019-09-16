@@ -1,6 +1,6 @@
 #include "cxxopts.hpp"
 
-#include "scheduler/current_scheduler.hpp"
+#include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "server/server.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Set scheduler so that the server can execute the tasks on separate threads.
-  opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
+  opossum::Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
 
   // Generate TPC-H data with given scale factor
   if (const auto scale_factor = parsed_options["generate_tpch"].as<float>(); scale_factor != 0.f) {

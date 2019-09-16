@@ -196,8 +196,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff * 12);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, (diff + 1) * 12);
 
-      static std::uniform_real_distribution<> discount_dist{0.02f, 0.09f};
-      const auto discount = discount_dist(random_engine);
+      static std::uniform_int_distribution<> discount_dist{2, 9};
+      const auto discount = 0.01f * discount_dist(random_engine);
 
       std::uniform_int_distribution<> quantity_dist{24, 25};
       const auto quantity = quantity_dist(random_engine);
@@ -297,7 +297,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
     }
 
     case 14 - 1: {
-      std::uniform_int_distribution<> date_diff_dist{0, 47};
+      std::uniform_int_distribution<> date_diff_dist{0, 5 * 12};
       const auto diff = date_diff_dist(random_engine);
       const auto begin_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff);
       const auto end_date = calculate_date(boost::gregorian::date{1993, 01, 01}, diff + 1);

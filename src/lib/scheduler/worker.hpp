@@ -17,7 +17,7 @@ class TaskQueue;
  * Ideally there should be one Worker actively doing work per CPU, but multiple might be active occasionally
  */
 class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable {
-  friend class CurrentScheduler;
+  friend class AbstractScheduler;
 
  public:
   static std::shared_ptr<Worker> get_this_thread_worker();

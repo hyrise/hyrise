@@ -7,7 +7,7 @@ namespace opossum {
 
 using ::testing::NiceMock;
 
-class PostgresHandlerTest : public BaseTest {
+class PostgresProtocolHandlerTest : public BaseTest {
  protected:
   void SetUp() override {
     // _socket = std::make_shared<NiceMock<MockSocket>>(NiceMock<MockSocket>);
@@ -17,14 +17,14 @@ class PostgresHandlerTest : public BaseTest {
     auto _socket = std::make_shared<MockSocket>(std::move(socket));
 
     // std::shared_ptr<Socket> socket(NiceMock<MockSocket>());
-    _postgres_protocol_handler = std::make_shared<PostgresHandler>(PostgresHandler(_socket));
+    _postgres_protocol_handler = std::make_shared<PostgresProtocolHandler>(PostgresProtocolHandler(_socket));
   }
   // std::shared_ptr<Socket> _socket;
-  std::shared_ptr<PostgresHandler> _postgres_protocol_handler;
-  // PostgresHandler _postgres_protocol_handler;
+  std::shared_ptr<PostgresProtocolHandler> _postgres_protocol_handler;
+  // PostgresProtocolHandler _postgres_protocol_handler;
 };
 
-TEST_F(PostgresHandlerTest, HandleQueryPacketEmpty) {
+TEST_F(PostgresProtocolHandlerTest, HandleQueryPacketEmpty) {
   size_t length = 0;
 
   const std::string result = _postgres_protocol_handler->read_query_packet();
@@ -32,7 +32,7 @@ TEST_F(PostgresHandlerTest, HandleQueryPacketEmpty) {
   ASSERT_EQ(result.size(), length);
 }
 
-// TEST_F(PostgresHandlerTest, HandleQueryPacket) {
+// TEST_F(PostgresProtocolHandlerTest, HandleQueryPacket) {
 //   ByteBuffer buffer = {'Q', 'u', 'e', 'r', 'y', '\0'};
 //   _input_packet.data = buffer;
 //   _input_packet.offset = _input_packet.data.cbegin();
@@ -43,7 +43,7 @@ TEST_F(PostgresHandlerTest, HandleQueryPacketEmpty) {
 //   ASSERT_TRUE(result.find("Query") != std::string::npos);
 // }
 
-// TEST_F(PostgresHandlerTest, HandleHeader) {
+// TEST_F(PostgresProtocolHandlerTest, HandleHeader) {
 //   ByteBuffer buffer = {'Q'};
 //   uint32_t value = ntohl(100);
 //   char* chars = reinterpret_cast<char*>(&value);
@@ -58,7 +58,7 @@ TEST_F(PostgresHandlerTest, HandleQueryPacketEmpty) {
 //   ASSERT_EQ(command_header.payload_length, 96ul);
 // }
 
-// TEST_F(PostgresHandlerTest, HandleStartupPackage) {
+// TEST_F(PostgresProtocolHandlerTest, HandleStartupPackage) {
 //   ByteBuffer buffer = {};
 //   uint32_t value = ntohl(100);
 //   char* chars = reinterpret_cast<char*>(&value);
@@ -71,7 +71,7 @@ TEST_F(PostgresHandlerTest, HandleQueryPacketEmpty) {
 //   ASSERT_EQ(result, 92ul);  // 100 - 2 * sizeof(uint32_t)
 // }
 
-// TEST_F(PostgresHandlerTest, WriteString) {
+// TEST_F(PostgresProtocolHandlerTest, WriteString) {
 //   std::string value("Response");
 
 //   postgres_wire_handler.write_string(_output_packet, value, true);

@@ -132,7 +132,7 @@ set(
     server/buffer_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
-    server/postgres_wire_handler_test.cpp
+    server/postgres_protocol_handler_test.cpp
     server/server_session_test.cpp
     sql/sql_identifier_resolver_test.cpp
     sql/sql_pipeline_statement_test.cpp
