@@ -48,6 +48,17 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
       EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
     }
   }
+
+  {
+    // TEST SQL features on meta tables
+    const auto result = SQLPipelineBuilder{"SELECT COUNT(*) FROM meta_tables WHERE \"table\" = 'int_int'"}
+                           .create_pipeline()
+                           .get_result_table();
+
+    EXPECT_EQ(result.first, SQLPipelineStatus::Success);
+
+    EXPECT_EQ(table.second->get_value<int64_t>(ColumnID{0}, 0), 1);
+  }
 }
 
 }  // namespace opossum
