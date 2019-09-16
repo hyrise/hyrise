@@ -13,9 +13,9 @@
 
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
@@ -268,7 +268,7 @@ void AggregateHash::_aggregate() {
     jobs.back()->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().scheduler().wait_for_tasks(jobs);
 
   /*
   AGGREGATION PHASE

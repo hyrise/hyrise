@@ -5,7 +5,10 @@
 #include <memory>
 #include <random>
 #include <string>
+<<<<<<< HEAD
 #include <thread>
+=======
+>>>>>>> master
 #include <utility>
 #include <vector>
 
@@ -46,8 +49,9 @@ namespace opossum {
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) {
-  auto table = generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
-                              {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, std::nullopt, UseMvcc::No);
+  auto table =
+      generate_table({num_columns, {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}},
+                     {num_columns, {DataType::Int}}, num_rows, chunk_size, std::nullopt, std::nullopt, UseMvcc::No);
 
   ChunkEncoder::encode_all_chunks(table, segment_encoding_spec);
 
@@ -68,7 +72,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   }
   if (segment_encoding_specs) {
     Assert(column_data_distributions.size() == segment_encoding_specs->size(),
-         "Length of value distributions needs to equal length of column encodings.");
+           "Length of value distributions needs to equal length of column encodings.");
   }
 
   const auto num_columns = column_data_distributions.size();
@@ -93,7 +97,6 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
     Segments segments(num_columns);
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
-      std::cout << "segment " << column_index << std::endl;
       resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
         using ColumnDataType = typename decltype(column_data_type)::type;
 

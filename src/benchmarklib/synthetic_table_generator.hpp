@@ -97,7 +97,11 @@ class SyntheticTableGenerator {
       return static_cast<T>(input);
     } else if constexpr (std::is_floating_point_v<T>) {
       return static_cast<T>(input) * 0.999999f;
+<<<<<<< HEAD
     } else if constexpr (std::is_same_v<T, pmr_string>) {
+=======
+    } else {
+>>>>>>> master
       constexpr auto generated_string_length = size_t{10};
       constexpr auto prefix_length = size_t{4};
       constexpr auto variable_string_length = generated_string_length - prefix_length;
@@ -125,8 +129,11 @@ class SyntheticTableGenerator {
       }
 
       return result;
+<<<<<<< HEAD
     } else {
       Fail("Requested type not supported.");
+=======
+>>>>>>> master
     }
   }
 

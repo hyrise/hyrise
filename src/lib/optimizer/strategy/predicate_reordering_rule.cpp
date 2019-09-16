@@ -17,18 +17,43 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
+namespace {
+using namespace opossum;  // NOLINT
+
+// Returns whether a certain node is a "predicate-style" node, i.e., a node that can be moved freely within a predicate
+// chain.
+bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
+  if (node->type == LQPNodeType::Predicate) return true;
+
+  // Validate can be seen as a Predicate on the MVCC column
+  if (node->type == LQPNodeType::Validate) return true;
+
+  // Semi-/Anti-Joins also reduce the number of tuples and can be freely reordered within a chain of predicates. This
+  // might place the join below a validate node, but since it is not a "proper" join (i.e., one that returns columns
+  // from multiple tables), the validate will stil be able to operate on the semi join's output.
+  if (node->type == LQPNodeType::Join) {
+    const auto& join_node = static_cast<JoinNode&>(*node);
+    if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue ||
+        join_node.join_mode == JoinMode::AntiNullAsFalse) {
+      return true;
+    }
+  }
+
+  return false;
+}
+}  // namespace
+
 namespace opossum {
 
 void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
 
-  // Validate can be seen as a Predicate on the MVCC column
-  if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
+  if (is_predicate_style_node(node)) {
     std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
-    while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate) {
+    while (is_predicate_style_node(current_node)) {
       // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
       if (current_node->outputs().size() > 1) {
         break;
@@ -70,8 +95,8 @@ void PredicateReorderingRule::_reorder_predicates(
   // non_const_predicates.front()->print();
 
   // Untie predicates from LQP, so we can freely retie them
-  for (auto& predicate : non_const_predicates) {
-    lqp_remove_node(predicate);
+  for (auto& predicate : predicates) {
+    lqp_remove_node(predicate, AllowRightInput::Yes);
   }
 
   do {

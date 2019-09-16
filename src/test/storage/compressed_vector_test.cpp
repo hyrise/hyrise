@@ -77,9 +77,9 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
 };
 
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, CompressedVectorTest,
-                        ::testing::Values(VectorCompressionType::SimdBp128,
-                                          VectorCompressionType::FixedSizeByteAligned),
-                        formatter);
+                         ::testing::Values(VectorCompressionType::SimdBp128,
+                                           VectorCompressionType::FixedSizeByteAligned),
+                         formatter);
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);
