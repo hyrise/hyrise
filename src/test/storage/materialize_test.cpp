@@ -154,6 +154,6 @@ TEST_P(MaterializeTest, MaterializeNullsTwoSegments) {
 INSTANTIATE_TEST_SUITE_P(
     MaterializeTestInstances, MaterializeTest,
     ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
-                        std::end(all_segment_encoding_specs)), );  // NOLINT(whitespace/parens)  // NOLINT
+                        std::end(all_segment_encoding_specs)));
 
 }  // namespace opossum

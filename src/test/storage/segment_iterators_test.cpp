@@ -199,6 +199,6 @@ bool operator<(const AbstractSegmentPosition<T>&, const AbstractSegmentPosition<
 INSTANTIATE_TEST_SUITE_P(
     SegmentIteratorsTestInstances, SegmentIteratorsTest,
     ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
-                        std::end(all_segment_encoding_specs)), );  // NOLINT(whitespace/parens)  // NOLINT
+                        std::end(all_segment_encoding_specs)));
 
 }  // namespace opossum

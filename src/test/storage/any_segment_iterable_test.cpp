@@ -80,6 +80,6 @@ INSTANTIATE_TEST_SUITE_P(
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::FrameOfReference}, SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4}), );  // NOLINT
+                      SegmentEncodingSpec{EncodingType::LZ4}));
 
 }  // namespace opossum
