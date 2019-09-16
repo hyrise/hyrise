@@ -9,21 +9,14 @@
 namespace opossum {
 
 /**
- * This rule turns PredicateNodes with (nested) conjunctions ("and) and disjunctions ("or")
- *   (e.g., `PredicateNode(a AND (b OR c))`) as their scan expression into an LQP of consecutive PredicateNodes (for the
- *   conjunctions) and UnionNodes (for the disjunctions).
+ * This rule reverts the changes of the PredicateSplitUpRule after other rules have run. It merges multiple
+ * PredicateNodes and UnionNodes into single a PredicateNode with a complex expression. This reduces the query runtime
+ * if there are many PredicateNodes and UnionNodes because the ExpressionEvaluator is faster in this case.
  *
- * Doing so enables other Optimizer rules to process these PredicateNodes and split-up PredicateNodes might take a
- *    faster operator execution path.
+ * The rule merges predicate chains to conjunctions ("and") and diamonds (below UnionNodes) to disjunctions ("or"),
  *
- * EXAMPLES:
- *   TPC-H query 19
- *     This rule makes `p_partkey = l_partkey` available as a join predicate and the predicates on `l_shipmode` and
- *     `l_shipinstruct` can be pulled below the join.
- *
- *   TPC-DS query 35
- *     This rule splits up `EXISTS (...) OR EXISTS (...)` into two expressions that can later be rewritten into two
- *     semi-joins.
+ * EXAMPLE:
+ *   TPC-DS query 41 benefits from this rule because the PredicateSplitUpRule creates a huge LQP.
  */
 class PredicateMergeRule : public AbstractRule {
  public:

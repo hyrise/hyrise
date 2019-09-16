@@ -90,11 +90,10 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
 
         lqp_remove_node(begin->left_input());
         lqp_remove_node(begin->right_input());
+        Assert(begin->left_input() == begin->right_input(), "The LQP should be an \"empty\" diamond now.");
+        begin->set_right_input(nullptr);
         const auto predicate_node = PredicateNode::make(expression);
         lqp_replace_node(begin, predicate_node);
-        Assert(!predicate_node->right_input() || predicate_node->left_input() == predicate_node->right_input(),
-               "The new predicate node must not have two different inputs");
-        predicate_node->set_right_input(nullptr);
 
         // The new predicate node might be mergeable with an underlying node now.
         return _merge_subplan(predicate_node, std::nullopt);

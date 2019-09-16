@@ -8,7 +8,7 @@
 namespace opossum {
 
 /**
- * This rule turns PredicateNodes with (nested) conjunctions ("and) and disjunctions ("or")
+ * This rule turns PredicateNodes with (nested) conjunctions ("and") and disjunctions ("or")
  *   (e.g., `PredicateNode(a AND (b OR c))`) as their scan expression into an LQP of consecutive PredicateNodes (for the
  *   conjunctions) and UnionNodes (for the disjunctions).
  *
