@@ -73,8 +73,8 @@ class SQLPipeline : public Noncopyable {
   std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> get_result_table() &;
 
   // Make sure that get_result_table(s) is not called on an expiring pipeline
-  void get_result_tables() const && = delete;
-  void get_result_table() const && = delete;
+  void get_result_tables() const&& = delete;
+  void get_result_table() const&& = delete;
 
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
   std::shared_ptr<TransactionContext> transaction_context() const;
