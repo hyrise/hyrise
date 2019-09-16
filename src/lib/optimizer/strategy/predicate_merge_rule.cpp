@@ -13,7 +13,7 @@ PredicateMergeRule::PredicateMergeRule(const size_t optimization_threshold)
     : _optimization_threshold(optimization_threshold) {}
 
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
-  Assert(node->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
+  Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
   visit_lqp(root, [&](const auto& node) {
     size_t lqp_complexity = 0;
