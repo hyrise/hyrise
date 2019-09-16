@@ -8,6 +8,6 @@ INSTANTIATE_TEST_SUITE_P(SQLiteTestRunnerEncodings, SQLiteTestRunner,
                          testing::Combine(testing::ValuesIn(SQLiteTestRunner::queries()), testing::ValuesIn({false}),
                                           testing::ValuesIn({EncodingType::Dictionary, EncodingType::RunLength,
                                                              EncodingType::FixedStringDictionary,
-                                                             EncodingType::FrameOfReference})));
+                                                             EncodingType::FrameOfReference, EncodingType::LZ4})));
 
 }  // namespace opossum
