@@ -8,7 +8,7 @@
 | clang-format     | 7.{0,1}          |    All   |                      Yes (formatting) |
 | clang-tidy       | 7.{0,1}          |    All   |                         Yes (linting) |
 | cmake            | >= 3.9           |    All   |                                    No |
-| gcc              | 8.{2,3}          |    All   | Yes, if clang installed, not for OS X |
+| gcc              | >= 9.0           |    All   | Yes, if clang installed, not for OS X |
 | gcovr            | >= 3.2           |    All   |                        Yes (coverage) |
 | graphviz         | any              |    All   |             Yes (query visualization) |
 | libclang-dev     | 7.1              |    Linux |                             Yes (JIT) |

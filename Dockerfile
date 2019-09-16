@@ -14,8 +14,8 @@ RUN apt-get update \
         cmake \
         curl \
         gcovr \
-        gcc-8 \
-        g++-8 \
+        gcc-9 \
+        g++-9 \
         graphviz \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \

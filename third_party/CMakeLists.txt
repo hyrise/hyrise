@@ -1,5 +1,5 @@
 # Disable some warnings for the third-party subfolder
-add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
+add_compile_options(-Wno-unused-function -Wno-deprecated-declarations -Wno-stringop-truncation)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     add_compile_options(-Wno-format-overflow)
 endif()
@@ -348,3 +348,15 @@ target_compile_definitions(
   tpcds_dbgen
   PUBLIC
   -DLINUX)
+
+target_compile_options(
+  tpcds_dbgen
+  PRIVATE
+
+  -Wno-implicit-int
+  -Wno-stringop-overflow
+  -Wno-format
+  -Wno-incompatible-pointer-types
+  -Wno-unused-result
+  -Wno-stringop-truncation
+)

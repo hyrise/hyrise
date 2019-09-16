@@ -1418,7 +1418,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
 
     const auto& string = strings->value(chunk_offset);
     DebugAssert(
-        string.size() < std::numeric_limits<int32_t>::max(),
+        string.size() < size_t{std::numeric_limits<int32_t>::max()},
         "String is too long to be handled by SUBSTR. Switch to int64_t in the SUBSTR implementation if you really "
         "need to.");
 
