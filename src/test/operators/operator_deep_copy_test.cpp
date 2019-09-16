@@ -56,7 +56,7 @@ class DeepCopyTestJoin : public OperatorDeepCopyTest {};
 
 // here we define all Join types
 using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
-TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
   std::shared_ptr<Table> expected_result =

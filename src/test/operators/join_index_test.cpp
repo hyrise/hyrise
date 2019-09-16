@@ -132,7 +132,7 @@ class JoinIndexTest : public BaseTest {
 
 typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIndex, GroupKeyIndex> DerivedIndices;
 
-TYPED_TEST_CASE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinIndexTest, LeftJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
