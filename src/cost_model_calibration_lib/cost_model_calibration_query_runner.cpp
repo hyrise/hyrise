@@ -3,7 +3,6 @@
 #include "calibration_feature_extractor.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "hyrise.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/format_duration.hpp"
 
@@ -22,7 +21,7 @@ const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner
   pqp->set_transaction_context_recursively(transaction_context);
   const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::No);
 
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
 
   return _evaluate_query_plan({pqp});
 }

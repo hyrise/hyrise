@@ -9,7 +9,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/storage_manager.hpp"
-#include "table_generator.hpp"
+#include "synthetic_table_generator.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -500,7 +500,7 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
     case DataType::Long:
       return value_(long_value);
     case DataType::String: {
-      auto search_string = TableGenerator::convert_integer_value<pmr_string>(int_value);
+      auto search_string = SyntheticTableGenerator::generate_value<pmr_string>(int_value);
 
       // TODO: like-predicates do not care about the given selectivity, yet.
       if (string_predicate_type == StringPredicateType::TrailingLike) {

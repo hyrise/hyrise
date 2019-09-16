@@ -5,10 +5,7 @@
 #include <memory>
 #include <random>
 #include <string>
-<<<<<<< HEAD
 #include <thread>
-=======
->>>>>>> master
 #include <utility>
 #include <vector>
 
