@@ -185,6 +185,6 @@ TEST_P(TableScanBetweenTest, Exclusive) {
 }
 
 INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
-                        TypedOperatorBaseTest::format);
+                         TypedOperatorBaseTest::format);
 
 }  // namespace opossum

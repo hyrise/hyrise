@@ -257,9 +257,9 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
-                        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
-                                          EncodingType::FrameOfReference),
-                        formatter);
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
+                                           EncodingType::FrameOfReference),
+                         formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);
