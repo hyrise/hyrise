@@ -104,7 +104,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexDisjunctionInPredicateNode) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicateSplitUpRuleTest, SelectColumn) {
+TEST_F(PredicateSplitUpRuleTest, SplitBelowProjection) {
   // SELECT a FROM a WHERE 1 OR 3 > 2
 
   // clang-format off
@@ -207,7 +207,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions
       PredicateNode::make(and_(equals_(a_a, a_b), greater_than_(a_a, 3)),
         node_a)));
 
-  const auto subquery_lqp =
+  const auto sub_lqp =
   ProjectionNode::make(expression_vector(a_b, a_a),
     PredicateNode::make(greater_than_(a_a, 3),
       PredicateNode::make(equals_(a_a, a_b),
@@ -216,9 +216,9 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions
   const auto lower_union_node =
   UnionNode::make(UnionMode::Positions,
     PredicateNode::make(greater_than_(a_a, value_(10)),
-      subquery_lqp),
+      sub_lqp),
     PredicateNode::make(less_than_(a_a, value_(8)),
-      subquery_lqp));
+      sub_lqp));
 
   const auto expected_lqp =
   UnionNode::make(UnionMode::Positions,
@@ -230,7 +230,7 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions
     PredicateNode::make(greater_than_(a_b, 7),
       PredicateNode::make(equals_(a_a, 5),
         PredicateNode::make(equals_(13, 13),
-          subquery_lqp))));
+          sub_lqp))));
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
@@ -239,11 +239,11 @@ TEST_F(PredicateSplitUpRuleTest, SplitUpComplexNestedConjunctionsAndDisjunctions
 }
 
 TEST_F(PredicateSplitUpRuleTest, NoRewriteSimplePredicate) {
-  // SELECT * FROM a WHERE a = 10
+  // SELECT * FROM a WHERE a < 10
 
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(value_(10),
+  PredicateNode::make(less_than_(a_a, value_(10)),
     node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
