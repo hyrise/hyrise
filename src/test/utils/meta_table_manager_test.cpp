@@ -56,8 +56,7 @@ TEST_F(MetaTableManagerTest, TableBasedMetaData) {
                            .get_result_table();
 
     EXPECT_EQ(result.first, SQLPipelineStatus::Success);
-
-    EXPECT_EQ(table.second->get_value<int64_t>(ColumnID{0}, 0), 1);
+    EXPECT_EQ(result.second->get_value<int64_t>(ColumnID{0}, 0), 1);
   }
 }
 

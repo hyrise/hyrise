@@ -204,6 +204,11 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipeline::g
   return {SQLPipelineStatus::Success, tables.back()};
 }
 
+std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> SQLPipeline::get_result_table() && {
+  // std::pair constructor will automatically convert the reference into a copy
+  return get_result_table();
+}
+
 std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> SQLPipeline::get_result_tables() & {
   if (_pipeline_status != SQLPipelineStatus::NotExecuted) {
     return {_pipeline_status, _result_tables};
@@ -232,6 +237,11 @@ std::pair<SQLPipelineStatus, const std::vector<std::shared_ptr<const Table>>&> S
 
   _pipeline_status = SQLPipelineStatus::Success;
   return {_pipeline_status, _result_tables};
+}
+
+std::pair<SQLPipelineStatus, std::vector<std::shared_ptr<const Table>>> SQLPipeline::get_result_tables() && {
+  // std::pair constructor will automatically convert the reference into a copy
+  return get_result_tables();
 }
 
 std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }
