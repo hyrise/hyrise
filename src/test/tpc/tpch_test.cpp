@@ -105,7 +105,7 @@ TEST_P(TPCHTest, Test) {
                   FloatComparisonMode::RelativeDifference);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TPCHTestNoJITNoPreparedStatements, TPCHTest,
     // TPCHBenchmarkItemRunner{false, 1.0f} is used only to get the list of all available queries
     testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
@@ -113,7 +113,7 @@ INSTANTIATE_TEST_CASE_P(
                                            .items()),
                      testing::ValuesIn({false}), testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TPCHTestNoJITPreparedStatements, TPCHTest,
     testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
                          std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
@@ -122,7 +122,7 @@ INSTANTIATE_TEST_CASE_P(
 
 #if HYRISE_JIT_SUPPORT
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TPCHTestJITPreparedStatements, TPCHTest,
     testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
                          std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}

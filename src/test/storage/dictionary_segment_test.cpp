@@ -32,7 +32,7 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
   return string;
 };
 
-INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
+INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                         ::testing::Values(VectorCompressionType::SimdBp128,
                                           VectorCompressionType::FixedSizeByteAligned),
                         formatter);

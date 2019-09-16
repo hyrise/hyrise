@@ -131,7 +131,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   return string;
 };
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SegmentEncodingSpecs, EncodedStringSegmentTest,
     ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},

@@ -184,7 +184,7 @@ TEST_P(TableScanBetweenTest, Exclusive) {
   _test_between_scan(exclusive_tests, PredicateCondition::BetweenExclusive);
 }
 
-INSTANTIATE_TEST_CASE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
+INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
                         TypedOperatorBaseTest::format);
 
 }  // namespace opossum

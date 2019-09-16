@@ -76,7 +76,7 @@ auto formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) 
   return string;
 };
 
-INSTANTIATE_TEST_CASE_P(VectorCompressionTypes, CompressedVectorTest,
+INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, CompressedVectorTest,
                         ::testing::Values(VectorCompressionType::SimdBp128,
                                           VectorCompressionType::FixedSizeByteAligned),
                         formatter);

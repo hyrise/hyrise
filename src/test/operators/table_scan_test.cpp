@@ -256,7 +256,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanTest,
+INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                           EncodingType::FrameOfReference),
                         formatter);

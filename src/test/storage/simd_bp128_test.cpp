@@ -72,7 +72,7 @@ auto formatter = [](const ::testing::TestParamInfo<uint8_t> info) {
   return std::to_string(static_cast<uint32_t>(info.param));
 };
 
-INSTANTIATE_TEST_CASE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), formatter);
+INSTANTIATE_TEST_SUITE_P(BitSizes, SimdBp128Test, ::testing::Range(uint8_t{1}, uint8_t{33}), formatter);
 
 TEST_P(SimdBp128Test, DecompressSequenceUsingIterators) {
   const auto sequence = generate_sequence(420);
