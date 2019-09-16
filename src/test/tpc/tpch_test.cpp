@@ -111,14 +111,14 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
                          std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
                                            .items()),
-                     testing::ValuesIn({false}), testing::ValuesIn({false})), );  // NOLINT(whitespace/parens)
+                     testing::ValuesIn({false}), testing::ValuesIn({false})));
 
 INSTANTIATE_TEST_SUITE_P(
     TPCHTestNoJITPreparedStatements, TPCHTest,
     testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
                          std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
                                            .items()),
-                     testing::ValuesIn({false}), testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+                     testing::ValuesIn({false}), testing::ValuesIn({true})));
 
 #if HYRISE_JIT_SUPPORT
 
@@ -127,7 +127,7 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
                          std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
                                            .items()),
-                     testing::ValuesIn({true}), testing::ValuesIn({true})), );  // NOLINT(whitespace/parens)
+                     testing::ValuesIn({true}), testing::ValuesIn({true})));
 
 #endif
 
