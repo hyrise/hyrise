@@ -17,7 +17,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
 
   visit_lqp(root, [&](const auto& node) {
     size_t lqp_complexity = 0;
-    visit_lqp(node, [&](const auto &sub_node) {
+    visit_lqp(node, [&](const auto& sub_node) {
       switch (sub_node->type) {
         case LQPNodeType::Predicate:
           return LQPVisitation::VisitInputs;
