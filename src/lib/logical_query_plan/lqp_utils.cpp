@@ -137,8 +137,9 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   original_node->set_right_input(nullptr);
 }
 
-void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node) {
-  Assert(!node->right_input(), "Can only remove nodes that only have a left input or no inputs");
+void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRightInput allow_right_input) {
+  Assert(allow_right_input == AllowRightInput::Yes || !node->right_input(),
+         "Caller did not explicitly confirm that right input should be ignored");
 
   /**
    * Back up outputs and in which input side they hold this node

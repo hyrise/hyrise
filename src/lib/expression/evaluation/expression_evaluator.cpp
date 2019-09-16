@@ -25,10 +25,10 @@
 #include "expression/pqp_subquery_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression_functors.hpp"
+#include "hyrise.hpp"
 #include "like_matcher.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
@@ -434,11 +434,10 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     }
 
     // If all elements of the list are simple values (e.g., `IN (1, 2, 3)`), iterate over the column and directly
-    // compare the left value with the values in the list. A binary search is used because of its algorithmic beauty
-    // (and for reeeeally long lists, as they might come from ORMs).
+    // compare the left value with the values in the list.
     //
-    // If we can't store the values in a vector (because they are too complex), we translate the IN clause to a series
-    // of ORs:
+    // If we can't store the values in a vector (because they are of non-literals or of different types), we translate
+    // the IN clause to a series of ORs:
     // "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
     // The first path is faster, while the second one is more flexible.
     if (all_elements_are_values_of_left_type) {
@@ -447,13 +446,13 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
         // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
         if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
-          std::vector<LeftDataType> right_values;
-          right_values.reserve(type_compatible_elements.size());
+          std::vector<LeftDataType> right_values(type_compatible_elements.size());
+          auto right_values_idx = size_t{0};
           for (const auto& expression : type_compatible_elements) {
             const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
-            right_values.emplace_back(boost::get<LeftDataType>(value_expression->value));
+            right_values[right_values_idx] = boost::get<LeftDataType>(value_expression->value);
+            right_values_idx++;
           }
-          std::sort(right_values.begin(), right_values.end());
 
           result_values.resize(left_view.size(), in_expression.is_negated());
           if (left_view.is_nullable()) {
@@ -465,7 +464,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
               result_nulls[chunk_offset] = true;
               continue;
             }
-            if (auto it = std::lower_bound(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
+            // We could sort right_values and perform a binary search. However, a linear search is better suited for
+            // small vectors. For bigger IN lists, the InExpressionRewriteRule will switch to a hash join, anyway.
+            if (auto it = std::find(right_values.cbegin(), right_values.cend(), left_view.value(chunk_offset));
                 it != right_values.cend() && *it == left_view.value(chunk_offset)) {
               result_values[chunk_offset] = !in_expression.is_negated();
             }
@@ -968,7 +969,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
   row_pqp->set_parameters(parameters);
 
   const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp, CleanupTemporaries::Yes);
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
 }

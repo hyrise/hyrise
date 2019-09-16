@@ -26,8 +26,12 @@ namespace opossum {
 class SubqueryToJoinRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
+    // One size fits all - we only look at cardinalities, anyway.
+    const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 100, 10);
+    const auto string_histogram = GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 10);
+
+    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+                                              {histogram, histogram, histogram});
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
     a_c = node_a->get_column("c");
@@ -35,65 +39,73 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     a_b_expression = to_expression(a_b);
     a_c_expression = to_expression(a_c);
 
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "b");
+    node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 10, {histogram, histogram});
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
-    node_c = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "c");
+    node_c = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+                                              {histogram, histogram, histogram});
     c_a = node_c->get_column("a");
 
-    node_d = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "d");
+    node_d = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+                                              {histogram, histogram, histogram});
     d_a = node_d->get_column("a");
     d_b = node_d->get_column("b");
     d_c = node_d->get_column("c");
 
-    node_e = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "e");
+    node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+                                              {histogram, histogram, histogram});
     e_a = node_e->get_column("a");
     e_b = node_e->get_column("b");
     e_c = node_e->get_column("c");
 
-    lineitem = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "extendedprice"},
-                                                          {DataType::Int, "quantity"},
-                                                          {DataType::Int, "partkey"},
-                                                          {DataType::String, "shipdate"},
-                                                          {DataType::Int, "suppkey"}},
-                              "lineitem");
+    small_node =
+        create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100, {histogram, histogram});
+    small_node_a = small_node->get_column("a");
+
+    large_node =
+        create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 10000, {histogram, histogram});
+    large_node_a = large_node->get_column("a");
+
+    lineitem = create_mock_node_with_statistics({{DataType::Int, "extendedprice"},
+                                                 {DataType::Int, "quantity"},
+                                                 {DataType::Int, "partkey"},
+                                                 {DataType::String, "shipdate"},
+                                                 {DataType::Int, "suppkey"}},
+                                                100, {histogram, histogram, histogram, string_histogram, histogram});
     l_extendedprice = lineitem->get_column("extendedprice");
     l_quantity = lineitem->get_column("quantity");
     l_partkey = lineitem->get_column("partkey");
     l_shipdate = lineitem->get_column("shipdate");
     l_suppkey = lineitem->get_column("suppkey");
 
-    nation =
-        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "nationkey"}, {DataType::Int, "name"}}, "nation");
+    nation = create_mock_node_with_statistics({{DataType::Int, "nationkey"}, {DataType::Int, "name"}}, 100,
+                                              {histogram, histogram});
     n_nationkey = nation->get_column("nationkey");
     n_name = nation->get_column("name");
 
-    part = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "partkey"},
-                                                      {DataType::String, "brand"},
-                                                      {DataType::String, "container"},
-                                                      {DataType::String, "name"}});
+    part = create_mock_node_with_statistics({{DataType::Int, "partkey"},
+                                             {DataType::String, "brand"},
+                                             {DataType::String, "container"},
+                                             {DataType::String, "name"}},
+                                            100, {histogram, string_histogram, string_histogram, string_histogram});
     p_partkey = part->get_column("partkey");
     p_brand = part->get_column("brand");
     p_container = part->get_column("container");
     p_name = part->get_column("name");
 
-    partsupp = MockNode::make(
-        MockNode::ColumnDefinitions{
-            {DataType::Int, "availqty"}, {DataType::Int, "partkey"}, {DataType::Int, "suppkey"}},
-        "partsupp");
+    partsupp = create_mock_node_with_statistics(
+        {{DataType::Int, "availqty"}, {DataType::Int, "partkey"}, {DataType::Int, "suppkey"}}, 100,
+        {histogram, histogram, histogram});
     ps_availqty = partsupp->get_column("availqty");
     ps_partkey = partsupp->get_column("partkey");
     ps_suppkey = partsupp->get_column("suppkey");
 
-    supplier = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "suppkey"},
-                                                          {DataType::String, "address"},
-                                                          {DataType::String, "name"},
-                                                          {DataType::Int, "nationkey"}},
-                              "supplier");
+    supplier = create_mock_node_with_statistics({{DataType::Int, "suppkey"},
+                                                 {DataType::String, "address"},
+                                                 {DataType::String, "name"},
+                                                 {DataType::Int, "nationkey"}},
+                                                100, {histogram, string_histogram, string_histogram, histogram});
     s_suppkey = supplier->get_column("suppkey");
     s_address = supplier->get_column("address");
     s_name = supplier->get_column("name");
@@ -104,10 +116,11 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
 
   std::shared_ptr<SubqueryToJoinRule> _rule;
 
-  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, lineitem, nation, part, partsupp, supplier;
-  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c, l_extendedprice, l_quantity, l_partkey,
-      l_shipdate, l_suppkey, n_nationkey, n_name, p_partkey, p_brand, p_container, p_name, ps_availqty, ps_partkey,
-      ps_suppkey, s_suppkey, s_address, s_name, s_nationkey;
+  std::shared_ptr<MockNode> node_a, node_b, node_c, node_d, node_e, small_node, large_node, lineitem, nation, part,
+      partsupp, supplier;
+  LQPColumnReference a_a, a_b, a_c, b_a, b_b, c_a, d_a, d_b, d_c, e_a, e_b, e_c, small_node_a, large_node_a,
+      l_extendedprice, l_quantity, l_partkey, l_shipdate, l_suppkey, n_nationkey, n_name, p_partkey, p_brand,
+      p_container, p_name, ps_availqty, ps_partkey, ps_suppkey, s_suppkey, s_address, s_name, s_nationkey;
   std::shared_ptr<LQPColumnExpression> a_a_expression, a_b_expression, a_c_expression;
 };
 
@@ -919,6 +932,91 @@ TEST_F(SubqueryToJoinRuleTest, SimpleCorrelatedInWithAdditionToSemiJoin) {
     node_a,
     ProjectionNode::make(expression_vector(b_a_plus_2, b_b),
       node_b));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsSemiJoinWithoutReduction) {
+  // SELECT * FROM larger WHERE EXISTS (SELECT * FROM smaller WHERE larger.b = smaller.a)
+
+  const auto parameter = correlated_parameter_(ParameterID{0}, large_node_a);
+
+  // clang-format off
+  const auto subquery_lqp =
+  PredicateNode::make(equals_(small_node_a, parameter),
+    small_node);
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, large_node_a));
+
+  const auto input_lqp =
+  PredicateNode::make(exists_(subquery),
+    large_node);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, equals_(large_node_a, small_node_a),
+    large_node,
+    small_node);
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedExistsToSemiJoinWithReduction) {
+  // SELECT * FROM smaller WHERE EXISTS (SELECT * FROM larger WHERE larger.b = smaller.a)
+
+  const auto parameter = correlated_parameter_(ParameterID{0}, small_node_a);
+
+  // clang-format off
+  const auto subquery_lqp =
+  PredicateNode::make(equals_(large_node_a, parameter),
+    large_node);
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, small_node_a));
+
+  const auto input_lqp =
+  PredicateNode::make(exists_(subquery),
+    small_node);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
+    small_node,
+    JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
+      large_node,
+      small_node));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, UnbalancedCorrelatedNotExistsToSemiJoinWithReduction) {
+  // SELECT * FROM smaller WHERE NOT EXISTS (SELECT * FROM larger WHERE larger.b = smaller.a)
+
+  const auto parameter = correlated_parameter_(ParameterID{0}, small_node_a);
+
+  // clang-format off
+  const auto subquery_lqp =
+  PredicateNode::make(equals_(large_node_a, parameter),
+    large_node);
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, small_node_a));
+
+  const auto input_lqp =
+  PredicateNode::make(not_exists_(subquery),
+    small_node);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::AntiNullAsFalse, equals_(small_node_a, large_node_a),
+    small_node,
+    JoinNode::make(JoinMode::Semi, equals_(small_node_a, large_node_a),
+      large_node,
+      small_node));
   // clang-format on
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);

@@ -64,4 +64,11 @@ JitRepository::JitRepository(const std::string& module_string)
   }
 }
 
+std::shared_ptr<JitRepository> JitRepository::_make_shared() {
+  // We need this struct because it enables the shared pointer to create a JitRepository since it provides a public
+  // constructor. With this solution we don't need to make JitRepository's standard constructor public.
+  struct MakeSharedEnabler : public JitRepository {};
+  return std::make_shared<MakeSharedEnabler>();
+}
+
 }  // namespace opossum
