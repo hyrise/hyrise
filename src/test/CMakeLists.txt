@@ -292,7 +292,6 @@ set(
     gtest
     gmock
     sqlite3
-    ${FILESYSTEM_LIBRARY}
 )
 
 # This warning does not play well with SCOPED_TRACE

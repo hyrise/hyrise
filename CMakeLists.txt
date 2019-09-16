@@ -19,7 +19,7 @@ function(compiler_not_supported message)
 endfunction(compiler_not_supported)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.2)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
         compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
     if (APPLE)
