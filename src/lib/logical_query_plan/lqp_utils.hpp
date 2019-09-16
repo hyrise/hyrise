@@ -100,7 +100,7 @@ enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 /**
  * Calls the passed @param visitor on @param lqp and recursively on its INPUTS. This will NOT visit subqueries.
  * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
- * as well.
+ * as well. The algorithm is BFS.
  * Each node is visited exactly once.
  *
  * @tparam Visitor      Functor called with every node as a param.
