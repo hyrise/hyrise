@@ -21,7 +21,7 @@ namespace opossum {
 class PredicateMergeRule : public AbstractRule {
  public:
   explicit PredicateMergeRule(const size_t optimization_threshold);
-  void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+  void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 
  private:
   std::shared_ptr<AbstractExpression> _merge_subplan(

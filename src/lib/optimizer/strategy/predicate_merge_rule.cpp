@@ -12,38 +12,33 @@ namespace opossum {
 PredicateMergeRule::PredicateMergeRule(const size_t optimization_threshold)
     : _optimization_threshold(optimization_threshold) {}
 
-void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
-  if (!node) {
-    return;
-  }
+void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+  Assert(node->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
-  std::set<std::shared_ptr<AbstractLQPNode>> break_nodes;
-  size_t lqp_complexity = 0;
-  visit_lqp(node, [&](const auto& sub_node) {
-    switch (sub_node->type) {
-      case LQPNodeType::Predicate:
-        return LQPVisitation::VisitInputs;
+  visit_lqp(root, [&](const auto& node) {
+    size_t lqp_complexity = 0;
+    visit_lqp(node, [&](const auto &sub_node) {
+      switch (sub_node->type) {
+        case LQPNodeType::Predicate:
+          return LQPVisitation::VisitInputs;
 
-      case LQPNodeType::Union:
-        lqp_complexity++;
-        return LQPVisitation::VisitInputs;
+        case LQPNodeType::Union:
+          lqp_complexity++;
+          return LQPVisitation::VisitInputs;
 
-      default:
-        break_nodes.insert(sub_node);
-        return LQPVisitation::DoNotVisitInputs;
+        default:
+          return LQPVisitation::DoNotVisitInputs;
+      }
+    });
+
+    // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs with many
+    // UNIONs.
+    if (lqp_complexity >= _optimization_threshold) {
+      _merge_subplan(node, std::nullopt);
     }
+
+    return LQPVisitation::VisitInputs;
   });
-
-  for (const auto& next_node : break_nodes) {
-    apply_to(next_node->left_input());
-    apply_to(next_node->right_input());
-  }
-
-  // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs with many
-  // UNIONs.
-  if (lqp_complexity >= _optimization_threshold) {
-    _merge_subplan(node, std::nullopt);
-  }
 }
 
 /**
