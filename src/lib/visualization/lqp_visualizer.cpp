@@ -43,7 +43,11 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
 
-  _add_vertex(node, node->description());
+  auto node_label = node->description();
+  if (!node->comment.empty()) {
+    node_label += "\\n(" + node->comment + ")";
+  }
+  _add_vertex(node, node_label);
 
   if (node->left_input()) {
     auto left_input = node->left_input();
@@ -85,7 +89,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   try {
     row_count = _cardinality_estimator.estimate_cardinality(from);
-    pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
+    pen_width = row_count;
   } catch (...) {
     // statistics don't exist for this edge
     row_count = NAN;

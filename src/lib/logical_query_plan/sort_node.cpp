@@ -31,6 +31,14 @@ std::string SortNode::description() const {
   return stream.str();
 }
 
+size_t SortNode::_shallow_hash() const {
+  size_t hash{0};
+  for (const auto& order_by_mode : order_by_modes) {
+    boost::hash_combine(hash, order_by_mode);
+  }
+  return hash;
+}
+
 std::shared_ptr<AbstractLQPNode> SortNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return SortNode::make(expressions_copy_and_adapt_to_different_lqp(node_expressions, node_mapping), order_by_modes);
 }

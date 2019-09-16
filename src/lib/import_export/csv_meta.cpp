@@ -30,6 +30,34 @@ void assign_if_exists(bool& value, const nlohmann::json& json_object, const std:
   }
 }
 
+void from_json(const nlohmann::json& json_string, NullHandling& null_handling) {
+  if (json_string == "reject_null_strings") {
+    null_handling = NullHandling::RejectNullStrings;
+  } else if (json_string == "null_string_as_null") {
+    null_handling = NullHandling::NullStringAsNull;
+  } else if (json_string == "null_string_as_value") {
+    null_handling = NullHandling::NullStringAsValue;
+  } else {
+    Fail("Illegal value for null_handling: " + json_string.get<std::string>());
+  }
+}
+
+void to_json(nlohmann::json& json_string, NullHandling null_handling) {
+  switch (null_handling) {
+    case NullHandling::RejectNullStrings:
+      json_string = "reject_null_strings";
+      break;
+    case NullHandling::NullStringAsNull:
+      json_string = "null_string_as_null";
+      break;
+    case NullHandling::NullStringAsValue:
+      json_string = "null_string_as_value";
+      break;
+    default:
+      Fail("Unexpected NullHandling.");
+  }
+}
+
 void from_json(const nlohmann::json& json, CsvMeta& meta) {
   // Apply only parts of the ParseConfig that are provided, use default values otherwise
   ParseConfig config{};
@@ -42,8 +70,11 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
     assign_if_exists(config.escape, config_json, "escape");
     assign_if_exists(config.delimiter_escape, config_json, "delimiter_escape");
     assign_if_exists(config.reject_quoted_nonstrings, config_json, "reject_quoted_nonstrings");
-    assign_if_exists(config.reject_null_strings, config_json, "reject_null_strings");
     assign_if_exists(config.rfc_mode, config_json, "rfc_mode");
+
+    if (config_json.find("null_handling") != config_json.end()) {
+      config.null_handling = config_json["null_handling"].get<NullHandling>();
+    }
   }
 
   if (json.find("columns") != json.end()) {
@@ -67,7 +98,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
                                          {"escape", std::string(1, meta.config.escape)},
                                          {"delimiter_escape", std::string(1, meta.config.delimiter_escape)},
                                          {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
-                                         {"reject_null_strings", meta.config.reject_null_strings},
+                                         {"null_handling", meta.config.null_handling},
                                          {"rfc_mode", meta.config.rfc_mode}};
 
   auto columns = nlohmann::json::parse("[]");
@@ -85,9 +116,9 @@ bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
 
 bool operator==(const ParseConfig& left, const ParseConfig& right) {
   return std::tie(left.delimiter, left.separator, left.quote, left.escape, left.delimiter_escape,
-                  left.reject_quoted_nonstrings, left.reject_null_strings, left.rfc_mode) ==
+                  left.reject_quoted_nonstrings, left.null_handling, left.rfc_mode) ==
          std::tie(right.delimiter, right.separator, right.quote, right.escape, right.delimiter_escape,
-                  right.reject_quoted_nonstrings, right.reject_null_strings, right.rfc_mode);
+                  right.reject_quoted_nonstrings, right.null_handling, right.rfc_mode);
 }
 
 bool operator==(const CsvMeta& left, const CsvMeta& right) {
