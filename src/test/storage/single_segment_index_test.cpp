@@ -215,7 +215,7 @@ class SingleSegmentIndexTest : public BaseTest {
 
 // List of indexes to test
 typedef ::testing::Types<AdaptiveRadixTreeIndex, BTreeIndex, /*CompositeGroupKeyIndex,*/ GroupKeyIndex> DerivedIndexes;
-TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(SingleSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 /*
   Test cases:

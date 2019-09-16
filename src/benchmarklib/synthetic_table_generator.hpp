@@ -65,7 +65,7 @@ class SyntheticTableGenerator {
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
                                         const std::vector<DataType>& column_data_types, const size_t num_rows,
                                         const ChunkOffset chunk_size,
-                                        const std::optional<std::vector<SegmentEncodingSpec>>& segment_encoding_specs,
+                                        const std::optional<ChunkEncodingSpec>& segment_encoding_specs,
                                         const std::optional<std::vector<std::string>>& column_names = std::nullopt,
                                         const UseMvcc use_mvcc = UseMvcc::No);
 
@@ -97,7 +97,7 @@ class SyntheticTableGenerator {
       return static_cast<T>(input);
     } else if constexpr (std::is_floating_point_v<T>) {
       return static_cast<T>(input) * 0.999999f;
-    } else {
+    } else if constexpr (std::is_same_v<T, pmr_string>) {
       constexpr auto generated_string_length = size_t{10};
       constexpr auto prefix_length = size_t{4};
       constexpr auto variable_string_length = generated_string_length - prefix_length;
@@ -125,6 +125,8 @@ class SyntheticTableGenerator {
       }
 
       return result;
+    } else {
+      Fail("Requested type not supported.");
     }
   }
 

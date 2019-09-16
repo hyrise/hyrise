@@ -100,7 +100,7 @@ TEST_F(DISABLED_CalibrationFeatureExtractorTest, ExtractOr) {
 }
 
 using JoinTypes = ::testing::Types<JoinHash, JoinIndex, JoinSortMerge, JoinNestedLoop, JoinMPSM>;
-TYPED_TEST_CASE(DISABLED_CalibrationFeatureExtractorJoinTest, JoinTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(DISABLED_CalibrationFeatureExtractorJoinTest, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DISABLED_CalibrationFeatureExtractorJoinTest, ExtractJoin) {
   const auto join = std::make_shared<TypeParam>(

@@ -1,6 +1,7 @@
 #include "chunk_encoder.hpp"
 
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include "base_value_segment.hpp"
@@ -92,21 +93,43 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
 }
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
-                                const ChunkEncodingSpec& chunk_encoding_spec) {
-  Assert((column_data_types.size() == chunk->column_count()),
+                                const ChunkEncodingSpec& chunk_encoding_spec, const bool encode_in_parallel) {
+  const auto column_count = chunk->column_count();
+  Assert((column_data_types.size() == column_count),
          "Number of column types must match the chunk’s column count.");
-  Assert((chunk_encoding_spec.size() == chunk->column_count()),
+  Assert((chunk_encoding_spec.size() == column_count),
          "Number of column encoding specs must match the chunk’s column count.");
+  
+  auto next_column_id = std::atomic_ushort{0};
+  auto threads = std::vector<std::thread>{};
+  const auto thread_count = std::min(column_count, static_cast<uint16_t>(std::thread::hardware_concurrency()));
 
-  for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-    const auto spec = chunk_encoding_spec[column_id];
+  for (auto thread_id = 0u; thread_id < static_cast<uint>(thread_count); ++thread_id) {
+    const auto task = [&] {
+      while (true) {
+        const auto current_column_id = ColumnID{next_column_id++};
+        if (current_column_id >= column_count) return;
 
-    const auto data_type = column_data_types[column_id];
-    const auto base_segment = chunk->get_segment(column_id);
+        const auto spec = chunk_encoding_spec[current_column_id];
 
-    const auto encoded_segment = encode_segment(base_segment, data_type, spec);
-    chunk->replace_segment(column_id, encoded_segment);
+        const auto data_type = column_data_types[current_column_id];
+        const auto base_segment = chunk->get_segment(current_column_id);
+
+        const auto encoded_segment = encode_segment(base_segment, data_type, spec);
+        chunk->replace_segment(current_column_id, encoded_segment);
+      }
+    };
+
+    if (encode_in_parallel) {
+      std::cout << "emplacing a thread" << std::endl;
+      threads.emplace_back(task);
+    } else {
+      std::cout << "executing directly" << std::endl;
+      task();
+    }
   }
+
+  for (auto& thread : threads) thread.join();
 
   chunk->mark_immutable();
 

@@ -20,7 +20,7 @@ namespace opossum {
 //                                      CalibrationFeatures, CalibrationJoinFeatures, CalibrationProjectionFeatures,
 //                                      CalibrationRuntimeHardwareFeatures, CalibrationTableScanFeatures>;
 //
-//TYPED_TEST_CASE(CalibrationFeatureTest, FeatureTypes, );  // NOLINT(whitespace/parens)
+//TYPED_TEST_SUITE(CalibrationFeatureTest, FeatureTypes, );  // NOLINT(whitespace/parens)
 //
 //TYPED_TEST(CalibrationFeatureTest, SimpleTest) {
 //  const auto features = std::make_shared<TypeParam>();
