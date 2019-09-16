@@ -139,7 +139,7 @@ class OperatorsAggregateTest : public BaseTest {
 };
 
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
-TYPED_TEST_CASE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {
   auto aggregate = std::make_shared<TypeParam>(
