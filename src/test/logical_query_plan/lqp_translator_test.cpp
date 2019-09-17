@@ -693,7 +693,7 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   EXPECT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_right()->input_left()->input_left());
 }
 
-TEST_F(LQPTranslatorTest, ReusingPQPsSelfJoin) {
+TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
   /**
    * Test that LQP:
    *
@@ -726,24 +726,24 @@ TEST_F(LQPTranslatorTest, ReusingPQPsSelfJoin) {
    *    
    */
 
-  auto int_float2_node_1 = StoredTableNode::make("table_int_float2");
-  auto int_float2_a_1 = int_float2_node_1->get_column("a");
-  auto int_float2_b_1 = int_float2_node_1->get_column("b");
+  auto int_float_node_1 = StoredTableNode::make("table_int_float2");
+  auto int_float_a_1 = int_float_node_1->get_column("a");
+  auto int_float_b_1 = int_float_node_1->get_column("b");
 
-  auto int_float2_node_2 = StoredTableNode::make("table_int_float2");
-  auto int_float2_a_2 = int_float2_node_2->get_column("a");
-  auto int_float2_b_2 = int_float2_node_2->get_column("b");
+  auto int_float_node_2 = StoredTableNode::make("table_int_float2");
+  auto int_float_a_2 = int_float_node_2->get_column("a");
+  auto int_float_b_2 = int_float_node_2->get_column("b");
 
   // clang-format off
   const auto lqp =
-  ProjectionNode::make(expression_vector(int_float2_b_1, int_float2_b_2),
+  ProjectionNode::make(expression_vector(int_float_b_1, int_float_b_2),
     JoinNode::make(JoinMode::Cross,
-      PredicateNode::make(equals_(int_float2_b_1, 456.7f),
-        PredicateNode::make(equals_(int_float2_a_1, 12345),
-          int_float2_node_1)),
-      PredicateNode::make(equals_(int_float2_b_2, 457.7f),
-        PredicateNode::make(equals_(int_float2_a_2, 12345),
-          int_float2_node_2))));
+      PredicateNode::make(equals_(int_float_b_1, 456.7f),
+        PredicateNode::make(equals_(int_float_a_1, 12345),
+          int_float_node_1)),
+      PredicateNode::make(equals_(int_float_b_2, 457.7f),
+        PredicateNode::make(equals_(int_float_a_2, 12345),
+          int_float_node_2))));
   // clang-format on
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
@@ -752,11 +752,23 @@ TEST_F(LQPTranslatorTest, ReusingPQPsSelfJoin) {
   ASSERT_NE(pqp->input_left(), nullptr);
   ASSERT_NE(pqp->input_left()->input_left(), nullptr);
   ASSERT_NE(pqp->input_left()->input_right(), nullptr);
-  ASSERT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_left()->input_right()->input_left());
-  ASSERT_EQ(pqp->input_left()->input_left()->input_left()->input_left(),
-            pqp->input_left()->input_right()->input_left()->input_left());
-  ASSERT_EQ(pqp->input_left()->input_left()->input_left()->input_left()->input_left(), nullptr);
-  ASSERT_EQ(pqp->input_left()->input_right()->input_left()->input_left()->input_left(), nullptr);
+
+  const auto table_scan_b_1 = std::dynamic_pointer_cast<const TableScan>(pqp->input_left()->input_left());
+  const auto table_scan_b_2 = std::dynamic_pointer_cast<const TableScan>(pqp->input_left()->input_right());
+  ASSERT_NE(table_scan_b_1, nullptr);
+  ASSERT_NE(table_scan_b_2, nullptr);
+  ASSERT_NE(table_scan_b_1, table_scan_b_2);
+
+  const auto table_scan_a_1 = std::dynamic_pointer_cast<const TableScan>(table_scan_b_1->input_left());
+  const auto table_scan_a_2 = std::dynamic_pointer_cast<const TableScan>(table_scan_b_2->input_left());
+  ASSERT_NE(table_scan_a_1, nullptr);
+  ASSERT_NE(table_scan_a_2, nullptr);
+  ASSERT_EQ(table_scan_a_1, table_scan_a_2);
+
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(table_scan_a_1->input_left());
+  ASSERT_NE(get_table, nullptr);
+
+  ASSERT_EQ(get_table->input_left(), nullptr);
 }
 
 TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
