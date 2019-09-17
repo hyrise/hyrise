@@ -16,7 +16,7 @@ class DeleteNodeTest : public BaseTest {
 
 TEST_F(DeleteNodeTest, Description) { EXPECT_EQ(_delete_node->description(), "[Delete]"); }
 
-TEST_F(DeleteNodeTest, HashEquals) {
+TEST_F(DeleteNodeTest, HashingAndEqualityCheck) {
   const auto another_delete_node = DeleteNode::make();
   EXPECT_EQ(*_delete_node, *another_delete_node);
 

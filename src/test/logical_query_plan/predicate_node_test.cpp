@@ -30,7 +30,7 @@ class PredicateNodeTest : public BaseTest {
 
 TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5"); }
 
-TEST_F(PredicateNodeTest, HashEquals) {
+TEST_F(PredicateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_predicate_node, *_predicate_node);
   const auto equal_table_node = StoredTableNode::make("table_a");
   LQPColumnReference equal_i{equal_table_node, ColumnID{0}};

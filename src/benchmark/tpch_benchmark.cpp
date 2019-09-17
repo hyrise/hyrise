@@ -14,9 +14,6 @@
 #include "cxxopts.hpp"
 #include "hyrise.hpp"
 #include "json.hpp"
-#include "scheduler/current_scheduler.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -133,6 +130,8 @@ int main(int argc, char* argv[]) {
 
   // Run the benchmark
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
-  BenchmarkRunner(*config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context)
-      .run();
+  auto benchmark_runner = std::make_shared<BenchmarkRunner>(
+      *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
+  Hyrise::get().benchmark_runner = benchmark_runner;
+  benchmark_runner->run();
 }

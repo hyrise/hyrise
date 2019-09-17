@@ -57,7 +57,7 @@ TEST_F(AggregateNodeTest, Description) {
   EXPECT_EQ(description, "[Aggregate] GroupBy: [a, c] Aggregates: [SUM(a + b), SUM(a + c)]");
 }
 
-TEST_F(AggregateNodeTest, HashEquals) {
+TEST_F(AggregateNodeTest, HashingAndEqualityCheck) {
   const auto same_aggregate_node = AggregateNode::make(
       expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
 

@@ -145,10 +145,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool operator!=(const AbstractLQPNode& rhs) const;
 
   /**
-   *  Builds a hash code by hashing the node type combined with specific member variables of
-   *  derived classes (see _shallow_hash()) and the hash codes of non-empty input nodes recursively.
-   *  Node expressions are not taken into account since combining the hashes of the expressions
-   *  can lead to unequal hash codes, even if lqp nodes are sementically equal.
+   * @return a hash for the (sub)plan whose root this node is
    */
   size_t hash() const;
 
@@ -159,10 +156,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * E.g., for the PredicateNode, this will be a single predicate expression; for a ProjectionNode it holds one
    * expression for each column.
    *
-   * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the expressions
-   * (e.g. column names in the AliasNode, OrderByModes in the SortNode) gets adjusted accordingly.
+   * WARNING: When changing the length of this vector, **absolutely make sure** any data associated with the
+   * expressions (e.g. column names in the AliasNode, OrderByModes in the SortNode) gets adjusted accordingly.
    */
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions;
+
+  /**
+   * Holds a (short) comment that is printed during plan visualization. For example, this could be a comment added by
+   * the optimizer explaining that a node was added as a semi-join reduction node (see SubqueryToJoinRule). It is not
+   * automatically added to the description.
+   */
+  std::string comment;
 
  protected:
   /**

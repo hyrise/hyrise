@@ -106,16 +106,14 @@ TEST_F(JoinPredicateOrderingRuleTest, AntiNonEqualsJoin) {
   }
 }
 
-TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin /* #1830 */) {
+TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
   set_statistics_for_mock_node(node_b, 100,
-                               {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 5),
-                                GenericHistogram<int32_t>::with_single_bin(-30, 10, 100, 5),
-                                GenericHistogram<int32_t>::with_single_bin(30, 70, 100, 5)});
+                               {GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 30),
+                                GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 20),
+                                GenericHistogram<int32_t>::with_single_bin(0, 40, 100, 10)});
 
-  // Assuming greater_than_(a_z, b_z) < greater_than_(a_x, b_x) < equals_(a_y, b_y) wrt. estimated cardinality.
-  //  This might change when our cardinality estimator changes. In that case the histograms should be updated.
-  //  The equals predicate must come first, because semi joins are only supported by hash joins, which require
-  //  their primary predicate to be equals.
+  // Test that the equals predicate comes first, as semi joins are only supported by hash joins, which require
+  // their primary predicate to be equal predicates.
   const auto expected_join_predicates =
       expression_vector(equals_(a_y, b_y), greater_than_(a_x, b_x), greater_than_(a_z, b_z));
   const auto expected_lqp = JoinNode::make(JoinMode::Semi, expected_join_predicates, node_a, node_b);

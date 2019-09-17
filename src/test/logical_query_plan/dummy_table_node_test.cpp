@@ -18,7 +18,7 @@ TEST_F(DummyTableNodeTest, Description) { EXPECT_EQ(_dummy_table_node->descripti
 
 TEST_F(DummyTableNodeTest, OutputColumnExpressions) { EXPECT_EQ(_dummy_table_node->column_expressions().size(), 0u); }
 
-TEST_F(DummyTableNodeTest, HashEquals) {
+TEST_F(DummyTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_dummy_table_node, *_dummy_table_node);
   EXPECT_EQ(*_dummy_table_node, *DummyTableNode::make());
 

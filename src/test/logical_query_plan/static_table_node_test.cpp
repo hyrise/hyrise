@@ -25,7 +25,7 @@ TEST_F(StaticTableNodeTest, Description) {
 
 TEST_F(StaticTableNodeTest, NodeExpressions) { ASSERT_EQ(static_table_node->node_expressions.size(), 0u); }
 
-TEST_F(StaticTableNodeTest, HashEquals) {
+TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*static_table_node, *static_table_node);
 
   const auto same_static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
