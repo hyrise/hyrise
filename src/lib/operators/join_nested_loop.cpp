@@ -11,7 +11,6 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
-#include "utils/ignore_unused_variable.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
