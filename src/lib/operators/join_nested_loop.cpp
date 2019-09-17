@@ -296,8 +296,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
    * SLOW PATH
    */
   // clang-format off
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, const auto [[maybe_unused]] left_end) {  // NOLINT
-    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it, const auto [[maybe_unused]] right_end) {  // NOLINT
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {  // NOLINT
+    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {  // NOLINT
       using LeftType = typename std::decay_t<decltype(left_it)>::ValueType;
       using RightType = typename std::decay_t<decltype(right_it)>::ValueType;
 
