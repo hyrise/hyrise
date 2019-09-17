@@ -660,10 +660,10 @@ TEST_P(JoinTestRunner, TestJoin) {
   // For this, configuration.index_side has to be set.
   // For a chunk to be scanned, indexes are used
   // if (index_exists && (data_table || (ref_table && inner_join && single_chunk_ref))) with
-  // - index_exists: the correct index exists for the corresponding table 
+  // - index_exists: the correct index exists for the corresponding table
   // - data_table: the table type is TableType::Data
   // - ref_table: the table type is TableType::Referene
-  // - inner_join: the join mode is JoinMode::Inner 
+  // - inner_join: the join mode is JoinMode::Inner
   // - single_chunk_ref: the (reference) chunk to be scanned references a single chunk
   // For more infomation about performance data, checkout join_index_test.cpp, `static void test_join_output(…)`.
 }
