@@ -49,24 +49,25 @@ JoinSortMergeClusterer<T>::JoinSortMergeClusterer(const std::shared_ptr<const Ta
   DebugAssert(right, "right input operator is null");
 
   /**
-   * In certain situations, sorting the materialized segments of the first phase can be
-   * advantageous. When segments are sorted, the later clustering creates a partially
-   * sorted output. Depending on the number of sorted runs (i.e., the number of input
-   * chunks), merging the sorted runs can be faster than sorting the final clusters.
-   */
+  * In certain situations, sorting the materialized segments of the first phase can be
+  * advantageous. When segments are sorted, the later clustering creates a partially
+  * sorted output. Depending on the number of sorted runs (i.e., the number of input
+  * chunks), merging the sorted runs can be faster than sorting the final clusters.
+  */
   const size_t left_input_rows = left->row_count();
   const size_t right_input_rows = right->row_count();
   const size_t left_input_chunk_count = left->chunk_count();
   const size_t right_input_chunk_count = right->chunk_count();
 
+  /**
+  * For range clustering, the materialized segments need to be sorted. For radix
+  * clustering, a simple heuristic is used to determine if presorting is advantageous.
+  **/
   if (_radix_clustering) {
   	_presort_segments.first = estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) < estimated_cost_full_sorting(left_input_rows, cluster_count);
   	_presort_segments.second = estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) < estimated_cost_full_sorting(right_input_rows, cluster_count);
 
-  	  std::cout << "Estimating merge costs with: L (part " << estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(left_input_rows, cluster_count) << ") and R(part " << estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(right_input_rows, cluster_count) << ")" << std::endl;
-  } else {
-  	// Range clustering requires presorted materialized segments
-  	_presort_segments = {true, true};
+  	  // std::cout << "Estimating merge costs with: L (part " << estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(left_input_rows, cluster_count) << ") and R(part " << estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(right_input_rows, cluster_count) << ")" << std::endl;
   }
 }
 
@@ -127,10 +128,10 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::concatenate_materialized_s
   }
 
   if (segments_are_presorted) {
-  	std::cout << "merge sort" << std::endl;
+  	// std::cout << "merge sort" << std::endl;
     merge_partially_sorted_materialized_segment(output, std::move(sorted_run_start_positions));
   } else {
-  	std::cout << "full sort" << std::endl;
+  	// std::cout << "full sort" << std::endl;
     std::sort(output.begin(), output.end(),
               [](auto& left, auto& right) { return left.value < right.value; });
   }
@@ -348,10 +349,10 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
       // Sorting of final output cluster. If materialized segments have been
       // presorted, output is partially sorted and the sorted lists can be merged.
       if (segments_are_presorted) {
-      	std::cout << "partial sort" << std::endl;
+      	// std::cout << "partial sort" << std::endl;
         merge_partially_sorted_materialized_segment(*segment, std::move(sorted_run_start_positions));
       } else {
-      	std::cout << "full sort" << std::endl;
+      	// std::cout << "full sort" << std::endl;
         std::sort(segment->begin(), segment->end(),
                   [](auto& left, auto& right) { return left.value < right.value; });
       }

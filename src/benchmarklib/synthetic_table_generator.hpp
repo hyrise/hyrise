@@ -5,6 +5,7 @@
 #include <optional>
 
 #include "storage/encoding_type.hpp"
+#include "operators/join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "types.hpp"
 
 namespace opossum {

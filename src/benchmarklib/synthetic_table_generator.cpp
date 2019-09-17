@@ -91,7 +91,6 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
     Segments segments(num_columns);
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
-      std::cout << "segment " << column_index << std::endl;
       resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
         using ColumnDataType = typename decltype(column_data_type)::type;
 
@@ -154,16 +153,16 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
       });
       // add full chunk to table
       if (column_index == num_columns - 1) {
-        const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-        table->append_chunk(segments, mvcc_data);
-        std::cout << "chunk appended" << std::endl;
+        if (use_mvcc == UseMvcc::Yes) {
+          const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+          table->append_chunk(segments, mvcc_data);
+        } else {
+          table->append_chunk(segments);
+        }
 
-        // TODO: put encoding in another thread
-        std::cout << "encoding start" << std::endl;
         if (segment_encoding_specs) {
           ChunkEncoder::encode_chunk(table->get_chunk(ChunkID{table->chunk_count() - 1}), table->column_data_types(), *segment_encoding_specs, true);
         }
-        std::cout << "encoding end" << std::endl;
       }
     }
   }

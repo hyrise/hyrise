@@ -176,7 +176,7 @@ class JoinSortMergeClusterer {
 
   // Denotes whether the materialized segments in the first phase are already being sorted
   // before the clustering phase. First elements of pairs for left input, second for right input.
-  std::pair<bool, bool> _presort_segments = {false, false};
+  std::pair<bool, bool> _presort_segments = {true, true};
 
   // The cluster count must be a power of two (i.e. 1, 2, 4, 8, 16) for radix clustering.
   const size_t _cluster_count;
