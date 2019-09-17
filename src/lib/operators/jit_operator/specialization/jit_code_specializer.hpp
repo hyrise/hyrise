@@ -5,6 +5,7 @@
 
 #include <stack>
 
+#include "hyrise.hpp"
 #include "jit_compiler.hpp"
 #include "jit_repository.hpp"
 #include "jit_runtime_pointer.hpp"
@@ -24,7 +25,7 @@ class JitRTTIHelper {
 
 class JitCodeSpecializer {
  public:
-  explicit JitCodeSpecializer(JitRepository& repository = JitRepository::get());
+  explicit JitCodeSpecializer(std::shared_ptr<JitRepository>& repository = Hyrise::get().jit_repository);
 
   // Specializes the given function with the provided runtime information.
   // The root_function_name must be the mangled name of the function to be specialized. This function must exist in the
@@ -83,8 +84,8 @@ class JitCodeSpecializer {
   template <typename T, typename U>
   void _visit(U& element, std::function<void(T&)> fn) const;
 
-  JitRepository& _repository;
-  const std::shared_ptr<llvm::LLVMContext> _llvm_context;
+  std::shared_ptr<JitRepository> _repository;
+  std::shared_ptr<llvm::LLVMContext> _llvm_context;
   JitCompiler _compiler;
   const std::string _specialized_root_function_name = "jit_module_root_function";
 };

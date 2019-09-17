@@ -323,12 +323,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
 
     if (primary_operator_join_predicate) {
       switch (join_node.join_mode) {
-        case JoinMode::Semi:
-        case JoinMode::AntiNullAsTrue:
-        case JoinMode::AntiNullAsFalse:
-          // TODO(anybody) Implement estimation of Semi/Anti joins. #1830
-          return left_input_table_statistics;
-
         // For now, handle outer joins just as inner joins
         // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches. #1830
         case JoinMode::Left:
@@ -366,6 +360,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
         case JoinMode::Cross:
           // Should have been forwarded to estimate_cross_join()
           Fail("Cross join is not a predicated join");
+
+        case JoinMode::Semi:
+          return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
+                                    primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
+                                    *right_input_table_statistics);
+
+        case JoinMode::AntiNullAsTrue:
+        case JoinMode::AntiNullAsFalse:
+          return left_input_table_statistics;
       }
     } else {
       // TODO(anybody) For now, estimate a selectivity of one. #1830
@@ -714,6 +717,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
   const auto left_data_type = left_input_table_statistics.column_data_type(left_column_id);
   const auto right_data_type = right_input_table_statistics.column_data_type(right_column_id);
 
+  // We expect both columns to be of the same type. This allows us to resolve the type only once, reducing the
+  // compile time. For differing column types and/or string columns (which we cannot handle right now), we assume that
+  // all tuples qualify. This is probably a gross overestimation, but we need to return something...
   // TODO(anybody) - Implement join estimation for differing column data types
   //               - Implement join estimation for String columns
   if (left_data_type != right_data_type || left_data_type == DataType::String) {
@@ -737,6 +743,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     auto right_histogram = right_input_column_statistics->histogram;
 
     if (left_histogram && right_histogram) {
+      // If we have histograms, we use the principle of inclusion to determine the number of matches between two bins.
       join_column_histogram = estimate_inner_equi_join_with_histograms(*left_histogram, *right_histogram);
       cardinality = join_column_histogram->total_count();
     } else {
@@ -778,6 +785,94 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
 
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
   });
+
+  return output_table_statistics;
+}
+
+std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
+    const ColumnID left_column_id, const ColumnID right_column_id, const TableStatistics& left_input_table_statistics,
+    const TableStatistics& right_input_table_statistics) {
+  // This is based on estimate_inner_equi_join. We take the histogram from the right, set the bin heights to the
+  // distinct counts and run an inner/equi estimation on it. As there are no more duplicates on the right side, we
+  // should get the correct estimation for the left side.
+  const auto left_data_type = left_input_table_statistics.column_data_type(left_column_id);
+  const auto right_data_type = right_input_table_statistics.column_data_type(right_column_id);
+
+  // We expect both columns to be of the same type. This allows us to resolve the type only once, reducing the
+  // compile time. For differing column types and/or string columns (which we cannot handle right now), we assume that
+  // all tuples qualify. This is probably a gross overestimation, but we need to return something...
+  // TODO(anybody) - Implement join estimation for differing column data types
+  //               - Implement join estimation for String columns
+  if (left_data_type != right_data_type || left_data_type == DataType::String) {
+    return std::make_shared<TableStatistics>(left_input_table_statistics);
+  }
+
+  std::shared_ptr<TableStatistics> output_table_statistics;
+
+  resolve_data_type(left_data_type, [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+
+    const auto left_input_column_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
+        left_input_table_statistics.column_statistics[left_column_id]);
+    const auto right_input_column_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
+        right_input_table_statistics.column_statistics[right_column_id]);
+
+    auto cardinality = Cardinality{0};
+    auto join_column_histogram = std::shared_ptr<AbstractHistogram<ColumnDataType>>{};
+
+    auto left_histogram = left_input_column_statistics->histogram;
+    auto right_histogram = right_input_column_statistics->histogram;
+
+    if (left_histogram && right_histogram) {
+      // Adapt the right histogram so that it only covers distinct values (i.e., replacing the bins' height with their
+      // number of distinct counts)
+      auto distinct_right_histogram_builder =
+          GenericHistogramBuilder(right_histogram->bin_count(), right_histogram->domain());
+      const auto right_bin_count = right_histogram->bin_count();
+      for (auto bin_id = BinID{0}; bin_id < right_bin_count; ++bin_id) {
+        const auto& right_bin = right_histogram->bin(bin_id);
+        distinct_right_histogram_builder.add_bin(right_bin.min, right_bin.max, right_bin.distinct_count,
+                                                 right_bin.distinct_count);
+      }
+
+      const auto distinct_right_histogram = distinct_right_histogram_builder.build();
+      // If we have histograms, we use the principle of inclusion to determine the number of matches between two bins.
+      join_column_histogram = estimate_inner_equi_join_with_histograms(*left_histogram, *distinct_right_histogram);
+      cardinality = join_column_histogram->total_count();
+    } else {
+      // TODO(anybody) If there aren't histograms on both sides, use some other algorithm/statistics to estimate the
+      //               Join
+      cardinality = left_input_table_statistics.row_count;
+    }
+
+    const auto left_selectivity = Selectivity{
+        left_input_table_statistics.row_count > 0 ? cardinality / left_input_table_statistics.row_count : 0.0f};
+
+    /**
+     * Write out the AttributeStatistics of all output columns. With no correlation info available, simply scale all
+     * those that didn't participate in the join predicate
+     */
+    std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics{
+        left_input_table_statistics.column_statistics.size()};
+
+    const auto left_column_count = left_input_table_statistics.column_statistics.size();
+
+    const auto join_columns_output_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
+    join_columns_output_statistics->histogram = join_column_histogram;
+    column_statistics[left_column_id] = join_columns_output_statistics;
+
+    for (auto column_id = ColumnID{0}; column_id < left_column_count; ++column_id) {
+      if (column_statistics[column_id]) continue;
+
+      column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
+    }
+
+    output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
+  });
+
+  DebugAssert(output_table_statistics->row_count <=
+                  left_input_table_statistics.row_count * (1 + std::numeric_limits<float>::epsilon()),
+              "Semi join should not increase cardinality");
 
   return output_table_statistics;
 }

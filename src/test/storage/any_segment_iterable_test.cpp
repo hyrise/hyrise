@@ -74,12 +74,12 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
   EXPECT_EQ(index, position_filter->size());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AnySegmentIterableTestInstances, AnySegmentIterableTest,
     ::testing::Values(SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
                       SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       SegmentEncodingSpec{EncodingType::FrameOfReference}, SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4}), );  // NOLINT
+                      SegmentEncodingSpec{EncodingType::LZ4}));
 
 }  // namespace opossum
