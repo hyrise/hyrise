@@ -8,7 +8,6 @@
 
 namespace opossum {
 
-class AbstractCostEstimator;
 class AbstractLQPNode;
 class PredicateNode;
 
@@ -29,8 +28,6 @@ class PredicateReorderingRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
-  const std::shared_ptr<AbstractCostEstimator> _cost_estimator;
-
   void _reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const;
 };
 
