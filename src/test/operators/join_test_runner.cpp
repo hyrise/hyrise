@@ -674,7 +674,7 @@ INSTANTIATE_TEST_SUITE_P(JoinHash, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinHash>()));
 INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()));
-// TODO
+// TODO(anyone) #1852
 // INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
 //                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
 INSTANTIATE_TEST_SUITE_P(JoinMPSM, JoinTestRunner,
