@@ -70,6 +70,7 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
     default:
       return {false, false};
   }
+  Fail("Invalid enum value");
 }
 
 /**

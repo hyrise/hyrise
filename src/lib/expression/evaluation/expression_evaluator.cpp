@@ -252,6 +252,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
     case ArithmeticOperator::Modulo:         return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
+  Fail("Invalid enum value");
 }
 
 template <>
@@ -600,6 +601,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       return _evaluate_is_null_expression<ExpressionEvaluator::Bool>(
           static_cast<const IsNullExpression&>(predicate_expression));
   }
+  Fail("Invalid enum value");
 }
 
 template <typename Result>
@@ -783,6 +785,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
         Fail("Function can only be evaluated to a string");
       }
   }
+  Fail("Invalid enum value");
 }
 
 template <>
@@ -803,6 +806,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
     case DatetimeComponent::Second:
       Fail("Hour, Minute and Second not available in String Datetimes");
   }
+  Fail("Invalid enum value");
 }
 
 template <typename Result>
@@ -1181,6 +1185,8 @@ ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(con
     case LogicalOperator::And: return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
+
+  Fail("Invalid enum value");
 }
 
 template <typename Result>

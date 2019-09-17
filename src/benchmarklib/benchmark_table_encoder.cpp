@@ -33,6 +33,8 @@ SegmentEncodingSpec get_segment_encoding_spec(const BaseEncodedSegment& base_enc
       case CompressedVectorType::SimdBp128:
         return {base_encoded_segment.encoding_type(), VectorCompressionType::SimdBp128};
     }
+
+    Fail("Invalid enum value");
   } else {
     return {base_encoded_segment.encoding_type()};
   }

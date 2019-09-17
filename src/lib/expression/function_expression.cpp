@@ -50,6 +50,7 @@ DataType FunctionExpression::data_type() const {
     case FunctionType::Concatenate:
       return DataType::String;
   }
+  Fail("Invalid enum value");
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {

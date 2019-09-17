@@ -188,6 +188,8 @@ std::vector<std::shared_ptr<PredicateNode>> PredicatePlacementRule::_pull_up_tra
       _insert_nodes(current_node, input_side, candidate_nodes);
       return {};
   }
+
+  Fail("Invalid enum value");
 }
 
 void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node, const LQPInputSide input_side,
