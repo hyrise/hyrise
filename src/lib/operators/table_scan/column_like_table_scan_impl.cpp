@@ -33,7 +33,7 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& seg
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
   // Select optimized or generic scanning implementation based on segment type
-  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment) && dictionary_segment->unique_values_count() <= segment->size()) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
     _scan_generic_segment(segment, chunk_id, matches, position_filter);
