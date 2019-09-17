@@ -34,7 +34,9 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& seg
                                                           const std::shared_ptr<const PosList>& position_filter) const {
   // For dictionary segments where the number of unique values is at least the number of (potentially filtered) input
   // rows, use an optimized implementation.
-  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment); dictionary_segment && (!position_filter || dictionary_segment->unique_values_count() <= position_filter->size())) {
+  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
+      dictionary_segment &&
+      (!position_filter || dictionary_segment->unique_values_count() <= position_filter->size())) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
     _scan_generic_segment(segment, chunk_id, matches, position_filter);
@@ -69,7 +71,7 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
                                                        const std::shared_ptr<const PosList>& position_filter) const {
   // First, build a bitmap containing 1s/0s for matching/non-matching dictionary values. Second, iterate over the
   // attribute vector and check against the bitmap. If too many input rows have already been removed (are not part of
-  // position_filter), this optimization is detrimental. See caller for that case. 
+  // position_filter), this optimization is detrimental. See caller for that case.
   std::pair<size_t, std::vector<bool>> result;
 
   if (segment.encoding_type() == EncodingType::Dictionary) {
