@@ -355,7 +355,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
             case PredicateCondition::IsNotNull:
               Fail("IS NULL is an invalid join predicate");
           }
-          Fail("GCC thinks this is reachable");
 
         case JoinMode::Cross:
           // Should have been forwarded to estimate_cross_join()
@@ -375,8 +374,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
       return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
     }
   }
-
-  Fail("GCC thinks this is reachable");
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(

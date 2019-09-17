@@ -252,7 +252,6 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
     case ArithmeticOperator::Modulo:         return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
-  Fail("GCC thinks this is reachable");
 }
 
 template <>
@@ -601,7 +600,6 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       return _evaluate_is_null_expression<ExpressionEvaluator::Bool>(
           static_cast<const IsNullExpression&>(predicate_expression));
   }
-  Fail("GCC thinks this is reachable");
 }
 
 template <typename Result>
@@ -776,7 +774,6 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
   switch (expression.function_type) {
     case FunctionType::Concatenate:
     case FunctionType::Substring:
-      // clang-format off
       if constexpr (std::is_same_v<Result, pmr_string>) {
         switch (expression.function_type) {
           case FunctionType::Substring: return _evaluate_substring(expression.arguments);
@@ -785,9 +782,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
       } else {
         Fail("Function can only be evaluated to a string");
       }
-      // clang-format on
   }
-  Fail("GCC thinks this is reachable");
 }
 
 template <>
@@ -808,7 +803,6 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
     case DatetimeComponent::Second:
       Fail("Hour, Minute and Second not available in String Datetimes");
   }
-  Fail("GCC thinks this is reachable");
 }
 
 template <typename Result>
@@ -1187,8 +1181,6 @@ ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(con
     case LogicalOperator::And: return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
-
-  Fail("GCC thinks this is reachable");
 }
 
 template <typename Result>
