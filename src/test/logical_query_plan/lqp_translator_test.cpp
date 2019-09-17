@@ -693,6 +693,72 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   EXPECT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_right()->input_left()->input_left());
 }
 
+TEST_F(LQPTranslatorTest, ReusingPQPsSelfJoin) {
+  /**
+   * Test that LQP:
+   *
+   *               Projection b, b
+   *                      |
+   *           ______Cross Join______
+   *          /                      \
+   *     Predicate                Predicate
+   *     b = 456.7f               b = 457.7f
+   *         |                        |
+   *     Predicate                Predicate
+   *     a = 12345                a = 12345
+   *         |                        |
+   *    StoredTable              StoredTable
+   *  table_int_float2         table_int_float2
+   *
+   * is translated to PQP:
+   *
+   *           Projection b, b
+   *                  |
+   *       ________Product_______
+   *      /                      \
+   *  TableScan               TableScan
+   *  b = 456.7f              b = 457.7f
+   *     \________TableScan______/
+   *              a = 12345
+   *                  |
+   *             StoredTable
+   *           table_int_float2
+   *    
+   */
+
+  auto int_float2_node_1 = StoredTableNode::make("table_int_float2");
+  auto int_float2_a_1 = int_float2_node_1->get_column("a");
+  auto int_float2_b_1 = int_float2_node_1->get_column("b");
+
+  auto int_float2_node_2 = StoredTableNode::make("table_int_float2");
+  auto int_float2_a_2 = int_float2_node_2->get_column("a");
+  auto int_float2_b_2 = int_float2_node_2->get_column("b");
+
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(int_float2_b_1, int_float2_b_2),
+    JoinNode::make(JoinMode::Cross,
+      PredicateNode::make(equals_(int_float2_b_1, 456.7f),
+        PredicateNode::make(equals_(int_float2_a_1, 12345),
+          int_float2_node_1)),
+      PredicateNode::make(equals_(int_float2_b_2, 457.7f),
+        PredicateNode::make(equals_(int_float2_a_2, 12345),
+          int_float2_node_2))));
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  ASSERT_NE(pqp, nullptr);
+  ASSERT_NE(pqp->input_left(), nullptr);
+  ASSERT_NE(pqp->input_left()->input_left(), nullptr);
+  ASSERT_NE(pqp->input_left()->input_right(), nullptr);
+  ASSERT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_left()->input_right()->input_left());
+  ASSERT_EQ(pqp->input_left()->input_left()->input_left()->input_left(),
+            pqp->input_left()->input_right()->input_left()->input_left());
+  ASSERT_EQ(pqp->input_left()->input_left()->input_left()->input_left()->input_left(), nullptr);
+  ASSERT_EQ(pqp->input_left()->input_right()->input_left()->input_left()->input_left(), nullptr);
+}
+
 TEST_F(LQPTranslatorTest, ReuseInputExpressions) {
   // If the result of a (sub)expression is available in an input column, the expression should not be redundantly
   // evaluated
