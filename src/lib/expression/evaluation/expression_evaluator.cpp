@@ -421,13 +421,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
         // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
         if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
-<<<<<<< Updated upstream
-          std::vector<LeftDataType> right_values;
+          pmr_vector<LeftDataType> right_values;
           right_values.reserve(type_compatible_elements.size());
-=======
-          pmr_vector<LeftDataType> right_values(type_compatible_elements.size());
-          auto right_values_idx = size_t{0};
->>>>>>> Stashed changes
           for (const auto& expression : type_compatible_elements) {
             const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
             right_values.emplace_back(boost::get<LeftDataType>(value_expression->value));
