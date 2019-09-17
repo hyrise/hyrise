@@ -236,16 +236,16 @@ TEST_F(JoinSortMergeClustererTest, SortPartiallySortedSegments) {
   auto segment = MaterializedSegment<int>{};
 
   auto empty_positions_1 = std::make_unique<std::vector<size_t>>();
-  if (HYRISE_DEBUG) EXPECT_NO_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_1)));
+  if (HYRISE_DEBUG) { EXPECT_NO_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_1))); }
   segment.push_back({RowID{ChunkID{9u}, ChunkOffset{9u}}, 1});
   auto empty_positions_2 = std::make_unique<std::vector<size_t>>();
-  if (HYRISE_DEBUG) EXPECT_NO_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_2)));
+  if (HYRISE_DEBUG) { EXPECT_NO_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_2))); }
 
   // for all segments with more elements, the vector of sorted run positions cannot be empty
   segment.push_back({RowID{ChunkID{8u}, ChunkOffset{8u}}, 2});
   segment.push_back({RowID{ChunkID{7u}, ChunkOffset{7u}}, 3});
   auto empty_positions_3 = std::make_unique<std::vector<size_t>>();
-  if (HYRISE_DEBUG) EXPECT_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_3)), std::logic_error);
+  if (HYRISE_DEBUG) { EXPECT_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_3)), std::logic_error); }
 
   segment.push_back({RowID{ChunkID{6u}, ChunkOffset{6u}}, 1});
   segment.push_back({RowID{ChunkID{5u}, ChunkOffset{5u}}, 2});
