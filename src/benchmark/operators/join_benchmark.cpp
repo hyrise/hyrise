@@ -97,7 +97,6 @@ static void BM_JoinInequality(benchmark::State& state) {
     clusterer.execute();
   }
 }
-// BENCHMARK(BM_JoinInequality)->RangeMultiplier(2)->Ranges({{2<<10, 2<<23}, {1, 16}});
 BENCHMARK(BM_JoinInequality)->RangeMultiplier(2)->Ranges({{2<<18, 2<<25}, {1, 512}, {true, false}});
 
 template <class C>
