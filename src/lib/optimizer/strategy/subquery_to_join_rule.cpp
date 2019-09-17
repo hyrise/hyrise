@@ -256,6 +256,35 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
         // Replace the right operand of the predicate with the subquery expression.
         binary_predicate->arguments[1] = left_subquery_expression;
       }
+    } else if (const auto left_arithmetic_expression =
+            std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->left_operand())) {
+      if (const auto right_subquery_expression =
+              std::dynamic_pointer_cast<LQPSubqueryExpression>(left_arithmetic_expression->right_operand())) {
+        const auto new_arithmetic_expression = std::make_shared<ArithmeticExpression>(
+            left_arithmetic_expression->arithmetic_operator, left_arithmetic_expression->left_operand(),
+            right_subquery_expression->lqp->node_expressions[0]);
+
+        const auto projection_node =
+            ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>{new_arithmetic_expression},
+                                 right_subquery_expression->lqp);
+        right_subquery_expression->lqp = projection_node;
+
+        // Replace the left operand of the predicate with the subquery expression.
+        binary_predicate->arguments[0] = right_subquery_expression;
+      } else if (const auto left_subquery_expression =
+              std::dynamic_pointer_cast<LQPSubqueryExpression>(left_arithmetic_expression->left_operand())) {
+        const auto new_arithmetic_expression = std::make_shared<ArithmeticExpression>(
+            left_arithmetic_expression->arithmetic_operator, left_subquery_expression->lqp->node_expressions[0],
+            left_arithmetic_expression->right_operand());
+
+        const auto projection_node =
+            ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>{new_arithmetic_expression},
+                                 left_subquery_expression->lqp);
+        left_subquery_expression->lqp = projection_node;
+
+        // Replace the left operand of the predicate with the subquery expression.
+        binary_predicate->arguments[0] = left_subquery_expression;
+      }
     }
 
     if (const auto left_subquery_expression =
