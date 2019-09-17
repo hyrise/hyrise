@@ -68,7 +68,7 @@ inline bool operator==(const AggregateHashSortAggregateDefinition& lhs,
          std::tie(rhs.aggregate_function, rhs.data_type, rhs.column_id);
 }
 
-struct AggregateHashSortSetup {
+struct AggregateHashSortEnvironment {
   AggregateHashSortConfig config;
 
   TableColumnDefinitions output_column_definitions;
@@ -119,24 +119,44 @@ struct AggregateHashSortSetup {
   std::vector<AggregateHashSortAggregateDefinition> aggregate_definitions;
 
   // Number of tasks working on the Aggregation. Once this reached zero, the aggregation is complete
-  std::atomic_size_t global_task_counter{0};
+  std::mutex global_task_counter_mutex;
+  size_t global_task_counter{0};
+  std::condition_variable done_condition;
 
   // Output data and associated mutex
   std::mutex output_chunks_mutex;
   std::vector<std::shared_ptr<Chunk>> output_chunks;
 
-  std::condition_variable done_condition;
+  void increment_global_task_counter() {
+    // global_task_counter is used as a condition variable, thus it has to be modified under mutex lock
+    auto lock = std::unique_lock{global_task_counter_mutex};
+    ++global_task_counter;
+  }
 
-  static std::shared_ptr<AggregateHashSortSetup> create(const AggregateHashSortConfig& config, const std::shared_ptr<const Table>& table,
+  void decrement_global_task_counter() {
+    auto lock = std::unique_lock{global_task_counter_mutex};
+    --global_task_counter;
+
+    /**
+     * Check if this was the last task in the entire Aggregation that completed. If that's the case, notify the main
+     * thread
+     */
+    if (global_task_counter == 0) {
+      done_condition.notify_all();
+    }
+  }
+
+  static std::shared_ptr<AggregateHashSortEnvironment> create(const AggregateHashSortConfig& config, const std::shared_ptr<const Table>& table,
                                        const std::vector<AggregateColumnDefinition>& aggregate_column_definitions,
-                                       const std::vector<ColumnID>& group_by_column_ids) {
+                                       const std::vector<ColumnID>& group_by_column_ids, const TableColumnDefinitions& table_column_definitions) {
     Assert(!group_by_column_ids.empty(),
            "AggregateHashSort cannot operate without group by columns, use a different aggregate operator");
 
-    auto setup = std::make_shared<AggregateHashSortSetup>();
+    auto setup = std::make_shared<AggregateHashSortEnvironment>();
 
     setup->config = config;
     setup->offsets.resize(group_by_column_ids.size());
+    setup->table_column_definitions = table_column_definitions;
 
     for (auto column_id = ColumnID{0}; column_id < group_by_column_ids.size(); ++column_id) {
       const auto group_by_column_id = group_by_column_ids[column_id];
@@ -320,7 +340,7 @@ struct BasicRun : public GroupSizePolicy {
   /**
    * @return     Begin byte and length in bytes of the variably sized value `value_idx` in group `group_idx`
    */
-  std::pair<size_t, size_t> get_variably_sized_value_range(const AggregateHashSortSetup& setup, const size_t group_idx,
+  std::pair<size_t, size_t> get_variably_sized_value_range(const AggregateHashSortEnvironment& setup, const size_t group_idx,
                                                            const size_t value_idx) const {
     const auto [group_begin_offset, group_length] = GroupSizePolicy::get_group_range(group_idx);
 
@@ -348,7 +368,7 @@ struct BasicRun : public GroupSizePolicy {
    * Materialize a Segment from this run
    */
   template <typename T>
-  std::shared_ptr<BaseSegment> materialize_group_column(const AggregateHashSortSetup& setup, const ColumnID column_id,
+  std::shared_ptr<BaseSegment> materialize_group_column(const AggregateHashSortEnvironment& setup, const ColumnID column_id,
                                                         const bool column_is_nullable) const {
     auto output_values = std::vector<T>(size);
 
@@ -416,7 +436,7 @@ struct BasicRun : public GroupSizePolicy {
 };
 
 template <typename Run>
-Run create_run(const AggregateHashSortSetup& setup, const size_t group_capacity = {},
+Run create_run(const AggregateHashSortEnvironment& setup, const size_t group_capacity = {},
                const size_t group_data_capacity = {}) {
   auto group_size_policy = typename Run::GroupSizePolicyType{setup, group_capacity};
 
@@ -498,7 +518,7 @@ struct FixedSizeInPlaceCompare {
 #if VERBOSE
   mutable size_t counter{};
 #endif
-  explicit FixedSizeInPlaceCompare(const AggregateHashSortSetup& setup) {}
+  explicit FixedSizeInPlaceCompare(const AggregateHashSortEnvironment& setup) {}
 
   template <size_t group_size>
   bool operator()(const FixedSizeInPlaceKey<group_size>& lhs, const FixedSizeInPlaceKey<group_size>& rhs) const {
@@ -520,7 +540,7 @@ struct StaticFixedGroupSizePolicy {
   using HashTableKey = FixedSizeInPlaceKey<group_size>;
   using HashTableCompare = FixedSizeInPlaceCompare;
 
-  StaticFixedGroupSizePolicy(const AggregateHashSortSetup& setup, const size_t group_capacity) {}
+  StaticFixedGroupSizePolicy(const AggregateHashSortEnvironment& setup, const size_t group_capacity) {}
 
   template <typename Run>
   auto get_append_iterator(Run& run) const {
@@ -578,7 +598,7 @@ struct FixedSizeRemoteCompare {
   mutable size_t counter{};
 #endif
 
-  explicit FixedSizeRemoteCompare(const AggregateHashSortSetup& setup) : group_size(setup.fixed_group_size) {}
+  explicit FixedSizeRemoteCompare(const AggregateHashSortEnvironment& setup) : group_size(setup.fixed_group_size) {}
 
   bool operator()(const FixedSizeRemoteKey& lhs, const FixedSizeRemoteKey& rhs) const {
 #if VERBOSE
@@ -600,7 +620,7 @@ struct DynamicFixedGroupSizePolicy {
 
   size_t group_size{};
 
-  DynamicFixedGroupSizePolicy(const AggregateHashSortSetup& setup, const size_t group_capacity)
+  DynamicFixedGroupSizePolicy(const AggregateHashSortEnvironment& setup, const size_t group_capacity)
       : group_size(setup.fixed_group_size) {}
 
   template <typename Run>
@@ -653,7 +673,7 @@ struct VariablySizedCompare {
 #if VERBOSE
   mutable size_t counter{};
 #endif
-  explicit VariablySizedCompare(const AggregateHashSortSetup& setup) {}
+  explicit VariablySizedCompare(const AggregateHashSortEnvironment& setup) {}
 
   bool operator()(const VariablySizedKey& lhs, const VariablySizedKey& rhs) const {
 #if VERBOSE
@@ -675,7 +695,7 @@ struct VariableGroupSizePolicy {
   // Number of `data` elements occupied after `append_buffer` is flushed into `data`
   size_t data_watermark{0};
 
-  VariableGroupSizePolicy(const AggregateHashSortSetup& setup, const size_t group_capacity)
+  VariableGroupSizePolicy(const AggregateHashSortEnvironment& setup, const size_t group_capacity)
       : group_end_offsets(group_capacity) {}
 
   template <typename Run>
@@ -774,7 +794,7 @@ inline bool operator==(const RadixFanOut& lhs, const RadixFanOut& rhs) {
 /**
  * @return hash table size
  */
-inline size_t configure_hash_table(const AggregateHashSortSetup& setup, const size_t row_count) {
+inline size_t configure_hash_table(const AggregateHashSortEnvironment& setup, const size_t row_count) {
 #ifdef USE_DENSE_HASH_MAP
   return std::min(setup.config.hash_table_size,
                   static_cast<size_t>(std::ceil(row_count / setup.config.hash_table_max_load_factor) / 2));
@@ -806,12 +826,8 @@ size_t hash(const T& key, const size_t seed) {
 
 enum class HashSortMode { Hashing, Partition };
 
-/**
- * Abstraction over the fact that group and aggregate data can either stem from a Table or a previously created
- * Partition
- */
-template <typename Run>
-struct AbstractRunSource {
+template<typename Run>
+struct RunReader {
   std::vector<Run> runs;
 
   // Current position of the read cursor
@@ -826,7 +842,7 @@ struct AbstractRunSource {
   size_t remaining_fetched_group_count{};
   size_t remaining_fetched_group_data_size{};
 
-  AbstractRunSource(std::vector<Run>&& runs) : runs(std::move(runs)) {
+  explicit RunReader(std::vector<Run>&& runs) : runs(std::move(runs)) {
     for (const auto& run : this->runs) {
       total_remaining_group_count += run.size;
       remaining_fetched_group_count += run.size;
@@ -834,12 +850,20 @@ struct AbstractRunSource {
     }
   }
 
-  virtual ~AbstractRunSource() = default;
+  bool end_of_reader() const { return end_of_run() && run_idx + 1 == this->runs.size(); }
 
-  virtual bool end_of_source() const = 0;
-  virtual void next_run(const AggregateHashSortSetup& setup) = 0;
-  virtual void prefetch(const AggregateHashSortSetup& setup) = 0;
-  virtual size_t size() const = 0;
+  void next_run(const AggregateHashSortEnvironment& setup) {
+    DebugAssert(end_of_run(), "Current run wasn't fully processed");
+    DebugAssert(!end_of_reader(), "There is no next run");
+
+    ++run_idx;
+    run_offset = 0;
+  }
+
+  size_t size() const {
+    return std::accumulate(runs.begin(), runs.end(), size_t{0},
+                           [](const size_t count, const auto& run) { return count + run.size; });
+  }
 
   /**
    * @return The Run that the read cursor points to
@@ -868,13 +892,22 @@ struct AbstractRunSource {
     this->remaining_fetched_group_data_size -= current_run().get_group_size(run_offset);
     ++run_offset;
   }
+
+};
+
+/**
+ * Abstraction over the fact that group and aggregate data can either stem from a Table or a previously created
+ * Partition
+ */
+template <typename Run>
+struct AbstractRunSource {
+  virtual ~AbstractRunSource() = default;
+  virtual std::vector<Run> fetch_runs() = 0;
 };
 
 /**
  * Determines the size of a run to be allocated, based on the remaining data in the data source and the partitioning
  * fan out and the assumption that partitioning distributes the data evenly
- *
- * @param max_group_count   Number of groups to be partitioned
  *
  * @return {group_count, group_data_size}
  */
@@ -912,55 +945,40 @@ struct Partition {
   }
 };
 
-// Wraps a Partition
+// Just forwards a number of runs
 template <typename Run>
-struct PartitionRunSource : public AbstractRunSource<Run> {
-  using AbstractRunSource<Run>::AbstractRunSource;
+struct RunSource : public AbstractRunSource<Run> {
+  explicit RunSource(std::vector<Run>&& runs):
+      runs{std::move(runs)} {}
 
-  bool end_of_source() const override { return this->end_of_run() && this->run_idx + 1 == this->runs.size(); }
+  std::vector<Run> fetch_runs() override { return std::move(runs); }
 
-  void prefetch(const AggregateHashSortSetup& setup) override {
-    // Do nothing
-  }
-
-  void next_run(const AggregateHashSortSetup& setup) override {
-    DebugAssert(this->end_of_run(), "Current run wasn't fully processed");
-    DebugAssert(!this->end_of_source(), "There is no next run");
-
-    ++this->run_idx;
-    this->run_offset = 0;
-  }
-
-  size_t size() const override {
-    return std::accumulate(this->runs.begin(), this->runs.end(), size_t{0},
-                           [](const size_t count, const auto& run) { return count + run.size; });
-  }
+  std::vector<Run> runs;
 };
 
 // Wraps a Table from which the runs are materialized
 template <typename Run>
-struct TableRunSource : public AbstractRunSource<Run> {
-  std::shared_ptr<const Table> table;
+struct ChunkRunSource : public AbstractRunSource<Run> {
+  std::shared_ptr<const Chunk> chunk;
 
-  RowID begin_row_id{ChunkID{0}, ChunkOffset{0}};
-  size_t unfetched_row_count;
-
-  TableRunSource(const AggregateHashSortSetup& setup, const std::shared_ptr<const Table>& table)
-      : AbstractRunSource<Run>({}), table(table), unfetched_row_count(table->row_count()) {
-    this->total_remaining_group_count = table->row_count();
+  ChunkRunSource(const AggregateHashSortEnvironment& setup, const std::shared_ptr<const Chunk>& chunk)
+      : AbstractRunSource<Run>({}), chunk(chunk), unfetched_row_count(chunk->size()) {
+    this->total_remaining_group_count = chunk->size();
   }
+
+  std::vector<Run> fetch_runs() override { return std::move(runs); }
 
   bool end_of_source() const override {
     return this->run_idx + 1 >= this->runs.size() && this->end_of_run() && unfetched_row_count == 0;
   }
 
-  void prefetch(const AggregateHashSortSetup& setup) override {
+  void prefetch(const AggregateHashSortEnvironment& setup) override {
     while (this->remaining_fetched_group_count < setup.config.group_prefetch_threshold && unfetched_row_count > 0) {
       fetch_run(setup);
     }
   }
 
-  void next_run(const AggregateHashSortSetup& setup) override {
+  void next_run(const AggregateHashSortEnvironment& setup) override {
     DebugAssert(this->end_of_run(), "Current run wasn't fully processed");
     DebugAssert(!this->end_of_source(), "There is no next run");
 
@@ -972,7 +990,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
     this->run_offset = 0;
   }
 
-  void fetch_run(const AggregateHashSortSetup& setup) {
+  void fetch_run(const AggregateHashSortEnvironment& setup) {
     DebugAssert(!end_of_source(), "fetch_run() should not have been called");
 
     const auto row_count = std::min(unfetched_row_count, setup.config.initial_run_size);
@@ -999,7 +1017,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
    *
    * @returns   The VariablySizedGroupRun and the end RowID, i.e., the RowID the next run starts at
    */
-  static std::pair<Run, RowID> from_table_range(const AggregateHashSortSetup& setup,
+  static std::pair<Run, RowID> from_table_range(const AggregateHashSortEnvironment& setup,
                                                 const std::shared_ptr<const Table>& table, const RowID& begin_row_id,
                                                 const size_t row_count) {
     using GroupSizePolicy = typename Run::GroupSizePolicyType;
@@ -1138,7 +1156,7 @@ struct TableRunSource : public AbstractRunSource<Run> {
    * @return {data_per_column, value_end_offsets, end_row_id}
    */
   static std::tuple<std::vector<uninitialized_vector<char>>, uninitialized_vector<size_t>, RowID>
-  materialize_variably_sized_columns(const AggregateHashSortSetup& setup, const std::shared_ptr<const Table>& table,
+  materialize_variably_sized_columns(const AggregateHashSortEnvironment& setup, const std::shared_ptr<const Table>& table,
                                      const RowID& begin_row_id, const size_t row_count) {
     const auto variably_sized_column_count = setup.variably_sized_column_ids.size();
 

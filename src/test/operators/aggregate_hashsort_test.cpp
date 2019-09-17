@@ -177,7 +177,7 @@ TEST_F(AggregateHashSortTest, Definition) {
   {ColumnID{1}, AggregateFunction::CountDistinct},
   };
 
-  const auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create({}, table, aggregate_column_definitions, group_by_column_ids);
 
   EXPECT_EQ(setup.offsets, std::vector<size_t>({0, 0, 1, 5}));
   EXPECT_EQ(setup.variably_sized_column_ids, std::vector({ColumnID{1}, ColumnID{2}}));
@@ -197,7 +197,7 @@ TEST_F(AggregateHashSortTest, CreateRun) {
   {ColumnID{1}, AggregateFunction::CountDistinct},
   };
 
-  const auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create({}, table, aggregate_column_definitions, group_by_column_ids);
 
   const auto variable_group_size_run = create_run<BasicRun<VariableGroupSizePolicy>>(setup, size_t{3}, size_t{50});
   EXPECT_EQ(variable_group_size_run.group_data.size(), 50u);
@@ -206,7 +206,7 @@ TEST_F(AggregateHashSortTest, CreateRun) {
 }
 
 TEST_F(AggregateHashSortTest, RunWithFixedGroupSize) {
-  auto setup = AggregateHashSortSetup{};
+  auto setup = AggregateHashSortEnvironment{};
   setup.fixed_group_size = 6u;
   setup.offsets = {0, 9, 17};
 
@@ -247,7 +247,7 @@ TEST_F(AggregateHashSortTest, VariablySizedGroupRun) {
   // Four group-by columns: nullable_int, string, double, nullable_string
 
   const auto group_by_column_ids = std::vector{ColumnID{1}, ColumnID{2}, ColumnID{6}, ColumnID{0}};
-  const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create({}, table, {}, group_by_column_ids);
 
   auto run = create_run<BasicRun<VariableGroupSizePolicy>>(setup);
 
@@ -326,7 +326,7 @@ TEST_F(AggregateHashSortTest, TableRunSourceFixedOnly) {
 
   const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{1}, ColumnID{0}, ColumnID{2}};
 
-  auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+  auto setup = AggregateHashSortEnvironment::create({}, table, {}, group_by_column_ids);
   setup.config.initial_run_size = 3;
 
   EXPECT_EQ(setup.fixed_group_size, 5u);
@@ -385,7 +385,7 @@ TEST_F(AggregateHashSortTest, TableRunSourceFixedOnly) {
 
 TEST_F(AggregateHashSortTest, TableRunSourceMaterializeVariablySizedColumns) {
   auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5}};
-  const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create({}, table, {}, group_by_column_ids);
 
   const auto begin_row_id = RowID{ChunkID{0}, ChunkOffset{1}};
   const auto row_count = 4;
@@ -416,7 +416,7 @@ TEST_F(AggregateHashSortTest, TableRunSourceDetermineGroupEndOffsets) {
 
 TEST_F(AggregateHashSortTest,TableRunSourceMaterializeFixedSizeColumn) {
   const auto group_by_column_ids = std::vector<ColumnID>{ColumnID{1}, ColumnID{2}, ColumnID{4}};
-  const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create({}, table, {}, group_by_column_ids);
 
   auto run = create_run<BasicRun<VariableGroupSizePolicy>>(setup);
 
@@ -462,7 +462,7 @@ TEST_F(AggregateHashSortTest,TableRunSourceMaterializeFixedSizeColumn) {
 
 TEST_F(AggregateHashSortTest, TableRunSourceFromTableRange) {
   auto group_by_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{5}};
-  const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create({}, table, {}, group_by_column_ids);
 
   const auto begin_row_id = RowID{ChunkID{0}, ChunkOffset{0}};
   const auto row_count = 5;
@@ -505,7 +505,7 @@ TEST_F(AggregateHashSortTest, ProduceInitialAggregates) {
   {ColumnID{2}, AggregateFunction::Avg},
   };
 
-  const auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, {ColumnID{0}});
+  const auto setup = AggregateHashSortEnvironment::create({}, table, aggregate_column_definitions, {ColumnID{0}});
 
   const auto [run, end_row_id] = TableRunSource<BasicRun<DynamicFixedGroupSizePolicy>>::from_table_range(setup, table, RowID{ChunkID{0}, ChunkOffset{1}}, 3);
 
@@ -551,7 +551,7 @@ TEST_F(AggregateHashSortTest, PartitionFixedOnly) {
   const auto group_by_column_ids = std::vector{ColumnID{4}};
   const auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Sum}};
 
-  const auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create({}, table, aggregate_column_definitions, group_by_column_ids);
 
   auto run = create_run<Run>(setup);
 
@@ -623,7 +623,7 @@ TEST_F(AggregateHashSortTest, PartitionVariablySized) {
   using Run = BasicRun<VariableGroupSizePolicy>;
 
   const auto group_by_column_ids = std::vector{ColumnID{0}, ColumnID{1}};
-  const auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create({}, table, {}, group_by_column_ids);
 
   auto run = create_run<Run>(setup);
 
@@ -676,7 +676,7 @@ TEST_F(AggregateHashSortTest, HashingFixed) {
   const auto group_by_column_ids = std::vector{ColumnID{4}, ColumnID{4}};
   const auto aggregate_column_definitions = std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Sum}};
 
-  auto setup = AggregateHashSortSetup::create({}, table, aggregate_column_definitions, group_by_column_ids);
+  auto setup = AggregateHashSortEnvironment::create({}, table, aggregate_column_definitions, group_by_column_ids);
   setup.config.hash_table_max_load_factor = 1.0f;
   // Provoke `continue_hashing` to be true
   setup.config.continue_hashing_density_threshold = 1.3f;
@@ -742,7 +742,7 @@ TEST_F(AggregateHashSortTest, HashingVariablySized) {
 
   const auto group_by_column_ids = std::vector{ColumnID{0}, ColumnID{1}};
 
-  auto setup = AggregateHashSortSetup::create({}, table, {}, group_by_column_ids);
+  auto setup = AggregateHashSortEnvironment::create({}, table, {}, group_by_column_ids);
   setup.config.hash_table_max_load_factor = 1.0f;
   // Provoke `continue_hashing` to be false
   setup.config.continue_hashing_density_threshold = 1.5f;
@@ -805,7 +805,7 @@ TEST_F(AggregateHashSortTest, AggregateAdaptive) {
   config.hash_table_max_load_factor = 0.5f;
   config.max_partitioning_counter = 2;
 
-  const auto setup = AggregateHashSortSetup::create(config, table, {}, group_by_column_ids);
+  const auto setup = AggregateHashSortEnvironment::create(config, table, {}, group_by_column_ids);
 
   auto run = create_run<Run>(setup);
 

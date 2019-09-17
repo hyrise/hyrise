@@ -11,7 +11,7 @@ struct AggregateHashSortConfig {
   size_t group_prefetch_threshold{1'000};
 
   // Number of rows to fetch from a table to fill an initial run
-  size_t initial_run_size{300'000};
+  size_t task_group_count_target{300'000};
 
   // Once a hashtable is full, AggregateHashSort can either build a next one (if the local density of groups is
   // determined to be high enough) or switch to partitioning
