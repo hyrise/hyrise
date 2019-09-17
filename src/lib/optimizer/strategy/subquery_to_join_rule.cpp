@@ -224,6 +224,9 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
   } else if (auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate())) {
     result.join_mode = JoinMode::Semi;
 
+    // Identify a subquery in an arithmetic expression and push the arithmetics into the subquery.
+    // e.g. SELECT * FROM a WHERE a.a > 3 * (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
+    // becomes SELECT * FROM a WHERE a.a > (SELECT 3 * SUM(b.a) FROM b WHERE b.b = a.b)
     if (const auto right_arithmetic_expression =
             std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->right_operand())) {
       if (const auto right_subquery_expression =
@@ -237,8 +240,21 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
                                  right_subquery_expression->lqp);
         right_subquery_expression->lqp = projection_node;
 
-        binary_predicate.reset(new BinaryPredicateExpression(
-            binary_predicate->predicate_condition, binary_predicate->left_operand(), right_subquery_expression));
+        // Replace the right operand of the predicate with the subquery expression.
+        binary_predicate->arguments[1] = right_subquery_expression;
+      } else if (const auto left_subquery_expression =
+              std::dynamic_pointer_cast<LQPSubqueryExpression>(right_arithmetic_expression->left_operand())) {
+        const auto new_arithmetic_expression = std::make_shared<ArithmeticExpression>(
+            right_arithmetic_expression->arithmetic_operator, left_subquery_expression->lqp->node_expressions[0],
+            right_arithmetic_expression->right_operand());
+
+        const auto projection_node =
+            ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>{new_arithmetic_expression},
+                                 left_subquery_expression->lqp);
+        left_subquery_expression->lqp = projection_node;
+
+        // Replace the right operand of the predicate with the subquery expression.
+        binary_predicate->arguments[1] = left_subquery_expression;
       }
     }
 
