@@ -564,8 +564,6 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 };  // namespace opossum
 
 TEST_P(JoinTestRunner, TestJoin) {
-  // TODO(anyone) for the case std::is_same_v<JoinOperator, JoinHash>
-  //  - add performace data evaluation
   const auto configuration = GetParam();
 
   const auto input_table_left = get_table(configuration.input_left);
@@ -676,6 +674,36 @@ TEST_P(JoinTestRunner, TestJoin) {
     print_configuration_info();
     FAIL();
   }
+
+  // check performance data if an index join was used
+  if(!configuration.index_side){
+    return;
+  }
+
+  std::shared_ptr<const AbstractOperator> index_side_input{};
+  bool using_indexes{};
+
+  if (index_side == IndexSide::Left) {
+    index_side_input = join_op->input_left();
+    using_indexes = configuration.input_left.has_indexes;
+  } else {
+    index_side_input = join_op->input_right();
+    using_indexes = configuration.input_right.has_indexes;
+  }
+  
+  const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join_op->performance_data());
+  if (using_indexes && (index_side_input->get_output()->type() == TableType::Data ||
+                        (mode == JoinMode::Inner && single_chunk_reference_guarantee))) {
+      EXPECT_EQ(performance_data.chunks_scanned_with_index,
+                static_cast<size_t>(index_side_input->get_output()->chunk_count()));
+      EXPECT_EQ(performance_data.chunks_scanned_without_index, 0);
+    } else {
+      EXPECT_EQ(performance_data.chunks_scanned_with_index, 0);
+      EXPECT_EQ(performance_data.chunks_scanned_without_index,
+                static_cast<size_t>(index_side_input->get_output()->chunk_count()));
+    }
+
+  ////
 }
 
 // clang-format off
