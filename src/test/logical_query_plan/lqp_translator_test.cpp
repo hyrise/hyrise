@@ -721,7 +721,7 @@ TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
    *     \________TableScan______/
    *              a = 12345
    *                  |
-   *             StoredTable
+   *              GetTable
    *           table_int_float2
    *    
    */
