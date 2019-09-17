@@ -221,27 +221,24 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
       return std::nullopt;
     }
 
-  } else if (auto binary_predicate =
-                 std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate())) {
+  } else if (auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate())) {
     result.join_mode = JoinMode::Semi;
 
     if (const auto right_arithmetic_expression =
-                   std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->right_operand())) {
+            std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->right_operand())) {
       if (const auto right_subquery_expression =
-                   std::dynamic_pointer_cast<LQPSubqueryExpression>(right_arithmetic_expression->right_operand())) {
+              std::dynamic_pointer_cast<LQPSubqueryExpression>(right_arithmetic_expression->right_operand())) {
         const auto new_arithmetic_expression = std::make_shared<ArithmeticExpression>(
-          right_arithmetic_expression->arithmetic_operator,
-          right_arithmetic_expression->left_operand(),
-          right_subquery_expression->lqp->node_expressions[0]);
-        
-        auto projection_node = ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>{new_arithmetic_expression});
-        projection_node->set_left_input(right_subquery_expression->lqp);
+            right_arithmetic_expression->arithmetic_operator, right_arithmetic_expression->left_operand(),
+            right_subquery_expression->lqp->node_expressions[0]);
+
+        const auto projection_node =
+            ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>{new_arithmetic_expression},
+                                 right_subquery_expression->lqp);
         right_subquery_expression->lqp = projection_node;
 
         binary_predicate.reset(new BinaryPredicateExpression(
-          binary_predicate->predicate_condition,
-          binary_predicate->left_operand(),
-          right_subquery_expression));
+            binary_predicate->predicate_condition, binary_predicate->left_operand(), right_subquery_expression));
       }
     }
 

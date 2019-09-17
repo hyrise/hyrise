@@ -1114,6 +1114,35 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, MultipliedCorrelatedComparatorToSemiJoin) {
+  // SELECT * FROM a WHERE a.a > 3 * (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
+
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+
+  // clang-format off
+  const auto subquery_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+    PredicateNode::make(equals_(b_b, parameter),
+      node_b));
+
+  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(a_a, mul_(value_(3), subquery)),
+    node_a);
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, mul_(value_(3), sum_(b_a))), equals_(a_b, b_b)),
+    node_a,
+    ProjectionNode::make(expression_vector(mul_(value_(3), sum_(b_a)), b_b),
+      AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+        node_b)));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredicates) {
   // SELECT * FROM d WHERE d.a > (SELECT SUM(e.a) FROM e WHERE e.b = d.b AND e.a IN (1, 2, 3))
 
