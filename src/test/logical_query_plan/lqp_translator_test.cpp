@@ -748,13 +748,14 @@ TEST_F(LQPTranslatorTest, ReusingPQPSelfJoin) {
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
-  ASSERT_NE(pqp, nullptr);
-  ASSERT_NE(pqp->input_left(), nullptr);
-  ASSERT_NE(pqp->input_left()->input_left(), nullptr);
-  ASSERT_NE(pqp->input_left()->input_right(), nullptr);
+  const auto projection = std::dynamic_pointer_cast<const Projection>(pqp);
+  ASSERT_NE(projection, nullptr);
 
-  const auto table_scan_b_1 = std::dynamic_pointer_cast<const TableScan>(pqp->input_left()->input_left());
-  const auto table_scan_b_2 = std::dynamic_pointer_cast<const TableScan>(pqp->input_left()->input_right());
+  const auto product = std::dynamic_pointer_cast<const Product>(projection->input_left());
+  ASSERT_NE(product, nullptr);
+
+  const auto table_scan_b_1 = std::dynamic_pointer_cast<const TableScan>(product->input_left());
+  const auto table_scan_b_2 = std::dynamic_pointer_cast<const TableScan>(product->input_right());
   ASSERT_NE(table_scan_b_1, nullptr);
   ASSERT_NE(table_scan_b_2, nullptr);
   ASSERT_NE(table_scan_b_1, table_scan_b_2);
