@@ -143,10 +143,9 @@ struct hash<std::vector<opossum::AggregateKeyEntry>> {
   }
 };
 
-template <>
-struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
-  // gcc7 doesn't support templating by `int N` here.
-  size_t operator()(const std::array<opossum::AggregateKeyEntry, 2>& key) const {
+template <int KeySize>
+struct hash<std::array<opossum::AggregateKeyEntry, KeySize>> {
+  size_t operator()(const std::array<opossum::AggregateKeyEntry, KeySize>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };

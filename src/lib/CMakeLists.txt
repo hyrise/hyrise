@@ -558,7 +558,6 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
-    utils/ignore_unused_variable.hpp
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
