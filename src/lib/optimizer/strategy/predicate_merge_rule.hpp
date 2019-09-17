@@ -13,7 +13,7 @@ namespace opossum {
  * PredicateNodes and UnionNodes into single a PredicateNode with a complex expression. This reduces the query runtime
  * if there are many PredicateNodes and UnionNodes because the ExpressionEvaluator is faster in this case.
  *
- * The rule merges predicate chains to conjunctions ("and") and diamonds (below UnionNodes) to disjunctions ("or"),
+ * The rule merges predicate chains to conjunctions ("and") and diamonds (below UnionNodes) to disjunctions ("or").
  *
  * EXAMPLE:
  *   TPC-DS query 41 benefits from this rule because the PredicateSplitUpRule creates a huge LQP.
