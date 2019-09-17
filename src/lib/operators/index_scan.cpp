@@ -4,11 +4,12 @@
 
 #include "expression/between_expression.hpp"
 
+#include "hyrise.hpp"
+
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
@@ -55,7 +56,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     }
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().scheduler().wait_for_tasks(jobs);
 
   return _out_table;
 }
@@ -109,8 +110,8 @@ void IndexScan::_validate_input() {
 PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
-  auto range_begin = BaseIndex::Iterator{};
-  auto range_end = BaseIndex::Iterator{};
+  auto range_begin = AbstractIndex::Iterator{};
+  auto range_end = AbstractIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = PosList{};

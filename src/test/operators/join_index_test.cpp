@@ -130,10 +130,9 @@ class JoinIndexTest : public BaseTest {
       _table_wrapper_m, _table_wrapper_n;
 };
 
-typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIndex /* , GroupKeyIndex */>
-    DerivedIndices;
+typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIndex, GroupKeyIndex> DerivedIndices;
 
-TYPED_TEST_CASE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(JoinIndexTest, DerivedIndices, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(JoinIndexTest, LeftJoinFallBack) {
   this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
@@ -259,8 +258,11 @@ TYPED_TEST(JoinIndexTest, OuterJoin) {
                          "resources/test_data/tbl/join_operators/int_outer_join.tbl", 1);
 }
 
-/* currently disabled because it breaks with AdaptiveRadixTreeIndex */
-TYPED_TEST(JoinIndexTest, DISABLED_OuterJoinWithNull /* #670 */) {
+TYPED_TEST(JoinIndexTest, OuterJoinWithNull) {
+  if constexpr (std::is_same_v<TypeParam, CompositeGroupKeyIndex>) {
+    return;  // CompositeGroupKeyIndex is currently not null-aware (#1818)
+  }
+
   this->test_join_output(this->_table_wrapper_m, this->_table_wrapper_n,
                          {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::FullOuter,
                          "resources/test_data/tbl/join_operators/int_outer_join_null.tbl", 1);

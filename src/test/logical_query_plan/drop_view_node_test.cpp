@@ -15,7 +15,7 @@ class DropViewNodeTest : public ::testing::Test {
 
 TEST_F(DropViewNodeTest, Description) { EXPECT_EQ(_drop_view_node->description(), "[Drop] View: 'some_view'"); }
 
-TEST_F(DropViewNodeTest, Equals) {
+TEST_F(DropViewNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_drop_view_node, *_drop_view_node);
 
   const auto same_drop_view_node = DropViewNode::make("some_view", false);
@@ -23,6 +23,9 @@ TEST_F(DropViewNodeTest, Equals) {
 
   EXPECT_EQ(*_drop_view_node, *same_drop_view_node);
   EXPECT_NE(*_drop_view_node, *different_drop_view_node);
+
+  EXPECT_EQ(_drop_view_node->hash(), same_drop_view_node->hash());
+  EXPECT_NE(_drop_view_node->hash(), different_drop_view_node->hash());
 }
 
 TEST_F(DropViewNodeTest, Copy) { EXPECT_EQ(*_drop_view_node->deep_copy(), *_drop_view_node); }

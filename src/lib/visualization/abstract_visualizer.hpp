@@ -42,6 +42,7 @@ struct VizEdgeInfo {
   double pen_width = 1.0;
   std::string dir = "forward";
   std::string style = "solid";
+  std::string arrowhead = "normal";
 };
 
 template <typename GraphBase>
@@ -55,6 +56,8 @@ class AbstractVisualizer {
   static const uint8_t MAX_LABEL_WIDTH = 50;
 
  public:
+  enum class InputSide { Left, Right };
+
   AbstractVisualizer() : AbstractVisualizer(GraphvizConfig{}, VizGraphInfo{}, VizVertexInfo{}, VizEdgeInfo{}) {}
 
   AbstractVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
@@ -83,6 +86,7 @@ class AbstractVisualizer {
     _add_property("penwidth", &VizEdgeInfo::pen_width);
     _add_property("style", &VizEdgeInfo::style);
     _add_property("dir", &VizEdgeInfo::dir);
+    _add_property("arrowhead", &VizEdgeInfo::arrowhead);
   }
 
   virtual ~AbstractVisualizer() = default;

@@ -107,6 +107,18 @@ class LogicalQueryPlanTest : public BaseTest {
   LQPColumnReference _t_b_b;
 };
 
+TEST_F(LogicalQueryPlanTest, LQPColumnExpressionHash) {
+  const auto node_int_int_1 = StoredTableNode::make("int_int");
+  const auto node_int_int_2 = StoredTableNode::make("int_int");
+
+  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_1, ColumnID{0}});
+  const auto expression_a_1 = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_1, ColumnID{0}});
+  const auto expression_a_2 = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int_2, ColumnID{0}});
+
+  EXPECT_EQ(expression_a->hash(), expression_a_1->hash());
+  EXPECT_EQ(expression_a->hash(), expression_a_2->hash());
+}
+
 TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
   ASSERT_EQ(_mock_node_a->left_input(), nullptr);
   ASSERT_EQ(_mock_node_a->right_input(), nullptr);
@@ -234,7 +246,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-  auto new_node = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node = UnionNode::make(UnionMode::Positions);
 
   lqp_replace_node(_nodes[5], new_node);
 

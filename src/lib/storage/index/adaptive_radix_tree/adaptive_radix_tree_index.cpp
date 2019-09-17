@@ -9,7 +9,7 @@
 
 #include "adaptive_radix_tree_nodes.hpp"
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -22,8 +22,10 @@ size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count
 }
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
-    : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
-      _indexed_segment(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
+    : AbstractIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
+      _indexed_segment(segments_to_index.empty()  // Empty segment list is illegal
+                           ? nullptr              // but range check needed for accessing the first segment
+                           : std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
   Assert(static_cast<bool>(_indexed_segment), "AdaptiveRadixTree only works with dictionary segments for now");
   Assert((segments_to_index.size() == 1), "AdaptiveRadixTree only works with a single segment");
 
@@ -32,50 +34,72 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
   std::vector<std::pair<BinaryComparable, ChunkOffset>> pairs_to_insert;
   pairs_to_insert.reserve(_indexed_segment->attribute_vector()->size());
 
+  const auto null_value_id = _indexed_segment->null_value_id();
+  _null_positions.reserve(_indexed_segment->attribute_vector()->size());
+
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](const auto& attribute_vector) {
     auto chunk_offset = ChunkOffset{0u};
-    auto value_id_it = attribute_vector.cbegin();
-    for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++chunk_offset) {
-      pairs_to_insert.emplace_back(BinaryComparable(ValueID{*value_id_it}), chunk_offset);
+    auto value_id_iter = attribute_vector.cbegin();
+    for (; value_id_iter != attribute_vector.cend(); ++value_id_iter, ++chunk_offset) {
+      if (static_cast<ValueID>(*value_id_iter) == null_value_id) {
+        _null_positions.emplace_back(chunk_offset);
+      } else {
+        pairs_to_insert.emplace_back(BinaryComparable(ValueID{*value_id_iter}), chunk_offset);
+      }
     }
   });
 
+  _null_positions.shrink_to_fit();
   _root = _bulk_insert(pairs_to_insert);
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
-  assert(values.size() == 1);
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
+  Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
+  // the caller is responsible for not passing a NULL value
+  Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
+
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
+  } else if (_root) {  // _root is nullptr if the index contains NULL positions only
+    return _root->lower_bound(BinaryComparable(value_id), 0);
+  } else {
+    return _cend();
   }
-  return _root->lower_bound(BinaryComparable(value_id), 0);
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
-  assert(values.size() == 1);
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
+  Assert((values.size() == 1), "Adaptive Radix Tree Index expects exactly one input value");
+  // the caller is responsible for not passing a NULL value
+  Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
+
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else {
+  } else if (_root) {  // _root is nullptr if the index contains NULL positions only
     return _root->lower_bound(BinaryComparable(value_id), 0);
+  } else {
+    return _cend();
   }
 }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offsets.cbegin(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offsets.cbegin(); }
 
-BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
-  DebugAssert(!(values.empty()), "Index on empty segment is not defined");
-  _chunk_offsets.reserve(values.size());
-  auto begin = _chunk_offsets.cbegin();
-  return _bulk_insert(values, static_cast<size_t>(0u), begin);
+  if (values.empty()) {
+    return nullptr;
+  } else {
+    _chunk_offsets.reserve(values.size());
+    auto begin = _chunk_offsets.cbegin();
+    return _bulk_insert(values, static_cast<size_t>(0u), begin);
+  }
 }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
-    const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth, BaseIndex::Iterator& it) {
+    const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth, AbstractIndex::Iterator& it) {
   // This is the anchor of the recursion: if all values have the same key, create a leaf.
   if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
         return values.front().first == pair.first;

@@ -13,7 +13,7 @@ namespace opossum {
 class BaseSegment;
 
 /**
- * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
+ * AbstractIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
  * ARTIndex etc.
  * It is assumed that all index types support range queries and that they are composite indexes.
  * I.e. the index is sorted based on the column order. To check whether a key is less than another
@@ -29,11 +29,13 @@ class BaseSegment;
  * As each index has a different way of iterating over its data structures, it has to implement its iterator as well.
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
  *
- * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/BaseIndex and
+ * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AbstractIndex and
  *                                               https://github.com/hyrise/hyrise/wiki/Indexes
  **/
 
-class BaseIndex : private Noncopyable {
+class AbstractIndex : private Noncopyable {
+  friend class GroupKeyIndexTest;
+
  public:
   // For now we use an iterator over a vector of chunkoffsets as the GroupKeyIndex works like this
   using Iterator = std::vector<ChunkOffset>::const_iterator;
@@ -57,11 +59,11 @@ class BaseIndex : private Noncopyable {
    * leads to very different indexes.
    */
 
-  BaseIndex() = delete;
-  explicit BaseIndex(const SegmentIndexType type);
-  BaseIndex(BaseIndex&&) = default;
-  BaseIndex& operator=(BaseIndex&&) = default;
-  virtual ~BaseIndex() = default;
+  AbstractIndex() = delete;
+  explicit AbstractIndex(const SegmentIndexType type);
+  AbstractIndex(AbstractIndex&&) = default;
+  AbstractIndex& operator=(AbstractIndex&&) = default;
+  virtual ~AbstractIndex() = default;
 
   /**
    * Checks whether the given segments are covered by the index. This is the case when the order of the given columns
@@ -102,22 +104,42 @@ class BaseIndex : private Noncopyable {
   Iterator upper_bound(const std::vector<AllTypeVariant>& values) const;
 
   /**
-   * Returns an Iterator to the position of the smallest indexed element. This is useful for range queries
+   * Returns an Iterator to the position of the smallest indexed non-NULL element. This is useful for range queries
    * with no specified begin.
    * Iterating from cbegin() to cend() will result in a position list with ordered values.
    * Calls _cbegin() of the most derived class.
-   * @return an Iterator on the position of first element of the Index.
+   * @return An Iterator on the position of first non-NULL element of the Index.
    */
   Iterator cbegin() const;
 
   /**
-   * Returns an Iterator past the position of the greatest indexed element. This is useful for open
+   * Returns an Iterator past the position of the largest indexed non-NULL element. This is useful for open
    * end range queries.
    * Iterating from cbegin() to cend() will result in a position list with ordered values.
    * Calls _cend() of the most derived class.
-   * @return an Iterator on the end of the index (one after the last element).
+   * @return An Iterator on the end of the non-NULL elements (one after the last element).
    */
   Iterator cend() const;
+
+  /**
+   * Returns an Iterator to the first NULL.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
+   * NULL handing is currently only supported for single-column indexes.
+   * We do not have a concept for multi-column NULL handling yet. #1818
+   *
+   * @return An Iterator on the position of the first NULL.
+   */
+  Iterator null_cbegin() const;
+
+  /**
+   * Returns an Iterator past the position of the last NULL.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
+   * NULL handing is currently only supported for single-column indexes.
+   * We do not have a concept for multi-column NULL handling yet. #1818
+   *
+   * @return An Iterator on the end of the NULLs (one after the last NULL).
+   */
+  Iterator null_cend() const;
 
   SegmentIndexType type() const;
 
@@ -137,6 +159,7 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
   virtual size_t _memory_consumption() const = 0;
+  std::vector<ChunkOffset> _null_positions;
 
  private:
   const SegmentIndexType _type;

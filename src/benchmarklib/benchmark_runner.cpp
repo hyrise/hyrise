@@ -11,7 +11,6 @@
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -38,26 +37,28 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
-    Topology::use_default_topology(config.cores);
+    Hyrise::get().topology.use_default_topology(config.cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
-    std::cout << Topology::get();
+    std::cout << Hyrise::get().topology;
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
-    for (const auto& node : Topology::get().nodes()) {
+    for (const auto& node : Hyrise::get().topology.nodes()) {
       numa_cores_per_node.push_back(node.cpus.size());
     }
     _context.push_back({"utilized_cores_per_numa_node", numa_cores_per_node});
 
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
-    CurrentScheduler::set(scheduler);
+    Hyrise::get().set_scheduler(scheduler);
   }
 
   _table_generator->generate_and_store();
 
   _benchmark_item_runner->on_tables_loaded();
 
-  if (_config.verify) {
+  // SQLite data is only loaded if the dedicated result set is not complete, i.e,
+  // items exist for which no dedicated result could be loaded.
+  if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
     Timer timer;
 
@@ -133,7 +134,7 @@ void BenchmarkRunner::run() {
     Assert(!any_verification_failed, "Verification failed");
   }
 
-  if (CurrentScheduler::is_set()) CurrentScheduler::get()->finish();
+  Hyrise::get().scheduler().finish();
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -186,7 +187,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   }
 
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
-  CurrentScheduler::wait_for_all_tasks();
+  Hyrise::get().scheduler().wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
 
@@ -219,17 +220,18 @@ void BenchmarkRunner::_benchmark_ordered() {
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+    const auto duration_per_item = static_cast<float>(duration_seconds) / result.successful_runs.size();
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s)" << std::endl;
+                << items_per_second << " iter/s, " << duration_per_item << " s/iter)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
     }
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    CurrentScheduler::wait_for_all_tasks();
+    Hyrise::get().scheduler().wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
 }
@@ -265,7 +267,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
   // No need to check if the benchmark uses the scheduler or not as this method executes tasks immediately if the
   // scheduler is not set.
-  CurrentScheduler::schedule_tasks<JobTask>({task});
+  Hyrise::get().scheduler().schedule_tasks<JobTask>({task});
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
@@ -294,7 +296,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   _state.set_done();
 
   // Wait for the rest of the tasks that didn't make it in time
-  CurrentScheduler::wait_for_all_tasks();
+  Hyrise::get().scheduler().wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
 
