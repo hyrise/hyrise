@@ -265,8 +265,6 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
                                       const bool track_index_matches, const bool is_semi_or_anti_join,
                                       MultiPredicateJoinEvaluator& secondary_predicate_evaluator) {
   PerformanceWarning("Fallback nested loop used.");
-  // TODO debug code
-  std::cout << "Fallback\n";
   auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
 
   const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);

@@ -583,25 +583,6 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto join_op = configuration.join_operator_factory->create_operator(input_operator_left, input_operator_right,
                                                                             primary_predicate, configuration);
 
-  // TODO debug code
-  std::cout << "====================== JoinOperator ========================" << std::endl;
-  std::cout << join_op->description(DescriptionMode::MultiLine) << std::endl;
-  std::cout << "===================== Left Input Table =====================" << std::endl;
-  Print::print(input_table_left, PrintFlags::IgnoreChunkBoundaries);
-  std::cout << "Chunk size: " << configuration.input_left.chunk_size << std::endl;
-  std::cout << "Table type: " << input_table_type_to_string.at(configuration.input_left.table_type) << std::endl;
-  std::cout << "Has indexes: " << (input_table_left->indexes_statistics().empty() ? "false" : "true") << std::endl;
-  std::cout << get_table_path(configuration.input_left) << std::endl;
-  std::cout << std::endl;
-  std::cout << "===================== Right Input Table ====================" << std::endl;
-  Print::print(input_table_right, PrintFlags::IgnoreChunkBoundaries);
-  std::cout << "Chunk size: " << configuration.input_right.chunk_size << std::endl;
-  std::cout << "Table size: " << input_table_type_to_string.at(configuration.input_right.table_type) << std::endl;
-  std::cout << "Has indexes: " << (input_table_right->indexes_statistics().empty() ? "false" : "true") << std::endl;
-  std::cout << get_table_path(configuration.input_right) << std::endl;
-  std::cout << std::endl;
-  // TODO end debug code
-
   auto expected_output_table_iter = expected_output_tables.find(configuration);
 
   const auto join_verification =
