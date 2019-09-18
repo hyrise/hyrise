@@ -22,6 +22,13 @@
 namespace opossum {
 
 class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
+public:
+  static void SetUpTestCase() {  // called ONCE before the tests
+    std::copy_if(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(), std::back_inserter(int_supporting_segment_encodings), [](SegmentEncodingSpec spec) { return encoding_supports_data_type(spec.encoding_type, DataType::Int); });
+  }
+
+  inline static std::vector<SegmentEncodingSpec> int_supporting_segment_encodings;
+
  protected:
   static constexpr auto max_value = 1'024;
 
@@ -133,15 +140,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    SegmentEncodingSpecs, EncodedSegmentTest,
-    ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
-    formatter);
+    SegmentEncodingSpecs, EncodedSegmentTest, ::testing::ValuesIn(EncodedSegmentTest::int_supporting_segment_encodings), formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});

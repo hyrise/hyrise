@@ -15,6 +15,7 @@
 
 namespace opossum {
 
+// TODO(anyone): add testing of other data types as well
 class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   static void SetUpTestCase() {
@@ -27,15 +28,14 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
                            {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{1}}, {ChunkID{0}, ChunkOffset{5}}};
     position_filter = std::make_shared<PosList>(std::move(row_ids));
     position_filter->guarantee_single_chunk();
+
+    std::copy_if(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(), std::back_inserter(int_supporting_segment_encodings), [](SegmentEncodingSpec spec) { return encoding_supports_data_type(spec.encoding_type, DataType::Int); });
   }
 
-  void SetUp() override {
-    const auto param = GetParam();
+  inline static std::vector<SegmentEncodingSpec> int_supporting_segment_encodings;
 
-    auto segment_encoding_spec = SegmentEncodingSpec{param.encoding_type};
-    if (param.vector_compression_type) {
-      segment_encoding_spec.vector_compression_type = *param.vector_compression_type;
-    }
+  void SetUp() override {
+    const auto segment_encoding_spec = GetParam();
     const auto value_int_segment = std::make_shared<ValueSegment<int32_t>>(int_values);
     int_segment = ChunkEncoder::encode_segment(std::dynamic_pointer_cast<ValueSegment<int32_t>>(value_int_segment),
                                                DataType::Int, segment_encoding_spec);
@@ -74,12 +74,21 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
   EXPECT_EQ(index, position_filter->size());
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    AnySegmentIterableTestInstances, AnySegmentIterableTest,
-    ::testing::Values(SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::Dictionary},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference}, SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4}));
+auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
+  const auto spec = info.param;
 
+  auto stream = std::stringstream{};
+  stream << spec.encoding_type;
+  if (spec.vector_compression_type) {
+    stream << "-" << *spec.vector_compression_type;
+  }
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    AnySegmentIterableTestInstances, AnySegmentIterableTest, ::testing::ValuesIn(AnySegmentIterableTest::int_supporting_segment_encodings), formatter);
 }  // namespace opossum
