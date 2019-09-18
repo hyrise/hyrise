@@ -15,7 +15,6 @@
 
 namespace opossum {
 
-// TODO(anyone): add testing of other data types as well
 class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   static void SetUpTestCase() {
