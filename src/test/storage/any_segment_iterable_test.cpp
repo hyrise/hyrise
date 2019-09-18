@@ -28,10 +28,11 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
     position_filter = std::make_shared<PosList>(std::move(row_ids));
     position_filter->guarantee_single_chunk();
 
-    std::copy_if(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(),
-                 std::back_inserter(int_supporting_segment_encodings), [](SegmentEncodingSpec spec) {
-                   return encoding_supports_data_type(spec.encoding_type, DataType::Int);
-                 });
+    for (const auto& spec : all_segment_encoding_specs) {
+      if (encoding_supports_data_type(spec.encoding_type, DataType::Int)) {
+        int_supporting_segment_encodings.emplace_back(spec);
+      }
+    }
   }
 
   inline static std::vector<SegmentEncodingSpec> int_supporting_segment_encodings;

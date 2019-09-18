@@ -25,10 +25,12 @@ namespace opossum {
 class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
-    std::copy_if(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(),
-                 std::back_inserter(string_supporting_segment_encodings), [](SegmentEncodingSpec spec) {
-                   return encoding_supports_data_type(spec.encoding_type, DataType::String);
-                 });
+    // Only use encodings that support string values (see encoded_segment_test.cpp for integers)
+    for (const auto& spec : all_segment_encoding_specs) {
+      if (encoding_supports_data_type(spec.encoding_type, DataType::String)) {
+        string_supporting_segment_encodings.emplace_back(spec);
+      }
+    }
   }
 
   inline static std::vector<SegmentEncodingSpec> string_supporting_segment_encodings;
