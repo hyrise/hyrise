@@ -101,6 +101,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
+  // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
+  // can be treated as predicates and pushed further down
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
+
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
@@ -121,8 +125,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
-
-  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   return optimizer;
 }

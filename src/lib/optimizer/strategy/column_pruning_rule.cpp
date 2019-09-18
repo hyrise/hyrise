@@ -74,9 +74,9 @@ ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<Abstrac
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-      // Tracks whether we need to include an additional (preferrably non-GROUP BY column) so that COUNT(*) has
-      // something to operate on. This is not necessary if we have already included a non-GROUP BY column, anyway.
-      auto require_column_for_count_star = std::optional<bool>{};
+      // Tracks whether we have already added a column. For COUNT(*) without GROUP BY, we might otherwise end up
+      // without any expressions.
+      auto has_at_least_one_expression = false;
 
       for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
         const auto& expression = node->node_expressions[expression_idx];
@@ -84,39 +84,22 @@ ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<Abstrac
         if (expression_idx < aggregate_node.aggregate_expressions_begin_idx) {
           // This is a group by expression that is required from the input
           required_expressions.emplace(expression);
+          has_at_least_one_expression = true;
         } else {
           // This is an aggregate expression - we need its argument
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
           if (expression->arguments.empty()) {
-            // Argument is empty (i.e., COUNT(*)). If we have not added another column yet, we might need to add one
-            // later.
-            if(require_column_for_count_star == std::nullopt) require_column_for_count_star = true;
+            // Argument is empty (i.e., COUNT(*)).
             continue;
           }
 
           required_expressions.emplace(expression->arguments[0]);
 
-          // We added a non-GROUP BY column, so we will definitely not need to add a column for COUNT(*) later.
-          require_column_for_count_star = false;
+          has_at_least_one_expression = true;
         }
       }
 
-      if (require_column_for_count_star.has_value() && *require_column_for_count_star) {
-        // First, try to add a non-GROUP BY column
-        for (const auto& expression : node->left_input()->column_expressions()) {
-          const auto group_by_columns_begin_iter = node->node_expressions.begin();
-          const auto group_by_columns_end_iter = node->node_expressions.begin() + aggregate_node.aggregate_expressions_begin_idx;
-          if (std::find_if(group_by_columns_begin_iter, group_by_columns_end_iter, [&expression](const auto& other) {return *expression == *other;}) ==
-          group_by_columns_end_iter) {
-            // expression is NOT a GROUP BY expression
-            required_expressions.emplace(expression);
-            require_column_for_count_star = false;
-            break;
-          }
-        }
-      }
-
-      if (require_column_for_count_star.has_value() && *require_column_for_count_star) {
+      if (!has_at_least_one_expression) {
         // Unsuccessful - add the first expression
         required_expressions.emplace(node->left_input()->column_expressions()[0]);
       }
@@ -240,7 +223,6 @@ void prune_join_node(
     };
 
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
-    if (predicate->predicate_condition != PredicateCondition::Equals) return;
     const auto& left_operand = predicate->left_operand();
     const auto& right_operand = predicate->right_operand();
 
