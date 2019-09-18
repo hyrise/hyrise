@@ -23,26 +23,29 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-
 // TODO column vs expression
 namespace {
-void gather_expressions_not_computed_by_expression_evaluator(const std::shared_ptr<AbstractExpression>& expression, const std::vector<std::shared_ptr<AbstractExpression>>& input_expressions, ExpressionUnorderedSet& required_expressions, const bool top_level = true) {
-        if (std::find_if(input_expressions.begin(), input_expressions.end(), [&expression](const auto& other) {return *expression == *other;}) != input_expressions.end()) {
-          // This expression has already been computed and does not need to be computed again. Only add it if it is not a top-level (i.e., forwarded) expression
-          if (!top_level) required_expressions.emplace(expression);
-          return;
-        }
+void gather_expressions_not_computed_by_expression_evaluator(
+    const std::shared_ptr<AbstractExpression>& expression,
+    const std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
+    ExpressionUnorderedSet& required_expressions, const bool top_level = true) {
+  if (std::find_if(input_expressions.begin(), input_expressions.end(),
+                   [&expression](const auto& other) { return *expression == *other; }) != input_expressions.end()) {
+    // This expression has already been computed and does not need to be computed again. Only add it if it is not a top-level (i.e., forwarded) expression
+    if (!top_level) required_expressions.emplace(expression);
+    return;
+  }
 
-        if (expression->type == ExpressionType::Aggregate || expression->type == ExpressionType::LQPColumn) {
-          // These cannot be computed by the expression evaluator and are expected to be provided by the input
-          required_expressions.emplace(expression);
-          return;
-        }
+  if (expression->type == ExpressionType::Aggregate || expression->type == ExpressionType::LQPColumn) {
+    // These cannot be computed by the expression evaluator and are expected to be provided by the input
+    required_expressions.emplace(expression);
+    return;
+  }
 
-        for (const auto& argument : expression->arguments) {
-          gather_expressions_not_computed_by_expression_evaluator(argument, input_expressions, required_expressions, false);
-        }
-      }
+  for (const auto& argument : expression->arguments) {
+    gather_expressions_not_computed_by_expression_evaluator(argument, input_expressions, required_expressions, false);
+  }
+}
 
 ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<AbstractLQPNode>& node) {
   // Gathers all expressions required by THIS node, i.e., expressions needed by the node to do its job. For example, a PredicateNode `a < 3` requires the LQPColumn a.
@@ -110,10 +113,10 @@ ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<Abstrac
     //   (2) cannot be computed (i.e., Aggregate and LQPColumn inputs)
     // As PredicateNodes use the ExpressionEvaluator, they have the same requirements.
     case LQPNodeType::Predicate:
-    case LQPNodeType::Projection:
-    {
+    case LQPNodeType::Projection: {
       for (const auto& expression : node->node_expressions) {
-        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->column_expressions(), required_expressions);
+        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->column_expressions(),
+                                                                required_expressions);
       }
     } break;
 
@@ -121,12 +124,12 @@ ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<Abstrac
     case LQPNodeType::Join: {
       const auto& join_node = static_cast<JoinNode&>(*node);
       for (const auto& predicate : join_node.join_predicates()) {
-        DebugAssert(predicate->type == ExpressionType::Predicate && predicate->arguments.size() == 2, "Expected binary predicate for join");
+        DebugAssert(predicate->type == ExpressionType::Predicate && predicate->arguments.size() == 2,
+                    "Expected binary predicate for join");
         required_expressions.emplace(predicate->arguments[0]);
         required_expressions.emplace(predicate->arguments[1]);
       }
     } break;
-
 
     // No pruning of the input columns to Delete, Update and Insert, they need them all.
     case LQPNodeType::Delete:
@@ -147,7 +150,8 @@ ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<Abstrac
 
 void recursive_gather_required_expressions(
     const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node, std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t>& outputs_visited_by_node) {
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node,
+    std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t>& outputs_visited_by_node) {
   const auto additional_columns = gather_required_expressions(node);
   auto& required_expressions = required_expressions_by_node[node];
   required_expressions.insert(additional_columns.begin(), additional_columns.end());
@@ -257,11 +261,11 @@ void prune_projection_node(
 
   for (auto expression_iter = projection_node->node_expressions.begin();
        expression_iter != projection_node->node_expressions.end(); ++expression_iter) {
-
     for (const auto& output : node->outputs()) {
       const auto& required_expressions = required_expressions_by_node[output];
-      if (std::find_if(required_expressions.begin(), required_expressions.end(), [&expression_iter](const auto& other) {return **expression_iter == *other;}) !=
-          required_expressions.end()) {
+      if (std::find_if(required_expressions.begin(), required_expressions.end(), [&expression_iter](const auto& other) {
+            return **expression_iter == *other;
+          }) != required_expressions.end()) {
         new_node_expressions.emplace_back(*expression_iter);
         break;
       }

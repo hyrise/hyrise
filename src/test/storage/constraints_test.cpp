@@ -33,7 +33,7 @@ class ConstraintsTest : public BaseTest {
       auto& sm = Hyrise::get().storage_manager;
       sm.add_table("table", table);
 
-      table->add_unique_constraint({ColumnID{0}}); 
+      table->add_unique_constraint({ColumnID{0}});
     }
 
     {

@@ -242,7 +242,7 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_unique_constraint({ColumnID{0}}); 
+    table->add_unique_constraint({ColumnID{0}});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -308,7 +308,6 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutUniqueConstraint) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-
 TEST_F(ColumnPruningRuleTest, DoNotTouchNonInnerJoin) {
   // based on the InnerJoinToSemiJoin test
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
@@ -321,7 +320,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchNonInnerJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_unique_constraint({ColumnID{0}}); 
+    table->add_unique_constraint({ColumnID{0}});
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
