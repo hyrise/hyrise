@@ -68,11 +68,12 @@ struct SegmentEncodingSpec {
 
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
-constexpr std::array all_encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
-                                        EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
-                                        EncodingType::RunLength,        EncodingType::LZ4};
+inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
+                                               EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
+                                               EncodingType::RunLength,        EncodingType::LZ4};
 
-constexpr std::array all_segment_encoding_specs{SegmentEncodingSpec{EncodingType::Unencoded},
+inline constexpr std::array all_segment_encoding_specs{
+    SegmentEncodingSpec{EncodingType::Unencoded},
     SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
     SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
     SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
