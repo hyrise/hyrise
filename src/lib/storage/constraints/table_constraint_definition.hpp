@@ -12,8 +12,8 @@ namespace opossum {
 struct TableConstraintDefinition final {
   TableConstraintDefinition(std::vector<ColumnID> column_ids, bool is_primary_key)
       : columns(std::move(column_ids)), is_primary_key(is_primary_key) {
-      	DebugAssert(std::is_sorted(column_ids.begin(), column_ids.end()), "Expecting Column IDs to be sorted");
-      }
+    DebugAssert(std::is_sorted(column_ids.begin(), column_ids.end()), "Expecting Column IDs to be sorted");
+  }
 
   std::vector<ColumnID> columns;
   bool is_primary_key;

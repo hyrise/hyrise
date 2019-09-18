@@ -7,6 +7,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "hyrise.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
@@ -14,8 +15,6 @@
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "storage/constraints/unique_checker.hpp"
-#include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -23,15 +22,31 @@ namespace opossum {
 class ConstraintsTest : public BaseTest {
  protected:
   void SetUp() override {
-    // First a test table with nonnullable columns is created. This table can be reused in all test as a base table.
-    column_definitions.emplace_back("column0", DataType::Int);
-    column_definitions.emplace_back("column1", DataType::Int);
-    column_definitions.emplace_back("column2", DataType::Int);
-    column_definitions.emplace_back("column3", DataType::Int);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    {
+      TableColumnDefinitions column_definitions;
+      column_definitions.emplace_back("column0", DataType::Int, false);
+      column_definitions.emplace_back("column1", DataType::Int, false);
+      column_definitions.emplace_back("column2", DataType::Int, false);
+      column_definitions.emplace_back("column3", DataType::Int, false);
+      auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 
-    auto& sm = StorageManager::get();
-    sm.add_table("table", table);
+      auto& sm = Hyrise::get().storage_manager;
+      sm.add_table("table", table);
+
+      table->add_unique_constraint({ColumnID{0}}); 
+    }
+
+    {
+      TableColumnDefinitions column_definitions;
+      column_definitions.emplace_back("column0", DataType::Int, false);
+      column_definitions.emplace_back("column1", DataType::Int, true);
+      auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+
+      auto& sm = Hyrise::get().storage_manager;
+      sm.add_table("table_nullable", table);
+
+      table->add_unique_constraint({ColumnID{0}});
+    }
   }
 };
 
@@ -51,9 +66,6 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
 
   // Invalid because there is still a nullable column.
   EXPECT_THROW(table_nullable->add_unique_constraint({ColumnID{0}, ColumnID{1}}, true), std::exception);
-
-  // Invalid because the column contains duplicated values.
-  EXPECT_THROW(table->add_unique_constraint({ColumnID{1}}), std::exception);
 
   table->add_unique_constraint({ColumnID{2}}, true);
 

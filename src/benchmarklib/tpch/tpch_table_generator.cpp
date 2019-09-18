@@ -287,7 +287,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   region_table->add_unique_constraint({ColumnID{0}}, true);
   table_info_by_name["region"].table = region_table;
 
-
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
     for (auto& [table_name, table_info] : table_info_by_name) {

@@ -124,7 +124,7 @@ TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(a),
     PredicateNode::make(greater_than_(mul_(a, b), 5),
-      ProjectionNode::make(expression_vector(a, b, mul_(a, b)),
+      ProjectionNode::make(expression_vector(a, mul_(a, b)),
         PredicateNode::make(greater_than_(mul_(a, 2), 5),
           ProjectionNode::make(expression_vector(a, b, mul_(a, 2)),
            node_a)))));

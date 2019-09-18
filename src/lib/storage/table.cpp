@@ -276,7 +276,8 @@ void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool 
     Assert(!primary || !column_is_nullable(column_id), "Column must be not nullable for primary key constraint");
   }
 
-  Assert(column_ids.size() == std::set<ColumnID>(column_ids.begin(), column_ids.end()).size(), "Column IDs must be unique");
+  Assert(column_ids.size() == std::set<ColumnID>(column_ids.begin(), column_ids.end()).size(),
+         "Column IDs must be unique");
 
   {
     auto scoped_lock = acquire_append_mutex();
