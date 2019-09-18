@@ -23,7 +23,6 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-// TODO column vs expression
 namespace {
 void gather_expressions_not_computed_by_expression_evaluator(
     const std::shared_ptr<AbstractExpression>& expression,
@@ -31,7 +30,8 @@ void gather_expressions_not_computed_by_expression_evaluator(
     ExpressionUnorderedSet& required_expressions, const bool top_level = true) {
   if (std::find_if(input_expressions.begin(), input_expressions.end(),
                    [&expression](const auto& other) { return *expression == *other; }) != input_expressions.end()) {
-    // This expression has already been computed and does not need to be computed again. Only add it if it is not a top-level (i.e., forwarded) expression
+    // This expression has already been computed and does not need to be computed again. Only add it if it is not a
+    // top-level (i.e., forwarded) expression
     if (!top_level) required_expressions.emplace(expression);
     return;
   }
@@ -48,11 +48,13 @@ void gather_expressions_not_computed_by_expression_evaluator(
 }
 
 ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<AbstractLQPNode>& node) {
-  // Gathers all expressions required by THIS node, i.e., expressions needed by the node to do its job. For example, a PredicateNode `a < 3` requires the LQPColumn a.
+  // Gathers all expressions required by THIS node, i.e., expressions needed by the node to do its job. For example, a
+  // PredicateNode `a < 3` requires the LQPColumn a.
   auto required_expressions = ExpressionUnorderedSet{};
 
   switch (node->type) {
-    // For the vast majority of node types, AbstractLQPNode::node_expression holds all expressions required by this node.
+    // For the vast majority of node types, AbstractLQPNode::node_expression holds all expressions required by this
+    // node.
     case LQPNodeType::Alias:
     case LQPNodeType::CreateTable:
     case LQPNodeType::CreatePreparedPlan:
@@ -186,7 +188,7 @@ void prune_join_node(
   // key column as non-unique joins could possibly emit a matching line more than once.
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  if (join_node->join_mode != JoinMode::Inner) return;  // TODO test this
+  if (join_node->join_mode != JoinMode::Inner) return;
 
   // Check whether the left/right inputs are actually needed by following operators
   auto left_input_is_used = false;
@@ -253,7 +255,8 @@ void prune_join_node(
 void prune_projection_node(
     const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
-  // TODO DOc
+  // Iterate over the ProjectionNode's expressions and add them to the pruned expressions if at least one output node
+  // requires them
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
 
   auto new_node_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
@@ -274,8 +277,6 @@ void prune_projection_node(
 
   projection_node->node_expressions = new_node_expressions;
 }
-
-// TODO make sure that diamond is tested
 
 }  // namespace
 

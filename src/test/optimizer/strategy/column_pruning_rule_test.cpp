@@ -159,6 +159,44 @@ TEST_F(ColumnPruningRuleTest, ProjectionDoesNotRecompute) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(ColumnPruningRuleTest, Diamond) {
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  // clang-format off
+  const auto sub_lqp = ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3), add_(c, 4)),
+        node_a);
+
+  lqp =
+  ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3)),
+    UnionNode::make(UnionMode::All,
+      PredicateNode::make(greater_than_(add_(a, 2), 5),
+        sub_lqp),
+      PredicateNode::make(less_than_(add_(b, 3), 10),
+        sub_lqp)));
+
+  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
+  lqp = lqp->deep_copy();
+
+  const auto expected_sub_lqp = ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3)),
+        node_a);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(a, 2), add_(b, 3)),
+    UnionNode::make(UnionMode::All,
+      PredicateNode::make(greater_than_(add_(a, 2), 5),
+        expected_sub_lqp),
+      PredicateNode::make(less_than_(add_(b, 3), 10),
+        expected_sub_lqp)));
+  // clang-format on
+
+  // We can be sure that the top projection node does not recompute a+2 because a is not available
+
+  node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{1}});
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(ColumnPruningRuleTest, SimpleAggregate) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
