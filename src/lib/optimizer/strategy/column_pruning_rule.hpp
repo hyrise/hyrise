@@ -15,7 +15,9 @@ class AbstractLQPNode;
 //     SELECT SUM(a + 2) FROM (SELECT a, a + 1 FROM t1) t2
 //   Here, `a + 1` is never actually used and should be pruned
 // - Joins that emit columns that are never used can be rewritten to semi joins if (a) the unused side has a unique
-//     constraint and (b) the join is an inner join
+//     constraint and (b) the join is an inner join. This is done in the ColumnPruningRule because it requires
+//     information about which columns are needed and which ones are not. That information is gathered here and not
+//     exported.
 class ColumnPruningRule : public AbstractRule {
  public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
