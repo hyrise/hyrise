@@ -73,16 +73,16 @@ constexpr std::array<EncodingType, 6> all_encoding_types = {
     EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
     EncodingType::RunLength,        EncodingType::LZ4};
 
-constexpr std::array<SegmentEncodingSpec, 10> all_segment_encoding_specs = {{
-    {EncodingType::Unencoded},
-    {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-    {EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
-    {EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-    {EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::LZ4, VectorCompressionType::SimdBp128},
-    {EncodingType::RunLength}}};
+constexpr std::array<SegmentEncodingSpec, 10> all_segment_encoding_specs = {
+    {{EncodingType::Unencoded},
+     {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+     {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+     {EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
+     {EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
+     {EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
+     {EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
+     {EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned},
+     {EncodingType::LZ4, VectorCompressionType::SimdBp128},
+     {EncodingType::RunLength}}};
 
 }  // namespace opossum

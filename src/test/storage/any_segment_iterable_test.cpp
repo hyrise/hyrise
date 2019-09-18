@@ -29,7 +29,10 @@ class AnySegmentIterableTest : public BaseTestWithParam<SegmentEncodingSpec> {
     position_filter = std::make_shared<PosList>(std::move(row_ids));
     position_filter->guarantee_single_chunk();
 
-    std::copy_if(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(), std::back_inserter(int_supporting_segment_encodings), [](SegmentEncodingSpec spec) { return encoding_supports_data_type(spec.encoding_type, DataType::Int); });
+    std::copy_if(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(),
+                 std::back_inserter(int_supporting_segment_encodings), [](SegmentEncodingSpec spec) {
+                   return encoding_supports_data_type(spec.encoding_type, DataType::Int);
+                 });
   }
 
   inline static std::vector<SegmentEncodingSpec> int_supporting_segment_encodings;
@@ -89,6 +92,6 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    AnySegmentIterableTestInstances, AnySegmentIterableTest, ::testing::ValuesIn(AnySegmentIterableTest::int_supporting_segment_encodings), formatter);
+INSTANTIATE_TEST_SUITE_P(AnySegmentIterableTestInstances, AnySegmentIterableTest,
+                         ::testing::ValuesIn(AnySegmentIterableTest::int_supporting_segment_encodings), formatter);
 }  // namespace opossum

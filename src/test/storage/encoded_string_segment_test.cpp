@@ -25,7 +25,10 @@ namespace opossum {
 class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
-    std::copy_if(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(), std::back_inserter(string_supporting_segment_encodings), [](SegmentEncodingSpec spec) { return encoding_supports_data_type(spec.encoding_type, DataType::String); });
+    std::copy_if(all_segment_encoding_specs.begin(), all_segment_encoding_specs.end(),
+                 std::back_inserter(string_supporting_segment_encodings), [](SegmentEncodingSpec spec) {
+                   return encoding_supports_data_type(spec.encoding_type, DataType::String);
+                 });
   }
 
   inline static std::vector<SegmentEncodingSpec> string_supporting_segment_encodings;
@@ -138,7 +141,8 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   return string;
 };
 
-INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest, ::testing::ValuesIn(EncodedStringSegmentTest::string_supporting_segment_encodings), formatter);
+INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
+                         ::testing::ValuesIn(EncodedStringSegmentTest::string_supporting_segment_encodings), formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = create_empty_string_value_segment();
