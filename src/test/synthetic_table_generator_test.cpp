@@ -9,9 +9,12 @@
 namespace opossum {
 
 TEST(SyntheticTableGeneratorTest, StringGeneration) {
-  ASSERT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(0), "          ");
-  ASSERT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(1), "         1");
-  ASSERT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(2), "         2");
+  EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(0), "          ");
+  EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(1), "         1");
+  EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(2), "         2");
+  EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(117), "        1t");
+  EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(50'018), "       D0k");
+  EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(3'433'820), "      EPIC");
 
   // Negative values are not supported.
   ASSERT_THROW(SyntheticTableGenerator::generate_value<pmr_string>(-17), std::logic_error);
@@ -38,8 +41,8 @@ TEST(SyntheticTableGeneratorTest, TestGeneratedValueRange) {
     ASSERT_TRUE(value >= 0.0 && value <= 1.0);
   }
 
-  ASSERT_EQ(table->row_count(), row_count);
-  ASSERT_EQ(table->chunk_count(), row_count / chunk_size);
+  EXPECT_EQ(table->row_count(), row_count);
+  EXPECT_EQ(table->chunk_count(), row_count / chunk_size);
 }
 
 TEST(SyntheticTableGeneratorTest, ThrowOnGenerateUnsupportedValue) {
@@ -92,14 +95,14 @@ TEST_P(SyntheticTableGeneratorDataTypeTests, IntegerTable) {
   auto table = table_generator->generate_table(test_data_distributions, test_data_types, row_count, chunk_size, supported_segment_encodings, column_names);
 
   const auto generated_chunk_count = table->chunk_count();
-  const auto generated_column_count = table->column_count()
-  ASSERT_EQ(table->row_count(), row_count);
-  ASSERT_EQ(generated_chunk_count, static_cast<size_t>(std::round(static_cast<float>(row_count) / chunk_size)));
-  ASSERT_EQ(generated_column_count, supported_segment_encodings.size());
+  const auto generated_column_count = table->column_count();
+  EXPECT_EQ(table->row_count(), row_count);
+  EXPECT_EQ(generated_chunk_count, static_cast<size_t>(std::round(static_cast<float>(row_count) / chunk_size)));
+  EXPECT_EQ(generated_column_count, supported_segment_encodings.size());
 
   for (auto column_id = ColumnID{0}; column_id < generated_column_count; ++column_id) {
-    ASSERT_EQ(table->column_data_type(column_id), tested_data_type);
-    ASSERT_EQ(table->column_name(column_id), "column_name");
+    EXPECT_EQ(table->column_data_type(column_id), tested_data_type);
+    EXPECT_EQ(table->column_name(column_id), "column_name");
   }
 
   for (auto chunk_id = ChunkID{0}; chunk_id < generated_chunk_count; ++chunk_id) {
