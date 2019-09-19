@@ -772,7 +772,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       }
 
-      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] {
+      jobs.emplace_back(std::make_shared<JobTask>([this, cluster_number] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
