@@ -131,11 +131,11 @@ class JoinSortMergeClusterer {
  protected:
 
   /**
-  * The SegmentInformation structure is used to gather statistics regarding a segments's values
+  * The SegmentHistogramAggregate structure is used to gather statistics regarding a segments's values
   * in order to be able to appropriately reserve space for the clustering output.
   **/
-  struct SegmentInformation {
-    explicit SegmentInformation(const size_t cluster_count) {
+  struct SegmentHistogramAggregate {
+    explicit SegmentHistogramAggregate(const size_t cluster_count) {
       cluster_histogram.resize(cluster_count);
       insert_position.resize(cluster_count);
     }
@@ -157,14 +157,14 @@ class JoinSortMergeClusterer {
   struct TableInformation {
     TableInformation(const size_t chunk_count, const size_t cluster_count) {
       cluster_histogram.resize(cluster_count);
-      segment_information.reserve(chunk_count);
+      segment_histogram_aggregates.reserve(chunk_count);
       for (size_t i = 0; i < chunk_count; ++i) {
-        segment_information.push_back(SegmentInformation(cluster_count));
+        segment_histogram_aggregates.push_back(SegmentHistogramAggregate(cluster_count));
       }
     }
     // Used to count the number of entries for each cluster from the whole table
     std::vector<size_t> cluster_histogram;
-    std::vector<SegmentInformation> segment_information;
+    std::vector<SegmentHistogramAggregate> segment_histogram_aggregates;
   };
 
   // Input parameters

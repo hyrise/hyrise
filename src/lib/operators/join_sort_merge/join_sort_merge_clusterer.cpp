@@ -254,7 +254,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
     auto job = std::make_shared<JobTask>([&, input_segment_id, clusterer] {
       // clusterer is passed by value to have a job-local copy
-      auto& segment_information = table_information.segment_information[input_segment_id];
+      auto& segment_histogram_aggregate = table_information.segment_histogram_aggregates[input_segment_id];
       const auto input_segment = materialized_input_segments[input_segment_id];
 
       if (segments_are_presorted) {
@@ -266,7 +266,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
       if (cluster_count > 1) {
         for (const auto& entry : *input_segment) {
           const auto cluster_id = clusterer(entry.value);
-          ++segment_information.cluster_histogram[cluster_id];
+          ++segment_histogram_aggregate.cluster_histogram[cluster_id];
         }
       }
     });
@@ -286,10 +286,10 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
   auto accumulated_size = size_t{0};
   if (cluster_count > 1) {
     // Aggregate the segment histograms to a table histogram and initialize the insert positions for each segment
-    for (auto& segment_information : table_information.segment_information) {
+    for (auto& segment_histogram_aggregate : table_information.segment_histogram_aggregates) {
       for (auto cluster_id = size_t{0}; cluster_id < cluster_count; ++cluster_id) {
-        segment_information.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
-        table_information.cluster_histogram[cluster_id] += segment_information.cluster_histogram[cluster_id];
+        segment_histogram_aggregate.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
+        table_information.cluster_histogram[cluster_id] += segment_histogram_aggregate.cluster_histogram[cluster_id];
       }
     }
 
@@ -311,11 +311,11 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
   const auto input_segment_count = materialized_input_segments.size();
   for (auto input_segment_id = size_t{0}; input_segment_id < input_segment_count; ++input_segment_id) {
     auto job = std::make_shared<JobTask>([&, input_segment_id, clusterer] {  // copy cluster functor per task
-      auto& segment_information = table_information.segment_information[input_segment_id];
+      auto& segment_histogram_aggregate = table_information.segment_histogram_aggregates[input_segment_id];
       for (const auto& entry : *(materialized_input_segments[input_segment_id])) {
         const auto cluster_id = clusterer(entry.value);
         auto& output_cluster = *(output[cluster_id]);
-        auto& insert_position = segment_information.insert_position[cluster_id];
+        auto& insert_position = segment_histogram_aggregate.insert_position[cluster_id];
         output_cluster[insert_position] = entry;
         ++insert_position;
       }
@@ -332,9 +332,9 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     auto job = std::make_shared<JobTask>([&, segment, segment_id] {
       auto sorted_run_start_positions = std::make_unique<std::vector<size_t>>();
       for (auto chunk_id = ChunkID{0}; chunk_id < materialized_input_segments.size(); ++chunk_id) {
-        const auto& segment_information = table_information.segment_information[chunk_id];
-        sorted_run_start_positions->push_back(segment_information.insert_position[segment_id] -
-                                             segment_information.cluster_histogram[segment_id]);
+        const auto& segment_histogram_aggregate = table_information.segment_histogram_aggregates[chunk_id];
+        sorted_run_start_positions->push_back(segment_histogram_aggregate.insert_position[segment_id] -
+                                             segment_histogram_aggregate.cluster_histogram[segment_id]);
       }
 
       // Sorting of final output cluster. If materialized segments have been presorted, output is partially sorted and
