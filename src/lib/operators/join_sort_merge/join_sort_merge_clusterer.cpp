@@ -131,11 +131,9 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::concatenate_materialized_s
     current_start_position += materialized_segment->size();
   }
 
-  if (segments_are_presorted) {
-  	// std::cout << "merge sort" << std::endl;
+  if (segments_are_presorted && is_partial_sorting_beneficial(current_start_position, materialized_segments.size(), materialized_segments.size())) {
     merge_partially_sorted_materialized_segment(*output, std::move(sorted_run_start_positions));
   } else {
-  	// std::cout << "full sort" << std::endl;
     std::sort(output->begin(), output->end(),
               [](auto& left, auto& right) { return left.value < right.value; });
   }
@@ -399,6 +397,7 @@ typename JoinSortMergeClusterer<T>::ClusterOutput JoinSortMergeClusterer<T>::exe
   // determined the new capacity from iterator: https://stackoverflow.com/a/35359472/1147726)
   samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
+  std::cout << "Using a cluster count of " << _cluster_count << std::endl;
   if (_cluster_count == 1) {
     output.clusters_left = std::move(concatenate_materialized_segments(materialized_left_segments, _presort_segments.first));
     output.clusters_right = std::move(concatenate_materialized_segments(materialized_right_segments, _presort_segments.second));
