@@ -217,26 +217,15 @@ std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> JoinSortMergeC
   MaterializedSegmentList<T> output_right;
   std::vector<std::shared_ptr<AbstractTask>> cluster_tasks;
 
-  auto cluster_task_left = [&] {
+  cluster_tasks.emplace_back(std::make_shared<JobTask>([&] {
     output_left = cluster(input_left, RangeClusterFunctor(split_values), cluster_count, true);
-  };
-  auto cluster_task_right = [&] {
+  }));
+  cluster_tasks.back()->schedule();
+
+  cluster_tasks.emplace_back(std::make_shared<JobTask>([&] {
     output_right = cluster(input_right, RangeClusterFunctor(split_values), cluster_count, true);
-  };
-
-  if (input_left.size() < 500) {
-    cluster_task_left();
-  } else {
-    cluster_tasks.push_back(std::make_shared<JobTask>(cluster_task_left));
-    cluster_tasks.back()->schedule();
-  }
-
-  if (input_right.size() < 500) {
-    cluster_task_right();
-  } else {
-    cluster_tasks.push_back(std::make_shared<JobTask>(cluster_task_right));
-    cluster_tasks.back()->schedule();
-  }
+  }));
+  cluster_tasks.back()->schedule();
 
   Hyrise::get().scheduler().wait_for_tasks(cluster_tasks);
 
