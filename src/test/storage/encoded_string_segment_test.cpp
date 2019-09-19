@@ -23,18 +23,6 @@
 namespace opossum {
 
 class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
- public:
-  static void SetUpTestCase() {  // called ONCE before the tests
-    // Only use encodings that support string values (see encoded_segment_test.cpp for integers)
-    for (const auto& spec : all_segment_encoding_specs) {
-      if (encoding_supports_data_type(spec.encoding_type, DataType::String)) {
-        string_supporting_segment_encodings.emplace_back(spec);
-      }
-    }
-  }
-
-  inline static std::vector<SegmentEncodingSpec> string_supporting_segment_encodings;
-
  protected:
   static constexpr auto max_length = 32;
   static constexpr auto row_count = size_t{1u} << 10;
@@ -144,7 +132,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
-                         ::testing::ValuesIn(EncodedStringSegmentTest::string_supporting_segment_encodings), formatter);
+                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::String, false)), formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = create_empty_string_value_segment();

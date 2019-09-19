@@ -22,18 +22,6 @@
 namespace opossum {
 
 class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
- public:
-  static void SetUpTestCase() {  // called ONCE before the tests
-    // Only use encodings that support integer values (see encoded_string_segment_test.cpp for strings)
-    for (const auto& spec : all_segment_encoding_specs) {
-      if (encoding_supports_data_type(spec.encoding_type, DataType::Int)) {
-        int_supporting_segment_encodings.emplace_back(spec);
-      }
-    }
-  }
-
-  inline static std::vector<SegmentEncodingSpec> int_supporting_segment_encodings;
-
  protected:
   static constexpr auto max_value = 1'024;
 
@@ -145,7 +133,7 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
-                         ::testing::ValuesIn(EncodedSegmentTest::int_supporting_segment_encodings), formatter);
+                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::Int, false)), formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});

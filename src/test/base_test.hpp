@@ -162,6 +162,18 @@ class BaseTestWithParam
 
     return chunk_encoding_spec;
   }
+
+  static std::vector<SegmentEncodingSpec> get_supporting_segment_encodings_specs(const DataType data_type, const bool include_unencoded = true) {
+  std::vector<SegmentEncodingSpec> segment_encodings;
+  for (const auto& spec : all_segment_encoding_specs) {
+    // Include all encoding types, if they support the given data type. As some tests work on encoded segments only,
+    // it further tested if the encoding is Unencoded and if Unencoded should be included or not.
+    if (encoding_supports_data_type(spec.encoding_type, data_type) && (spec.encoding_type != EncodingType::Unencoded || include_unencoded)) {
+      segment_encodings.emplace_back(spec);
+    }
+  }
+  return segment_encodings;
+}
 };
 
 using BaseTest = BaseTestWithParam<void>;
