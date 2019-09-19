@@ -61,24 +61,6 @@ TEST_P(SyntheticTableGeneratorDataTypeTests, IntegerTable) {
   const auto tested_data_type = std::get<0>(GetParam());
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
-  ///////////////////////
-  ///////////////////////
-  ///////////////////////
-  const std::array<SegmentEncodingSpec, 10> all_segment_encoding_specs = {{
-    {EncodingType::Unencoded},
-    {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-    {EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
-    {EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-    // {EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned},
-    {EncodingType::LZ4, VectorCompressionType::SimdBp128},
-    {EncodingType::RunLength}}};
-  ///////////////////////
-  ///////////////////////
-  ///////////////////////
-
   std::vector<SegmentEncodingSpec> supported_segment_encodings;
   auto replace_unsupporting_encoding_types = [&](SegmentEncodingSpec spec) {
     if (encoding_supports_data_type(spec.encoding_type, tested_data_type)) {

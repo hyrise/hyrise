@@ -184,6 +184,7 @@ class BaseTestWithParam
         }
       }
     }
+  }
 
   static std::vector<SegmentEncodingSpec> get_supporting_segment_encodings_specs(const DataType data_type,
                                                                                  const bool include_unencoded = true) {
