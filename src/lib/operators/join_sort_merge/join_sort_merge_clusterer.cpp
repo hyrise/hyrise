@@ -119,28 +119,28 @@ void JoinSortMergeClusterer<T>::merge_partially_sorted_materialized_segment(Mate
 template <typename T>
 MaterializedSegmentList<T> JoinSortMergeClusterer<T>::concatenate_materialized_segments(
     const MaterializedSegmentList<T>& materialized_segments, const bool segments_are_presorted) {
-  auto output = MaterializedSegment<T>();
+  auto output = std::make_shared<MaterializedSegment<T>>();
   auto sorted_run_start_positions = std::make_unique<std::vector<size_t>>();
 
   auto current_start_position = size_t{0};
   // Reserve the required space and copy the data to the output
-  output.reserve(_materialized_table_size(materialized_segments));
+  output->reserve(_materialized_table_size(materialized_segments));
   for (const auto& materialized_segment : materialized_segments) {
-    output.insert(output.end(), materialized_segment->cbegin(), materialized_segment->cend());
+    output->insert(output->end(), materialized_segment->cbegin(), materialized_segment->cend());
     sorted_run_start_positions->push_back(current_start_position);
     current_start_position += materialized_segment->size();
   }
 
   if (segments_are_presorted) {
   	// std::cout << "merge sort" << std::endl;
-    merge_partially_sorted_materialized_segment(output, std::move(sorted_run_start_positions));
+    merge_partially_sorted_materialized_segment(*output, std::move(sorted_run_start_positions));
   } else {
   	// std::cout << "full sort" << std::endl;
-    std::sort(output.begin(), output.end(),
+    std::sort(output->begin(), output->end(),
               [](auto& left, auto& right) { return left.value < right.value; });
   }
 
-  return {std::make_shared<MaterializedSegment<T>>(output)};
+  return {output};
 }
 
 template <typename T>
