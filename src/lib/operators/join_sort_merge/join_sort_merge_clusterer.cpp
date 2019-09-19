@@ -26,7 +26,7 @@ size_t estimated_cost_partial_sorting(const size_t table_row_count, const size_t
   return cluster_count * static_cast<size_t>(chunk_count * std::max(1ul, avg_element_count / 2));
 }
 
-size_t is_partial_sorting_preferable(const size_t table_row_count, const size_t cluster_count, const size_t chunk_count) {
+size_t is_partial_sorting_beneficial(const size_t table_row_count, const size_t cluster_count, const size_t chunk_count) {
   return estimated_cost_partial_sorting(table_row_count, cluster_count, chunk_count) < estimated_cost_full_sorting(table_row_count, cluster_count);
 }
 
@@ -68,8 +68,8 @@ JoinSortMergeClusterer<T>::JoinSortMergeClusterer(const std::shared_ptr<const Ta
   * clustering, a simple heuristic is used to determine if presorting is advantageous.
   **/
   if (_radix_clustering) {
-  	_presort_segments.first = is_partial_sorting_preferable(left_input_rows, cluster_count, left_input_chunk_count);
-  	_presort_segments.second = is_partial_sorting_preferable(right_input_rows, cluster_count, right_input_chunk_count);
+  	_presort_segments.first = is_partial_sorting_beneficial(left_input_rows, cluster_count, left_input_chunk_count);
+  	_presort_segments.second = is_partial_sorting_beneficial(right_input_rows, cluster_count, right_input_chunk_count);
 
   	  // std::cout << "Estimating merge costs with: L (part " << estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(left_input_rows, cluster_count) << ") and R(part " << estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(right_input_rows, cluster_count) << ")" << std::endl;
   }
@@ -352,7 +352,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
       // the sorted lists can be merged. In this case, estimate costs for partial and full sorting and chose more
       // efficient method.
       assert(materialized_input_segments.size() == sorted_run_start_positions->size());
-      if (segments_are_presorted && is_partial_sorting_preferable(accumulated_size, materialized_input_segments.size(), materialized_input_segments.size())) {
+      if (segments_are_presorted && is_partial_sorting_beneficial(accumulated_size, materialized_input_segments.size(), materialized_input_segments.size())) {
         merge_partially_sorted_materialized_segment(*segment, std::move(sorted_run_start_positions));
       } else {
         std::sort(segment->begin(), segment->end(),
