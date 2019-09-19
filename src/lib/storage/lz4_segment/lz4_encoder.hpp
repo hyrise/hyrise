@@ -224,7 +224,7 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     }
 
     // Compress the offsets with a vector compression method to reduce the memory footprint of the LZ4 segment.
-    auto compressed_offsets = compress_vector(offsets, vector_compression_type(), allocator, {offsets.back()});
+    auto compressed_offsets = compress_vector(offsets, VectorCompressionType::SimdBp128, allocator, {offsets.back()});
 
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows

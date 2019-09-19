@@ -9,6 +9,7 @@
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -451,6 +452,18 @@ EncodingType LZ4Segment<T>::encoding_type() const {
 
 template <typename T>
 std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() const {
+  return std::nullopt;
+}
+
+template <>
+std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
+  if (_string_offsets) {
+    CompressedVectorType type;
+    resolve_compressed_vector_type(*(*_string_offsets), [&](const auto& vector) {
+      type = vector.type();
+    });
+    return type;
+  }
   return std::nullopt;
 }
 
