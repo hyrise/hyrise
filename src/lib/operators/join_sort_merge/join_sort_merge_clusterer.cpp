@@ -271,7 +271,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
       }
     });
 
-    histogram_jobs.push_back(job);
+    histogram_jobs.emplace_back(job);
     job->schedule();
   }
 
@@ -320,7 +320,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
         ++insert_position;
       }
     });
-    cluster_jobs.push_back(job);
+    cluster_jobs.emplace_back(job);
     job->schedule();
   }
 
@@ -352,7 +352,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
                                    [](auto& left, auto& right) { return left.value < right.value; }),
                     "Resulting clusters are expected to be sorted.");
     });
-    sort_jobs.push_back(job);
+    sort_jobs.emplace_back(job);
     job->schedule();
 
     ++segment_id;
