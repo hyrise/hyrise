@@ -5,6 +5,7 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -28,11 +29,11 @@ using namespace opossum;  // NOLINT
 
 template <typename T>
 pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& values) {
-  pmr_concurrent_vector<T> result;
-  result.reserve(values.size());
+  pmr_concurrent_vector<T> result(values.size());
 
+  auto insert_position = size_t{0};
   for (const auto& value : values) {
-    result.push_back(SyntheticTableGenerator::generate_value<T>(value));
+    result[insert_position++] = SyntheticTableGenerator::generate_value<T>(value);
   }
 
   return result;
@@ -57,7 +58,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions,
     const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
-    const std::optional<std::vector<SegmentEncodingSpec>>& segment_encoding_specs,
+    const std::optional<ChunkEncodingSpec>& segment_encoding_specs,
     const std::optional<std::vector<std::string>>& column_names, const UseMvcc use_mvcc) {
   Assert(chunk_size != 0ul, "cannot generate table with chunk size 0");
   Assert(column_data_distributions.size() == column_data_types.size(),
@@ -83,14 +84,13 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
   std::random_device random_device;
-  // Using std::mt19937 over std::default_random_engine since it provides better guarantees on the randomness
-  // of values being created (see discussion: https://stackoverflow.com/q/30240899/1147726)
   auto pseudorandom_engine = std::mt19937{};
 
   pseudorandom_engine.seed(random_device());
+  auto encoder_threads = std::vector<std::thread>{};
 
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
-    Segments segments;
+    Segments segments(num_columns);
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
       resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
         using ColumnDataType = typename decltype(column_data_type)::type;
@@ -149,20 +149,40 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           values.push_back(generate_value_by_distribution_type());
         }
 
-        segments.push_back(
-            std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values)));
+        segments[column_index] = 
+            std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
       });
+
       // add full chunk to table
       if (column_index == num_columns - 1) {
-        const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-        table->append_chunk(segments, mvcc_data);
+        if (use_mvcc == UseMvcc::Yes) {
+          const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+          table->append_chunk(segments, mvcc_data);
+        } else {
+          table->append_chunk(segments);
+        }
+
+        if (segment_encoding_specs) {
+          /**
+          * For chunk sizes <1M, parallelizing the segment creation is not worth the overhead, because chunk encoding 
+          * dominates the runtime. Nonetheless, a single thread for the chunk encoder (which itself is parallelizing
+          * internally) ensures that the segment creation is not blocked by the encoding of the previous chunk. To
+          * avoid overparallelizing, calls to encode_chunk are not parallelized.
+          **/
+          if (!encoder_threads.empty()) {
+            encoder_threads.back().join();
+          }
+
+          const auto chunk_id = ChunkID{table->chunk_count() - 1};
+          encoder_threads.emplace_back([&, chunk_id] {
+            ChunkEncoder::encode_chunk(table->get_chunk(chunk_id), table->column_data_types(), *segment_encoding_specs, true);
+          });
+        }
       }
     }
   }
 
-  if (segment_encoding_specs) {
-    ChunkEncoder::encode_all_chunks(table, *segment_encoding_specs);
-  }
+  encoder_threads.back().join();
 
   return table;
 }

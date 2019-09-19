@@ -30,7 +30,7 @@ struct ColumnDataDistribution {
     return c;
   }
 
-  static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 0.0,
+  static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 1000.0,
                                                           const double skew_scale = 1.0,
                                                           const double skew_shape = 0.0) {
     ColumnDataDistribution c{};
@@ -65,7 +65,7 @@ class SyntheticTableGenerator {
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
                                         const std::vector<DataType>& column_data_types, const size_t num_rows,
                                         const ChunkOffset chunk_size,
-                                        const std::optional<std::vector<SegmentEncodingSpec>>& segment_encoding_specs,
+                                        const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
                                         const std::optional<std::vector<std::string>>& column_names = std::nullopt,
                                         const UseMvcc use_mvcc = UseMvcc::No);
 
@@ -97,18 +97,21 @@ class SyntheticTableGenerator {
       return static_cast<T>(input);
     } else if constexpr (std::is_floating_point_v<T>) {
       return static_cast<T>(input) * 0.999999f;
-    } else {
+    } else if constexpr (std::is_same_v<T, pmr_string>) {
+      Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
+
       constexpr auto generated_string_length = size_t{10};
       constexpr auto prefix_length = size_t{4};
       constexpr auto variable_string_length = generated_string_length - prefix_length;
-
-      Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
 
       const std::vector<char> chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
                                        'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
                                        'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
                                        'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
       const size_t chars_base = chars.size();
+
+      // For the current settings, integer valures are guaranteed to not exceed the value range. However, the assertion
+      // is kept as the generated string length might change or the interface (e.g., taking size_t input).
       Assert(static_cast<double>(input) < std::pow(chars_base, variable_string_length),
              "Input too large. Cannot be represented in " + std::to_string(variable_string_length) + " chars.");
 
@@ -125,6 +128,8 @@ class SyntheticTableGenerator {
       }
 
       return result;
+    } else {
+      Fail("Requested type not supported.");
     }
   }
 
