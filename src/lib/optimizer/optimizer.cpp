@@ -96,12 +96,14 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
-  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
-
   // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+
+  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
+  // `a BETWEEN 5 and 7` is.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
