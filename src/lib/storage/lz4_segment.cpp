@@ -459,9 +459,7 @@ template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
   if (_string_offsets) {
     CompressedVectorType type;
-    resolve_compressed_vector_type(*(*_string_offsets), [&](const auto& vector) {
-      type = vector.type();
-    });
+    resolve_compressed_vector_type(*(*_string_offsets), [&](const auto& vector) { type = vector.type(); });
     return type;
   }
   return std::nullopt;

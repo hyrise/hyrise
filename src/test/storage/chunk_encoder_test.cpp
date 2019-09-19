@@ -24,11 +24,12 @@ class ChunkEncoderTest : public BaseTest {
     static const auto row_count = 15u;
     static const auto max_chunk_size = 5u;
     static const auto column_count = 3u;
-    
+
     _table = create_test_table(row_count, max_chunk_size, column_count);
   }
 
-  static std::shared_ptr<Table> create_test_table(const size_t row_count, const size_t max_chunk_size, const size_t column_count) {
+  static std::shared_ptr<Table> create_test_table(const size_t row_count, const size_t max_chunk_size,
+                                                  const size_t column_count) {
     TableColumnDefinitions column_definitions;
 
     for (auto column_id = 0u; column_id < column_count; ++column_id) {
@@ -49,11 +50,13 @@ class ChunkEncoderTest : public BaseTest {
   std::shared_ptr<Table> _table;
 };
 
-
 TEST(ChunkEncoderTest, ParentVectorCompressionType) {
-  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned), VectorCompressionType::FixedSizeByteAligned);
-  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned), VectorCompressionType::FixedSizeByteAligned);
-  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned), VectorCompressionType::FixedSizeByteAligned);
+  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned),
+            VectorCompressionType::FixedSizeByteAligned);
+  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned),
+            VectorCompressionType::FixedSizeByteAligned);
+  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned),
+            VectorCompressionType::FixedSizeByteAligned);
   ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::SimdBp128), VectorCompressionType::SimdBp128);
 }
 
@@ -115,7 +118,7 @@ TEST_F(ChunkEncoderTest, ThrowOnEncodingReferenceSegments) {
 
   EXPECT_EQ(_table->row_count(), table_scan->get_output()->row_count());
 
-  const auto chunk_encoding_spec = 
+  const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::Dictionary}, {EncodingType::Dictionary}};
   auto chunk = std::const_pointer_cast<Chunk>(table_scan->get_output()->get_chunk(ChunkID{0u}));
   const auto types = _table->column_data_types();
@@ -219,7 +222,8 @@ TEST_P(ParallelChunkEncoderTest, EncodeChunk) {
 
   auto _table = ChunkEncoderTest::create_test_table(max_chunk_size, max_chunk_size, std::get<0>(GetParam()));
 
-  const auto chunk_encoding_spec = std::vector<SegmentEncodingSpec>(std::get<0>(GetParam()), {EncodingType::Dictionary});
+  const auto chunk_encoding_spec =
+      std::vector<SegmentEncodingSpec>(std::get<0>(GetParam()), {EncodingType::Dictionary});
 
   const auto types = _table->column_data_types();
   const auto column_count = _table->column_count();
@@ -234,6 +238,7 @@ TEST_P(ParallelChunkEncoderTest, EncodeChunk) {
   BaseTest::verify_encoding(chunk, chunk_encoding_spec);
 }
 
-INSTANTIATE_TEST_SUITE_P(ParallizationModesChunkEncoder, ParallelChunkEncoderTest, testing::Combine(testing::Values(1ul, 10ul), testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(ParallizationModesChunkEncoder, ParallelChunkEncoderTest,
+                         testing::Combine(testing::Values(1ul, 10ul), testing::Bool()));
 
 }  // namespace opossum

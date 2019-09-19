@@ -149,7 +149,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           values.push_back(generate_value_by_distribution_type());
         }
 
-        segments[column_index] = 
+        segments[column_index] =
             std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
       });
 
@@ -175,7 +175,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
           const auto chunk_id = ChunkID{table->chunk_count() - 1};
           encoder_threads.emplace_back([&, chunk_id] {
-            ChunkEncoder::encode_chunk(table->get_chunk(chunk_id), table->column_data_types(), *segment_encoding_specs, true);
+            ChunkEncoder::encode_chunk(table->get_chunk(chunk_id), table->column_data_types(), *segment_encoding_specs,
+                                       true);
           });
         }
       }

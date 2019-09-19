@@ -95,11 +95,10 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                                 const ChunkEncodingSpec& chunk_encoding_spec, const bool encode_in_parallel) {
   const auto column_count = chunk->column_count();
-  Assert((column_data_types.size() == column_count),
-         "Number of column types must match the chunk’s column count.");
+  Assert((column_data_types.size() == column_count), "Number of column types must match the chunk’s column count.");
   Assert((chunk_encoding_spec.size() == column_count),
          "Number of column encoding specs must match the chunk’s column count.");
-  
+
   auto next_column_id = std::atomic_ushort{0};
   auto threads = std::vector<std::thread>{};
   const auto thread_count = std::min(column_count, static_cast<uint16_t>(std::thread::hardware_concurrency()));
