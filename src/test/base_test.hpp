@@ -162,6 +162,29 @@ class BaseTestWithParam
 
     return chunk_encoding_spec;
   }
+
+  static void verify_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
+    const auto column_count = chunk->column_count();
+    for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+      const auto segment = chunk->get_segment(column_id);
+      const auto segment_spec = spec.at(column_id);
+
+      if (segment_spec.encoding_type == EncodingType::Unencoded) {
+        const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(segment);
+        EXPECT_NE(value_segment, nullptr);
+      } else {
+        const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+        EXPECT_NE(encoded_segment, nullptr);
+        EXPECT_EQ(encoded_segment->encoding_type(), segment_spec.encoding_type);
+        if (segment_spec.vector_compression_type && encoded_segment->compressed_vector_type()) {
+          // Both optionals need to be set for comparison, because some encodings only use vector compression for
+          // certain types (e.g., LZ4 for pmr_string segments).
+          EXPECT_EQ(*segment_spec.vector_compression_type,
+                    parent_vector_compression_type(*encoded_segment->compressed_vector_type()));
+        }
+      }
+    }
+  }
 };
 
 using BaseTest = BaseTestWithParam<void>;
