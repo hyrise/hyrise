@@ -24,6 +24,7 @@ class HyriseCommunicator {
   static std::shared_ptr<TransactionContext> get_new_transaction_context();
 
   static std::shared_ptr<const Table> execute_prepared_statement(std::shared_ptr<AbstractOperator> physical_plan);
+
 };
 
 }  // namespace opossum

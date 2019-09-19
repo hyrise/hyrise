@@ -12,7 +12,6 @@ cxxopts::Options get_server_cli_options() {
   cli_options.add_options()
     ("help", "Display this help and exit")
     ("p,port", "Specify the port number. 0 means randomly select an available one", cxxopts::value<uint16_t>()->default_value("5432"))  //NOLINT
-    ("debug_note", "Send message containing query execution times to the client", cxxopts::value<bool>()->default_value("false"))  //NOLINT
     ("generate_tpch", "Generate all TPC-H tables with specified scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0"))  //NOLINT
     ;  //NOLINT
   // clang-format on

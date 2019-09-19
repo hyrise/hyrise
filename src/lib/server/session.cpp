@@ -23,7 +23,7 @@ void Session::_establish_connection() {
   const auto body_length = _postgres_protocol_handler->read_startup_packet();
 
   // Currently, the information available in the start up packet body (such as db name, user name) is ignored
-  _postgres_protocol_handler->handle_startup_packet_body(body_length);
+  _postgres_protocol_handler->read_startup_packet_body(body_length);
   _postgres_protocol_handler->send_authentication();
   _postgres_protocol_handler->send_parameter("server_version", "11");
   _postgres_protocol_handler->send_parameter("server_encoding", "UTF8");
@@ -32,7 +32,7 @@ void Session::_establish_connection() {
 }
 
 void Session::_handle_request() {
-  const auto header = _postgres_protocol_handler->get_packet_type();
+  const auto header = _postgres_protocol_handler->read_packet_type();
 
   switch (header) {
     case NetworkMessageType::TerminateCommand: {
@@ -85,7 +85,7 @@ void Session::_handle_simple_query() {
     row_count = result_table->row_count();
   }
 
-  _postgres_protocol_handler->command_complete(
+  _postgres_protocol_handler->send_command_complete(
       ResponseBuilder::build_command_complete_message(root_operator_type, row_count));
   _postgres_protocol_handler->send_ready_for_query();
 }
@@ -155,7 +155,7 @@ void Session::_handle_execute() {
     _postgres_protocol_handler->send_status_message(NetworkMessageType::NoDataResponse);
   }
 
-  _postgres_protocol_handler->command_complete(
+  _postgres_protocol_handler->send_command_complete(
       ResponseBuilder::build_command_complete_message(physical_plan->type(), row_count));
   // Ready for query + flush will be done after reading sync message
 }

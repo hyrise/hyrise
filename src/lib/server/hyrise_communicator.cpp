@@ -18,13 +18,17 @@ uint64_t HyriseCommunicator::send_query_response(std::shared_ptr<const Table> ta
 
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; chunk_id++) {
     const auto chunk_size = table->get_chunk(chunk_id)->size();
-    const auto& segments = table->get_chunk(chunk_id)->segments();
+    const auto segments = table->get_chunk(chunk_id)->segments();
     for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
+      auto string_lengths = 0;
       for (size_t current_segment = 0; current_segment < segments.size(); current_segment++) {
-        const auto& attribute_value = (*segments[current_segment])[current_chunk_offset];
-        attribute_strings[current_segment] = lossless_variant_cast<pmr_string>(attribute_value).value();
+        const auto attribute_value = segments[current_segment]->operator[](current_chunk_offset);
+        // TODO(toni): lossless ?
+        const auto string_value = lossless_variant_cast<pmr_string>(attribute_value).value();
+        attribute_strings[current_segment] = string_value;
+        string_lengths += string_value.size();
       }
-      postgres_protocol_handler->send_data_row(attribute_strings);
+      postgres_protocol_handler->send_data_row(attribute_strings, string_lengths);
     }
   }
   return table->row_count();

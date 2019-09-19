@@ -21,8 +21,7 @@ void Server::_start_session(const boost::system::error_code& error) {
       // Sockets cannot be copied. After moving the _socket object the object will be in the same state as before.
       auto session = Session(std::move(_socket));
       session.start();
-    })
-        .detach();
+    }).detach();
   } else {
     std::cerr << error.category().name() << ": " << error.message() << std::endl;
   }
@@ -30,7 +29,6 @@ void Server::_start_session(const boost::system::error_code& error) {
 }
 
 void Server::run() {
-  // This call is non-blocking
   _accept_new_session();
   std::cout << "Server starting on port " << get_port() << std::endl;
   _io_service.run();

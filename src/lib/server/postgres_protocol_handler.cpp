@@ -25,7 +25,7 @@ uint32_t PostgresProtocolHandler::read_startup_packet() {
   }
 }
 
-NetworkMessageType PostgresProtocolHandler::get_packet_type() { return _read_buffer.get_message_type(); }
+NetworkMessageType PostgresProtocolHandler::read_packet_type() { return _read_buffer.get_message_type(); }
 
 std::string PostgresProtocolHandler::read_query_packet() {
   const auto query_length = _read_buffer.get_value<uint32_t>() - LENGTH_FIELD_SIZE;
@@ -38,7 +38,7 @@ void PostgresProtocolHandler::_ssl_deny() {
   _write_buffer.flush();
 }
 
-void PostgresProtocolHandler::handle_startup_packet_body(const uint32_t size) {
+void PostgresProtocolHandler::read_startup_packet_body(const uint32_t size) {
   // As of now, we don't do anything with the startup packet body. It contains authentication data and the
   // database name the user desires to connect to. Hence, we read this information from the network device as
   // one large string and throw it away.
@@ -68,7 +68,7 @@ void PostgresProtocolHandler::send_ready_for_query() {
   _write_buffer.flush();
 }
 
-void PostgresProtocolHandler::command_complete(const std::string& command_complete_message) {
+void PostgresProtocolHandler::send_command_complete(const std::string& command_complete_message) {
   const auto packet_size = sizeof(LENGTH_FIELD_SIZE) + command_complete_message.size() + 1u /* null terminator */;
   _write_buffer.put_value(NetworkMessageType::CommandComplete);
   _write_buffer.put_value<uint32_t>(packet_size);
@@ -120,7 +120,7 @@ void PostgresProtocolHandler::set_row_description_header(const uint32_t total_co
 
 void PostgresProtocolHandler::send_row_description(const std::string& column_name, const uint32_t object_id,
                                                    const int16_t type_width) {
-  _write_buffer.put_string(column_name);         // Column name
+  _write_buffer.put_string(column_name);
   _write_buffer.put_value<int32_t>(0u);          // No object id
   _write_buffer.put_value<int16_t>(0u);          // No attribute number
   _write_buffer.put_value<int32_t>(object_id);   // Object id of type
@@ -129,21 +129,7 @@ void PostgresProtocolHandler::send_row_description(const std::string& column_nam
   _write_buffer.put_value<int16_t>(0u);          // Text format
 }
 
-void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_strings) {
-  // TODO(toni): refac here
-  _write_buffer.put_value(NetworkMessageType::DataRow);
-
-  auto packet_size = sizeof(uint32_t) + sizeof(uint16_t);
-
-  for (const auto& attribute : row_strings) {
-    packet_size = packet_size + attribute.size() + sizeof(uint32_t);
-  }
-
-  _write_buffer.put_value<uint32_t>(packet_size);
-
-  // Number of columns in row
-  _write_buffer.put_value<uint16_t>(row_strings.size());
-
+void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_strings, const uint32_t string_lengths) {
   /*
   DataRow (B)
   Byte1('D')
@@ -165,6 +151,15 @@ void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_
   The value of the column, in the format indicated by the associated format code. n is the above length.
   */
 
+  _write_buffer.put_value(NetworkMessageType::DataRow);
+
+  const auto packet_size = LENGTH_FIELD_SIZE + sizeof(uint16_t) + row_strings.size() * LENGTH_FIELD_SIZE + string_lengths;
+
+  _write_buffer.put_value<uint32_t>(packet_size);
+
+  // Number of columns in row
+  _write_buffer.put_value<uint16_t>(row_strings.size());
+
   for (const auto& value_string : row_strings) {
     // Size of string representation of value, NOT of value type's size
     _write_buffer.put_value<uint32_t>(value_string.size());
@@ -175,18 +170,20 @@ void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_
 }
 
 std::pair<std::string, std::string> PostgresProtocolHandler::read_parse_packet() {
-  // TODO(toni): refac here
   _read_buffer.get_value<uint32_t>();  // Ignore packet size
 
   const std::string statement_name = _read_buffer.get_string();
   const std::string query = _read_buffer.get_string();
-  const auto network_parameter_data_types = _read_buffer.get_value<uint16_t>();
+  
+  // The number of parameter data types specified (can be zero).
+  const auto data_types_specified = _read_buffer.get_value<uint16_t>();
 
-  for (auto i = 0; i < network_parameter_data_types; i++) {
-    /*auto parameter_data_types = */ _read_buffer.get_value<uint32_t>();
+  for (auto i = 0; i < data_types_specified; i++) {
+    // Specifies the object ID of the parameter data type. Placing a zero here is equivalent to leaving the type unspecified.
+    /*auto data_type = */ _read_buffer.get_value<int32_t>();
   }
 
-  return {std::move(statement_name), std::move(query)};
+  return {statement_name, query};
 }
 
 void PostgresProtocolHandler::read_sync_packet() {
@@ -196,59 +193,50 @@ void PostgresProtocolHandler::read_sync_packet() {
 
 PreparedStatementDetails PostgresProtocolHandler::read_bind_packet() {
   _read_buffer.get_value<uint32_t>();
-  auto portal = _read_buffer.get_string();
-  auto statement_name = _read_buffer.get_string();
-  auto num_format_codes = _read_buffer.get_value<int16_t>();
-
-  // auto format_codes = std::vector<int16_t>();
-  // format_codes.reserve(num_format_codes);
+  const auto portal = _read_buffer.get_string();
+  const auto statement_name = _read_buffer.get_string();
+  const auto num_format_codes = _read_buffer.get_value<int16_t>();
 
   for (auto i = 0; i < num_format_codes; i++) {
-    // format_codes.emplace_back(_read_buffer.get_value<int16_t>());
-    _read_buffer.get_value<int16_t>();
+    Assert(_read_buffer.get_value<int16_t>() == 0, "Assuming all parameters to be in text format (0)");
   }
 
-  auto num_parameter_values = _read_buffer.get_value<int16_t>();
+  const auto num_parameter_values = _read_buffer.get_value<int16_t>();
 
-  // TODO(toni): room for refactoring here?
   std::vector<AllTypeVariant> parameter_values;
   for (auto i = 0; i < num_parameter_values; ++i) {
-    // TODO(toni): include null terminator
     const auto parameter_value_length = _read_buffer.get_value<int32_t>();
-    const std::string x = _read_buffer.get_string(parameter_value_length, false);
-    // auto x = _read_buffer.get_string();
-    // const pmr_string x_str(x.begin(), x.end());
-    parameter_values.emplace_back(x.c_str());
+    parameter_values.emplace_back(_read_buffer.get_string(parameter_value_length, false).c_str());
   }
 
-  auto num_result_column_format_codes = _read_buffer.get_value<int16_t>();
+  const auto num_result_column_format_codes = _read_buffer.get_value<int16_t>();
 
   for (auto i = 0; i < num_result_column_format_codes; i++) {
-    // format_codes.emplace_back(_read_buffer.get_value<int16_t>());
-    _read_buffer.get_value<int16_t>();
+    Assert(_read_buffer.get_value<int16_t>() == 0, "Assuming all result columns to be in text format (0)");
   }
-  // auto result_column_format_codes = read_values<int16_t>(num_result_column_format_codes);
 
-  return {statement_name, portal, std::move(parameter_values)};
+  return {statement_name, portal, parameter_values};
 }
 
 void PostgresProtocolHandler::read_describe_packet() {
   const auto packet_length = _read_buffer.get_value<uint32_t>();
-  const auto object_to_describe = _read_buffer.get_value<char>();
+  // Clients asks for a description of a statement or a portal
+  // Statement descriptions (S) are returned as two separate messages: ParameterDescription and RowDescription
+  // Portal descriptions are just RowDescriptions
+  const auto description_target = _read_buffer.get_value<char>();
   const auto statement_or_portal_name = _read_buffer.get_string(packet_length - sizeof(uint32_t) - sizeof(char));
 
-  // statement descriptions are returned as two separate messages:
-  // ParameterDescription and RowDescription
-  // portal descriptions are just RowDescriptions
-  if (object_to_describe == 'S') {
-    // TODO(toni): describe portal
-  }
+  Assert(description_target == 'P', "Only portal descriptions are supported currently.");
+  // The description itself will be sent out after execution of the prepared statement.
 }
 
 std::string PostgresProtocolHandler::read_execute_packet() {
   const auto packet_length = _read_buffer.get_value<uint32_t>();
   const auto portal = _read_buffer.get_string(packet_length - 2 * sizeof(uint32_t));
-  // TODO(toni): necessary?
+  /* https://www.postgresql.org/docs/11/protocol-flow.html:
+   The result-row count is only meaningful for portals containing commands that return row sets; in other cases
+   the command is always executed to completion, and the row count is ignored.
+  */ 
   /*const auto max_rows = */ _read_buffer.get_value<int32_t>();
   return portal;
 }
