@@ -50,7 +50,7 @@ class ChunkEncoderTest : public BaseTest {
   std::shared_ptr<Table> _table;
 };
 
-TEST(ChunkEncoderTest, ParentVectorCompressionType) {
+TEST_F(ChunkEncoderTest, ParentVectorCompressionType) {
   ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned),
             VectorCompressionType::FixedSizeByteAligned);
   ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned),
