@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "base_test.hpp"
 
 #include "hyrise.hpp"
 #include "storage/encoding_type.hpp"
