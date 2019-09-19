@@ -26,6 +26,10 @@ size_t estimated_cost_partial_sorting(const size_t table_row_count, const size_t
   return cluster_count * static_cast<size_t>(chunk_count * std::max(1ul, avg_element_count / 2));
 }
 
+size_t is_partial_sorting_preferable(const size_t table_row_count, const size_t cluster_count, const size_t chunk_count) {
+  return estimated_cost_partial_sorting(table_row_count, cluster_count, chunk_count) < estimated_cost_full_sorting(table_row_count, cluster_count);
+}
+
 }  // namespace
 
 
@@ -64,8 +68,8 @@ JoinSortMergeClusterer<T>::JoinSortMergeClusterer(const std::shared_ptr<const Ta
   * clustering, a simple heuristic is used to determine if presorting is advantageous.
   **/
   if (_radix_clustering) {
-  	_presort_segments.first = estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) < estimated_cost_full_sorting(left_input_rows, cluster_count);
-  	_presort_segments.second = estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) < estimated_cost_full_sorting(right_input_rows, cluster_count);
+  	_presort_segments.first = is_partial_sorting_preferable(left_input_rows, cluster_count, left_input_chunk_count);
+  	_presort_segments.second = is_partial_sorting_preferable(right_input_rows, cluster_count, right_input_chunk_count);
 
   	  // std::cout << "Estimating merge costs with: L (part " << estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(left_input_rows, cluster_count) << ") and R(part " << estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(right_input_rows, cluster_count) << ")" << std::endl;
   }
@@ -290,6 +294,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
    * Otherwise:
    *   -> Size the output with the accumulated size of all segments
    **/
+  auto accumulated_size = size_t{0};
   if (cluster_count > 1) {
     // Aggregate the segment histograms to a table histogram and initialize the insert positions for each segment
     for (auto& segment_information : table_information.segment_information) {
@@ -303,13 +308,13 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     for (auto cluster_id = size_t{0}; cluster_id < cluster_count; ++cluster_id) {
       const auto cluster_size = table_information.cluster_histogram[cluster_id];
       output[cluster_id] = std::make_shared<MaterializedSegment<T>>(cluster_size);
+      accumulated_size += cluster_size;
     }
   } else {
-    auto single_cluster_size = size_t{0};
     for (const auto& segment : materialized_input_segments) {
-      single_cluster_size += segment->size();
+      accumulated_size += segment->size();
     }
-    output[0] = std::make_shared<MaterializedSegment<T>>(single_cluster_size);
+    output[0] = std::make_shared<MaterializedSegment<T>>(accumulated_size);
   }
 
   // Move each entry into its appropriate cluster in parallel
@@ -343,13 +348,13 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
                                              segment_information.cluster_histogram[segment_id]);
       }
 
-      // Sorting of final output cluster. If materialized segments have been
-      // presorted, output is partially sorted and the sorted lists can be merged.
-      if (segments_are_presorted) {
-      	// std::cout << "partial sort" << std::endl;
+      // Sorting of final output cluster. If materialized segments have been presorted, output is partially sorted and
+      // the sorted lists can be merged. In this case, estimate costs for partial and full sorting and chose more
+      // efficient method.
+      assert(materialized_input_segments.size() == sorted_run_start_positions->size());
+      if (segments_are_presorted && is_partial_sorting_preferable(accumulated_size, materialized_input_segments.size(), materialized_input_segments.size())) {
         merge_partially_sorted_materialized_segment(*segment, std::move(sorted_run_start_positions));
       } else {
-      	// std::cout << "full sort" << std::endl;
         std::sort(segment->begin(), segment->end(),
                   [](auto& left, auto& right) { return left.value < right.value; });
       }
