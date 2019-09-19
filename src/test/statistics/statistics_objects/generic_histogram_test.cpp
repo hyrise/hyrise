@@ -966,7 +966,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
     const auto expected_histogram = GenericHistogram<pmr_string>{
       std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{40,   27,   4,    9},
+      std::vector<HistogramCountType>{40,   30,   5,    10},  // TODO
       std::vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on

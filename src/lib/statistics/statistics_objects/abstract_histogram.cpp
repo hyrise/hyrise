@@ -674,10 +674,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
       DebugAssert(value2, "pruned() cannot be called with NULL");
 
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-        auto ratio_outside = Selectivity{};
-        ratio_outside += bin_ratio_less_than_equals(bin_id, *value2) - bin_ratio_less_than(bin_id, *value);
+        const auto ratio_inside = bin_ratio_less_than_equals(bin_id, *value2) - bin_ratio_less_than(bin_id, *value);
 
-        bin_prunable_height[bin_id] = bin_height(bin_id) * ratio_outside;
+        bin_prunable_height[bin_id] = bin_height(bin_id) * (Selectivity{1} - ratio_inside);
       }
     } break;
 
