@@ -167,7 +167,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           * For chunk sizes <1M, parallelizing the segment creation is not worth the overhead, because chunk encoding 
           * dominates the runtime. Nonetheless, a single thread for the chunk encoder (which itself is parallelizing
           * internally) ensures that the segment creation is not blocked by the encoding of the previous chunk. To
-          * avoid overparallelizing, calls to encode_chunk are not parallelized.
+          * avoid overparallelizing, there is at most one thread for encode_chunk() at any time.
           **/
           if (!encoder_threads.empty()) {
             encoder_threads.back().join();
