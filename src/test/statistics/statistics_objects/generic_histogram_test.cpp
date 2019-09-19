@@ -936,7 +936,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
     const auto expected_histogram = GenericHistogram<pmr_string>{
       std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{ 0,   15,   1,    1},
+      std::vector<HistogramCountType>{ 0,   15,   5,    10},
       std::vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
@@ -951,8 +951,8 @@ TEST_F(GenericHistogramTest, PrunedString) {
     const auto expected_histogram = GenericHistogram<pmr_string>{
       std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{40,   30,   5,    10},
-      std::vector<HistogramCountType>{10,   12,   1,    1},
+      std::vector<HistogramCountType>{40,   22,   5,    10},
+      std::vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
 
@@ -966,7 +966,7 @@ TEST_F(GenericHistogramTest, PrunedString) {
     const auto expected_histogram = GenericHistogram<pmr_string>{
       std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
       std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
-      std::vector<HistogramCountType>{40,   30,   5,    10},
+      std::vector<HistogramCountType>{40,   27,   4,    9},
       std::vector<HistogramCountType>{10,   20,   1,    1},
       StringHistogramDomain{'a', 'z', 2u}};
     // clang-format on
@@ -974,7 +974,37 @@ TEST_F(GenericHistogramTest, PrunedString) {
     EXPECT_EQ(*pruned, expected_histogram);
   }
 
-  // TODO test value outside of domain
+  {
+    // Same as the last test, but this time, the search values are longer than the domain's common prefix.
+    // Remember that string_to_number adds 1 for strings that are longer than the prefix.
+    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(histogram->pruned(PredicateCondition::BetweenExclusive, 5, "blaba", "dfqfqs"));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<pmr_string>{
+      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      std::vector<HistogramCountType>{40,   27,   4,    9},
+      std::vector<HistogramCountType>{10,   20,   1,    1},
+      StringHistogramDomain{'a', 'z', 2u}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Same as the last test, but this time, the search values contain characters outside of the domain.
+    // cX should be converted to ca, c{ to cz. This way, the third bin should be included fully and the fourth bin partially.
+    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(histogram->pruned(PredicateCondition::BetweenExclusive, 3, "cX", "c{"));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<pmr_string>{
+      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      std::vector<HistogramCountType>{40,   30,   2.5f, 9.5f},
+      std::vector<HistogramCountType>{10,   20,   1,    1},
+      StringHistogramDomain{'a', 'z', 2u}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
 }
 
 TEST_F(GenericHistogramTest, SplitAtEmptyBinBounds) {

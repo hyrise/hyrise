@@ -91,6 +91,7 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
 }
 
 template <typename T>
+// TODO test the string optimization of this and bin_ratio_less_than_equals
 float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& value) const {
   if (value <= bin_minimum(bin_id)) {
     return 0.0f;
@@ -139,7 +140,7 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     // Determine the common_prefix_lengths of bin_min and bin_max. E.g. bin_max=abcde and bin_max=abcz have a
     // common_prefix_length=3
     auto common_prefix_length = size_t{0};
-    const auto max_common_prefix_length = std::min(bin_min.length(), bin_max.length());
+    const auto max_common_prefix_length = std::min(bin_min.length() - _domain.prefix_length, bin_max.length() - _domain.prefix_length);
     for (; common_prefix_length < max_common_prefix_length; ++common_prefix_length) {
       if (bin_min[common_prefix_length] != bin_max[common_prefix_length]) {
         break;
@@ -169,13 +170,12 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
   if constexpr (!std::is_same_v<T, pmr_string>) {
     return bin_ratio_less_than(bin_id, _domain.next_value_clamped(value));
   } else {
+    // See bin_ratio_less_than for comment.
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
 
-    // Determine the common_prefix_lengths of bin_min and bin_max. E.g. bin_max=abcde and bin_max=abcz have a
-    // common_prefix_length=3
     auto common_prefix_length = size_t{0};
-    const auto max_common_prefix_length = std::min(bin_min.length(), bin_max.length());
+    const auto max_common_prefix_length = std::min(bin_min.length() - _domain.prefix_length, bin_max.length() - _domain.prefix_length);
     for (; common_prefix_length < max_common_prefix_length; ++common_prefix_length) {
       if (bin_min[common_prefix_length] != bin_max[common_prefix_length]) {
         break;
@@ -187,6 +187,12 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
     const auto min_repr = _domain.string_to_number(bin_min.substr(common_prefix_length));
     const auto max_repr = _domain.string_to_number(bin_max.substr(common_prefix_length));
     const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
+
+    std::cout << "in_domain_value: " << in_domain_value << std::endl;
+    std::cout << "value_repr: " << value_repr << std::endl;
+    std::cout << "min_repr: " << min_repr << std::endl;
+    std::cout << "max_repr: " << max_repr << std::endl;
+    std::cout << "bin_ratio: " << bin_ratio << std::endl;
 
     return bin_ratio;
   }
