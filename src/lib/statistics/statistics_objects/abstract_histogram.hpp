@@ -115,6 +115,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
+  std::shared_ptr<AbstractStatisticsObject> pruned(
+      const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
   /**
@@ -174,6 +178,11 @@ class AbstractHistogram : public AbstractStatisticsObject {
    * Returns the largest value in a bin.
    */
   virtual T bin_maximum(const BinID index) const = 0;
+
+  /**
+   * Returns whether the value is contained in a given bin
+   */
+  bool bin_contains(const BinID index, const T& value) const;
 
   /**
    * Returns the number of values in a bin.

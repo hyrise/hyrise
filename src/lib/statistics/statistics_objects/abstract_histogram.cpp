@@ -62,6 +62,11 @@ HistogramBin<T> AbstractHistogram<T>::bin(const BinID index) const {
 }
 
 template <typename T>
+bool AbstractHistogram<T>::bin_contains(const BinID index, const T& value) const {
+  return bin_minimum(index) >= value && value <= bin_maximum(index);
+}
+
+template <typename T>
 typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_width(const BinID index) const {
   DebugAssert(index < bin_count(), "Index is not a valid bin.");
 
@@ -598,6 +603,115 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
   }
 
   Fail("Unreachable, but GCC does not realize...");
+}
+
+template <typename T>
+std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
+    const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
+    const std::optional<AllTypeVariant>& variant_value2) const {
+  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
+    return nullptr;
+  }
+
+  const auto value = lossy_variant_cast<T>(variant_value);
+  DebugAssert(value, "pruned() cannot be called with NULL");
+
+  // For each bin, bin_prunable_height holds TODO
+  std::vector<HistogramCountType> bin_prunable_height(bin_count());
+
+  switch (predicate_condition) {
+    case PredicateCondition::Equals: {
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        if (bin_contains(bin_id, *value)) {
+          // If 5% of the bin match the equals predicate, the other 95% are subject to pruning
+          bin_prunable_height[bin_id] = bin_height(bin_id) - (bin_height(bin_id) / bin_distinct_count(bin_id));
+        } else {
+          // 100% of the bin were subject to the pruning predicate
+          bin_prunable_height[bin_id] = bin_height(bin_id);
+        }
+      }
+    } break;
+
+    case PredicateCondition::NotEquals: {
+      // Find the bin that contains the NotEquals value
+      const auto bin_id = _bin_for_value(*value);
+      if (bin_id == INVALID_BIN_ID) return clone();
+
+      // If the NotEquals value makes for 5% of the bin, the pruning ratio is 5%, too.
+      bin_prunable_height[bin_id] = bin_height(bin_id) / bin_distinct_count(bin_id);
+    } break;
+
+    case PredicateCondition::LessThanEquals: {
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        bin_prunable_height[bin_id] = bin_height(bin_id) * bin_ratio_less_than_equals(bin_id, *value);
+      }
+    } break;
+
+    case PredicateCondition::LessThan: {
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        bin_prunable_height[bin_id] = bin_height(bin_id) * bin_ratio_less_than(bin_id, *value);
+      }
+    } break;
+
+    case PredicateCondition::GreaterThan: {
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than_equals(bin_id, *value));
+      }
+    } break;
+
+    case PredicateCondition::GreaterThanEquals: {
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than(bin_id, *value));
+      }
+    } break;
+
+    case PredicateCondition::BetweenInclusive:
+    case PredicateCondition::BetweenLowerExclusive:
+    case PredicateCondition::BetweenUpperExclusive:
+    case PredicateCondition::BetweenExclusive: {
+      DebugAssert(value2, "Expected second value for between");
+      const auto value2 = lossy_variant_cast<T>(*variant_value2);
+      DebugAssert(value2, "pruned() cannot be called with NULL");
+
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        auto ratio_outside = Selectivity{};
+        ratio_outside += bin_ratio_less_than(bin_id, *value);
+        ratio_outside += 1 - bin_ratio_less_than_equals(bin_id, *value2);
+
+        bin_prunable_height[bin_id] = bin_height(bin_id) * ratio_outside;
+      }
+    } break;
+
+    case PredicateCondition::Like:
+    case PredicateCondition::NotLike:
+      // TODO(anybody) Pruning for (NOT) LIKE not supported, yet
+      return clone();
+
+    case PredicateCondition::In:
+    case PredicateCondition::NotIn:
+    case PredicateCondition::IsNull:
+    case PredicateCondition::IsNotNull:
+      Fail("PredicateCondition not supported by Histograms");
+  }
+
+  size_t total_prunable_values{0};
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+    total_prunable_values += bin_prunable_height[bin_id];
+  }
+
+  const auto pruning_ratio = static_cast<Selectivity>(num_values_pruned) / total_prunable_values;
+
+  GenericHistogramBuilder<T> builder(bin_count(), _domain);
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
+    const auto pruned_height = bin_prunable_height[bin_id] * pruning_ratio;
+
+    // std::cout << "Bin " << bin_id << ": " << bin_prunable_height[bin_id] << " prunable, prune " << pruned_height << std::endl;
+
+    builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) - pruned_height,
+                    bin_distinct_count(bin_id));
+  }
+
+  return builder.build();
 }
 
 template <typename T>

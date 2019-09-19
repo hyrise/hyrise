@@ -756,6 +756,28 @@ TEST_F(GenericHistogramTest, SlicedFloat) {
   test_sliced_with_predicates(histograms, predicates);
 }
 
+TEST_F(GenericHistogramTest, PrunedInt) {
+  // clang-format off
+
+  // Normal histogram, no special cases here
+  const auto histogram_a = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>            { 1, 31, 60, 80},
+    std::vector<int32_t>            {25, 50, 60, 99},
+    std::vector<HistogramCountType> {40, 30, 5,  10},
+    std::vector<HistogramCountType> {10, 20, 1,  1});
+  // clang-format on
+
+  std::cout << *histogram_a << std::endl;
+
+  const auto pruned =
+            histogram_a->pruned(PredicateCondition::BetweenInclusive, 30, 31, 50);
+
+  std::cout << static_cast<GenericHistogram<int32_t>&>(*pruned) << std::endl;
+
+// TODO test all predicate types
+// TODO test matching boundary, histogram gap, middle
+}
+
 TEST_F(GenericHistogramTest, SplitAtEmptyBinBounds) {
   // clang-format off
   const auto histogram = GenericHistogram<int32_t>(

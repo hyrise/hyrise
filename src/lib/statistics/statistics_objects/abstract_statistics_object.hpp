@@ -25,6 +25,14 @@ class AbstractStatisticsObject : private Noncopyable {
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const = 0;
 
   /**
+   * @return A statistics object that represents the data after `num_values_pruned` rows that satisfy the given condition
+   * have been removed
+   */
+  virtual std::shared_ptr<AbstractStatisticsObject> pruned(
+      const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+
+  /**
    * @return a statistics object that represents the data after a filter with the given selectivity has been applied.
    */
   virtual std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const = 0;
