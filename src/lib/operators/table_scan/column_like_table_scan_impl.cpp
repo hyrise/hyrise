@@ -32,8 +32,11 @@ std::string ColumnLikeTableScanImpl::description() const { return "ColumnLike"; 
 void ColumnLikeTableScanImpl::_scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id,
                                                           PosList& matches,
                                                           const std::shared_ptr<const PosList>& position_filter) const {
-  // Select optimized or generic scanning implementation based on segment type
-  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+  // For dictionary segments where the number of unique values is not higher than the number of (potentially filtered)
+  // input rows, use an optimized implementation.
+  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
+      dictionary_segment &&
+      (!position_filter || dictionary_segment->unique_values_count() <= position_filter->size())) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
     _scan_generic_segment(segment, chunk_id, matches, position_filter);
@@ -44,11 +47,9 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(const BaseSegment& segment, 
                                                     PosList& matches,
                                                     const std::shared_ptr<const PosList>& position_filter) const {
   segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
-    // Don't instantiate this for this for DictionarySegments and ReferenceSegments to save compile time.
-    // DictionarySegments are handled in _scan_dictionary_segment()
-    // ReferenceSegments are handled via position_filter
-    if constexpr (!is_dictionary_segment_iterable_v<typename decltype(it)::IterableType> &&
-                  !is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
+    // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
+    // via position_filter
+    if constexpr (!is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
       using ColumnDataType = typename decltype(it)::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
@@ -60,7 +61,7 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(const BaseSegment& segment, 
         Fail("Can only handle strings");
       }
     } else {
-      Fail("Dictionary and ReferenceSegments have their own code paths and should be handled there");
+      Fail("ReferenceSegments have their own code paths and should be handled there");
     }
   });
 }
@@ -68,6 +69,9 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(const BaseSegment& segment, 
 void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
                                                        PosList& matches,
                                                        const std::shared_ptr<const PosList>& position_filter) const {
+  // First, build a bitmap containing 1s/0s for matching/non-matching dictionary values. Second, iterate over the
+  // attribute vector and check against the bitmap. If too many input rows have already been removed (are not part of
+  // position_filter), this optimization is detrimental. See caller for that case.
   std::pair<size_t, std::vector<bool>> result;
 
   if (segment.encoding_type() == EncodingType::Dictionary) {
