@@ -458,7 +458,7 @@ std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() cons
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
   if (_string_offsets) {
-    CompressedVectorType type;
+    CompressedVectorType type = CompressedVectorType::SimdBp128;  // initialize for GCC
     resolve_compressed_vector_type(*(*_string_offsets), [&](const auto& vector) { type = vector.type(); });
     return type;
   }
