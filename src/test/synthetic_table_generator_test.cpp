@@ -115,11 +115,13 @@ auto formatter = [](const testing::TestParamInfo<Params> info) {
   return stream.str();
 };
 
+// For the skewed distribution, we use a location of 1,000 to move the distribution far into the positive number range.
+// The reason is that string values cannot be generated for negative values.
 INSTANTIATE_TEST_SUITE_P(SyntheticTableGeneratorDataType, SyntheticTableGeneratorDataTypeTests,
                          testing::Combine(testing::Values(DataType::Int, DataType::Long, DataType::Float,
                                                           DataType::Double, DataType::String),
                                           testing::Values(ColumnDataDistribution::make_uniform_config(0.0, 10'000),
                                                           ColumnDataDistribution::make_pareto_config(),
-                                                          ColumnDataDistribution::make_skewed_normal_config())),
+                                                          ColumnDataDistribution::make_skewed_normal_config(1'000.0))),
                          formatter);
 }  // namespace opossum
