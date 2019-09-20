@@ -129,7 +129,8 @@ void PostgresProtocolHandler::send_row_description(const std::string& column_nam
   _write_buffer.put_value<int16_t>(0u);          // Text format
 }
 
-void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_strings, const uint32_t string_lengths) {
+void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_strings,
+                                            const uint32_t string_lengths) {
   /*
   DataRow (B)
   Byte1('D')
@@ -153,7 +154,8 @@ void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_
 
   _write_buffer.put_value(NetworkMessageType::DataRow);
 
-  const auto packet_size = LENGTH_FIELD_SIZE + sizeof(uint16_t) + row_strings.size() * LENGTH_FIELD_SIZE + string_lengths;
+  const auto packet_size =
+      LENGTH_FIELD_SIZE + sizeof(uint16_t) + row_strings.size() * LENGTH_FIELD_SIZE + string_lengths;
 
   _write_buffer.put_value<uint32_t>(packet_size);
 
@@ -174,12 +176,13 @@ std::pair<std::string, std::string> PostgresProtocolHandler::read_parse_packet()
 
   const std::string statement_name = _read_buffer.get_string();
   const std::string query = _read_buffer.get_string();
-  
+
   // The number of parameter data types specified (can be zero).
   const auto data_types_specified = _read_buffer.get_value<uint16_t>();
 
   for (auto i = 0; i < data_types_specified; i++) {
-    // Specifies the object ID of the parameter data type. Placing a zero here is equivalent to leaving the type unspecified.
+    // Specifies the object ID of the parameter data type.
+    // Placing a zero here is equivalent to leaving the type unspecified.
     /*auto data_type = */ _read_buffer.get_value<int32_t>();
   }
 
@@ -236,7 +239,7 @@ std::string PostgresProtocolHandler::read_execute_packet() {
   /* https://www.postgresql.org/docs/11/protocol-flow.html:
    The result-row count is only meaningful for portals containing commands that return row sets; in other cases
    the command is always executed to completion, and the row count is ignored.
-  */ 
+  */
   /*const auto max_rows = */ _read_buffer.get_value<int32_t>();
   return portal;
 }

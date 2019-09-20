@@ -104,12 +104,10 @@ std::enable_if_t<std::is_integral_v<Source> && std::is_same_v<pmr_string, Target
 //                it.
 //                Lossless floating point to string conversion might be possible in theory, but standard library
 //                functions do not openly support such a conversion
-
-// TODO(all): Let's discuss this together.
 template <typename Target, typename Source>
 std::enable_if_t<std::is_floating_point_v<Source> && std::is_same_v<pmr_string, Target>, std::optional<Target>>
 lossless_cast(const Source& source) {
-  return pmr_string{std::to_string(source)};
+  return std::nullopt;
 }
 
 // integral to floating point

@@ -39,7 +39,7 @@ class ServerTestRunner : public BaseTest {
     _server_thread->join();
   }
 
-  std::unique_ptr<Server> _server = std::make_unique<Server>(5432);  // run on port 0 so the server can pick a free one
+  std::unique_ptr<Server> _server = std::make_unique<Server>(0);  // run on port 0 so the server can pick a free one
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 
@@ -120,23 +120,6 @@ TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
   const auto result2 = transaction.exec_prepared(prepared_name, param);
   EXPECT_EQ(result2.size(), 2u);
 }
-
-TEST_F(ServerTestRunner, TestUnnamedPreparedStatementt) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
-
-  const std::string prepared_name = "";
-  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ? AND a > ?");
-
-  const auto param = 1234u;
-  const auto result1 = transaction.exec_prepared(prepared_name, param, param);
-  EXPECT_EQ(result1.size(), 1u);
-}
-
-
-
-
-
 
 TEST_F(ServerTestRunner, TestParallelConnections) {
   // This test is by no means perfect, as it can show flaky behaviour. But it is rather hard to get reliable tests with

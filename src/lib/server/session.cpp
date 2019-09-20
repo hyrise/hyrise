@@ -79,9 +79,8 @@ void Session::_handle_simple_query() {
   auto row_count = 0;
   // If there is no result table, e.g. after an INSERT command, we cannot send row data
   if (result_table) {
-    ResponseBuilder::build_row_description(result_table, _postgres_protocol_handler);
-    // TODO(toni): Is that the right place?
-    HyriseCommunicator::send_query_response(result_table, _postgres_protocol_handler);
+    ResponseBuilder::build_and_send_row_description(result_table, _postgres_protocol_handler);
+    ResponseBuilder::build_and_send_query_response(result_table, _postgres_protocol_handler);
     row_count = result_table->row_count();
   }
 
@@ -147,9 +146,8 @@ void Session::_handle_execute() {
   auto row_count = 0;
   // If there is no result table, e.g. after an INSERT command, we cannot send row data
   if (result_table) {
-    ResponseBuilder::build_row_description(result_table, _postgres_protocol_handler);
-    // TODO(toni): Is that the right place?
-    HyriseCommunicator::send_query_response(result_table, _postgres_protocol_handler);
+    ResponseBuilder::build_and_send_row_description(result_table, _postgres_protocol_handler);
+    ResponseBuilder::build_and_send_query_response(result_table, _postgres_protocol_handler);
     row_count = result_table->row_count();
   } else {
     _postgres_protocol_handler->send_status_message(NetworkMessageType::NoDataResponse);

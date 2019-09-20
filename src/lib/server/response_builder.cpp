@@ -1,10 +1,10 @@
-
 #include "response_builder.hpp"
+#include "lossy_cast.hpp"
 
 namespace opossum {
 
-void ResponseBuilder::build_row_description(std::shared_ptr<const Table> table,
-                                            std::shared_ptr<PostgresProtocolHandler> postgres_protocol_handler) {
+void ResponseBuilder::build_and_send_row_description(std::shared_ptr<const Table> table,
+                                            const std::shared_ptr<PostgresProtocolHandler>& postgres_protocol_handler) {
   // Calculate sum of length of all column names
   uint32_t column_lengths_total = 0;
   for (auto& column_name : table->column_names()) {
@@ -41,9 +41,35 @@ void ResponseBuilder::build_row_description(std::shared_ptr<const Table> table,
       default:
         Fail("Bad DataType");
     }
-
     postgres_protocol_handler->send_row_description(table->column_name(column_id), object_id, type_width);
   }
+}
+
+
+uint64_t ResponseBuilder::build_and_send_query_response(std::shared_ptr<const Table> table,
+                                              const std::shared_ptr<PostgresProtocolHandler>& postgres_protocol_handler) {
+  auto attribute_strings = std::vector<std::string>(table->column_count());
+  const auto chunk_count = table->chunk_count();
+
+  // Iterate over each chunk in result table
+  for (ChunkID chunk_id{0}; chunk_id < chunk_count; chunk_id++) {
+    const auto chunk_size = table->get_chunk(chunk_id)->size();
+    const auto segments = table->get_chunk(chunk_id)->segments();
+    // Iterate over each row in chunk
+    for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
+      auto string_lengths = 0;
+      // Iterate over each attribute in row
+      for (size_t current_segment = 0; current_segment < segments.size(); current_segment++) {
+        const auto attribute_value = segments[current_segment]->operator[](current_chunk_offset);
+        const auto string_value = lossy_variant_cast<pmr_string>(attribute_value).value();
+        // Sum up string lengths for a row to save an extra loop during serialization
+        string_lengths += string_value.size();
+        attribute_strings[current_segment] = std::move(string_value);
+      }
+      postgres_protocol_handler->send_data_row(attribute_strings, string_lengths);
+    }
+  }
+  return table->row_count();
 }
 
 std::string ResponseBuilder::build_command_complete_message(const OperatorType root_operator_type,

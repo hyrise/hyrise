@@ -1,38 +1,14 @@
 #include "hyrise_communicator.hpp"
 
-#include "hyrise.hpp"
 #include "SQLParser.h"
 #include "expression/value_expression.hpp"
-#include "lossless_cast.hpp"
+#include "hyrise.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 
 namespace opossum {
-
-uint64_t HyriseCommunicator::send_query_response(std::shared_ptr<const Table> table,
-                                                 std::shared_ptr<PostgresProtocolHandler> postgres_protocol_handler) {
-  auto attribute_strings = std::vector<std::string>(table->column_count());
-  const auto chunk_count = table->chunk_count();
-
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; chunk_id++) {
-    const auto chunk_size = table->get_chunk(chunk_id)->size();
-    const auto segments = table->get_chunk(chunk_id)->segments();
-    for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
-      auto string_lengths = 0;
-      for (size_t current_segment = 0; current_segment < segments.size(); current_segment++) {
-        const auto attribute_value = segments[current_segment]->operator[](current_chunk_offset);
-        // TODO(toni): lossless ?
-        const auto string_value = lossless_variant_cast<pmr_string>(attribute_value).value();
-        attribute_strings[current_segment] = string_value;
-        string_lengths += string_value.size();
-      }
-      postgres_protocol_handler->send_data_row(attribute_strings, string_lengths);
-    }
-  }
-  return table->row_count();
-}
 
 std::pair<std::shared_ptr<const Table>, OperatorType> HyriseCommunicator::execute_pipeline(const std::string& sql) {
   // A simple query command invalidates unnamed statements

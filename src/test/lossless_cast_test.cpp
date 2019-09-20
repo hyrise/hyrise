@@ -143,10 +143,10 @@ TEST_F(LosslessCastTest, StringToNonString) {
 TEST_F(LosslessCastTest, NumberToString) {
   EXPECT_EQ(lossless_cast<pmr_string>(int32_t(2)), "2");
   EXPECT_EQ(lossless_cast<pmr_string>(int64_t(2)), "2");
-  EXPECT_EQ(lossless_cast<pmr_string>(2.5f), "2.500000");
-  EXPECT_EQ(lossless_cast<pmr_string>(3.333f), "3.333000");
-  EXPECT_EQ(lossless_cast<pmr_string>(2.5), "2.500000");
-  EXPECT_EQ(lossless_cast<pmr_string>(3.333), "3.333000");
+  EXPECT_EQ(lossless_cast<pmr_string>(2.5f), std::nullopt);
+  EXPECT_EQ(lossless_cast<pmr_string>(3.333f), std::nullopt);
+  EXPECT_EQ(lossless_cast<pmr_string>(2.5), std::nullopt);
+  EXPECT_EQ(lossless_cast<pmr_string>(3.333), std::nullopt);
 }
 
 TEST_F(LosslessCastTest, VariantCastSafe) {
