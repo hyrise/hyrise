@@ -614,19 +614,12 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
   const auto value = lossy_variant_cast<T>(variant_value);
   DebugAssert(value, "pruned() cannot be called with NULL");
 
-  // For each bin, bin_prunable_height holds TODO
+  // For each bin, bin_prunable_height holds
+  //TODO
   std::vector<HistogramCountType> bin_prunable_height(bin_count());
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
-      // Find the bin that contains the Equals value
-      const auto bin_id = _bin_for_value(*value);
-      if (bin_id == INVALID_BIN_ID) return clone();
-
-      bin_prunable_height[bin_id] = bin_height(bin_id) / bin_distinct_count(bin_id);
-    } break;
-
-    case PredicateCondition::NotEquals: {
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         if (bin_contains(bin_id, *value)) {
           bin_prunable_height[bin_id] = bin_height(bin_id) - (bin_height(bin_id) / bin_distinct_count(bin_id));
@@ -636,27 +629,37 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
       }
     } break;
 
+    case PredicateCondition::NotEquals: {
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        if (bin_contains(bin_id, *value)) {
+          bin_prunable_height[bin_id] = bin_height(bin_id) / bin_distinct_count(bin_id);
+        } else {
+          bin_prunable_height[bin_id] = 0.0f;
+        }
+      }
+    } break;
+
     case PredicateCondition::LessThanEquals: {
-      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-        bin_prunable_height[bin_id] = bin_height(bin_id) * bin_ratio_less_than_equals(bin_id, *value);
-      }
-    } break;
-
-    case PredicateCondition::LessThan: {
-      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-        bin_prunable_height[bin_id] = bin_height(bin_id) * bin_ratio_less_than(bin_id, *value);
-      }
-    } break;
-
-    case PredicateCondition::GreaterThan: {
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than_equals(bin_id, *value));
       }
     } break;
 
-    case PredicateCondition::GreaterThanEquals: {
+    case PredicateCondition::LessThan: {
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than(bin_id, *value));
+      }
+    } break;
+
+    case PredicateCondition::GreaterThan: {
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        bin_prunable_height[bin_id] = bin_height(bin_id) * bin_ratio_less_than_equals(bin_id, *value);
+      }
+    } break;
+
+    case PredicateCondition::GreaterThanEquals: {
+      for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
+        bin_prunable_height[bin_id] = bin_height(bin_id) * bin_ratio_less_than(bin_id, *value);
       }
     } break;
 
@@ -670,8 +673,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         const auto ratio_inside = bin_ratio_less_than_equals(bin_id, *value2) - bin_ratio_less_than(bin_id, *value);
-
-        bin_prunable_height[bin_id] = bin_height(bin_id) * (Selectivity{1} - ratio_inside);
+        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - ratio_inside);
       }
     } break;
 
@@ -695,7 +697,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     return clone();
   }
 
-  const auto pruning_ratio = static_cast<Selectivity>(num_values_pruned) / total_prunable_values;
+  // For a correct histogram, the pruning ratio should never exceed 100%. If, however, the histogram is outdated, we
+  // must make sure that no bin becomes more than empty and that we do not touch the unpruned part of the bin.
+  const auto pruning_ratio = std::min(static_cast<Selectivity>(num_values_pruned) / total_prunable_values, 1.0f);
 
   GenericHistogramBuilder<T> builder(bin_count(), _domain);
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {

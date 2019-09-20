@@ -145,8 +145,17 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       if (_can_prune(*segment_statistics, condition, *value, value2)) {
         const auto& old_statistics =
             stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
-        const auto pruned_statistics = _prune_table_statistics(old_statistics, operator_predicate, chunk->size());
-        stored_table_node->table_statistics = pruned_statistics;
+
+        const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+        if (std::find(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), chunk_id) ==
+            already_pruned_chunk_ids.end()) {
+          // Chunk was not yet marked as pruned - update statistics
+          const auto pruned_statistics = _prune_table_statistics(*old_statistics, operator_predicate, chunk->size());
+          stored_table_node->table_statistics = pruned_statistics;
+        } else {
+          // Chunk was already pruned. While we might prune on a different predicate this time, we must make sure that
+          // we do not over-prune the statistics.
+        }
         result.insert(chunk_id);
       }
     }
@@ -188,17 +197,26 @@ bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const
   return node.type == LQPNodeType::Alias || node.type == LQPNodeType::Projection || node.type == LQPNodeType::Sort;
 }
 
-std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(
-    std::shared_ptr<TableStatistics> old_statistics, OperatorScanPredicate predicate, size_t num_values_pruned) const {
-  auto column_statistics = old_statistics->column_statistics;
+std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const TableStatistics& old_statistics,
+                                                                           OperatorScanPredicate predicate,
+                                                                           size_t num_values_pruned) const {
+  const auto column_count = old_statistics.column_statistics.size();
 
-  column_statistics[predicate.column_id] = column_statistics[predicate.column_id]->pruned(
-      predicate.predicate_condition, num_values_pruned, boost::get<AllTypeVariant>(predicate.value),
-      predicate.value2 ? std::optional<AllTypeVariant>{boost::get<AllTypeVariant>(*predicate.value2)} : std::nullopt);
-  // TODO scale other histograms
+  std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(column_count);
 
-  return statistics = std::make_shared<TableStatistics>(std::move(column_statistics),
-                                                        old_statistics->row_count - num_values_pruned);
+  const auto scale = 1 - (num_values_pruned / old_statistics.row_count);
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    if (column_id == predicate.column_id) {
+      column_statistics[column_id] = old_statistics.column_statistics[column_id]->pruned(
+          predicate.predicate_condition, num_values_pruned, boost::get<AllTypeVariant>(predicate.value),
+          predicate.value2 ? std::optional<AllTypeVariant>{boost::get<AllTypeVariant>(*predicate.value2)}
+                           : std::nullopt);
+    } else {
+      column_statistics[column_id] = old_statistics.column_statistics[column_id]->scaled(scale);
+    }
+  }
+
+  return std::make_shared<TableStatistics>(std::move(column_statistics), old_statistics.row_count - num_values_pruned);
 }
 
 }  // namespace opossum

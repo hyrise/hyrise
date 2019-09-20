@@ -880,7 +880,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
   });
 
-  DebugAssert(output_table_statistics->row_count <=
+  DebugAssert(output_table_statistics->row_count <=  // TODO make assert
                   left_input_table_statistics.row_count * (1 + std::numeric_limits<float>::epsilon()),
               "Semi join should not increase cardinality");
 

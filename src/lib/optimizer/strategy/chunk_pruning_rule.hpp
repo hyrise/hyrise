@@ -38,7 +38,7 @@ class ChunkPruningRule : public AbstractRule {
 
   bool _is_non_filtering_node(const AbstractLQPNode& node) const;
 
-  std::shared_ptr<TableStatistics> _prune_table_statistics(std::shared_ptr<TableStatistics> old_statistics,
+  std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
                                                            OperatorScanPredicate predicate,
                                                            size_t num_values_pruned) const;
 };
