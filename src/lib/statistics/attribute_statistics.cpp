@@ -110,13 +110,13 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
 
 template <typename T>
 std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
-    const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
+    const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
   if (histogram) {
     statistics->set_statistics_object(
-        histogram->pruned(predicate_condition, num_values_pruned, variant_value, variant_value2));
+        histogram->pruned(num_values_pruned, predicate_condition, variant_value, variant_value2));
   }
 
   if (null_value_ratio) {

@@ -207,8 +207,8 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
   const auto scale = 1 - (num_values_pruned / old_statistics.row_count);
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     if (column_id == predicate.column_id) {
-      column_statistics[column_id] = old_statistics.column_statistics[column_id]->pruned(
-          predicate.predicate_condition, num_values_pruned, boost::get<AllTypeVariant>(predicate.value),
+      column_statistics[column_id] = old_statistics.column_statistics[column_id]->pruned(num_values_pruned,
+          predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value),
           predicate.value2 ? std::optional<AllTypeVariant>{boost::get<AllTypeVariant>(*predicate.value2)}
                            : std::nullopt);
     } else {

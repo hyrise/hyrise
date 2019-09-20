@@ -91,7 +91,6 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
 }
 
 template <typename T>
-// TODO test the string optimization of this and bin_ratio_less_than_equals
 float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& value) const {
   if (value <= bin_minimum(bin_id)) {
     return 0.0f;
@@ -609,13 +608,12 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
 template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
-    const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
+    const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
   const auto value = lossy_variant_cast<T>(variant_value);
   DebugAssert(value, "pruned() cannot be called with NULL");
 
-  // For each bin, bin_prunable_height holds
-  //TODO
+  // For each bin, bin_prunable_height holds the number of values that do not fulfill the predicate.
   std::vector<HistogramCountType> bin_prunable_height(bin_count());
 
   switch (predicate_condition) {
