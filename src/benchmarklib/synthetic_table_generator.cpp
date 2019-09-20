@@ -146,7 +146,13 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           if (chunk_index * chunk_size + (row_offset + 1) > num_rows - 2) {
             break;
           }
-          values.push_back(generate_value_by_distribution_type());
+
+          if constexpr (std::is_same_v<ColumnDataType, pmr_string> && column_data_distribution.distribution_type == DataDistributionType::NormalSkewed) {
+            // shift values and remove negative ones, because negative values cannot converted to strings as of now
+            values.push_back(abs(generate_value_by_distribution_type() + 10'000));
+          } else {
+            values.push_back(generate_value_by_distribution_type());
+          }
         }
 
         segments[column_index] =
