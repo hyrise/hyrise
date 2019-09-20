@@ -50,16 +50,6 @@ class ChunkEncoderTest : public BaseTest {
   std::shared_ptr<Table> _table;
 };
 
-TEST_F(ChunkEncoderTest, ParentVectorCompressionType) {
-  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned),
-            VectorCompressionType::FixedSizeByteAligned);
-  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned),
-            VectorCompressionType::FixedSizeByteAligned);
-  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::FixedSize4ByteAligned),
-            VectorCompressionType::FixedSizeByteAligned);
-  ASSERT_EQ(parent_vector_compression_type(CompressedVectorType::SimdBp128), VectorCompressionType::SimdBp128);
-}
-
 TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}};

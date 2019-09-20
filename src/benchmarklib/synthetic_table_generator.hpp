@@ -109,9 +109,6 @@ class SyntheticTableGenerator {
                                        'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
                                        'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
       const size_t chars_base = chars.size();
-
-      // For the current settings, integer valures are guaranteed to not exceed the value range. However, the assertion
-      // is kept as the generated string length might change or the interface (e.g., taking size_t input).
       Assert(static_cast<double>(input) < std::pow(chars_base, variable_string_length),
              "Input too large. Cannot be represented in " + std::to_string(variable_string_length) + " chars.");
 
@@ -128,8 +125,6 @@ class SyntheticTableGenerator {
       }
 
       return result;
-    } else {
-      Fail("Requested type not supported.");
     }
   }
 

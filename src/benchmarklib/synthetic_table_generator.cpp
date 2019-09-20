@@ -33,7 +33,8 @@ pmr_concurrent_vector<T> create_typed_segment_values(const std::vector<int>& val
 
   auto insert_position = size_t{0};
   for (const auto& value : values) {
-    result[insert_position++] = SyntheticTableGenerator::generate_value<T>(value);
+    result[insert_position] = SyntheticTableGenerator::generate_value<T>(value);
+    ++insert_position;
   }
 
   return result;
@@ -164,8 +165,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
         if (segment_encoding_specs) {
           /**
-          * For chunk sizes <1M, parallelizing the segment creation is not worth the overhead, because chunk encoding 
-          * dominates the runtime. Nonetheless, a single thread for the chunk encoder (which itself is parallelizing
+          * As the runtime of the table generation is dominated by the chunk encoding, parallelizing the actual data
+          * generation barely impact the runtime. Nonetheless, a single thread for the chunk encoder (which itself is parallelizing
           * internally) ensures that the segment creation is not blocked by the encoding of the previous chunk. To
           * avoid overparallelizing, there is at most one thread for encode_chunk() at any time.
           **/

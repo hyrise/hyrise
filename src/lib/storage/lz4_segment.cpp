@@ -455,14 +455,15 @@ std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() cons
   return std::nullopt;
 }
 
+// Right now, vector compression is fixed to SimdBp128. This method nonetheless checks for the actual vector
+// compression type. So if the vector compression becomes configurable, this method does not need to be touched.
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
+  std::optional<CompressedVectorType> type;
   if (_string_offsets) {
-    CompressedVectorType type = CompressedVectorType::SimdBp128;  // initialize for GCC
     resolve_compressed_vector_type(*(*_string_offsets), [&](const auto& vector) { type = vector.type(); });
-    return type;
   }
-  return std::nullopt;
+  return type;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(LZ4Segment);

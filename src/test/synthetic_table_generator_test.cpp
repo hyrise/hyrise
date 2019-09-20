@@ -47,11 +47,6 @@ TEST(SyntheticTableGeneratorTest, TestGeneratedValueRange) {
   EXPECT_EQ(table->chunk_count(), row_count / chunk_size);
 }
 
-TEST(SyntheticTableGeneratorTest, ThrowOnGenerateUnsupportedValue) {
-  struct A {};
-  ASSERT_THROW(SyntheticTableGenerator::generate_value<A>(17), std::logic_error);
-}
-
 using Params = std::tuple<DataType, ColumnDataDistribution>;
 
 class SyntheticTableGeneratorDataTypeTests : public testing::TestWithParam<Params> {};
