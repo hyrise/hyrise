@@ -193,10 +193,7 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(std::
   column_statistics[predicate.column_id] = column_statistics[predicate.column_id]->pruned(predicate.predicate_condition, num_values_pruned, boost::get<AllTypeVariant>(predicate.value), predicate.value2 ? std::optional<AllTypeVariant>{boost::get<AllTypeVariant>(*predicate.value2)} : std::nullopt);
   // TODO scale other histograms
 
-  const auto statistics = std::make_shared<TableStatistics>(std::move(column_statistics), old_statistics->row_count - num_values_pruned);
-  std::cout << "=========" << std::endl;
-  std::cout << *statistics << std::endl;
-  return statistics;
+  return statistics = std::make_shared<TableStatistics>(std::move(column_statistics), old_statistics->row_count - num_values_pruned);
 }
 
 }  // namespace opossum

@@ -188,12 +188,6 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
     const auto max_repr = _domain.string_to_number(bin_max.substr(common_prefix_length));
     const auto bin_ratio = static_cast<float>(value_repr - min_repr) / (max_repr - min_repr + 1);
 
-    std::cout << "in_domain_value: " << in_domain_value << std::endl;
-    std::cout << "value_repr: " << value_repr << std::endl;
-    std::cout << "min_repr: " << min_repr << std::endl;
-    std::cout << "max_repr: " << max_repr << std::endl;
-    std::cout << "bin_ratio: " << bin_ratio << std::endl;
-
     return bin_ratio;
   }
 }
@@ -706,7 +700,6 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
     const auto pruned_height = bin_prunable_height[bin_id] * pruning_ratio;
 
-    std::cout << "Bin " << bin_id << ": " << bin_prunable_height[bin_id] << " prunable, prune " << pruned_height << std::endl;
     builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) - pruned_height,
                     bin_distinct_count(bin_id));
   }

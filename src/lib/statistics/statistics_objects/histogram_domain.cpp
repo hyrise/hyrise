@@ -9,8 +9,6 @@ HistogramDomain<pmr_string>::HistogramDomain()
       // length were chosen so that the entire range of IntegralType is covered
       HistogramDomain<pmr_string>(' ', '~', 9) {}
 
-// TODO TPC-H 20 - warum wird p_name BETWEEN so schlecht abgeschätzt?
-
 HistogramDomain<pmr_string>::HistogramDomain(const char min_char, const char max_char, const size_t prefix_length)
     : min_char(min_char), max_char(max_char), prefix_length(prefix_length) {
   Assert(min_char <= max_char, "Invalid character range");
