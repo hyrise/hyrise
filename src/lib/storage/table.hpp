@@ -188,7 +188,7 @@ class Table : private Noncopyable {
    * by this method. Constraint column IDs will always be sorted from here on.
    * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    */
-  void add_unique_constraint(const std::vector<ColumnID>& column_ids, bool primary = false);
+  void add_unique_constraint(const std::vector<ColumnID>& column_ids, const bool primary);
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)

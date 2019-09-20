@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "base_test.hpp"
-#include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
@@ -33,7 +32,7 @@ class ConstraintsTest : public BaseTest {
       auto& sm = Hyrise::get().storage_manager;
       sm.add_table("table", table);
 
-      table->add_unique_constraint({ColumnID{0}});
+      table->add_unique_constraint({ColumnID{0}}, false);
     }
 
     {
@@ -45,7 +44,7 @@ class ConstraintsTest : public BaseTest {
       auto& sm = Hyrise::get().storage_manager;
       sm.add_table("table_nullable", table);
 
-      table->add_unique_constraint({ColumnID{0}});
+      table->add_unique_constraint({ColumnID{0}}, false);
     }
   }
 };
@@ -56,10 +55,10 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
   auto table_nullable = sm.get_table("table_nullable");
 
   // Invalid because the column id is out of range
-  EXPECT_THROW(table->add_unique_constraint({ColumnID{5}}), std::exception);
+  EXPECT_THROW(table->add_unique_constraint({ColumnID{5}}, false), std::exception);
 
   // Invalid because the constraint contains duplicated columns.
-  EXPECT_THROW(table->add_unique_constraint({ColumnID{1}, ColumnID{1}}), std::exception);
+  EXPECT_THROW(table->add_unique_constraint({ColumnID{1}, ColumnID{1}}, false), std::exception);
 
   // Invalid because the column must be non nullable for a primary key.
   EXPECT_THROW(table_nullable->add_unique_constraint({ColumnID{1}}, true), std::exception);
@@ -84,11 +83,11 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
       std::exception);
 
   // Invalid because a constraint on the same column already exists.
-  EXPECT_THROW(table->add_unique_constraint({ColumnID{0}}), std::exception);
+  EXPECT_THROW(table->add_unique_constraint({ColumnID{0}}, false), std::exception);
 
-  table->add_unique_constraint({ColumnID{0}, ColumnID{2}});
+  table->add_unique_constraint({ColumnID{0}, ColumnID{2}}, false);
   // Invalid because a concatenated constraint on the same columns already exists.
-  EXPECT_THROW(table->add_unique_constraint({ColumnID{0}, ColumnID{2}}), std::exception);
+  EXPECT_THROW(table->add_unique_constraint({ColumnID{0}, ColumnID{2}}, false), std::exception);
 }
 
 }  // namespace opossum

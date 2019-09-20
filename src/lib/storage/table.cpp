@@ -270,14 +270,11 @@ std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes
 
 const std::vector<TableConstraintDefinition>& Table::get_unique_constraints() const { return _constraint_definitions; }
 
-void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, bool primary) {
+void Table::add_unique_constraint(const std::vector<ColumnID>& column_ids, const bool primary) {
   for (const auto& column_id : column_ids) {
     Assert(column_id < column_count(), "ColumnID out of range");
     Assert(!primary || !column_is_nullable(column_id), "Column must be not nullable for primary key constraint");
   }
-
-  Assert(column_ids.size() == std::set<ColumnID>(column_ids.begin(), column_ids.end()).size(),
-         "Column IDs must be unique");
 
   {
     auto scoped_lock = acquire_append_mutex();
