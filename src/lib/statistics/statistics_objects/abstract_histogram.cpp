@@ -140,7 +140,8 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     // Determine the common_prefix_lengths of bin_min and bin_max. E.g. bin_max=abcde and bin_max=abcz have a
     // common_prefix_length=3
     auto common_prefix_length = size_t{0};
-    const auto max_common_prefix_length = std::min(bin_min.length() - _domain.prefix_length, bin_max.length() - _domain.prefix_length);
+    const auto max_common_prefix_length =
+        std::min(bin_min.length() - _domain.prefix_length, bin_max.length() - _domain.prefix_length);
     for (; common_prefix_length < max_common_prefix_length; ++common_prefix_length) {
       if (bin_min[common_prefix_length] != bin_max[common_prefix_length]) {
         break;
@@ -175,7 +176,8 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
     const auto bin_max = bin_maximum(bin_id);
 
     auto common_prefix_length = size_t{0};
-    const auto max_common_prefix_length = std::min(bin_min.length() - _domain.prefix_length, bin_max.length() - _domain.prefix_length);
+    const auto max_common_prefix_length =
+        std::min(bin_min.length() - _domain.prefix_length, bin_max.length() - _domain.prefix_length);
     for (; common_prefix_length < max_common_prefix_length; ++common_prefix_length) {
       if (bin_min[common_prefix_length] != bin_max[common_prefix_length]) {
         break;
@@ -609,7 +611,6 @@ template <typename T>
 std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& variant_value2) const {
-
   const auto value = lossy_variant_cast<T>(variant_value);
   DebugAssert(value, "pruned() cannot be called with NULL");
 

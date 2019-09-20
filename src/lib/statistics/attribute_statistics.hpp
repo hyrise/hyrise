@@ -38,8 +38,8 @@ class AttributeStatistics : public BaseAttributeStatistics {
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<BaseAttributeStatistics> pruned(
-    const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+      const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
   std::shared_ptr<AbstractHistogram<T>> histogram;
   std::shared_ptr<MinMaxFilter<T>> min_max_filter;

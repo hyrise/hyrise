@@ -115,7 +115,8 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
   const auto statistics = std::make_shared<AttributeStatistics<T>>();
 
   if (histogram) {
-    statistics->set_statistics_object(histogram->pruned(predicate_condition, num_values_pruned, variant_value, variant_value2));
+    statistics->set_statistics_object(
+        histogram->pruned(predicate_condition, num_values_pruned, variant_value, variant_value2));
   }
 
   if (null_value_ratio) {

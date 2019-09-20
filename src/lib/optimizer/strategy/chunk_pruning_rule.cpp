@@ -143,7 +143,8 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 
       const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
       if (_can_prune(*segment_statistics, condition, *value, value2)) {
-        const auto& old_statistics = stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
+        const auto& old_statistics =
+            stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
         const auto pruned_statistics = _prune_table_statistics(old_statistics, operator_predicate, chunk->size());
         stored_table_node->table_statistics = pruned_statistics;
         result.insert(chunk_id);
@@ -187,13 +188,17 @@ bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const
   return node.type == LQPNodeType::Alias || node.type == LQPNodeType::Projection || node.type == LQPNodeType::Sort;
 }
 
-std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(std::shared_ptr<TableStatistics> old_statistics, OperatorScanPredicate predicate, size_t num_values_pruned) const {
+std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(
+    std::shared_ptr<TableStatistics> old_statistics, OperatorScanPredicate predicate, size_t num_values_pruned) const {
   auto column_statistics = old_statistics->column_statistics;
 
-  column_statistics[predicate.column_id] = column_statistics[predicate.column_id]->pruned(predicate.predicate_condition, num_values_pruned, boost::get<AllTypeVariant>(predicate.value), predicate.value2 ? std::optional<AllTypeVariant>{boost::get<AllTypeVariant>(*predicate.value2)} : std::nullopt);
+  column_statistics[predicate.column_id] = column_statistics[predicate.column_id]->pruned(
+      predicate.predicate_condition, num_values_pruned, boost::get<AllTypeVariant>(predicate.value),
+      predicate.value2 ? std::optional<AllTypeVariant>{boost::get<AllTypeVariant>(*predicate.value2)} : std::nullopt);
   // TODO scale other histograms
 
-  return statistics = std::make_shared<TableStatistics>(std::move(column_statistics), old_statistics->row_count - num_values_pruned);
+  return statistics = std::make_shared<TableStatistics>(std::move(column_statistics),
+                                                        old_statistics->row_count - num_values_pruned);
 }
 
 }  // namespace opossum

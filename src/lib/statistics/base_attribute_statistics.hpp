@@ -47,8 +47,8 @@ class BaseAttributeStatistics {
    * Creates a new AttributeStatistics with num_values_pruned rows that fulfill the predicate removed from the statistics
    */
   virtual std::shared_ptr<BaseAttributeStatistics> pruned(
-    const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
-    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
+      const PredicateCondition predicate_condition, const size_t num_values_pruned, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   const DataType data_type;
 };
