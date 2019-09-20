@@ -11,6 +11,7 @@ TEST(SyntheticTableGeneratorTest, StringGeneration) {
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(0), "          ");
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(1), "         1");
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(2), "         2");
+  EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(17), "         H");
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(117), "        1t");
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(50'018), "       D0k");
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(3'433'820), "      EPIC");
