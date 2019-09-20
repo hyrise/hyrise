@@ -3,8 +3,8 @@
 
 namespace opossum {
 
-void ResponseBuilder::build_and_send_row_description(std::shared_ptr<const Table> table,
-                                            const std::shared_ptr<PostgresProtocolHandler>& postgres_protocol_handler) {
+void ResponseBuilder::build_and_send_row_description(
+    std::shared_ptr<const Table> table, const std::shared_ptr<PostgresProtocolHandler>& postgres_protocol_handler) {
   // Calculate sum of length of all column names
   uint32_t column_lengths_total = 0;
   for (auto& column_name : table->column_names()) {
@@ -45,9 +45,8 @@ void ResponseBuilder::build_and_send_row_description(std::shared_ptr<const Table
   }
 }
 
-
-uint64_t ResponseBuilder::build_and_send_query_response(std::shared_ptr<const Table> table,
-                                              const std::shared_ptr<PostgresProtocolHandler>& postgres_protocol_handler) {
+uint64_t ResponseBuilder::build_and_send_query_response(
+    std::shared_ptr<const Table> table, const std::shared_ptr<PostgresProtocolHandler>& postgres_protocol_handler) {
   auto attribute_strings = std::vector<std::string>(table->column_count());
   const auto chunk_count = table->chunk_count();
 
