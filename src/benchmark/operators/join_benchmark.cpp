@@ -11,6 +11,7 @@
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "synthetic_table_generator.hpp"
@@ -97,11 +98,13 @@ static void BM_JoinInequality(benchmark::State& state) {
     clusterer.execute();
   }
 }
-BENCHMARK(BM_JoinInequality)->RangeMultiplier(2)->Ranges({{2<<18, 2<<25}, {1, 512}, {true, false}});
+BENCHMARK(BM_JoinInequality)->RangeMultiplier(2)->Ranges({{2<<16, 2<<20}, {1, 256}, {true, false}});
 
 static void BM_JoinInequalityStatic(benchmark::State& state) {
+  // Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
   const auto scale_factor = 1'000'000;
-  const auto cluster_count = 8;
+  const auto cluster_count = 32;
   const auto radix_clustering = state.range(0);
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
 
@@ -131,6 +134,8 @@ static void BM_JoinInequalityStatic(benchmark::State& state) {
         false, false, cluster_count);
     clusterer.execute();
   }
+
+  // Hyrise::get().scheduler().finish();
 }
 BENCHMARK(BM_JoinInequalityStatic)->RangeMultiplier(2)->Ranges({{true, false}});
 
