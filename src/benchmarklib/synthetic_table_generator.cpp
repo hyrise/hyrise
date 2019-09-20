@@ -147,7 +147,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             break;
           }
 
-          if constexpr (std::is_same_v<ColumnDataType, pmr_string> && column_data_distribution.distribution_type == DataDistributionType::NormalSkewed) {
+          if constexpr (std::is_same_v<ColumnDataType, pmr_string> &&
+                        column_data_distribution.distribution_type == DataDistributionType::NormalSkewed) {
             // shift values and remove negative ones, because negative values cannot converted to strings as of now
             values.push_back(abs(generate_value_by_distribution_type() + 10'000));
           } else {
