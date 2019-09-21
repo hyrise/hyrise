@@ -96,7 +96,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
-  // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
+  // Run the JoinOrderingRule before the SubqueryToJoinRule, since the Semi/Anti Joins the SubqueryToJoinRule introduces
+  // are opaque to the JoinOrderingRule
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
