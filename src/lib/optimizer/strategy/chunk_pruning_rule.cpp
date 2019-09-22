@@ -134,6 +134,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     auto condition = operator_predicate.predicate_condition;
 
     const auto chunk_count = table.chunk_count();
+    auto num_rows_pruned = size_t{0};
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table.get_chunk(chunk_id);
       if (!chunk) continue;
@@ -143,21 +144,24 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 
       const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
       if (_can_prune(*segment_statistics, condition, *value, value2)) {
-        const auto& old_statistics =
-            stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
-
         const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
         if (std::find(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), chunk_id) ==
             already_pruned_chunk_ids.end()) {
           // Chunk was not yet marked as pruned - update statistics
-          const auto pruned_statistics = _prune_table_statistics(*old_statistics, operator_predicate, chunk->size());
-          stored_table_node->table_statistics = pruned_statistics;
+          num_rows_pruned += chunk->size();
         } else {
           // Chunk was already pruned. While we might prune on a different predicate this time, we must make sure that
           // we do not over-prune the statistics.
         }
         result.insert(chunk_id);
       }
+    }
+
+    if (num_rows_pruned > size_t{0}) {
+      const auto& old_statistics =
+        stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
+      const auto pruned_statistics = _prune_table_statistics(*old_statistics, operator_predicate, num_rows_pruned);
+      stored_table_node->table_statistics = pruned_statistics;
     }
   }
 
