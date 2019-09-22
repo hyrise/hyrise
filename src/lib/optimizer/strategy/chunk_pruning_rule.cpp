@@ -206,9 +206,9 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
   // out of ten, the selectivity is now 100%. Updating the statistics is important so that the predicate ordering
   // can properly order the predicates.
   //
-  // For the column that the predicate pruned on, we remove chunk.size() that do not match the predicate from the
-  // histogram, assuming equidistribution among the pruned values. The other columns are simply scaled to reflect the
-  // reduced table size.
+  // For the column that the predicate pruned on, we remove chunk.size() values that do not match the predicate from
+  // the histogram, assuming equidistribution among the pruned values. The other columns are simply scaled to reflect
+  // the reduced table size.
 
   const auto column_count = old_statistics.column_statistics.size();
 
