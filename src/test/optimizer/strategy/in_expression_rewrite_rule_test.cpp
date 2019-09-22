@@ -86,22 +86,22 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     // Checks that a given node is a predicate of the form `col_a = x` where x is an int and will be added to
     // values_found_in_predicates
     const auto verify_predicate_node = [&](const auto& node) {
-      EXPECT_EQ(node->type, LQPNodeType::Predicate);
+      ASSERT_EQ(node->type, LQPNodeType::Predicate);
       auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-      EXPECT_TRUE(predicate_node);
+      ASSERT_TRUE(predicate_node);
       auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
-      EXPECT_TRUE(predicate);
+      ASSERT_TRUE(predicate);
       EXPECT_EQ(predicate->left_operand(), col_a);
-      EXPECT_EQ(predicate->right_operand()->type, ExpressionType::Value);
+      ASSERT_EQ(predicate->right_operand()->type, ExpressionType::Value);
       values_found_in_predicates.emplace_back(
           boost::get<int>(dynamic_cast<ValueExpression&>(*predicate->right_operand()).value));
     };
 
     auto current_node = result_lqp;
     for (auto union_node_idx = 0; union_node_idx < 4; ++union_node_idx) {
-      EXPECT_EQ(current_node->type, LQPNodeType::Union);
+      ASSERT_EQ(current_node->type, LQPNodeType::Union);
       auto union_node = std::dynamic_pointer_cast<UnionNode>(current_node);
-      EXPECT_TRUE(union_node);
+      ASSERT_TRUE(union_node);
       EXPECT_EQ(union_node->union_mode, UnionMode::All);
 
       verify_predicate_node(union_node->right_input());
