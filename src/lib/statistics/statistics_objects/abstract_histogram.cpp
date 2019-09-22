@@ -111,22 +111,21 @@ float AbstractHistogram<T>::bin_ratio_less_than(const BinID bin_id, const T& val
     *  1. For two strings s1 and s2: s1 < s2 -> repr(s1) < repr(s2)
     *  2. For two strings s1 and s2: dist(s1, s2) == repr(s2) - repr(s1)
     *  repr(s) is the numerical representation for a string s, and dist(s1, s2) returns the number of strings between
-    *  s1 and s2 in the domain of strings with at most length `common_prefix_length`
-    *  and the set of supported characters in the `_domain`.
+    *  s1 and s2 in the domain of strings with at most length `_domain.prefix_length` and the set of supported
+    * characters in the `_domain`.
     *
-    * Thus, we calculate the range based only on a domain of strings with a maximum length of `string_prefix_length`
-    * characters.
-    * However, we make use of a trick: if the bin edges share a common prefix, we strip that common prefix and
-    * take the substring starting after that prefix.
+    * Thus, we calculate the range based only on a domain of strings with a maximum length of `_domain.prefix_length`
+    * characters. To improve estimations where strings exceed that length, but share a common prefix, we strip that
+    * common prefix and take the substring starting after that prefix.
     *
     * Example:
     *  - bin: ["intelligence", "intellij"]
     *  - _domain.supported_characters: [a-z]
-    *  - common_prefix_length: 4
+    *  - _domain.prefix_length: 4
     *  - value: intelligent
     *
     *  Traditionally, if we did not strip the common prefix, we would calculate the range based on the
-    *  substring of length `string_prefix_length`, which is "inte" for both lower and upper edge of the bin.
+    *  substring of length `_domain.prefix_length`, which is "inte" for both lower and upper edge of the bin.
     *  We could not make a reasonable assumption how large the share is.
     *  Instead, we strip the common prefix ("intelli") and calculate the share based on the numerical representation
     *  of the substring after the common prefix.
@@ -191,6 +190,13 @@ float AbstractHistogram<T>::bin_ratio_less_than_equals(const BinID bin_id, const
 
     return bin_ratio;
   }
+}
+
+template <typename T>
+float AbstractHistogram<T>::bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const {
+  // All values that are less than or equal to the upper boundary minus all values that are smaller than the lower
+  // boundary
+  return bin_ratio_less_than_equals(bin_id, value2) - bin_ratio_less_than(bin_id, value);
 }
 
 template <typename T>
@@ -618,6 +624,8 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
 
   switch (predicate_condition) {
     case PredicateCondition::Equals: {
+      // Bins that do not contain the value are fully prunable. In the bin that contains the value, there are
+      // `height / distinct_count` instances of the value that satisfies the predicate. All other values are prunable.
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         if (bin_contains(bin_id, *value)) {
           bin_prunable_height[bin_id] = bin_height(bin_id) - (bin_height(bin_id) / bin_distinct_count(bin_id));
@@ -628,6 +636,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     } break;
 
     case PredicateCondition::NotEquals: {
+      // Bins that do not contain the value are NOT prunable. In the bin that contains the value, there are
+      // `height / distinct_count` instances of the value that DO NOT satisfy the predicate. All other values are
+      // prunable.
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         if (bin_contains(bin_id, *value)) {
           bin_prunable_height[bin_id] = bin_height(bin_id) / bin_distinct_count(bin_id);
@@ -638,24 +649,29 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     } break;
 
     case PredicateCondition::LessThanEquals: {
+      // For bins that are completely less than/equal to the value, bin_ratio_less_than_equals is 100% and no values
+      // are prunable. After that, the inverse bin_ratio_less_than_equals is prunable.
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than_equals(bin_id, *value));
       }
     } break;
 
     case PredicateCondition::LessThan: {
+      // Analogous to LessThanEquals
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_less_than(bin_id, *value));
       }
     } break;
 
     case PredicateCondition::GreaterThan: {
+      // Analogous to LessThanEquals
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         bin_prunable_height[bin_id] = bin_height(bin_id) * bin_ratio_less_than_equals(bin_id, *value);
       }
     } break;
 
     case PredicateCondition::GreaterThanEquals: {
+      // Analogous to LessThanEquals
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
         bin_prunable_height[bin_id] = bin_height(bin_id) * bin_ratio_less_than(bin_id, *value);
       }
@@ -665,13 +681,13 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
     case PredicateCondition::BetweenLowerExclusive:
     case PredicateCondition::BetweenUpperExclusive:
     case PredicateCondition::BetweenExclusive: {
+      // Treating all between conditions the same for now. Analogous to LessThanEquals.
       DebugAssert(variant_value2, "Expected second value for between");
       const auto value2 = lossy_variant_cast<T>(*variant_value2);
       DebugAssert(value2, "pruned() cannot be called with NULL");
 
       for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
-        const auto ratio_inside = bin_ratio_less_than_equals(bin_id, *value2) - bin_ratio_less_than(bin_id, *value);
-        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - ratio_inside);
+        bin_prunable_height[bin_id] = bin_height(bin_id) * (1.0f - bin_ratio_between(bin_id, *value, *value2));
       }
     } break;
 
@@ -691,20 +707,23 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
   for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     total_prunable_values += bin_prunable_height[bin_id];
   }
+
+  // Without prunable values, the histogram is out-of-date. Return an unmodified histogram to avoid DIV/0 below.
   if (total_prunable_values == HistogramCountType{0}) {
     return clone();
   }
 
-  // For a correct histogram, the pruning ratio should never exceed 100%. If, however, the histogram is outdated, we
-  // must make sure that no bin becomes more than empty and that we do not touch the unpruned part of the bin.
+  // For an up-to-date histogram, the pruning ratio should never exceed 100%. If, however, the histogram is outdated
+  // we must make sure that no bin becomes more than empty and that we do not touch the unpruned part of the bin.
   const auto pruning_ratio = std::min(static_cast<Selectivity>(num_values_pruned) / total_prunable_values, 1.0f);
 
   GenericHistogramBuilder<T> builder(bin_count(), _domain);
   for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
     const auto pruned_height = bin_prunable_height[bin_id] * pruning_ratio;
+    const auto new_bin_height = bin_height(bin_id) - pruned_height;
+    if (new_bin_height == 0) continue;
 
-    builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) - pruned_height,
-                    bin_distinct_count(bin_id));
+    builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), new_bin_height, bin_distinct_count(bin_id));
   }
 
   return builder.build();

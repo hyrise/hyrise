@@ -217,6 +217,11 @@ class AbstractHistogram : public AbstractStatisticsObject {
   float bin_ratio_less_than_equals(const BinID bin_id, const T& value) const;
   /** @} */
 
+  /**
+   * Returns the share of the value range of a bin that is within [value, value2], i.e., BetweenInclusive
+   */
+  float bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const;
+
  protected:
   // Call after constructor of the derived histogram has finished to check whether the bins are valid
   // (e.g. do not overlap).

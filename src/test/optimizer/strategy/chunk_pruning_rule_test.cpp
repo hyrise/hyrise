@@ -81,8 +81,6 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
     std::vector<HistogramCountType> {0,  0,   2},
     std::vector<HistogramCountType> {1,  1,   1}};
   // clang-format on
-
-  std::cout << *stored_table_node->table_statistics << std::endl;
 }
 
 TEST_F(ChunkPruningRuleTest, SimpleChinkPruningTestWithColumnPruning) {
