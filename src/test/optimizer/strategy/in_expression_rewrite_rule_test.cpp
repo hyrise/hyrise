@@ -112,7 +112,8 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     verify_predicate_node(current_node);
 
     std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
-    EXPECT_EQ(values_found_in_predicates, std::vector<int>{1, 2, 3, 4, 5});
+    const auto expected_values = std::vector<int>{1, 2, 3, 4, 5};
+    EXPECT_EQ(values_found_in_predicates, expected_values);
   }
 
   {
