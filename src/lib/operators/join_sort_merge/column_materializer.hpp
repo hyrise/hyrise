@@ -92,7 +92,7 @@ class ColumnMaterializer {
       }
     }
 
-    return {std::move(output), std::move(null_rows), std::move(gathered_samples)};
+    return {output, std::move(null_rows), gathered_samples};
   }
 
  private:
