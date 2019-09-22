@@ -264,7 +264,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   table_info_by_name["orders"].table = orders_table;
 
   auto lineitem_table = lineitem_builder.finish_table();
-  lineitem_table->add_unique_constraint({lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")}, true);
+  lineitem_table->add_unique_constraint(
+      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")}, true);
   table_info_by_name["lineitem"].table = lineitem_table;
 
   auto part_table = part_builder.finish_table();
@@ -272,7 +273,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   table_info_by_name["part"].table = part_table;
 
   auto partsupp_table = partsupp_builder.finish_table();
-  partsupp_table->add_unique_constraint({partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")}, true);
+  partsupp_table->add_unique_constraint(
+      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")}, true);
   table_info_by_name["partsupp"].table = partsupp_table;
 
   auto supplier_table = supplier_builder.finish_table();
