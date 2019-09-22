@@ -80,34 +80,39 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     const auto input_lqp = PredicateNode::make(five_element_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-    // clang-format off
-    // Account for different order produced by ExpressionUnorderedSet
-#ifdef __GLIBCXX__
-    const auto expected_lqp =
-      UnionNode::make(UnionMode::All,
-        UnionNode::make(UnionMode::All,
-          UnionNode::make(UnionMode::All,
-            UnionNode::make(UnionMode::All,
-              PredicateNode::make(equals_(col_a, 5), node),
-              PredicateNode::make(equals_(col_a, 3), node)),
-            PredicateNode::make(equals_(col_a, 2), node)),
-          PredicateNode::make(equals_(col_a, 4), node)),
-        PredicateNode::make(equals_(col_a, 1), node));
-#else
-    const auto expected_lqp =
-      UnionNode::make(UnionMode::All,
-        UnionNode::make(UnionMode::All,
-          UnionNode::make(UnionMode::All,
-            UnionNode::make(UnionMode::All,
-              PredicateNode::make(equals_(col_a, 5), node),
-              PredicateNode::make(equals_(col_a, 4), node)),
-            PredicateNode::make(equals_(col_a, 3), node)),
-          PredicateNode::make(equals_(col_a, 2), node)),
-        PredicateNode::make(equals_(col_a, 1), node));
-#endif
-    // clang-format on
+    // Can't use EXPECT_LQP_EQ here, because ExpressionUnorderedSet produces a non-deterministic order of predicates
+    auto values_found_in_predicates = std::vector<int>{};
 
-    EXPECT_LQP_EQ(result_lqp, expected_lqp);
+    // Checks that a given node is a predicate of the form `col_a = x` where x is an int and will be added to
+    // values_found_in_predicates
+    const auto verify_predicate_node = [&](const auto& node) {
+      EXPECT_EQ(node->type, LQPNodeType::Predicate);
+      auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+      EXPECT_TRUE(predicate_node);
+      auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
+      EXPECT_TRUE(predicate);
+      EXPECT_EQ(predicate->left_operand(), col_a);
+      EXPECT_EQ(predicate->right_operand()->type, ExpressionType::Value);
+      values_found_in_predicates.emplace_back(
+          boost::get<int>(dynamic_cast<ValueExpression&>(*predicate->right_operand()).value));
+    };
+
+    auto current_node = result_lqp;
+    for (auto union_node_idx = 0; union_node_idx < 4; ++union_node_idx) {
+      EXPECT_EQ(current_node->type, LQPNodeType::Union);
+      auto union_node = std::dynamic_pointer_cast<UnionNode>(current_node);
+      EXPECT_TRUE(union_node);
+      EXPECT_EQ(union_node->union_mode, UnionMode::All);
+
+      verify_predicate_node(union_node->right_input());
+
+      current_node = union_node->left_input();
+    }
+    // After checking four union nodes, the last node has predicates on both sides
+    verify_predicate_node(current_node);
+
+    std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
+    EXPECT_EQ(values_found_in_predicates, std::vector<int>{1, 2, 3, 4, 5});
   }
 
   {
