@@ -15,7 +15,6 @@
 #include "operators/join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -228,7 +227,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmar
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+    Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
   }
 }
 
@@ -246,7 +245,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+    Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
   }
 }
 
@@ -294,7 +293,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_SortMergeSemiProbeRelationLarger)(
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state) {
-  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  // Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto& sm = Hyrise::get().storage_manager;
   auto orders_table = sm.get_table("orders");
@@ -314,11 +313,11 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state)
     join->execute();
   }
 
-  // CurrentScheduler::get()->finish();
+  // Hyrise::get().scheduler().finish();
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling2)(benchmark::State& state) {
-  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  // Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto& sm = Hyrise::get().storage_manager;
   auto orders_table = sm.get_table("orders");
@@ -338,11 +337,11 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling2)(benchmark::State& state
     join->execute();
   }
 
-  // CurrentScheduler::get()->finish();
+  // Hyrise::get().scheduler().finish();
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_MT)(benchmark::State& state) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto& sm = Hyrise::get().storage_manager;
   auto orders_table = sm.get_table("orders");
@@ -361,12 +360,12 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_MT)(benchmark::State& st
     auto sort_output = clusterer.execute();
   }
 
-  CurrentScheduler::get()->finish();
-  CurrentScheduler::set(nullptr);
+  Hyrise::get().scheduler().finish();
+  Hyrise::get().set_scheduler(nullptr);
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_ST)(benchmark::State& state) {
-  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  // Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto& sm = Hyrise::get().storage_manager;
   auto orders_table = sm.get_table("orders");
@@ -385,11 +384,11 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_ST)(benchmark::State& st
     auto sort_output = clusterer.execute();
   }
 
-  // CurrentScheduler::get()->finish();
+  // Hyrise::get().scheduler().finish();
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_MT)(benchmark::State& state) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto& sm = Hyrise::get().storage_manager;
   auto orders_table = sm.get_table("orders");
@@ -408,12 +407,12 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_MT)(benchmark::State& st
     auto sort_output = clusterer.execute();
   }
 
-  CurrentScheduler::get()->finish();
-  CurrentScheduler::set(nullptr);
+  Hyrise::get().scheduler().finish();
+  Hyrise::get().set_scheduler(nullptr);
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_ST)(benchmark::State& state) {
-  // CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  // Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto& sm = Hyrise::get().storage_manager;
   auto orders_table = sm.get_table("orders");
@@ -432,7 +431,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_ST)(benchmark::State& st
     auto sort_output = clusterer.execute();
   }
 
-  // CurrentScheduler::get()->finish();
+  // Hyrise::get().scheduler().finish();
 }
 
 }  // namespace opossum

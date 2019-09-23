@@ -96,6 +96,11 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
                                                                    const TableStatistics& left_input_table_statistics,
                                                                    const TableStatistics& right_input_table_statistics);
 
+  static std::shared_ptr<TableStatistics> estimate_semi_join(const ColumnID left_column_id,
+                                                             const ColumnID right_column_id,
+                                                             const TableStatistics& left_input_table_statistics,
+                                                             const TableStatistics& right_input_table_statistics);
+
   static std::shared_ptr<TableStatistics> estimate_cross_join(const TableStatistics& left_input_table_statistics,
                                                               const TableStatistics& right_input_table_statistics);
   template <typename T>

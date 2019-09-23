@@ -6,8 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -81,7 +81,7 @@ class ColumnMaterializer {
       jobs.back()->schedule();
     }
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().scheduler().wait_for_tasks(jobs);
 
     auto gathered_samples = std::vector<T>();
     if (_gather_samples) {  
@@ -92,7 +92,7 @@ class ColumnMaterializer {
       }
     }
 
-    return {std::move(output), std::move(null_rows), std::move(gathered_samples)};
+    return {output, std::move(null_rows), gathered_samples};
   }
 
  private:
@@ -145,30 +145,28 @@ class ColumnMaterializer {
                                                                        const ChunkID chunk_id,
                                                                        std::unique_ptr<PosList>& null_rows_output,
                                                                        Subsample<T>& subsample) {
-    auto output = MaterializedSegment<T>{};
-    output.reserve(segment.size());
+    auto output = std::make_shared<MaterializedSegment<T>>();
+    output->reserve(segment.size());
 
     segment_iterate<T>(segment, [&](const auto& position) {
       const auto row_id = RowID{chunk_id, position.chunk_offset()};
-      if (position.is_null()) {
-        if (_materialize_null) {
-          null_rows_output->emplace_back(row_id);
-        }
+      if (_materialize_null && position.is_null()) {
+        null_rows_output->emplace_back(row_id);
       } else {
-        output.emplace_back(MaterializedValue<T>{row_id, position.value()});
+        output->emplace_back(MaterializedValue<T>{row_id, position.value()});
       }
     });
 
     if (_sort_materialized_segments) {
-      std::sort(output.begin(), output.end(),
+      std::sort(output->begin(), output->end(),
                 [](const auto& left, const auto& right) { return left.value < right.value; });
     }
 
     if (_gather_samples) {
-      _gather_samples_from_segment(output, subsample);
+      _gather_samples_from_segment(*output, subsample);
     }
 
-    return std::make_shared<MaterializedSegment<T>>(std::move(output));
+    return output;
   }
 
   /**
@@ -178,8 +176,8 @@ class ColumnMaterializer {
                                                                           const ChunkID chunk_id,
                                                                           std::unique_ptr<PosList>& null_rows_output,
                                                                           Subsample<T>& subsample) {
-    auto output = MaterializedSegment<T>{};
-    output.reserve(segment.size());
+    auto output = std::make_shared<MaterializedSegment<T>>();
+    output->reserve(segment.size());
 
     auto base_attribute_vector = segment.attribute_vector();
     auto dict = segment.dictionary();
@@ -205,10 +203,10 @@ class ColumnMaterializer {
           auto value_id = static_cast<ValueID>(*value_id_it);
 
           if (value_id != null_value_id) {
-            rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
+            rows_with_value[value_id].emplace_back(RowID{chunk_id, chunk_offset});
           } else {
             if (_materialize_null) {
-              null_rows_output->push_back(RowID{chunk_id, chunk_offset});
+              null_rows_output->emplace_back(RowID{chunk_id, chunk_offset});
             }
           }
         }
@@ -218,7 +216,7 @@ class ColumnMaterializer {
       ChunkOffset chunk_offset{0};
       for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
         for (auto& row_id : rows_with_value[value_id]) {
-          output.emplace_back(MaterializedValue<T>{row_id, (*dict)[value_id]});
+          output->emplace_back(MaterializedValue<T>{row_id, (*dict)[value_id]});
           ++chunk_offset;
         }
       }
@@ -226,21 +224,19 @@ class ColumnMaterializer {
       auto iterable = create_iterable_from_segment(segment);
       iterable.for_each([&](const auto& position) {
         const auto row_id = RowID{chunk_id, position.chunk_offset()};
-        if (position.is_null()) {
-          if (_materialize_null) {
-            null_rows_output->emplace_back(row_id);
-          }
+        if (_materialize_null && position.is_null()) {
+          null_rows_output->emplace_back(row_id);
         } else {
-          output.emplace_back(MaterializedValue<T>{row_id, position.value()});
+          output->emplace_back(MaterializedValue<T>{row_id, position.value()});
         }
       });
     }
 
     if (_gather_samples) {
-      _gather_samples_from_segment(output, subsample);
+      _gather_samples_from_segment(*output, subsample);
     }
 
-    return std::make_shared<MaterializedSegment<T>>(std::move(output));
+    return output;
   }
 
  private:

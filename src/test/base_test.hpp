@@ -12,7 +12,6 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/table_scan.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "statistics/attribute_statistics.hpp"
@@ -42,14 +41,22 @@ class BaseTestWithParam
  protected:
   // creates a dictionary segment with the given type and values
   template <typename T>
-  static std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_type,
-                                                                           const std::vector<T>& values) {
-    auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
-    auto value_segment = std::make_shared<ValueSegment<T>>(std::move(vector_values));
+  static std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(
+      DataType data_type, const std::vector<std::optional<T>>& values) {
+    auto value_segment = std::make_shared<ValueSegment<T>>(true);
 
-    auto compressed_segment =
+    for (const auto& value : values) {
+      if (value) {
+        value_segment->append(*value);
+      } else {
+        value_segment->append(NULL_VALUE);
+      }
+    }
+
+    const auto& dict_segment =
         encode_and_compress_segment(value_segment, data_type, SegmentEncodingSpec{EncodingType::Dictionary});
-    return std::static_pointer_cast<DictionarySegment<T>>(compressed_segment);
+
+    return std::static_pointer_cast<DictionarySegment<T>>(dict_segment);
   }
 
   void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
@@ -65,9 +72,6 @@ class BaseTestWithParam
    * GTest runs the destructor right after TearDown(): https://github.com/abseil/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown
    */
   ~BaseTestWithParam() {
-    // Reset scheduler first so that all tasks are done before we kill the StorageManager
-    CurrentScheduler::set(nullptr);
-
     Hyrise::reset();
     SQLPipelineBuilder::default_pqp_cache = nullptr;
     SQLPipelineBuilder::default_lqp_cache = nullptr;
@@ -102,18 +106,11 @@ class BaseTestWithParam
     return std::make_shared<TableScan>(in, predicate);
   }
 
-  static std::shared_ptr<MockNode> create_mock_node_with_statistics(
-      const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
+  static void set_statistics_for_mock_node(
+      const std::shared_ptr<MockNode>& mock_node, const size_t row_count,
       const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
-    Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
-
-    const auto mock_node = MockNode::make(column_definitions);
-
-    auto column_data_types = std::vector<DataType>{column_definitions.size()};
-    std::transform(column_definitions.begin(), column_definitions.end(), column_data_types.begin(),
-                   [&](const auto& column_definition) { return column_definition.first; });
-
-    auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{column_definitions.size()};
+    const auto& column_definitions = mock_node->column_definitions();
+    auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_definitions.size());
 
     for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
       resolve_data_type(column_definitions[column_id].first, [&](const auto data_type_t) {
@@ -127,6 +124,16 @@ class BaseTestWithParam
 
     const auto table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
     mock_node->set_table_statistics(table_statistics);
+  }
+
+  static std::shared_ptr<MockNode> create_mock_node_with_statistics(
+      const MockNode::ColumnDefinitions& column_definitions, const size_t row_count,
+      const std::vector<std::shared_ptr<AbstractStatisticsObject>>& statistics_objects) {
+    Assert(column_definitions.size() == statistics_objects.size(), "Column count mismatch");
+
+    const auto mock_node = MockNode::make(column_definitions);
+
+    set_statistics_for_mock_node(mock_node, row_count, statistics_objects);
 
     return mock_node;
   }
@@ -154,6 +161,21 @@ class BaseTestWithParam
     }
 
     return chunk_encoding_spec;
+  }
+
+  static std::vector<SegmentEncodingSpec> get_supporting_segment_encodings_specs(const DataType data_type,
+                                                                                 const bool include_unencoded = true) {
+    std::vector<SegmentEncodingSpec> segment_encodings;
+    for (const auto& spec : all_segment_encoding_specs) {
+      // Add all encoding types to the returned vector if they support the given data type. As some test cases work on
+      // encoded segments only, it is further tested if the segment is not encoded and if segments of type Unencoded
+      // should be included or not (flag `include_unencoded`).
+      if (encoding_supports_data_type(spec.encoding_type, data_type) &&
+          (spec.encoding_type != EncodingType::Unencoded || include_unencoded)) {
+        segment_encodings.emplace_back(spec);
+      }
+    }
+    return segment_encodings;
   }
 };
 

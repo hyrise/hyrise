@@ -36,7 +36,6 @@ class ChunkEncoderTest : public BaseTest {
     }
   }
 
- protected:
   void verify_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
     for (auto column_id = ColumnID{0u}; column_id < chunk->column_count(); ++column_id) {
       const auto segment = chunk->get_segment(column_id);

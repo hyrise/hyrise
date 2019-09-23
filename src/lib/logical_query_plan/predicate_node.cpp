@@ -28,6 +28,8 @@ std::string PredicateNode::description() const {
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }
 
+size_t PredicateNode::_shallow_hash() const { return boost::hash_value(scan_type); }
+
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<PredicateNode>(expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping));
 }

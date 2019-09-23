@@ -52,7 +52,7 @@ TEST_F(JitCodeSpecializerTest, InlinesVirtualCalls) {
 
   {
     // We "specialize" the function without providing any runtime information
-    JitCodeSpecializer code_specializer(*_repository);
+    JitCodeSpecializer code_specializer(_repository);
     const auto specialized_module =
         code_specializer.specialize_function(virtual_call_fn_symbol, std::make_shared<JitRuntimePointer>());
 
@@ -67,7 +67,7 @@ TEST_F(JitCodeSpecializerTest, InlinesVirtualCalls) {
     // Create an operation instance
     Decrement dec;
 
-    JitCodeSpecializer code_specializer(*_repository);
+    JitCodeSpecializer code_specializer(_repository);
     // Pass a pointer of the instance to the specialization engine for specializing the module.
     const auto specialized_module =
         code_specializer.specialize_function(virtual_call_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&dec));
@@ -97,7 +97,7 @@ TEST_F(JitCodeSpecializerTest, InlinesVirtualCalls) {
   {
     // We repeat the above test with a different type of operation.
     Increment inc;
-    JitCodeSpecializer code_specializer(*_repository);
+    JitCodeSpecializer code_specializer(_repository);
     const auto specialized_module =
         code_specializer.specialize_function(virtual_call_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&inc));
 
@@ -130,7 +130,7 @@ TEST_F(JitCodeSpecializerTest, ReplacesLoadInstructions) {
 
   {
     // We "specialize" the function without providing any runtime information
-    JitCodeSpecializer code_specializer(*_repository);
+    JitCodeSpecializer code_specializer(_repository);
     const auto specialized_module =
         code_specializer.specialize_function(load_replacement_fn_symbol, std::make_shared<JitRuntimePointer>());
 
@@ -145,7 +145,7 @@ TEST_F(JitCodeSpecializerTest, ReplacesLoadInstructions) {
     // Create the operation instance
     IncrementByN inc_by_5(5);
 
-    JitCodeSpecializer code_specializer(*_repository);
+    JitCodeSpecializer code_specializer(_repository);
     // Pass a pointer of the instance to the specialization engine for specializing the module.
     const auto specialized_module = code_specializer.specialize_function(
         load_replacement_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&inc_by_5));
@@ -188,7 +188,7 @@ TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
   }));
 
   {
-    JitCodeSpecializer code_specializer(*_repository);
+    JitCodeSpecializer code_specializer(_repository);
     // Run the code specialization WITHOUT loop unrolling
     const auto specialized_module = code_specializer.specialize_function(
         apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&multiple_operations), false);
@@ -206,7 +206,7 @@ TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
     ASSERT_GE(num_call_instructions, 1u);
   }
   {
-    JitCodeSpecializer code_specializer(*_repository);
+    JitCodeSpecializer code_specializer(_repository);
     const auto specialized_module = code_specializer.specialize_function(
         apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&multiple_operations), true);
 

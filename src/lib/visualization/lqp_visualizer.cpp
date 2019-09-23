@@ -43,18 +43,22 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
 
-  _add_vertex(node, node->description());
+  auto node_label = node->description();
+  if (!node->comment.empty()) {
+    node_label += "\\n(" + node->comment + ")";
+  }
+  _add_vertex(node, node_label);
 
   if (node->left_input()) {
     auto left_input = node->left_input();
     _build_subtree(left_input, visualized_nodes, visualized_sub_queries);
-    _build_dataflow(left_input, node);
+    _build_dataflow(left_input, node, InputSide::Left);
   }
 
   if (node->right_input()) {
     auto right_input = node->right_input();
     _build_subtree(right_input, visualized_nodes, visualized_sub_queries);
-    _build_dataflow(right_input, node);
+    _build_dataflow(right_input, node, InputSide::Right);
   }
 
   // Visualize subqueries
@@ -79,13 +83,13 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 }
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
-                                    const std::shared_ptr<AbstractLQPNode>& to) {
+                                    const std::shared_ptr<AbstractLQPNode>& to, const InputSide side) {
   float row_count, row_percentage = 100.0f;
   double pen_width;
 
   try {
     row_count = _cardinality_estimator.estimate_cardinality(from);
-    pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
+    pen_width = row_count;
   } catch (...) {
     // statistics don't exist for this edge
     row_count = NAN;
@@ -115,6 +119,9 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   VizEdgeInfo info = _default_edge;
   info.label = label_stream.str();
   info.pen_width = pen_width;
+  if (to->input_count() == 2) {
+    info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
+  }
 
   _add_edge(from, to, info);
 }

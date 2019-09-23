@@ -9,6 +9,13 @@ bool TableColumnDefinition::operator==(const TableColumnDefinition& rhs) const {
   return name == rhs.name && data_type == rhs.data_type && nullable == rhs.nullable;
 }
 
+size_t TableColumnDefinition::hash() const {
+  auto hash = boost::hash_value(name);
+  boost::hash_combine(hash, data_type);
+  boost::hash_combine(hash, nullable);
+  return hash;
+}
+
 TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs) {
   auto column_definitions = lhs;
   column_definitions.insert(column_definitions.end(), rhs.begin(), rhs.end());

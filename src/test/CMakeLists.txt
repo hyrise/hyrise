@@ -119,8 +119,10 @@ set(
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
+    optimizer/strategy/in_expression_rewrite_rule_test.cpp
     optimizer/strategy/insert_limit_in_exists_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
+    optimizer/strategy/join_predicate_ordering_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
@@ -176,6 +178,7 @@ set(
     storage/single_segment_index_test.cpp
     storage/storage_manager_test.cpp
     storage/table_test.cpp
+    storage/table_column_definition_test.cpp
     storage/value_segment_test.cpp
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
@@ -202,6 +205,7 @@ set (
     ${SHARED_SOURCES}
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    tpc/tpcds_db_generator_test.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp

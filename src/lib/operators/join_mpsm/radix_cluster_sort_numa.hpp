@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "column_materializer_numa.hpp"
+#include "hyrise.hpp"
 #include "operators/join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "resolve_type.hpp"
 
@@ -213,7 +214,7 @@ class RadixClusterSortNUMA {
       job->schedule(node_id);
     }
 
-    CurrentScheduler::wait_for_tasks(cluster_jobs);
+    Hyrise::get().scheduler().wait_for_tasks(cluster_jobs);
 
     DebugAssert(output_table.materialized_segments.size() == _cluster_count,
                 "Error in clustering: Number of output segments does not match the number of clusters.");
@@ -248,7 +249,7 @@ class RadixClusterSortNUMA {
       job->schedule(node_id);
     }
 
-    CurrentScheduler::wait_for_tasks(cluster_jobs);
+    Hyrise::get().scheduler().wait_for_tasks(cluster_jobs);
 
     return output;
   }
@@ -294,7 +295,7 @@ class RadixClusterSortNUMA {
       job->schedule(numa_node);
     }
 
-    CurrentScheduler::wait_for_tasks(repartition_jobs);
+    Hyrise::get().scheduler().wait_for_tasks(repartition_jobs);
 
     return homogenous_partitions;
   }
@@ -316,7 +317,7 @@ class RadixClusterSortNUMA {
       }
     }
 
-    CurrentScheduler::wait_for_tasks(sort_jobs);
+    Hyrise::get().scheduler().wait_for_tasks(sort_jobs);
   }
 
  public:

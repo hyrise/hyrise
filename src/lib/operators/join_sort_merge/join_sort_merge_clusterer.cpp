@@ -14,16 +14,30 @@ namespace {
 using namespace opossum;  // NOLINT
 
 size_t estimated_cost_full_sorting(const size_t table_row_count, const size_t cluster_count) {
+  // Avoid division by zero for empty inputs
+  if (table_row_count == 0 || cluster_count == 0) {
+    return 1ul;
+  }
+
   // The cost is simply sorting (n*log(n)) each cluster
   const size_t avg_element_count = std::max(1ul, static_cast<size_t>(table_row_count / cluster_count));
   return cluster_count * static_cast<size_t>(avg_element_count * std::log2(avg_element_count));
 }
 
 size_t estimated_cost_partial_sorting(const size_t table_row_count, const size_t cluster_count, const size_t chunk_count) {
+  // Avoid division by zero for empty inputs
+  if (table_row_count == 0 || cluster_count == 0 || chunk_count == 0) {
+    return 0ul;
+  }
+
   // For each cluster, the sorted runs are iteratively sorted. In average, each run is cluster_size/2 large.
   // The number of sorted runs is determined by the number of input chunks.
   const size_t avg_element_count = std::max(1ul, static_cast<size_t>(table_row_count / cluster_count));
   return cluster_count * static_cast<size_t>(chunk_count * std::max(1ul, avg_element_count / 2));
+}
+
+size_t is_partial_sorting_beneficial(const size_t table_row_count, const size_t cluster_count, const size_t chunk_count) {
+  return estimated_cost_partial_sorting(table_row_count, cluster_count, chunk_count) < estimated_cost_full_sorting(table_row_count, cluster_count);
 }
 
 }  // namespace
@@ -49,24 +63,25 @@ JoinSortMergeClusterer<T>::JoinSortMergeClusterer(const std::shared_ptr<const Ta
   DebugAssert(right, "right input operator is null");
 
   /**
-   * In certain situations, sorting the materialized segments of the first phase can be
-   * advantageous. When segments are sorted, the later clustering creates a partially
-   * sorted output. Depending on the number of sorted runs (i.e., the number of input
-   * chunks), merging the sorted runs can be faster than sorting the final clusters.
-   */
+  * In certain situations, sorting the materialized segments of the first phase can be
+  * advantageous. When segments are sorted, the later clustering creates a partially
+  * sorted output. Depending on the number of sorted runs (i.e., the number of input
+  * chunks), merging the sorted runs can be faster than sorting the final clusters.
+  */
   const size_t left_input_rows = left->row_count();
   const size_t right_input_rows = right->row_count();
   const size_t left_input_chunk_count = left->chunk_count();
   const size_t right_input_chunk_count = right->chunk_count();
 
+  /**
+  * For range clustering, the materialized segments need to be sorted. For radix
+  * clustering, a simple heuristic is used to determine if presorting is advantageous.
+  **/
   if (_radix_clustering) {
-  	_presort_segments.first = estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) < estimated_cost_full_sorting(left_input_rows, cluster_count);
-  	_presort_segments.second = estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) < estimated_cost_full_sorting(right_input_rows, cluster_count);
+  	_presort_segments.first = is_partial_sorting_beneficial(left_input_rows, cluster_count, left_input_chunk_count);
+  	_presort_segments.second = is_partial_sorting_beneficial(right_input_rows, cluster_count, right_input_chunk_count);
 
-  	  std::cout << "Estimating merge costs with: L (part " << estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(left_input_rows, cluster_count) << ") and R(part " << estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(right_input_rows, cluster_count) << ")" << std::endl;
-  } else {
-  	// Range clustering requires presorted materialized segments
-  	_presort_segments = {true, true};
+  	  // std::cout << "Estimating merge costs with: L (part " << estimated_cost_partial_sorting(left_input_rows, cluster_count, left_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(left_input_rows, cluster_count) << ") and R(part " << estimated_cost_partial_sorting(right_input_rows, cluster_count, right_input_chunk_count) << " vs. full " << estimated_cost_full_sorting(right_input_rows, cluster_count) << ")" << std::endl;
   }
 }
 
@@ -114,28 +129,26 @@ void JoinSortMergeClusterer<T>::merge_partially_sorted_materialized_segment(Mate
 template <typename T>
 MaterializedSegmentList<T> JoinSortMergeClusterer<T>::concatenate_materialized_segments(
     const MaterializedSegmentList<T>& materialized_segments, const bool segments_are_presorted) {
-  auto output = MaterializedSegment<T>();
+  auto output = std::make_shared<MaterializedSegment<T>>();
   auto sorted_run_start_positions = std::make_unique<std::vector<size_t>>();
 
   auto current_start_position = size_t{0};
   // Reserve the required space and copy the data to the output
-  output.reserve(_materialized_table_size(materialized_segments));
+  output->reserve(_materialized_table_size(materialized_segments));
   for (const auto& materialized_segment : materialized_segments) {
-    output.insert(output.end(), materialized_segment->cbegin(), materialized_segment->cend());
+    output->insert(output->end(), materialized_segment->cbegin(), materialized_segment->cend());
     sorted_run_start_positions->push_back(current_start_position);
     current_start_position += materialized_segment->size();
   }
 
-  if (segments_are_presorted) {
-  	std::cout << "merge sort" << std::endl;
-    merge_partially_sorted_materialized_segment(output, std::move(sorted_run_start_positions));
+  if (segments_are_presorted && is_partial_sorting_beneficial(current_start_position, materialized_segments.size(), materialized_segments.size())) {
+    merge_partially_sorted_materialized_segment(*output, std::move(sorted_run_start_positions));
   } else {
-  	std::cout << "full sort" << std::endl;
-    std::sort(output.begin(), output.end(),
+    std::sort(output->begin(), output->end(),
               [](auto& left, auto& right) { return left.value < right.value; });
   }
 
-  return {std::make_shared<MaterializedSegment<T>>(output)};
+  return {output};
 }
 
 template <typename T>
@@ -212,33 +225,19 @@ std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> JoinSortMergeC
   MaterializedSegmentList<T> output_right;
   std::vector<std::shared_ptr<AbstractTask>> cluster_tasks;
 
-  auto cluster_task_left = [&] {
+  cluster_tasks.emplace_back(std::make_shared<JobTask>([&] {
     output_left = cluster(input_left, RangeClusterFunctor(split_values), cluster_count, true);
-  };
-  auto cluster_task_right = [&] {
+  }));
+  cluster_tasks.back()->schedule();
+
+  cluster_tasks.emplace_back(std::make_shared<JobTask>([&] {
     output_right = cluster(input_right, RangeClusterFunctor(split_values), cluster_count, true);
-  };
+  }));
+  cluster_tasks.back()->schedule();
 
-  if (input_left.size() < 500) {
-    cluster_task_left();
-  } else {
-    cluster_tasks.push_back(std::make_shared<JobTask>(cluster_task_left));
-    cluster_tasks.back()->schedule();
-  }
+  Hyrise::get().scheduler().wait_for_tasks(cluster_tasks);
 
-  if (input_right.size() < 500) {
-    cluster_task_right();
-  } else {
-    cluster_tasks.push_back(std::make_shared<JobTask>(cluster_task_right));
-    cluster_tasks.back()->schedule();
-  }
-
-  CurrentScheduler::wait_for_tasks(cluster_tasks);
-
-  // auto output_left = cluster(input_left, RangeClusterFunctor(split_values), cluster_count);
-  // auto output_right = cluster(input_right, RangeClusterFunctor(split_values), cluster_count);
-
-  return {std::move(output_left), std::move(output_right)};
+  return {output_left, output_right};
 }
 
 template <typename T>
@@ -263,7 +262,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
     auto job = std::make_shared<JobTask>([&, input_segment_id, clusterer] {
       // clusterer is passed by value to have a job-local copy
-      auto& segment_information = table_information.segment_information[input_segment_id];
+      auto& segment_histogram_aggregate = table_information.segment_histogram_aggregates[input_segment_id];
       const auto input_segment = materialized_input_segments[input_segment_id];
 
       if (segments_are_presorted) {
@@ -275,16 +274,16 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
       if (cluster_count > 1) {
         for (const auto& entry : *input_segment) {
           const auto cluster_id = clusterer(entry.value);
-          ++segment_information.cluster_histogram[cluster_id];
+          ++segment_histogram_aggregate.cluster_histogram[cluster_id];
         }
       }
     });
 
-    histogram_jobs.push_back(job);
+    histogram_jobs.emplace_back(job);
     job->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(histogram_jobs);
+  Hyrise::get().scheduler().wait_for_tasks(histogram_jobs);
 
   /**
    * In case more than one cluster will be created:
@@ -292,12 +291,13 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
    * Otherwise:
    *   -> Size the output with the accumulated size of all segments
    **/
+  auto accumulated_size = size_t{0};
   if (cluster_count > 1) {
     // Aggregate the segment histograms to a table histogram and initialize the insert positions for each segment
-    for (auto& segment_information : table_information.segment_information) {
+    for (auto& segment_histogram_aggregate : table_information.segment_histogram_aggregates) {
       for (auto cluster_id = size_t{0}; cluster_id < cluster_count; ++cluster_id) {
-        segment_information.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
-        table_information.cluster_histogram[cluster_id] += segment_information.cluster_histogram[cluster_id];
+        segment_histogram_aggregate.insert_position[cluster_id] = table_information.cluster_histogram[cluster_id];
+        table_information.cluster_histogram[cluster_id] += segment_histogram_aggregate.cluster_histogram[cluster_id];
       }
     }
 
@@ -305,13 +305,10 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     for (auto cluster_id = size_t{0}; cluster_id < cluster_count; ++cluster_id) {
       const auto cluster_size = table_information.cluster_histogram[cluster_id];
       output[cluster_id] = std::make_shared<MaterializedSegment<T>>(cluster_size);
+      accumulated_size += cluster_size;
     }
   } else {
-    auto single_cluster_size = size_t{0};
-    for (const auto& segment : materialized_input_segments) {
-      single_cluster_size += segment->size();
-    }
-    output[0] = std::make_shared<MaterializedSegment<T>>(single_cluster_size);
+    output[0] = std::make_shared<MaterializedSegment<T>>(_materialized_table_size(materialized_input_segments));
   }
 
   // Move each entry into its appropriate cluster in parallel
@@ -319,20 +316,20 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
   const auto input_segment_count = materialized_input_segments.size();
   for (auto input_segment_id = size_t{0}; input_segment_id < input_segment_count; ++input_segment_id) {
     auto job = std::make_shared<JobTask>([&, input_segment_id, clusterer] {  // copy cluster functor per task
-      auto& segment_information = table_information.segment_information[input_segment_id];
+      auto& segment_histogram_aggregate = table_information.segment_histogram_aggregates[input_segment_id];
       for (const auto& entry : *(materialized_input_segments[input_segment_id])) {
         const auto cluster_id = clusterer(entry.value);
         auto& output_cluster = *(output[cluster_id]);
-        auto& insert_position = segment_information.insert_position[cluster_id];
+        auto& insert_position = segment_histogram_aggregate.insert_position[cluster_id];
         output_cluster[insert_position] = entry;
         ++insert_position;
       }
     });
-    cluster_jobs.push_back(job);
+    cluster_jobs.emplace_back(job);
     job->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(cluster_jobs);
+  Hyrise::get().scheduler().wait_for_tasks(cluster_jobs);
 
   std::vector<std::shared_ptr<AbstractTask>> sort_jobs;
   auto segment_id = size_t{0};
@@ -340,18 +337,17 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     auto job = std::make_shared<JobTask>([&, segment, segment_id] {
       auto sorted_run_start_positions = std::make_unique<std::vector<size_t>>();
       for (auto chunk_id = ChunkID{0}; chunk_id < materialized_input_segments.size(); ++chunk_id) {
-        const auto& segment_information = table_information.segment_information[chunk_id];
-        sorted_run_start_positions->push_back(segment_information.insert_position[segment_id] -
-                                             segment_information.cluster_histogram[segment_id]);
+        const auto& segment_histogram_aggregate = table_information.segment_histogram_aggregates[chunk_id];
+        sorted_run_start_positions->push_back(segment_histogram_aggregate.insert_position[segment_id] -
+                                             segment_histogram_aggregate.cluster_histogram[segment_id]);
       }
 
-      // Sorting of final output cluster. If materialized segments have been
-      // presorted, output is partially sorted and the sorted lists can be merged.
-      if (segments_are_presorted) {
-      	std::cout << "partial sort" << std::endl;
+      // Sorting of final output cluster. If materialized segments have been presorted, output is partially sorted and
+      // the sorted lists can be merged. In this case, estimate costs for partial and full sorting and chose more
+      // efficient method.
+      if (segments_are_presorted && is_partial_sorting_beneficial(accumulated_size, materialized_input_segments.size(), materialized_input_segments.size())) {
         merge_partially_sorted_materialized_segment(*segment, std::move(sorted_run_start_positions));
       } else {
-      	std::cout << "full sort" << std::endl;
         std::sort(segment->begin(), segment->end(),
                   [](auto& left, auto& right) { return left.value < right.value; });
       }
@@ -360,13 +356,13 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
                                    [](auto& left, auto& right) { return left.value < right.value; }),
                     "Resulting clusters are expected to be sorted.");
     });
-    sort_jobs.push_back(job);
+    sort_jobs.emplace_back(job);
     job->schedule();
 
     ++segment_id;
   }
 
-  CurrentScheduler::wait_for_tasks(sort_jobs);
+  Hyrise::get().scheduler().wait_for_tasks(sort_jobs);
 
   return output;
 }
@@ -408,8 +404,8 @@ typename JoinSortMergeClusterer<T>::ClusterOutput JoinSortMergeClusterer<T>::exe
   samples_left.insert(samples_left.end(), samples_right.begin(), samples_right.end());
 
   if (_cluster_count == 1) {
-    output.clusters_left = std::move(concatenate_materialized_segments(materialized_left_segments, _presort_segments.first));
-    output.clusters_right = std::move(concatenate_materialized_segments(materialized_right_segments, _presort_segments.second));
+    output.clusters_left = concatenate_materialized_segments(materialized_left_segments, _presort_segments.first);
+    output.clusters_right = concatenate_materialized_segments(materialized_right_segments, _presort_segments.second);
   } else if (_radix_clustering) {
     output.clusters_left = radix_cluster(materialized_left_segments, _cluster_count, _presort_segments.first);
     output.clusters_right = radix_cluster(materialized_right_segments, _cluster_count, _presort_segments.second);

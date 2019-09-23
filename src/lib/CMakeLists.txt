@@ -86,6 +86,7 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    hyrise.cpp
     hyrise.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
@@ -296,10 +297,14 @@ set(
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
+    optimizer/strategy/in_expression_rewrite_rule.cpp
+    optimizer/strategy/in_expression_rewrite_rule.hpp
     optimizer/strategy/insert_limit_in_exists_rule.cpp
     optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
+    optimizer/strategy/join_predicate_ordering_rule.cpp
+    optimizer/strategy/join_predicate_ordering_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -312,12 +317,12 @@ set(
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp
-    scheduler/current_scheduler.cpp
-    scheduler/current_scheduler.hpp
     scheduler/job_task.cpp
     scheduler/job_task.hpp
     scheduler/node_queue_scheduler.cpp
     scheduler/node_queue_scheduler.hpp
+    scheduler/immediate_execution_scheduler.cpp
+    scheduler/immediate_execution_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
     scheduler/task_queue.cpp
@@ -432,8 +437,8 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
-    storage/index/base_index.cpp
-    storage/index/base_index.hpp
+    storage/index/abstract_index.cpp
+    storage/index/abstract_index.hpp
     storage/index/b_tree/b_tree_index.cpp
     storage/index/b_tree/b_tree_index.hpp
     storage/index/b_tree/b_tree_index_impl.cpp
@@ -563,8 +568,6 @@ set(
     utils/make_bimap.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
-    utils/null_streambuf.cpp
-    utils/null_streambuf.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp

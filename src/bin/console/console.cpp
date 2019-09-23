@@ -34,14 +34,14 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "optimizer/optimizer.hpp"
 #include "pagination.hpp"
-#include "scheduler/current_scheduler.hpp"
+#include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/topology.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
@@ -122,6 +122,7 @@ Console::Console()
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
+  register_command("generate_tpcds", std::bind(&Console::_generate_tpcds, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
   register_command("export", std::bind(&Console::_export_table, this, std::placeholders::_1));
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
@@ -386,6 +387,7 @@ int Console::_help(const std::string&) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
+  out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-DS tables\n");
   out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
   out("                                               The import type is chosen by the type of FILEPATH.\n");
   out("                                                 Supported types: '.bin', '.csv', '.tbl'\n");
@@ -458,6 +460,43 @@ int Console::_generate_tpch(const std::string& args) {
 
   out("Generating all TPCH tables (this might take a while) ...\n");
   TPCHTableGenerator{scale_factor, chunk_size}.generate_and_store();
+
+  return ReturnCode::Ok;
+}
+
+int Console::_generate_tpcds(const std::string& args) {
+  auto input = args;
+  boost::algorithm::trim<std::string>(input);
+  auto arguments = std::vector<std::string>{};
+  boost::algorithm::split(arguments, input, boost::is_space());
+
+  // Check whether there are one or two arguments.
+  auto args_valid = !arguments.empty() && arguments.size() <= 2;
+
+  // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
+  // and that's not actually an argument.
+  auto scale_factor = uint32_t{1};
+  if (!arguments.empty() && !arguments[0].empty()) {
+    scale_factor = static_cast<uint32_t>(std::stoul(arguments[0]));
+  } else {
+    args_valid = false;
+  }
+
+  auto chunk_size = Chunk::DEFAULT_SIZE;
+  if (arguments.size() > 1) {
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
+  }
+
+  if (!args_valid) {
+    out("Usage: ");
+    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
+    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
+        " by default. \n");
+    return ReturnCode::Error;
+  }
+
+  out("Generating all TPC-DS tables (this might take a while) ...\n");
+  TpcdsTableGenerator{scale_factor, chunk_size}.generate_and_store();
 
   return ReturnCode::Ok;
 }
@@ -764,10 +803,10 @@ int Console::_change_runtime_setting(const std::string& input) {
 
   if (property == "scheduler") {
     if (value == "on") {
-      CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+      Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
       out("Scheduler turned on\n");
     } else if (value == "off") {
-      CurrentScheduler::set(nullptr);
+      Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
       out("Scheduler turned off\n");
     } else {
       out("Usage: scheduler (on|off)\n");

@@ -9,11 +9,11 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
@@ -772,7 +772,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         }
       }
 
-      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] {
+      jobs.emplace_back(std::make_shared<JobTask>([this, cluster_number] {
         // Accessors are not thread-safe, so we create one evaluator per job
         std::optional<MultiPredicateJoinEvaluator> multi_predicate_join_evaluator;
         if (!_secondary_join_predicates.empty()) {
@@ -786,7 +786,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       jobs.back()->schedule();
     }
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().scheduler().wait_for_tasks(jobs);
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
@@ -896,8 +896,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
         include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = clusterer.execute();
-    _sorted_left_table = std::move(std::make_unique<MaterializedSegmentList<T>>(sort_output.clusters_left));
-    _sorted_right_table = std::move(std::make_unique<MaterializedSegmentList<T>>(sort_output.clusters_right));
+    _sorted_left_table = std::make_unique<MaterializedSegmentList<T>>(std::move(sort_output.clusters_left));
+    _sorted_right_table = std::make_unique<MaterializedSegmentList<T>>(std::move(sort_output.clusters_right));
     _null_rows_left = std::move(sort_output.null_rows_left);
     _null_rows_right = std::move(sort_output.null_rows_right);
     _end_of_left_table = _end_of_table(_sorted_left_table);

@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/index/base_index.hpp"
+#include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -18,34 +18,45 @@ class GroupKeyIndexTest;
 /**
  *
  * The GroupKeyIndex works on a single dictionary compressed segment.
- * It uses two structures, one being a postings list containing record positions (ie ChunkOffsets)
- * in the attribute vector. The other structure is an index offset, mapping value-ids to offsets
- * in the postings list.
+ * Besides the AbstractIndex's positions list containing record positions for NULL values (`_null_positions`),
+ * this specialized index uses two additional structures. The first is a positions list containing record positions
+ * (ie ChunkOffsets) for non-NULL values in the attribute vector, the second is a structure mapping non-NULL-value-ids
+ * to the start offsets in the positions list.
+ * Since the AbstractIndex's NULL position list only contains NULL value positions, a structure for mapping
+ * NULL-value-ids to offsets isn't needed. 
  *
  * An example structure along with the corresponding dictionary segment might look like this:
- *    +---+-----------+------------+---------+----------------+
- *    |(i)| Attribute | Dictionary |  Index  | Index Postings |
- *    |   |  Vector   |            | Offsets |                |
- *    +---+-----------+------------+---------+----------------+
- *    | 0 |         4 | apple    ------->  0 ------------>  4 |  ie "apple" can be found at i = 4 in the AV
- *    | 1 |         2 | charlie  ------->  1 ------------>  5 |
- *    | 2 |         3 | delta    ------->  3 ---------|     6 |
- *    | 3 |         2 | frank    ------->  5 -------| |-->  1 |
- *    | 4 |         0 | hotel    ------->  6 -----| |       3 |  ie "delta" can be found at i = 1 and 3
- *    | 5 |         1 | inbox    ------->  7 ---| | |---->  2 |
- *    | 6 |         1 |            |         |  | |------>  0 |
- *    | 7 |         5 |            |         |  |-------->  7 |  ie "inbox" can be found at i = 7 in the AV
- *    +---+-----------+------------+---------+----------------+
+ *  +----+-----------+------------+---------+----------------+----------------+
+ *  | (i)| Attribute | Dictionary |  Index  | Index Postings | NULL Positions |
+ *  |    |  Vector   |            | Offsets | (non-NULL)     | [x²]           |
+ *  +----+-----------+------------+---------+----------------+----------------+
+ *  |  0 |         6 | apple    ------->  0 ------------>  7 |              0 | ie NULL can be found at i = 0, 5, 6 and 11
+ *  |  1 |         4 | charlie  ------->  1 ------------>  8 |              5 |
+ *  |  2 |         2 | delta    ------->  3 ----------|    9 |              6 |
+ *  |  3 |         3 | frank    ------->  5 --------| |->  2 |             11 |
+ *  |  4 |         2 | hotel    ------->  6 ------| |      4 |                |       
+ *  |  5 |         6 | inbox    ------->  7 ----| | |--->  3 |                |
+ *  |  6 |         6 |            | [x¹]  8 |   | |----->  1 |                |
+ *  |  7 |         0 |            |         |   |-------> 10 |                |  
+ *  |  8 |         1 |            |         |                |                |
+ *  |  9 |         1 |            |         |                |                |
+ *  | 10 |         5 |            |         |                |                |
+ *  | 11 |         6 |            |         |                |                |  
+ *  +----+-----------+------------+---------+----------------+----------------+
+ * 
+ * NULL is represented in the Attribute Vector by ValueID{dictionary.size()}, i.e., ValueID{6} in this example.
+ * x¹: Mark for the ending position.
+ * x²: NULL positions are stored in `_null_positions` of the AbstractIndex
  *
  * Find more information about this in our Wiki: https://github.com/hyrise/hyrise/wiki/GroupKey-Index
  */
-class GroupKeyIndex : public BaseIndex {
+class GroupKeyIndex : public AbstractIndex {
   friend class GroupKeyIndexTest;
 
  public:
   /**
    * Predicts the memory consumption in bytes of creating this index.
-   * See BaseIndex::estimate_memory_consumption()
+   * See AbstractIndex::estimate_memory_consumption()
    */
   static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
 
@@ -70,18 +81,18 @@ class GroupKeyIndex : public BaseIndex {
 
   /**
    *
-   * @returns an iterator pointing to the the first ChunkOffset in the postings-vector
+   * @returns an iterator pointing to the the first ChunkOffset in the positions-vector
    * that belongs to a given value-id.
    */
-  Iterator _get_postings_iterator_at(ValueID value_id) const;
+  Iterator _get_positions_iterator_at(ValueID value_id) const;
 
   std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const;
 
   size_t _memory_consumption() const final;
 
  private:
-  const std::shared_ptr<const BaseDictionarySegment> _indexed_segments;
-  std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
-  std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
+  const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
+  std::vector<ChunkOffset> _value_start_offsets;  // maps value-ids to offsets in _positions
+  std::vector<ChunkOffset> _positions;            // non-NULL record positions in the attribute vector
 };
 }  // namespace opossum

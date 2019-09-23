@@ -2,9 +2,8 @@
 
 namespace opossum {
 
-INSTANTIATE_TEST_CASE_P(
-    SQLiteTestRunnerUnencoded, SQLiteTestRunner,
-    testing::Combine(testing::ValuesIn(SQLiteTestRunner::queries()), testing::ValuesIn({false}),
-                     testing::ValuesIn({EncodingType::Unencoded})), );  // NOLINT(whitespace/parens)  // NOLINT
+INSTANTIATE_TEST_SUITE_P(SQLiteTestRunnerUnencoded, SQLiteTestRunner,
+                         testing::Combine(testing::ValuesIn(SQLiteTestRunner::queries()), testing::ValuesIn({false}),
+                                          testing::ValuesIn({EncodingType::Unencoded})));
 
 }  // namespace opossum

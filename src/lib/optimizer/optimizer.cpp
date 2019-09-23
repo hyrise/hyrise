@@ -14,9 +14,11 @@
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/column_pruning_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
+#include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
+#include "strategy/join_predicate_ordering_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
@@ -94,8 +96,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
-  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
-
   // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
@@ -107,10 +107,23 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
+  optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
+
   optimizer->add_rule(std::make_unique<InsertLimitInExistsRule>());
+
+  // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
+  // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
+  // StoredTableNode as possible where the ChunkPruningRule can work with them.
+  optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
+
+  // Before the IN predicate is rewritten, it should have been moved to a good position. Also, while the IN predicate
+  // might become a join, it is semantically more similar to a predicate. If we run this rule too early, it might
+  // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
+  // joins and would not recognize such a rewritten predicate.
+  optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 

@@ -199,24 +199,24 @@ TEST_F(JoinSortMergeClustererTest, PickSampleValues) {
 
 TEST_F(JoinSortMergeClustererTest, RangeClusterFunctorSorted) {
   // Clusters need to be sorted for range clustering (done by ColumnMaterializer)
-  auto segment_1 = MaterializedSegment<int>{};
-  segment_1.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
-  segment_1.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 8});
-  segment_1.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 9});
-  auto segment_2 = MaterializedSegment<int>{};
-  segment_2.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 4});
-  segment_2.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 5});
-  segment_2.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 6});
-  auto segment_3 = MaterializedSegment<int>{};
-  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
-  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
-  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 2});
-  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 3});
-  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 7});
-  segment_3.push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 10});
+  auto segment_1 = std::make_shared<MaterializedSegment<int>>();
+  segment_1->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
+  segment_1->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 8});
+  segment_1->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 9});
+  auto segment_2 = std::make_shared<MaterializedSegment<int>>();
+  segment_2->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 4});
+  segment_2->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 5});
+  segment_2->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 6});
+  auto segment_3 = std::make_shared<MaterializedSegment<int>>();
+  segment_3->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
+  segment_3->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 1});
+  segment_3->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 2});
+  segment_3->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 3});
+  segment_3->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 7});
+  segment_3->push_back({RowID{ChunkID{1u}, ChunkOffset{1u}}, 10});
 
-  auto segment_list_left = MaterializedSegmentList<int>{std::make_shared<MaterializedSegment<int>>(segment_1), std::make_shared<MaterializedSegment<int>>(segment_2)};
-  auto segment_list_right = MaterializedSegmentList<int>{std::make_shared<MaterializedSegment<int>>(segment_2), std::make_shared<MaterializedSegment<int>>(segment_3)};
+  auto segment_list_left = MaterializedSegmentList<int>{segment_1, segment_2};
+  auto segment_list_right = MaterializedSegmentList<int>{segment_2, segment_3};
   auto result = JoinSortMergeClusterer<int>::range_cluster(segment_list_left, segment_list_right, {3, 5}, 3, {true, true});
 
   // We expect the left being clustered (values) into (1, 2), (3, 4), (5, 6) and the right into (2), (3, 4), and (5, 6, 7)
@@ -236,16 +236,16 @@ TEST_F(JoinSortMergeClustererTest, SortPartiallySortedSegments) {
   auto segment = MaterializedSegment<int>{};
 
   auto empty_positions_1 = std::make_unique<std::vector<size_t>>();
-  if (HYRISE_DEBUG) EXPECT_NO_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_1)));
+  if (HYRISE_DEBUG) { EXPECT_NO_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_1))); }
   segment.push_back({RowID{ChunkID{9u}, ChunkOffset{9u}}, 1});
   auto empty_positions_2 = std::make_unique<std::vector<size_t>>();
-  if (HYRISE_DEBUG) EXPECT_NO_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_2)));
+  if (HYRISE_DEBUG) { EXPECT_NO_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_2))); }
 
   // for all segments with more elements, the vector of sorted run positions cannot be empty
   segment.push_back({RowID{ChunkID{8u}, ChunkOffset{8u}}, 2});
   segment.push_back({RowID{ChunkID{7u}, ChunkOffset{7u}}, 3});
   auto empty_positions_3 = std::make_unique<std::vector<size_t>>();
-  if (HYRISE_DEBUG) EXPECT_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_3)), std::logic_error);
+  if (HYRISE_DEBUG) { EXPECT_THROW(JoinSortMergeClusterer<int>::merge_partially_sorted_materialized_segment(segment, std::move(empty_positions_3)), std::logic_error); }
 
   segment.push_back({RowID{ChunkID{6u}, ChunkOffset{6u}}, 1});
   segment.push_back({RowID{ChunkID{5u}, ChunkOffset{5u}}, 2});
