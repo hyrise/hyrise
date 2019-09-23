@@ -218,7 +218,7 @@ void prune_join_node(
       if (!stored_table_node) return false;
 
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      for (const auto& table_constraint : table->get_unique_constraints()) {
+      for (const auto& table_constraint : table->get_soft_unique_constraints()) {
         // This currently does not handle multi-column constraints, but that should be easy to add once needed.
         if (table_constraint.columns.size() > 1) continue;
         if (table_constraint.columns[0] == column_reference.original_column_id()) {

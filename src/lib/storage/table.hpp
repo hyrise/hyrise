@@ -181,14 +181,14 @@ class Table : private Noncopyable {
     _indexes.emplace_back(index_statistics);
   }
 
-  const std::vector<TableConstraintDefinition>& get_unique_constraints() const;
-
   /**
    * Add a unique constraint. The column IDs can be passed in an arbitrary order, they will be sorted
    * by this method. Constraint column IDs will always be sorted from here on.
    * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" constraints to draw attention to that.
    */
-  void add_unique_constraint(const std::vector<ColumnID>& column_ids, const bool primary);
+  void add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const bool primary);
+  const std::vector<TableConstraintDefinition>& get_soft_unique_constraints() const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
