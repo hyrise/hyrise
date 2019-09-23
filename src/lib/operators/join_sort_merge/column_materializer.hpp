@@ -150,10 +150,11 @@ class ColumnMaterializer {
 
     segment_iterate<T>(segment, [&](const auto& position) {
       const auto row_id = RowID{chunk_id, position.chunk_offset()};
-      if (_materialize_null && position.is_null()) {
-        null_rows_output->emplace_back(row_id);
-      } else {
+      if (!position.is_null()) {
         output->emplace_back(MaterializedValue<T>{row_id, position.value()});
+      } else if (_materialize_null) {
+        // Write NULL if position is NULL and NULLs shall be materialized
+        null_rows_output->emplace_back(row_id);
       }
     });
 
@@ -204,10 +205,9 @@ class ColumnMaterializer {
 
           if (value_id != null_value_id) {
             rows_with_value[value_id].emplace_back(RowID{chunk_id, chunk_offset});
-          } else {
-            if (_materialize_null) {
-              null_rows_output->emplace_back(RowID{chunk_id, chunk_offset});
-            }
+          } else if (_materialize_null) {
+            // Write NULL if value_id is the NULL value id and NULLs shall be materialized
+            null_rows_output->emplace_back(RowID{chunk_id, chunk_offset});
           }
         }
       });
@@ -224,10 +224,11 @@ class ColumnMaterializer {
       auto iterable = create_iterable_from_segment(segment);
       iterable.for_each([&](const auto& position) {
         const auto row_id = RowID{chunk_id, position.chunk_offset()};
-        if (_materialize_null && position.is_null()) {
-          null_rows_output->emplace_back(row_id);
-        } else {
+        if (!position.is_null()) {
           output->emplace_back(MaterializedValue<T>{row_id, position.value()});
+        } else if (_materialize_null) {
+          // Write NULL if position is NULL and NULLs shall be materialized
+          null_rows_output->emplace_back(row_id);          
         }
       });
     }
