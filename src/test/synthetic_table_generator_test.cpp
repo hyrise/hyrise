@@ -90,7 +90,7 @@ TEST_P(SyntheticTableGeneratorDataTypeTests, IntegerTable) {
 
   for (auto chunk_id = ChunkID{0}; chunk_id < generated_chunk_count; ++chunk_id) {
     const auto& chunk = table->get_chunk(chunk_id);
-    BaseTest::verify_encoding(chunk, supported_segment_encodings);
+    BaseTest::assert_chunk_encoding(chunk, supported_segment_encodings);
   }
 }
 
