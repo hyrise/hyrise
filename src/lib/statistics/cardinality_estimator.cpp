@@ -296,11 +296,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // of searching for a single value would be reasonable. However, it is likely that the SubqueryToJoinRule will
   // rewrite this query so that the CorrelatedParameterExpression will turn into an LQPColumnExpression that is part
   // of a join predicate. However, since the JoinOrderingRule is executed before the SubqueryToJoinRule, it would
-  // create a different join order if it assumes `orders` to be filtered down to very few values. For now, we ignore
-  // correlated predicates in the cardinality estimation, i.e., we assume that they return 100% of all matching values.
-  // This is not perfect, but better than estimating `num_rows / distinct_values`.
+  // create a different join order if it assumes `orders` to be filtered down to very few values. For now, we return
+  // PLACEHOLDER_SELECTIVITY_HIGH. This is not perfect, but better than estimating `num_rows / distinct_values`.
   if (expression_contains_correlated_parameter(predicate)) {
-    return input_table_statistics;
+    return input_table_statistics->scaled(PLACEHOLDER_SELECTIVITY_HIGH);
   }
 
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);

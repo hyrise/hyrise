@@ -638,9 +638,9 @@ TEST_F(CardinalityEstimatorTest, PredicateMultipleWithCorrelatedParameter) {
       node_a));
   // clang-format on
 
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 50.0f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 100.0f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 45.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 90.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 90.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithNull) {
