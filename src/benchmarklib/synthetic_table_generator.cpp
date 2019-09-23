@@ -94,11 +94,6 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   }
   std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
-  std::random_device random_device;
-  auto pseudorandom_engine = std::mt19937{};
-
-  pseudorandom_engine.seed(random_device());
-
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(static_cast<size_t>(num_chunks));
@@ -107,12 +102,17 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&, column_index]() {
-        resolve_data_type(column_data_types[column_index], [&, column_index](const auto column_data_type) {
+        resolve_data_type(column_data_types[column_index], [&](const auto column_data_type) {
           using ColumnDataType = typename decltype(column_data_type)::type;
 
           std::vector<int> values;
           values.reserve(chunk_size);
           const auto& column_data_distribution = column_data_distributions[column_index];
+
+          std::random_device random_device;
+          auto pseudorandom_engine = std::mt19937{};
+
+          pseudorandom_engine.seed(random_device());
 
           auto probability_dist = std::uniform_real_distribution{0.0, 1.0};
           auto generate_value_by_distribution_type = std::function<int(void)>{};
