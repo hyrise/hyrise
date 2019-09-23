@@ -10,6 +10,8 @@ using Socket = boost::asio::ip::tcp::socket;
 
 static constexpr size_t BUFFER_SIZE = 4096u;
 
+// This class implements the logic of a circular buffer. If the end of the underlying data structure is reached
+// the iterator will start at the beginning if the data has already been processed.
 class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char> {
  public:
   explicit RingBufferIterator(std::array<char, BUFFER_SIZE>& data, size_t position = 0)
@@ -21,10 +23,7 @@ class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char>
     return *this;
   }
 
-// TODO(toni): available size function
-
-
-  bool operator==(RingBufferIterator other) const { return (_position == other._position) && (_data == other._data);}
+  bool operator==(RingBufferIterator other) const { return (_position == other._position) && (_data == other._data); }
 
   bool operator!=(RingBufferIterator other) const { return !(*this == other); }
 
@@ -46,26 +45,31 @@ class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char>
 
   RingBufferIterator& operator+=(const size_t increment) { return operator+(increment); }
 
-  RingBufferIterator::difference_type operator-(RingBufferIterator const& other) const { return _position - other._position; }
+  RingBufferIterator::difference_type operator-(RingBufferIterator const& other) const {
+    return _position - other._position;
+  }
 
   reference operator*() const { return _data[_position]; }
+
+  char* get_raw_pointer() const { return &_data[_position]; }
 
  private:
   std::array<char, BUFFER_SIZE>& _data;
   size_t _position;
 };
 
+// This class implements general methods for the ring buffer.
 class RingBuffer {
  public:
   explicit RingBuffer(const std::shared_ptr<Socket>& socket) : _socket(socket) {}
 
-   char* data() noexcept { return _data.begin(); }
-   const char* data() const noexcept { return _data.begin(); }
+  char* data() noexcept { return _data.begin(); }
+  const char* data() const noexcept { return _data.begin(); }
 
   // Problem: full and empty might be same state, so head == tail
   // Solution: Full state is tail + 1 == head
   //           Empty state is head == tail
-   size_t size() const {
+  size_t size() const {
     const auto current_size = _current_position - _start_position;
     if (current_size < 0) {
       return current_size + BUFFER_SIZE;
@@ -74,7 +78,10 @@ class RingBuffer {
     }
   }
 
-   bool full() const { return size() == (BUFFER_SIZE - 1); }
+  // See comment above
+  size_t maximum_capacity() const { return BUFFER_SIZE - 1; }
+
+  bool full() const { return size() == maximum_capacity(); }
 
  protected:
   std::shared_ptr<Socket> _socket;
@@ -83,6 +90,7 @@ class RingBuffer {
   RingBufferIterator _current_position = RingBufferIterator(_data);
 };
 
+// Dedicated buffer for read operations. The ring buffer gets extended by methods for reading different data types.
 class ReadBuffer : public RingBuffer {
  public:
   explicit ReadBuffer(std::shared_ptr<Socket> socket) : RingBuffer(socket) {}
@@ -127,6 +135,7 @@ class ReadBuffer : public RingBuffer {
   void _receive_if_necessary(const size_t bytes_required = 1);
 };
 
+// Dedicated buffer for write operations. The ring buffer gets extended by methods for writing different data types.
 class WriteBuffer : public RingBuffer {
  public:
   explicit WriteBuffer(const std::shared_ptr<Socket> socket) : RingBuffer(socket) {}

@@ -48,7 +48,7 @@ std::string ReadBuffer::get_string(const size_t string_length, const bool has_nu
 
   // Read from network device until string is complete or skip if string is already complete.
   while (result.size() < string_length) {
-    const auto substring_length = std::min(string_length - result.size(), BUFFER_SIZE - 1);
+    const auto substring_length = std::min(string_length - result.size(), maximum_capacity());
     _receive_if_necessary(substring_length);
     std::copy_n(_start_position, substring_length, std::back_inserter(result));
     _start_position += substring_length;
@@ -76,21 +76,23 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
   }
 
   // Buffer might contain unread data, so cant read full buffer size
-  const auto maximum_readable_size = BUFFER_SIZE - size() - 1;
+  const auto maximum_readable_size = maximum_capacity() - size();
 
   size_t bytes_read;
   // We can't forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
   // distinguish between reading into continuous memory or partially read the data.
-  if ((_current_position - _start_position) < 0 || &*_start_position == &_data[0]) {
-    bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&(*_current_position), maximum_readable_size),
-                                   boost::asio::transfer_at_least(bytes_required - size()));
-  } else {
+  if ((_current_position - _start_position) < 0 || _start_position.get_raw_pointer() == &_data[0]) {
     bytes_read =
-        boost::asio::read(*_socket,
-                          std::array<boost::asio::mutable_buffer, 2>{
-                              boost::asio::buffer(&*_current_position, std::distance(&*_current_position, _data.end())),
-                              boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_start_position - 1))},
+        boost::asio::read(*_socket, boost::asio::buffer(_current_position.get_raw_pointer(), maximum_readable_size),
                           boost::asio::transfer_at_least(bytes_required - size()));
+  } else {
+    bytes_read = boost::asio::read(
+        *_socket,
+        std::array<boost::asio::mutable_buffer, 2>{
+            boost::asio::buffer(_current_position.get_raw_pointer(),
+                                std::distance(_current_position.get_raw_pointer(), _data.end())),
+            boost::asio::buffer(_data.begin(), std::distance(_data.begin(), _start_position.get_raw_pointer() - 1))},
+        boost::asio::transfer_at_least(bytes_required - size()));
   }
 
   if (!bytes_read) {
@@ -104,14 +106,14 @@ void WriteBuffer::put_string(const std::string& value, const bool terminate) {
 
   // Use available space first
   if (!full()) {
-    position_in_string = std::min(BUFFER_SIZE - size() - 1, value.size());
+    position_in_string = std::min(maximum_capacity() - size(), value.size());
     std::copy_n(value.cbegin(), position_in_string, _current_position);
     _current_position += position_in_string;
   }
 
   // Read from network device until string is complete. Ignore last character since it is \0
   while (position_in_string < value.size()) {
-    const auto bytes_to_transfer = std::min(BUFFER_SIZE - 1, value.size() - position_in_string);
+    const auto bytes_to_transfer = std::min(maximum_capacity(), value.size() - position_in_string);
     _flush_if_necessary(bytes_to_transfer);
     std::copy_n(value.cbegin() + position_in_string, bytes_to_transfer, _current_position);
     _current_position += bytes_to_transfer;
@@ -132,14 +134,15 @@ void WriteBuffer::flush(const size_t bytes_required) {
 
   if ((_current_position - _start_position) < 0) {
     // Data not continously stored in buffer
-    bytes_sent =
-        boost::asio::write(*_socket,
-                           std::array<boost::asio::mutable_buffer, 2>{
-                               boost::asio::buffer(&*_start_position, std::distance(&*_start_position, _data.end())),
-                               boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_current_position))},
-                           boost::asio::transfer_at_least(bytes_to_send));
+    bytes_sent = boost::asio::write(
+        *_socket,
+        std::array<boost::asio::mutable_buffer, 2>{
+            boost::asio::buffer(_start_position.get_raw_pointer(),
+                                std::distance(_start_position.get_raw_pointer(), _data.end())),
+            boost::asio::buffer(_data.begin(), std::distance(_data.begin(), _current_position.get_raw_pointer()))},
+        boost::asio::transfer_at_least(bytes_to_send));
   } else {
-    bytes_sent = boost::asio::write(*_socket, boost::asio::buffer(&*_start_position, size()),
+    bytes_sent = boost::asio::write(*_socket, boost::asio::buffer(_start_position.get_raw_pointer(), size()),
                                     boost::asio::transfer_at_least(bytes_to_send));
   }
 
@@ -150,7 +153,7 @@ void WriteBuffer::flush(const size_t bytes_required) {
 }
 
 void WriteBuffer::_flush_if_necessary(const size_t bytes_required) {
-  if (bytes_required >= BUFFER_SIZE - size() - 1) {
+  if (bytes_required >= maximum_capacity() - size()) {
     flush(bytes_required);
   }
 }
