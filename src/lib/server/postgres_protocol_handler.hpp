@@ -1,8 +1,8 @@
 #pragma once
 
 #include "all_parameter_variant.hpp"
-#include "buffer.hpp"
 #include "network_message_types.hpp"
+#include "ring_buffer.hpp"
 
 namespace opossum {
 
@@ -16,7 +16,7 @@ struct PreparedStatementDetails {
 // This class implements the message handling according to the PostgreSQL Wire Protocol.
 class PostgresProtocolHandler {
  public:
-  explicit PostgresProtocolHandler(const std::shared_ptr<Socket> socket);
+  explicit PostgresProtocolHandler(const std::shared_ptr<Socket>& socket);
 
   // Handling the startup packet
   uint32_t read_startup_packet();

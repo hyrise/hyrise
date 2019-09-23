@@ -6,7 +6,7 @@ namespace opossum {
 
 static constexpr auto LENGTH_FIELD_SIZE = 4u;
 
-PostgresProtocolHandler::PostgresProtocolHandler(const std::shared_ptr<Socket> socket)
+PostgresProtocolHandler::PostgresProtocolHandler(const std::shared_ptr<Socket>& socket)
     : _read_buffer(socket), _write_buffer(socket) {}
 
 uint32_t PostgresProtocolHandler::read_startup_packet() {

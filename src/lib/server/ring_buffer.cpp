@@ -1,4 +1,4 @@
-#include "buffer.hpp"
+#include "ring_buffer.hpp"
 
 namespace opossum {
 
@@ -6,16 +6,13 @@ static constexpr auto LENGTH_FIELD_SIZE = sizeof(uint32_t);
 static constexpr auto MESSAGE_TYPE_SIZE = sizeof(NetworkMessageType);
 
 std::string ReadBuffer::get_string() {
-  auto string_end = BufferIterator(_data);
+  auto string_end = RingBufferIterator(_data);
   std::string result = "";
 
   // First, use bytes available in buffer
   if (size() != 0) {
-    // We have to convert the byte buffer into a std::string, making sure
-    // we don't run past the end of the buffer and stop at the first null byte
     string_end = std::find(_start_position, _current_position, '\0');
     std::copy(_start_position, string_end, std::back_inserter(result));
-    // Off by 1?
     _start_position += result.size();
   }
 
@@ -27,8 +24,8 @@ std::string ReadBuffer::get_string() {
   }
 
   while (*string_end != '\0') {
-    // We dont know how long this is going to be. Hence, receive at least 1 char.
-    _receive_if_necessary(1u);
+    // We dont know how long this string is going to be. Hence, receive at least 1 char.
+    _receive_if_necessary();
     string_end = std::find(_start_position, _current_position, '\0');
     std::copy(_start_position, string_end, std::back_inserter(result));
     _start_position = string_end;
@@ -39,7 +36,6 @@ std::string ReadBuffer::get_string() {
   return result;
 }
 
-// TODO(toni): doc: has to include null terminator
 std::string ReadBuffer::get_string(const size_t string_length, const bool has_null_terminator) {
   std::string result = "";
   result.reserve(string_length);
@@ -83,6 +79,8 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
   const auto maximum_readable_size = BUFFER_SIZE - size() - 1;
 
   size_t bytes_read;
+  // We can't forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
+  // distinguish between reading into continuous memory or partially read the data.
   if ((_current_position - _start_position) < 0 || &*_start_position == &_data[0]) {
     bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&(*_current_position), maximum_readable_size),
                                    boost::asio::transfer_at_least(bytes_required - size()));
@@ -122,7 +120,7 @@ void WriteBuffer::put_string(const std::string& value, const bool terminate) {
 
   // Add string terminator if necessary
   if (terminate) {
-    _flush_if_necessary(1u);
+    _flush_if_necessary(sizeof(char));
     *_current_position = '\0';
     _current_position++;
   }

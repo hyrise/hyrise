@@ -1,11 +1,9 @@
 #include "hyrise_communicator.hpp"
 
-#include "SQLParser.h"
 #include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
-#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 
 namespace opossum {
@@ -72,7 +70,7 @@ std::shared_ptr<TransactionContext> HyriseCommunicator::get_new_transaction_cont
 }
 
 std::shared_ptr<const Table> HyriseCommunicator::execute_prepared_statement(
-    std::shared_ptr<AbstractOperator> physical_plan) {
+    const std::shared_ptr<AbstractOperator>& physical_plan) {
   const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan, CleanupTemporaries::Yes);
   Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
   return tasks.back()->get_operator()->get_output();

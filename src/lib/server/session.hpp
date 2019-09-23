@@ -8,8 +8,6 @@
 
 namespace opossum {
 
-using Socket = boost::asio::ip::tcp::socket;
-
 // The session class implements the communication flow and stores session specific information such as portals.
 class Session {
  public:

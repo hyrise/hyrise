@@ -4,7 +4,6 @@
 #include "operators/abstract_operator.hpp"
 #include "postgres_protocol_handler.hpp"
 #include "storage/table.hpp"
-#include "types.hpp"
 
 namespace opossum {
 
@@ -19,7 +18,7 @@ class HyriseCommunicator {
 
   static std::shared_ptr<TransactionContext> get_new_transaction_context();
 
-  static std::shared_ptr<const Table> execute_prepared_statement(std::shared_ptr<AbstractOperator> physical_plan);
+  static std::shared_ptr<const Table> execute_prepared_statement(const std::shared_ptr<AbstractOperator>& physical_plan);
 };
 
 }  // namespace opossum

@@ -7,7 +7,7 @@
 
 // #include "mock_connection.hpp"
 
-#include "server/buffer.hpp"
+#include "server/ring_buffer.hpp"
 
 namespace opossum {
 

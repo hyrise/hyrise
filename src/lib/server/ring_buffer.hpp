@@ -10,42 +10,43 @@ using Socket = boost::asio::ip::tcp::socket;
 
 static constexpr size_t BUFFER_SIZE = 4096u;
 
-class BufferIterator : public std::iterator<std::forward_iterator_tag, char> {
+class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char> {
  public:
-  explicit BufferIterator(std::array<char, BUFFER_SIZE>& data, size_t position = 0)
+  explicit RingBufferIterator(std::array<char, BUFFER_SIZE>& data, size_t position = 0)
       : _data(data), _position(position) {}
 
-  BufferIterator(const BufferIterator&) = default;
-
-  BufferIterator& operator=(const BufferIterator& other) {
+  RingBufferIterator& operator=(const RingBufferIterator& other) {
     _position = other._position;
     _data = other._data;
     return *this;
   }
 
-  bool operator==(BufferIterator other) const { return _position == other._position; }
+// TODO(toni): available size function
 
-  bool operator!=(BufferIterator other) const { return !(*this == other); }
 
-  BufferIterator& operator++() {
+  bool operator==(RingBufferIterator other) const { return (_position == other._position) && (_data == other._data);}
+
+  bool operator!=(RingBufferIterator other) const { return !(*this == other); }
+
+  RingBufferIterator& operator++() {
     _position = (_position + 1) % BUFFER_SIZE;
     return *this;
   }
 
-  BufferIterator operator++(int) {
-    BufferIterator retval = *this;
+  RingBufferIterator operator++(int) {
+    RingBufferIterator retval = *this;
     ++(*this);
     return retval;
   }
 
-  BufferIterator& operator+(const size_t increment) {
+  RingBufferIterator& operator+(const size_t increment) {
     _position = (_position + increment) % BUFFER_SIZE;
     return *this;
   }
 
-  BufferIterator& operator+=(const size_t increment) { return operator+(increment); }
+  RingBufferIterator& operator+=(const size_t increment) { return operator+(increment); }
 
-  BufferIterator::difference_type operator-(BufferIterator const& other) const { return _position - other._position; }
+  RingBufferIterator::difference_type operator-(RingBufferIterator const& other) const { return _position - other._position; }
 
   reference operator*() const { return _data[_position]; }
 
@@ -54,17 +55,17 @@ class BufferIterator : public std::iterator<std::forward_iterator_tag, char> {
   size_t _position;
 };
 
-class Buffer {
+class RingBuffer {
  public:
-  explicit Buffer(const std::shared_ptr<Socket> socket) : _socket(socket) {}
+  explicit RingBuffer(const std::shared_ptr<Socket>& socket) : _socket(socket) {}
 
-  // really inline?
-  inline char* data() noexcept { return _data.begin(); }
+   char* data() noexcept { return _data.begin(); }
+   const char* data() const noexcept { return _data.begin(); }
 
   // Problem: full and empty might be same state, so head == tail
   // Solution: Full state is tail + 1 == head
   //           Empty state is head == tail
-  inline size_t size() const {
+   size_t size() const {
     const auto current_size = _current_position - _start_position;
     if (current_size < 0) {
       return current_size + BUFFER_SIZE;
@@ -73,25 +74,24 @@ class Buffer {
     }
   }
 
-  inline void reset() { _start_position = _current_position; }
-
-  inline bool full() { return size() == (BUFFER_SIZE - 1); }
+   bool full() const { return size() == (BUFFER_SIZE - 1); }
 
  protected:
   std::shared_ptr<Socket> _socket;
   std::array<char, BUFFER_SIZE> _data;
-  BufferIterator _start_position = BufferIterator(_data);
-  BufferIterator _current_position = BufferIterator(_data);
+  RingBufferIterator _start_position = RingBufferIterator(_data);
+  RingBufferIterator _current_position = RingBufferIterator(_data);
 };
 
-class ReadBuffer : public Buffer {
+class ReadBuffer : public RingBuffer {
  public:
-  explicit ReadBuffer(std::shared_ptr<Socket> socket) : Buffer(socket) {}
+  explicit ReadBuffer(std::shared_ptr<Socket> socket) : RingBuffer(socket) {}
 
+  // Extract numerical values from buffer. Values will be converted into the correct byte order if necessary.
   template <typename T, typename std::enable_if_t<std::is_same_v<uint16_t, T> || std::is_same_v<int16_t, T>, int> = 0>
   T get_value() {
     _receive_if_necessary(sizeof(T));
-    T network_value;
+    T network_value = 0;
     std::copy_n(_start_position, sizeof(T), reinterpret_cast<char*>(&network_value));
     _start_position += sizeof(T);
     return ntohs(network_value);
@@ -100,7 +100,7 @@ class ReadBuffer : public Buffer {
   template <typename T, typename std::enable_if_t<std::is_same_v<uint32_t, T> || std::is_same_v<int32_t, T>, int> = 0>
   T get_value() {
     _receive_if_necessary(sizeof(T));
-    T network_value;
+    T network_value = 0;
     std::copy_n(_start_position, sizeof(T), reinterpret_cast<char*>(&network_value));
     _start_position += sizeof(T);
     return ntohl(network_value);
@@ -111,29 +111,33 @@ class ReadBuffer : public Buffer {
                                                   int> = 0>
   T get_value() {
     _receive_if_necessary(sizeof(T));
-    T network_value;
+    T network_value = 0;
     std::copy_n(_start_position, sizeof(T), reinterpret_cast<char*>(&network_value));
     _start_position += sizeof(T);
     return network_value;
   }
 
+  // String functions
   std::string get_string(const size_t string_length, const bool has_null_terminator = true);
   std::string get_string();
 
   NetworkMessageType get_message_type();
 
- protected:
+ private:
   void _receive_if_necessary(const size_t bytes_required = 1);
 };
 
-class WriteBuffer : public Buffer {
+class WriteBuffer : public RingBuffer {
  public:
-  explicit WriteBuffer(const std::shared_ptr<Socket> socket) : Buffer(socket) {}
+  explicit WriteBuffer(const std::shared_ptr<Socket> socket) : RingBuffer(socket) {}
 
+  // Flush whole buffer, e. g. after a finished request
   void flush(const size_t bytes_required = 0);
 
+  // Put string into the buffer. If the string is longer than the buffer itself the buffer will flush automatically.
   void put_string(const std::string& value, const bool terminate = true);
 
+  // Put numerical values into the buffer. Values will be converted into the correct byte order if necessary.
   template <typename T, typename std::enable_if_t<std::is_same_v<uint32_t, T> || std::is_same_v<int32_t, T>, int> = 0>
   void put_value(const T network_value) {
     _flush_if_necessary(sizeof(T));
@@ -159,7 +163,7 @@ class WriteBuffer : public Buffer {
     _current_position += sizeof(T);
   }
 
- protected:
+ private:
   void _flush_if_necessary(const size_t bytes_required);
 };
 }  // namespace opossum
