@@ -202,9 +202,11 @@ std::pair<SubqueryToJoinRule::PredicatePullUpResult, bool> pull_up_correlated_pr
 void push_arithmetic_expression_into_subquery(const std::shared_ptr<BinaryPredicateExpression>& predicate_expression,
                                               const std::shared_ptr<ArithmeticExpression>& arithmetic_expression,
                                               const std::shared_ptr<LQPSubqueryExpression>& subquery_expression,
-                                              size_t arithmetic_expression_argument_idx, bool subquery_expression_is_left) {
-  DebugAssert(subquery_expression->lqp->node_expressions.size() == 1, 
-              "Subqueries used in arithmetic expressions must return a single value, so they must have one node_expression");
+                                              size_t arithmetic_expression_argument_idx,
+                                              bool subquery_expression_is_left) {
+  DebugAssert(
+      subquery_expression->lqp->node_expressions.size() == 1,
+      "Subqueries used in arithmetic expressions must return a single value, so they must have one node_expression");
 
   // Create a copy of the arithmetic expression which has the subquery expression replaced with the subquery's result.
   const auto new_arithmetic_expression = std::make_shared<ArithmeticExpression>(
@@ -246,7 +248,8 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
       return std::nullopt;
     }
 
-  } else if (const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate())) {
+  } else if (const auto binary_predicate =
+                 std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate())) {
     result.join_mode = JoinMode::Semi;
 
     /**
