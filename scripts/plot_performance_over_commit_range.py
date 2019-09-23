@@ -11,8 +11,7 @@ import re
 import sys
 
 if(len(sys.argv) != 4):
-    print("Usage: " + sys.argv[0] + " <path to Hyrise> <first commit> <last commit>")
-    exit()
+    exit("Usage: " + sys.argv[0] + " <path to Hyrise> <first commit> <last commit>")
 
 results = []
 column_names = ['Commit']
@@ -43,8 +42,7 @@ for commit in RepositoryMining(sys.argv[1], from_commit=sys.argv[2], to_commit=s
 			result.append(float(items_per_second))
 
 		if len(result) != len(column_names):
-			print("Mismatching number of benchmarks, starting with commit " + commit)
-			exit()
+			exit("Mismatching number of benchmarks, starting with commit " + commit)
 
 	results.append(result)
 
@@ -58,5 +56,6 @@ print(df)
 
 df.plot.line(x='Commit', figsize=(64, 18))
 plt.xticks(df.index, df['Commit'], rotation=90)
+plt.ylabel('Throughput relative to first commit')
 plt.tight_layout()
 plt.savefig('output.pdf')

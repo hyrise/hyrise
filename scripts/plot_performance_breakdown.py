@@ -11,8 +11,7 @@ import sys
 benchmarks = []
 
 if(len(sys.argv) != 2):
-    print("Usage: " + sys.argv[0] + " benchmark.json")
-    exit()
+    exit("Usage: " + sys.argv[0] + " benchmark.json")
 
 with open(sys.argv[1]) as file:
     data = json.load(file)
@@ -29,8 +28,7 @@ for benchmark_json in data['benchmarks']:
 
     for run in benchmark_json['successful_runs']:
         if len(run['metrics']) == 0:
-            print("No metrics found. Did you run the benchmark with --sql_metrics?")
-            exit()
+            exit("No metrics found. Did you run the benchmark with --sql_metrics?")
         for metrics in run['metrics']:
             sum_parse_duration += metrics['parse_duration']
 
@@ -56,10 +54,11 @@ print(df)
 
 ax = df.plot.bar(x='Benchmark', stacked=True)
 ax.set_yticklabels(['{:,.0%}'.format(x) for x in ax.get_yticks()])
+ax.set_ylabel('Share of query run time')
 
 # Reverse legend so that it matches the stacked bars
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(reversed(handles), reversed(labels))
+ax.legend(reversed(handles), reversed(labels), bbox_to_anchor=(1.0, 1.0))
 
 basename = sys.argv[1].replace('.json', '')
 plt.tight_layout()
