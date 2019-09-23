@@ -1593,4 +1593,44 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, ComplexArithmeticExpression) {
+  // SELECT * FROM a WHERE a.a > (SELECT SUM(a.a) FROM a WHERE a.b = a.b) + (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
+
+  // clang-format off
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+
+  const auto subquery_lqp0 =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)),
+    PredicateNode::make(equals_(a_b, parameter),
+      node_a));
+  const auto subquery0 = lqp_subquery_(subquery_lqp0, std::make_pair(ParameterID{0}, a_b));
+
+  const auto subquery_lqp1 =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+    PredicateNode::make(equals_(b_b, parameter),
+      node_b));
+  const auto subquery1 = lqp_subquery_(subquery_lqp1, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(a_a, add_(subquery0, subquery1)),
+    node_a);
+
+
+  const auto subquery_lqp2 =
+  ProjectionNode::make(expression_vector(add_(sum_(a_a), subquery1)),
+    AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)),
+      PredicateNode::make(equals_(a_b, parameter),
+        node_a)));
+  const auto subquery2 = lqp_subquery_(subquery_lqp2, std::make_pair(ParameterID{0}, a_b));
+
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(a_a, subquery2),
+    node_a);
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum

@@ -208,7 +208,8 @@ void push_arithmetic_expression_into_subquery(const std::shared_ptr<BinaryPredic
       subquery_expression->lqp->node_expressions.size() == 1,
       "Subqueries used in arithmetic expressions must return a single value, so they must have one node_expression");
 
-  // Create a copy of the arithmetic expression which has the subquery expression replaced with the subquery's result.
+  // (1) Create a new arithmetic expression that takes the result expression of the subquery and applies the arithmetic
+  //     operation on it.
   const auto new_arithmetic_expression = std::make_shared<ArithmeticExpression>(
       arithmetic_expression->arithmetic_operator,
       subquery_expression_is_left ? subquery_expression->lqp->node_expressions[0]
@@ -216,11 +217,12 @@ void push_arithmetic_expression_into_subquery(const std::shared_ptr<BinaryPredic
       subquery_expression_is_left ? arithmetic_expression->right_operand()
                                   : subquery_expression->lqp->node_expressions[0]);
 
-  // Add a projection node to the subquery which encapsulates the arithmetic operation we did in the main query.
+  // (2) Insert a ProjectionNode on top of the subquery's LQP that evaluates this arithmetic expression.
   subquery_expression->lqp = ProjectionNode::make(
       std::vector<std::shared_ptr<AbstractExpression>>{new_arithmetic_expression}, subquery_expression->lqp);
 
-  // Replace the arithmetic expression in the predicate with just the subquery expression.
+  // (3) In the PredicateExpression outside of the LQP, replace the old arithmetic expression with the updated subquery
+  //     expression.
   predicate_expression->arguments[arithmetic_expression_argument_idx] = subquery_expression;
 }
 
@@ -260,31 +262,30 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
      * predicate and then it could be the left/right operand of that arithmetic expression.
      * More complex cases, such as SELECT * FROM a WHERE a.a > 1 + (SELECT ... ) + 2 are not covered yet.
      */
-    if (const auto arithmetic_expression =
-            std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->right_operand())) {
-      if (const auto subquery_expression =
-              std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->right_operand())) {
-        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, subquery_expression, 1,
-                                                 false);
-      }
 
-      if (const auto subquery_expression =
+    if (const auto arithmetic_expression =
+            std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->left_operand())) {
+      if (const auto left_subquery_expression =
               std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->left_operand())) {
-        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, subquery_expression, 1, true);
+        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, left_subquery_expression, 0,
+                                                 true);
+      } else if (const auto right_subquery_expression =
+                     std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->right_operand())) {
+        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, right_subquery_expression, 0,
+                                                 false);
       }
     }
 
     if (const auto arithmetic_expression =
-            std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->left_operand())) {
-      if (const auto subquery_expression =
-              std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->right_operand())) {
-        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, subquery_expression, 0,
-                                                 false);
-      }
-
-      if (const auto subquery_expression =
+            std::dynamic_pointer_cast<ArithmeticExpression>(binary_predicate->right_operand())) {
+      if (const auto left_subquery_expression =
               std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->left_operand())) {
-        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, subquery_expression, 0, true);
+        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, left_subquery_expression, 1,
+                                                 true);
+      } else if (const auto right_subquery_expression =
+                     std::dynamic_pointer_cast<LQPSubqueryExpression>(arithmetic_expression->right_operand())) {
+        push_arithmetic_expression_into_subquery(binary_predicate, arithmetic_expression, right_subquery_expression, 1,
+                                                 false);
       }
     }
 
