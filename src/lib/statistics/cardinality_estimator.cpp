@@ -299,7 +299,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // create a different join order if it assumes `orders` to be filtered down to very few values. For now, we return
   // PLACEHOLDER_SELECTIVITY_HIGH. This is not perfect, but better than estimating `num_rows / distinct_values`.
   if (expression_contains_correlated_parameter(predicate)) {
-    return input_table_statistics->scaled(PLACEHOLDER_SELECTIVITY_HIGH);
+    auto output_column_statistics =
+        std::vector<std::shared_ptr<BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};
+
+    for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
+      output_column_statistics[column_id] =
+          input_table_statistics->column_statistics[column_id]->scaled(PLACEHOLDER_SELECTIVITY_HIGH);
+    }
+
+    const auto row_count = Cardinality{input_table_statistics->row_count * PLACEHOLDER_SELECTIVITY_HIGH};
+    return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
   }
 
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
