@@ -380,7 +380,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }));
     jobs.back()->schedule();
 
-    Hyrise::get().scheduler().wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted

@@ -32,7 +32,9 @@ struct ColumnDataDistribution {
 
   static ColumnDataDistribution make_skewed_normal_config(const double skew_location = 0.0,
                                                           const double skew_scale = 1.0,
-                                                          const double skew_shape = 0.0) {
+                                                          // Temporary work around for https://github.com/boostorg/math/issues/254.
+                                                          // TODO(anyone): reset to 0.0 when Hyrise's boost has the fix.
+                                                          const double skew_shape = 0.0001) {
     ColumnDataDistribution c{};
     c.skew_location = skew_location;
     c.skew_scale = skew_scale;
@@ -65,7 +67,7 @@ class SyntheticTableGenerator {
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
                                         const std::vector<DataType>& column_data_types, const size_t num_rows,
                                         const ChunkOffset chunk_size,
-                                        const std::optional<ChunkEncodingSpec>& segment_encoding_specs,
+                                        const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
                                         const std::optional<std::vector<std::string>>& column_names = std::nullopt,
                                         const UseMvcc use_mvcc = UseMvcc::No);
 
@@ -98,11 +100,11 @@ class SyntheticTableGenerator {
     } else if constexpr (std::is_floating_point_v<T>) {
       return static_cast<T>(input) * 0.999999f;
     } else if constexpr (std::is_same_v<T, pmr_string>) {
+      Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
+
       constexpr auto generated_string_length = size_t{10};
       constexpr auto prefix_length = size_t{4};
       constexpr auto variable_string_length = generated_string_length - prefix_length;
-
-      Assert(input >= 0, "Integer values need to be positive in order to be converted to a pmr_string.");
 
       const std::vector<char> chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
                                        'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
@@ -125,8 +127,6 @@ class SyntheticTableGenerator {
       }
 
       return result;
-    } else {
-      Fail("Requested type not supported.");
     }
   }
 

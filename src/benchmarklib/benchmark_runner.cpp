@@ -134,7 +134,7 @@ void BenchmarkRunner::run() {
     Assert(!any_verification_failed, "Verification failed");
   }
 
-  Hyrise::get().scheduler().finish();
+  Hyrise::get().scheduler()->finish();
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -187,7 +187,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   }
 
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
-  Hyrise::get().scheduler().wait_for_all_tasks();
+  Hyrise::get().scheduler()->wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
 
@@ -231,7 +231,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    Hyrise::get().scheduler().wait_for_all_tasks();
+    Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
 }
@@ -267,7 +267,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
   // No need to check if the benchmark uses the scheduler or not as this method executes tasks immediately if the
   // scheduler is not set.
-  Hyrise::get().scheduler().schedule_tasks<JobTask>({task});
+  Hyrise::get().scheduler()->schedule_tasks<JobTask>({task});
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
@@ -296,7 +296,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   _state.set_done();
 
   // Wait for the rest of the tasks that didn't make it in time
-  Hyrise::get().scheduler().wait_for_all_tasks();
+  Hyrise::get().scheduler()->wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
 

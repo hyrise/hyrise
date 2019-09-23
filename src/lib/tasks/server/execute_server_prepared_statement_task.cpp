@@ -10,7 +10,7 @@ namespace opossum {
 void ExecuteServerPreparedStatementTask::_on_execute() {
   try {
     const auto tasks = OperatorTask::make_tasks_from_operator(_prepared_plan, CleanupTemporaries::Yes);
-    Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
     auto result_table = tasks.back()->get_operator()->get_output();
     _promise.set_value(std::move(result_table));
   } catch (const std::exception&) {

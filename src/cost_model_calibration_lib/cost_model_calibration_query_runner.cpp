@@ -21,7 +21,7 @@ const std::vector<cost_model::CostModelFeatures> CostModelCalibrationQueryRunner
   pqp->set_transaction_context_recursively(transaction_context);
   const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::No);
 
-  Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   return _evaluate_query_plan({pqp});
 }
