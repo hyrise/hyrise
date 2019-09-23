@@ -2,6 +2,7 @@ matplotlib>=2.1.1
 numpy==1.16.4
 pandas==0.24.2
 pexpect>=4.7.0
+PyDriller>=1.9.2
 scipy>=1.0
 termcolor>=1.0
 terminaltables>=3.0
