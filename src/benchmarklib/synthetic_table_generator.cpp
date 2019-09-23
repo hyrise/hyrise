@@ -164,37 +164,34 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             values.push_back(generate_value_by_distribution_type());
           }
 
-          segments[column_index] =
+          auto value_segment =
               std::make_shared<ValueSegment<ColumnDataType>>(create_typed_segment_values<ColumnDataType>(values));
-        });
 
-        // add full chunk to table
-        if (column_index == num_columns - 1) {
-          if (use_mvcc == UseMvcc::Yes) {
-            const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-            table->append_chunk(segments, mvcc_data);
+          if (!segment_encoding_specs) {
+            segments[column_index] = value_segment;
           } else {
-            table->append_chunk(segments);
+            segments[column_index] = ChunkEncoder::encode_segment(value_segment, column_data_types[column_index],
+                                         segment_encoding_specs->at(column_index));
           }
-
-          // get added chunk, mark it as immutable and add statistics
-          const auto& added_chunk = table->get_chunk(ChunkID{table->chunk_count() - 1});
-          added_chunk->mark_immutable();
-          if (!added_chunk->pruning_statistics()) {
-            generate_chunk_pruning_statistics(added_chunk);
-          }
-
-          if (segment_encoding_specs) {
-            for (auto column_id_to_encode = ColumnID{0}; column_id_to_encode < num_columns; ++column_id_to_encode)
-              ChunkEncoder::encode_segment(added_chunk->get_segment(column_id_to_encode),
-                                           table->column_data_types()[column_id_to_encode],
-                                           segment_encoding_specs->at(column_id_to_encode));
-          }
-        }
+        });
       }));
       jobs.back()->schedule();
     }
     Hyrise::get().scheduler()->wait_for_tasks(jobs);
+
+    if (use_mvcc == UseMvcc::Yes) {
+      const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
+      table->append_chunk(segments, mvcc_data);
+    } else {
+      table->append_chunk(segments);
+    }
+
+    // get added chunk, mark it as immutable and add statistics
+    const auto& added_chunk = table->get_chunk(ChunkID{table->chunk_count() - 1});
+    added_chunk->mark_immutable();
+    if (!added_chunk->pruning_statistics()) {
+      generate_chunk_pruning_statistics(added_chunk);
+    }
   }
 
   Hyrise::get().scheduler()->wait_for_all_tasks();
