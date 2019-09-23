@@ -288,9 +288,22 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns' statistics are
   // scaled with the estimated selectivity of the predicate.
 
-  const auto& predicate = *predicate_node.predicate();
+  const auto predicate = predicate_node.predicate();
 
-  const auto operator_scan_predicates = OperatorScanPredicate::from_expression(predicate, predicate_node);
+  // Estimating correlated parameters is tricky. Example:
+  //   SELECT c_custkey, (SELECT AVG(o_totalprice) FROM orders WHERE o_custkey = c_custkey) FROM customer
+  // If the subquery was executed for each customer row, assuming that the predicate has a selectivity matching that
+  // of searching for a single value would be reasonable. However, it is likely that the SubqueryToJoinRule will
+  // rewrite this query so that the CorrelatedParameterExpression will turn into an LQPColumnExpression that is part
+  // of a join predicate. However, since the JoinOrderingRule is executed before the SubqueryToJoinRule, it would
+  // create a different join order if it assumes `orders` to be filtered down to very few values. For now, we ignore
+  // correlated predicates in the cardinality estimation, i.e., we assume that they return 100% of all matching values.
+  // This is not perfect, but better than estimating `num_rows / distinct_values`.
+  if (expression_contains_correlated_parameter(predicate)) {
+    return input_table_statistics;
+  }
+
+  const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
 
   // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates
