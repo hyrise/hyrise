@@ -105,8 +105,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
     Segments segments(num_columns);
 
-    for (auto column_index = ColumnID{0}; column_index < num_chunks; ++column_index) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+    for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
+      jobs.emplace_back(std::make_shared<JobTask>([&, column_index]() {
         resolve_data_type(column_data_types[column_index], [&, column_index](const auto column_data_type) {
           using ColumnDataType = typename decltype(column_data_type)::type;
 
@@ -197,7 +197,9 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     Hyrise::get().scheduler()->wait_for_tasks(jobs);
   }
 
+  Hyrise::get().scheduler()->wait_for_all_tasks();
   Hyrise::get().set_scheduler(previous_scheduler);  // set scheduler back to previous one.
+
   return table;
 }
 
