@@ -14,6 +14,7 @@
 #include "boost/math/distributions/uniform.hpp"
 
 #include "hyrise.hpp"
+#include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -23,7 +24,6 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace {
@@ -83,7 +83,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   const auto num_columns = column_data_distributions.size();
-  const auto num_chunks = static_cast<size_t>(std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size)));
+  const auto num_chunks =
+      static_cast<size_t>(std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size)));
 
   // add column definitions and initialize each value vector
   TableColumnDefinitions column_definitions;
@@ -104,8 +105,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
     Segments segments(num_columns);
 
-    for (auto column_index = ColumnID{0}; column_index < num_chunks; ++column_index) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+    for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
+      jobs.emplace_back(std::make_shared<JobTask>([&, column_index]() {
         resolve_data_type(column_data_types[column_index], [&, column_index](const auto column_data_type) {
           using ColumnDataType = typename decltype(column_data_type)::type;
 
@@ -128,9 +129,9 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
               break;
             }
             case DataDistributionType::NormalSkewed: {
-              const auto skew_dist = boost::math::skew_normal_distribution<double>{column_data_distribution.skew_location,
-                                                                                   column_data_distribution.skew_scale,
-                                                                                   column_data_distribution.skew_shape};
+              const auto skew_dist = boost::math::skew_normal_distribution<double>{
+                  column_data_distribution.skew_location, column_data_distribution.skew_scale,
+                  column_data_distribution.skew_shape};
               generate_value_by_distribution_type = [skew_dist, &probability_dist, &pseudorandom_engine]() {
                 const auto probability = probability_dist(pseudorandom_engine);
                 return static_cast<int>(std::round(boost::math::quantile(skew_dist, probability) * 10));
@@ -185,7 +186,9 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
 
           if (segment_encoding_specs) {
             for (auto column_id_to_encode = ColumnID{0}; column_id_to_encode < num_columns; ++column_id_to_encode)
-              ChunkEncoder::encode_segment(added_chunk->get_segment(column_id_to_encode), table->column_data_types()[column_id_to_encode], segment_encoding_specs->at(column_id_to_encode));
+              ChunkEncoder::encode_segment(added_chunk->get_segment(column_id_to_encode),
+                                           table->column_data_types()[column_id_to_encode],
+                                           segment_encoding_specs->at(column_id_to_encode));
           }
         }
       }));
@@ -194,7 +197,9 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     Hyrise::get().scheduler()->wait_for_tasks(jobs);
   }
 
+  Hyrise::get().scheduler()->wait_for_all_tasks();
   Hyrise::get().set_scheduler(previous_scheduler);  // set scheduler back to previous one.
+
   return table;
 }
 
