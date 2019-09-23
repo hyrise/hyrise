@@ -354,6 +354,9 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
     const auto duration_seconds = reported_item_duration_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+    
+    // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
+    // want to touch this and potentially break the comparability across commits.
     benchmark["items_per_second"] = items_per_second;
     const auto time_per_item =
         !result.successful_runs.empty() ? reported_item_duration_ns / result.successful_runs.size() : std::nanf("");
