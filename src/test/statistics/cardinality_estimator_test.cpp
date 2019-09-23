@@ -640,7 +640,7 @@ TEST_F(CardinalityEstimatorTest, PredicateMultipleWithCorrelatedParameter) {
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 45.0f);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 90.0f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 90.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
 }
 
 TEST_F(CardinalityEstimatorTest, PredicateWithNull) {
