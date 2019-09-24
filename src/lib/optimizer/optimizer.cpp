@@ -22,6 +22,7 @@
 #include "strategy/predicate_placement_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 #include "strategy/predicate_split_up_rule.hpp"
+#include "strategy/semi_join_reduction_rule.hpp"
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -102,6 +103,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
+
+  optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
