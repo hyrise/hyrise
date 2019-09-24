@@ -11,6 +11,7 @@
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
