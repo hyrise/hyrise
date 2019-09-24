@@ -141,11 +141,11 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       for (const auto& push_down_node : push_down_nodes) {
         if (_is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
           aggregate_push_down_nodes.emplace_back(push_down_node);
-          _push_down_traversal(input_node, LQPInputSide::Left, aggregate_push_down_nodes);
         } else {
           _insert_nodes(current_node, input_side, {push_down_node});
         }
       }
+      _push_down_traversal(input_node, LQPInputSide::Left, aggregate_push_down_nodes);
     } break;
 
     default: {
@@ -263,10 +263,29 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto& predicate_node = static_cast<PredicateNode&>(*node);
-      return expression_evaluable_on_lqp(predicate_node.predicate(), *lqp);
-    } break;
+      if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp)) return false;
+
+      auto has_uncomputed_aggregate = false;
+      auto predicate = predicate_node.predicate();
+      visit_expression(predicate, [&](const auto &expression) {
+        if (expression->type == ExpressionType::Aggregate && !lqp->find_column_id(*expression)) {
+          has_uncomputed_aggregate = true;
+          return ExpressionVisitation::DoNotVisitArguments;
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+      return !has_uncomputed_aggregate;
+    }
     case LQPNodeType::Join: {
-      return true;// TODO
+      const auto& join_node = static_cast<JoinNode&>(*node);
+      for (const auto& join_predicate : join_node.join_predicates()) {
+        for (const auto& argument : join_predicate->arguments) {
+          if (!lqp->find_column_id(*argument) && !join_node.right_input()->find_column_id(*argument)) {
+            return false;
+          }
+        }
+      }
+      return true;
     }
     default:
       Fail("Unexpected node type");
