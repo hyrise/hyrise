@@ -62,7 +62,7 @@ namespace opossum {
           semi_join_reduction_node->set_right_input(join_node->right_input());
 
           const auto& estimator = cost_estimator->cardinality_estimator;
-          const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->right_input());
+          const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
           const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
           
           std::cout << *join_node << std::endl;
