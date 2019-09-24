@@ -43,9 +43,6 @@ namespace opossum {
           const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
           const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
           
-          std::cout << *join_node << std::endl;
-          std::cout << semi_join_reduction_node->description() << " reduces from " << reduction_input_cardinality << " to " << reduction_output_cardinality << " (" << reduction_output_cardinality/reduction_input_cardinality << ") / right input: " << estimator->estimate_cardinality(join_node->right_input()) << std::endl;
-
           semi_join_reduction_node->set_right_input(nullptr);
           lqp_remove_node(semi_join_reduction_node);
 
@@ -65,9 +62,6 @@ namespace opossum {
           const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
           const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
           
-          std::cout << *join_node << std::endl;
-          std::cout << semi_join_reduction_node->description() << " reduces from " << reduction_input_cardinality << " to " << reduction_output_cardinality << " (" << reduction_input_cardinality/reduction_output_cardinality << ") / left input: " << estimator->estimate_cardinality(join_node->left_input()) << std::endl;
-
           semi_join_reduction_node->set_right_input(nullptr);
           lqp_remove_node(semi_join_reduction_node);
 
