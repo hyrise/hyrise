@@ -14,6 +14,12 @@ namespace opossum {
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
 
+  /**
+   * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
+   * (for tables with >= 200m rows) are created.
+   */
+  const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
+
   auto next_column_id = std::atomic<size_t>{0u};
   auto threads = std::vector<std::thread>{};
 
@@ -32,15 +38,6 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
 
         resolve_data_type(column_data_type, [&](auto type) {
           using ColumnDataType = typename decltype(type)::type;
-
-          /**
-           * Determine bin count, within mostly arbitrarily chosen bounds:
-           * For numeric types, 5 bins (for tables with <=2k rows) up to 100 bins (for tables with >= 200k rows)
-           * For string types, 5 bins (for tables with <=200 rows) up to 100 bins (for tables with >= 20k rows)
-           * This is to account for the worse estimation on string histograms
-           */
-          const auto scale = column_data_type == DataType::String ? 200 : 2'000;
-          const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / scale));
 
           const auto output_column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
 
