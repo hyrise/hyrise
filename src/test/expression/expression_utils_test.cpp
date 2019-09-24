@@ -64,4 +64,19 @@ TEST_F(ExpressionUtilsTest, ExpressionCommonType) {
   EXPECT_EQ(expression_common_type(DataType::String, DataType::String), DataType::String);
 }
 
+TEST_F(ExpressionUtilsTest, ExpressionContainsPlaceholders) {
+  EXPECT_FALSE(expression_contains_placeholder(and_(greater_than_(a_a, 5), equals_(a_c, 7))));
+  EXPECT_TRUE(expression_contains_placeholder(and_(greater_than_(a_a, placeholder_(ParameterID{5})), equals_(a_c, 7))));
+  EXPECT_FALSE(expression_contains_placeholder(
+      and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, lqp_column_(a_a))), equals_(a_c, 7))));
+}
+
+TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
+  EXPECT_FALSE(expression_contains_correlated_parameter(and_(greater_than_(a_a, 5), equals_(a_c, 7))));
+  EXPECT_FALSE(expression_contains_correlated_parameter(
+      and_(greater_than_(a_a, placeholder_(ParameterID{5})), equals_(a_c, 7))));
+  EXPECT_TRUE(expression_contains_correlated_parameter(
+      and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, lqp_column_(a_a))), equals_(a_c, 7))));
+}
+
 }  // namespace opossum
