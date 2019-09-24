@@ -1,7 +1,7 @@
 #pragma once
 
-#include <array>
 #include <boost/asio.hpp>
+#include <array>
 #include "network_message_types.hpp"
 
 namespace opossum {

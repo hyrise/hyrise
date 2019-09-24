@@ -66,6 +66,7 @@ void Session::_handle_request() {
       break;
     }
     default:
+      std::cout << "header is: " << static_cast<char>(header) << std::endl;
       Fail("Unknown packet type");
   }
 }

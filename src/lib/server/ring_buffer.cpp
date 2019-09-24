@@ -1,5 +1,8 @@
 #include "ring_buffer.hpp"
 
+#include <pthread.h>
+#include <iostream>
+
 namespace opossum {
 
 std::string ReadBuffer::get_string() {
@@ -76,12 +79,13 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
   const auto maximum_readable_size = maximum_capacity() - size();
 
   size_t bytes_read;
+  boost::system::error_code error_code;
   // We can't forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
   // distinguish between reading into continuous memory or partially read the data.
   if ((_current_position - _start_position) < 0 || _start_position.get_raw_pointer() == &_data[0]) {
     bytes_read =
         boost::asio::read(*_socket, boost::asio::buffer(_current_position.get_raw_pointer(), maximum_readable_size),
-                          boost::asio::transfer_at_least(bytes_required - size()));
+                          boost::asio::transfer_at_least(bytes_required - size()), error_code);
   } else {
     bytes_read = boost::asio::read(
         *_socket,
@@ -89,11 +93,15 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
             boost::asio::buffer(_current_position.get_raw_pointer(),
                                 std::distance(_current_position.get_raw_pointer(), _data.end())),
             boost::asio::buffer(_data.begin(), std::distance(_data.begin(), _start_position.get_raw_pointer() - 1))},
-        boost::asio::transfer_at_least(bytes_required - size()));
+        boost::asio::transfer_at_least(bytes_required - size()), error_code);
   }
 
-  if (!bytes_read) {
-    // TODO(toni): Connection abort
+  // Socket was closed by client during execution
+  if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset) {
+    // Terminate session by stopping the current thread
+    pthread_exit(0);
+  } else if (error_code) {
+    std::cerr << error_code.category().name() << ": " << error_code.message() << std::endl;
   }
   _current_position += bytes_read;
 }
@@ -129,6 +137,7 @@ void WriteBuffer::flush(const size_t bytes_required) {
   const auto bytes_to_send = bytes_required ? bytes_required : size();
   size_t bytes_sent;
 
+  boost::system::error_code error_code;
   if ((_current_position - _start_position) < 0) {
     // Data not continously stored in buffer
     bytes_sent = boost::asio::write(
@@ -137,14 +146,18 @@ void WriteBuffer::flush(const size_t bytes_required) {
             boost::asio::buffer(_start_position.get_raw_pointer(),
                                 std::distance(_start_position.get_raw_pointer(), _data.end())),
             boost::asio::buffer(_data.begin(), std::distance(_data.begin(), _current_position.get_raw_pointer()))},
-        boost::asio::transfer_at_least(bytes_to_send));
+        boost::asio::transfer_at_least(bytes_to_send), error_code);
   } else {
     bytes_sent = boost::asio::write(*_socket, boost::asio::buffer(_start_position.get_raw_pointer(), size()),
-                                    boost::asio::transfer_at_least(bytes_to_send));
+                                    boost::asio::transfer_at_least(bytes_to_send), error_code);
   }
 
-  if (!bytes_sent) {
-    // TODO(toni): connection abort
+  // Socket was closed by client during execution
+  if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset) {
+    // Terminate session by stopping the current thread
+    pthread_exit(0);
+  } else if (error_code) {
+    std::cerr << error_code.category().name() << ": " << error_code.message() << std::endl;
   }
   _start_position += bytes_sent;
 }
