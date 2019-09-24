@@ -43,14 +43,17 @@ namespace opossum {
           const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
           const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
           
+          std::cout << semi_join_reduction_node->description() << " reduces from " << reduction_input_cardinality << " to " << reduction_output_cardinality << " (" << reduction_input_cardinality/reduction_output_cardinality << ")" << std::endl;
+
           semi_join_reduction_node->set_right_input(nullptr);
           lqp_remove_node(semi_join_reduction_node);
 
-          if (reduction_output_cardinality / reduction_input_cardinality <= .1f) { // TODO
+          if (reduction_output_cardinality / reduction_input_cardinality <= .25f) { // TODO
             semi_join_reductions.emplace_back(join_node, LQPInputSide::Right, semi_join_reduction_node);
           }
         }
 
+// TODO Deduplicate
         {
           const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
           semi_join_reduction_node->comment = "Semi Reduction";
@@ -58,13 +61,15 @@ namespace opossum {
           semi_join_reduction_node->set_right_input(join_node->right_input());
 
           const auto& estimator = cost_estimator->cardinality_estimator;
-          const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
+          const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->right_input());
           const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
           
+          std::cout << semi_join_reduction_node->description() << " reduces from " << reduction_input_cardinality << " to " << reduction_output_cardinality << " (" << reduction_input_cardinality/reduction_output_cardinality << ")" << std::endl;
+
           semi_join_reduction_node->set_right_input(nullptr);
           lqp_remove_node(semi_join_reduction_node);
 
-          if (reduction_output_cardinality / reduction_input_cardinality <= .1f) { // TODO
+          if (reduction_output_cardinality / reduction_input_cardinality <= .25f) { // TODO
             semi_join_reductions.emplace_back(join_node, LQPInputSide::Left, semi_join_reduction_node);
           }
         }
