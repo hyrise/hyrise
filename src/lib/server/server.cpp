@@ -4,25 +4,24 @@
 
 namespace opossum {
 
-Server::Server(const uint16_t port)
-    : _socket(_io_service), _acceptor(_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {
-  // boost::asio::socket_base::reuse_address option(true);
-  // _acceptor.set_option(option);
-}
+// Specified port (default: 5432) will be opened after initializing the _acceptor
+Server::Server(const uint16_t port) 
+    : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {
+        std::cout << "Server starting on port " << get_port() << std::endl;
+    }
 
 void Server::_accept_new_session() {
-  auto start_session = boost::bind(&Server::_start_session, this, boost::asio::placeholders::error);
-  _acceptor.async_accept(_socket, start_session);
+  // Create a new session. This will also open a new data socket in order to communicate with the client
+  // For more information on TCP ports + Asio see: 
+  // https://www.gamedev.net/forums/topic/586557-boostasio-allowing-multiple-connections-to-a-single-server-socket/
+  auto new_session = std::make_shared<Session>(_io_service);
+  _acceptor.async_accept(*(new_session->get_socket()), boost::bind(&Server::_start_session, this, new_session, boost::asio::placeholders::error));
 }
 
-void Server::_start_session(const boost::system::error_code& error) {
+void Server::_start_session(const std::shared_ptr<Session>& new_session, const boost::system::error_code& error) {
   if (!error) {
-    std::thread([this] {
-      // Sockets cannot be copied. After moving the _socket object the object will be in the same state as before.
-      auto session = Session(std::move(_socket));
-      session.start();
-    })
-        .detach();
+    std::thread session_thread([new_session] { new_session->start(); });
+    session_thread.detach();
   } else {
     std::cerr << error.category().name() << ": " << error.message() << std::endl;
   }
@@ -31,7 +30,6 @@ void Server::_start_session(const boost::system::error_code& error) {
 
 void Server::run() {
   _accept_new_session();
-  std::cout << "Server starting on port " << get_port() << std::endl;
   _io_service.run();
 }
 

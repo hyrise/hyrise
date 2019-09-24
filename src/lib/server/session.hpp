@@ -11,10 +11,13 @@ namespace opossum {
 // The session class implements the communication flow and stores session specific information such as portals.
 class Session {
  public:
-  explicit Session(Socket socket);
+  // explicit Session(Socket socket);
+  explicit Session(boost::asio::io_service& io_service);
 
   // Start new session.
   void start();
+
+  std::shared_ptr<Socket> get_socket();
 
  private:
   // Establish new connection by exchanging parameters.
@@ -40,6 +43,8 @@ class Session {
 
   // Commit current transaction.
   void _sync();
+
+
 
   const std::shared_ptr<Socket> _socket;
   const std::shared_ptr<PostgresProtocolHandler> _postgres_protocol_handler;

@@ -2,9 +2,6 @@
 
 namespace opossum {
 
-static constexpr auto LENGTH_FIELD_SIZE = sizeof(uint32_t);
-static constexpr auto MESSAGE_TYPE_SIZE = sizeof(NetworkMessageType);
-
 std::string ReadBuffer::get_string() {
   auto string_end = RingBufferIterator(_data);
   std::string result = "";
@@ -63,7 +60,7 @@ std::string ReadBuffer::get_string(const size_t string_length, const bool has_nu
 }
 
 NetworkMessageType ReadBuffer::get_message_type() {
-  _receive_if_necessary(MESSAGE_TYPE_SIZE);
+  _receive_if_necessary();
   auto message_type = static_cast<NetworkMessageType>(*_start_position);
   _start_position++;
   return message_type;

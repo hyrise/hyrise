@@ -44,6 +44,9 @@ class PostgresProtocolHandler {
   // Send out status message containing NetworkMessageType and length
   void send_status_message(const NetworkMessageType message_type);
 
+  // Send error message to client if there is an error during parsing or execution
+  void send_error_message(const std::string& error_message);
+
   void set_row_description_header(const uint32_t total_column_name_length, const uint16_t column_count);
 
  private:

@@ -39,7 +39,8 @@ class ServerTestRunner : public BaseTest {
     _server_thread->join();
   }
 
-  std::unique_ptr<Server> _server = std::make_unique<Server>(0);  // run on port 0 so the server can pick a free one
+  std::unique_ptr<Server> _server = std::make_unique<Server>(5432);  // run on port 0 so the server can pick a free one
+  // std::unique_ptr<Server> _server = std::make_unique<Server>(0);  // run on port 0 so the server can pick a free one
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 
@@ -52,6 +53,23 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
   // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
+  const auto result = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), _table_a->row_count());
+}
+
+TEST_F(ServerTestRunner, TestInvalidStatement) {
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+  
+  // Ill-formed SQL statement
+  EXPECT_THROW(transaction.exec("SELECT * FROM;"), pqxx::sql_error);
+
+  // Well-formed but table does not exist
+  EXPECT_THROW(transaction.exec("SELECT * FROM non_existent;"), pqxx::sql_error);
+
+  // Check whether server is still running and connection established
   const auto result = transaction.exec("SELECT * FROM table_a;");
   EXPECT_EQ(result.size(), _table_a->row_count());
 }
@@ -103,6 +121,39 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
   const auto result2 = transaction.exec_prepared(prepared_name, param);
   EXPECT_EQ(result2.size(), 2u);
 }
+
+TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
+  pqxx::connection connection{_connection_string};
+  pqxx::nontransaction transaction{connection};
+
+  const std::string prepared_name = "statement1";
+  const auto param = 1234u;
+  // Ill-formed prepared statement
+  connection.prepare(prepared_name, "SELECT * FROM WHERE a > ?");
+  EXPECT_THROW(transaction.exec_prepared(prepared_name, param), pqxx::sql_error);
+
+  // Well-formed but table does not exist
+
+  // Check whether server is still running and connection established
+
+
+
+  // Well-formed but table does not exist
+  // EXPECT_THROW(transaction.exec("SELECT * FROM non_existent;"), pqxx::sql_error);
+
+
+
+
+  // const auto param = 1234u;
+  // const auto result1 = transaction.exec_prepared(prepared_name, param);
+  // EXPECT_EQ(result1.size(), 1u);
+
+  // transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
+  // const auto result2 = transaction.exec_prepared(prepared_name, param);
+  // EXPECT_EQ(result2.size(), 2u);
+}
+
+
 
 TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
   pqxx::connection connection{_connection_string};

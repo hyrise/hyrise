@@ -7,10 +7,17 @@
 
 namespace opossum {
 
+struct ExecutionInformation {
+  std::shared_ptr<const Table> result_table;
+  OperatorType root_operator;
+  std::string execution_information;
+  std::string error;
+};
+
 // This class manages the interaction between the server and the database component.
 class HyriseCommunicator {
  public:
-  static std::pair<std::shared_ptr<const Table>, OperatorType> execute_pipeline(const std::string& sql);
+  static ExecutionInformation execute_pipeline(const std::string& sql);
 
   static void setup_prepared_plan(const std::string& statement_name, const std::string& query);
 

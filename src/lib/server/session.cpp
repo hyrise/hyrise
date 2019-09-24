@@ -6,13 +6,15 @@
 
 namespace opossum {
 
-Session::Session(Socket socket)
-    : _socket(std::make_shared<Socket>(std::move(socket))),
+Session::Session(boost::asio::io_service& io_service)
+    : _socket(std::make_shared<Socket>(io_service)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler>(_socket)) {
-  _socket->set_option(boost::asio::ip::tcp::no_delay(true));
 }
 
+std::shared_ptr<Socket> Session::get_socket() { return _socket; }
+
 void Session::start() {
+  _socket->set_option(boost::asio::ip::tcp::no_delay(true));
   _establish_connection();
   while (!_terminate_session) {
     _handle_request();
@@ -74,19 +76,22 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto [result_table, root_operator_type] = HyriseCommunicator::execute_pipeline(query);
+  const auto execution_information = HyriseCommunicator::execute_pipeline(query);
 
-  auto row_count = 0;
-  // If there is no result table, e.g. after an INSERT command, we cannot send row data
-  if (result_table) {
-    ResponseBuilder::build_and_send_row_description(result_table, _postgres_protocol_handler);
-    ResponseBuilder::build_and_send_query_response(result_table, _postgres_protocol_handler);
-    row_count = result_table->row_count();
+  if (!execution_information.error.empty()) {
+    _postgres_protocol_handler->send_error_message(execution_information.error);
+  } else {
+    auto row_count = 0;
+    // If there is no result table, e.g. after an INSERT command, we cannot send row data
+    if (execution_information.result_table) {
+      ResponseBuilder::build_and_send_row_description(execution_information.result_table, _postgres_protocol_handler);
+      ResponseBuilder::build_and_send_query_response(execution_information.result_table, _postgres_protocol_handler);
+      row_count = execution_information.result_table->row_count();
+    }
+     // TODO(toni): exec note
+    _postgres_protocol_handler->send_command_complete(ResponseBuilder::build_command_complete_message(execution_information.root_operator, row_count));
   }
-
-  _postgres_protocol_handler->send_command_complete(
-      ResponseBuilder::build_command_complete_message(root_operator_type, row_count));
-  _postgres_protocol_handler->send_ready_for_query();
+    _postgres_protocol_handler->send_ready_for_query();
 }
 
 void Session::_handle_parse_command() {

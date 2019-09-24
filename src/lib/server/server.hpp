@@ -24,10 +24,9 @@ class Server {
  private:
   void _accept_new_session();
 
-  void _start_session(const boost::system::error_code& error);
+  void _start_session(const std::shared_ptr<Session>& new_session, const boost::system::error_code& error);
 
   boost::asio::io_service _io_service;
-  boost::asio::ip::tcp::socket _socket;
   boost::asio::ip::tcp::acceptor _acceptor;
 };
 }  // namespace opossum

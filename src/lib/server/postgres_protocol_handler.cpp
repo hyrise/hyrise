@@ -249,4 +249,14 @@ void PostgresProtocolHandler::send_status_message(const NetworkMessageType messa
   _write_buffer.put_value<uint32_t>(LENGTH_FIELD_SIZE);
 }
 
+void PostgresProtocolHandler::send_error_message(const std::string& error_message) {
+    _write_buffer.put_value(NetworkMessageType::ErrorResponse);
+    const auto packet_size = LENGTH_FIELD_SIZE + sizeof(NetworkMessageType) + error_message.size() + 2u /* null terminator */;
+    _write_buffer.put_value<uint32_t>(packet_size);
+    // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
+    _write_buffer.put_value(NetworkMessageType::HumanReadableError);
+    _write_buffer.put_string(error_message);
+    // We need an additional null terminator for this message
+    _write_buffer.put_value('\0');
+}
 }  // namespace opossum
