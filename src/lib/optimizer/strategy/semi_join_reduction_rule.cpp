@@ -9,7 +9,7 @@ namespace opossum {
   void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
     Assert(root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
 
-    std::vector<std::pair<std::shared_ptr<JoinNode>, std::shared_ptr<JoinNode>>> semi_join_reductions;
+    std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<JoinNode>>> semi_join_reductions;
 
     visit_lqp(root, [&](const auto& node) {
       if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
@@ -33,32 +33,50 @@ namespace opossum {
         // an example, see TPC-H query 21. That query is the main reason this part exists. The current thresholds are
         // somewhat arbitrary. If we start to see more of those cases, we can try and find a more complex heuristic. This
         // is also called "semi join reduction": http://www.db.in.tum.de/research/publications/conferences/semijoin.pdf
-        const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
-        semi_join_reduction_node->comment = "Semi Reduction";
-        lqp_insert_node(join_node, LQPInputSide::Right, semi_join_reduction_node);
-        semi_join_reduction_node->set_right_input(join_node->left_input());
+        {
+          const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
+          semi_join_reduction_node->comment = "Semi Reduction";
+          lqp_insert_node(join_node, LQPInputSide::Right, semi_join_reduction_node);
+          semi_join_reduction_node->set_right_input(join_node->left_input());
 
-        const auto& estimator = cost_estimator->cardinality_estimator;
-        const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
-        const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
+          const auto& estimator = cost_estimator->cardinality_estimator;
+          const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
+          const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
+          
+          semi_join_reduction_node->set_right_input(nullptr);
+          lqp_remove_node(semi_join_reduction_node);
 
-        std::cout << semi_join_reduction_node->description() << " reduces from " << reduction_input_cardinality << " to " << reduction_output_cardinality << " with " << estimator->estimate_cardinality(semi_join_reduction_node->right_input()) << " right values" << std::endl;
-        
-        semi_join_reduction_node->set_right_input(nullptr);
-        lqp_remove_node(semi_join_reduction_node);
+          if (reduction_output_cardinality / reduction_input_cardinality <= .1f) { // TODO
+            semi_join_reductions.emplace_back(join_node, LQPInputSide::Right, semi_join_reduction_node);
+          }
+        }
 
-        if (reduction_output_cardinality / reduction_input_cardinality <= .1f) { // TODO
-          semi_join_reductions.emplace_back(join_node, semi_join_reduction_node);
+        {
+          const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
+          semi_join_reduction_node->comment = "Semi Reduction";
+          lqp_insert_node(join_node, LQPInputSide::Left, semi_join_reduction_node);
+          semi_join_reduction_node->set_right_input(join_node->right_input());
+
+          const auto& estimator = cost_estimator->cardinality_estimator;
+          const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
+          const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
+          
+          semi_join_reduction_node->set_right_input(nullptr);
+          lqp_remove_node(semi_join_reduction_node);
+
+          if (reduction_output_cardinality / reduction_input_cardinality <= .1f) { // TODO
+            semi_join_reductions.emplace_back(join_node, LQPInputSide::Left, semi_join_reduction_node);
+          }
         }
       }
 
       return LQPVisitation::VisitInputs;
     });
 
-    for (const auto& [join_node, semi_join_reduction_node] : semi_join_reductions) {
+    for (const auto& [join_node, side_of_join, semi_join_reduction_node] : semi_join_reductions) {
       // TODO explain why only right side
-      lqp_insert_node(join_node, LQPInputSide::Right, semi_join_reduction_node);
-      semi_join_reduction_node->set_right_input(join_node->left_input());
+      lqp_insert_node(join_node, side_of_join, semi_join_reduction_node);
+      semi_join_reduction_node->set_right_input(join_node->input(side_of_join == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left));
     }
   }
 }
