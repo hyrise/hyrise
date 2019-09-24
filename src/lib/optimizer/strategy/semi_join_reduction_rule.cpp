@@ -52,7 +52,7 @@ namespace opossum {
         }
 
 // TODO Deduplicate
-        {
+        if (join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse) {
           const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate);
           semi_join_reduction_node->comment = "Semi Reduction";
           lqp_insert_node(join_node, LQPInputSide::Left, semi_join_reduction_node);
