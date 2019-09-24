@@ -630,6 +630,19 @@ TEST_F(CardinalityEstimatorTest, PredicateWithValuePlaceholder) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_e), 25.0f);
 }
 
+TEST_F(CardinalityEstimatorTest, PredicateMultipleWithCorrelatedParameter) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(a_a, 50),  // s=0.5
+    PredicateNode::make(less_than_equals_(a_b, correlated_parameter_(ParameterID{1}, a_a)),
+      node_a));
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 45.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 90.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
+}
+
 TEST_F(CardinalityEstimatorTest, PredicateWithNull) {
   const auto lqp_a = PredicateNode::make(equals_(a_a, NullValue{}), node_a);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp_a), 0.0f);
