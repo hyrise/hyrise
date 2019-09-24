@@ -26,7 +26,7 @@ class Hyrise : public Singleton<Hyrise> {
   // You should be very sure that this is what you want.
   static void reset();
 
-  AbstractScheduler& scheduler() const;
+  const std::shared_ptr<AbstractScheduler>& scheduler() const;
 
   void set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler);
 

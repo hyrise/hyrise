@@ -133,7 +133,7 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
     expected_table->append({458.7f, 12345});
   }
 
-  Hyrise::get().scheduler().finish();
+  Hyrise::get().scheduler()->finish();
   EXPECT_TABLE_EQ_ORDERED(importer->get_operator()->get_output(), expected_table);
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }

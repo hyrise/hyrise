@@ -242,15 +242,27 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
   }
 }
 
-bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression) {
+bool expression_contains_placeholder(const std::shared_ptr<AbstractExpression>& expression) {
   auto placeholder_found = false;
 
   visit_expression(expression, [&](const auto& sub_expression) {
     placeholder_found |= std::dynamic_pointer_cast<PlaceholderExpression>(sub_expression) != nullptr;
-    return ExpressionVisitation::VisitArguments;
+    return !placeholder_found ? ExpressionVisitation::VisitArguments : ExpressionVisitation::DoNotVisitArguments;
   });
 
   return placeholder_found;
+}
+
+bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpression>& expression) {
+  auto correlated_parameter_found = false;
+
+  visit_expression(expression, [&](const auto& sub_expression) {
+    correlated_parameter_found |= std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression) != nullptr;
+    return !correlated_parameter_found ? ExpressionVisitation::VisitArguments
+                                       : ExpressionVisitation::DoNotVisitArguments;
+  });
+
+  return correlated_parameter_found;
 }
 
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {

@@ -1212,6 +1212,102 @@ TEST_F(SubqueryToJoinRuleTest, DoubleCorrelatedComparatorToSemiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SubqueryToJoinRuleTest, MultipliedCorrelatedComparatorToSemiJoin) {
+  // clang-format off
+  // SELECT * FROM a WHERE a.a > 3 / (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
+  {
+    const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+    const auto subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+      PredicateNode::make(equals_(b_b, parameter),
+        node_b));
+    const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+    const auto input_lqp =
+    PredicateNode::make(greater_than_(a_a, div_(value_(3), subquery)),
+      node_a);
+
+    const auto expected_lqp =
+    JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, div_(value_(3), sum_(b_a))), equals_(a_b, b_b)),
+      node_a,
+      ProjectionNode::make(expression_vector(div_(value_(3), sum_(b_a)), b_b),
+        AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+          node_b)));
+
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // SELECT * FROM a WHERE a.a > (SELECT SUM(b.a) FROM b WHERE b.b = a.b) / 3
+  {
+    const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+    const auto subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+      PredicateNode::make(equals_(b_b, parameter),
+        node_b));
+    const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+    const auto input_lqp =
+    PredicateNode::make(greater_than_(a_a, div_(subquery, value_(3))),
+      node_a);
+
+    const auto expected_lqp =
+    JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, div_(sum_(b_a), value_(3))), equals_(a_b, b_b)),
+      node_a,
+      ProjectionNode::make(expression_vector(div_(sum_(b_a), value_(3)), b_b),
+        AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+          node_b)));
+
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // SELECT * FROM a WHERE 3 / (SELECT SUM(b.a) FROM b WHERE b.b = a.b) < a.a
+  {
+    const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+    const auto subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+      PredicateNode::make(equals_(b_b, parameter),
+        node_b));
+    const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+    const auto input_lqp =
+    PredicateNode::make(less_than_(div_(value_(3), subquery), a_a),
+      node_a);
+
+    const auto expected_lqp =
+    JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, div_(value_(3), sum_(b_a))), equals_(a_b, b_b)),
+      node_a,
+      ProjectionNode::make(expression_vector(div_(value_(3), sum_(b_a)), b_b),
+        AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+          node_b)));
+
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // SELECT * FROM a WHERE (SELECT SUM(b.a) FROM b WHERE b.b = a.b) / 3 < a.a
+  {
+    const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+    const auto subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+      PredicateNode::make(equals_(b_b, parameter),
+        node_b));
+    const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, a_b));
+    const auto input_lqp =
+    PredicateNode::make(less_than_(div_(subquery, value_(3)), a_a),
+      node_a);
+
+    const auto expected_lqp =
+    JoinNode::make(JoinMode::Semi, expression_vector(greater_than_(a_a, div_(sum_(b_a), value_(3))), equals_(a_b, b_b)),
+      node_a,
+      ProjectionNode::make(expression_vector(div_(sum_(b_a), value_(3)), b_b),
+        AggregateNode::make(expression_vector(b_b), expression_vector(sum_(b_a)),
+          node_b)));
+
+    const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  // clang-format on
+}
+
 TEST_F(SubqueryToJoinRuleTest, SubqueryUsesConjunctionOfCorrelatedAndLocalPredicates) {
   // SELECT * FROM d WHERE d.a > (SELECT SUM(e.a) FROM e WHERE e.b = d.b AND e.a IN (1, 2, 3))
 
@@ -1494,6 +1590,46 @@ TEST_F(SubqueryToJoinRuleTest, NoRewriteIfNoEqualsPredicateCanBeDerived) {
 
   const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SubqueryToJoinRuleTest, ComplexArithmeticExpression) {
+  // SELECT * FROM a WHERE a.a > (SELECT SUM(a.a) FROM a WHERE a.b = a.b) + (SELECT SUM(b.a) FROM b WHERE b.b = a.b)
+
+  // clang-format off
+  const auto parameter = correlated_parameter_(ParameterID{0}, a_b);
+
+  const auto subquery_lqp0 =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)),
+    PredicateNode::make(equals_(a_b, parameter),
+      node_a));
+  const auto subquery0 = lqp_subquery_(subquery_lqp0, std::make_pair(ParameterID{0}, a_b));
+
+  const auto subquery_lqp1 =
+  AggregateNode::make(expression_vector(), expression_vector(sum_(b_a)),
+    PredicateNode::make(equals_(b_b, parameter),
+      node_b));
+  const auto subquery1 = lqp_subquery_(subquery_lqp1, std::make_pair(ParameterID{0}, a_b));
+
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(a_a, add_(subquery0, subquery1)),
+    node_a);
+
+
+  const auto subquery_lqp2 =
+  ProjectionNode::make(expression_vector(add_(sum_(a_a), subquery1)),
+    AggregateNode::make(expression_vector(), expression_vector(sum_(a_a)),
+      PredicateNode::make(equals_(a_b, parameter),
+        node_a)));
+  const auto subquery2 = lqp_subquery_(subquery_lqp2, std::make_pair(ParameterID{0}, a_b));
+
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(a_a, subquery2),
+    node_a);
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
