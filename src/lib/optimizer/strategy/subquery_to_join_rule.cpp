@@ -565,10 +565,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   join_node->set_right_input(pull_up_result.adapted_lqp);
 
   if (pull_up_result.adapted_lqp) {
-    const auto& estimator = cost_estimator->cardinality_estimator;
-    const auto probe_side_cardinality = estimator->estimate_cardinality(join_node->left_input());
-    const auto build_side_cardinality = estimator->estimate_cardinality(join_node->right_input());
-    const auto& primary_join_predicate = join_predicates[0];
+    const auto& primary_join_predicate = join_predicates.back();
 
     bool primary_join_predicate_is_equals = false;
     if (const auto predicate_expression =
@@ -578,10 +575,10 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
       }
     }
 
-    if ((join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
-         join_mode == JoinMode::AntiNullAsFalse) &&
-        build_side_cardinality > probe_side_cardinality * 10 && build_side_cardinality > 1'000 &&
-        primary_join_predicate_is_equals) {
+    if (primary_join_predicate_is_equals) {
+
+// Semi Join Reductions also make sense when they are pushed below, e.g., an expensive aggregate (TPC-H 20?). This can only happen for non-subqueries with WITH or views. Those are not covered yet.
+
       // Semi/Anti joins are currently handled by the hash join, which performs badly if the right side is much bigger
       // than the left side. For that case, we add a second semi join on the build side, which throws out all values
       // that will not be found by the primary (first) predicate of the later join, anyway. This is the case no matter
