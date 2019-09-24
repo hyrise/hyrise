@@ -4,8 +4,8 @@
 // #include <boost/thread/future.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include "server/ring_buffer.hpp"
 #include "server/postgres_protocol_handler.hpp"
+#include "server/ring_buffer.hpp"
 
 namespace opossum {
 using ::testing::_;

@@ -12,21 +12,21 @@ ExecutionInformation HyriseCommunicator::execute_pipeline(const std::string& sql
   // A simple query command invalidates unnamed statements
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
-  auto execution_info = ExecutionInformation();  
+  auto execution_info = ExecutionInformation();
   try {
-   auto sql_pipeline = std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
-   const auto [pipeline_status, result_table] = sql_pipeline->get_result_table();
-   if (pipeline_status == SQLPipelineStatus::Success) {
-    execution_info.result_table = result_table;
-    execution_info.root_operator = sql_pipeline->get_physical_plans().front()->type();
+    auto sql_pipeline = std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
+    const auto [pipeline_status, result_table] = sql_pipeline->get_result_table();
+    if (pipeline_status == SQLPipelineStatus::Success) {
+      execution_info.result_table = result_table;
+      execution_info.root_operator = sql_pipeline->get_physical_plans().front()->type();
 
-    std::stringstream stream;
-    stream << sql_pipeline->metrics();
-    execution_info.execution_information = stream.str();
-   } else {
-    const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();
-    execution_info.error = "Error during pipeline execution! Failed statement: " + failed_statement;
-   }
+      std::stringstream stream;
+      stream << sql_pipeline->metrics();
+      execution_info.execution_information = stream.str();
+    } else {
+      const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();
+      execution_info.error = "Error during pipeline execution! Failed statement: " + failed_statement;
+    }
   } catch (const InvalidInputException& exception) {
     execution_info.error = std::string(exception.what());
   }
@@ -41,7 +41,7 @@ void HyriseCommunicator::setup_prepared_plan(const std::string& statement_name, 
                 "Named prepared statements must be explicitly closed before they can be redefined.");
     Hyrise::get().storage_manager.drop_prepared_plan(statement_name);
   }
-  
+
   auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
   auto sql_translator = SQLTranslator{UseMvcc::Yes};
   const auto prepared_plans = sql_translator.translate_parser_result(*pipeline_statement.get_parsed_sql_statement());

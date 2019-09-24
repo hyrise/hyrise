@@ -6,10 +6,10 @@
 
 namespace opossum {
 
-Session::Session(boost::asio::io_service& io_service)
+Session::Session(boost::asio::io_service& io_service, const bool debug_note)
     : _socket(std::make_shared<Socket>(io_service)),
-      _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler>(_socket)) {
-}
+      _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler>(_socket)),
+      _debug_note(debug_note) {}
 
 std::shared_ptr<Socket> Session::get_socket() { return _socket; }
 
@@ -88,10 +88,13 @@ void Session::_handle_simple_query() {
       ResponseBuilder::build_and_send_query_response(execution_information.result_table, _postgres_protocol_handler);
       row_count = execution_information.result_table->row_count();
     }
-     // TODO(toni): exec note
-    _postgres_protocol_handler->send_command_complete(ResponseBuilder::build_command_complete_message(execution_information.root_operator, row_count));
+    if (_debug_note) {
+      _postgres_protocol_handler->send_debug_note(execution_information.execution_information);
+    }
+    _postgres_protocol_handler->send_command_complete(
+        ResponseBuilder::build_command_complete_message(execution_information.root_operator, row_count));
   }
-    _postgres_protocol_handler->send_ready_for_query();
+  _postgres_protocol_handler->send_ready_for_query();
 }
 
 void Session::_handle_parse_command() {

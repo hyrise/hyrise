@@ -250,13 +250,27 @@ void PostgresProtocolHandler::send_status_message(const NetworkMessageType messa
 }
 
 void PostgresProtocolHandler::send_error_message(const std::string& error_message) {
-    _write_buffer.put_value(NetworkMessageType::ErrorResponse);
-    const auto packet_size = LENGTH_FIELD_SIZE + sizeof(NetworkMessageType) + error_message.size() + 2u /* null terminator */;
-    _write_buffer.put_value<uint32_t>(packet_size);
-    // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
-    _write_buffer.put_value(NetworkMessageType::HumanReadableError);
-    _write_buffer.put_string(error_message);
-    // We need an additional null terminator for this message
-    _write_buffer.put_value('\0');
+  _write_buffer.put_value(NetworkMessageType::ErrorResponse);
+  const auto packet_size =
+      LENGTH_FIELD_SIZE + sizeof(NetworkMessageType) + error_message.size() + 2u /* null terminator */;
+  _write_buffer.put_value<uint32_t>(packet_size);
+  // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
+  _write_buffer.put_value(NetworkMessageType::HumanReadableError);
+  _write_buffer.put_string(error_message);
+  // We need an additional null terminator for this message
+  _write_buffer.put_value('\0');
 }
+
+void PostgresProtocolHandler::send_debug_note(const std::string& execution_information) {
+  _write_buffer.put_value(NetworkMessageType::Notice);
+  const auto packet_size =
+      LENGTH_FIELD_SIZE + sizeof(NetworkMessageType) + execution_information.size() + 2u /* null terminator */;
+  _write_buffer.put_value<uint32_t>(packet_size);
+  // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
+  _write_buffer.put_value(NetworkMessageType::HumanReadableError);
+  _write_buffer.put_string(execution_information);
+  // We need an additional null terminator for this message
+  _write_buffer.put_value('\0');
+}
+
 }  // namespace opossum

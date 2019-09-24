@@ -13,6 +13,8 @@ cxxopts::Options get_server_cli_options() {
     ("help", "Display this help and exit")
     ("p,port", "Specify the port number. 0 means randomly select an available one", cxxopts::value<uint16_t>()->default_value("5432"))  //NOLINT
     ("generate_tpch", "Generate all TPC-H tables with specified scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0"))  //NOLINT
+    ("debug_note", "Send operator runtimes to the client after statement execution", cxxopts::value<bool>()->default_value("false")) // NOLINT
+
     ;  //NOLINT
   // clang-format on
 
@@ -37,8 +39,10 @@ int main(int argc, char* argv[]) {
     opossum::TPCHTableGenerator{scale_factor}.generate_and_store();
   }
 
+  const auto debug_note = parsed_options["debug_note"].as<bool>();
   const auto port = parsed_options["port"].as<uint16_t>();
-  auto server = opossum::Server{port};
+
+  auto server = opossum::Server{port, debug_note};
   server.run();
 
   return 0;

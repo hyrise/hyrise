@@ -39,8 +39,7 @@ class ServerTestRunner : public BaseTest {
     _server_thread->join();
   }
 
-  std::unique_ptr<Server> _server = std::make_unique<Server>(5432);  // run on port 0 so the server can pick a free one
-  // std::unique_ptr<Server> _server = std::make_unique<Server>(0);  // run on port 0 so the server can pick a free one
+  std::unique_ptr<Server> _server = std::make_unique<Server>(0, false);  // run on port 0 so the server can pick a free one
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 
@@ -62,7 +61,7 @@ TEST_F(ServerTestRunner, TestInvalidStatement) {
 
   // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
-  
+
   // Ill-formed SQL statement
   EXPECT_THROW(transaction.exec("SELECT * FROM;"), pqxx::sql_error);
 
@@ -136,13 +135,8 @@ TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
 
   // Check whether server is still running and connection established
 
-
-
   // Well-formed but table does not exist
   // EXPECT_THROW(transaction.exec("SELECT * FROM non_existent;"), pqxx::sql_error);
-
-
-
 
   // const auto param = 1234u;
   // const auto result1 = transaction.exec_prepared(prepared_name, param);
@@ -152,8 +146,6 @@ TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
   // const auto result2 = transaction.exec_prepared(prepared_name, param);
   // EXPECT_EQ(result2.size(), 2u);
 }
-
-
 
 TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
   pqxx::connection connection{_connection_string};
