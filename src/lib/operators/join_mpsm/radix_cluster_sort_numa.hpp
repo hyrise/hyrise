@@ -214,7 +214,7 @@ class RadixClusterSortNUMA {
       job->schedule(node_id);
     }
 
-    Hyrise::get().scheduler().wait_for_tasks(cluster_jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(cluster_jobs);
 
     DebugAssert(output_table.materialized_segments.size() == _cluster_count,
                 "Error in clustering: Number of output segments does not match the number of clusters.");
@@ -249,7 +249,7 @@ class RadixClusterSortNUMA {
       job->schedule(node_id);
     }
 
-    Hyrise::get().scheduler().wait_for_tasks(cluster_jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(cluster_jobs);
 
     return output;
   }
@@ -295,7 +295,7 @@ class RadixClusterSortNUMA {
       job->schedule(numa_node);
     }
 
-    Hyrise::get().scheduler().wait_for_tasks(repartition_jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(repartition_jobs);
 
     return homogenous_partitions;
   }
@@ -317,7 +317,7 @@ class RadixClusterSortNUMA {
       }
     }
 
-    Hyrise::get().scheduler().wait_for_tasks(sort_jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(sort_jobs);
   }
 
  public:

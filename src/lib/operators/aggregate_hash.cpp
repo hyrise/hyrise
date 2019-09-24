@@ -268,7 +268,7 @@ void AggregateHash::_aggregate() {
     jobs.back()->schedule();
   }
 
-  Hyrise::get().scheduler().wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   /*
   AGGREGATION PHASE

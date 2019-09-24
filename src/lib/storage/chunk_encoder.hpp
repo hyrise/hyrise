@@ -36,13 +36,9 @@ class ChunkEncoder {
    * @brief Encodes a chunk
    *
    * Encodes a chunk using the passed encoding specifications. Reduces also the fragmentation of the chunk’s MVCC data.
-   * 
-   * thread_per_segment allows to parallelize the encoding. It defaults to false since encoding is expected to be a
-   * background process with a minimal overhead. The scheduler is not used in order to parallelize even when the
-   * scheduler is disabled.
    */
   static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
-                           const ChunkEncodingSpec& chunk_encoding_spec, const bool parallelize_encoding = false);
+                           const ChunkEncodingSpec& chunk_encoding_spec);
 
   /**
    * @brief Encodes a chunk using the same SegmentEncodingSpec
