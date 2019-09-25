@@ -251,7 +251,8 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
   // with column pruning
   {
-    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+    auto get_table =
+        std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
     get_table->execute();
 
     auto get_table_output = get_table->get_output();
@@ -264,7 +265,8 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
   // without column pruning
   {
-    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{});
+    auto get_table =
+        std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});
     get_table->execute();
 
     auto get_table_output = get_table->get_output();

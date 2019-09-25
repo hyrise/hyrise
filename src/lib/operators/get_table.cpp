@@ -175,8 +175,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         }
 
         if (chunk_ordered_by && chunk_ordered_by->first == stored_column_id) {
-          chunk_ordered_by->first = ColumnID{static_cast<uint16_t>(std::distance(_pruned_column_ids.begin(),
-                                                                                 pruned_column_ids_iter))};
+          chunk_ordered_by->first =
+              ColumnID{static_cast<uint16_t>(std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter))};
         }
 
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
