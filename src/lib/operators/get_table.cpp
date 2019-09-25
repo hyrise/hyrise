@@ -155,6 +155,10 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     // The Chunk is to be included in the output Table, now we progress to excluding Columns
     const auto stored_chunk = stored_table->get_chunk(stored_chunk_id);
 
+    // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
+    // pruned and will be set on the outputted chunk.
+    std::optional<std::pair<ColumnID, OrderByMode>> chunk_ordered_by = stored_chunk->ordered_by();
+
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;
     } else {
@@ -170,6 +174,11 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
           continue;
         }
 
+        if (chunk_ordered_by && chunk_ordered_by->first == stored_column_id) {
+          chunk_ordered_by->first = ColumnID{static_cast<uint16_t>(std::distance(_pruned_column_ids.begin(),
+                                                                                 pruned_column_ids_iter))};
+        }
+
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
         auto indexes = stored_chunk->get_indexes({*output_segments_iter});
         if (!indexes.empty()) {
@@ -180,6 +189,9 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
+      if (chunk_ordered_by) {
+        (*output_chunks_iter)->set_ordered_by(*chunk_ordered_by);
+      }
     }
 
     ++output_chunks_iter;
