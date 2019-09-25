@@ -72,8 +72,19 @@ const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _prune
 
 std::string MockNode::description() const {
   std::ostringstream stream;
-  stream << "[MockNode '"s << name.value_or("Unnamed") << "']";
-  stream << " pruned: " << _pruned_column_ids.size() << "/" << _column_definitions.size() << " columns";
+  stream << "[MockNode '"s << name.value_or("Unnamed") << "'] Columns:";
+
+  auto column_id = ColumnID{0};
+  for (const auto& column : _column_definitions) {
+    if (std::find(_pruned_column_ids.begin(), _pruned_column_ids.end(), column_id) != _pruned_column_ids.end()) {
+      ++column_id;
+      continue;
+    }
+    stream << " " << column.second;
+    ++column_id;
+  }
+
+  stream << " | pruned: " << _pruned_column_ids.size() << "/" << _column_definitions.size() << " columns";
 
   return stream.str();
 }
