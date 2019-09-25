@@ -19,7 +19,7 @@ class HyriseCommunicator {
  public:
   static ExecutionInformation execute_pipeline(const std::string& sql);
 
-  static void setup_prepared_plan(const std::string& statement_name, const std::string& query);
+  static std::optional<std::string> setup_prepared_plan(const std::string& statement_name, const std::string& query);
 
   static std::shared_ptr<AbstractOperator> bind_prepared_plan(const PreparedStatementDetails& statement_details);
 

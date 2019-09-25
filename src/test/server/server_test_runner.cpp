@@ -121,32 +121,6 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
   EXPECT_EQ(result2.size(), 2u);
 }
 
-TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
-  pqxx::connection connection{_connection_string};
-  pqxx::nontransaction transaction{connection};
-
-  const std::string prepared_name = "statement1";
-  const auto param = 1234u;
-  // Ill-formed prepared statement
-  connection.prepare(prepared_name, "SELECT * FROM WHERE a > ?");
-  EXPECT_THROW(transaction.exec_prepared(prepared_name, param), pqxx::sql_error);
-
-  // Well-formed but table does not exist
-
-  // Check whether server is still running and connection established
-
-  // Well-formed but table does not exist
-  // EXPECT_THROW(transaction.exec("SELECT * FROM non_existent;"), pqxx::sql_error);
-
-  // const auto param = 1234u;
-  // const auto result1 = transaction.exec_prepared(prepared_name, param);
-  // EXPECT_EQ(result1.size(), 1u);
-
-  // transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
-  // const auto result2 = transaction.exec_prepared(prepared_name, param);
-  // EXPECT_EQ(result2.size(), 2u);
-}
-
 TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
@@ -162,6 +136,34 @@ TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
 
   const auto result2 = transaction.exec_prepared(prepared_name, param);
   EXPECT_EQ(result2.size(), 2u);
+}
+
+TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
+  pqxx::connection connection{_connection_string};
+  pqxx::nontransaction transaction{connection};
+
+  const std::string prepared_name = "";
+  const auto param = 1234u;
+  // Ill-formed prepared statement
+  connection.prepare(prepared_name, "SELECT * FROM WHERE a > ?");
+  EXPECT_THROW(transaction.exec_prepared(prepared_name, param), pqxx::sql_error);
+
+  // Well-formed but table does not exist
+  connection.prepare(prepared_name, "SELECT * FROM non_existent WHERE a > ?");
+  EXPECT_THROW(transaction.exec_prepared(prepared_name, param), pqxx::sql_error);
+
+  // Wrong number of parameters
+  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ? and a > ?");
+  EXPECT_THROW(transaction.exec_prepared(prepared_name, param), pqxx::sql_error);
+
+  // Wrong parameter type
+  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
+  EXPECT_THROW(transaction.exec_prepared(prepared_name, "string"), pqxx::sql_error);
+
+  // Check whether server is still running and connection established
+  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
+  const auto result = transaction.exec_prepared(prepared_name, param);
+  EXPECT_EQ(result.size(), 1u);
 }
 
 TEST_F(ServerTestRunner, TestParallelConnections) {

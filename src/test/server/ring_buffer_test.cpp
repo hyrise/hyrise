@@ -48,9 +48,6 @@ TEST_F(BufferTest, Write) {
   _write_buffer->put_string(numbers);
   _write_buffer->put_string(numbers, false);
   EXPECT_EQ(_write_buffer->size(), 21);
-  // for (auto i = 0; i < 25; i++) {
-  //   std::cout << *(_write_buffer->data() + i) << std::endl;
-  // }
 }
 
 // TEST_F(BufferTest, WriteMoreThanAvailable) {
@@ -65,15 +62,25 @@ TEST_F(BufferTest, Write) {
 // }
 
 TEST_F(BufferTest, CorrectNetworkConversion) {
-  const uint32_t some_integer = 42;
+  const auto some_integer = 42;
   _write_buffer->put_value<uint32_t>(some_integer);
   uint32_t value_from_buffer;
   std::copy_n(_write_buffer->data(), sizeof(some_integer), reinterpret_cast<char*>(&value_from_buffer));
+  EXPECT_EQ(some_integer, ntohl(value_from_buffer));
 
-  EXPECT_EQ(some_integer, value_from_buffer);
-  std::copy_n((_write_buffer->data()) + 4, sizeof(some_integer), reinterpret_cast<char*>(&value_from_buffer));
+  const uint16_t some_small_integer = 42;
+  _write_buffer->put_value<uint16_t>(42);
+  uint16_t value_from_buffer1;
+  std::copy_n(_write_buffer->data() + sizeof(some_integer), sizeof(some_small_integer),
+              reinterpret_cast<char*>(&value_from_buffer1));
+  EXPECT_EQ(some_small_integer, ntohs(value_from_buffer1));
 
-  EXPECT_EQ(some_integer, value_from_buffer);
+  const uint64_t some_long_value = 42;
+  _write_buffer->put_value<uint64_t>(some_long_value);
+  uint64_t value_from_buffer2;
+  std::copy_n(_write_buffer->data() + sizeof(some_small_integer), sizeof(2),
+              reinterpret_cast<char*>(&value_from_buffer2));
+  EXPECT_EQ(some_long_value, value_from_buffer2);
 }
 
 }  // namespace opossum

@@ -33,7 +33,8 @@ ExecutionInformation HyriseCommunicator::execute_pipeline(const std::string& sql
   return execution_info;
 }
 
-void HyriseCommunicator::setup_prepared_plan(const std::string& statement_name, const std::string& query) {
+std::optional<std::string> HyriseCommunicator::setup_prepared_plan(const std::string& statement_name,
+                                                                   const std::string& query) {
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
   if (Hyrise::get().storage_manager.has_prepared_plan(statement_name)) {
@@ -44,13 +45,19 @@ void HyriseCommunicator::setup_prepared_plan(const std::string& statement_name, 
 
   auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
   auto sql_translator = SQLTranslator{UseMvcc::Yes};
-  const auto prepared_plans = sql_translator.translate_parser_result(*pipeline_statement.get_parsed_sql_statement());
+  auto prepared_plans = std::vector<std::shared_ptr<AbstractLQPNode>>();
+  try {
+    prepared_plans = sql_translator.translate_parser_result(*pipeline_statement.get_parsed_sql_statement());
+  } catch (const InvalidInputException& exception) {
+    return std::string(exception.what());
+  }
   Assert(prepared_plans.size() == 1u, "Only a single statement allowed in prepared statement");
 
   const auto prepared_plan =
       std::make_shared<PreparedPlan>(prepared_plans[0], sql_translator.parameter_ids_of_value_placeholders());
 
   Hyrise::get().storage_manager.add_prepared_plan(statement_name, std::move(prepared_plan));
+  return {};
 }
 
 std::shared_ptr<AbstractOperator> HyriseCommunicator::bind_prepared_plan(
@@ -59,10 +66,7 @@ std::shared_ptr<AbstractOperator> HyriseCommunicator::bind_prepared_plan(
          "The specified statement does not exist.");
 
   const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(statement_details.statement_name);
-  Assert(statement_details.parameters.size() == prepared_plan->parameter_ids.size(),
-         "Prepared statement parameter count mismatch");
 
-  // TODO(toni): WTH?
   if (statement_details.statement_name.empty()) {
     Hyrise::get().storage_manager.drop_prepared_plan(statement_details.statement_name);
   }

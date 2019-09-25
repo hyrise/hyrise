@@ -100,10 +100,14 @@ void Session::_handle_simple_query() {
 
 void Session::_handle_parse_command() {
   const auto [statement_name, query] = _postgres_protocol_handler->read_parse_packet();
+  const auto error = HyriseCommunicator::setup_prepared_plan(statement_name, query);
 
-  HyriseCommunicator::setup_prepared_plan(statement_name, query);
-
-  _postgres_protocol_handler->send_status_message(NetworkMessageType::ParseComplete);
+  if (error.has_value()) {
+    _postgres_protocol_handler->send_error_message(error.value());
+    // _postgres_protocol_handler->send_ready_for_query();
+  } else {
+    _postgres_protocol_handler->send_status_message(NetworkMessageType::ParseComplete);
+  }
   // Ready for query + flush will be done after reading sync message
 }
 

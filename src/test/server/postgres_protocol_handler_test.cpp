@@ -24,14 +24,6 @@ class PostgresProtocolHandlerTest : public BaseTest {
   // PostgresProtocolHandler _postgres_protocol_handler;
 };
 
-TEST_F(PostgresProtocolHandlerTest, HandleQueryPacketEmpty) {
-  size_t length = 0;
-
-  const std::string result = _postgres_protocol_handler->read_query_packet();
-
-  ASSERT_EQ(result.size(), length);
-}
-
 // TEST_F(PostgresProtocolHandlerTest, HandleQueryPacket) {
 //   ByteBuffer buffer = {'Q', 'u', 'e', 'r', 'y', '\0'};
 //   _input_packet.data = buffer;
