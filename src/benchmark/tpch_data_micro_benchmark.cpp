@@ -227,7 +227,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmar
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-    Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }
 
@@ -245,7 +245,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-    Hyrise::get().scheduler().schedule_and_wait_for_tasks(tasks);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }
 
@@ -313,7 +313,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling)(benchmark::State& state)
     join->execute();
   }
 
-  // Hyrise::get().scheduler().finish();
+  // Hyrise::get().scheduler()->finish();
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling2)(benchmark::State& state) {
@@ -337,7 +337,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling2)(benchmark::State& state
     join->execute();
   }
 
-  // Hyrise::get().scheduler().finish();
+  // Hyrise::get().scheduler()->finish();
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_MT)(benchmark::State& state) {
@@ -360,7 +360,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_MT)(benchmark::State& st
     auto sort_output = clusterer.execute();
   }
 
-  Hyrise::get().scheduler().finish();
+  Hyrise::get().scheduler()->finish();
   Hyrise::get().set_scheduler(nullptr);
 }
 
@@ -384,7 +384,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling3_ST)(benchmark::State& st
     auto sort_output = clusterer.execute();
   }
 
-  // Hyrise::get().scheduler().finish();
+  // Hyrise::get().scheduler()->finish();
 }
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_MT)(benchmark::State& state) {
@@ -407,7 +407,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_MT)(benchmark::State& st
     auto sort_output = clusterer.execute();
   }
 
-  Hyrise::get().scheduler().finish();
+  Hyrise::get().scheduler()->finish();
   Hyrise::get().set_scheduler(nullptr);
 }
 
@@ -431,7 +431,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_Sampling4_ST)(benchmark::State& st
     auto sort_output = clusterer.execute();
   }
 
-  // Hyrise::get().scheduler().finish();
+  // Hyrise::get().scheduler()->finish();
 }
 
 }  // namespace opossum

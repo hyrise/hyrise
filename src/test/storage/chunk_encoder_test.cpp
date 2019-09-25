@@ -7,6 +7,8 @@
 #include "gtest/gtest.h"
 
 #include "all_type_variant.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
@@ -19,41 +21,29 @@ namespace opossum {
 class ChunkEncoderTest : public BaseTest {
  public:
   void SetUp() override {
+    static const auto row_count = 15u;
     static const auto max_chunk_size = 5u;
-
     static const auto column_count = 3u;
+
+    _table = create_test_table(row_count, max_chunk_size, column_count);
+  }
+
+  static std::shared_ptr<Table> create_test_table(const size_t row_count, const size_t max_chunk_size,
+                                                  const size_t column_count) {
     TableColumnDefinitions column_definitions;
+
     for (auto column_id = 0u; column_id < column_count; ++column_id) {
       const auto column_name = std::to_string(column_id);
       column_definitions.emplace_back(column_name, DataType::Int, false);
     }
-    _table = std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
 
-    static const auto row_count = max_chunk_size * 3u;
     for (auto row_id = 0u; row_id < row_count; ++row_id) {
       const auto row = std::vector<AllTypeVariant>(column_count, AllTypeVariant{static_cast<int32_t>(row_id)});
-      _table->append(row);
+      table->append(row);
     }
-  }
 
-  void verify_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
-    for (auto column_id = ColumnID{0u}; column_id < chunk->column_count(); ++column_id) {
-      const auto segment = chunk->get_segment(column_id);
-      const auto segment_spec = spec.at(column_id);
-
-      if (segment_spec.encoding_type == EncodingType::Unencoded) {
-        const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(segment);
-        EXPECT_NE(value_segment, nullptr);
-      } else {
-        const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
-        EXPECT_NE(encoded_segment, nullptr);
-        EXPECT_EQ(encoded_segment->encoding_type(), segment_spec.encoding_type);
-        if (segment_spec.vector_compression_type) {
-          EXPECT_EQ(*segment_spec.vector_compression_type,
-                    parent_vector_compression_type(*encoded_segment->compressed_vector_type()));
-        }
-      }
-    }
+    return table;
   }
 
  protected:
@@ -64,24 +54,65 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
-  auto types = _table->column_data_types();
+  const auto types = _table->column_data_types();
+  const auto column_count = _table->column_count();
+  const auto row_count = _table->row_count();
   const auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec);
 
-  verify_encoding(chunk, chunk_encoding_spec);
+  EXPECT_EQ(types, _table->column_data_types());
+  EXPECT_EQ(column_count, _table->column_count());
+  EXPECT_EQ(row_count, _table->row_count());
+  assert_chunk_encoding(chunk, chunk_encoding_spec);
+
+  // Re-encoding with the same configuration
+  ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec);
+  assert_chunk_encoding(chunk, chunk_encoding_spec);
 }
 
 TEST_F(ChunkEncoderTest, LeaveOneSegmentUnencoded) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
-  auto types = _table->column_data_types();
+  const auto types = _table->column_data_types();
   const auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec);
 
-  verify_encoding(chunk, chunk_encoding_spec);
+  assert_chunk_encoding(chunk, chunk_encoding_spec);
+}
+
+TEST_F(ChunkEncoderTest, UnencodeEncodedSegments) {
+  const auto types = _table->column_data_types();
+  const auto chunk = _table->get_chunk(ChunkID{0u});
+
+  const auto chunk_encoding_spec =
+      ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::LZ4}};
+  ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec);
+  assert_chunk_encoding(chunk, chunk_encoding_spec);
+
+  const auto chunk_unencoding_spec =
+      ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}};
+  ChunkEncoder::encode_chunk(chunk, types, chunk_unencoding_spec);
+  assert_chunk_encoding(chunk, chunk_unencoding_spec);
+}
+
+TEST_F(ChunkEncoderTest, ThrowOnEncodingReferenceSegments) {
+  auto table_wrapper = std::make_shared<TableWrapper>(_table);
+  table_wrapper->execute();
+
+  auto a = PQPColumnExpression::from_table(*_table, "0");
+  auto table_scan = std::make_shared<TableScan>(table_wrapper, greater_than_equals_(a, 0));
+  table_scan->execute();
+
+  EXPECT_EQ(_table->row_count(), table_scan->get_output()->row_count());
+
+  const auto chunk_encoding_spec =
+      ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::Dictionary}, {EncodingType::Dictionary}};
+  auto chunk = std::const_pointer_cast<Chunk>(table_scan->get_output()->get_chunk(ChunkID{0u}));
+  const auto types = _table->column_data_types();
+  EXPECT_THROW(ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec), std::logic_error);
 }
 
 TEST_F(ChunkEncoderTest, EncodeWholeTable) {
@@ -95,7 +126,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTable) {
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
     const auto chunk = _table->get_chunk(chunk_id);
     const auto& spec = chunk_encoding_specs.at(chunk_id);
-    verify_encoding(chunk, spec);
+    assert_chunk_encoding(chunk, spec);
   }
 }
 
@@ -107,7 +138,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTableUsingSameEncoding) {
 
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
     const auto chunk = _table->get_chunk(chunk_id);
-    verify_encoding(chunk, chunk_encoding_spec);
+    assert_chunk_encoding(chunk, chunk_encoding_spec);
   }
 }
 
@@ -123,13 +154,13 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
   for (auto chunk_id : chunk_ids) {
     const auto chunk = _table->get_chunk(chunk_id);
     const auto& spec = chunk_encoding_specs.at(chunk_id);
-    verify_encoding(chunk, spec);
+    assert_chunk_encoding(chunk, spec);
   }
 
   const auto unencoded_chunk_spec =
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}};
 
-  verify_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
+  assert_chunk_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
 }
 
 TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
@@ -142,12 +173,12 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
 
   for (auto chunk_id : chunk_ids) {
     const auto chunk = _table->get_chunk(chunk_id);
-    verify_encoding(chunk, chunk_encoding_spec);
+    assert_chunk_encoding(chunk, chunk_encoding_spec);
   }
 
   const auto unencoded_chunk_spec = ChunkEncodingSpec{3u, SegmentEncodingSpec{EncodingType::Unencoded}};
 
-  verify_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
+  assert_chunk_encoding(_table->get_chunk(ChunkID{1u}), unencoded_chunk_spec);
 }
 
 TEST_F(ChunkEncoderTest, ReencodingTable) {
@@ -169,7 +200,7 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
     ChunkEncoder::encode_all_chunks(_table, chunk_encoding_spec);
     const auto chunk_count = _table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      verify_encoding(_table->get_chunk(chunk_id), chunk_encoding_spec);
+      assert_chunk_encoding(_table->get_chunk(chunk_id), chunk_encoding_spec);
     }
   }
 }

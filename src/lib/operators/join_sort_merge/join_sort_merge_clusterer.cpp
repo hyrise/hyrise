@@ -235,7 +235,7 @@ std::pair<MaterializedSegmentList<T>, MaterializedSegmentList<T>> JoinSortMergeC
   }));
   cluster_tasks.back()->schedule();
 
-  Hyrise::get().scheduler().wait_for_tasks(cluster_tasks);
+  Hyrise::get().scheduler()->wait_for_tasks(cluster_tasks);
 
   return {output_left, output_right};
 }
@@ -283,7 +283,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     job->schedule();
   }
 
-  Hyrise::get().scheduler().wait_for_tasks(histogram_jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(histogram_jobs);
 
   /**
    * In case more than one cluster will be created:
@@ -329,7 +329,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     job->schedule();
   }
 
-  Hyrise::get().scheduler().wait_for_tasks(cluster_jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(cluster_jobs);
 
   std::vector<std::shared_ptr<AbstractTask>> sort_jobs;
   auto segment_id = size_t{0};
@@ -362,7 +362,7 @@ MaterializedSegmentList<T> JoinSortMergeClusterer<T>::cluster(const Materialized
     ++segment_id;
   }
 
-  Hyrise::get().scheduler().wait_for_tasks(sort_jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(sort_jobs);
 
   return output;
 }

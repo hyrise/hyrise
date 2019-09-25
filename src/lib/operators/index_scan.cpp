@@ -56,7 +56,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     }
   }
 
-  Hyrise::get().scheduler().wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   return _out_table;
 }

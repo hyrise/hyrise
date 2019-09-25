@@ -1,5 +1,7 @@
 #include <memory>
 
+#include "micro_benchmark_basic_fixture.hpp"
+
 #include "benchmark/benchmark.h"
 #include "hyrise.hpp"
 #include "expression/expression_functional.hpp"
@@ -9,6 +11,7 @@
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/join_sort_merge/join_sort_merge_clusterer.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -20,7 +23,12 @@
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace {
+using namespace opossum;
+
 constexpr auto NUMBER_OF_CHUNKS = size_t{50};
+
+constexpr auto ROW_COUNTS = {size_t{10'000}, size_t{100'000}};
+constexpr auto CHUNK_SIZES = {ChunkOffset{10'000}, ChunkOffset{100'000}};
 
 // These numbers were arbitrarily chosen to form a representative group of JoinBenchmarks
 // that run in a tolerable amount of time
@@ -197,5 +205,89 @@ BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinMPSM);
 BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinMPSM);
 BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinMPSM);
+
+class JoinBenchmarkFixture : public MicroBenchmarkBasicFixture {
+ public:
+  void SetUp(::benchmark::State& state) {
+    auto& storage_manager = Hyrise::get().storage_manager;
+
+    if (!_data_generated) {
+      auto table_generator = std::make_shared<SyntheticTableGenerator>();
+
+      auto distribution_left = ColumnDataDistribution::make_uniform_config(0.0, 10'000);
+      auto distribution_right = ColumnDataDistribution::make_uniform_config(0.0, 30'000);
+
+      const auto encoding_spec = std::vector<SegmentEncodingSpec>({SegmentEncodingSpec{EncodingType::Dictionary}});
+
+      std::cout << "Generating tables." << std::endl;
+      for (const auto row_count : ROW_COUNTS) {
+        for (const auto chunk_size : CHUNK_SIZES) {
+          auto table_l = table_generator->generate_table({distribution_left}, {DataType::Int}, row_count, chunk_size, encoding_spec, std::nullopt, UseMvcc::Yes);
+          storage_manager.add_table("left__rc_" + std::to_string(row_count) + "_cz_" + std::to_string(chunk_size), table_l);
+
+          auto table_r = table_generator->generate_table({distribution_right}, {DataType::Int}, row_count * 10, chunk_size, encoding_spec, std::nullopt, UseMvcc::Yes);
+          storage_manager.add_table("right__rc_" + std::to_string(row_count*10) + "_cz_" + std::to_string(chunk_size), table_r);
+
+          std::cout << "Added tables for row count " << row_count << " and chunk size " << chunk_size << "." << std::endl;
+        }
+      }
+
+      _data_generated = true;
+    }
+  }
+
+  // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
+  void TearDown(::benchmark::State&) {}
+
+  inline static bool _data_generated = false;
+
+  std::shared_ptr<Table> t;
+};
+
+BENCHMARK_DEFINE_F(JoinBenchmarkFixture, BM_JoinInequalityVarying)(benchmark::State& state) {
+  auto& storage_manager = Hyrise::get().storage_manager;
+
+  const auto row_count = state.range(0);
+  const auto chunk_size = state.range(1);
+  const auto cluster_count = state.range(2);
+  const auto radix_clustering = state.range(3);
+
+  const auto left_table_name = "left__rc_" + std::to_string(row_count) + "_cz_" + std::to_string(chunk_size);
+  const auto right_table_name = "right__rc_" + std::to_string(row_count*10) + "_cz_" + std::to_string(chunk_size);
+
+  auto table_left = storage_manager.get_table(left_table_name);
+  auto table_wrapper_left = std::make_shared<TableWrapper>(table_left);
+  table_wrapper_left->execute();
+  auto table_right = storage_manager.get_table(right_table_name);
+  auto table_wrapper_right = std::make_shared<TableWrapper>(table_right);
+  table_wrapper_right->execute();
+
+  auto expression_left = PQPColumnExpression::from_table(*table_left, "column_1");
+  auto expression_right = PQPColumnExpression::from_table(*table_right, "column_1");
+  auto table_scan_left = std::make_shared<TableScan>(table_wrapper_left, greater_than_equals_(expression_left, 1'000));  // 0.9 selectivity
+  auto table_scan_right = std::make_shared<TableScan>(table_wrapper_right, greater_than_equals_(expression_right, 3'000));  // 0.9 selectivity
+  table_scan_left->execute();
+  table_scan_right->execute();
+
+  for (auto _ : state) {
+    auto clusterer = JoinSortMergeClusterer<int>(
+        table_scan_left->get_output(), table_scan_right->get_output(), ColumnIDPair{0, 0}, radix_clustering,
+        false, false, cluster_count);
+    clusterer.execute();
+  }
+}
+
+static void CustomArguments(benchmark::internal::Benchmark* b) {
+  for (const auto row_count : ROW_COUNTS) {
+    for (const auto chunk_size : CHUNK_SIZES) {
+      for (const auto cluster_count : {1, 2, 8, 16, 32, 64}) {
+        for (const auto radix_clustering : {true, false}) {
+          b->Args({static_cast<long long>(row_count), static_cast<long long>(chunk_size), cluster_count, radix_clustering});
+        }
+      }
+    }
+  }
+}
+BENCHMARK_REGISTER_F(JoinBenchmarkFixture, BM_JoinInequalityVarying)->Apply(CustomArguments);
 
 }  // namespace opossum

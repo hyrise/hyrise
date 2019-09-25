@@ -65,8 +65,7 @@ def calculate_and_format_p_value(old, new):
 
 
 if(len(sys.argv) != 3):
-    print("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json")
-    exit()
+    exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json")
 
 with open(sys.argv[1]) as old_file:
     old_data = json.load(old_file)
@@ -75,8 +74,7 @@ with open(sys.argv[2]) as new_file:
     new_data = json.load(new_file)
 
 if old_data['context']['benchmark_mode'] != new_data['context']['benchmark_mode']:
-    print("Benchmark runs with different modes (ordered/shuffled) are not comparable")
-    exit()
+    exit("Benchmark runs with different modes (ordered/shuffled) are not comparable")
 
 diffs = []
 

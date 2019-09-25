@@ -382,7 +382,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.
-    if (expression_contains_placeholders(column_expressions[column_id]) ||
+    if (expression_contains_placeholder(column_expressions[column_id]) ||
         target_table->column_data_type(column_id) != column_expressions[column_id]->data_type()) {
       column_expressions[column_id] = cast_(column_expressions[column_id], target_table->column_data_type(column_id));
     }
@@ -459,7 +459,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.
-    if (expression_contains_placeholders(update_expressions[column_id]) ||
+    if (expression_contains_placeholder(update_expressions[column_id]) ||
         target_table->column_data_type(column_id) != update_expressions[column_id]->data_type()) {
       update_expressions[column_id] = cast_(update_expressions[column_id], target_table->column_data_type(column_id));
     }

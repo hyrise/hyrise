@@ -80,7 +80,6 @@ inline constexpr std::array all_segment_encoding_specs{
     SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
     SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::FixedSizeByteAligned},
     SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-    SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned},
     SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
     SegmentEncodingSpec{EncodingType::RunLength}};
 

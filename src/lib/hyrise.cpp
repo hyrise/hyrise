@@ -22,11 +22,11 @@ Hyrise::Hyrise() {
 }
 
 void Hyrise::reset() {
-  Hyrise::get().scheduler().finish();
+  Hyrise::get().scheduler()->finish();
   get() = Hyrise{};
 }
 
-AbstractScheduler& Hyrise::scheduler() const { return *_scheduler; }
+const std::shared_ptr<AbstractScheduler>& Hyrise::scheduler() const { return _scheduler; }
 
 void Hyrise::set_scheduler(const std::shared_ptr<AbstractScheduler>& new_scheduler) {
   _scheduler->finish();

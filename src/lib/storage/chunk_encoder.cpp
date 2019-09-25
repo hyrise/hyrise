@@ -93,40 +93,21 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
 }
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
-                                const ChunkEncodingSpec& chunk_encoding_spec, const bool parallelize_encoding) {
+                                const ChunkEncodingSpec& chunk_encoding_spec) {
   const auto column_count = chunk->column_count();
-  Assert((column_data_types.size() == column_count),
-         "Number of column types must match the chunk’s column count.");
+  Assert((column_data_types.size() == column_count), "Number of column types must match the chunk’s column count.");
   Assert((chunk_encoding_spec.size() == column_count),
          "Number of column encoding specs must match the chunk’s column count.");
 
-  const auto thread_count = std::thread::hardware_concurrency();
-  const auto segments_per_thread = std::ceil(static_cast<float>(column_count) / thread_count);
-  auto threads = std::vector<std::thread>{};
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    const auto spec = chunk_encoding_spec[column_id];
 
-  for (auto thread_id = uint16_t{0}; thread_id < thread_count; ++thread_id) {
-    auto task = [&, thread_id] {
-      const auto column_id_start = static_cast<uint16_t>(thread_id * segments_per_thread);
-      const auto column_id_end = std::min(column_count, static_cast<uint16_t>((thread_id + 1) * segments_per_thread));
-      for (auto column_id = ColumnID{column_id_start}; column_id < column_id_end; ++column_id) {
-        const auto spec = chunk_encoding_spec[column_id];
+    const auto data_type = column_data_types[column_id];
+    const auto base_segment = chunk->get_segment(column_id);
 
-        const auto data_type = column_data_types[column_id];
-        const auto base_segment = chunk->get_segment(column_id);
-
-        const auto encoded_segment = encode_segment(base_segment, data_type, spec);
-        chunk->replace_segment(column_id, encoded_segment);
-      }
-    };
-
-    if (parallelize_encoding) {
-      threads.emplace_back(task);
-    } else {
-      task();
-    }
+    const auto encoded_segment = encode_segment(base_segment, data_type, spec);
+    chunk->replace_segment(column_id, encoded_segment);
   }
-
-  for (auto& thread : threads) thread.join();
 
   chunk->mark_immutable();
 

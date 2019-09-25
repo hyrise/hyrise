@@ -81,7 +81,7 @@ class ColumnMaterializer {
       jobs.back()->schedule();
     }
 
-    Hyrise::get().scheduler().wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
     auto gathered_samples = std::vector<T>();
     if (_gather_samples) {  
@@ -228,7 +228,7 @@ class ColumnMaterializer {
           output->emplace_back(MaterializedValue<T>{row_id, position.value()});
         } else if (_materialize_null) {
           // Write NULL if position is NULL and NULLs shall be materialized
-          null_rows_output->emplace_back(row_id);          
+          null_rows_output->emplace_back(row_id);
         }
       });
     }
