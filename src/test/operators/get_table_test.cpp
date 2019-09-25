@@ -249,15 +249,28 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
   table->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
   table->get_chunk(ChunkID{1})->set_ordered_by({ColumnID{2}, OrderByMode::Descending});
 
-  auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
-  get_table->execute();
+  // with column pruning
+  {
+    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+    get_table->execute();
 
-  auto get_table_output = get_table->get_output();
-  EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->first, ColumnID{0});
-  EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{1});
-  EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->second, OrderByMode::Ascending);
-  EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
-  EXPECT_FALSE(get_table_output->get_chunk(ChunkID{2})->ordered_by().has_value());
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->first, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{1});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->second, OrderByMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{2})->ordered_by().has_value());
+  }
+
+  // without column pruning
+  {
+    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{2});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+  }
 }
 
 }  // namespace opossum
