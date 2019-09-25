@@ -23,19 +23,19 @@ ExecutionInformation HyriseCommunicator::execute_pipeline(const std::string& sql
   }
 
   const auto [pipeline_status, result_table] = sql_pipeline->get_result_table();
-    if (pipeline_status == SQLPipelineStatus::Success) {
-      execution_info.result_table = result_table;
-      execution_info.root_operator = sql_pipeline->get_physical_plans().front()->type();
+  if (pipeline_status == SQLPipelineStatus::Success) {
+    execution_info.result_table = result_table;
+    execution_info.root_operator = sql_pipeline->get_physical_plans().front()->type();
 
-      if (debug_note) {
+    if (debug_note) {
       std::stringstream stream;
       stream << sql_pipeline->metrics();
       execution_info.execution_information = stream.str();
-  }
-    } else {
-      const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();
-      execution_info.error = "Error during pipeline execution! Failed statement: " + failed_statement;
     }
+  } else {
+    const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();
+    execution_info.error = "Error during pipeline execution! Failed statement: " + failed_statement;
+  }
   return execution_info;
 }
 
@@ -88,9 +88,9 @@ std::pair<std::string, std::shared_ptr<AbstractOperator>> HyriseCommunicator::bi
   try {
     const auto lqp = prepared_plan->instantiate(parameter_expressions);
     pqp = LQPTranslator{}.translate_node(lqp);
-  } catch (const std::exception& exception){
+  } catch (const std::exception& exception) {
     error = exception.what();
-  } 
+  }
 
   return std::make_pair(error, pqp);
 }
@@ -101,7 +101,6 @@ std::shared_ptr<TransactionContext> HyriseCommunicator::get_new_transaction_cont
 
 std::shared_ptr<const Table> HyriseCommunicator::execute_prepared_statement(
     const std::shared_ptr<AbstractOperator>& physical_plan) {
-
   std::shared_ptr<const Table> result_table;
   std::string error = "";
   const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan, CleanupTemporaries::Yes);

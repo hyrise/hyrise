@@ -127,7 +127,7 @@ void Session::_handle_bind_command() {
   // In case of an error, we store a nullptr in portals map. Since describe and execute packet usually arrive togehter,
   // we still have to handle the execute packet. Before executing the prepared statement we make a nullptr check.
   _portals.emplace(parameters.portal, physical_plan);
-  
+
   if (error.empty()) {
     _postgres_protocol_handler->send_status_message(NetworkMessageType::BindComplete);
   } else {
@@ -153,7 +153,7 @@ void Session::_handle_execute() {
   auto portal_it = _portals.find(portal_name);
   Assert(portal_it != _portals.end(), "The specified portal does not exist.");
 
-  if (!portal_it->second) { 
+  if (!portal_it->second) {
     _portals.erase(portal_it);
     return;
   }
@@ -178,7 +178,7 @@ void Session::_handle_execute() {
   }
 
   _postgres_protocol_handler->send_command_complete(
-  ResponseBuilder::build_command_complete_message(physical_plan->type(), row_count));
+      ResponseBuilder::build_command_complete_message(physical_plan->type(), row_count));
   // Ready for query + flush will be done after reading sync message
 }
 }  // namespace opossum

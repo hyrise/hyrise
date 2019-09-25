@@ -22,7 +22,8 @@ class HyriseCommunicator {
 
   static std::optional<std::string> setup_prepared_plan(const std::string& statement_name, const std::string& query);
 
-  static std::pair<std::string, std::shared_ptr<AbstractOperator>> bind_prepared_plan(const PreparedStatementDetails& statement_details);
+  static std::pair<std::string, std::shared_ptr<AbstractOperator>> bind_prepared_plan(
+      const PreparedStatementDetails& statement_details);
 
   static std::shared_ptr<TransactionContext> get_new_transaction_context();
 

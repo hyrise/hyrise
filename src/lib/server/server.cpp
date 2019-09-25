@@ -1,6 +1,7 @@
 #include "server.hpp"
 
 #include <iostream>
+#include <thread>
 
 namespace opossum {
 
