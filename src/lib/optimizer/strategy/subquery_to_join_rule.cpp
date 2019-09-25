@@ -619,6 +619,7 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
     return;
   }
 
+  // TODO if semi, anti, or inner, split up into multiple joins
   const auto join_mode = predicate_node_info->join_mode;
   const auto join_node = JoinNode::make(join_mode, join_predicates);
   lqp_replace_node(node, join_node);
