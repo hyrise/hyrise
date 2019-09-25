@@ -68,7 +68,7 @@ namespace opossum {
               const auto candidate_cardinality = estimator->estimate_cardinality(candidate);
               
 
-              if (candidate_cardinality > right_cardinality * 1.01) return false;
+              if (candidate_cardinality > right_cardinality * 1.01) return false; // TODO
 
               right_input = candidate;
               right_cardinality = candidate_cardinality;
@@ -86,11 +86,13 @@ namespace opossum {
           const auto reduction_input_cardinality = estimator->estimate_cardinality(semi_join_reduction_node->left_input());
           const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
           
-          lqp_remove_node(semi_join_reduction_node, AllowRightInput::Yes);
+          semi_join_reduction_node->set_right_input(nullptr);
+          lqp_remove_node(semi_join_reduction_node);
 
-          if (reduction_output_cardinality / reduction_input_cardinality <= .25f) { // TODO move this check up
-            semi_join_reductions.emplace_back(join_node, side_of_join, semi_join_reduction_node);
-          }
+          if (reduction_output_cardinality / reduction_input_cardinality <= .25f) return;  // TODO move up
+
+          semi_join_reduction_node->set_right_input(right_input);
+          semi_join_reductions.emplace_back(join_node, side_of_join, semi_join_reduction_node);
         };
 
         reduce_if_beneficial(LQPInputSide::Right);
