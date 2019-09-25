@@ -157,7 +157,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
     // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
     // pruned and will be set on the outputted chunk.
-    std::optional<std::pair<ColumnID, OrderByMode>> chunk_ordered_by = stored_chunk->ordered_by();
+    const auto& current_chunk_order = stored_chunk->ordered_by();
+    std::optional<std::pair<ColumnID, OrderByMode>> adapted_chunk_order;
 
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;
@@ -174,9 +175,10 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
           continue;
         }
 
-        if (chunk_ordered_by && chunk_ordered_by->first == stored_column_id) {
-          chunk_ordered_by->first =
-              ColumnID{static_cast<uint16_t>(std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter))};
+        if (current_chunk_order && current_chunk_order->first == stored_column_id) {
+          adapted_chunk_order = {
+              ColumnID{static_cast<uint16_t>(std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter))},
+              current_chunk_order->second};
         }
 
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
@@ -189,8 +191,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
-      if (chunk_ordered_by) {
-        (*output_chunks_iter)->set_ordered_by(*chunk_ordered_by);
+      if (adapted_chunk_order) {
+        (*output_chunks_iter)->set_ordered_by(*adapted_chunk_order);
       }
     }
 

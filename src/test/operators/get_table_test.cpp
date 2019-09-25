@@ -256,6 +256,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     get_table->execute();
 
     auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 2);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->first, ColumnID{0});
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{1});
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->second, OrderByMode::Ascending);
@@ -270,8 +271,21 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     get_table->execute();
 
     auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 3);
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{2});
     EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+  }
+
+  // pruning the columns on which chunks are sorted
+  {
+    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{},
+                                                         std::vector{ColumnID{0}, ColumnID{2}});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 1);
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by().has_value());
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by().has_value());
   }
 }
 
