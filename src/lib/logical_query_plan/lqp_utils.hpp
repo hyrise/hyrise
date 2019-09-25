@@ -50,7 +50,7 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
-                     const std::shared_ptr<AbstractLQPNode>& node);
+                     const std::shared_ptr<AbstractLQPNode>& node, const AllowRightInput allow_right_input = AllowRightInput::No);
 
 /**
  * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context

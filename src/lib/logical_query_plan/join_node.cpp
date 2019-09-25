@@ -44,7 +44,7 @@ std::string JoinNode::description() const {
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_expressions() const {
-  Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoiNode's output expressions");
+  Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions");
 
   /**
    * Update the JoinNode's output expressions every time they are requested. An overhead, but keeps the LQP code simple.

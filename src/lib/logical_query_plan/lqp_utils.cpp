@@ -164,8 +164,8 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRi
 }
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
-                     const std::shared_ptr<AbstractLQPNode>& node) {
-  DebugAssert(node->input_count() == 0 && node->output_count() == 0, "Expected node without inputs and outputs");
+                     const std::shared_ptr<AbstractLQPNode>& node, const AllowRightInput allow_right_input) {
+  DebugAssert(!node->left_input() && (!node->right_input() || allow_right_input == AllowRightInput::Yes) && node->output_count() == 0, "Expected node without inputs and outputs");
 
   const auto old_input = parent_node->input(input_side);
   parent_node->set_input(input_side, node);
