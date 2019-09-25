@@ -81,7 +81,7 @@ void Session::_handle_simple_query() {
   if (!execution_information.error.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error);
   } else {
-    auto row_count = 0;
+    uint64_t row_count = 0;
     // If there is no result table, e.g. after an INSERT command, we cannot send row data
     if (execution_information.result_table) {
       ResponseBuilder::build_and_send_row_description(execution_information.result_table, _postgres_protocol_handler);
@@ -167,7 +167,7 @@ void Session::_handle_execute() {
 
   const auto result_table = HyriseCommunicator::execute_prepared_statement(physical_plan);
 
-  auto row_count = 0;
+  uint64_t row_count = 0;
   // If there is no result table, e.g. after an INSERT command, we cannot send row data
   if (result_table) {
     ResponseBuilder::build_and_send_row_description(result_table, _postgres_protocol_handler);

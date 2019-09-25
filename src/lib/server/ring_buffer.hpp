@@ -1,7 +1,7 @@
 #pragma once
 
-#include <boost/asio.hpp>
 #include <array>
+#include <boost/asio.hpp>  // NOLINT
 #include "network_message_types.hpp"
 
 namespace opossum {
@@ -19,9 +19,10 @@ class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char>
 
   RingBufferIterator& operator=(const RingBufferIterator& other) {
     _position = other._position;
-    _data = other._data;
     return *this;
   }
+
+  RingBufferIterator(const RingBufferIterator& other) = default;
 
   bool operator==(RingBufferIterator other) const { return (_position == other._position) && (_data == other._data); }
 
@@ -49,9 +50,10 @@ class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char>
     return _position - other._position;
   }
 
-  reference operator*() const { return _data[_position]; }
+  char& operator*() { return _data[_position]; }
+  const char& operator*() const { return _data[_position]; }
 
-  char* get_raw_pointer() const { return &_data[_position]; }
+  char* get_raw_pointer() { return &_data[_position]; }
 
  private:
   std::array<char, BUFFER_SIZE>& _data;

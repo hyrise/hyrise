@@ -54,9 +54,9 @@ void PostgresProtocolHandler::send_authentication() {
 }
 
 void PostgresProtocolHandler::send_parameter(const std::string& key, const std::string& value) {
-  const auto body_length = sizeof(LENGTH_FIELD_SIZE) + key.size() + value.size() + 2u /* null terminator */;
+  const auto packet_size = sizeof(LENGTH_FIELD_SIZE) + key.size() + value.size() + 2u /* null terminator */;
   _write_buffer.put_value(NetworkMessageType::ParameterStatus);
-  _write_buffer.put_value<uint32_t>(body_length);
+  _write_buffer.put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(key);
   _write_buffer.put_string(value);
 }
@@ -71,7 +71,7 @@ void PostgresProtocolHandler::send_ready_for_query() {
 void PostgresProtocolHandler::send_command_complete(const std::string& command_complete_message) {
   const auto packet_size = sizeof(LENGTH_FIELD_SIZE) + command_complete_message.size() + 1u /* null terminator */;
   _write_buffer.put_value(NetworkMessageType::CommandComplete);
-  _write_buffer.put_value<uint32_t>(packet_size);
+  _write_buffer.put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(command_complete_message);
 }
 
@@ -113,7 +113,7 @@ void PostgresProtocolHandler::set_row_description_header(const uint32_t total_co
   const auto packet_size = sizeof(uint32_t) + sizeof(uint16_t) +
                            column_count * (sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t)) +
                            total_column_name_length;
-  _write_buffer.put_value<uint32_t>(packet_size);
+  _write_buffer.put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   // Specifies the number of fields in a row (can be zero).
   _write_buffer.put_value<uint16_t>(column_count);
 }
@@ -157,14 +157,14 @@ void PostgresProtocolHandler::send_data_row(const std::vector<std::string>& row_
   const auto packet_size =
       LENGTH_FIELD_SIZE + sizeof(uint16_t) + row_strings.size() * LENGTH_FIELD_SIZE + string_lengths;
 
-  _write_buffer.put_value<uint32_t>(packet_size);
+  _write_buffer.put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
   // Number of columns in row
-  _write_buffer.put_value<uint16_t>(row_strings.size());
+  _write_buffer.put_value<uint16_t>(static_cast<uint16_t>(row_strings.size()));
 
   for (const auto& value_string : row_strings) {
     // Size of string representation of value, NOT of value type's size
-    _write_buffer.put_value<uint32_t>(value_string.size());
+    _write_buffer.put_value<uint32_t>(static_cast<uint32_t>(value_string.size()));
 
     // Text mode means all values are sent as non-terminated strings
     _write_buffer.put_string(value_string, false);
@@ -253,7 +253,7 @@ void PostgresProtocolHandler::send_error_message(const std::string& error_messag
   _write_buffer.put_value(NetworkMessageType::ErrorResponse);
   const auto packet_size =
       LENGTH_FIELD_SIZE + sizeof(NetworkMessageType) + error_message.size() + 2u /* null terminator */;
-  _write_buffer.put_value<uint32_t>(packet_size);
+  _write_buffer.put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
   _write_buffer.put_value(NetworkMessageType::HumanReadableError);
   _write_buffer.put_string(error_message);
@@ -266,7 +266,7 @@ void PostgresProtocolHandler::send_debug_note(const std::string& execution_infor
   _write_buffer.put_value(NetworkMessageType::Notice);
   const auto packet_size =
       LENGTH_FIELD_SIZE + sizeof(NetworkMessageType) + execution_information.size() + 2u /* null terminator */;
-  _write_buffer.put_value<uint32_t>(packet_size);
+  _write_buffer.put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
   _write_buffer.put_value(NetworkMessageType::HumanReadableError);
   _write_buffer.put_string(execution_information);

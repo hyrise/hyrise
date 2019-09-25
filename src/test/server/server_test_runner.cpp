@@ -39,7 +39,7 @@ class ServerTestRunner : public BaseTest {
     _server_thread->join();
   }
 
-  std::unique_ptr<Server> _server = std::make_unique<Server>(5432, false);  // Port 0 select random open port
+  std::unique_ptr<Server> _server = std::make_unique<Server>(0, false);  // Port 0 select random open port
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 

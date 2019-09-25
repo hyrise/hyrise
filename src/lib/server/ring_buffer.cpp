@@ -99,7 +99,7 @@ void ReadBuffer::_receive_if_necessary(const size_t bytes_required) {
   // Socket was closed by client during execution
   if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset) {
     // Terminate session by stopping the current thread
-    pthread_exit(0);
+    pthread_exit(nullptr);
   } else if (error_code) {
     std::cerr << error_code.category().name() << ": " << error_code.message() << std::endl;
   }
@@ -111,7 +111,7 @@ void WriteBuffer::put_string(const std::string& value, const bool terminate) {
 
   // Use available space first
   if (!full()) {
-    position_in_string = std::min(maximum_capacity() - size(), value.size());
+    position_in_string = static_cast<uint32_t>(std::min(maximum_capacity() - size(), value.size()));
     std::copy_n(value.cbegin(), position_in_string, _current_position);
     _current_position += position_in_string;
   }
@@ -155,7 +155,7 @@ void WriteBuffer::flush(const size_t bytes_required) {
   // Socket was closed by client during execution
   if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset) {
     // Terminate session by stopping the current thread
-    pthread_exit(0);
+    pthread_exit(nullptr);
   } else if (error_code) {
     std::cerr << error_code.category().name() << ": " << error_code.message() << std::endl;
   }
