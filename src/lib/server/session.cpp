@@ -66,7 +66,6 @@ void Session::_handle_request() {
       break;
     }
     default:
-      std::cout << "header is: " << static_cast<char>(header) << std::endl;
       Fail("Unknown packet type");
   }
 }
@@ -77,7 +76,7 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto execution_information = HyriseCommunicator::execute_pipeline(query);
+  const auto execution_information = HyriseCommunicator::execute_pipeline(query, _debug_note);
 
   if (!execution_information.error.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error);
@@ -123,10 +122,17 @@ void Session::_handle_bind_command() {
     _portals.erase(portal_it);
   }
 
-  const auto& physical_plan = HyriseCommunicator::bind_prepared_plan(parameters);
-  _portals.emplace(parameters.portal, physical_plan);
+  const auto& [error, physical_plan] = HyriseCommunicator::bind_prepared_plan(parameters);
 
-  _postgres_protocol_handler->send_status_message(NetworkMessageType::BindComplete);
+  // In case of an error, we store a nullptr in portals map. Since describe and execute packet usually arrive togehter,
+  // we still have to handle the execute packet. Before executing the prepared statement we make a nullptr check.
+  _portals.emplace(parameters.portal, physical_plan);
+  
+  if (error.empty()) {
+    _postgres_protocol_handler->send_status_message(NetworkMessageType::BindComplete);
+  } else {
+    _postgres_protocol_handler->send_error_message(error);
+  }
   // Ready for query + flush will be done after reading sync message
 }
 
@@ -143,12 +149,17 @@ void Session::_sync() {
 
 void Session::_handle_execute() {
   const std::string& portal_name = _postgres_protocol_handler->read_execute_packet();
+
   auto portal_it = _portals.find(portal_name);
   Assert(portal_it != _portals.end(), "The specified portal does not exist.");
 
+  if (!portal_it->second) { 
+    _portals.erase(portal_it);
+    return;
+  }
+
   const auto physical_plan = portal_it->second;
 
-  // TODO(toni): WTH
   if (portal_name.empty()) _portals.erase(portal_it);
 
   if (!_transaction) _transaction = HyriseCommunicator::get_new_transaction_context();
@@ -167,7 +178,7 @@ void Session::_handle_execute() {
   }
 
   _postgres_protocol_handler->send_command_complete(
-      ResponseBuilder::build_command_complete_message(physical_plan->type(), row_count));
+  ResponseBuilder::build_command_complete_message(physical_plan->type(), row_count));
   // Ready for query + flush will be done after reading sync message
 }
 }  // namespace opossum

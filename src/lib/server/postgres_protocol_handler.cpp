@@ -259,6 +259,7 @@ void PostgresProtocolHandler::send_error_message(const std::string& error_messag
   _write_buffer.put_string(error_message);
   // We need an additional null terminator for this message
   _write_buffer.put_value('\0');
+  _write_buffer.flush();
 }
 
 void PostgresProtocolHandler::send_debug_note(const std::string& execution_information) {

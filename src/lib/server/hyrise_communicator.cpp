@@ -8,28 +8,34 @@
 
 namespace opossum {
 
-ExecutionInformation HyriseCommunicator::execute_pipeline(const std::string& sql) {
+ExecutionInformation HyriseCommunicator::execute_pipeline(const std::string& sql, const bool debug_note) {
   // A simple query command invalidates unnamed statements
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
   auto execution_info = ExecutionInformation();
+  std::unique_ptr<SQLPipeline> sql_pipeline;
   try {
-    auto sql_pipeline = std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
-    const auto [pipeline_status, result_table] = sql_pipeline->get_result_table();
+    sql_pipeline = std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
+    sql_pipeline->get_result_table();
+  } catch (const InvalidInputException& exception) {
+    execution_info.error = exception.what();
+    return execution_info;
+  }
+
+  const auto [pipeline_status, result_table] = sql_pipeline->get_result_table();
     if (pipeline_status == SQLPipelineStatus::Success) {
       execution_info.result_table = result_table;
       execution_info.root_operator = sql_pipeline->get_physical_plans().front()->type();
 
+      if (debug_note) {
       std::stringstream stream;
       stream << sql_pipeline->metrics();
       execution_info.execution_information = stream.str();
+  }
     } else {
       const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();
       execution_info.error = "Error during pipeline execution! Failed statement: " + failed_statement;
     }
-  } catch (const InvalidInputException& exception) {
-    execution_info.error = std::string(exception.what());
-  }
   return execution_info;
 }
 
@@ -60,7 +66,7 @@ std::optional<std::string> HyriseCommunicator::setup_prepared_plan(const std::st
   return {};
 }
 
-std::shared_ptr<AbstractOperator> HyriseCommunicator::bind_prepared_plan(
+std::pair<std::string, std::shared_ptr<AbstractOperator>> HyriseCommunicator::bind_prepared_plan(
     const PreparedStatementDetails& statement_details) {
   Assert(Hyrise::get().storage_manager.has_prepared_plan(statement_details.statement_name),
          "The specified statement does not exist.");
@@ -77,10 +83,16 @@ std::shared_ptr<AbstractOperator> HyriseCommunicator::bind_prepared_plan(
         std::make_shared<ValueExpression>(statement_details.parameters[parameter_idx]);
   }
 
-  const auto lqp = prepared_plan->instantiate(parameter_expressions);
-  const auto pqp = LQPTranslator{}.translate_node(lqp);
+  std::shared_ptr<AbstractOperator> pqp;
+  std::string error = "";
+  try {
+    const auto lqp = prepared_plan->instantiate(parameter_expressions);
+    pqp = LQPTranslator{}.translate_node(lqp);
+  } catch (const std::exception& exception){
+    error = exception.what();
+  } 
 
-  return pqp;
+  return std::make_pair(error, pqp);
 }
 
 std::shared_ptr<TransactionContext> HyriseCommunicator::get_new_transaction_context() {
@@ -89,6 +101,9 @@ std::shared_ptr<TransactionContext> HyriseCommunicator::get_new_transaction_cont
 
 std::shared_ptr<const Table> HyriseCommunicator::execute_prepared_statement(
     const std::shared_ptr<AbstractOperator>& physical_plan) {
+
+  std::shared_ptr<const Table> result_table;
+  std::string error = "";
   const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan, CleanupTemporaries::Yes);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   return tasks.back()->get_operator()->get_output();

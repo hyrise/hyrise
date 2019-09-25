@@ -45,7 +45,7 @@ void ResponseBuilder::build_and_send_row_description(
   }
 }
 
-uint64_t ResponseBuilder::build_and_send_query_response(
+void ResponseBuilder::build_and_send_query_response(
     std::shared_ptr<const Table> table, const std::shared_ptr<PostgresProtocolHandler>& postgres_protocol_handler) {
   auto attribute_strings = std::vector<std::string>(table->column_count());
   const auto chunk_count = table->chunk_count();
@@ -68,7 +68,6 @@ uint64_t ResponseBuilder::build_and_send_query_response(
       postgres_protocol_handler->send_data_row(attribute_strings, string_lengths);
     }
   }
-  return table->row_count();
 }
 
 std::string ResponseBuilder::build_command_complete_message(const OperatorType root_operator_type,

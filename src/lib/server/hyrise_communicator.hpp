@@ -14,14 +14,15 @@ struct ExecutionInformation {
   std::string error;
 };
 
-// This class manages the interaction between the server and the database component.
+// This class manages the interaction between the server and the database component. Furthermore, most of the SQL based
+// error handling happens in this class.
 class HyriseCommunicator {
  public:
-  static ExecutionInformation execute_pipeline(const std::string& sql);
+  static ExecutionInformation execute_pipeline(const std::string& sql, const bool debug_note);
 
   static std::optional<std::string> setup_prepared_plan(const std::string& statement_name, const std::string& query);
 
-  static std::shared_ptr<AbstractOperator> bind_prepared_plan(const PreparedStatementDetails& statement_details);
+  static std::pair<std::string, std::shared_ptr<AbstractOperator>> bind_prepared_plan(const PreparedStatementDetails& statement_details);
 
   static std::shared_ptr<TransactionContext> get_new_transaction_context();
 
