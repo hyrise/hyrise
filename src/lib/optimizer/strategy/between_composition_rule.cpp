@@ -182,7 +182,7 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
     } else {
       const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate_node->predicate());
       Assert(!logical_expression || logical_expression->logical_operator != LogicalOperator::And,
-          "Conjunctions should already have been split up");
+             "Conjunctions should already have been split up");
       predicate_nodes.push_back(predicate);
     }
 

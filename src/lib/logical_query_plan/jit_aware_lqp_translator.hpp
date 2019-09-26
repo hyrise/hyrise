@@ -20,8 +20,8 @@ namespace opossum {
  *    We will follow each branch of the tree until we hit a non-jittable node. Since StoredTableNodes are not jittable,
  *    this is guaranteed to happen for all branches.
  *    All non-jittable nodes encountered this way are stored in a set.
- *    Once the BFS terminates, we only continue if the number of jittable nodes is greater than two and the
- *    set of non-jittable nodes we encountered only contains a single node. This is then used as the input
+ *    Once the breadth-first search terminates, we only continue if the number of jittable nodes is greater than two and
+ *    the set of non-jittable nodes we encountered only contains a single node. This is then used as the input
  *    node to the chain of jit operators.
  * 2) Once we know which nodes we want to jit, we can start building out JitOperatorWrapper:
  *    We start by adding a JitReadTuples node. This node is passed to all translation functions during the construction
