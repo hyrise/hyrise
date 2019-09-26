@@ -7,8 +7,8 @@
 
 namespace opossum {
 
-PredicateSplitUpRule::PredicateSplitUpRule(const bool should_split_disjunction)
-    : _should_split_disjunction(should_split_disjunction) {}
+PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunctions)
+    : _split_disjunctions(split_disjunctions) {}
 
 void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");
@@ -23,7 +23,7 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
 
   // _split_conjunction() and _split_disjunction() split up logical expressions by calling each other recursively
   for (const auto& predicate_node : predicate_nodes) {
-    if (!_split_conjunction(predicate_node)) {
+    if (!_split_conjunction(predicate_node) && _split_disjunctions) {
       // If there is no conjunction at the top level, try to split disjunction first
       _split_disjunction(predicate_node);
     }
@@ -43,7 +43,9 @@ bool PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
   for (const auto& predicate_expression : flat_conjunction) {
     const auto& new_predicate_node = PredicateNode::make(predicate_expression);
     lqp_insert_node(predicate_node, LQPInputSide::Left, new_predicate_node);
-    _split_disjunction(new_predicate_node);
+    if (_split_disjunctions) {
+      _split_disjunction(new_predicate_node);
+    }
   }
   lqp_remove_node(predicate_node);
 
@@ -51,10 +53,6 @@ bool PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
 }
 
 void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
-  if (!_should_split_disjunction) {
-    return;
-  }
-
   const auto flat_disjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::Or);
   if (flat_disjunction.size() <= 1) {
     return;
@@ -64,28 +62,32 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
    * Split up PredicateNode with disjunctive chain (e.g., `PredicateNode(a OR b OR c)`) as their scan expression into
    * n-1 consecutive UnionNodes and n PredicateNodes.
    */
-  auto previous_union_node = UnionNode::make(UnionMode::Positions);
-  const auto left_input = predicate_node->left_input();
-  lqp_replace_node(predicate_node, previous_union_node);
+  // Insert top UnionNode and create a diamond supblan
+  auto new_union_node = UnionNode::make(UnionMode::Positions);
+  const auto diamond_bottom = predicate_node->left_input();
+  lqp_replace_node(predicate_node, new_union_node);
 
-  auto new_predicate_node = PredicateNode::make(flat_disjunction[0], left_input);
-  previous_union_node->set_left_input(new_predicate_node);
+  auto new_predicate_node = PredicateNode::make(flat_disjunction[0], diamond_bottom);
+  new_union_node->set_left_input(new_predicate_node);
   _split_conjunction(new_predicate_node);
 
-  new_predicate_node = PredicateNode::make(flat_disjunction[1], left_input);
-  previous_union_node->set_right_input(new_predicate_node);
+  new_predicate_node = PredicateNode::make(flat_disjunction[1], diamond_bottom);
+  new_union_node->set_right_input(new_predicate_node);
   _split_conjunction(new_predicate_node);
 
+  // Insert all remaining n-2 UnionNodes into the diamond supblan. Each UnionNode becomes the right input of the higher
+  // UnionNode, respectively. The left inputs become PredicateNodes that all have the same input (diamond_bottom).
+  auto previous_union_node = new_union_node;
   for (auto disjunction_idx = size_t{2}; disjunction_idx < flat_disjunction.size(); ++disjunction_idx) {
     const auto& predicate_expression = flat_disjunction[disjunction_idx];
-    auto next_union_node = UnionNode::make(UnionMode::Positions);
-    lqp_insert_node(previous_union_node, LQPInputSide::Right, next_union_node);
+    new_union_node = UnionNode::make(UnionMode::Positions);
+    lqp_insert_node(previous_union_node, LQPInputSide::Right, new_union_node);
 
-    new_predicate_node = PredicateNode::make(predicate_expression, left_input);
-    next_union_node->set_right_input(new_predicate_node);
+    new_predicate_node = PredicateNode::make(predicate_expression, diamond_bottom);
+    new_union_node->set_right_input(new_predicate_node);
     _split_conjunction(new_predicate_node);
 
-    previous_union_node = next_union_node;
+    previous_union_node = new_union_node;
   }
 }
 
