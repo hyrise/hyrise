@@ -223,8 +223,10 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
                                                           nullptr, _block_size, 0u, 0u, null_values.size());
     }
 
-    // Compress the offsets with a vector compression method to reduce the memory footprint of the LZ4 segment.
-    auto compressed_offsets = compress_vector(offsets, vector_compression_type(), allocator, {offsets.back()});
+    // Compress the offsets with SimdBp128 vector compression to reduce the memory footprint of the LZ4 segment.
+    // SimdBp128 is chosen over fixed size byte-aligned (FSBA) vector compression, since it compresses better and the
+    // performance advantage of FSBA is neglectable, because runtime is dominated by the LZ4 encoding/decoding anyways.
+    auto compressed_offsets = compress_vector(offsets, VectorCompressionType::SimdBp128, allocator, {offsets.back()});
 
     /**
      * Pre-compute a zstd dictionary if the input data is split among multiple blocks. This dictionary allows

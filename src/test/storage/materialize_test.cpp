@@ -151,8 +151,6 @@ TEST_P(MaterializeTest, MaterializeNullsTwoSegments) {
   EXPECT_EQ(expected, nulls);
 }
 
-INSTANTIATE_TEST_SUITE_P(MaterializeTestInstances, MaterializeTest,
-                         ::testing::ValuesIn(std::begin(all_segment_encoding_specs),
-                                             std::end(all_segment_encoding_specs)));
+INSTANTIATE_TEST_SUITE_P(MaterializeTestInstances, MaterializeTest, ::testing::ValuesIn(all_segment_encoding_specs));
 
 }  // namespace opossum

@@ -162,6 +162,44 @@ class BaseTestWithParam
 
     return chunk_encoding_spec;
   }
+
+  static void assert_chunk_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
+    const auto column_count = chunk->column_count();
+    for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+      const auto segment = chunk->get_segment(column_id);
+      const auto segment_spec = spec.at(column_id);
+
+      if (segment_spec.encoding_type == EncodingType::Unencoded) {
+        const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(segment);
+        ASSERT_NE(value_segment, nullptr);
+      } else {
+        const auto encoded_segment = std::dynamic_pointer_cast<const BaseEncodedSegment>(segment);
+        ASSERT_NE(encoded_segment, nullptr);
+        ASSERT_EQ(encoded_segment->encoding_type(), segment_spec.encoding_type);
+        if (segment_spec.vector_compression_type && encoded_segment->compressed_vector_type()) {
+          // Both optionals need to be set for comparison, because some encodings only use vector compression for
+          // certain types (e.g., LZ4 for pmr_string segments).
+          ASSERT_EQ(*segment_spec.vector_compression_type,
+                    parent_vector_compression_type(*encoded_segment->compressed_vector_type()));
+        }
+      }
+    }
+  }
+
+  static std::vector<SegmentEncodingSpec> get_supporting_segment_encodings_specs(const DataType data_type,
+                                                                                 const bool include_unencoded = true) {
+    std::vector<SegmentEncodingSpec> segment_encodings;
+    for (const auto& spec : all_segment_encoding_specs) {
+      // Add all encoding types to the returned vector if they support the given data type. As some test cases work on
+      // encoded segments only, it is further tested if the segment is not encoded and if segments of type Unencoded
+      // should be included or not (flag `include_unencoded`).
+      if (encoding_supports_data_type(spec.encoding_type, data_type) &&
+          (spec.encoding_type != EncodingType::Unencoded || include_unencoded)) {
+        segment_encodings.emplace_back(spec);
+      }
+    }
+    return segment_encodings;
+  }
 };
 
 using BaseTest = BaseTestWithParam<void>;

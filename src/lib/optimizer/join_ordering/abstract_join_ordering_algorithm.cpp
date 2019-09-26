@@ -48,9 +48,19 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
-    const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
+    std::shared_ptr<AbstractLQPNode> left_lqp, std::shared_ptr<AbstractLQPNode> right_lqp,
     std::vector<std::shared_ptr<AbstractExpression>> join_predicates,
     const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+  /**
+   * To make the input sides more deterministic, we make sure that the larger input is on the right side. This helps
+   * future rules to identify common subplans. For plans with equal cardinalities, this might still result in
+   * non-deterministic orders. Deal with it once it becomes a problem - maybe use the hash?
+   */
+  if (cost_estimator->cardinality_estimator->estimate_cardinality(left_lqp) <
+      cost_estimator->cardinality_estimator->estimate_cardinality(right_lqp)) {
+    std::swap(left_lqp, right_lqp);
+  }
+
   /**
    * Join two plans using a set of predicates; try to bring them into an efficient order
    *

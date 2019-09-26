@@ -9,6 +9,7 @@ namespace opossum {
 
 /**
  * A rule that brings join predicates of a multi-predicate-join into an efficient order.
+ *
  * Operators like the hash join operate on the primary predicate, i.e., they hash the two columns that are compared
  * in the first predicate. Secondary predicates are evaluated using accessors, which is significantly more expensive.
  * As such, a good predicate order is even more important that it is for regular (i.e., non-join) predicates.
