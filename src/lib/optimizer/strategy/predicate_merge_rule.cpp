@@ -12,28 +12,38 @@ namespace opossum {
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
-  visit_lqp(root, [&](const auto& node) {
-    size_t lqp_complexity = 0;
-    visit_lqp(node, [&](const auto& sub_node) {
-      switch (sub_node->type) {
-        case LQPNodeType::Predicate:
-          return LQPVisitation::VisitInputs;
+  // For every node, store a pointer to the root of the subplan if this subplan can be merged
+  std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<AbstractLQPNode>> subplan_roots;
 
-        case LQPNodeType::Union:
-          lqp_complexity++;
-          return LQPVisitation::VisitInputs;
+  // For every subplan root, store the number of UnionNodes in the subplan
+  std::map<const std::shared_ptr<AbstractLQPNode>, size_t> union_node_counts;
 
-        default:
-          return LQPVisitation::DoNotVisitInputs;
+  visit_lqp(root, [&](const auto &node) {
+    if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Union) {
+      // Add node to subplans
+      const auto& outputs = node->outputs();
+      const auto parent = std::find_if(outputs.begin(), outputs.end(),
+                                       [&](const auto &output) { return subplan_roots.count(output); });
+      if (parent == outputs.end()) {
+        // New subplan root found
+        subplan_roots.insert(std::make_pair(node, node));
+        union_node_counts.insert(std::make_pair(node, 0));
+      } else {
+        // New node for a known subplan found
+        subplan_roots.insert(std::make_pair(node, subplan_roots[*parent]));
       }
-    });
-
-    if (lqp_complexity >= optimization_threshold) {
-      _merge_subplan(node, std::nullopt);
+      if (node->type == LQPNodeType::Union) {
+        union_node_counts[subplan_roots[node]]++;
+      }
     }
-
     return LQPVisitation::VisitInputs;
   });
+
+  for (const auto& node_and_count : union_node_counts) {
+    if (node_and_count.second >= optimization_threshold) {
+      _merge_subplan(node_and_count.first, std::nullopt);
+    }
+  }
 }
 
 /**
@@ -66,7 +76,7 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
       auto expression = predicate_node->predicate();
       if (subsequent_expression && begin->output_count() == 1) {
-        // Only merge inside a chain.
+        // Only merge inside a chain
         expression = and_(expression, *subsequent_expression);
       }
 
@@ -91,7 +101,7 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
         auto expression = or_(left_input_expression, right_input_expression);
 
         if (subsequent_expression && begin->output_count() == 1) {
-          // Only merge inside a chain.
+          // Only merge inside a chain
           expression = and_(expression, *subsequent_expression);
         }
 
