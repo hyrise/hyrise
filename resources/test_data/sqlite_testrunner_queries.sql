@@ -68,7 +68,7 @@ SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 90;
 SELECT * FROM id_int_int_int_100 WHERE a > 20 AND a <= 91;
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a < 91;
 SELECT * FROM id_int_int_int_100 WHERE a > 20 AND a < 91;
-SELECT * FROM id_int_int_int_100 WHERE a = 20 AND b = 91; -- negative example
+SELECT * FROM id_int_int_int_100 WHERE a = 20 AND b = 93; -- negative example
 
 SELECT * FROM id_int_int_int_100 WHERE 90 >= a AND 20 <= a;
 SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 <= a;
