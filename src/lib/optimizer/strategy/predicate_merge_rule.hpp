@@ -9,9 +9,11 @@
 namespace opossum {
 
 /**
- * This rule reverts the changes of the PredicateSplitUpRule after other rules have run. It merges multiple
- * PredicateNodes and UnionNodes into single a PredicateNode with a complex expression. This reduces the query runtime
- * if there are many PredicateNodes and UnionNodes because the ExpressionEvaluator is faster in this case.
+ * This rule cleans up any large subplan that the PredicateSplitUpRule created after other optimizer rules have run.
+ * For any of these subplans, the PredicateMergeRule reverts all of the PredicateSplitUpRule's changes by merging
+ * multiple PredicateNodes and UnionNodes into single a PredicateNode that has a complex expression.
+ * This merging reduces the query runtime if there are many PredicateNodes and UnionNodes because the
+ * ExpressionEvaluator is faster in this case.
  *
  * The rule merges predicate chains to conjunctions ("and") and diamonds (below UnionNodes) to disjunctions ("or").
  *
