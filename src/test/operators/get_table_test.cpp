@@ -284,8 +284,8 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
     auto get_table_output = get_table->get_output();
     EXPECT_EQ(get_table_output->column_count(), 1);
-    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by().has_value());
-    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by().has_value());
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by());
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by());
   }
 }
 
