@@ -126,11 +126,12 @@ TEST_F(BetweenCompositionTest, NoPullPastOrExpression) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, AndExpression) {
+TEST_F(BetweenCompositionTest, PredicateChain) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(and_(greater_than_equals_(_a_a, 200), less_than_equals_(_a_a, 300)),
-    _node_a);
+  PredicateNode::make(greater_than_equals_(_a_a, 200),
+    PredicateNode::make(less_than_equals_(_a_a, 300),
+      _node_a));
 
   const auto expected_lqp =
   PredicateNode::make(between_inclusive_(_a_a, 200, 300),
@@ -142,17 +143,18 @@ TEST_F(BetweenCompositionTest, AndExpression) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, AndExpressionCombination) {
+TEST_F(BetweenCompositionTest, LongPredicateChain) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(and_(greater_than_equals_(_a_a, 200), less_than_equals_(_a_b, 300)),
-    PredicateNode::make(less_than_equals_(_a_a, 300),
-    _node_a));
+  PredicateNode::make(greater_than_equals_(_a_a, 200),
+    PredicateNode::make(less_than_equals_(_a_b, 300),
+      PredicateNode::make(less_than_equals_(_a_a, 300),
+        _node_a)));
 
   const auto expected_lqp =
   PredicateNode::make(less_than_equals_(_a_b, 300),
     PredicateNode::make(between_inclusive_(_a_a, 200, 300),
-    _node_a));
+      _node_a));
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -321,25 +323,6 @@ TEST_F(BetweenCompositionTest, FindOptimalExclusiveBetween) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, FindOptimalInclusiveAndExclusiveBetween) {
-  // clang-format off
-  const auto input_lqp =
-  PredicateNode::make(greater_than_equals_(_a_a, 200),
-    PredicateNode::make(greater_than_(_a_a, 200),
-      PredicateNode::make(less_than_(_a_a, 400),
-        PredicateNode::make(less_than_equals_(_a_a, 300),
-          _node_a))));
-
-  const auto expected_lqp =
-  PredicateNode::make(between_lower_exclusive_(_a_a, 200, 300),
-    _node_a);
-  // clang-format on
-
-  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-
-  EXPECT_LQP_EQ(result_lqp, expected_lqp);
-}
-
 TEST_F(BetweenCompositionTest, KeepRemainingPredicates) {
   // clang-format off
   const auto input_lqp =
@@ -386,9 +369,10 @@ TEST_F(BetweenCompositionTest, MultipleBetweensVariousLocations) {
 TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(and_(greater_than_(_a_a, 100), in_(_a_a, list_(1, 2, 3))),
-    PredicateNode::make(less_than_(_a_a, 200),
-      _node_a));
+  PredicateNode::make(greater_than_(_a_a, 100),
+    PredicateNode::make(in_(_a_a, list_(1, 2, 3)),
+      PredicateNode::make(less_than_(_a_a, 200),
+        _node_a)));
 
   const auto expected_lqp =
   PredicateNode::make(in_(_a_a, list_(1, 2, 3)),
@@ -425,8 +409,9 @@ TEST_F(BetweenCompositionTest, NoPullPastDiamondPredicate) {
 TEST_F(BetweenCompositionTest, HandleMultipleEqualExpressions) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(and_(equals_(_a_a, 100), equals_(_a_b, 100)),
-    _node_a);
+  PredicateNode::make(equals_(_a_a, 100),
+    PredicateNode::make(equals_(_a_b, 100),
+    _node_a));
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
