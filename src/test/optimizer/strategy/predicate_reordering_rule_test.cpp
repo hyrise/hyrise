@@ -209,8 +209,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
      *         |
      *       Table
      *
-     * Predicate_a should come before Predicate_b - but since Predicate_b has two outputs, it can't be reordered.
-     * However, Predicate_b can be swapped with Predicate_c.
+     * Predicate_a has a lower selectivity than Predicate_b - but since Predicate_b has two outputs, it cannot be
+     * reordered. However, Predicate_b can be swapped with Predicate_c.
      */
 
   /**
