@@ -37,9 +37,26 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
 }
 
 /**
- * Merge an LQP that only consists of PredicateNodes and UnionNodes into a single PredicateNode. The
+ * Merge a subplan that only consists of PredicateNodes and UnionNodes into a single PredicateNode. The
  * subsequent_expression parameter passes the translated expressions to the translation of its children nodes, which
  * allows to add the translated expression of child node before its parent node to the output expression.
+ *
+ * A subplan consists of linear "chain" and forked "diamond" parts.
+ *
+ * EXAMPLE:
+ *         Step 1                   Step 2                   Step 3                         Step 4
+ *
+ *           |                        |                        |                              |
+ *      ___Union___              ___Union___           Predicate (A OR B)      Predicate ((D AND C) AND (A OR B))
+ *    /            \            /           \                  |                              |
+ * Predicate (A)   |         Predicate (A)  |                  |
+ *    |            |           |            |                  |
+ *    |       Predicate (B)    |      Predicate (B)            |
+ *    \           /            \          /                    |
+ *     Predicate (C)          Predicate (D AND C)     Predicate (D AND C)
+ *           |                        |                        |
+ *     Predicate (D)
+ *           |
  */
 std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
     const std::shared_ptr<AbstractLQPNode>& begin,
@@ -48,16 +65,15 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
     case LQPNodeType::Predicate: {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(begin);
       auto expression = predicate_node->predicate();
-      // Do not concatenate expressions at the bottom of a diamond because they will be concatenated later.
       if (subsequent_expression && begin->output_count() == 1) {
+        // Only merge inside a chain.
         expression = and_(expression, *subsequent_expression);
       }
 
       const auto left_input_expression = _merge_subplan(begin->left_input(), expression);
       if (begin->left_input()->output_count() == 1 && left_input_expression) {
-        // Do not merge PredicateNodes with nodes that have multiple outputs because this would unnecessarily inflate
-        // the resulting logical expression. Instead, wait until the lower node has only one output. This is the case
-        // after a diamond was resolved.
+        // Only merge inside a chain. Nodes at the bottom of a diamond would unnecessarily inflate the resulting logical
+        // expression now.
         lqp_remove_node(begin->left_input());
         predicate_node->node_expressions[0] = left_input_expression;
         return left_input_expression;
@@ -70,11 +86,12 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(begin);
       const auto left_input_expression = _merge_subplan(begin->left_input(), std::nullopt);
       const auto right_input_expression = _merge_subplan(begin->right_input(), std::nullopt);
+
       if (left_input_expression && right_input_expression) {
         auto expression = or_(left_input_expression, right_input_expression);
 
-        // Do not concatenate expressions at the bottom of a diamond because they will be concatenated later.
         if (subsequent_expression && begin->output_count() == 1) {
+          // Only merge inside a chain.
           expression = and_(expression, *subsequent_expression);
         }
 
@@ -85,7 +102,7 @@ std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
         const auto predicate_node = PredicateNode::make(expression);
         lqp_replace_node(begin, predicate_node);
 
-        // The new predicate node might be mergeable with an underlying node now.
+        // The diamond was merged into a new PredicateNode, which might be mergeable with the underlying node now.
         return _merge_subplan(predicate_node, std::nullopt);
       } else {
         return nullptr;
