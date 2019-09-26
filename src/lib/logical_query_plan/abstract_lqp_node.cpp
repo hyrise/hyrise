@@ -114,6 +114,7 @@ void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<Abstrac
   DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
                   type == LQPNodeType::Union || type == LQPNodeType::Update,
               "This node type does not accept a right input");
+  DebugAssert(&*input != this, "A node cannot be its own input");
 
   // We need a reference to _inputs[input_idx], so not calling this->input(side)
   auto& current_input = _inputs[static_cast<int>(side)];

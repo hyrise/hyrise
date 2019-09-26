@@ -10,6 +10,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
@@ -393,6 +394,27 @@ TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
   PredicateNode::make(in_(_a_a, list_(1, 2, 3)),
     PredicateNode::make(between_exclusive_(_a_a, 100, 200),
       _node_a));
+  // clang-format on
+
+  const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(result_lqp, expected_lqp);
+}
+
+TEST_F(BetweenCompositionTest, NoPullPastDiamondPredicate) {
+  // clang-format off
+  const auto predicate_node =
+  PredicateNode::make(greater_than_equals_(_a_a, 200),
+                      _node_a);
+
+  const auto input_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(greater_than_equals_(_a_a, 300),
+      predicate_node),
+    PredicateNode::make(greater_than_equals_(_a_a, 400),
+      predicate_node));
+
+  const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
 
   const auto result_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
