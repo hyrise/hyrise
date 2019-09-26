@@ -1,6 +1,5 @@
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -8,19 +7,13 @@
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-#include "operators/get_table.hpp"
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "utils/assert.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -407,18 +400,11 @@ TEST_F(BetweenCompositionTest, NonBoundaryPredicate) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-TEST_F(BetweenCompositionTest, NoPullPastDiamondPredicate) {
+TEST_F(BetweenCompositionTest, HandleMultipleEqualExpressions) {
   // clang-format off
-  const auto predicate_node =
-  PredicateNode::make(greater_than_equals_(_a_a, 200),
-    _node_a);
-
   const auto input_lqp =
-  UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(greater_than_equals_(_a_a, 300),
-      predicate_node),
-    PredicateNode::make(greater_than_equals_(_a_a, 400),
-      predicate_node));
+  PredicateNode::make(and_(equals_(_a_a, 100), equals_(_a_b, 100)),
+    _node_a);
 
   const auto expected_lqp = input_lqp->deep_copy();
   // clang-format on
