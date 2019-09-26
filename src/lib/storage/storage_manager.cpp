@@ -22,6 +22,9 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
+    // We currently assume that all tables stored in the StorageManager are mutable and, as such, have MVCC data. This
+    // way, we do not need to check query plans if they try to update immutable tables. However, this is not a hard
+    // limitation and might be changed into more fine-grained assertions if the need arises.
     Assert(table->get_chunk(chunk_id)->has_mvcc_data(), "Table must have MVCC data.");
   }
 
