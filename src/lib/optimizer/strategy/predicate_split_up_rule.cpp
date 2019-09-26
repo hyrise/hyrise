@@ -49,8 +49,6 @@ void PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
     }
   }
   lqp_remove_node(predicate_node);
-
-  return;
 }
 
 void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
