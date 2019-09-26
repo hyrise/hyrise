@@ -30,7 +30,7 @@ auto TaskRunner::dispatch_server_task(std::shared_ptr<TResult> task) -> decltype
   using opossum::then_operator::then;
   using TaskList = std::vector<std::shared_ptr<AbstractTask>>;
 
-  Hyrise::get().scheduler().schedule_tasks(TaskList({task}));
+  Hyrise::get().scheduler()->schedule_tasks(TaskList({task}));
 
   return task->get_future()
       .then(boost::launch::sync,
