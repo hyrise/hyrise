@@ -39,7 +39,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
 /**
  * Merge an LQP that only consists of PredicateNodes and UnionNodes into a single PredicateNode. The
  * subsequent_expression parameter passes the translated expressions to the translation of its children nodes, which
- * enables to add the translated expression of child node before its parent node to the output expression.
+ * allows to add the translated expression of child node before its parent node to the output expression.
  */
 std::shared_ptr<AbstractExpression> PredicateMergeRule::_merge_subplan(
     const std::shared_ptr<AbstractLQPNode>& begin,

@@ -591,8 +591,6 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
       // an example, see TPC-H query 21. That query is the main reason this part exists. The current thresholds are
       // somewhat arbitrary. If we start to see more of those cases, we can try and find a more complex heuristic. This
       // is also called "semi join reduction": http://www.db.in.tum.de/research/publications/conferences/semijoin.pdf
-      // However, TPC-DS 45 could be executed faster without an additional semi join reduction node.
-      // TODO(anybody): Adjust this heuristic so that both TPC-H 21 and TPC-DS 45 run fast.
       const auto pre_join_node = JoinNode::make(JoinMode::Semi, primary_join_predicate);
       pre_join_node->comment = "Semi Reduction";
       lqp_insert_node(join_node, LQPInputSide::Right, pre_join_node);
