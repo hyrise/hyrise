@@ -21,19 +21,21 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
     return LQPVisitation::VisitInputs;
   });
 
-  // _split_conjunction() and _split_disjunction() split up logical expressions by calling each other recursively
+  // _split_conjunction() and _split_disjunction() split up logical expressions by calling each other recursively.
   for (const auto& predicate_node : predicate_nodes) {
-    if (!_split_conjunction(predicate_node) && _split_disjunctions) {
-      // If there is no conjunction at the top level, try to split disjunction first
+    const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
+    if (flat_conjunction.size() > 1) {
+      _split_conjunction(predicate_node);
+    } else if (_split_disjunctions) {
       _split_disjunction(predicate_node);
     }
   }
 }
 
-bool PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
+void PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
   if (flat_conjunction.size() <= 1) {
-    return false;
+    return;
   }
 
   /**
@@ -49,7 +51,7 @@ bool PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
   }
   lqp_remove_node(predicate_node);
 
-  return true;
+  return;
 }
 
 void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {

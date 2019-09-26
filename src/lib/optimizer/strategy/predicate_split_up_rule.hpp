@@ -30,10 +30,7 @@ class PredicateSplitUpRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 
  private:
-  /**
-   * @return true if a conjunction was split up
-   */
-  bool _split_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
+  void _split_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
   void _split_disjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
 
   bool _split_disjunctions;
