@@ -9,9 +9,6 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-PredicateMergeRule::PredicateMergeRule(const size_t optimization_threshold)
-    : _optimization_threshold(optimization_threshold) {}
-
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
@@ -31,9 +28,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
       }
     });
 
-    // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs with many
-    // UNIONs.
-    if (lqp_complexity >= _optimization_threshold) {
+    if (lqp_complexity >= optimization_threshold) {
       _merge_subplan(node, std::nullopt);
     }
 

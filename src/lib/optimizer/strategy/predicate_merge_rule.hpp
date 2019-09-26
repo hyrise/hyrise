@@ -20,15 +20,15 @@ namespace opossum {
  */
 class PredicateMergeRule : public AbstractRule {
  public:
-  explicit PredicateMergeRule(const size_t optimization_threshold);
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
+
+  // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs.
+  size_t optimization_threshold{4};
 
  private:
   std::shared_ptr<AbstractExpression> _merge_subplan(
       const std::shared_ptr<AbstractLQPNode>& begin,
       const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) const;
-
-  size_t _optimization_threshold;
 };
 
 }  // namespace opossum

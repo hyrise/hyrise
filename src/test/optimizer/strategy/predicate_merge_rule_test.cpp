@@ -23,8 +23,9 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
-    // An optimization threshold of 1 means that the rule won't merge pure predicate chains without UNIONs.
-    rule = std::make_shared<PredicateMergeRule>(1);
+    rule = std::make_shared<PredicateMergeRule>();
+    // A value of 1 means that the rule won't merge pure predicate chains without UNIONs.
+    rule->optimization_threshold = 1;
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
