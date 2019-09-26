@@ -89,7 +89,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
-  optimizer->add_rule(std::make_unique<ColumnPruningRule>())
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
