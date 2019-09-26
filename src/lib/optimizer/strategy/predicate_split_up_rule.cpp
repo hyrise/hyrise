@@ -7,8 +7,7 @@
 
 namespace opossum {
 
-PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunctions)
-    : _split_disjunctions(split_disjunctions) {}
+PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunctions) : _split_disjunctions(split_disjunctions) {}
 
 void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateSplitUpRule needs root to hold onto");

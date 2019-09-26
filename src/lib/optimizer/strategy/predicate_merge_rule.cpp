@@ -18,12 +18,12 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
   // For every subplan root, store the number of UnionNodes in the subplan
   std::map<const std::shared_ptr<AbstractLQPNode>, size_t> union_node_counts;
 
-  visit_lqp(root, [&](const auto &node) {
+  visit_lqp(root, [&](const auto& node) {
     if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Union) {
       // Add node to subplans
       const auto& outputs = node->outputs();
-      const auto parent = std::find_if(outputs.begin(), outputs.end(),
-                                       [&](const auto &output) { return subplan_roots.count(output); });
+      const auto parent =
+          std::find_if(outputs.begin(), outputs.end(), [&](const auto& output) { return subplan_roots.count(output); });
       if (parent == outputs.end()) {
         // New subplan root found
         subplan_roots.insert(std::make_pair(node, node));
