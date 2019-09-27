@@ -32,14 +32,11 @@ class ServerTestRunner : public BaseTest {
   }
 
   void TearDown() override {
-    // Give the server time to shut down gracefully before force-closing the socket it's working on
-    // std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
     _server->shutdown();
     _server_thread->join();
   }
 
-  std::unique_ptr<Server> _server = std::make_unique<Server>(0, false);  // Port 0 select random open port
+  std::unique_ptr<Server> _server = std::make_unique<Server>(0, false);  // Port 0 to select random open port
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 
