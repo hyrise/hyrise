@@ -38,8 +38,10 @@ void PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
   }
 
   /**
-   * Split up PredicateNode with conjunctive chain (e.g., `PredicateNode(a AND b AND c)`) as its scan expression into
-   * multiple consecutive PredicateNodes (e.g. `PredicateNode(c) -> PredicateNode(b) -> PredicateNode(a)`).
+   * Split up a single PredicateNode with a conjunctive chain as its scan expression into multiple consecutive
+   * PredicateNodes.
+   *
+   * Example: PredicateNode(a AND b AND c)   -->   PredicateNode(a) -> PredicateNode(b) -> PredicateNode(c)
    */
   for (const auto& predicate_expression : flat_conjunction) {
     const auto& new_predicate_node = PredicateNode::make(predicate_expression);
@@ -58,10 +60,12 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
   }
 
   /**
-   * Split up PredicateNode with disjunctive chain (e.g., `PredicateNode(a OR b OR c)`) as their scan expression into
-   * n-1 consecutive UnionNodes and n PredicateNodes.
+   * Split up a single PredicateNode with a disjunctive chain (e.g., `PredicateNode(a OR b OR c)`) as its scan
+   * expression into n-1 consecutive UnionNodes and n PredicateNodes.
+   *
+   * Todo(jj): Draw example
    */
-  // Insert top UnionNode and create a diamond supblan
+  // Insert top UnionNode and create a diamond subplan
   auto new_union_node = UnionNode::make(UnionMode::Positions);
   const auto diamond_bottom = predicate_node->left_input();
   lqp_replace_node(predicate_node, new_union_node);
@@ -74,7 +78,7 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
   new_union_node->set_right_input(new_predicate_node);
   _split_conjunction(new_predicate_node);
 
-  // Insert all remaining n-2 UnionNodes into the diamond supblan. Each UnionNode becomes the right input of the higher
+  // Insert all remaining n-2 UnionNodes into the diamond subplan. Each UnionNode becomes the right input of the higher
   // UnionNode, respectively. The left inputs become PredicateNodes that all have the same input (diamond_bottom).
   auto previous_union_node = new_union_node;
   for (auto disjunction_idx = size_t{2}; disjunction_idx < flat_disjunction.size(); ++disjunction_idx) {

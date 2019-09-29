@@ -209,8 +209,9 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
      *         |
      *       Table
      *
-     * Predicate_a has a lower selectivity than Predicate_b - but since Predicate_b has two outputs, it cannot be
-     * reordered. However, Predicate_b can be swapped with Predicate_c.
+     * Predicate_a has a lower selectivity than Predicate_b - but since Predicate_b has two outputs, Predicate_a cannot
+     * be reordered since it does not belong to the predicate chain (Predicate_b and Predicate_c). However, Predicate_b
+     * and Predicate_c can be reordered inside their chain.
      */
 
   /**

@@ -93,8 +93,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
-  // Run once before the JoinOrderingRule without disjunction split-up because the JoinOrderingRule cannot handle UNION
-  // (#1829)
+  // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
+  // JoinOrderingRule cannot handle UnionNodes (#1829), do not split disjunctions just yet.
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>(false));
 
   // The JoinOrderingRule cannot proceed past Semi/Anti Joins. These may be part of the initial query plan (in which
