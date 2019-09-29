@@ -97,9 +97,6 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
                                        const AllTypeVariant& variant_value,
                                        const std::optional<AllTypeVariant>& variant_value2) const {
 
-  std::cout << "min: " << min << std::endl;
-  std::cout << "max: " << max << std::endl;
-
   // Early exit for NULL variants.
   if (variant_is_null(variant_value)) {
     return false;
@@ -131,17 +128,17 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     case PredicateCondition::BetweenLowerExclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
-      return value >= max || value2 <= min;
+      return value >= max || value2 < min;
     }
     case PredicateCondition::BetweenUpperExclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
-      return value >= max || value2 < min;
+      return value > max || value2 <= min;
     }
     case PredicateCondition::BetweenExclusive: {
       Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
-      return value > max || value2 < min;
+      return value >= max || value2 <= min;
     }
     default:
       return false;
