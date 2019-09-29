@@ -96,7 +96,6 @@ template <typename T>
 bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condition,
                                        const AllTypeVariant& variant_value,
                                        const std::optional<AllTypeVariant>& variant_value2) const {
-
   // Early exit for NULL variants.
   if (variant_is_null(variant_value)) {
     return false;
