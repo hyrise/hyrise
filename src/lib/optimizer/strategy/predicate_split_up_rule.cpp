@@ -22,12 +22,8 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
 
   // _split_conjunction() and _split_disjunction() split up logical expressions by calling each other recursively.
   for (const auto& predicate_node : predicate_nodes) {
-    const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
-    if (flat_conjunction.size() > 1) {
-      _split_conjunction(predicate_node);
-    } else if (_split_disjunctions) {
-      _split_disjunction(predicate_node);
-    }
+    _split_conjunction(predicate_node);
+    if (_split_disjunctions) _split_disjunction(predicate_node);
   }
 }
 
