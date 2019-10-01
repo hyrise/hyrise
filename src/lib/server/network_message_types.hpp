@@ -1,5 +1,7 @@
 #pragma once
 
+namespace opossum {
+
 enum class NetworkMessageType : unsigned char {
   // Important: The character '0' is treated as a null message
   // That means we cannot have an invalid type
@@ -45,3 +47,5 @@ enum class TransactionStatusIndicator : unsigned char {
   InTransactionBlock = 'T',
   InFailedTransactionBlock = 'e'
 };
+
+}  // namespace opossum

@@ -7,22 +7,22 @@ namespace opossum {
 
 using ::testing::NiceMock;
 
-class PostgresProtocolHandlerTest : public BaseTest {
- protected:
-  void SetUp() override {
-    // _socket = std::make_shared<NiceMock<MockSocket>>(NiceMock<MockSocket>);
-    NiceMock<MockIO> io;
-    // NiceMock<MockSocket> socket(io);
-    auto socket = MockSocket(io);
-    auto _socket = std::make_shared<MockSocket>(std::move(socket));
+// class PostgresProtocolHandlerTest : public BaseTest {
+//  protected:
+//   void SetUp() override {
+//     // _socket = std::make_shared<NiceMock<MockSocket>>(NiceMock<MockSocket>);
+//     NiceMock<MockIO> io;
+//     // NiceMock<MockSocket> socket(io);
+//     auto socket = MockSocket(io);
+//     auto _socket = std::make_shared<MockSocket>(std::move(socket));
 
-    // std::shared_ptr<Socket> socket(NiceMock<MockSocket>());
-    _postgres_protocol_handler = std::make_shared<PostgresProtocolHandler>(PostgresProtocolHandler(_socket));
-  }
-  // std::shared_ptr<Socket> _socket;
-  std::shared_ptr<PostgresProtocolHandler> _postgres_protocol_handler;
-  // PostgresProtocolHandler _postgres_protocol_handler;
-};
+//     // std::shared_ptr<Socket> socket(NiceMock<MockSocket>());
+//     _postgres_protocol_handler = std::make_shared<PostgresProtocolHandler>(PostgresProtocolHandler(_socket));
+//   }
+//   // std::shared_ptr<Socket> _socket;
+//   std::shared_ptr<PostgresProtocolHandler> _postgres_protocol_handler;
+//   // PostgresProtocolHandler _postgres_protocol_handler;
+// };
 
 // TEST_F(PostgresProtocolHandlerTest, HandleQueryPacket) {
 //   ByteBuffer buffer = {'Q', 'u', 'e', 'r', 'y', '\0'};

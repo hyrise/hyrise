@@ -6,21 +6,49 @@
 #include <boost/asio/ip/tcp.hpp>
 #include "server/postgres_protocol_handler.hpp"
 #include "server/ring_buffer.hpp"
+#include <filesystem>
+#include <fstream>
+#include <stdio.h>
 
 namespace opossum {
 using ::testing::_;
 using ::testing::Invoke;
 
-class MockIO : public boost::asio::io_service {
+static const std::string file_name = "socket_file.txt";
+
+typedef boost::asio::posix::stream_descriptor file_stream;
+class MockSocket {
  public:
-  // MockSocket() : boost::asio::ip::tcp::socket(boost::asio::io_context()) {}
-  // MOCK_METHOD0(read, void());
-  // // MockSocket() {}
+  MockSocket() {
+    boost::asio::io_service io_service;
+    auto file_descriptor = open(file_name.c_str(), O_RDWR | O_CREAT | O_TRUNC, 0755);
+    stream = std::make_shared<file_stream>(io_service, file_descriptor);
+    io_service.run();
+  }
+
+  ~MockSocket() { std::filesystem::remove(std::filesystem::path{file_name}); }
+
+  std::shared_ptr<file_stream> get_socket() { return stream;}
+
+  void write(const std::string& value) {
+    std::ofstream(std::filesystem::path{file_name}) << value;
+  }
+
+  std::string read() {
+    std::ifstream file_stream(file_name);
+      return {std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>()};
+  }
+
+  bool empty() {
+    return std::ifstream(std::filesystem::path{file_name}).peek() == std::ifstream::traits_type::eof();
+  }
+
+
+
+ std::shared_ptr<file_stream> stream;
+
 };
 
-class MockSocket : public boost::asio::ip::tcp::socket {
- public:
-  MockSocket(boost::asio::io_service& service) : boost::asio::ip::tcp::socket(service) {}
   //     MOCK_METHOD1(read_some, size_t(size_t b));
   //     // MOCK_METHOD1(write_some, size_t(MutableBufferSequence b));
   //     // basic_streambuf< Allocator > & b,
@@ -33,7 +61,6 @@ class MockSocket : public boost::asio::ip::tcp::socket {
   //     //     boost::asio::SyncReadStream & s,
   //     //     boost::asio::basic_streambuf & b,
   //     // CompletionCondition completion_condition))
-};
 // class MockPG : public PostgresHandler {
 // public:
 //     MockPG() : PostgresHandler(MockSocket(MockIO)) {}
@@ -48,18 +75,18 @@ class MockSocket : public boost::asio::ip::tcp::socket {
 
 // };
 
-class MockFoo {
- public:
-  MockFoo(std::shared_ptr<boost::asio::ip::tcp::socket> socket) : _real(socket) {
-    // By default, all calls are delegated to the real object
-    ON_CALL(*this, put_string(_, _)).WillByDefault(Invoke(&_real, &WriteBuffer::put_string));
-  }
-  MOCK_METHOD2(put_string, void(const std::string&, const bool));
-  MOCK_METHOD1(_flush_if_necessary, void(const size_t));
+// class MockFoo {
+//  public:
+//   MockFoo(std::shared_ptr<boost::asio::ip::tcp::socket> socket) : _real(socket) {
+//     // By default, all calls are delegated to the real object
+//     ON_CALL(*this, put_string(_, _)).WillByDefault(Invoke(&_real, &WriteBuffer::put_string));
+//   }
+//   MOCK_METHOD2(put_string, void(const std::string&, const bool));
+//   MOCK_METHOD1(_flush_if_necessary, void(const size_t));
 
- private:
-  WriteBuffer _real;
-};
+//  private:
+//   WriteBuffer _real;
+// };
 
 // class MockConnection {
 //  public:

@@ -14,7 +14,6 @@ cxxopts::Options get_server_cli_options() {
     ("p,port", "Specify the port number. 0 means randomly select an available one", cxxopts::value<uint16_t>()->default_value("5432"))  //NOLINT
     ("generate_tpch", "Generate all TPC-H tables with specified scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0"))  //NOLINT
     ("debug_note", "Send operator runtimes to the client after statement execution", cxxopts::value<bool>()->default_value("false")) // NOLINT
-
     ;  //NOLINT
   // clang-format on
 

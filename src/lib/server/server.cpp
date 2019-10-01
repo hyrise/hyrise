@@ -39,4 +39,5 @@ void Server::run() {
 void Server::shutdown() { _io_service.stop(); }
 
 uint16_t Server::get_port() const { return _acceptor.local_endpoint().port(); }
+
 }  // namespace opossum

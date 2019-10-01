@@ -53,7 +53,7 @@ class PostgresProtocolHandler {
  private:
   void _ssl_deny();
 
-  ReadBuffer _read_buffer;
-  WriteBuffer _write_buffer;
+  ReadBuffer<Socket> _read_buffer;
+  WriteBuffer<Socket> _write_buffer;
 };
 }  // namespace opossum

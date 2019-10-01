@@ -63,7 +63,7 @@ class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char>
 // This class implements general methods for the ring buffer.
 class RingBuffer {
  public:
-  explicit RingBuffer(const std::shared_ptr<Socket>& socket) : _socket(socket) {}
+  RingBuffer() = default;
 
   char* data() noexcept { return _data.begin(); }
   const char* data() const noexcept { return _data.begin(); }
@@ -86,16 +86,16 @@ class RingBuffer {
   bool full() const { return size() == maximum_capacity(); }
 
  protected:
-  std::shared_ptr<Socket> _socket;
   std::array<char, BUFFER_SIZE> _data;
   RingBufferIterator _start_position = RingBufferIterator(_data);
   RingBufferIterator _current_position = RingBufferIterator(_data);
 };
 
 // Dedicated buffer for read operations. The ring buffer gets extended by methods for reading different data types.
+template<typename SocketType>
 class ReadBuffer : public RingBuffer {
  public:
-  explicit ReadBuffer(std::shared_ptr<Socket> socket) : RingBuffer(socket) {}
+  explicit ReadBuffer(std::shared_ptr<SocketType> socket) : _socket(socket) {}
 
   // Extract numerical values from buffer. Values will be converted into the correct byte order if necessary.
   template <typename T, typename std::enable_if_t<std::is_same_v<uint16_t, T> || std::is_same_v<int16_t, T>, int> = 0>
@@ -134,13 +134,15 @@ class ReadBuffer : public RingBuffer {
   NetworkMessageType get_message_type();
 
  private:
+  std::shared_ptr<SocketType> _socket;
   void _receive_if_necessary(const size_t bytes_required = 1);
 };
 
 // Dedicated buffer for write operations. The ring buffer gets extended by methods for writing different data types.
+template <typename SocketType>
 class WriteBuffer : public RingBuffer {
  public:
-  explicit WriteBuffer(const std::shared_ptr<Socket> socket) : RingBuffer(socket) {}
+  explicit WriteBuffer(const std::shared_ptr<SocketType> socket) : _socket(socket) {}
 
   // Flush whole buffer, e. g. after a finished request
   void flush(const size_t bytes_required = 0);
@@ -175,6 +177,8 @@ class WriteBuffer : public RingBuffer {
   }
 
  private:
+  std::shared_ptr<SocketType> _socket;
   void _flush_if_necessary(const size_t bytes_required);
 };
+
 }  // namespace opossum
