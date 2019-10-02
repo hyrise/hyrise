@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-template<typename SocketType>
+template <typename SocketType>
 std::string ReadBuffer<SocketType>::get_string() {
   auto string_end = RingBufferIterator(_data);
   std::string result = "";
@@ -37,7 +37,7 @@ std::string ReadBuffer<SocketType>::get_string() {
   return result;
 }
 
-template<typename SocketType>
+template <typename SocketType>
 std::string ReadBuffer<SocketType>::get_string(const size_t string_length, const bool has_null_terminator) {
   std::string result = "";
   result.reserve(string_length);
@@ -64,7 +64,7 @@ std::string ReadBuffer<SocketType>::get_string(const size_t string_length, const
   return result;
 }
 
-template<typename SocketType>
+template <typename SocketType>
 NetworkMessageType ReadBuffer<SocketType>::get_message_type() {
   _receive_if_necessary();
   auto message_type = static_cast<NetworkMessageType>(*_start_position);
@@ -72,7 +72,7 @@ NetworkMessageType ReadBuffer<SocketType>::get_message_type() {
   return message_type;
 }
 
-template<typename SocketType>
+template <typename SocketType>
 void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) {
   // Already enough data present in buffer
   if (size() >= bytes_required) {
@@ -110,7 +110,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   _current_position += bytes_read;
 }
 
-template<typename SocketType>
+template <typename SocketType>
 void WriteBuffer<SocketType>::put_string(const std::string& value, const bool terminate) {
   auto position_in_string = 0u;
 
@@ -138,7 +138,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const bool te
   }
 }
 
-template<typename SocketType>
+template <typename SocketType>
 void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   const auto bytes_to_send = bytes_required ? bytes_required : size();
   size_t bytes_sent;
@@ -168,7 +168,7 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   _start_position += bytes_sent;
 }
 
-template<typename SocketType>
+template <typename SocketType>
 void WriteBuffer<SocketType>::_flush_if_necessary(const size_t bytes_required) {
   if (bytes_required >= maximum_capacity() - size()) {
     flush(bytes_required);
@@ -179,6 +179,5 @@ template class ReadBuffer<Socket>;
 template class ReadBuffer<boost::asio::posix::stream_descriptor>;
 template class WriteBuffer<Socket>;
 template class WriteBuffer<boost::asio::posix::stream_descriptor>;
-
 
 }  // namespace opossum

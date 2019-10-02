@@ -90,7 +90,7 @@ class RingBuffer {
 };
 
 // Dedicated buffer for read operations. The ring buffer gets extended by methods for reading different data types.
-template<typename SocketType>
+template <typename SocketType>
 class ReadBuffer : public RingBuffer {
  public:
   explicit ReadBuffer(std::shared_ptr<SocketType> socket) : _socket(socket) {}
