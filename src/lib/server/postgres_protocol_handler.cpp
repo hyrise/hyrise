@@ -4,12 +4,15 @@
 
 namespace opossum {
 
+// Each message contains a field (4 bytes) indicating the packet's size including itself. Using extra variable here to
+// avoid magic numbers.
 static constexpr auto LENGTH_FIELD_SIZE = 4u;
 
 PostgresProtocolHandler::PostgresProtocolHandler(const std::shared_ptr<Socket>& socket)
     : _read_buffer(socket), _write_buffer(socket) {}
 
 uint32_t PostgresProtocolHandler::read_startup_packet() {
+  // Special SSL version number that we catch to deny SSL support
   constexpr auto ssl_request_code = 80877103u;
 
   const auto body_length = _read_buffer.get_value<uint32_t>();
@@ -47,7 +50,7 @@ void PostgresProtocolHandler::read_startup_packet_body(const uint32_t size) {
 
 void PostgresProtocolHandler::send_authentication() {
   _write_buffer.put_value(NetworkMessageType::AuthenticationRequest);
-  // Since we dont have any authentication mechanism, authentication is always successful
+  // Since we don't have any authentication mechanism, authentication is always successful
   constexpr uint32_t authentication_successful = 0;
   _write_buffer.put_value<uint32_t>(sizeof(LENGTH_FIELD_SIZE) + sizeof(authentication_successful));
   _write_buffer.put_value<uint32_t>(authentication_successful);
@@ -262,7 +265,7 @@ void PostgresProtocolHandler::send_error_message(const std::string& error_messag
   _write_buffer.flush();
 }
 
-void PostgresProtocolHandler::send_debug_note(const std::string& execution_information) {
+void PostgresProtocolHandler::send_execution_info(const std::string& execution_information) {
   _write_buffer.put_value(NetworkMessageType::Notice);
   const auto packet_size =
       LENGTH_FIELD_SIZE + sizeof(NetworkMessageType) + execution_information.size() + 2u /* null terminator */;

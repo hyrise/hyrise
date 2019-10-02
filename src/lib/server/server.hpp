@@ -10,7 +10,7 @@ namespace opossum {
 // The server class is responsible for setting up and listening to the system port.
 class Server {
  public:
-  explicit Server(const uint16_t port, const bool debug_note);
+  explicit Server(const uint16_t port, const bool send_execution_info);
 
   // Return the port the server is running on.
   uint16_t get_port() const;
@@ -28,6 +28,6 @@ class Server {
 
   boost::asio::io_service _io_service;
   boost::asio::ip::tcp::acceptor _acceptor;
-  const bool _debug_note;
+  const bool _send_execution_info;
 };
 }  // namespace opossum

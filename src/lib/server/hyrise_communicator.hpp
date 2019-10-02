@@ -14,7 +14,7 @@ struct ExecutionInformation {
   std::string error;
 };
 
-// This class manages the interaction between the server and the database component. Furthermore, most of the SQL based
+// This class manages the interaction between the server and the database component. Furthermore, most of the SQL-based
 // error handling happens in this class.
 class HyriseCommunicator {
  public:

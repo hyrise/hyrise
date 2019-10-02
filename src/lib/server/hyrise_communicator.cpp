@@ -101,8 +101,6 @@ std::shared_ptr<TransactionContext> HyriseCommunicator::get_new_transaction_cont
 
 std::shared_ptr<const Table> HyriseCommunicator::execute_prepared_statement(
     const std::shared_ptr<AbstractOperator>& physical_plan) {
-  std::shared_ptr<const Table> result_table;
-  std::string error = "";
   const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan, CleanupTemporaries::Yes);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   return tasks.back()->get_operator()->get_output();

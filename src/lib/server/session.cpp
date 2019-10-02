@@ -6,10 +6,10 @@
 
 namespace opossum {
 
-Session::Session(boost::asio::io_service& io_service, const bool debug_note)
+Session::Session(boost::asio::io_service& io_service, const bool send_execution_info)
     : _socket(std::make_shared<Socket>(io_service)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler>(_socket)),
-      _debug_note(debug_note) {}
+      _send_execution_info(send_execution_info) {}
 
 std::shared_ptr<Socket> Session::get_socket() { return _socket; }
 
@@ -76,7 +76,7 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto execution_information = HyriseCommunicator::execute_pipeline(query, _debug_note);
+  const auto execution_information = HyriseCommunicator::execute_pipeline(query, _send_execution_info);
 
   if (!execution_information.error.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error);
@@ -88,8 +88,8 @@ void Session::_handle_simple_query() {
       ResponseBuilder::build_and_send_query_response(execution_information.result_table, _postgres_protocol_handler);
       row_count = execution_information.result_table->row_count();
     }
-    if (_debug_note) {
-      _postgres_protocol_handler->send_debug_note(execution_information.execution_information);
+    if (_send_execution_info) {
+      _postgres_protocol_handler->send_execution_info(execution_information.execution_information);
     }
     _postgres_protocol_handler->send_command_complete(
         ResponseBuilder::build_command_complete_message(execution_information.root_operator, row_count));
