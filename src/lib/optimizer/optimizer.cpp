@@ -94,13 +94,17 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
 
-  // Run before SubqueryToJoinRule, since the Semi/Anti Joins it introduces are opaque to the JoinOrderingRule
+
+  // The JoinOrderingRule cannot proceed past Semi/Anti Joins. These may be part of the initial query plan (in which
+  // case we are out of luck and the join ordering will be sub-optimal), but many of them are also introduced by the
+  // SubqueryToJoinRule. As such, we run the JoinOrderingRule before the SubqueryToJoinRule.
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 
   // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
-  // can be treated as predicates and pushed further down
+  // can be treated as predicates and pushed further down. For the same reason, run it after the JoinOrderingRule,
+  // which does not like semi joins (see above).
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but

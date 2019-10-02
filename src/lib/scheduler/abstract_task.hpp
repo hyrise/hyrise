@@ -123,7 +123,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   /**
    * Blocks the calling thread until the Task finished executing.
-   * This is only called from non-Worker threads and from Hyrise::get().scheduler().wait_for_tasks().
+   * This is only called from non-Worker threads and from Hyrise::get().scheduler()->wait_for_tasks().
    */
   void _join();
 

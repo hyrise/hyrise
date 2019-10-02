@@ -67,12 +67,12 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
   const auto expected_lqp =
   AggregateNode::make(expression_vector(a_a), expression_vector(),
     JoinNode::make(JoinMode::Inner, equals_(a_a, b_b),
-      node_a,
       JoinNode::make(JoinMode::Left, equals_(b_b, d_d),
         node_b,
         JoinNode::make(JoinMode::Inner, equals_(d_d, c_c),
           node_d,
-          node_c))));
+          node_c)),
+      node_a));
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
