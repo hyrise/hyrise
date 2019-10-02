@@ -12,8 +12,12 @@ namespace opossum {
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
+  std::queue<std::shared_ptr<AbstractLQPNode>> mergeable_nodes;
   size_t union_node_count = 0;
   visit_lqp(root, [&](const auto& node) {
+    if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Predicate) {
+      mergeable_nodes.push(node);
+    }
     if (node->type == LQPNodeType::Union) {
       union_node_count++;
     }
@@ -25,24 +29,27 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
     return;
   }
 
-  for (int i = 0; i < 5; i++) {
-    visit_lqp(root, [&](const auto& node) {
-      switch (node->type) {
-        case LQPNodeType::Predicate:
-          _merge_conjunction(std::static_pointer_cast<PredicateNode>(node));
-          break;
+  while (!mergeable_nodes.empty()) {
+    const auto node = mergeable_nodes.front();
+    mergeable_nodes.pop();
 
-        case LQPNodeType::Union:
-          union_node_count++;
-          _merge_disjunction(std::static_pointer_cast<UnionNode>(node));
-          break;
+    if (node->output_count() == 0) {
+      // The node was already removed.
+      continue;
+    }
 
-        default: {}
-      }
+    switch (node->type) {
+      case LQPNodeType::Predicate:
+        _merge_conjunction(std::static_pointer_cast<PredicateNode>(node));
+        break;
 
-      return LQPVisitation::VisitInputs;
-    });
-  }
+      case LQPNodeType::Union:
+        _merge_disjunction(std::static_pointer_cast<UnionNode>(node));
+        break;
+
+      default: {}
+    }
+  };
 }
 
 void PredicateMergeRule::_merge_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
@@ -72,6 +79,9 @@ void PredicateMergeRule::_merge_conjunction(const std::shared_ptr<PredicateNode>
 
     const auto merged_predicate_node = PredicateNode::make(merged_predicate);
     lqp_replace_node(predicate_nodes.front(), merged_predicate_node);
+
+    const auto parent_union_node = std::dynamic_pointer_cast<UnionNode>(merged_predicate_node->outputs().front());
+    if (parent_union_node) _merge_disjunction(parent_union_node);
   }
 }
 
@@ -89,6 +99,19 @@ void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& un
     lqp_remove_node(right_node);
     union_node->set_right_input(nullptr);
     lqp_replace_node(union_node, merged_predicate_node);
+
+    const auto parent_union_node = std::dynamic_pointer_cast<UnionNode>(merged_predicate_node->outputs().front());
+    if (parent_union_node) _merge_disjunction(parent_union_node);
+
+    if (merged_predicate_node->output_count()) {
+      // There was no disjunction above that could be merged
+      const auto parent_predicate_node = std::dynamic_pointer_cast<PredicateNode>(merged_predicate_node->outputs().front());
+      if (parent_predicate_node) {
+        _merge_conjunction(parent_predicate_node);
+      } else {
+        _merge_conjunction(merged_predicate_node);
+      }
+    }
   }
 }
 
