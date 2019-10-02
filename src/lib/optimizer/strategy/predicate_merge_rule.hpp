@@ -9,6 +9,29 @@
 namespace opossum {
 
 /**
+ * Merge a subplan that only consists of PredicateNodes and UnionNodes into a single PredicateNode. The
+ * subsequent_expression parameter passes the translated expressions to the translation of its children nodes, which
+ * allows to add the translated expression of child node before its parent node to the output expression.
+ *
+ * A subplan consists of linear "chain" and forked "diamond" parts.
+ *
+ * EXAMPLE:
+ *         Step 1                   Step 2                   Step 3                         Step 4
+ *
+ *           |                        |                        |                              |
+ *      ___Union___              ___Union___           Predicate (A OR B)      Predicate ((D AND C) AND (A OR B))
+ *    /            \            /           \                  |                              |
+ * Predicate (A)   |         Predicate (A)  |                  |
+ *    |            |           |            |                  |
+ *    |       Predicate (B)    |      Predicate (B)            |
+ *    \           /            \          /                    |
+ *     Predicate (C)          Predicate (D AND C)     Predicate (D AND C)
+ *           |                        |                        |
+ *     Predicate (D)
+ *           |
+ */
+
+/**
  * This rule cleans up any large subplan that the PredicateSplitUpRule created after other optimizer rules have run.
  * For any of these subplans, the PredicateMergeRule reverts all of the PredicateSplitUpRule's changes by merging
  * multiple PredicateNodes and UnionNodes into single a PredicateNode that has a complex expression.
@@ -28,9 +51,8 @@ class PredicateMergeRule : public AbstractRule {
   size_t optimization_threshold{10}; // > TPCDS-13
 
  private:
-  std::shared_ptr<AbstractExpression> _merge_subplan(
-      const std::shared_ptr<AbstractLQPNode>& begin,
-      const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) const;
+  void _merge_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
+  void _merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const;
 };
 
 }  // namespace opossum

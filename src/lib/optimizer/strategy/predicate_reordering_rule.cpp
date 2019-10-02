@@ -72,7 +72,6 @@ void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& r
        * Continue rule in deepest input
        */
       if (predicate_nodes.size() > 1) {
-        const auto input = predicate_nodes.back()->left_input();
         _reorder_predicates(predicate_nodes);
       }
     }
