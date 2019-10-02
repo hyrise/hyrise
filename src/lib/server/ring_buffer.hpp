@@ -51,7 +51,6 @@ class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char>
   }
 
   char& operator*() { return _data[_position]; }
-  const char& operator*() const { return _data[_position]; }
 
   char* get_raw_pointer() { return &_data[_position]; }
 
@@ -66,7 +65,6 @@ class RingBuffer {
   RingBuffer() = default;
 
   char* data() noexcept { return _data.begin(); }
-  const char* data() const noexcept { return _data.begin(); }
 
   // Problem: full and empty might be same state, so head == tail
   // Solution: Full state is tail + 1 == head
