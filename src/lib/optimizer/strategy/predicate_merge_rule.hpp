@@ -25,7 +25,7 @@ class PredicateMergeRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 
   // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs.
-  size_t optimization_threshold{4};
+  size_t optimization_threshold{10}; // > TPCDS-13
 
  private:
   std::shared_ptr<AbstractExpression> _merge_subplan(
