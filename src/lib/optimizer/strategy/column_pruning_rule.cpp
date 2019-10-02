@@ -30,14 +30,17 @@ void gather_expressions_not_computed_by_expression_evaluator(
     ExpressionUnorderedSet& required_expressions, const bool top_level = true) {
   if (std::find_if(input_expressions.begin(), input_expressions.end(),
                    [&expression](const auto& other) { return *expression == *other; }) != input_expressions.end()) {
-    // This expression has already been computed and does not need to be computed again. Only add it if it is not a
-    // top-level (i.e., forwarded) expression
+    // Top-level expressions are those that are (part of) the ExpressionEvaluator's final result. For example, for an
+    // ExpressionEvaluator producing (a + b) + c, the entire expression is a top-level expression. It is the consumer's
+    // job to mark it as required. (a + b) however, is required by the ExpressionEvaluator and will be added to
+    // required_expressions, as it is not a top-level expression.
     if (!top_level) required_expressions.emplace(expression);
     return;
   }
 
   if (expression->type == ExpressionType::Aggregate || expression->type == ExpressionType::LQPColumn) {
-    // These cannot be computed by the expression evaluator and are expected to be provided by the input
+    // Aggregates and LQPColumns are not calculated by the ExpressionEvaluator and are thus required to be part of the
+    // input.
     required_expressions.emplace(expression);
     return;
   }
@@ -86,6 +89,8 @@ ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<Abstrac
       for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
         const auto& expression = node->node_expressions[expression_idx];
 
+        // The AggregateNode's node_expressions contain both the group_by- and the aggregate_expressions in that order,
+        // separated by aggregate_expressions_begin_idx.
         if (expression_idx < aggregate_node.aggregate_expressions_begin_idx) {
           // This is a group by expression that is required from the input
           required_expressions.emplace(expression);
@@ -94,6 +99,9 @@ ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<Abstrac
           // This is an aggregate expression - we need its argument
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
           if (expression->arguments.empty()) {
+            DebugAssert(
+                static_cast<const AggregateExpression&>(*expression).aggregate_function == AggregateFunction::Count,
+                "Only COUNT(*) may have empty arguments");
             // Argument is empty (i.e., COUNT(*)).
             continue;
           }
@@ -182,10 +190,11 @@ void recursive_gather_required_expressions(
 void prune_join_node(
     const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
-  // Sometimes, joins are not actually used to combine data but only to check the existence of a tuple in a second
+  // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
   // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
-  // These joins will be rewritten to semi joins. However, we can only do this if the join is on a unique/primary
-  // key column as non-unique joins could possibly emit a matching line more than once.
+  // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
+  // uniqueness is not guaranteed, we cannot perform the rewrite as non-unique joins could possibly emit a matching
+  // line more than once.
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   if (join_node->join_mode != JoinMode::Inner) return;
@@ -314,7 +323,9 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
         auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
 
         if (pruned_column_ids.size() == stored_table_node->column_expressions().size()) {
-          // Cannot prune all columns
+          // All columns were marked to be pruned. However, while `SELECT 1 FROM table` does not need any particular
+          // column, it needs at least one column so that it knows how many 1s to produce. Thus, we remove a random
+          // column from the pruning list. It does not matter which column it is.
           pruned_column_ids.resize(pruned_column_ids.size() - 1);
         }
 
