@@ -275,4 +275,46 @@ TEST_F(PredicateMergeRuleTest, NoRewritePredicateChains) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicateMergeRuleTest, NoRewriteDifferentTables) {
+  // clang-format off
+  const auto input_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(equals_(a_a, 47),
+      node_a),
+    PredicateNode::make(equals_(a_b, 11),
+      node_b));
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicateMergeRuleTest, MergeAboveOneTable) {
+  // clang-format off
+  const auto input_lqp =
+  UnionNode::make(UnionMode::Positions,
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(equals_(a_a, 47),
+        node_a),
+      PredicateNode::make(equals_(a_b, 11),
+        node_a)),
+    PredicateNode::make(equals_(b_a, 3),
+      node_b));
+
+  const auto expected_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(or_(equals_(a_a, 47), equals_(a_b, 11)),
+      node_a),
+    PredicateNode::make(equals_(b_a, 3),
+      node_b));
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
