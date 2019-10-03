@@ -271,14 +271,13 @@ void prune_projection_node(
   auto new_node_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   new_node_expressions.reserve(projection_node->node_expressions.size());
 
-  for (auto expression_iter = projection_node->node_expressions.begin();
-       expression_iter != projection_node->node_expressions.end(); ++expression_iter) {
+  for (const auto& expression : projection_node->node_expressions) {
     for (const auto& output : node->outputs()) {
       const auto& required_expressions = required_expressions_by_node[output];
-      if (std::find_if(required_expressions.begin(), required_expressions.end(), [&expression_iter](const auto& other) {
-            return **expression_iter == *other;
+      if (std::find_if(required_expressions.begin(), required_expressions.end(), [&expression](const auto& other) {
+            return *expression == *other;
           }) != required_expressions.end()) {
-        new_node_expressions.emplace_back(*expression_iter);
+        new_node_expressions.emplace_back(expression);
         break;
       }
     }
