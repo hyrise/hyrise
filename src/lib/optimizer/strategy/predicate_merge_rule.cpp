@@ -63,13 +63,18 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
        *   a) being called on any mergable node of the initial LQP,
        *   b) calling each other recursively once they merged something into a new node.
        */
-      case LQPNodeType::Predicate:
+      case LQPNodeType::Predicate: {
         _merge_conjunction(std::static_pointer_cast<PredicateNode>(node));
         break;
+      }
 
-      case LQPNodeType::Union:
-        _merge_disjunction(std::static_pointer_cast<UnionNode>(node));
+      case LQPNodeType::Union: {
+        const auto& union_node = std::static_pointer_cast<UnionNode>(node);
+        if (union_node->union_mode == UnionMode::Positions) {
+          _merge_disjunction(union_node);
+        }
         break;
+      }
 
       default: {}
     }
@@ -112,9 +117,10 @@ void PredicateMergeRule::_merge_conjunction(const std::shared_ptr<PredicateNode>
 void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const {
   const auto left_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->left_input());
   const auto right_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->right_input());
-  if (left_predicate_node && right_predicate_node &&
-      left_predicate_node->left_input() == right_predicate_node->left_input() &&
-      left_predicate_node->output_count() == 1 && right_predicate_node->output_count() == 1) {
+  if (!left_predicate_node || !right_predicate_node ||
+      left_predicate_node->left_input() != right_predicate_node->left_input() ||
+      left_predicate_node->output_count() != 1 || right_predicate_node->output_count() != 1) {
+    // There has to be a simple diamond below the UnionNode.
     return;
   }
 
