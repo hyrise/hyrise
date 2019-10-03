@@ -9,34 +9,10 @@
 namespace opossum {
 
 /**
- * Merge a subplan that only consists of PredicateNodes and UnionNodes into a single PredicateNode. The
- * subsequent_expression parameter passes the translated expressions to the translation of its children nodes, which
- * allows to add the translated expression of child node before its parent node to the output expression.
- *
- * A subplan consists of linear "chain" and forked "diamond" parts.
- *
- * EXAMPLE:
- *         Step 1                   Step 2                   Step 3                         Step 4
- *
- *           |                        |                        |                              |
- *      ___Union___              ___Union___           Predicate (A OR B)      Predicate ((D AND C) AND (A OR B))
- *    /            \            /           \                  |                              |
- * Predicate (A)   |         Predicate (A)  |                  |
- *    |            |           |            |                  |
- *    |       Predicate (B)    |      Predicate (B)            |
- *    \           /            \          /                    |
- *     Predicate (C)          Predicate (D AND C)     Predicate (D AND C)
- *           |                        |                        |
- *     Predicate (D)
- *           |
- */
-
-/**
- * This rule cleans up any large subplan that the PredicateSplitUpRule created after other optimizer rules have run.
- * For any of these subplans, the PredicateMergeRule reverts all of the PredicateSplitUpRule's changes by merging
- * multiple PredicateNodes and UnionNodes into single a PredicateNode that has a complex expression.
- * This merging reduces the query runtime if there are many PredicateNodes and UnionNodes because the
- * ExpressionEvaluator is faster in this case.
+ * The PredicateMergeRule reverts all of the PredicateSplitUpRule's changes by merging multiple PredicateNodes and
+ * UnionNodes into a single PredicateNode that has a complex expression. This merging reduces the query runtime if there
+ * are many UnionNodes because the ExpressionEvaluator is faster in this case. Therefore, a threshold prevents the
+ * PredicateMergeRule from merging only few nodes.
  *
  * The rule merges predicate chains to conjunctions ("and") and diamonds (below UnionNodes) to disjunctions ("or").
  *
