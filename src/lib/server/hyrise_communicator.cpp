@@ -10,6 +10,7 @@ namespace opossum {
 
 ExecutionInformation HyriseCommunicator::execute_pipeline(const std::string& sql, const bool debug_note) {
   // A simple query command invalidates unnamed statements
+  // See: https://postgresql.org/docs/11/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
   auto execution_info = ExecutionInformation();
@@ -41,8 +42,10 @@ ExecutionInformation HyriseCommunicator::execute_pipeline(const std::string& sql
 
 std::optional<std::string> HyriseCommunicator::setup_prepared_plan(const std::string& statement_name,
                                                                    const std::string& query) {
-  // Named prepared statements must be explicitly closed before they can be redefined by another Parse message
-  // https://www.postgresql.org/docs/10/static/protocol-flow.html
+  // Named prepared statements must be explicitly closed before they can be redefined by another Parse message.
+  // An unnamed prepared statement lasts only until the next Parse statement specifying the unnamed statement as
+  // destination is issued
+  // https://www.postgresql.org/docs/11/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan(statement_name)) {
     AssertInput(statement_name.empty(),
                 "Named prepared statements must be explicitly closed before they can be redefined.");
@@ -66,16 +69,12 @@ std::optional<std::string> HyriseCommunicator::setup_prepared_plan(const std::st
   return {};
 }
 
-std::pair<std::string, std::shared_ptr<AbstractOperator>> HyriseCommunicator::bind_prepared_plan(
+std::variant<std::string, std::shared_ptr<AbstractOperator>> HyriseCommunicator::bind_prepared_plan(
     const PreparedStatementDetails& statement_details) {
   Assert(Hyrise::get().storage_manager.has_prepared_plan(statement_details.statement_name),
          "The specified statement does not exist.");
 
   const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(statement_details.statement_name);
-
-  if (statement_details.statement_name.empty()) {
-    Hyrise::get().storage_manager.drop_prepared_plan(statement_details.statement_name);
-  }
 
   auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{statement_details.parameters.size()};
   for (auto parameter_idx = size_t{0}; parameter_idx < statement_details.parameters.size(); ++parameter_idx) {
@@ -88,11 +87,10 @@ std::pair<std::string, std::shared_ptr<AbstractOperator>> HyriseCommunicator::bi
   try {
     const auto lqp = prepared_plan->instantiate(parameter_expressions);
     pqp = LQPTranslator{}.translate_node(lqp);
+    return pqp;
   } catch (const std::exception& exception) {
-    error = exception.what();
+    return exception.what();
   }
-
-  return std::make_pair(error, pqp);
 }
 
 std::shared_ptr<TransactionContext> HyriseCommunicator::get_new_transaction_context() {

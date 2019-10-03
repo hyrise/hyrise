@@ -122,16 +122,19 @@ void Session::_handle_bind_command() {
     _portals.erase(portal_it);
   }
 
-  const auto& [error, physical_plan] = HyriseCommunicator::bind_prepared_plan(parameters);
+  const auto result = HyriseCommunicator::bind_prepared_plan(parameters);
 
-  // In case of an error, we store a nullptr in portals map. Since describe and execute packet usually arrive togehter,
-  // we still have to handle the execute packet. Before executing the prepared statement we make a nullptr check.
-  _portals.emplace(parameters.portal, physical_plan);
-
-  if (error.empty()) {
-    _postgres_protocol_handler->send_status_message(NetworkMessageType::BindComplete);
+  // In case of an error
+  if (std::holds_alternative<std::string>(result)) {
+    // In case of an error, we store a nullptr in portals map. Since describe and execute packet usually arrive
+    // together, we still have to handle the execute packet. Before executing the prepared statement we make a
+    // nullptr check.
+    _portals.emplace(parameters.portal, nullptr);
+    _postgres_protocol_handler->send_error_message(std::get<0>(result));
+    // No error
   } else {
-    _postgres_protocol_handler->send_error_message(error);
+    _portals.emplace(parameters.portal, std::get<1>(result));
+    _postgres_protocol_handler->send_status_message(NetworkMessageType::BindComplete);
   }
   // Ready for query + flush will be done after reading sync message
 }

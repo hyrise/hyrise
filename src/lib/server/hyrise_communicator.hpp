@@ -1,5 +1,6 @@
 #pragma once
 
+#include <variant>
 #include "hyrise.hpp"
 #include "operators/abstract_operator.hpp"
 #include "postgres_protocol_handler.hpp"
@@ -9,6 +10,8 @@ namespace opossum {
 
 struct ExecutionInformation {
   std::shared_ptr<const Table> result_table;
+  // Since the PostgreSQL Wire Protocol requires the query type (such as SELECT, INSERT, UPDATE,...) we need to store
+  // the root operator's type.
   OperatorType root_operator;
   std::string execution_information;
   std::string error;
@@ -22,7 +25,7 @@ class HyriseCommunicator {
 
   static std::optional<std::string> setup_prepared_plan(const std::string& statement_name, const std::string& query);
 
-  static std::pair<std::string, std::shared_ptr<AbstractOperator>> bind_prepared_plan(
+  static std::variant<std::string, std::shared_ptr<AbstractOperator>> bind_prepared_plan(
       const PreparedStatementDetails& statement_details);
 
   static std::shared_ptr<TransactionContext> get_new_transaction_context();
