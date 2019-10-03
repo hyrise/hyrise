@@ -145,6 +145,88 @@ TEST_F(PredicateMergeRuleTest, MergeBelowProjection) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicateMergeRuleTest, MergeOnlyAboveLeftTable) {
+  // clang-format off
+  const auto input_lqp =
+  UnionNode::make(UnionMode::Positions,
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(equals_(a_a, 47),
+        node_a),
+      PredicateNode::make(equals_(a_b, 11),
+        node_a)),
+    PredicateNode::make(equals_(b_a, 3),
+      node_b));
+
+  const auto expected_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(or_(equals_(a_a, 47), equals_(a_b, 11)),
+      node_a),
+    PredicateNode::make(equals_(b_a, 3),
+      node_b));
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByProjection) {
+  // clang-format off
+  const auto sub_lqp =
+  ProjectionNode::make(expression_vector(a_a),
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(less_than_(a_a, 1),
+        node_a),
+      PredicateNode::make(greater_than_(3, 2),
+        node_a)));
+
+  const auto input_lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(less_than_(a_a, 10),
+      sub_lqp),
+    PredicateNode::make(greater_than_(30, 20),
+      sub_lqp));
+
+  const auto expected_lqp =
+  PredicateNode::make(or_(less_than_(a_a, 10), greater_than_(30, 20)),
+    ProjectionNode::make(expression_vector(a_a),
+      PredicateNode::make(or_(less_than_(a_a, 1), greater_than_(3, 2)),
+        node_a)));
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicateMergeRuleTest, MergeUnionsSeparatedByJoin) {
+  // clang-format off
+  const auto input_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(less_than_(a_a, 1),
+        node_a),
+      PredicateNode::make(greater_than_(3, 2),
+        node_a)),
+    UnionNode::make(UnionMode::Positions,
+      PredicateNode::make(less_than_(b_a, 10),
+        node_b),
+      PredicateNode::make(greater_than_(30, 20),
+        node_b)));
+
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+    PredicateNode::make(or_(less_than_(a_a, 1), greater_than_(3, 2)),
+      node_a),
+    PredicateNode::make(or_(less_than_(b_a, 10), greater_than_(30, 20)),
+      node_b));
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(PredicateMergeRuleTest, HandleDiamondLQPWithCorrelatedParameters) {
   const auto parameter0 = correlated_parameter_(ParameterID{0}, b_a);
   const auto parameter1 = correlated_parameter_(ParameterID{1}, b_b);
@@ -285,31 +367,6 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentTables) {
       node_b));
 
   const auto expected_lqp = input_lqp->deep_copy();
-  // clang-format on
-
-  const auto actual_lqp = apply_rule(rule, input_lqp);
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(PredicateMergeRuleTest, MergeAboveOneTable) {
-  // clang-format off
-  const auto input_lqp =
-  UnionNode::make(UnionMode::Positions,
-    UnionNode::make(UnionMode::Positions,
-      PredicateNode::make(equals_(a_a, 47),
-        node_a),
-      PredicateNode::make(equals_(a_b, 11),
-        node_a)),
-    PredicateNode::make(equals_(b_a, 3),
-      node_b));
-
-  const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(or_(equals_(a_a, 47), equals_(a_b, 11)),
-      node_a),
-    PredicateNode::make(equals_(b_a, 3),
-      node_b));
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, input_lqp);
