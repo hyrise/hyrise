@@ -37,7 +37,8 @@ void PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
    * Split up a single PredicateNode with a conjunctive chain as its scan expression into multiple consecutive
    * PredicateNodes.
    *
-   * Example: PredicateNode(a AND b AND c)   -->   PredicateNode(a) -> PredicateNode(b) -> PredicateNode(c)
+   * EXAMPLE:
+   *   PredicateNode(a AND b AND c)     -->     PredicateNode(a) -> PredicateNode(b) -> PredicateNode(c)
    */
   for (const auto& predicate_expression : flat_conjunction) {
     const auto& new_predicate_node = PredicateNode::make(predicate_expression);
@@ -49,18 +50,32 @@ void PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
   lqp_remove_node(predicate_node);
 }
 
+/**
+ * Split up a single PredicateNode with a disjunctive chain (e.g., `PredicateNode(a OR b OR c)`) as its scan expression
+ * into n-1 consecutive UnionNodes and n PredicateNodes.
+ *
+ * EXAMPLE:
+ *         Step 1                                  Step 2                                  Step 3
+ *
+ *           |                                       |                                       |
+ * PredicateNode(a OR b OR c)                    __Union___                              __Union___
+ *           |                                  /          \                            /          \
+ *         Table                          Predicate (A)    |                      Predicate (A)    |
+ *                                             |           |                           |           |
+ *                                             |     Predicate (B OR C)                |       __Union__
+ *                                             |           |                           |      /         \
+ *                                             \           /                           | Predicate (B)  |
+ *                                             \--Table---/                            |     |          |
+ *                                                                                     |     |     Predicate (C)
+ *                                                                                     \     \          /
+ *                                                                                      \----Table-----/
+ */
 void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto flat_disjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::Or);
   if (flat_disjunction.size() <= 1) {
     return;
   }
 
-  /**
-   * Split up a single PredicateNode with a disjunctive chain (e.g., `PredicateNode(a OR b OR c)`) as its scan
-   * expression into n-1 consecutive UnionNodes and n PredicateNodes.
-   *
-   * Todo(jj): Draw example
-   */
   // Insert top UnionNode and create a diamond subplan
   auto new_union_node = UnionNode::make(UnionMode::Positions);
   const auto diamond_bottom = predicate_node->left_input();
