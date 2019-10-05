@@ -55,20 +55,19 @@ void PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
  * into n-1 consecutive UnionNodes and n PredicateNodes.
  *
  * EXAMPLE:
- *         Step 1                                  Step 2                                  Step 3
  *
- *           |                                       |                                       |
- * PredicateNode(a OR b OR c)                    __Union___                              __Union___
- *           |                                  /          \                            /          \
- *         Table                          Predicate (A)    |                      Predicate (A)    |
- *                                             |           |                           |           |
- *                                             |     Predicate (B OR C)                |       __Union__
- *                                             |           |                           |      /         \
- *                                             \           /                           | Predicate (B)  |
- *                                             \--Table---/                            |     |          |
- *                                                                                     |     |     Predicate (C)
- *                                                                                     \     \          /
- *                                                                                      \----Table-----/
+ *           |                                       |                                            |
+ * PredicateNode(a OR b OR c)                    __Union___                                   __Union___
+ *           |                                  /          \                                 /          \
+ *           |                            Predicate (A)    |                           Predicate (A)    |
+ *           |                                 |           |                                |           |
+ *           |                                 |     Predicate (B OR C)                     |       __Union__
+ *           |                ----->           |           |                ----->          |      /         \
+ *           |                                 |           |                                | Predicate (B)  |
+ *           |                                 |           |                                |     |          |
+ *           |                                 |           |                                |     |     Predicate (C)
+ *           |                                 |           |                                \     \         /
+ *         Table                               \--Table---/                                 \----Table-----/
  */
 void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto flat_disjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::Or);

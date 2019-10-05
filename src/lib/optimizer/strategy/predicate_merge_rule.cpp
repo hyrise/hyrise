@@ -14,19 +14,19 @@ namespace opossum {
  * PredicateNode. A subplan consists of linear "chain" and forked "diamond" parts.
  *
  * EXAMPLE:
- *         Step 1                                  Step 2                                  Step 3
  *
  *           |                                       |                                       |
  *      ___Union___                           Predicate (A OR B)            Predicate ((D AND C) AND (A OR B))
  *    /            \                                 |                                       |
- * Predicate (A)   |                                 |
- *    |            |                                 |
- *    |       Predicate (B)                          |
- *    \           /                                  |
- *     Predicate (C)                           Predicate (C)
- *           |                                       |
- *     Predicate (D)                           Predicate (D)
- *           |                                       |
+ * Predicate (A)   |                                 |                                       |
+ *    |            |                                 |                                       |
+ *    |       Predicate (B)                          |                                       |
+ *    \           /               ----->             |                ----->                 |
+ *     Predicate (C)                           Predicate (C)                                 |
+ *           |                                       |                                       |
+ *     Predicate (D)                           Predicate (D)                                 |
+ *           |                                       |                                       |
+ *         Table                                   Table                                   Table
  *
  *  Note: These steps can also occur in a different order because the function iterates over a map of nodes.
  */
