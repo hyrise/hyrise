@@ -316,7 +316,7 @@ TEST_F(PredicateMergeRuleTest, MergeComplexNestedConjunctionsAndDisjunctions) {
           sub_lqp))));
 
   const auto expected_lqp =
-  PredicateNode::make(or_(and_(or_(greater_than_(a_a, 10), less_than_(a_a, 8)), or_(less_than_equals_(a_b, 7), equals_(11, a_b))), and_(equals_(13, 13), and_(equals_(a_a, 5), greater_than_(a_b, 7)))),  // NOLINT
+  PredicateNode::make(or_(and_(or_(greater_than_(a_a, 10), less_than_(a_a, 8)), or_(less_than_equals_(a_b, 7), equals_(11, a_b))), and_(and_(equals_(13, 13), equals_(a_a, 5)), greater_than_(a_b, 7))),  // NOLINT
     ProjectionNode::make(expression_vector(a_b, a_a),
       PredicateNode::make(and_(equals_(a_a, a_b), greater_than_(a_a, 3)),
         node_a)));

@@ -28,48 +28,47 @@ namespace opossum {
  *           |                                       |
  *     Predicate (D)                           Predicate (D)
  *           |                                       |
+ *
+ *  Note: These steps can also occur in a different order because the algorithm iterates a map of nodes.
  */
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
-  // For every node, store a pointer to the root of the subplan if this subplan can be merged
-  std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<UnionNode>> subplan_roots;
+  // Disjunctive chains are identified by their topmost UnionNode. node_to_topmost holds a mapping from
+  // PredicateNodes and UnionNodes within disjunctive chains to the respective topmost UnionNode
+  std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<UnionNode>> node_to_topmost;
 
   // For every subplan root, store the number of UnionNodes in the subplan
   std::map<const std::shared_ptr<UnionNode>, size_t> union_node_counts;
 
-  std::queue<std::shared_ptr<AbstractLQPNode>> mergeable_nodes;
-
   visit_lqp(root, [&](const auto& node) {
     const auto& union_node = std::dynamic_pointer_cast<UnionNode>(node);
     if (node->type == LQPNodeType::Predicate || (union_node && union_node->union_mode == UnionMode::Positions)) {
-      mergeable_nodes.push(node);
-
       // Add node to subplans
       const auto& outputs = node->outputs();
       const auto parent =
-          std::find_if(outputs.begin(), outputs.end(), [&](const auto& output) { return subplan_roots.count(output); });
+          std::find_if(outputs.begin(), outputs.end(), [&](const auto& output) { return node_to_topmost.count(output); });
       if (parent == outputs.end() && union_node) {
         // New subplan root found
-        subplan_roots.insert(std::make_pair(union_node, union_node));
+        node_to_topmost.insert(std::make_pair(union_node, union_node));
         union_node_counts.insert(std::make_pair(union_node, 0));
       } else if (parent != outputs.end()) {
         // New node for a known subplan found
-        subplan_roots.insert(std::make_pair(node, subplan_roots[*parent]));
+        node_to_topmost.insert(std::make_pair(node, node_to_topmost[*parent]));
       }
 
       if (union_node) {
-        union_node_counts[subplan_roots[node]]++;
+        union_node_counts[node_to_topmost[node]]++;
       }
     }
     return LQPVisitation::VisitInputs;
   });
 
-  while (!mergeable_nodes.empty()) {
-    const auto node = mergeable_nodes.front();
-    mergeable_nodes.pop();
+  for (const auto& node_and_count : node_to_topmost) {
+    const auto& node = node_and_count.first;
+    const auto& topmost_union_node = node_and_count.second;
 
-    if (node->output_count() == 0 || union_node_counts[subplan_roots[node]] < optimization_threshold) {
+    if (node->output_count() == 0 || union_node_counts[topmost_union_node] < optimization_threshold) {
       // The node was already removed due to a merge or its subplan is too small to be merged.
       continue;
     }
@@ -107,9 +106,8 @@ void PredicateMergeRule::_merge_conjunction(const std::shared_ptr<PredicateNode>
   // Build predicate chain
   std::shared_ptr<AbstractLQPNode> current_node = predicate_node->left_input();
   while (current_node->type == LQPNodeType::Predicate) {
-    // Once a node has multiple outputs, we're not talking about a predicate chain anymore. However, a new chain can
-    // start here.
-    if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
+    // Once a node has multiple outputs, we're not talking about a predicate chain anymore.
+    if (current_node->outputs().size() > 1) {
       break;
     }
 
