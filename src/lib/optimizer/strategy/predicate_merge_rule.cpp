@@ -34,12 +34,12 @@ namespace opossum {
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
-  // Disjunctive chains are identified by their topmost UnionNode. node_to_topmost holds a mapping from
-  // PredicateNodes and UnionNodes within disjunctive chains to the respective topmost UnionNode
+  // Subplans are identified by their topmost UnionNode. node_to_topmost holds a mapping from PredicateNodes
+  // and UnionNodes within such subplans to the respective topmost UnionNode.
   std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<UnionNode>> node_to_topmost;
 
-  // For every subplan root, store the number of UnionNodes in the subplan
-  std::map<const std::shared_ptr<UnionNode>, size_t> union_node_counts;
+  // For every topmost UnionNode, store the total number of UnionNodes in its subplan below
+  std::map<const std::shared_ptr<UnionNode>, size_t> topmost_to_union_count;
 
   visit_lqp(root, [&](const auto& node) {
     const auto& union_node = std::dynamic_pointer_cast<UnionNode>(node);
@@ -49,16 +49,16 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
       const auto parent =
           std::find_if(outputs.begin(), outputs.end(), [&](const auto& output) { return node_to_topmost.count(output); });
       if (parent == outputs.end() && union_node) {
-        // New subplan root found
-        node_to_topmost.insert(std::make_pair(union_node, union_node));
-        union_node_counts.insert(std::make_pair(union_node, 0));
+        // New subplan found
+        node_to_topmost.emplace(union_node, union_node);
+        topmost_to_union_count.emplace(union_node, 0);
       } else if (parent != outputs.end()) {
         // New node for a known subplan found
-        node_to_topmost.insert(std::make_pair(node, node_to_topmost[*parent]));
+        node_to_topmost.emplace(node, node_to_topmost[*parent]);
       }
 
       if (union_node) {
-        union_node_counts[node_to_topmost[node]]++;
+        topmost_to_union_count[node_to_topmost[node]]++;
       }
     }
     return LQPVisitation::VisitInputs;
@@ -68,7 +68,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
     const auto& node = node_and_count.first;
     const auto& topmost_union_node = node_and_count.second;
 
-    if (node->output_count() == 0 || union_node_counts[topmost_union_node] < optimization_threshold) {
+    if (node->output_count() == 0 || topmost_to_union_count[topmost_union_node] < optimization_threshold) {
       // The node was already removed due to a merge or its subplan is too small to be merged.
       continue;
     }
