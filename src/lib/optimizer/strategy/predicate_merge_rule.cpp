@@ -16,15 +16,15 @@ namespace opossum {
  * EXAMPLE:
  *
  *           |                                       |                                       |
- *      ___Union___                           Predicate (A OR B)            Predicate ((D AND C) AND (A OR B))
+ *      ___Union___                           Predicate(a OR b)            Predicate((d AND c) AND (a OR b))
  *    /            \                                 |                                       |
- * Predicate (A)   |                                 |                                       |
+ * Predicate(a)    |                                 |                                       |
  *    |            |                                 |                                       |
- *    |       Predicate (B)                          |                                       |
+ *    |       Predicate(b)                           |                                       |
  *    \           /               ----->             |                ----->                 |
- *     Predicate (C)                           Predicate (C)                                 |
+ *     Predicate(c)                             Predicate(c)                                 |
  *           |                                       |                                       |
- *     Predicate (D)                           Predicate (D)                                 |
+ *     Predicate(d)                             Predicate(d)                                 |
  *           |                                       |                                       |
  *         Table                                   Table                                   Table
  *
@@ -72,11 +72,9 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
     }
 
     switch (node->type) {
-      /**
-       * _merge_disjunction() and _merge_conjunction() merge UnionNodes and PredicateNodes by
-       *   a) being called on any node inside a mergable subplan
-       *   b) calling each other recursively after a merge to check whether they can merge right again
-       */
+      // _merge_disjunction() and _merge_conjunction() merge UnionNodes and PredicateNodes by
+      //   a) being called on any node inside a mergable subplan
+      //   b) calling each other recursively after a merge to check whether they can merge right again
       case LQPNodeType::Union: {
         const auto& union_node = std::static_pointer_cast<UnionNode>(node);
         _merge_disjunction(union_node);

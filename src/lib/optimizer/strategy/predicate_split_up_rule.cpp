@@ -27,19 +27,26 @@ void PredicateSplitUpRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root
   }
 }
 
+/**
+ * Split up a single PredicateNode with a conjunctive chain as its scan expression into multiple consecutive
+ * PredicateNodes.
+ *
+ * EXAMPLE:
+ *                |                                 |
+ *   PredicateNode(a AND b AND c)             PredicateNode(c)
+ *                |                                 |
+ *                |               ----->      PredicateNode(b)
+ *                |                                 |
+ *                |                           PredicateNode(a)
+ *                |                                 |
+ *              Table                             Table
+ */
 void PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto flat_conjunction = flatten_logical_expressions(predicate_node->predicate(), LogicalOperator::And);
   if (flat_conjunction.size() <= 1) {
     return;
   }
 
-  /**
-   * Split up a single PredicateNode with a conjunctive chain as its scan expression into multiple consecutive
-   * PredicateNodes.
-   *
-   * EXAMPLE:
-   *   PredicateNode(a AND b AND c)     -->     PredicateNode(a) -> PredicateNode(b) -> PredicateNode(c)
-   */
   for (const auto& predicate_expression : flat_conjunction) {
     const auto& new_predicate_node = PredicateNode::make(predicate_expression);
     lqp_insert_node(predicate_node, LQPInputSide::Left, new_predicate_node);
@@ -75,28 +82,31 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
     return;
   }
 
-  // Insert top UnionNode and create a diamond subplan
-  auto new_union_node = UnionNode::make(UnionMode::Positions);
+  // Step 1: Insert initial diamond
+  auto top_union_node = UnionNode::make(UnionMode::Positions);
   const auto diamond_bottom = predicate_node->left_input();
-  lqp_replace_node(predicate_node, new_union_node);
+  lqp_replace_node(predicate_node, top_union_node);
+  {
+    const auto new_predicate_node = PredicateNode::make(flat_disjunction[0], diamond_bottom);
+    top_union_node->set_left_input(new_predicate_node);
+    _split_conjunction(new_predicate_node);
+  }
+  {
+    const auto new_predicate_node = PredicateNode::make(flat_disjunction[1], diamond_bottom);
+    top_union_node->set_right_input(new_predicate_node);
+    _split_conjunction(new_predicate_node);
+  }
 
-  auto new_predicate_node = PredicateNode::make(flat_disjunction[0], diamond_bottom);
-  new_union_node->set_left_input(new_predicate_node);
-  _split_conjunction(new_predicate_node);
-
-  new_predicate_node = PredicateNode::make(flat_disjunction[1], diamond_bottom);
-  new_union_node->set_right_input(new_predicate_node);
-  _split_conjunction(new_predicate_node);
-
-  // Insert all remaining n-2 UnionNodes into the diamond subplan. Each UnionNode becomes the right input of the higher
-  // UnionNode, respectively. The left inputs become PredicateNodes that all have the same input (diamond_bottom).
-  auto previous_union_node = new_union_node;
+  // Step 2: Insert all remaining n-2 UnionNodes into the diamond subplan. Each UnionNode becomes the right input of the
+  // higher UnionNode, respectively. The left inputs become PredicateNodes that all have the same input
+  // (diamond_bottom).
+  auto previous_union_node = top_union_node;
   for (auto disjunction_idx = size_t{2}; disjunction_idx < flat_disjunction.size(); ++disjunction_idx) {
     const auto& predicate_expression = flat_disjunction[disjunction_idx];
-    new_union_node = UnionNode::make(UnionMode::Positions);
+    const auto new_union_node = UnionNode::make(UnionMode::Positions);
     lqp_insert_node(previous_union_node, LQPInputSide::Right, new_union_node);
 
-    new_predicate_node = PredicateNode::make(predicate_expression, diamond_bottom);
+    const auto new_predicate_node = PredicateNode::make(predicate_expression, diamond_bottom);
     new_union_node->set_right_input(new_predicate_node);
     _split_conjunction(new_predicate_node);
 

@@ -72,7 +72,7 @@ TEST_F(PredicateMergeRuleTest, MergeUnionBelowPredicateBelowUnion) {
       sub_lqp));
 
   const auto expected_lqp =
-  PredicateNode::make(and_(or_(less_than_(a_b, 8), greater_than_(a_b, 12)), and_(equals_(a_a, 10), or_(less_than_(a_b, 15), greater_than_(a_b, 5)))),  // NOLINT
+  PredicateNode::make(and_(and_(or_(less_than_(a_b, 8), greater_than_(a_b, 12)), equals_(a_a, 10)), or_(less_than_(a_b, 15), greater_than_(a_b, 5))),  // NOLINT
     node_a);
   // clang-format on
 
