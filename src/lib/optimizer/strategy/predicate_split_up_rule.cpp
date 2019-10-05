@@ -66,13 +66,13 @@ void PredicateSplitUpRule::_split_conjunction(const std::shared_ptr<PredicateNod
  *           |                                       |                                            |
  * PredicateNode(a OR b OR c)                    __Union___                                   __Union___
  *           |                                  /          \                                 /          \
- *           |                            Predicate (A)    |                           Predicate (A)    |
+ *           |                            Predicate(a)     |                           Predicate(a)     |
  *           |                                 |           |                                |           |
- *           |                                 |     Predicate (B OR C)                     |       __Union__
+ *           |                                 |     Predicate(b OR c)                      |       __Union__
  *           |                ----->           |           |                ----->          |      /         \
- *           |                                 |           |                                | Predicate (B)  |
+ *           |                                 |           |                                | Predicate(b)   |
  *           |                                 |           |                                |     |          |
- *           |                                 |           |                                |     |     Predicate (C)
+ *           |                                 |           |                                |     |     Predicate(c)
  *           |                                 |           |                                \     \         /
  *         Table                               \--Table---/                                 \----Table-----/
  */

@@ -27,8 +27,6 @@ namespace opossum {
  *     Predicate(d)                             Predicate(d)                                 |
  *           |                                       |                                       |
  *         Table                                   Table                                   Table
- *
- *  Note: These steps can also occur in a different order because the function iterates over a map of nodes.
  */
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
@@ -36,6 +34,9 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
   // Subplans are identified by their topmost UnionNode. node_to_topmost holds a mapping from PredicateNodes
   // and UnionNodes within such subplans to the respective topmost UnionNode.
   std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<UnionNode>> node_to_topmost;
+
+  // Store the same nodes as node_to_topmost but preserve their order
+  std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
 
   // For every topmost UnionNode, store the total number of UnionNodes in its subplan below
   std::map<const std::shared_ptr<UnionNode>, size_t> topmost_to_union_count;
@@ -51,10 +52,12 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
       if (parent == outputs.end() && union_node) {
         // New subplan found
         node_to_topmost.emplace(union_node, union_node);
+        node_queue.push(union_node);
         topmost_to_union_count.emplace(union_node, 0);
       } else if (parent != outputs.end()) {
         // New node for a known subplan found
         node_to_topmost.emplace(node, node_to_topmost[*parent]);
+        node_queue.push(node);
       }
 
       if (union_node) {
@@ -65,8 +68,11 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
   });
 
   // Step 2: Try to merge each node
-  for (const auto& [node, topmost_union_node] : node_to_topmost) {
-    if (node->output_count() == 0 || topmost_to_union_count[topmost_union_node] < minimum_union_count) {
+  while (!node_queue.empty()) {
+    const auto& node = node_queue.front();
+    node_queue.pop();
+
+    if (node->output_count() == 0 || topmost_to_union_count[node_to_topmost[node]] < minimum_union_count) {
       // The node was already removed due to a previous merge or its subplan is too small to be merged.
       continue;
     }
