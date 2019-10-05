@@ -120,7 +120,8 @@ void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& un
   if (merged_predicate_node->output_count()) {
     // There was no disjunction above that could be merged. But there could be a predicate chain that just became simple
     // so that it can be merged.
-    const auto parent_predicate_node = std::dynamic_pointer_cast<PredicateNode>(merged_predicate_node->outputs().front());
+    const auto parent_predicate_node =
+        std::dynamic_pointer_cast<PredicateNode>(merged_predicate_node->outputs().front());
     if (parent_predicate_node) {
       _merge_conjunction(parent_predicate_node);
     } else {
