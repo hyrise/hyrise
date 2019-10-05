@@ -32,28 +32,45 @@ namespace opossum {
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
+  // For every node, store a pointer to the root of the subplan if this subplan can be merged
+  std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<UnionNode>> subplan_roots;
+
+  // For every subplan root, store the number of UnionNodes in the subplan
+  std::map<const std::shared_ptr<UnionNode>, size_t> union_node_counts;
+
   std::queue<std::shared_ptr<AbstractLQPNode>> mergeable_nodes;
-  size_t union_node_count = 0;
+
   visit_lqp(root, [&](const auto& node) {
-    if (node->type == LQPNodeType::Union || node->type == LQPNodeType::Predicate) {
-      if (node->type == LQPNodeType::Union) {
-        union_node_count++;
-      }
+    const auto& union_node = std::dynamic_pointer_cast<UnionNode>(node);
+    if (node->type == LQPNodeType::Predicate || (union_node && union_node->union_mode == UnionMode::Positions)) {
       mergeable_nodes.push(node);
+
+      // Add node to subplans
+      const auto& outputs = node->outputs();
+      const auto parent =
+          std::find_if(outputs.begin(), outputs.end(), [&](const auto& output) { return subplan_roots.count(output); });
+      if (parent == outputs.end() && union_node) {
+        // New subplan root found
+        subplan_roots.insert(std::make_pair(union_node, union_node));
+        union_node_counts.insert(std::make_pair(union_node, 0));
+      } else if (parent != outputs.end()) {
+        // New node for a known subplan found
+        subplan_roots.insert(std::make_pair(node, subplan_roots[*parent]));
+      }
+
+      if (union_node) {
+        union_node_counts[subplan_roots[node]]++;
+      }
     }
     return LQPVisitation::VisitInputs;
   });
-
-  if (union_node_count < optimization_threshold) {
-    return;
-  }
 
   while (!mergeable_nodes.empty()) {
     const auto node = mergeable_nodes.front();
     mergeable_nodes.pop();
 
-    if (node->output_count() == 0) {
-      // The node was already removed due to a merge.
+    if (node->output_count() == 0 || union_node_counts[subplan_roots[node]] < optimization_threshold) {
+      // The node was already removed due to a merge or its subplan is too small to be merged.
       continue;
     }
 
@@ -78,7 +95,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
 
       default: {}
     }
-  };
+  }
 }
 
 /**
