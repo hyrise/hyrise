@@ -10,9 +10,8 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 /**
- * Merge subplans that only consists of PredicateNodes and UnionNodes into a single PredicateNode.
- *
- * A subplan consists of linear "chain" and forked "diamond" parts.
+ * Merge subplans that only consists of PredicateNodes and UnionNodes (with UnionMode::Positions) into a single
+ * PredicateNode. A subplan consists of linear "chain" and forked "diamond" parts.
  *
  * EXAMPLE:
  *         Step 1                                  Step 2                                  Step 3
@@ -68,7 +67,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
     const auto& node = node_and_count.first;
     const auto& topmost_union_node = node_and_count.second;
 
-    if (node->output_count() == 0 || topmost_to_union_count[topmost_union_node] < optimization_threshold) {
+    if (node->output_count() == 0 || topmost_to_union_count[topmost_union_node] < minimum_union_count) {
       // The node was already removed due to a merge or its subplan is too small to be merged.
       continue;
     }

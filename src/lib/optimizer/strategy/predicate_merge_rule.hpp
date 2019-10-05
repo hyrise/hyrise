@@ -11,8 +11,8 @@ namespace opossum {
 /**
  * The PredicateMergeRule reverts all of the PredicateSplitUpRule's changes by merging multiple PredicateNodes and
  * UnionNodes into a single PredicateNode that has a complex expression. This merging reduces the query runtime if there
- * are many UnionNodes because the ExpressionEvaluator is faster in this case. Therefore, a threshold prevents the
- * PredicateMergeRule from merging only few nodes.
+ * are many UnionNodes because the ExpressionEvaluator is faster in this case. Therefore, a threshold
+ * (minimum_union_count) prevents the PredicateMergeRule from merging only few nodes.
  *
  * The rule merges predicate chains to conjunctions ("and") and diamonds (below UnionNodes) to disjunctions ("or").
  *
@@ -24,7 +24,7 @@ class PredicateMergeRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override;
 
   // Simple heuristic: The PredicateMergeRule is more likely to improve the performance for complex LQPs.
-  size_t optimization_threshold{10}; // > TPCDS-13
+  size_t minimum_union_count{10}; // > TPCDS-13
 
  private:
   void _merge_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;

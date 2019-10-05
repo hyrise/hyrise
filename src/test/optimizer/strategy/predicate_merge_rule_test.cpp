@@ -25,7 +25,7 @@ class PredicateMergeRuleTest : public StrategyBaseTest {
 
     rule = std::make_shared<PredicateMergeRule>();
     // A value of 1 means that the rule won't merge pure predicate chains without UNIONs.
-    rule->optimization_threshold = 1;
+    rule->minimum_union_count = 1;
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
