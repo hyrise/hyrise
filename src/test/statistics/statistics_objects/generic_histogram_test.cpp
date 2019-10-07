@@ -771,6 +771,8 @@ TEST_F(GenericHistogramTest, PrunedInt) {
         histogram->pruned(20, PredicateCondition::GreaterThanEquals, 26));
 
     // clang-format off
+    // This is what the histogram looks like after 20 values that are not >= 26 are pruned (aka. removed) from the
+    // statistics
     const auto expected_histogram = GenericHistogram<int32_t>{
       std::vector<int32_t>            { 1, 31, 60, 80},
       std::vector<int32_t>            {25, 50, 60, 99},

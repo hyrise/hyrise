@@ -159,7 +159,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 
     if (num_rows_pruned > size_t{0}) {
       const auto& old_statistics =
-        stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
+          stored_table_node->table_statistics ? stored_table_node->table_statistics : table.table_statistics();
       const auto pruned_statistics = _prune_table_statistics(*old_statistics, operator_predicate, num_rows_pruned);
       stored_table_node->table_statistics = pruned_statistics;
     }
@@ -211,8 +211,11 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
   // can properly order the predicates.
   //
   // For the column that the predicate pruned on, we remove num_rows_pruned values that do not match the predicate
-  // from the histogram, assuming equidistribution among the pruned values. The other columns are simply scaled to
-  // reflect the reduced table size.
+  // from the statistics. See the pruned() implementation of the different statistics types for details.
+  // The other columns are simply scaled to reflect the reduced table size.
+  //
+  // For now, this does not take any sorting on a chunk- or table-level into account. In the future, this may be done
+  // to further improve the accuracy of the statistics.
 
   const auto column_count = old_statistics.column_statistics.size();
 

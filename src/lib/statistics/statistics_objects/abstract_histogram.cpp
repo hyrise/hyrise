@@ -619,7 +619,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
   const auto value = lossy_variant_cast<T>(variant_value);
   DebugAssert(value, "pruned() cannot be called with NULL");
 
-  // For each bin, bin_prunable_height holds the number of values that do not fulfill the predicate.
+  // For each bin, bin_prunable_height holds the number of values that do not fulfill the predicate. If we had some
+  // information about the sort order of the table, we might start pruning a GreaterThan predicate with the lowest
+  // value instead of uniformly pruning across all affected chunks as a future optimization.
   std::vector<HistogramCountType> bin_prunable_height(bin_count());
 
   switch (predicate_condition) {
