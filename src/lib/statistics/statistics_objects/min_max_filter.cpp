@@ -55,19 +55,19 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
       break;
 
     case PredicateCondition::BetweenInclusive: {
-      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
       return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThanEquals, value2);
     }
 
     case PredicateCondition::BetweenLowerExclusive: {
-      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
       return sliced(PredicateCondition::GreaterThan, value)->sliced(PredicateCondition::LessThanEquals, value2);
     }
 
     case PredicateCondition::BetweenUpperExclusive: {
-      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
       return sliced(PredicateCondition::GreaterThanEquals, value)->sliced(PredicateCondition::LessThan, value2);
     }
@@ -120,24 +120,35 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
     case PredicateCondition::NotEquals:
       return value == min && value == max;
     case PredicateCondition::BetweenInclusive: {
-      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
+      // Examples for a MinMaxFilter that holds values [7, 10]:
+      // does_not_contain [5, 7] -> no condition matches as 7 is both in the MinMaxFilter and the predicate
+      // does_not_contain [5, 6] -> second condition (6 < 7) matches
+      // does_not_contain [10, 12] -> no condition matches as 10 overlaps
+      // does_not_contain [11, 12] -> first condition matches
       return value > max || value2 < min;
     }
     case PredicateCondition::BetweenLowerExclusive: {
-      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      Assert(variant_value2, "Between operator needs two values.");
+      const auto value2 = boost::get<T>(*variant_value2);
+      // Examples for a MinMaxFilter that holds values [7, 10]:
+      // does_not_contain (5, 7] -> no condition matches as 7 is both in the MinMaxFilter and the predicate
+      // does_not_contain (5, 6] -> second condition (6 < 7) matches
+      // does_not_contain (10, 12] -> first condition matches - 10 is both the max of the filter and the lower bound
+      //                              but the lower bound is excluded
+      // does_not_contain (11, 12] -> first condition matches
+      return value >= max || value2 < min;
+    }
+    case PredicateCondition::BetweenUpperExclusive: {
+      Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
       return value > max || value2 <= min;
     }
-    case PredicateCondition::BetweenUpperExclusive: {
-      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
-      const auto value2 = boost::get<T>(*variant_value2);
-      return value >= max || value2 < min;
-    }
     case PredicateCondition::BetweenExclusive: {
-      Assert(static_cast<bool>(variant_value2), "Between operator needs two values.");
+      Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
-      return value > max || value2 < min;
+      return value >= max || value2 <= min;
     }
     default:
       return false;

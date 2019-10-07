@@ -114,7 +114,7 @@ set(
     optimizer/join_graph_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/between_composition_rule_test.cpp
-    optimizer/strategy/chunk_pruning_test.cpp
+    optimizer/strategy/chunk_pruning_rule_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp

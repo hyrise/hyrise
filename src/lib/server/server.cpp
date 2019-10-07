@@ -6,9 +6,9 @@
 namespace opossum {
 
 // Specified port (default: 5432) will be opened after initializing the _acceptor
-Server::Server(const uint16_t port, const bool debug_note)
+Server::Server(const uint16_t port, const bool send_execution_info)
     : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-      _debug_note(debug_note) {
+      _send_execution_info(send_execution_info) {
   std::cout << "Server starting on port " << get_port() << std::endl;
 }
 
@@ -16,7 +16,7 @@ void Server::_accept_new_session() {
   // Create a new session. This will also open a new data socket in order to communicate with the client
   // For more information on TCP ports + Asio see:
   // https://www.gamedev.net/forums/topic/586557-boostasio-allowing-multiple-connections-to-a-single-server-socket/
-  auto new_session = std::make_shared<Session>(_io_service, _debug_note);
+  auto new_session = std::make_shared<Session>(_io_service, _send_execution_info);
   _acceptor.async_accept(*(new_session->get_socket()),
                          boost::bind(&Server::_start_session, this, new_session, boost::asio::placeholders::error));
 }

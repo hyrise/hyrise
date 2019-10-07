@@ -12,7 +12,7 @@ namespace opossum {
 class Session {
  public:
   // explicit Session(Socket socket);
-  explicit Session(boost::asio::io_service& io_service, const bool debug_note);
+  explicit Session(boost::asio::io_service& io_service, const bool send_execution_info);
 
   // Start new session.
   void start();
@@ -46,7 +46,7 @@ class Session {
 
   const std::shared_ptr<Socket> _socket;
   const std::shared_ptr<PostgresProtocolHandler> _postgres_protocol_handler;
-  const bool _debug_note;
+  const bool _send_execution_info;
   bool _terminate_session = false;
   std::shared_ptr<TransactionContext> _transaction;
   std::unordered_map<std::string, std::shared_ptr<AbstractOperator>> _portals;

@@ -1,15 +1,15 @@
 #include "session.hpp"
 
-#include "hyrise_communicator.hpp"
 #include "network_message_types.hpp"
+#include "query_handler.hpp"
 #include "response_builder.hpp"
 
 namespace opossum {
 
-Session::Session(boost::asio::io_service& io_service, const bool debug_note)
+Session::Session(boost::asio::io_service& io_service, const bool send_execution_info)
     : _socket(std::make_shared<Socket>(io_service)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler>(_socket)),
-      _debug_note(debug_note) {}
+      _send_execution_info(send_execution_info) {}
 
 std::shared_ptr<Socket> Session::get_socket() { return _socket; }
 
@@ -76,7 +76,7 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto execution_information = HyriseCommunicator::execute_pipeline(query, _debug_note);
+  const auto execution_information = QueryHandler::execute_pipeline(query, _send_execution_info);
 
   if (!execution_information.error.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error);
@@ -88,8 +88,8 @@ void Session::_handle_simple_query() {
       ResponseBuilder::build_and_send_query_response(execution_information.result_table, _postgres_protocol_handler);
       row_count = execution_information.result_table->row_count();
     }
-    if (_debug_note) {
-      _postgres_protocol_handler->send_debug_note(execution_information.execution_information);
+    if (_send_execution_info) {
+      _postgres_protocol_handler->send_execution_info(execution_information.execution_information);
     }
     _postgres_protocol_handler->send_command_complete(
         ResponseBuilder::build_command_complete_message(execution_information.root_operator, row_count));
@@ -99,7 +99,7 @@ void Session::_handle_simple_query() {
 
 void Session::_handle_parse_command() {
   const auto [statement_name, query] = _postgres_protocol_handler->read_parse_packet();
-  const auto error = HyriseCommunicator::setup_prepared_plan(statement_name, query);
+  const auto error = QueryHandler::setup_prepared_plan(statement_name, query);
 
   if (error.has_value()) {
     _postgres_protocol_handler->send_error_message(error.value());
@@ -122,16 +122,19 @@ void Session::_handle_bind_command() {
     _portals.erase(portal_it);
   }
 
-  const auto& [error, physical_plan] = HyriseCommunicator::bind_prepared_plan(parameters);
+  const auto result = QueryHandler::bind_prepared_plan(parameters);
 
-  // In case of an error, we store a nullptr in portals map. Since describe and execute packet usually arrive togehter,
-  // we still have to handle the execute packet. Before executing the prepared statement we make a nullptr check.
-  _portals.emplace(parameters.portal, physical_plan);
-
-  if (error.empty()) {
-    _postgres_protocol_handler->send_status_message(NetworkMessageType::BindComplete);
+  // In case of an error
+  if (std::holds_alternative<std::string>(result)) {
+    // In case of an error, we store a nullptr in portals map. Since describe and execute packet usually arrive
+    // together, we still have to handle the execute packet. Before executing the prepared statement we make a
+    // nullptr check.
+    _portals.emplace(parameters.portal, nullptr);
+    _postgres_protocol_handler->send_error_message(std::get<0>(result));
+    // No error
   } else {
-    _postgres_protocol_handler->send_error_message(error);
+    _portals.emplace(parameters.portal, std::get<1>(result));
+    _postgres_protocol_handler->send_status_message(NetworkMessageType::BindComplete);
   }
   // Ready for query + flush will be done after reading sync message
 }
@@ -162,10 +165,10 @@ void Session::_handle_execute() {
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction) _transaction = HyriseCommunicator::get_new_transaction_context();
+  if (!_transaction) _transaction = QueryHandler::get_new_transaction_context();
   physical_plan->set_transaction_context_recursively(_transaction);
 
-  const auto result_table = HyriseCommunicator::execute_prepared_statement(physical_plan);
+  const auto result_table = QueryHandler::execute_prepared_statement(physical_plan);
 
   uint64_t row_count = 0;
   // If there is no result table, e.g. after an INSERT command, we cannot send row data

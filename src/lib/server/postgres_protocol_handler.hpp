@@ -47,7 +47,7 @@ class PostgresProtocolHandler {
   // Send error message to client if there is an error during parsing or execution
   void send_error_message(const std::string& error_message);
 
-  void send_debug_note(const std::string& execution_information);
+  void send_execution_info(const std::string& execution_information);
   void set_row_description_header(const uint32_t total_column_name_length, const uint16_t column_count);
 
  private:
