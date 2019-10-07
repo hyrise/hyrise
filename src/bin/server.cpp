@@ -3,7 +3,6 @@
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "server/server.hpp"
-#include "tpch/tpch_table_generator.hpp"
 
 cxxopts::Options get_server_cli_options() {
   cxxopts::Options cli_options("./hyriseServer", "Starts Hyrise Server in order to accept network requests.");
