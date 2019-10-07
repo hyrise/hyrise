@@ -203,26 +203,26 @@ bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) const
 
 std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const TableStatistics& old_statistics,
                                                                            OperatorScanPredicate predicate,
-                                                                           size_t num_values_pruned) const {
+                                                                           size_t num_rows_pruned) const {
   // If a chunk is pruned, we update the table statistics. This is so that the selectivity of the predicate that was
   // used for pruning can be correctly estimated. Example: For a table that has sorted values from 1 to 100 and a chunk
   // size of 10, the predicate `x > 90` has a selectivity of 10%. However, if the ChunkPruningRule removes nine chunks
   // out of ten, the selectivity is now 100%. Updating the statistics is important so that the predicate ordering
   // can properly order the predicates.
   //
-  // For the column that the predicate pruned on, we remove chunk.size() values that do not match the predicate from
-  // the histogram, assuming equidistribution among the pruned values. The other columns are simply scaled to reflect
-  // the reduced table size.
+  // For the column that the predicate pruned on, we remove num_rows_pruned values that do not match the predicate
+  // from the histogram, assuming equidistribution among the pruned values. The other columns are simply scaled to
+  // reflect the reduced table size.
 
   const auto column_count = old_statistics.column_statistics.size();
 
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(column_count);
 
-  const auto scale = 1 - (num_values_pruned / old_statistics.row_count);
+  const auto scale = 1 - (num_rows_pruned / old_statistics.row_count);
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     if (column_id == predicate.column_id) {
       column_statistics[column_id] = old_statistics.column_statistics[column_id]->pruned(
-          num_values_pruned, predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value),
+          num_rows_pruned, predicate.predicate_condition, boost::get<AllTypeVariant>(predicate.value),
           predicate.value2 ? std::optional<AllTypeVariant>{boost::get<AllTypeVariant>(*predicate.value2)}
                            : std::nullopt);
     } else {
@@ -230,7 +230,7 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
     }
   }
 
-  return std::make_shared<TableStatistics>(std::move(column_statistics), old_statistics.row_count - num_values_pruned);
+  return std::make_shared<TableStatistics>(std::move(column_statistics), old_statistics.row_count - num_rows_pruned);
 }
 
 }  // namespace opossum

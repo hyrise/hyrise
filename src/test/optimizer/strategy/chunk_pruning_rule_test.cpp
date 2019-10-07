@@ -76,11 +76,15 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
 
   // clang-format off
   const auto expected_histogram = GenericHistogram<int32_t>{
-    std::vector<int32_t>            {12, 123, 12345},
-    std::vector<int32_t>            {12, 123, 12345},
-    std::vector<HistogramCountType> {0,  0,   2},
-    std::vector<HistogramCountType> {1,  1,   1}};
+    std::vector<int32_t>            {12345},
+    std::vector<int32_t>            {12345},
+    std::vector<HistogramCountType> {2},
+    std::vector<HistogramCountType> {1}};
   // clang-format on
+
+  const auto& column_statistics = dynamic_cast<AttributeStatistics<int32_t>&>(*stored_table_node->table_statistics->column_statistics[0]);
+  const auto& actual_histogram = dynamic_cast<GenericHistogram<int32_t>&>(*column_statistics.histogram);
+  EXPECT_EQ(actual_histogram, expected_histogram);
 }
 
 TEST_F(ChunkPruningRuleTest, SimpleChinkPruningTestWithColumnPruning) {

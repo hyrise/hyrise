@@ -180,7 +180,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
   virtual T bin_maximum(const BinID index) const = 0;
 
   /**
-   * Returns whether the value is contained in a given bin
+   * Returns whether the value belongs into a given bin. This does not necessarily mean that the value is actually
+   * present.
    */
   bool bin_contains(const BinID index, const T& value) const;
 

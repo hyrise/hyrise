@@ -40,7 +40,7 @@ class ChunkPruningRule : public AbstractRule {
 
   std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
                                                            OperatorScanPredicate predicate,
-                                                           size_t num_values_pruned) const;
+                                                           size_t num_rows_pruned) const;
 };
 
 }  // namespace opossum

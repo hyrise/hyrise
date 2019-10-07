@@ -815,7 +815,7 @@ TEST_F(GenericHistogramTest, PrunedInt) {
     // Prune eight values from the last two bins with the boundary being on a single bin's value
     const auto pruned =
         std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(8, PredicateCondition::LessThan, 60));
-    const auto remaining_ratio = 1.0f - 8.0f / 15.0f;
+    const auto remaining_ratio = 1.0f - 8.0f / (5.0f + 10.0f);
     // clang-format off
     const auto expected_histogram = GenericHistogram<int32_t>{
       std::vector<int32_t>            { 1, 31, 60, 80},

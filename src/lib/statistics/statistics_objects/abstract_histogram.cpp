@@ -43,14 +43,14 @@ std::string AbstractHistogram<T>::description() const {
   stream << " bin count: " << bin_count() << ";";
 
   stream << "  Bins" << std::endl;
-  for (BinID bin = 0u; bin < bin_count(); bin++) {
+  for (BinID bin_id = 0u; bin_id < bin_count(); ++bin_id) {
     if constexpr (std::is_same_v<T, pmr_string>) {
-      stream << "  ['" << bin_minimum(bin) << "' (" << _domain.string_to_number(bin_minimum(bin)) << ") -> '";
-      stream << bin_maximum(bin) << "' (" << _domain.string_to_number(bin_maximum(bin)) << ")]: ";
+      stream << "  ['" << bin_minimum(bin_id) << "' (" << _domain.string_to_number(bin_minimum(bin_id)) << ") -> '";
+      stream << bin_maximum(bin_id) << "' (" << _domain.string_to_number(bin_maximum(bin_id)) << ")]: ";
     } else {
-      stream << "  [" << bin_minimum(bin) << " -> " << bin_maximum(bin) << "]: ";
+      stream << "  [" << bin_minimum(bin_id) << " -> " << bin_maximum(bin_id) << "]: ";
     }
-    stream << "Height: " << bin_height(bin) << "; DistinctCount: " << bin_distinct_count(bin) << std::endl;
+    stream << "Height: " << bin_height(bin_id) << "; DistinctCount: " << bin_distinct_count(bin_id) << std::endl;
   }
 
   return stream.str();
@@ -262,7 +262,7 @@ bool AbstractHistogram<T>::does_not_contain(const PredicateCondition predicate_c
       // and there are either no bins in between or none of them have any elements, we can also prune the predicate.
       if (value_bin != INVALID_BIN_ID && value2_bin != INVALID_BIN_ID && bin_height(value_bin) == 0 &&
           bin_height(value2_bin) == 0) {
-        for (auto current_bin = value_bin + 1; current_bin < value2_bin; current_bin++) {
+        for (auto current_bin = value_bin + 1; current_bin < value2_bin; ++current_bin) {
           if (bin_height(current_bin) > 0ul) {
             return false;
           }
@@ -352,7 +352,7 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       DebugAssert(bin_id != INVALID_BIN_ID, "Should have been caught by does_not_contain().");
 
       // Sum up all bins before the bin (or gap) containing the value.
-      for (BinID bin = 0u; bin < bin_id; bin++) {
+      for (BinID bin = 0u; bin < bin_id; ++bin) {
         cardinality += bin_height(bin);
         distinct_count += bin_distinct_count(bin);
       }
@@ -718,10 +718,10 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
   const auto pruning_ratio = std::min(static_cast<Selectivity>(num_values_pruned) / total_prunable_values, 1.0f);
 
   GenericHistogramBuilder<T> builder(bin_count(), _domain);
-  for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     const auto pruned_height = bin_prunable_height[bin_id] * pruning_ratio;
     const auto new_bin_height = bin_height(bin_id) - pruned_height;
-    if (new_bin_height == 0) continue;
+    if (new_bin_height <= std::numeric_limits<float>::epsilon()) continue;
 
     builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), new_bin_height, bin_distinct_count(bin_id));
   }
@@ -734,7 +734,7 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::scaled(const Sel
   GenericHistogramBuilder<T> builder(bin_count(), _domain);
 
   // Scale the number of values in the bin with the given selectivity.
-  for (auto bin_id = BinID{0}; bin_id < bin_count(); bin_id++) {
+  for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), bin_height(bin_id) * selectivity,
                     _scale_distinct_count(bin_height(bin_id), bin_distinct_count(bin_id), selectivity));
   }
@@ -763,7 +763,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
    */
   auto candidate_split_set = std::unordered_set<std::pair<T, T>, boost::hash<std::pair<T, T>>>{};
 
-  for (auto bin_id = BinID{0}; bin_id < input_bin_count; bin_id++) {
+  for (auto bin_id = BinID{0}; bin_id < input_bin_count; ++bin_id) {
     const auto bin_min = bin_minimum(bin_id);
     const auto bin_max = bin_maximum(bin_id);
     // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
@@ -826,7 +826,7 @@ std::shared_ptr<AbstractHistogram<T>> AbstractHistogram<T>::split_at_bin_bounds(
   const auto result_bin_count = candidate_edges.size() / 2;
   GenericHistogramBuilder<T> builder{result_bin_count, _domain};
 
-  for (auto bin_id = BinID{0}; bin_id < result_bin_count; bin_id++) {
+  for (auto bin_id = BinID{0}; bin_id < result_bin_count; ++bin_id) {
     const auto bin_min = candidate_edges[bin_id * 2];
     const auto bin_max = candidate_edges[bin_id * 2 + 1];
 
@@ -848,7 +848,7 @@ template <typename T>
 std::vector<std::pair<T, T>> AbstractHistogram<T>::bin_bounds() const {
   std::vector<std::pair<T, T>> bin_edges(bin_count());
 
-  for (auto bin_id = BinID{0}; bin_id < bin_edges.size(); bin_id++) {
+  for (auto bin_id = BinID{0}; bin_id < bin_edges.size(); ++bin_id) {
     bin_edges[bin_id] = std::make_pair(bin_minimum(bin_id), bin_maximum(bin_id));
   }
 
