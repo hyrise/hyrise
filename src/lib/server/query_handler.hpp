@@ -19,7 +19,7 @@ struct ExecutionInformation {
 
 // This class manages the interaction between the server and the database component. Furthermore, most of the SQL-based
 // error handling happens in this class.
-class HyriseCommunicator {
+class QueryHandler {
  public:
   static ExecutionInformation execute_pipeline(const std::string& sql, const bool debug_note);
 

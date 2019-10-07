@@ -330,11 +330,11 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    server/hyrise_communicator.cpp
-    server/hyrise_communicator.hpp
     server/network_message_types.hpp
     server/postgres_protocol_handler.cpp
     server/postgres_protocol_handler.hpp
+    server/query_handler.cpp
+    server/query_handler.hpp
     server/response_builder.cpp
     server/response_builder.hpp
     server/ring_buffer.cpp

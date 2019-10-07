@@ -1,7 +1,7 @@
 #include "session.hpp"
 
-#include "hyrise_communicator.hpp"
 #include "network_message_types.hpp"
+#include "query_handler.hpp"
 #include "response_builder.hpp"
 
 namespace opossum {
@@ -76,7 +76,7 @@ void Session::_handle_simple_query() {
   // A simple query command invalidates unnamed portals
   _portals.erase("");
 
-  const auto execution_information = HyriseCommunicator::execute_pipeline(query, _send_execution_info);
+  const auto execution_information = QueryHandler::execute_pipeline(query, _send_execution_info);
 
   if (!execution_information.error.empty()) {
     _postgres_protocol_handler->send_error_message(execution_information.error);
@@ -99,7 +99,7 @@ void Session::_handle_simple_query() {
 
 void Session::_handle_parse_command() {
   const auto [statement_name, query] = _postgres_protocol_handler->read_parse_packet();
-  const auto error = HyriseCommunicator::setup_prepared_plan(statement_name, query);
+  const auto error = QueryHandler::setup_prepared_plan(statement_name, query);
 
   if (error.has_value()) {
     _postgres_protocol_handler->send_error_message(error.value());
@@ -122,7 +122,7 @@ void Session::_handle_bind_command() {
     _portals.erase(portal_it);
   }
 
-  const auto result = HyriseCommunicator::bind_prepared_plan(parameters);
+  const auto result = QueryHandler::bind_prepared_plan(parameters);
 
   // In case of an error
   if (std::holds_alternative<std::string>(result)) {
@@ -165,10 +165,10 @@ void Session::_handle_execute() {
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction) _transaction = HyriseCommunicator::get_new_transaction_context();
+  if (!_transaction) _transaction = QueryHandler::get_new_transaction_context();
   physical_plan->set_transaction_context_recursively(_transaction);
 
-  const auto result_table = HyriseCommunicator::execute_prepared_statement(physical_plan);
+  const auto result_table = QueryHandler::execute_prepared_statement(physical_plan);
 
   uint64_t row_count = 0;
   // If there is no result table, e.g. after an INSERT command, we cannot send row data
