@@ -27,12 +27,17 @@ namespace opossum {
  *     Predicate(d)                             Predicate(d)                                 |
  *           |                                       |                                       |
  *         Table                                   Table                                   Table
+ *
+ * Note that predicates c and d are now also included in the new predicate and will be evaluated by the
+ * ExpressionEvaluator. The reason for this is that the current detection algorithm does not yet identify predicates
+ * that are inputs to a merged subplan but do not necessarily belong to that subplan. When it becomes necessary, this
+ * rule might be adapted to make more sophisticated decisions on which predicates to include.
  */
 void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "PredicateMergeRule needs root to hold onto");
 
-  // Subplans are identified by their topmost UnionNode. node_to_topmost holds a mapping from PredicateNodes
-  // and UnionNodes within such subplans to the respective topmost UnionNode.
+  // (Potentially mergeable) subplans are identified by their topmost UnionNode. node_to_topmost holds a mapping from
+  // PredicateNodes and UnionNodes within such subplans to the respective topmost UnionNode.
   std::map<const std::shared_ptr<AbstractLQPNode>, const std::shared_ptr<UnionNode>> node_to_topmost;
 
   // Store the same nodes as node_to_topmost but preserve their order
@@ -44,6 +49,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
   // Step 1: Collect mergeable nodes
   visit_lqp(root, [&](const auto& node) {
     const auto& union_node = std::dynamic_pointer_cast<UnionNode>(node);
+    // We need to check for UnionMode::Positions as other UnionModes are not guaranteed to represent a disjunction
     if (node->type == LQPNodeType::Predicate || (union_node && union_node->union_mode == UnionMode::Positions)) {
       const auto& outputs = node->outputs();
       const auto parent = std::find_if(outputs.begin(), outputs.end(),
@@ -101,6 +107,7 @@ void PredicateMergeRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) 
  * Merge "simple" diamonds, which only consist of one UnionNode, having two PredicateNodes as inputs
  */
 void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& union_node) const {
+  Assert(union_node->union_mode == UnionMode::Positions, "Cannot merge union_node into disjunction");
   const auto left_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->left_input());
   const auto right_predicate_node = std::dynamic_pointer_cast<PredicateNode>(union_node->right_input());
 
@@ -122,7 +129,10 @@ void PredicateMergeRule::_merge_disjunction(const std::shared_ptr<UnionNode>& un
   // Step 3: Try to merge other nodes
   // There could be another diamond that just became simple so that it can be merged.
   const auto parent_union_node = std::dynamic_pointer_cast<UnionNode>(merged_predicate_node->outputs().front());
-  if (parent_union_node) _merge_disjunction(parent_union_node);
+  if (parent_union_node && parent_union_node->union_mode == UnionMode::Positions) {
+    _merge_disjunction(parent_union_node);
+  }
+
   if (merged_predicate_node->output_count()) {
     // There was no disjunction above that could be merged. But there could be a predicate chain that just became simple
     // so that it can be merged.

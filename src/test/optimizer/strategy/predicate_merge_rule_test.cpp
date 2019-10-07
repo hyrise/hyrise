@@ -375,4 +375,21 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentTables) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicateMergeRuleTest, NoRewriteDifferentUnionMode) {
+  // clang-format off
+  const auto input_lqp =
+  UnionNode::make(UnionMode::All,
+    PredicateNode::make(equals_(a_a, 47),
+      node_a),
+    PredicateNode::make(equals_(a_b, 11),
+      node_a));
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 }  // namespace opossum
