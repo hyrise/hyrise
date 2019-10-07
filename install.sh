@@ -51,7 +51,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-7 libclang-7-dev clang-tidy-7 clang-format-7 gcovr python2.7 python-pexpect python-glob2 graphviz gcc-8 g++-8 llvm llvm-7-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev systemtap systemtap-sdt-dev autoconf &
+                sudo apt-get install --no-install-recommends -y clang-7 libclang-7-dev clang-tidy-7 clang-format-7 gcovr python2.7 python-pexpect python-glob2 graphviz gcc-8 g++-8 llvm llvm-7-tools libnuma-dev libnuma1 libtbb-dev cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev postgresql-server-dev-all systemtap systemtap-sdt-dev autoconf &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
