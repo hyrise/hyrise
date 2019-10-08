@@ -104,7 +104,10 @@ class AbstractVisualizer {
 
     // This unique_ptr serves as a scope guard that guarantees the deletion of the temp file once we return from this
     // method.
-    const auto delete_temp_file = [&tmpname](auto) { std::remove(tmpname); };
+    const auto delete_temp_file = [&tmpname](auto ptr) {
+      delete ptr;
+      std::remove(tmpname);
+    };
     const auto delete_guard = std::unique_ptr<char, decltype(delete_temp_file)>(new char, delete_temp_file);
 
     // The caller set the pen widths to either the number of rows (for edges) or the execution time in ns (for
