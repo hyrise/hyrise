@@ -31,7 +31,9 @@ uint32_t PostgresProtocolHandler<SocketType>::read_startup_packet() {
 }
 
 template <typename SocketType>
-NetworkMessageType PostgresProtocolHandler<SocketType>::read_packet_type() { return _read_buffer.get_message_type(); }
+NetworkMessageType PostgresProtocolHandler<SocketType>::read_packet_type() {
+  return _read_buffer.get_message_type();
+}
 
 template <typename SocketType>
 std::string PostgresProtocolHandler<SocketType>::read_query_packet() {
@@ -90,7 +92,7 @@ void PostgresProtocolHandler<SocketType>::send_command_complete(const std::strin
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::set_row_description_header(const uint32_t total_column_name_length,
-                                                         const uint16_t column_count) {
+                                                                     const uint16_t column_count) {
   _write_buffer.template put_value(NetworkMessageType::RowDescription);
 
   /* Each column has the following fields within the message:
@@ -134,7 +136,7 @@ void PostgresProtocolHandler<SocketType>::set_row_description_header(const uint3
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_row_description(const std::string& column_name, const uint32_t object_id,
-                                                   const int16_t type_width) {
+                                                               const int16_t type_width) {
   _write_buffer.put_string(column_name);
   _write_buffer.template put_value<int32_t>(0u);          // No object id
   _write_buffer.template put_value<int16_t>(0u);          // No attribute number
@@ -146,7 +148,7 @@ void PostgresProtocolHandler<SocketType>::send_row_description(const std::string
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_data_row(const std::vector<std::string>& row_strings,
-                                            const uint32_t string_lengths) {
+                                                        const uint32_t string_lengths) {
   /*
   DataRow (B)
   Byte1('D')

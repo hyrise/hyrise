@@ -3,9 +3,10 @@
 
 namespace opossum {
 
-template<typename SocketType>
+template <typename SocketType>
 void ResponseBuilder::build_and_send_row_description(
-    std::shared_ptr<const Table> table, const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
+    std::shared_ptr<const Table> table,
+    const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
   // Calculate sum of length of all column names
   uint32_t column_lengths_total = 0;
   for (auto& column_name : table->column_names()) {
@@ -47,9 +48,10 @@ void ResponseBuilder::build_and_send_row_description(
   }
 }
 
-template<typename SocketType>
+template <typename SocketType>
 void ResponseBuilder::build_and_send_query_response(
-    std::shared_ptr<const Table> table, const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
+    std::shared_ptr<const Table> table,
+    const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
   auto attribute_strings = std::vector<std::string>(table->column_count());
   const auto chunk_count = table->chunk_count();
 
@@ -100,12 +102,14 @@ template void ResponseBuilder::build_and_send_row_description<Socket>(
     std::shared_ptr<const Table>, const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
 
 template void ResponseBuilder::build_and_send_row_description<boost::asio::posix::stream_descriptor>(
-    std::shared_ptr<const Table>, const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
+    std::shared_ptr<const Table>,
+    const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
 
 template void ResponseBuilder::build_and_send_query_response<Socket>(
     std::shared_ptr<const Table>, const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
 
 template void ResponseBuilder::build_and_send_query_response<boost::asio::posix::stream_descriptor>(
-    std::shared_ptr<const Table>, const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
+    std::shared_ptr<const Table>,
+    const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
 
 }  // namespace opossum
