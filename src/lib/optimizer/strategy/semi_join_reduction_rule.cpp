@@ -30,8 +30,6 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         continue;
       }
 
-      // Semi Join Reductions also make sense when they are pushed below, e.g., an expensive aggregate (TPC-H 20?). This can only happen for non-subqueries with WITH or views. Those are not covered yet.
-
       // Semi/Anti joins are currently handled by the hash join, which performs badly if the right side is much bigger
       // than the left side. For that case, we add a second semi join on the build side, which throws out all values
       // that will not be found by the primary (first) predicate of the later join, anyway. This is the case no matter
@@ -60,6 +58,17 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         semi_join_reduction_node->comment = "Semi Reduction";
         lqp_insert_node(join_node, side_of_join, semi_join_reduction_node);
 
+        semi_join_reduction_node->set_right_input(right_input);
+
+        const auto reduction_input_cardinality =
+            estimator->estimate_cardinality(semi_join_reduction_node->left_input());
+        const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
+
+        semi_join_reduction_node->set_right_input(nullptr);
+        lqp_remove_node(semi_join_reduction_node);
+
+        if (reduction_output_cardinality / reduction_input_cardinality > MINIMUM_SELECTIVITY) return;
+
         while (true) {
           if (right_input->type != LQPNodeType::Join) break;
           // No matter the join type, we will never see values that were not there before
@@ -82,17 +91,6 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
           if (try_deeper_right_input(LQPInputSide::Right)) continue;
           break;
         }
-
-        semi_join_reduction_node->set_right_input(right_input);
-
-        const auto reduction_input_cardinality =
-            estimator->estimate_cardinality(semi_join_reduction_node->left_input());
-        const auto reduction_output_cardinality = estimator->estimate_cardinality(semi_join_reduction_node);
-
-        semi_join_reduction_node->set_right_input(nullptr);
-        lqp_remove_node(semi_join_reduction_node);
-
-        if (reduction_output_cardinality / reduction_input_cardinality <= .25f) return;  // TODO move up
 
         semi_join_reduction_node->set_right_input(right_input);
         semi_join_reductions.emplace_back(join_node, side_of_join, semi_join_reduction_node);
