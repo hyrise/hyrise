@@ -109,8 +109,11 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
       // Having defined the lambda responsible for conditionally adding a semi join reduction, we now apply ot to both
       // inputs of the join.
       reduce_if_beneficial(LQPInputSide::Right);
-      if (join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse) {
-        // TODO Check if doing this for semi makes sense, as it effectively duplicates the join
+
+      // On the left side we must not create semi join reductions for anti joins as those rely on the very existence of
+      // non-matching values on the right side. Also, we should not create semi join reductions for semi joins as those
+      // would simply duplicate the original join. 
+      if (join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse && join_node->join_mode != JoinMode::Semi) {
         reduce_if_beneficial(LQPInputSide::Left);
       }
     }
