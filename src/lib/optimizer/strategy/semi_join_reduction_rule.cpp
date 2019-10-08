@@ -96,15 +96,15 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
           break;
         }
 
+        if (right_cardinality > left_cardinality) {
+          // The JoinHash, which is currently used for semi joins is bad at handling cases where the build side is larger
+          // than the probe side. In these cases, do not add a semi join reduction for now.
+          return;
+        }
+
         semi_join_reduction_node->set_right_input(right_input);
         semi_join_reductions.emplace_back(join_node, side_of_join, semi_join_reduction_node);
       };
-
-      if (right_cardinality > left_cardinality) {
-        // The JoinHash, which is currently used for semi joins is bad at handling cases where the build side is larger
-        // than the probe side. In these cases, do not add a semi join reduction for now.
-        return;
-      }
 
       // Having defined the lambda responsible for conditionally adding a semi join reduction, we now apply ot to both
       // inputs of the join.
