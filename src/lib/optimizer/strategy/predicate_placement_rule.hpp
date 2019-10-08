@@ -47,6 +47,7 @@ class PredicatePlacementRule : public AbstractRule {
   // Checks whether a given node would continue to be evaluable on top of a given LQP. This goes beyond
   // expression_is_evaluable_on_lqp in that it also checks for AggregateExpressions that a predicate cannot be pushed
   // beyond. However, it is tailored to this rule, which is why it is not globally available.
-  static bool _is_evaluable_on_lqp(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<AbstractLQPNode>& lqp);
+  static bool _is_evaluable_on_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                   const std::shared_ptr<AbstractLQPNode>& lqp);
 };
 }  // namespace opossum

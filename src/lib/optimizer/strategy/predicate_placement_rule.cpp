@@ -103,8 +103,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
           join_node->join_mode == JoinMode::AntiNullAsFalse) {
         for (const auto& push_down_node : push_down_nodes) {
           const auto move_to_left = _is_evaluable_on_lqp(push_down_node, join_node->left_input());
-          const auto move_to_right =
-              _is_evaluable_on_lqp(push_down_node, join_node->right_input());
+          const auto move_to_right = _is_evaluable_on_lqp(push_down_node, join_node->right_input());
 
           if (!move_to_left && !move_to_right) {
             _insert_nodes(current_node, input_side, {push_down_node});
@@ -259,7 +258,8 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
   return predicate_contains_correlated_subquery;
 }
 
-bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<AbstractLQPNode>& lqp) {
+bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                                  const std::shared_ptr<AbstractLQPNode>& lqp) {
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto& predicate_node = static_cast<PredicateNode&>(*node);
@@ -267,7 +267,7 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
 
       auto has_uncomputed_aggregate = false;
       auto predicate = predicate_node.predicate();
-      visit_expression(predicate, [&](const auto &expression) {
+      visit_expression(predicate, [&](const auto& expression) {
         if (expression->type == ExpressionType::Aggregate && !lqp->find_column_id(*expression)) {
           has_uncomputed_aggregate = true;
           return ExpressionVisitation::DoNotVisitArguments;
