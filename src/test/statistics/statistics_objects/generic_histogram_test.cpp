@@ -756,6 +756,307 @@ TEST_F(GenericHistogramTest, SlicedFloat) {
   test_sliced_with_predicates(histograms, predicates);
 }
 
+TEST_F(GenericHistogramTest, PrunedInt) {
+  // clang-format off
+  const auto histogram = std::make_shared<GenericHistogram<int32_t>>(
+    std::vector<int32_t>            { 1, 31, 60, 80},
+    std::vector<int32_t>            {25, 50, 60, 99},
+    std::vector<HistogramCountType> {40, 30, 5,  10},
+    std::vector<HistogramCountType> {10, 20, 1,  1});
+  // clang-format on
+
+  {
+    // Prune half of the values from the first bin
+    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+        histogram->pruned(20, PredicateCondition::GreaterThanEquals, 26));
+
+    // clang-format off
+    // This is what the histogram looks like after 20 values that are not >= 26 are pruned (aka. removed) from the
+    // statistics
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31, 60, 80},
+      std::vector<int32_t>            {25, 50, 60, 99},
+      std::vector<HistogramCountType> {20, 30, 5,  10},  // This is the row that changes in the tests
+      std::vector<HistogramCountType> {10, 20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune all values from the first bin and half of the values from the second bin
+    const auto pruned =
+        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(55, PredicateCondition::GreaterThan, 40));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            {31, 60, 80},
+      std::vector<int32_t>            {50, 60, 99},
+      std::vector<HistogramCountType> {15, 5,  10},
+      std::vector<HistogramCountType> {20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune three values from the last bin with the boundary being outside of any bin
+    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+        histogram->pruned(3, PredicateCondition::LessThanEquals, 70));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31, 60, 80},
+      std::vector<int32_t>            {25, 50, 60, 99},
+      std::vector<HistogramCountType> {40, 30, 5,  7},
+      std::vector<HistogramCountType> {10, 20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune eight values from the last two bins with the boundary being on a single bin's value
+    const auto pruned =
+        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(8, PredicateCondition::LessThan, 60));
+    const auto remaining_ratio = 1.0f - 8.0f / (5.0f + 10.0f);
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31, 60, 80},
+      std::vector<int32_t>            {25, 50, 60, 99},
+      std::vector<HistogramCountType> {40, 30, 5.0f*remaining_ratio, 10.0f*remaining_ratio},
+      std::vector<HistogramCountType> {10, 20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune by equals predicate with value found in first bin
+    const auto pruned =
+        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(27, PredicateCondition::Equals, 17));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31, 60, 80},
+      std::vector<int32_t>            {25, 50, 60, 99},
+      std::vector<HistogramCountType> {28, 20, 5*2.0f/3,  10*2.0f/3},
+      std::vector<HistogramCountType> {10, 20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune by equals predicate with value not found anywhere
+    const auto pruned =
+        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(17, PredicateCondition::Equals, 61));
+
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31, 60, 80},
+      std::vector<int32_t>            {25, 50, 60, 99},
+      std::vector<HistogramCountType> {32, 24, 4,  8},
+      std::vector<HistogramCountType> {10, 20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune by not equals predicate from first bin
+    const auto pruned =
+        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(3, PredicateCondition::NotEquals, 21));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31, 60, 80},
+      std::vector<int32_t>            {25, 50, 60, 99},
+      std::vector<HistogramCountType> {37, 30, 5,  10},
+      std::vector<HistogramCountType> {10, 20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune by not equals predicate not found in any bin
+    const auto pruned =
+        std::static_pointer_cast<GenericHistogram<int32_t>>(histogram->pruned(15, PredicateCondition::NotEquals, 28));
+
+    EXPECT_EQ(*pruned, *histogram);
+  }
+
+  {
+    // Prune by Between entirely contained in one bin
+    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+        histogram->pruned(14, PredicateCondition::BetweenInclusive, 41, 50));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31, 60, 80},
+      std::vector<int32_t>            {25, 50, 60, 99},
+      std::vector<HistogramCountType> {32, 27, 4,  8},
+      std::vector<HistogramCountType> {10, 20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune by Between spanning three bins, covering half of the bins on both ends
+    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+        histogram->pruned(24, PredicateCondition::BetweenExclusive, 41, 89));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31, 60, 80},
+      std::vector<int32_t>            {25, 50, 60, 99},
+      std::vector<HistogramCountType> {24, 24, 5,  8},
+      std::vector<HistogramCountType> {10, 20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune by Between spanning two bins, with the begin value being outside of the histogram and the end value in the
+    // middle of the second bin
+    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+        histogram->pruned(12, PredicateCondition::BetweenLowerExclusive, -10, 40));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            { 1, 31,   60, 80},
+      std::vector<int32_t>            {25, 50,   60, 99},
+      std::vector<HistogramCountType> {40, 24,   3,  6},
+      std::vector<HistogramCountType> {10, 20,   1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune from the first and second bin. Prune more values than the bins contain.
+    const auto pruned = std::static_pointer_cast<GenericHistogram<int32_t>>(
+        histogram->pruned(100, PredicateCondition::GreaterThan, 40));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<int32_t>{
+      std::vector<int32_t>            {31, 60, 80},
+      std::vector<int32_t>            {50, 60, 99},
+      std::vector<HistogramCountType> {15, 5,  10},
+      std::vector<HistogramCountType> {20, 1,  1}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+}
+
+TEST_F(GenericHistogramTest, PrunedString) {
+  // Same cardinalities as in PrunedInt, just with string values. Strings are chosen so that their numeric
+  // representation is the same as the numbers used in PrunedInt, too.
+  // clang-format off
+  const auto histogram = std::make_shared<GenericHistogram<pmr_string>>(std::vector<pmr_string>        { "a", "bc", "ce", "cy"},  // NOLINT
+                                                                        std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},  // NOLINT
+                                                                        std::vector<HistogramCountType>{40,   30,   5,    10},    // NOLINT
+                                                                        std::vector<HistogramCountType>{10,   20,   1,    1},     // NOLINT
+                                                                        StringHistogramDomain{'a', 'z', 2u});
+  // clang-format on
+
+  {
+    // Prune half of the values from the first bin
+    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+        histogram->pruned(20, PredicateCondition::GreaterThanEquals, "ay"));
+
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<pmr_string>{
+      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      std::vector<HistogramCountType>{20,   30,   5,    10},
+      std::vector<HistogramCountType>{10,   20,   1,    1},
+      StringHistogramDomain{'a', 'z', 2u}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune all values from the first bin and half of the values from the second bin
+    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+        histogram->pruned(55, PredicateCondition::GreaterThan, "bl"));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<pmr_string>{
+      std::vector<pmr_string>        {"bc", "ce", "cy"},
+      std::vector<pmr_string>        {"bv", "ce", "dq"},
+      std::vector<HistogramCountType>{15,   5,    10},
+      std::vector<HistogramCountType>{20,   1,    1},
+      StringHistogramDomain{'a', 'z', 2u}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune by Between entirely contained in one bin
+    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+        histogram->pruned(14, PredicateCondition::BetweenInclusive, "bl", "bu"));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<pmr_string>{
+      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      std::vector<HistogramCountType>{32,   27,   4,    8},
+      std::vector<HistogramCountType>{10,   20,   1,    1},
+      StringHistogramDomain{'a', 'z', 2u}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Prune by Between spanning three bins, covering half of the bins on both ends
+    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+        histogram->pruned(24, PredicateCondition::BetweenExclusive, "bm", "dg"));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<pmr_string>{
+      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      std::vector<HistogramCountType>{24,   24,   5,    8},
+      std::vector<HistogramCountType>{10,   20,   1,    1},
+      StringHistogramDomain{'a', 'z', 2u}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Same as the last test, but this time, the search values are longer than the domain's common prefix.
+    // Remember that string_to_number adds 1 for strings that are longer than the prefix.
+    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+        histogram->pruned(24, PredicateCondition::BetweenExclusive, "blaba", "dfqfqs"));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<pmr_string>{
+      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      std::vector<HistogramCountType>{24,   24,   5,    8},
+      std::vector<HistogramCountType>{10,   20,   1,    1},
+      StringHistogramDomain{'a', 'z', 2u}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+
+  {
+    // Same as the last test, but this time, the search values contain characters outside of the domain.
+    // cX should be converted to ca. This way, the third bin should be included fully and the fourth bin
+    // partially.
+    const auto pruned = std::static_pointer_cast<GenericHistogram<pmr_string>>(
+        histogram->pruned(15, PredicateCondition::BetweenExclusive, "cX", "dg"));
+    // clang-format off
+    const auto expected_histogram = GenericHistogram<pmr_string>{
+      std::vector<pmr_string>        { "a", "bc", "ce", "cy"},
+      std::vector<pmr_string>        {"ax", "bv", "ce", "dq"},
+      std::vector<HistogramCountType>{32,   24,   5,    9},
+      std::vector<HistogramCountType>{10,   20,   1,    1},
+      StringHistogramDomain{'a', 'z', 2u}};
+    // clang-format on
+
+    EXPECT_EQ(*pruned, expected_histogram);
+  }
+}
+
 TEST_F(GenericHistogramTest, SplitAtEmptyBinBounds) {
   // clang-format off
   const auto histogram = GenericHistogram<int32_t>(

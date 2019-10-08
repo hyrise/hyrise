@@ -115,6 +115,10 @@ class AbstractHistogram : public AbstractStatisticsObject {
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
 
+  std::shared_ptr<AbstractStatisticsObject> pruned(
+      const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+      const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const override;
+
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
   /**
@@ -176,6 +180,12 @@ class AbstractHistogram : public AbstractStatisticsObject {
   virtual T bin_maximum(const BinID index) const = 0;
 
   /**
+   * Returns whether the value belongs into a given bin. This does not necessarily mean that the value is actually
+   * present.
+   */
+  bool bin_contains(const BinID index, const T& value) const;
+
+  /**
    * Returns the number of values in a bin.
    */
   virtual HistogramCountType bin_height(const BinID index) const = 0;
@@ -207,6 +217,11 @@ class AbstractHistogram : public AbstractStatisticsObject {
   float bin_ratio_less_than(const BinID bin_id, const T& value) const;
   float bin_ratio_less_than_equals(const BinID bin_id, const T& value) const;
   /** @} */
+
+  /**
+   * Returns the share of the value range of a bin that is within [value, value2], i.e., BetweenInclusive
+   */
+  float bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const;
 
  protected:
   // Call after constructor of the derived histogram has finished to check whether the bins are valid

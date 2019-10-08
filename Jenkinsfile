@@ -101,6 +101,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+              sh "./clang-release/hyriseBenchmarkTPCDS --verify -r 1"
               sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
