@@ -10,8 +10,6 @@ namespace opossum {
 
 class PredicateNode;
 
-// TODO update comment
-
 /**
  * Heuristic rule pushing non-expensive predicates down as far as possible (to reduce the result set early on) and
  * pulling expensive predicates up as far as possible. For the purpose of this rule, semi- and anti-joins are treated

@@ -83,7 +83,9 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
 
             const auto candidate_cardinality = estimator->estimate_cardinality(candidate);
 
-            if (candidate_cardinality > right_cardinality * 1.01) return false;  // TODO necessary?
+            // Check if the candidate has an equal or lower cardinality. Allow for some tolerance due to float values
+            // being used.
+            if (candidate_cardinality > right_cardinality * 1.01) return false;
 
             right_input = candidate;
             right_cardinality = candidate_cardinality;
@@ -97,8 +99,8 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         }
 
         if (right_cardinality > left_cardinality) {
-          // The JoinHash, which is currently used for semi joins is bad at handling cases where the build side is larger
-          // than the probe side. In these cases, do not add a semi join reduction for now.
+          // The JoinHash, which is currently used for semi joins is bad at handling cases where the build side is
+          // larger than the probe side. In these cases, do not add a semi join reduction for now.
           return;
         }
 
@@ -112,8 +114,9 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
 
       // On the left side we must not create semi join reductions for anti joins as those rely on the very existence of
       // non-matching values on the right side. Also, we should not create semi join reductions for semi joins as those
-      // would simply duplicate the original join. 
-      if (join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse && join_node->join_mode != JoinMode::Semi) {
+      // would simply duplicate the original join.
+      if (join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse &&
+          join_node->join_mode != JoinMode::Semi) {
         reduce_if_beneficial(LQPInputSide::Left);
       }
     }
