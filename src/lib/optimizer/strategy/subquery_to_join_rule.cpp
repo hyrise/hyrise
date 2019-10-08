@@ -448,7 +448,7 @@ SubqueryToJoinRule::try_to_extract_join_predicates(
     }
 
     auto left_operand = expression_it->second;
-    join_predicates.emplace_back(
+    join_predicates.emplace_back(  // TODO multiple semi joins instead of MPJ
         std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand));
     sub_expression = nullptr;
   }
