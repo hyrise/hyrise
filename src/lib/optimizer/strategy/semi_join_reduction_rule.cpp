@@ -42,6 +42,7 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         // is getting filtered and "right" refers to the table that the left side is filtered by. As such, right_input
         // holds the right side of the semi join reduction, i.e., the list of values that the left side is filtered on.
         // This is independent on the side of the original join that we are operating on, which is called side_of_join.
+        auto left_cardinality = estimator->estimate_cardinality(join_node->input(side_of_join));
         auto right_input = join_node->input(opposite_side(side_of_join));
         auto right_cardinality = estimator->estimate_cardinality(right_input);
 
@@ -98,6 +99,12 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         semi_join_reduction_node->set_right_input(right_input);
         semi_join_reductions.emplace_back(join_node, side_of_join, semi_join_reduction_node);
       };
+
+      if (right_cardinality > left_cardinality) {
+        // The JoinHash, which is currently used for semi joins is bad at handling cases where the build side is larger
+        // than the probe side. In these cases, do not add a semi join reduction for now.
+        return;
+      }
 
       // Having defined the lambda responsible for conditionally adding a semi join reduction, we now apply ot to both
       // inputs of the join.
