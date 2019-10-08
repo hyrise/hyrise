@@ -1,6 +1,6 @@
 #include "session.hpp"
 
-#include "network_message_types.hpp"
+#include "postgres_message_types.hpp"
 #include "query_handler.hpp"
 #include "response_builder.hpp"
 
@@ -37,31 +37,31 @@ void Session::_handle_request() {
   const auto header = _postgres_protocol_handler->read_packet_type();
 
   switch (header) {
-    case NetworkMessageType::TerminateCommand: {
+    case PostgresMessageType::TerminateCommand: {
       _terminate_session = true;
       break;
     }
-    case NetworkMessageType::SimpleQueryCommand: {
+    case PostgresMessageType::SimpleQueryCommand: {
       _handle_simple_query();
       break;
     }
-    case NetworkMessageType::ParseCommand: {
+    case PostgresMessageType::ParseCommand: {
       _handle_parse_command();
       break;
     }
-    case NetworkMessageType::SyncCommand: {
+    case PostgresMessageType::SyncCommand: {
       _sync();
       break;
     }
-    case NetworkMessageType::BindCommand: {
+    case PostgresMessageType::BindCommand: {
       _handle_bind_command();
       break;
     }
-    case NetworkMessageType::DescribeCommand: {
+    case PostgresMessageType::DescribeCommand: {
       _handle_describe();
       break;
     }
-    case NetworkMessageType::ExecuteCommand: {
+    case PostgresMessageType::ExecuteCommand: {
       _handle_execute();
       break;
     }
@@ -105,7 +105,7 @@ void Session::_handle_parse_command() {
     _postgres_protocol_handler->send_error_message(error.value());
     // _postgres_protocol_handler->send_ready_for_query();
   } else {
-    _postgres_protocol_handler->send_status_message(NetworkMessageType::ParseComplete);
+    _postgres_protocol_handler->send_status_message(PostgresMessageType::ParseComplete);
   }
   // Ready for query + flush will be done after reading sync message
 }
@@ -134,7 +134,7 @@ void Session::_handle_bind_command() {
     // No error
   } else {
     _portals.emplace(parameters.portal, std::get<1>(result));
-    _postgres_protocol_handler->send_status_message(NetworkMessageType::BindComplete);
+    _postgres_protocol_handler->send_status_message(PostgresMessageType::BindComplete);
   }
   // Ready for query + flush will be done after reading sync message
 }
@@ -177,7 +177,7 @@ void Session::_handle_execute() {
     ResponseBuilder::build_and_send_query_response(result_table, _postgres_protocol_handler);
     row_count = result_table->row_count();
   } else {
-    _postgres_protocol_handler->send_status_message(NetworkMessageType::NoDataResponse);
+    _postgres_protocol_handler->send_status_message(PostgresMessageType::NoDataResponse);
   }
 
   _postgres_protocol_handler->send_command_complete(

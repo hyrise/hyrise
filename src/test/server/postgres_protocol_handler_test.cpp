@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <boost/asio.hpp>  // NOLINT
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
@@ -45,7 +44,7 @@ TEST_F(PostgresProtocolHandlerTest, ReadStartupMessage) {
 
 TEST_F(PostgresProtocolHandlerTest, GetMessageType) {
   _mocked_socket->write("Q");
-  EXPECT_EQ(_protocol_handler->read_packet_type(), NetworkMessageType::SimpleQueryCommand);
+  EXPECT_EQ(_protocol_handler->read_packet_type(), PostgresMessageType::SimpleQueryCommand);
 }
 
 TEST_F(PostgresProtocolHandlerTest, SendAuthentication) {
@@ -53,7 +52,7 @@ TEST_F(PostgresProtocolHandlerTest, SendAuthentication) {
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
-  EXPECT_EQ(static_cast<NetworkMessageType>(file_content.front()), NetworkMessageType::AuthenticationRequest);
+  EXPECT_EQ(static_cast<PostgresMessageType>(file_content.front()), PostgresMessageType::AuthenticationRequest);
   EXPECT_EQ(_get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
 }
 
@@ -62,7 +61,7 @@ TEST_F(PostgresProtocolHandlerTest, DiscardStartupPacketBody) {
   const std::string content = "garbageQ";
   _mocked_socket->write(content);
   _protocol_handler->read_startup_packet_body(static_cast<uint32_t>(content.size() - 1));
-  EXPECT_EQ(_protocol_handler->read_packet_type(), NetworkMessageType::SimpleQueryCommand);
+  EXPECT_EQ(_protocol_handler->read_packet_type(), PostgresMessageType::SimpleQueryCommand);
 }
 
 TEST_F(PostgresProtocolHandlerTest, ReadQueryPacket) {
@@ -79,11 +78,11 @@ TEST_F(PostgresProtocolHandlerTest, SendParameter) {
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
-  EXPECT_EQ(static_cast<NetworkMessageType>(file_content.front()), NetworkMessageType::ParameterStatus);
+  EXPECT_EQ(static_cast<PostgresMessageType>(file_content.front()), PostgresMessageType::ParameterStatus);
   // Ignore length of packet and directly read values
-  EXPECT_EQ(std::string(file_content, sizeof(NetworkMessageType) + sizeof(uint32_t), 3u), "key");
+  EXPECT_EQ(std::string(file_content, sizeof(PostgresMessageType) + sizeof(uint32_t), 3u), "key");
   // Ignore null terminator
-  EXPECT_EQ(std::string(file_content, sizeof(NetworkMessageType) + sizeof(uint32_t) + 3u + sizeof('\0'), 5u), "value");
+  EXPECT_EQ(std::string(file_content, sizeof(PostgresMessageType) + sizeof(uint32_t) + 3u + sizeof('\0'), 5u), "value");
   EXPECT_EQ(_get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
 }
 
@@ -91,7 +90,7 @@ TEST_F(PostgresProtocolHandlerTest, SendReadyForQuery) {
   _protocol_handler->send_ready_for_query();
   const std::string file_content = _mocked_socket->read();
 
-  EXPECT_EQ(static_cast<NetworkMessageType>(file_content.front()), NetworkMessageType::ReadyForQuery);
+  EXPECT_EQ(static_cast<PostgresMessageType>(file_content.front()), PostgresMessageType::ReadyForQuery);
   EXPECT_EQ(static_cast<TransactionStatusIndicator>(file_content.back()), TransactionStatusIndicator::Idle);
   EXPECT_EQ(_get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
 }
@@ -102,17 +101,17 @@ TEST_F(PostgresProtocolHandlerTest, SendCommandComplete) {
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
-  EXPECT_EQ(static_cast<NetworkMessageType>(file_content.front()), NetworkMessageType::CommandComplete);
-  EXPECT_EQ(std::string(file_content, sizeof(NetworkMessageType) + sizeof(uint32_t), completion_message.size()),
+  EXPECT_EQ(static_cast<PostgresMessageType>(file_content.front()), PostgresMessageType::CommandComplete);
+  EXPECT_EQ(std::string(file_content, sizeof(PostgresMessageType) + sizeof(uint32_t), completion_message.size()),
             completion_message);
   EXPECT_EQ(_get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
 }
 
 TEST_F(PostgresProtocolHandlerTest, SendStatusMessage) {
-  _protocol_handler->send_status_message(NetworkMessageType::BindComplete);
+  _protocol_handler->send_status_message(PostgresMessageType::BindComplete);
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
-  EXPECT_EQ(static_cast<NetworkMessageType>(file_content.front()), NetworkMessageType::BindComplete);
+  EXPECT_EQ(static_cast<PostgresMessageType>(file_content.front()), PostgresMessageType::BindComplete);
   EXPECT_EQ(_get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
 }
 
@@ -122,10 +121,10 @@ TEST_F(PostgresProtocolHandlerTest, SendExecutionInfo) {
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
-  EXPECT_EQ(static_cast<NetworkMessageType>(file_content.front()), NetworkMessageType::Notice);
-  EXPECT_EQ(static_cast<NetworkMessageType>(file_content[sizeof(uint32_t) + sizeof(NetworkMessageType)]),
-            NetworkMessageType::HumanReadableError);
-  EXPECT_EQ(std::string(file_content, sizeof(NetworkMessageType) + sizeof(uint32_t) + sizeof(NetworkMessageType),
+  EXPECT_EQ(static_cast<PostgresMessageType>(file_content.front()), PostgresMessageType::Notice);
+  EXPECT_EQ(static_cast<PostgresMessageType>(file_content[sizeof(uint32_t) + sizeof(PostgresMessageType)]),
+            PostgresMessageType::HumanReadableError);
+  EXPECT_EQ(std::string(file_content, sizeof(PostgresMessageType) + sizeof(uint32_t) + sizeof(PostgresMessageType),
                         execution_information.size()),
             execution_information);
   EXPECT_EQ(_get_message_length(file_content.cbegin() + 1), file_content.size() - 1);

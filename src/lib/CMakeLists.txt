@@ -330,7 +330,7 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    server/network_message_types.hpp
+    server/postgres_message_types.hpp
     server/postgres_protocol_handler.cpp
     server/postgres_protocol_handler.hpp
     server/query_handler.cpp

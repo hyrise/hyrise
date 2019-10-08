@@ -2,7 +2,7 @@
 
 #include <array>
 #include <boost/asio.hpp>  // NOLINT
-#include "network_message_types.hpp"
+#include "postgres_message_types.hpp"
 
 namespace opossum {
 
@@ -129,7 +129,7 @@ class ReadBuffer : public RingBuffer {
   std::string get_string(const size_t string_length, const bool has_null_terminator = true);
   std::string get_string();
 
-  NetworkMessageType get_message_type();
+  PostgresMessageType get_message_type();
 
  private:
   std::shared_ptr<SocketType> _socket;

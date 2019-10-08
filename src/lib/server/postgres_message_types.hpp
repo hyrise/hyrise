@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-enum class NetworkMessageType : unsigned char {
+enum class PostgresMessageType : unsigned char {
   // Important: The character '0' is treated as a null message
   // That means we cannot have an invalid type
   NullCommand = '0',

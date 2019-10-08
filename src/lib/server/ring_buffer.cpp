@@ -65,9 +65,9 @@ std::string ReadBuffer<SocketType>::get_string(const size_t string_length, const
 }
 
 template <typename SocketType>
-NetworkMessageType ReadBuffer<SocketType>::get_message_type() {
+PostgresMessageType ReadBuffer<SocketType>::get_message_type() {
   _receive_if_necessary();
-  auto message_type = static_cast<NetworkMessageType>(*_start_position);
+  auto message_type = static_cast<PostgresMessageType>(*_start_position);
   _start_position++;
   return message_type;
 }

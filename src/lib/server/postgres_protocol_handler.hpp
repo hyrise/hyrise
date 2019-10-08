@@ -1,7 +1,7 @@
 #pragma once
 
 #include "all_parameter_variant.hpp"
-#include "network_message_types.hpp"
+#include "postgres_message_types.hpp"
 #include "ring_buffer.hpp"
 
 namespace opossum {
@@ -24,7 +24,7 @@ class PostgresProtocolHandler {
   void read_startup_packet_body(const uint32_t size);
 
   // Read first byte of next packet
-  NetworkMessageType read_packet_type();
+  PostgresMessageType read_packet_type();
 
   // Reading supported packets
   std::string read_query_packet();
@@ -42,8 +42,8 @@ class PostgresProtocolHandler {
   void send_row_description(const std::string& column_name, const uint32_t object_id, const int16_t type_width);
   void send_data_row(const std::vector<std::string>& row_strings, const uint32_t string_lengths);
 
-  // Send out status message containing NetworkMessageType and length
-  void send_status_message(const NetworkMessageType message_type);
+  // Send out status message containing PostgresMessageType and length
+  void send_status_message(const PostgresMessageType message_type);
 
   // Send error message to client if there is an error during parsing or execution
   void send_error_message(const std::string& error_message);

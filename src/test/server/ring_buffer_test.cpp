@@ -65,9 +65,9 @@ TEST_F(RingBufferTest, ReadLargeString) {
   EXPECT_EQ(_read_buffer->get_string(), original_content);
 }
 
-TEST_F(RingBufferTest, ReadNetworkMessageType) {
+TEST_F(RingBufferTest, ReadPostgresMessageType) {
   mocked_socket->write("Q");
-  EXPECT_EQ(_read_buffer->get_message_type(), NetworkMessageType::SimpleQueryCommand);
+  EXPECT_EQ(_read_buffer->get_message_type(), PostgresMessageType::SimpleQueryCommand);
 }
 
 TEST_F(RingBufferTest, WriteValues) {
