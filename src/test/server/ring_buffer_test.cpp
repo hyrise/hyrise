@@ -12,14 +12,13 @@
 namespace opossum {
 
 class RingBufferTest : public BaseTest {
- public:
+ protected:
   void SetUp() override {
     mocked_socket = std::make_shared<MockSocket>();
     _read_buffer = std::make_shared<ReadBuffer<boost::asio::posix::stream_descriptor>>(mocked_socket->get_socket());
     _write_buffer = std::make_shared<WriteBuffer<boost::asio::posix::stream_descriptor>>(mocked_socket->get_socket());
   }
 
- protected:
   RingBuffer ring_buffer;
   std::shared_ptr<MockSocket> mocked_socket;
   std::shared_ptr<ReadBuffer<boost::asio::posix::stream_descriptor>> _read_buffer;

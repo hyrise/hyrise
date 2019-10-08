@@ -8,7 +8,7 @@ namespace opossum {
 
 Session::Session(boost::asio::io_service& io_service, const bool send_execution_info)
     : _socket(std::make_shared<Socket>(io_service)),
-      _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler>(_socket)),
+      _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
       _send_execution_info(send_execution_info) {}
 
 std::shared_ptr<Socket> Session::get_socket() { return _socket; }

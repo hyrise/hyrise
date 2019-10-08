@@ -15,6 +15,8 @@ typedef boost::asio::posix::stream_descriptor file_stream;
 class MockSocket {
  public:
   MockSocket() {
+    // Remove file if it still exists, e. g. after a broken test.
+    std::filesystem::remove(std::filesystem::path{file_name});
     boost::asio::io_service io_service;
     auto file_descriptor = open(file_name, O_RDWR | O_CREAT | O_APPEND, 0755);
     stream = std::make_shared<file_stream>(io_service, file_descriptor);

@@ -14,9 +14,10 @@ struct PreparedStatementDetails {
 };
 
 // This class implements the message handling according to the PostgreSQL Wire Protocol.
+template<typename SocketType>
 class PostgresProtocolHandler {
  public:
-  explicit PostgresProtocolHandler(const std::shared_ptr<Socket>& socket);
+  PostgresProtocolHandler(const std::shared_ptr<SocketType>& socket);
 
   // Handling the startup packet
   uint32_t read_startup_packet();
@@ -50,10 +51,12 @@ class PostgresProtocolHandler {
   void send_execution_info(const std::string& execution_information);
   void set_row_description_header(const uint32_t total_column_name_length, const uint16_t column_count);
 
+  // This method is required for testing. Otherwise we can't make the protocol handler flush its data.
+  void force_flush() { _write_buffer.flush(); }
  private:
   void _ssl_deny();
-
-  ReadBuffer<Socket> _read_buffer;
-  WriteBuffer<Socket> _write_buffer;
+  ReadBuffer<SocketType> _read_buffer;
+  WriteBuffer<SocketType> _write_buffer;
+  
 };
 }  // namespace opossum

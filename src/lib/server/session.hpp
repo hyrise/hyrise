@@ -45,7 +45,7 @@ class Session {
   void _sync();
 
   const std::shared_ptr<Socket> _socket;
-  const std::shared_ptr<PostgresProtocolHandler> _postgres_protocol_handler;
+  const std::shared_ptr<PostgresProtocolHandler<Socket>> _postgres_protocol_handler;
   const bool _send_execution_info;
   bool _terminate_session = false;
   std::shared_ptr<TransactionContext> _transaction;
