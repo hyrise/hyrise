@@ -236,7 +236,7 @@ namespace {
  * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
  * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
  * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
- * translated expressions to the translation of its children nodes which enables to add the translated expression of
+ * translated expressions to the translation of its children nodes, which allows to add the translated expression of
  * child node before its parent node to the output expression.
  */
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
