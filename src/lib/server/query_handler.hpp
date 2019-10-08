@@ -8,6 +8,7 @@
 
 namespace opossum {
 
+// Store relevant information after pipeline execution
 struct ExecutionInformation {
   std::shared_ptr<const Table> result_table;
   // Since the PostgreSQL Wire Protocol requires the query type (such as SELECT, INSERT, UPDATE,...) we need to store

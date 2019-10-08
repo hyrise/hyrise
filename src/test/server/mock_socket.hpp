@@ -1,21 +1,17 @@
 #pragma once
 
-#include <gmock/gmock.h>
-// #include <boost/thread/future.hpp>
-#include <stdio.h>
 #include <boost/asio.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <filesystem>
 #include <fstream>
-#include "server/postgres_protocol_handler.hpp"
-#include "server/ring_buffer.hpp"
 
 namespace opossum {
 
-static constexpr char file_name[] = "socket_file.txt";
+static constexpr char file_name[] = "socket_file";
 
 typedef boost::asio::posix::stream_descriptor file_stream;
 
+// Instead of writing data to the network device this class puts the information into a file. This allows an easier
+// verification of input and output and works independently from the network.
 class MockSocket {
  public:
   MockSocket() {
@@ -37,6 +33,8 @@ class MockSocket {
   }
 
   bool empty() { return std::ifstream(std::filesystem::path{file_name}).peek() == std::ifstream::traits_type::eof(); }
+
+ private:
   std::shared_ptr<file_stream> stream;
 };
 

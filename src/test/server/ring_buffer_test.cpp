@@ -1,12 +1,11 @@
 // #include <memory>
 
 #include <arpa/inet.h>
-#include <gmock/gmock.h>
 #include <boost/asio.hpp>
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "mock_connection.hpp"
+#include "mock_socket.hpp"
 
 #include "server/ring_buffer.hpp"
 
