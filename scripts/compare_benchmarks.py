@@ -64,7 +64,7 @@ def calculate_and_format_p_value(old, new):
     return colored(notes + "{0:.4f}".format(p_value), color)
 
 
-if(len(sys.argv) != 3 and len(sys.argv) != 4):
+if (not len(sys.argv) in [3, 4]):
     exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json [--github]")
 
 # Format the output as a diff (prepending - and +) so that Github shows colors
@@ -133,7 +133,7 @@ table.justify_columns[6] = 'right'
 
 result = str(table.table)
 if github_format:
-    new_result = ''
+    new_result = '```diff\n'
     green_control_sequence = colored('', 'green')[0:5]
     red_control_sequence = colored('', 'red')[0:5]
 
@@ -146,12 +146,9 @@ if github_format:
             new_result += ' '
 
         new_result += line + '\n'
+    new_result += '```'
     result = new_result
 
 print("")
-if github_format:
-    print("```diff")
 print(result)
-if github_format:
-    print("```")
 print("")
