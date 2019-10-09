@@ -33,9 +33,6 @@ class PredicateNode;
  * [ part p1 ] -> [ Predicate p_container IN (...) ] -----------------------------------------------------------------> ...  // NOLINT
  *                                                   \                                                               /
  * [ part p2 ] --------------------------------------> [ Semi Join p1.p_container = p2.p_container ] -> [ Aggregate ]
- *
- * More generally speaking, this rule looks at each equals predicate of an existing join and checks whether it reduces
- // TODO
 **/
 
 class SemiJoinReductionRule : public AbstractRule {
