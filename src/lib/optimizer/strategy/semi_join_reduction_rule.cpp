@@ -59,7 +59,8 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         semi_join_reduction_node->set_right_input(nullptr);
         lqp_remove_node(semi_join_reduction_node);
 
-        if (reduction_output_cardinality / reduction_input_cardinality > MINIMUM_SELECTIVITY) {
+        if (reduction_input_cardinality == 0 ||
+            reduction_output_cardinality / reduction_input_cardinality > MINIMUM_SELECTIVITY) {
           return;
         }
 
