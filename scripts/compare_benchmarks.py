@@ -54,14 +54,13 @@ def calculate_and_format_p_value(old, new):
     new_runtime = sum(runtime for runtime in new_durations)
     if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns):
         is_significant = False
-        notes += "(run time too short) "
-
-    if (len(old_durations) < min_iterations or len(new_durations) < min_iterations):
+        return "(run time too short)"
+    elif (len(old_durations) < min_iterations or len(new_durations) < min_iterations):
         is_significant = False
-        notes += "(not enough runs) "
-
-    color = 'green' if is_significant else 'white'
-    return colored(notes + "{0:.4f}".format(p_value), color)
+        return "(not enough runs)"
+    else:
+        color = 'green' if is_significant else 'white'
+        return colored("{0:.4f}".format(p_value), color)
 
 
 if (not len(sys.argv) in [3, 4]):
@@ -82,7 +81,7 @@ if old_data['context']['benchmark_mode'] != new_data['context']['benchmark_mode'
 diffs = []
 
 table_data = []
-table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
+table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "p-value"])
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
