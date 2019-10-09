@@ -39,7 +39,8 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     a_b_expression = to_expression(a_b);
     a_c_expression = to_expression(a_c);
 
-    node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100, {histogram, histogram});
+    node_b =
+        create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100, {histogram, histogram});
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
