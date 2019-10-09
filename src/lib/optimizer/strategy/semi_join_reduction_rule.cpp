@@ -83,9 +83,8 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
 
           const auto try_deeper_right_input = [&](const auto side_of_input) {
             const auto& candidate = right_input->input(side_of_input);
-            std::cout << "deeper right candidate: " << candidate->description() << std::endl;
             if (!expression_evaluable_on_lqp(left_expression, *candidate)) {
-              break;
+              return false;
             }
 
             const auto candidate_cardinality = estimator->estimate_cardinality(candidate);
