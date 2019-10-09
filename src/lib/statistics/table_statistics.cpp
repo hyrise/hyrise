@@ -75,7 +75,20 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
 
 TableStatistics::TableStatistics(std::vector<std::shared_ptr<BaseAttributeStatistics>>&& column_statistics,
                                  const Cardinality row_count)
-    : column_statistics(std::move(column_statistics)), row_count(row_count) {}
+    : column_statistics(std::move(column_statistics)), row_count(row_count) {
+  if constexpr (HYRISE_DEBUG) {
+    // Check that the histogram height is not higher than the row_count. Lower is OK as NULL values are not
+    // represented.
+    for (const auto& single_column_statistics : this->column_statistics) {
+      resolve_data_type(single_column_statistics->data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        const auto& typed_statistics = static_cast<AttributeStatistics<ColumnDataType>&>(*single_column_statistics);
+        const auto& histogram = typed_statistics.histogram;
+        DebugAssert(histogram->total_count() <= row_count, "Histogram is larger than TableStatistics");
+      });
+    }
+  }
+}
 
 DataType TableStatistics::column_data_type(const ColumnID column_id) const {
   DebugAssert(column_id < column_statistics.size(), "ColumnID out of bounds");

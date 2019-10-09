@@ -59,7 +59,9 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         semi_join_reduction_node->set_right_input(nullptr);
         lqp_remove_node(semi_join_reduction_node);
 
-        if (reduction_output_cardinality / reduction_input_cardinality > MINIMUM_SELECTIVITY) return;
+        if (reduction_output_cardinality / reduction_input_cardinality > MINIMUM_SELECTIVITY) {
+          return;
+        }
 
         // For `t1 JOIN t2 on t1.a = t2.a` where a semi join reduction is supposed to be added to the t1, `t1.a = t2.a`
         // is the predicate_expression. The values from t1 are supposed to be filtered by looking at t1.a, which is
@@ -74,18 +76,25 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         // multiple joins have been added that increase the cardinality. We walk the LQP starting with right_input
         // taking those paths where lext_expression continues to be evaluable.
         while (true) {
-          if (right_input->type != LQPNodeType::Join) break;
+          if (right_input->type != LQPNodeType::Join) {
+            break;
+          }
           // No matter the join type, we will never see values that were not there before
 
           const auto try_deeper_right_input = [&](const auto side_of_input) {
             const auto& candidate = right_input->input(side_of_input);
-            if (!expression_evaluable_on_lqp(left_expression, *candidate)) return false;
+            std::cout << "deeper right candidate: " << candidate->description() << std::endl;
+            if (!expression_evaluable_on_lqp(left_expression, *candidate)) {
+              break;
+            }
 
             const auto candidate_cardinality = estimator->estimate_cardinality(candidate);
 
             // Check if the candidate has an equal or lower cardinality. Allow for some tolerance due to float values
             // being used.
-            if (candidate_cardinality > right_cardinality * 1.01) return false;
+            if (candidate_cardinality > right_cardinality * 1.01) {
+              return false;
+            }
 
             right_input = candidate;
             right_cardinality = candidate_cardinality;
