@@ -329,6 +329,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
       return second_predicate_statistics;
     }
+  }
 
   // Estimating correlated parameters is tricky. Example:
   //   SELECT c_custkey, (SELECT AVG(o_totalprice) FROM orders WHERE o_custkey = c_custkey) FROM customer
