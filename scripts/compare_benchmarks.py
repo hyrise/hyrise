@@ -64,8 +64,11 @@ def calculate_and_format_p_value(old, new):
     return colored(notes + "{0:.4f}".format(p_value), color)
 
 
-if(len(sys.argv) != 3):
-    exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json")
+if(len(sys.argv) != 3 and len(sys.argv) != 4):
+    exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json [--github]")
+
+# Format the output as a diff (prepending - and +) so that Github shows colors
+github_format = bool(len(sys.argv) == 4 and sys.argv[3] == '--github')
 
 with open(sys.argv[1]) as old_file:
     old_data = json.load(old_file)
@@ -123,6 +126,32 @@ table_data.append(['geometric mean', '', '', '', '', format_diff(geometric_mean(
 table = AsciiTable(table_data)
 table.justify_columns[6] = 'right'
 
+# If github_format is set, format the output in the style of a diff file where added lines (starting with +) are
+# colored green, removed lines (starting with -) are red, and others (starting with an empty space) are black.
+# Because terminaltables (unsurprisingly) does not support this hack, we need to post-process the result string,
+# searching for the control codes that define lines formatted as green or red.
+
+result = str(table.table)
+if github_format:
+    new_result = ''
+    green_control_sequence = colored('', 'green')[0:5]
+    red_control_sequence = colored('', 'red')[0:5]
+
+    for line in result.splitlines():
+        if green_control_sequence in line:
+            new_result += '+'
+        elif red_control_sequence in line:
+            new_result += '-'
+        else:
+            new_result += ' '
+
+        new_result += line + '\n'
+    result = new_result
+
 print("")
-print(table.table)
+if github_format:
+    print("```diff")
+print(result)
+if github_format:
+    print("```")
 print("")
