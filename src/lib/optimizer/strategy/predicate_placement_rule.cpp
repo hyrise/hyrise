@@ -180,39 +180,16 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               }
             }
 
-            // const auto& cardinality_estimator = *cost_estimator->cardinality_estimator;
-            // if (!left_disjunction.empty()) {
-            //   // Connect all options (e.g., l.name = 'DE' and l.name = 'FR') with a disjunction, create a predicate,
-            //   // and add it to the list of nodes that will be pushed to the left side
-            //   const auto left_expression = inflate_logical_expressions(left_disjunction, LogicalOperator::Or);
-            //   const auto pre_filter_predicate_node = PredicateNode::make(left_expression, join_node->left_input());
-
-            //   const auto old_cardinality = cardinality_estimator.estimate_cardinality(join_node->left_input());
-            //   const auto new_cardinality = cardinality_estimator.estimate_cardinality(pre_filter_predicate_node);
-            //   std::cout << pre_filter_predicate_node->description() << " reduces cardinality from " << old_cardinality << " to " << new_cardinality << std::endl;
-            //   // TODO dedup with right side
-
-            //   // Unset the left input, as it will be re-set later
-            //   pre_filter_predicate_node->set_left_input(nullptr);
-
-            //   left_push_down_nodes.emplace_back(pre_filter_predicate_node);
-            // }
-
-            const auto add_disjunction_to_nodes = [](const std::vector<std::shared_ptr<AbstractExpression>>& disjunction, std::vector<std::shared_ptr<AbstractExpression>> predicate_nodes) {
+            const auto add_disjunction_to_nodes = [](const auto& disjunction, auto& predicate_nodes) {
               if (disjunction.empty()) return;
 
-              if (disjunction.size() <= 3) { // TODO as constant
-                // We are doing the job of the ... here, but we need to do it now so that we can add the nodes to the pushdown list. Otherwise, we would need to iteratively run both queries again and again.
-                // TODO add OR/AND flattened
-              } else {
-                const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
-                const auto predicate_node = PredicateNode::make(expression);
-                predicate_nodes.emplace_back(predicate_node);
-              }
+              const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
+              const auto predicate_node = PredicateNode::make(expression);
+              predicate_nodes.emplace_back(predicate_node);
             };
 
-            add_disjunction_to_nodes(left_disjunction, left_push_down_nodes);
-            add_disjunction_to_nodes(right_disjunction, right_push_down_nodes);
+            add_disjunction_to_nodes(left_disjunction, left_push_down_nodes); // TODO test this
+            add_disjunction_to_nodes(right_disjunction, right_push_down_nodes); // TODO test this
 
             _insert_nodes(current_node, input_side, {push_down_node});
 
