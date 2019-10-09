@@ -45,37 +45,39 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
 
 namespace opossum {
 
-void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+void PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
+  Assert(root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
 
-  if (is_predicate_style_node(node)) {
-    std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
+  visit_lqp(root, [&](const auto& node) {
+    if (is_predicate_style_node(node)) {
+      std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
-    // Gather adjacent PredicateNodes
-    auto current_node = node;
-    while (is_predicate_style_node(current_node)) {
-      // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
-      if (current_node->outputs().size() > 1) {
-        break;
+      // Gather adjacent PredicateNodes
+      auto current_node = node;
+      while (is_predicate_style_node(current_node)) {
+        // Once a node has multiple outputs, we're not talking about a predicate chain anymore. However, a new chain can
+        // start here.
+        if (current_node->outputs().size() > 1 && !predicate_nodes.empty()) {
+          break;
+        }
+
+        predicate_nodes.emplace_back(current_node);
+        current_node = current_node->left_input();
       }
 
-      predicate_nodes.emplace_back(current_node);
-      current_node = current_node->left_input();
+      /**
+       * A chain of predicates was found.
+       * Sort PredicateNodes in descending order with regards to the expected row_count
+       * Continue rule in deepest input
+       */
+      if (predicate_nodes.size() > 1) {
+        _reorder_predicates(predicate_nodes);
+      }
     }
 
-    /**
-     * A chain of predicates was found.
-     * Sort PredicateNodes in descending order with regards to the expected row_count
-     * Continue rule in deepest input
-     */
-    if (predicate_nodes.size() > 1) {
-      const auto input = predicate_nodes.back()->left_input();
-      _reorder_predicates(predicate_nodes);
-      apply_to(input);
-    }
-  }
-
-  _apply_to_inputs(node);
+    return LQPVisitation::VisitInputs;
+  });
 }
 
 void PredicateReorderingRule::_reorder_predicates(
