@@ -129,7 +129,7 @@ table.justify_columns[6] = 'right'
 # If github_format is set, format the output in the style of a diff file where added lines (starting with +) are
 # colored green, removed lines (starting with -) are red, and others (starting with an empty space) are black.
 # Because terminaltables (unsurprisingly) does not support this hack, we need to post-process the result string,
-# searching for the control codes that define lines formatted as green or red.
+# searching for the control codes that define text to be formatted as green or red.
 
 result = str(table.table)
 if github_format:
