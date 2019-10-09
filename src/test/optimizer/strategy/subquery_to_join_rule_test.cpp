@@ -30,7 +30,7 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     const auto histogram = GenericHistogram<int32_t>::with_single_bin(1, 100, 100, 10);
     const auto string_histogram = GenericHistogram<pmr_string>::with_single_bin("a", "z", 100, 10);
 
-    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_a = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
@@ -39,21 +39,21 @@ class SubqueryToJoinRuleTest : public StrategyBaseTest {
     a_b_expression = to_expression(a_b);
     a_c_expression = to_expression(a_c);
 
-    node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 10, {histogram, histogram});
+    node_b = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}}, 100, {histogram, histogram});
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
 
-    node_c = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_c = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     c_a = node_c->get_column("a");
 
-    node_d = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_d = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     d_a = node_d->get_column("a");
     d_b = node_d->get_column("b");
     d_c = node_d->get_column("c");
 
-    node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 10,
+    node_e = create_mock_node_with_statistics({{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, 100,
                                               {histogram, histogram, histogram});
     e_a = node_e->get_column("a");
     e_b = node_e->get_column("b");

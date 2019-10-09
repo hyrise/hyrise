@@ -134,7 +134,6 @@ TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
-  std::cout << *actual_lqp << std::endl;
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
