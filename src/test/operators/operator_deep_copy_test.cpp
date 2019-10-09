@@ -56,7 +56,7 @@ class DeepCopyTestJoin : public OperatorDeepCopyTest {};
 
 // here we define all Join types
 using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
-TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
   std::shared_ptr<Table> expected_result =
@@ -205,7 +205,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
 
   const auto copied_plan = sql_pipeline.get_physical_plan()->deep_copy();
   const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan, CleanupTemporaries::Yes);
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   const auto copied_result = tasks.back()->get_operator()->get_output();
 

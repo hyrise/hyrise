@@ -48,15 +48,25 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
-    const std::shared_ptr<AbstractLQPNode>& left_lqp, const std::shared_ptr<AbstractLQPNode>& right_lqp,
+    std::shared_ptr<AbstractLQPNode> left_lqp, std::shared_ptr<AbstractLQPNode> right_lqp,
     std::vector<std::shared_ptr<AbstractExpression>> join_predicates,
     const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+  /**
+   * To make the input sides more deterministic, we make sure that the larger input is on the right side. This helps
+   * future rules to identify common subplans. For plans with equal cardinalities, this might still result in
+   * non-deterministic orders. Deal with it once it becomes a problem - maybe use the hash?
+   */
+  if (cost_estimator->cardinality_estimator->estimate_cardinality(left_lqp) <
+      cost_estimator->cardinality_estimator->estimate_cardinality(right_lqp)) {
+    std::swap(left_lqp, right_lqp);
+  }
+
   /**
    * Join two plans using a set of predicates; try to bring them into an efficient order
    *
    *
-   * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates) are executed as
-   * column-to-column scans after the join.
+   * One predicate ("primary predicate") becomes the join predicate, the others ("secondary predicates") are executed as
+   * table scans (column vs column) after the join.
    * The primary predicate needs to be a simple "<column> <operator> <column>" predicate, otherwise the join operators
    * won't be able to execute it.
    *
@@ -78,10 +88,11 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   std::sort(join_predicates_and_cost.begin(), join_predicates_and_cost.end(),
             [&](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
 
-  // Categorize join predicates into those that can be processed as part of a join operator and those that need to be
-  // processed as normal predicates.
-  // NOTE: Since a multi-predicate join is currently slower than scanning the join output table, we do not emit multiple
-  //       predicates for the JoinNode, but use subsequent scans instead.
+  // Categorize join predicates into those that MUST be processed as part of a join operator (because they are required
+  // to see if an outer join emits a value or a NULL) and those that can also be processed as regular predicates after
+  // the join predicates (post-join predicates, e.g., additional join predicates for inner joins). Since the
+  // multi-predicate join is currently slower than a regular predicate (i.e., a full table scan), we only use it in
+  // cases where it is required for a correct result.
   auto join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto post_join_node_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 

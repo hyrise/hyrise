@@ -14,7 +14,6 @@
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
@@ -230,7 +229,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmar
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }
 
@@ -248,7 +247,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchm
   for (auto _ : state) {
     const auto pqp = LQPTranslator{}.translate_node(lqp);
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp, CleanupTemporaries::Yes);
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   }
 }
 

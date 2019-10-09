@@ -124,34 +124,6 @@ TEST_F(JoinGraphBuilderTest, LocalPredicates) {
   EXPECT_EQ(*join_graph->edges.at(2).predicates.at(1), *less_than_(a_a, 10));
 }
 
-TEST_F(JoinGraphBuilderTest, Disjunction) {
-  // Test that Unions get converted to an OR expression
-
-  // clang-format off
-  const auto lqp =
-  UnionNode::make(UnionMode::Positions,
-    PredicateNode::make(equals_(a_a, 5),
-      node_a),
-    UnionNode::make(UnionMode::Positions,
-      PredicateNode::make(greater_than_(a_b, 6),
-        node_a),
-      PredicateNode::make(less_than_equals_(a_b, 12),
-        node_a)));
-  // clang-format on
-
-  const auto join_graph = JoinGraphBuilder()(lqp);
-  ASSERT_TRUE(join_graph);
-
-  ASSERT_EQ(join_graph->vertices.size(), 1u);
-  EXPECT_EQ(join_graph->vertices.at(0), node_a);
-
-  ASSERT_EQ(join_graph->edges.size(), 1u);
-  EXPECT_EQ(join_graph->edges.at(0).vertex_set, JoinGraphVertexSet(1, 0b1));
-  EXPECT_EQ(join_graph->edges.at(0).predicates.size(), 1u);
-  EXPECT_EQ(*join_graph->edges.at(0).predicates.at(0),
-            *or_(equals_(a_a, 5), or_(greater_than_(a_b, 6), less_than_equals_(a_b, 12))));
-}
-
 TEST_F(JoinGraphBuilderTest, ComputedExpression) {
   // An expression computed in one of the vertices is used in a predicate
 
@@ -273,6 +245,22 @@ TEST_F(JoinGraphBuilderTest, MultipleComponentsWithHyperEdge) {
   EXPECT_TRUE(cross_edge.vertex_set == JoinGraphVertexSet(3, 0b101) ||
               cross_edge.vertex_set == JoinGraphVertexSet(3, 0b110));
   ASSERT_EQ(join_graph->edges.at(2).predicates.size(), 0u);
+}
+
+TEST_F(JoinGraphBuilderTest, NonJoinGraphDisjunction) {
+  // Unions are not represented in the JoinGraph
+
+  // clang-format off
+  const auto lqp =
+  UnionNode::make(UnionMode::Positions,
+    PredicateNode::make(equals_(a_a, 5),
+      node_a),
+    PredicateNode::make(greater_than_(a_b, 6),
+      node_a));
+  // clang-format on
+
+  const auto join_graph = JoinGraphBuilder()(lqp);
+  ASSERT_FALSE(join_graph);
 }
 
 TEST_F(JoinGraphBuilderTest, NonJoinGraphJoin) {

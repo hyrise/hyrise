@@ -60,6 +60,19 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
   return copied_expressions;
 }
 
+void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
+                             const ExpressionUnorderedMap<std::shared_ptr<AbstractExpression>>& mapping) {
+  visit_expression(expression, [&](auto& sub_expression) {
+    const auto replacement_iter = mapping.find(sub_expression);
+    if (replacement_iter != mapping.end()) {
+      sub_expression = replacement_iter->second;
+      return ExpressionVisitation::DoNotVisitArguments;
+    } else {
+      return ExpressionVisitation::VisitArguments;
+    }
+  });
+}
+
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
@@ -229,15 +242,27 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
   }
 }
 
-bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression) {
+bool expression_contains_placeholder(const std::shared_ptr<AbstractExpression>& expression) {
   auto placeholder_found = false;
 
   visit_expression(expression, [&](const auto& sub_expression) {
     placeholder_found |= std::dynamic_pointer_cast<PlaceholderExpression>(sub_expression) != nullptr;
-    return ExpressionVisitation::VisitArguments;
+    return !placeholder_found ? ExpressionVisitation::VisitArguments : ExpressionVisitation::DoNotVisitArguments;
   });
 
   return placeholder_found;
+}
+
+bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpression>& expression) {
+  auto correlated_parameter_found = false;
+
+  visit_expression(expression, [&](const auto& sub_expression) {
+    correlated_parameter_found |= std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression) != nullptr;
+    return !correlated_parameter_found ? ExpressionVisitation::VisitArguments
+                                       : ExpressionVisitation::DoNotVisitArguments;
+  });
+
+  return correlated_parameter_found;
 }
 
 std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractExpression& expression) {

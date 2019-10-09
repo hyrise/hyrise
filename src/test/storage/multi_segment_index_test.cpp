@@ -42,15 +42,15 @@ class MultiSegmentIndexTest : public BaseTest {
     return result;
   }
 
-  std::shared_ptr<BaseIndex> index_int_str = nullptr;
-  std::shared_ptr<BaseIndex> index_str_int = nullptr;
+  std::shared_ptr<AbstractIndex> index_int_str = nullptr;
+  std::shared_ptr<AbstractIndex> index_str_int = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_int = nullptr;
   std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
 };
 
 // List of indexes to test
 typedef ::testing::Types<CompositeGroupKeyIndex> DerivedIndexes;
-TYPED_TEST_CASE(MultiSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(MultiSegmentIndexTest, DerivedIndexes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MultiSegmentIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();

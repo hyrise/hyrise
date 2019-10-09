@@ -278,10 +278,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
       auto timer = Timer{};
       std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
 
-      auto table_info = BenchmarkTableInfo{};
-      table_info.table = ImportBinary::read_binary(table_file.path());
-      table_info.loaded_from_binary = true;
-      table_info_by_name[table_name] = table_info;
+      table_info_by_name[table_name].table = ImportBinary::read_binary(table_file.path());
+      table_info_by_name[table_name].loaded_from_binary = true;
 
       std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
     }
@@ -312,7 +310,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generat
   return table_info_by_name;
 }
 
-std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& table_name) {
+std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& table_name) const {
   if (table_name == "call_center") {
     return generate_call_center();
   } else if (table_name == "catalog_page") {
@@ -350,12 +348,12 @@ std::shared_ptr<Table> TpcdsTableGenerator::_generate_table(const std::string& t
   } else if (table_name == "web_site") {
     return generate_web_site();
   } else {
-    Assert(false, "unexpected table name: " + table_name);
+    Fail("Unexpected table name: " + table_name);
   }
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::_generate_sales_and_returns_tables(
-    const std::string& sales_table_name) {
+    const std::string& sales_table_name) const {
   if (sales_table_name == "catalog_sales") {
     return generate_catalog_sales_and_returns();
   } else if (sales_table_name == "store_sales") {
@@ -363,7 +361,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TpcdsTableGenerator::_
   } else if (sales_table_name == "web_sales") {
     return generate_web_sales_and_returns();
   } else {
-    Assert(false, "unexpected sales table name: " + sales_table_name);
+    Fail("Unexpected sales table name: " + sales_table_name);
   }
 }
 

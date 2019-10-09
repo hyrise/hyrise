@@ -1,5 +1,6 @@
 #include <boost/hana/at_key.hpp>
 
+#include <algorithm>
 #include <cctype>
 #include <memory>
 #include <random>
@@ -26,7 +27,6 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   static constexpr auto max_length = 32;
   static constexpr auto row_count = size_t{1u} << 10;
 
- protected:
   std::shared_ptr<ValueSegment<pmr_string>> create_empty_string_value_segment() {
     auto values = pmr_concurrent_vector<pmr_string>(row_count);
     return std::make_shared<ValueSegment<pmr_string>>(std::move(values));
@@ -131,17 +131,9 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   return string;
 };
 
-INSTANTIATE_TEST_CASE_P(
-    SegmentEncodingSpecs, EncodedStringSegmentTest,
-    ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::FixedStringDictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FixedStringDictionary,
-                                          VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
-    formatter);
+INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
+                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::String, false)),
+                         formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = create_empty_string_value_segment();

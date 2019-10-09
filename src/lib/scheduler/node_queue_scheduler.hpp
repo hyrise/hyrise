@@ -49,7 +49,7 @@ namespace opossum {
  * In general, each node owns a TaskQueue. Furthermore, one Worker is assigned to one CPU. Therefore, the Worker
  * running on CPUs of one node are just pulling from the single TaskQueue of this node.
  *
- * A topology can also be created with Topology::use_fake_numa_topology() to simulate a NUMA system
+ * A topology can also be created with Hyrise::get().topology.use_fake_numa_topology() to simulate a NUMA system
  * with multiple nodes (queues) and worker and should mainly be used for testing NUMA-concepts
  * on non-NUMA development machines.
  *

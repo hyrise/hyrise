@@ -10,10 +10,10 @@
 #include <vector>
 
 #include "bytell_hash_map.hpp"
+#include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -380,7 +380,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }));
     jobs.back()->schedule();
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted

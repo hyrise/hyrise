@@ -4,7 +4,6 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "storage/prepared_plan.hpp"
 
