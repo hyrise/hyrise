@@ -95,11 +95,22 @@ class AbstractVisualizer {
     _build_graph(graph_base);
 
     char* tmpname = strdup("/tmp/hyrise_viz_XXXXXX");
-    auto ret = mkstemp(tmpname);
-    Assert(ret > 0, "mkstemp failed");
+    auto file_descriptor = mkstemp(tmpname);
+    Assert(file_descriptor > 0, "mkstemp failed");
+
+    // mkstemp returns a file descriptor. Unfortunately, we cannot directly create an ofstream from a file descriptor.
+    close(file_descriptor);
     std::ofstream file(tmpname);
 
-    // By now, the pen widths are set to either the number of rows (for edges) or the execution time in ns (for
+    // This unique_ptr serves as a scope guard that guarantees the deletion of the temp file once we return from this
+    // method.
+    const auto delete_temp_file = [&tmpname](auto ptr) {
+      delete ptr;
+      std::remove(tmpname);
+    };
+    const auto delete_guard = std::unique_ptr<char, decltype(delete_temp_file)>(new char, delete_temp_file);
+
+    // The caller set the pen widths to either the number of rows (for edges) or the execution time in ns (for
     // vertices). As some plans have only operators that take microseconds and others take minutes, normalize this
     // so that the thickest pen has a width of max_normalized_width and the thinnest one has a width of 1. Using
     // a logarithm makes the operators that follow the most expensive one more visible. Not sure if this is what
@@ -132,7 +143,7 @@ class AbstractVisualizer {
     auto format = _graphviz_config.format;
 
     auto cmd = renderer + " -T" + format + " \"" + tmpname + "\" > \"" + img_filename + "\"";
-    ret = system(cmd.c_str());
+    auto ret = system(cmd.c_str());
 
     Assert(ret == 0, "Calling graphviz' " + renderer +
                          " failed. Have you installed graphviz "
