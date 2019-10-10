@@ -181,20 +181,9 @@ void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_p
       expressions.push_back(binary_predicate_expression);
     } else {
       const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate_node->predicate());
-      if (logical_expression && logical_expression->logical_operator == LogicalOperator::And) {
-        const auto flattened_expressions = flatten_logical_expressions(logical_expression, LogicalOperator::And);
-        for (const auto& flattened_expression : flattened_expressions) {
-          const auto flattened_binary_predicate_expression =
-              std::dynamic_pointer_cast<BinaryPredicateExpression>(flattened_expression);
-          if (flattened_binary_predicate_expression) {
-            expressions.push_back(flattened_binary_predicate_expression);
-          } else {
-            predicate_nodes.push_back(PredicateNode::make(flattened_expression));
-          }
-        }
-      } else {
-        predicate_nodes.push_back(predicate);
-      }
+      Assert(!logical_expression || logical_expression->logical_operator != LogicalOperator::And,
+             "Conjunctions should already have been split up");
+      predicate_nodes.push_back(predicate);
     }
 
     for (const auto& expression : expressions) {

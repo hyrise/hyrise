@@ -128,7 +128,7 @@ void BenchmarkRunner::run() {
     for (const auto& item_id : items) {
       const auto& result = _results[item_id];
       Assert(result.verification_passed, "Verification result should have been set");
-      any_verification_failed |= !result.verification_passed;
+      any_verification_failed |= !(*result.verification_passed);
     }
 
     Assert(!any_verification_failed, "Verification failed");
@@ -354,6 +354,9 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
     const auto duration_seconds = reported_item_duration_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+
+    // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
+    // want to touch this and potentially break the comparability across commits.
     benchmark["items_per_second"] = items_per_second;
     const auto time_per_item =
         !result.successful_runs.empty() ? reported_item_duration_ns / result.successful_runs.size() : std::nanf("");
@@ -399,7 +402,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE))) // NOLINT
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
-    ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
+    ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value("Ordered")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
@@ -410,7 +413,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("sql_metrics", "Track SQL metrics (parse time etc.) for each SQL query", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("sql_metrics", "Track SQL metrics (parse time etc.) for each SQL query and add it to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")); // NOLINT
 
   if constexpr (HYRISE_JIT_SUPPORT) {
     cli_options.add_options()

@@ -148,7 +148,8 @@ void expression_set_transaction_context(const std::shared_ptr<AbstractExpression
 void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                                          const std::weak_ptr<TransactionContext>& transaction_context);
 
-bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
+bool expression_contains_placeholder(const std::shared_ptr<AbstractExpression>& expression);
+bool expression_contains_correlated_parameter(const std::shared_ptr<AbstractExpression>& expression);
 
 /**
  * @return  The value of a CorrelatedParameterExpression or ValueExpression

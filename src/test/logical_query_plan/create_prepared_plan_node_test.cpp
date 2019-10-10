@@ -24,7 +24,7 @@ TEST_F(CreatePreparedPlanNodeTest, Description) {
   EXPECT_EQ(create_prepared_plan_node->description(),
             R"([CreatePreparedPlan] 'some_prepared_plan' {
 ParameterIDs: []
-[0] [MockNode 'Unnamed'] pruned: 0/1 columns
+[0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns
 })");
 }
 

@@ -1,12 +1,9 @@
 #include "join_graph_builder.hpp"
 
-#include <algorithm>
-#include <numeric>
 #include <queue>
 #include <stack>
 
 #include "expression/expression_functional.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
@@ -76,24 +73,6 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       _traverse(node->left_input());
     } break;
 
-    case LQPNodeType::Union: {
-      /**
-       * A UnionNode is the entry point to a disjunction, which is parsed starting from _parse_union(). Normal traversal
-       * is commenced from the node "below" the Union.
-       */
-
-      const auto union_node = std::static_pointer_cast<UnionNode>(node);
-
-      if (union_node->union_mode == UnionMode::Positions) {
-        const auto parse_result = _parse_union(union_node);
-
-        _traverse(parse_result.base_node);
-        _predicates.emplace_back(parse_result.predicate);
-      } else {
-        _vertices.emplace_back(node);
-      }
-    } break;
-
     default: { Fail("Node type cannot be used for JoinGraph, should have been detected as a vertex"); }
   }
 }
@@ -118,32 +97,14 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
       }
     } break;
 
-    case LQPNodeType::Union:
-      return _parse_union(std::static_pointer_cast<UnionNode>(node));
-
     default:
       Assert(node->left_input() && !node->right_input(), "");
       return _parse_predicate(node->left_input());
   }
 }
 
-JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_union(
-    const std::shared_ptr<UnionNode>& union_node) const {
-  DebugAssert(union_node->left_input() && union_node->right_input(),
-              "UnionNode needs both inputs set in order to be parsed");
-
-  const auto parse_result_left = _parse_predicate(union_node->left_input());
-  const auto parse_result_right = _parse_predicate(union_node->right_input());
-
-  DebugAssert(parse_result_left.base_node == parse_result_right.base_node, "Invalid OR not having a single base node");
-
-  const auto or_predicate = or_(parse_result_left.predicate, parse_result_right.predicate);
-
-  return {parse_result_left.base_node, or_predicate};
-}
-
 bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) const {
-  return node_type != LQPNodeType::Join && node_type != LQPNodeType::Union && node_type != LQPNodeType::Predicate;
+  return node_type != LQPNodeType::Join && node_type != LQPNodeType::Predicate;
 }
 
 std::vector<JoinGraphEdge> JoinGraphBuilder::_join_edges_from_predicates(
