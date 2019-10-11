@@ -6,7 +6,7 @@
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR UNIX AND NOT APPLE)
     FIND_LIBRARY(FILESYSTEM_LIBRARY NAME libstdc++fs.a HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib /usr/lib/gcc/*/8/ /usr/local/Cellar/gcc/*/lib/gcc/*/)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    FIND_LIBRARY(FILESYSTEM_LIBRARY NAMES libc++fs.a libc++experimental.a HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib /usr/local/Cellar/llvm/*/lib)
+    FIND_LIBRARY(FILESYSTEM_LIBRARY NAMES libc++fs.a libc++experimental.a HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib /usr/local/Cellar/llvm/*/lib /usr/local/Cellar/llvm@7/7.1.0/lib)
 endif()
 
 IF (FILESYSTEM_LIBRARY)
