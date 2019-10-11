@@ -1,9 +1,8 @@
 #pragma once
 
 #include "concurrency/transaction_context.hpp"
-#include "postgres_protocol_handler.hpp"
-
 #include "operators/abstract_operator.hpp"
+#include "postgres_protocol_handler.hpp"
 #include "scheduler/operator_task.hpp"
 
 namespace opossum {
@@ -23,7 +22,7 @@ class Session {
   // Establish new connection by exchanging parameters.
   void _establish_connection();
 
-  // Determine message and call the appropiate method.
+  // Determine message and call the appropriate method.
   void _handle_request();
 
   // Execute plain SQL statement.

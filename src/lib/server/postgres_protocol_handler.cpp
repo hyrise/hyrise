@@ -1,12 +1,6 @@
 #include "postgres_protocol_handler.hpp"
 
-#include "postgres_message_types.hpp"
-
 namespace opossum {
-
-// Each message contains a field (4 bytes) indicating the packet's size including itself. Using extra variable here to
-// avoid magic numbers.
-static constexpr auto LENGTH_FIELD_SIZE = 4u;
 
 template <typename SocketType>
 PostgresProtocolHandler<SocketType>::PostgresProtocolHandler(const std::shared_ptr<SocketType>& socket)
@@ -93,38 +87,11 @@ void PostgresProtocolHandler<SocketType>::send_command_complete(const std::strin
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::set_row_description_header(const uint32_t total_column_name_length,
                                                                      const uint16_t column_count) {
+  // The documentation of the fields in this message can be found at:
+  // https://www.postgresql.org/docs/current/static/protocol-message-formats.html
   _write_buffer.template put_value(PostgresMessageType::RowDescription);
 
-  /* Each column has the following fields within the message:
-   FROM: https://www.postgresql.org/docs/current/static/protocol-message-formats.html
-
-   String
-   The field name.
-
-   Int32
-   If the field can be identified as a column of a specific table, the object ID of the table; otherwise zero.
-
-   Int16
-   If the field can be identified as a column of a specific table, the attribute number of the column; otherwise zero.
-
-   Int32
-   The object ID of the field's data type.
-   Found at: https://github.com/postgres/postgres/blob/master/src/include/catalog/pg_type.h
-
-   Int16
-   The data type size (see pg_type.typlen). Note that negative values denote variable-width types.
-
-   Int32
-   The type modifier (see pg_attribute.atttypmod). The meaning of the modifier is type-specific.
-
-   Int16
-   The format code being used for the field. Currently will be zero (text) or one (binary).
-   In a RowDescription returned from the statement variant of Describe, the format code is not yet known and will always
-   be zero.
-   */
-
   // Total message length can be calculated this way:
-
   // length field + column count + values for each column
   const auto packet_size = sizeof(uint32_t) + sizeof(uint16_t) +
                            column_count * (sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t)) +
@@ -149,26 +116,8 @@ void PostgresProtocolHandler<SocketType>::send_row_description(const std::string
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_data_row(const std::vector<std::optional<std::string>>& row_strings,
                                                         const uint32_t string_lengths) {
-  /*
-  DataRow (B)
-  Byte1('D')
-  Identifies the message as a data row.
-
-  Int32
-  Length of message contents in bytes, including self.
-
-  Int16
-  The number of column values that follow (possibly zero).
-
-  Next, the following pair of fields appear for each column:
-
-  Int32
-  The length of the column value, in bytes (this count does not include itself). Can be zero. As a special case,
-  -1 indicates a NULL column value. No value bytes follow in the NULL case.
-
-  Byte n
-  The value of the column, in the format indicated by the associated format code. n is the above length.
-  */
+  // The documentation of the fields in this message can be found at:
+  // https://www.postgresql.org/docs/current/static/protocol-message-formats.html
 
   _write_buffer.template put_value(PostgresMessageType::DataRow);
 
@@ -250,7 +199,7 @@ PreparedStatementDetails PostgresProtocolHandler<SocketType>::read_bind_packet()
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::read_describe_packet() {
   const auto packet_length = _read_buffer.template get_value<uint32_t>();
-  // Clients asks for a description of a statement or a portal
+  // Client asks for a description of a statement or a portal
   // Statement descriptions (S) are returned as two separate messages: ParameterDescription and RowDescription
   // Portal descriptions are just RowDescriptions
   const auto description_target = _read_buffer.template get_value<char>();

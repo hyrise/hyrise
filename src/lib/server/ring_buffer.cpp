@@ -25,7 +25,7 @@ std::string ReadBuffer<SocketType>::get_string() {
   }
 
   while (*string_end != '\0') {
-    // We dont know how long this string is going to be. Hence, receive at least 1 char.
+    // We don't know how long this string is going to be. Hence, receive at least 1 char.
     _receive_if_necessary();
     string_end = std::find(_start_position, _current_position, '\0');
     std::copy(_start_position, string_end, std::back_inserter(result));
@@ -79,7 +79,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
     return;
   }
 
-  // Buffer might contain unread data, so cant read full buffer size
+  // Buffer might contain unread data, so can't read full buffer size
   const auto maximum_readable_size = maximum_capacity() - size();
 
   size_t bytes_read;
@@ -121,7 +121,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const bool te
     _current_position += position_in_string;
   }
 
-  // Read from network device until string is complete. Ignore last character since it is \0
+  // Write to network device until string is complete. Ignore last character since it is \0
   while (position_in_string < value.size()) {
     const auto bytes_to_transfer = std::min(maximum_capacity(), value.size() - position_in_string);
     _flush_if_necessary(bytes_to_transfer);
@@ -145,7 +145,7 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
 
   boost::system::error_code error_code;
   if ((_current_position - _start_position) < 0) {
-    // Data not continously stored in buffer
+    // Data not continuously stored in buffer
     bytes_sent = boost::asio::write(
         *_socket,
         std::array<boost::asio::mutable_buffer, 2>{

@@ -5,7 +5,7 @@
 #include "server/server.hpp"
 
 cxxopts::Options get_server_cli_options() {
-  cxxopts::Options cli_options("./hyriseServer", "Starts Hyrise Server in order to accept network requests.");
+  cxxopts::Options cli_options("./hyriseServer", "Starts Hyrise server in order to accept network requests.");
 
   // clang-format off
   cli_options.add_options()

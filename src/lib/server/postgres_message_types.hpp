@@ -2,6 +2,12 @@
 
 namespace opossum {
 
+// Each message contains a field (4 bytes) indicating the packet's size including itself. Using extra variable here to
+// avoid magic numbers.
+static constexpr auto LENGTH_FIELD_SIZE = 4u;
+
+// Documentation of the message types can be found here:
+// https://www.postgresql.org/docs/current/protocol-message-formats.html?
 enum class PostgresMessageType : unsigned char {
   // Important: The character '0' is treated as a null message
   // That means we cannot have an invalid type

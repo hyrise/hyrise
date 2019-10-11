@@ -103,7 +103,6 @@ void Session::_handle_parse_command() {
 
   if (error.has_value()) {
     _postgres_protocol_handler->send_error_message(error.value());
-    // _postgres_protocol_handler->send_ready_for_query();
   } else {
     _postgres_protocol_handler->send_status_message(PostgresMessageType::ParseComplete);
   }

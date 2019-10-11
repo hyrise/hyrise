@@ -1,12 +1,12 @@
 #pragma once
 
-#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 #include "postgres_message_types.hpp"
 #include "ring_buffer.hpp"
 
 namespace opossum {
 
-// This struct stores information about a prepared statements required for execution.
+// This struct stores information about a prepared statement.
 struct PreparedStatementDetails {
   std::string statement_name;
   std::string portal;

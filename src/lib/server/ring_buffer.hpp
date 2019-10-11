@@ -3,6 +3,7 @@
 #include <array>
 #include <boost/asio.hpp>  // NOLINT
 #include "postgres_message_types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -10,14 +11,15 @@ using Socket = boost::asio::ip::tcp::socket;
 
 static constexpr size_t BUFFER_SIZE = 4096u;
 
-// This class implements the logic of a circular buffer. If the end of the underlying data structure is reached
-// the iterator will start at the beginning if the data has already been processed.
+// This class implements a circular buffer. If all data has been processed and the end of the underlying data
+// structure is reached, the iterator wraps around and starts at the beginning of the data structure.
 class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char> {
  public:
   explicit RingBufferIterator(std::array<char, BUFFER_SIZE>& data, size_t position = 0)
       : _data(data), _position(position) {}
 
   RingBufferIterator& operator=(const RingBufferIterator& other) {
+    DebugAssert(&_data == &other._data, "Can't convert iterators from different arrays");
     _position = other._position;
     return *this;
   }
@@ -47,6 +49,7 @@ class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char>
   RingBufferIterator& operator+=(const size_t increment) { return operator+(increment); }
 
   RingBufferIterator::difference_type operator-(RingBufferIterator const& other) const {
+    DebugAssert(&_data == &other._data, "Can't convert iterators from different arrays");
     return _position - other._position;
   }
 
@@ -62,8 +65,6 @@ class RingBufferIterator : public std::iterator<std::forward_iterator_tag, char>
 // This class implements general methods for the ring buffer.
 class RingBuffer {
  public:
-  RingBuffer() = default;
-
   char* data() noexcept { return _data.begin(); }
 
   // Problem: full and empty might be same state, so head == tail

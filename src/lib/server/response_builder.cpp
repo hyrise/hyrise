@@ -20,6 +20,8 @@ void ResponseBuilder::build_and_send_row_description(
     uint32_t object_id;
     int16_t type_width;
 
+    // Documentation of the PostgreSQL object_ids can be found at:
+    // https://crate.io/docs/crate/reference/en/latest/interfaces/postgres.html
     switch (table->column_data_type(column_id)) {
       case DataType::Int:
         object_id = 23;
