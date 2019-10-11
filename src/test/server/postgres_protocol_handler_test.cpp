@@ -142,7 +142,8 @@ TEST_F(PostgresProtocolHandlerTest, SendDataRow) {
   const std::string value1 = "some";
   const std::string value2 = "string";
 
-  _protocol_handler->send_data_row({value1, value2}, static_cast<uint32_t>(value1.size() + value2.size()));
+  _protocol_handler->send_data_row({value1, value2, std::nullopt},
+                                   static_cast<uint32_t>(value1.size() + value2.size()));
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
@@ -151,7 +152,7 @@ TEST_F(PostgresProtocolHandlerTest, SendDataRow) {
   EXPECT_EQ(_get_message_length(file_content.begin() + start), file_content.size() - 1);
   start += sizeof(uint32_t);
   // Amount of values
-  EXPECT_EQ(_get_small_int(file_content.begin() + start), 2);
+  EXPECT_EQ(_get_small_int(file_content.begin() + start), 3);
   start += sizeof(uint16_t);
   // Length of first value
   EXPECT_EQ(_get_message_length(file_content.begin() + start), value1.size());
@@ -164,6 +165,9 @@ TEST_F(PostgresProtocolHandlerTest, SendDataRow) {
   start += sizeof(uint32_t);
   // Second value
   EXPECT_EQ(std::string(file_content, start, value2.size()), value2);
+  start += value2.size();
+  // NULL value is represented by setting length to -1 and ommiting a value
+  EXPECT_EQ(_get_message_length(file_content.begin() + start), -1);
 }
 
 TEST_F(PostgresProtocolHandlerTest, SetRowDescriptionHeader) {

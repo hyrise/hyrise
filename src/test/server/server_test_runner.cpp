@@ -53,6 +53,33 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
   EXPECT_EQ(result.size(), _table_a->row_count());
 }
 
+TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
+  const auto all_types_table = load_table("resources/test_data/tbl/all_data_types_sorted.tbl", 2);
+  Hyrise::get().storage_manager.add_table("all_types_table", all_types_table);
+
+  pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
+  pqxx::nontransaction transaction{connection};
+
+  const auto result = transaction.exec("SELECT * FROM all_types_table;");
+
+  EXPECT_EQ(result.size(), all_types_table->row_count());
+  EXPECT_EQ(result[0].size(), all_types_table->column_count());
+
+  for (uint64_t row_id = 0; row_id < all_types_table->row_count(); row_id++) {
+    const auto current_row = all_types_table->get_row(row_id);
+    for (ColumnID column_count{0}; column_count < all_types_table->column_count(); column_count++) {
+      // Representation of NULL values in pqxx::field differ from result of lexical_cast
+      if (result[row_id][column_count].is_null()) {
+        EXPECT_EQ("NULL", boost::lexical_cast<std::string>(current_row[column_count]));
+      } else {
+        EXPECT_EQ(result[row_id][column_count].c_str(), boost::lexical_cast<std::string>(current_row[column_count]));
+      }
+    }
+  }
+}
+
 TEST_F(ServerTestRunner, TestInvalidStatement) {
   pqxx::connection connection{_connection_string};
 

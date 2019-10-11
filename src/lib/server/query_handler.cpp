@@ -34,7 +34,6 @@ ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql, cons
       execution_info.execution_information = stream.str();
     }
   } else {
-    std::cout << "in here\n\n\n\n\n\n\n\n" << std::endl;
     const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();
     execution_info.error = "Error during pipeline execution! Failed statement: " + failed_statement;
   }

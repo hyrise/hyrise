@@ -52,7 +52,8 @@ template <typename SocketType>
 void ResponseBuilder::build_and_send_query_response(
     std::shared_ptr<const Table> table,
     const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
-  auto attribute_strings = std::vector<std::string>(table->column_count());
+  auto attribute_strings = std::vector<std::optional<std::string>>(table->column_count());
+
   const auto chunk_count = table->chunk_count();
 
   // Iterate over each chunk in result table
@@ -65,9 +66,11 @@ void ResponseBuilder::build_and_send_query_response(
       // Iterate over each attribute in row
       for (size_t current_segment = 0; current_segment < segments.size(); current_segment++) {
         const auto attribute_value = segments[current_segment]->operator[](current_chunk_offset);
-        const auto string_value = lossy_variant_cast<pmr_string>(attribute_value).value();
-        // Sum up string lengths for a row to save an extra loop during serialization
-        string_lengths += string_value.size();
+        const auto string_value = lossy_variant_cast<pmr_string>(attribute_value);
+        if (string_value.has_value()) {
+          // Sum up string lengths for a row to save an extra loop during serialization
+          string_lengths += string_value.value().size();
+        }
         attribute_strings[current_segment] = std::move(string_value);
       }
       postgres_protocol_handler->send_data_row(attribute_strings, string_lengths);

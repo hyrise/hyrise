@@ -40,7 +40,7 @@ class PostgresProtocolHandler {
   void send_command_complete(const std::string& command_complete_message);
   void send_ready_for_query();
   void send_row_description(const std::string& column_name, const uint32_t object_id, const int16_t type_width);
-  void send_data_row(const std::vector<std::string>& row_strings, const uint32_t string_lengths);
+  void send_data_row(const std::vector<std::optional<std::string>>& row_strings, const uint32_t string_lengths);
 
   // Send out status message containing PostgresMessageType and length
   void send_status_message(const PostgresMessageType message_type);

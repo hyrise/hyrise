@@ -147,7 +147,7 @@ void PostgresProtocolHandler<SocketType>::send_row_description(const std::string
 }
 
 template <typename SocketType>
-void PostgresProtocolHandler<SocketType>::send_data_row(const std::vector<std::string>& row_strings,
+void PostgresProtocolHandler<SocketType>::send_data_row(const std::vector<std::optional<std::string>>& row_strings,
                                                         const uint32_t string_lengths) {
   /*
   DataRow (B)
@@ -181,11 +181,16 @@ void PostgresProtocolHandler<SocketType>::send_data_row(const std::vector<std::s
   _write_buffer.template put_value<uint16_t>(static_cast<uint16_t>(row_strings.size()));
 
   for (const auto& value_string : row_strings) {
-    // Size of string representation of value, NOT of value type's size
-    _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(value_string.size()));
+    if (value_string.has_value()) {
+      // Size of string representation of value, NOT of value type's size
+      _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(value_string.value().size()));
 
-    // Text mode means all values are sent as non-terminated strings
-    _write_buffer.put_string(value_string, false);
+      // Text mode means all values are sent as non-terminated strings
+      _write_buffer.put_string(value_string.value(), false);
+    } else {
+      // NULL values are represented by setting the value's length to -1
+      _write_buffer.template put_value<int32_t>(-1);
+    }
   }
 }
 

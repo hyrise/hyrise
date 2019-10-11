@@ -132,6 +132,7 @@ set(
     server/mock_socket.hpp
     server/postgres_protocol_handler_test.cpp
     server/query_handler_test.cpp
+    server/response_builder_test.cpp
     server/ring_buffer_test.cpp
     sql/sql_identifier_resolver_test.cpp
     sql/sql_pipeline_statement_test.cpp

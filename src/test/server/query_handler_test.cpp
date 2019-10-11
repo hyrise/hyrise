@@ -8,8 +8,8 @@ namespace opossum {
 class QueryHandlerTest : public BaseTest {
  protected:
   void SetUp() override {
-    const auto& _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_a", _table_a);
+    const auto& table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
+    Hyrise::get().storage_manager.add_table("table_a", table_a);
   }
 };
 
