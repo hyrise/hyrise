@@ -70,29 +70,33 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
-  if (in_table->type() == TableType::Data) {
-    bool check_chunks_for_visibility = true;
+  // Optimization, only checking chunks, blabla
+  // if (in_table->type() == TableType::Data) {
+  //   bool check_chunks_for_visibility = true;
 
-    // Abort if there is a delete in the same transaction context
-    const auto& rw_operators = transaction_context->read_write_operators();
-    for (const auto& rw_operator : rw_operators) {
-      if (rw_operator->type() == OperatorType::Delete) check_chunks_for_visibility = false;
-    }
+  //   // Abort if there is a delete in the same transaction context
+  //   const auto& rw_operators = transaction_context->read_write_operators();
+  //   for (const auto& rw_operator : rw_operators) {
+  //     if (rw_operator->type() == OperatorType::Delete) {
+  //       check_chunks_for_visibility = false;
+  //       break;
+  //     }
+  //   }
 
-    if (check_chunks_for_visibility) {
-      ChunkID visible_chunks = ChunkID{0};
-      for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto chunk_in = in_table->get_chunk(chunk_id);
-        DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
+  //   if (check_chunks_for_visibility) {
+  //     ChunkID visible_chunks = ChunkID{0};
+  //     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  //       const auto chunk_in = in_table->get_chunk(chunk_id);
+  //       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 
-        if (!_is_chunk_visible(chunk_in, snapshot_commit_id)) break;
+  //       if (!_is_chunk_visible(chunk_in, snapshot_commit_id)) break;
 
-        ++visible_chunks;
-      }
+  //       ++visible_chunks;
+  //     }
 
-      if (visible_chunks == chunk_count) return in_table;
-    }
-  }
+  //     if (visible_chunks == chunk_count) return in_table;
+  //   }
+  // }
 
   // for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
   std::vector<std::shared_ptr<JobTask>> jobs;
@@ -103,6 +107,17 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   auto job_start_chunk_id = ChunkID{0};
   auto job_end_chunk_id = ChunkID{0};
   auto job_row_count = uint32_t{0};
+
+  bool check_visibility_on_chunk_level = true;
+  const auto& rw_operators = transaction_context->read_write_operators();
+
+  // Not allowed if a delete is registerd in the same transaction context
+  for (const auto& rw_operator : rw_operators) {
+    if (rw_operator->type() == OperatorType::Delete) {
+      check_chunks_for_visibility = false;
+      break;
+    }
+  }
 
   while (job_end_chunk_id < chunk_count) {
     const auto chunk = in_table->get_chunk(job_end_chunk_id);
@@ -117,11 +132,11 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       if (execute_directly) {
         _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
-                         output_mutex);
+                         output_mutex, check_chunks_for_visibility);
       } else {
         jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
           _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
-                           output_mutex);
+                           output_mutex, check_chunks_for_visibility);
         }));
         jobs.back()->schedule();
 
@@ -141,7 +156,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
                                 const TransactionID snapshot_commit_id,
-                                std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) {
+                                std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex,
+                                const bool check_chunks_for_visibility) {
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
@@ -180,11 +196,11 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         //   // }
         // } else {
 
-          for (auto row_id : pos_list_in) {
-            if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
-              pos_list_out->emplace_back(row_id);
-            }
+        for (auto row_id : pos_list_in) {
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            pos_list_out->emplace_back(row_id);
           }
+        }
         // }
 
       } else {

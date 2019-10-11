@@ -120,7 +120,8 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
     append_mutable_chunk();
     last_chunk = get_chunk(ChunkID{chunk_count() - 1});
 
-    // Since we have at least two chunks, this means one chunk just now reached its capacity.
+    // Since we have at least two chunks, this means one chunk reached its capacity just now.
+    // We prepare this chunk for MVCC optimizations.
     if (chunk_count() > 1) {
       auto second_last_chunk = get_chunk(ChunkID{chunk_count() - 2});
       second_last_chunk->update_max_begin_cid();
