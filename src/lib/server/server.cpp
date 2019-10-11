@@ -6,10 +6,10 @@
 namespace opossum {
 
 // Specified port (default: 5432) will be opened after initializing the _acceptor
-Server::Server(const uint16_t port, const bool send_execution_info)
-    : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+Server::Server(const boost::asio::ip::address& address, const uint16_t port, const bool send_execution_info)
+    : _acceptor(_io_service, boost::asio::ip::tcp::endpoint(address, port)),
       _send_execution_info(send_execution_info) {
-  std::cout << "Server starting on port " << get_port() << std::endl;
+  std::cout << "Server starting using address " << get_address() << " and port " << get_port() << std::endl;
 }
 
 void Server::_accept_new_session() {
@@ -39,5 +39,7 @@ void Server::run() {
 void Server::shutdown() { _io_service.stop(); }
 
 uint16_t Server::get_port() const { return _acceptor.local_endpoint().port(); }
+
+boost::asio::ip::address Server::get_address() const { return _acceptor.local_endpoint().address(); }
 
 }  // namespace opossum

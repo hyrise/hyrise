@@ -9,7 +9,8 @@ cxxopts::Options get_server_cli_options() {
 
   // clang-format off
   cli_options.add_options()
-    ("help", "Display this help and exit")
+    ("help", "Display this help and exit") // NOLINT
+    ("address", "Specify the address to run on", cxxopts::value<std::string>()->default_value("0.0.0.0"))  // NOLINT
     ("p,port", "Specify the port number. 0 means randomly select an available one", cxxopts::value<uint16_t>()->default_value("5432"))  //NOLINT
     ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ;  //NOLINT
@@ -28,13 +29,21 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  // Set scheduler so that the server can execute the tasks on separate threads.
-  opossum::Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
-
   const auto execution_info = parsed_options["execution_info"].as<bool>();
   const auto port = parsed_options["port"].as<uint16_t>();
 
-  auto server = opossum::Server{port, execution_info};
+  boost::system::error_code error;
+  const auto address = boost::asio::ip::make_address(parsed_options["address"].as<std::string>(), error);
+
+  if (error) {
+    std::cerr << "Not a valid IPv4 address: " << parsed_options["address"].as<std::string>() << ", terminating..." << std::endl;
+    return error.value();
+  }
+
+  // Set scheduler so that the server can execute the tasks on separate threads.
+  opossum::Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
+
+  auto server = opossum::Server{address, port, execution_info};
   server.run();
 
   return 0;

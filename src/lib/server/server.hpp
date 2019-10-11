@@ -10,10 +10,12 @@ namespace opossum {
 // The server class is responsible for setting up and listening to the system port.
 class Server {
  public:
-  explicit Server(const uint16_t port, const bool send_execution_info);
+  Server(const boost::asio::ip::address& address, const uint16_t port, const bool send_execution_info);
 
   // Return the port the server is running on.
   uint16_t get_port() const;
+
+  boost::asio::ip::address get_address() const;
 
   // Shutdown Hyrise server.
   void shutdown();
