@@ -78,6 +78,8 @@ class AbstractReadWriteOperator : public AbstractOperator {
    */
   virtual void _on_rollback_records() = 0;
 
+  void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) final;
+
   /**
    * This method is used in sub classes in their _on_execute() method.
    *
