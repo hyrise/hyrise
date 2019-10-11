@@ -58,7 +58,6 @@ class SQLIdentifierResolver final {
   void append(SQLIdentifierResolver&& rhs);
 
  private:
-  SQLIdentifierContextEntry& _find_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
   SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
 
   std::vector<SQLIdentifierContextEntry> _entries;

@@ -1042,6 +1042,23 @@ TEST_F(SQLTranslatorTest, AggregateForwarding) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, ProjectedAggregateForwarding) {
+  // Test that a referenced Aggregate does not result in redundant (and illegal!) AggregateNodes
+
+  const auto actual_lqp = compile_query("SELECT x + 3 FROM (SELECT MIN(a) - 1 as x FROM int_float) AS t;");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(sub_(min_(int_float_a), 1), 3)),
+    AliasNode::make(expression_vector(sub_(min_(int_float_a), 1)), std::vector<std::string>({"x"}),
+      ProjectionNode::make(expression_vector(sub_(min_(int_float_a), 1)),
+        AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+          stored_table_node_int_float))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, SubqueryFromSimple) {
   const auto actual_lqp_a = compile_query("SELECT z.x, z.a, z.b FROM (SELECT a + b AS x, * FROM int_float) AS z");
   const auto actual_lqp_b = compile_query("SELECT * FROM (SELECT a + b AS x, * FROM int_float) AS z");
@@ -1422,6 +1439,21 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, FromColumnAliasingAggregation) {
+  const auto actual_lqp =
+      compile_query("SELECT foo + 1 FROM (SELECT a, MIN(b) FROM int_float WHERE a > 10 GROUP BY a) AS t (bar, foo)");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(min_(int_float_b), 1)),
+    AggregateNode::make(expression_vector(int_float_a), expression_vector(min_(int_float_b)),
+      PredicateNode::make(greater_than_(int_float_a, 10),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, FromColumnAliasingColumnsSwitchNames) {

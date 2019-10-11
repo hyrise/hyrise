@@ -76,13 +76,13 @@ TEST_F(GreedyOperatorOrderingTest, ChainQuery) {
   // clang-format off
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
-    PredicateNode::make(greater_than_(a_a, 0),
-      node_a),
     JoinNode::make(JoinMode::Inner, equals_(b_a, c_a),
       node_b,
       JoinNode::make(JoinMode::Inner, equals_(c_a, d_a),
-        node_c,
-        node_d)));
+        node_d,
+        node_c)),
+    PredicateNode::make(greater_than_(a_a, 0),
+      node_a));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -101,12 +101,12 @@ TEST_F(GreedyOperatorOrderingTest, StarQuery) {
   // clang-format off
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
-    node_b,
     JoinNode::make(JoinMode::Inner, equals_(a_a, d_a),
       JoinNode::make(JoinMode::Inner, equals_(a_a, c_a),
         node_a,
         node_c),
-      node_d));
+      node_d),
+    node_b);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -133,14 +133,14 @@ TEST_F(GreedyOperatorOrderingTest, HyperEdges) {
   PredicateNode::make(greater_than_(add_(b_a, c_a), sub_(a_a, d_a)),
     PredicateNode::make(equals_(c_a, add_(d_a, a_a)),
       JoinNode::make(JoinMode::Cross,
-        node_a,
         PredicateNode::make(equals_(add_(b_a, c_a), d_a),
           JoinNode::make(JoinMode::Inner, equals_(b_a, c_a),
             node_b,
               PredicateNode::make(less_than_equals_(c_a, d_a),
                 JoinNode::make(JoinMode::Inner, expression_vector(equals_(c_a, d_a)),
-                  node_c,
-                  node_d)))))));
+                  node_d,
+                  node_c)))),
+        node_a)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

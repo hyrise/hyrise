@@ -44,6 +44,7 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- Sorting tables" << std::endl;
 
     for (const auto& [table_name, column_name] : sort_order_by_table) {
+      const auto order_by_mode = OrderByMode::Ascending;  // currently fixed to ascending
       std::cout << "-  Sorting '" << table_name << "' by '" << column_name << "' " << std::flush;
       Timer per_table_timer;
 
@@ -54,7 +55,8 @@ void AbstractTableGenerator::generate_and_store() {
       auto& table = table_info_by_name[table_name].table;
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
-      auto sort = std::make_shared<Sort>(table_wrapper, table->column_id_by_name(column_name));
+      auto sort = std::make_shared<Sort>(table_wrapper, table->column_id_by_name(column_name), order_by_mode,
+                                         _benchmark_config->chunk_size);
       sort->execute();
       const auto immutable_sorted_table = sort->get_output();
       table = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
@@ -62,6 +64,7 @@ void AbstractTableGenerator::generate_and_store() {
       for (auto chunk_id = ChunkID{0}; chunk_id < immutable_sorted_table->chunk_count(); ++chunk_id) {
         auto mvcc_data = std::make_shared<MvccData>(immutable_sorted_table->get_chunk(chunk_id)->size(), CommitID{0});
         table->append_chunk(immutable_sorted_table->get_chunk(chunk_id)->segments(), mvcc_data);
+        table->get_chunk(chunk_id)->set_ordered_by({table->column_id_by_name(column_name), order_by_mode});
       }
 
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;

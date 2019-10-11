@@ -2,6 +2,7 @@
 
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -24,7 +25,9 @@ MetaTableManager::MetaTableManager() {
 const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
 
 std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table_name) const {
-  return _methods.at(table_name)();
+  const auto table = _methods.at(table_name)();
+  table->set_table_statistics(TableStatistics::from_table(*table));
+  return table;
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {

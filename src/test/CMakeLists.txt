@@ -114,7 +114,7 @@ set(
     optimizer/join_graph_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/between_composition_rule_test.cpp
-    optimizer/strategy/chunk_pruning_test.cpp
+    optimizer/strategy/chunk_pruning_rule_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
@@ -122,6 +122,7 @@ set(
     optimizer/strategy/insert_limit_in_exists_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/join_predicate_ordering_rule_test.cpp
+    optimizer/strategy/predicate_merge_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
@@ -204,6 +205,7 @@ set (
     ${SHARED_SOURCES}
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    synthetic_table_generator_test.cpp
     tpc/tpcds_db_generator_test.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
@@ -314,5 +316,5 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest pqxx)
+target_link_libraries_system(hyriseSystemTest pqxx_static)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

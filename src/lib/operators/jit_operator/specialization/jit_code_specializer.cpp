@@ -18,15 +18,19 @@
 
 namespace opossum {
 
-JitCodeSpecializer::JitCodeSpecializer(JitRepository& repository)
-    : _repository{repository}, _llvm_context{_repository.llvm_context()} {}
+JitCodeSpecializer::JitCodeSpecializer(std::shared_ptr<JitRepository>& repository)
+    : _repository{repository ? repository : JitRepository::_make_shared()}, _llvm_context{_repository->llvm_context()} {
+  if (!Hyrise::get().jit_repository) {
+    Hyrise::get().jit_repository = _repository;
+  }
+}
 
 std::unique_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
     const std::string& root_function_name, const std::shared_ptr<const JitRuntimePointer>& runtime_this,
     const bool two_passes) {
   // The LLVMContext does not support concurrent access, so we only allow one specialization operation at a time for
   // each JitRepository (each bitcode repository has its own LLVMContext).
-  std::lock_guard<std::mutex> lock(_repository.specialization_mutex());
+  std::lock_guard<std::mutex> lock(_repository->specialization_mutex());
 
   // Initialize specialization context with the function name and an empty module
   SpecializationContext context;
@@ -35,7 +39,7 @@ std::unique_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
   context.module->setDataLayout(_compiler.data_layout());
 
   // Locate and clone the root function from the bitcode repository
-  const auto root_function = _repository.get_function(root_function_name);
+  const auto root_function = _repository->get_function(root_function_name);
   Assert(root_function, "Root function not found in repository.");
   context.root_function = _clone_root_function(context, *root_function);
 
@@ -137,7 +141,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
 
         // If the called function can be located in the repository, the virtual call is replaced by a direct call to
         // that function.
-        if (const auto repo_function = _repository.get_vtable_entry(class_name, vtable_index)) {
+        if (const auto repo_function = _repository->get_vtable_entry(class_name, vtable_index)) {
           call_site.setCalledFunction(repo_function);
         }
       } else {

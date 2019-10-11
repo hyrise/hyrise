@@ -11,6 +11,7 @@
 namespace opossum {
 
 class LQPColumnExpression;
+class TableStatistics;
 
 /**
  * Represents a Table from the StorageManager in an LQP
@@ -43,6 +44,10 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   bool is_column_nullable(const ColumnID column_id) const override;
 
   const std::string table_name;
+
+  // By default, the StoredTableNode takes its statistics from the table. This field can be used to overwrite these
+  // statistics if they have changed from the original table, e.g., as the result of chunk pruning.
+  std::shared_ptr<TableStatistics> table_statistics;
 
  protected:
   size_t _shallow_hash() const override;

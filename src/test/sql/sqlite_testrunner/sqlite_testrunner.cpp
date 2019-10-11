@@ -46,8 +46,8 @@ void SQLiteTestRunner::SetUpTestCase() {
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
 
-  opossum::Topology::use_numa_topology();
-  opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
+  opossum::Hyrise::get().topology.use_numa_topology();
+  opossum::Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 }
 
 void SQLiteTestRunner::SetUp() {
