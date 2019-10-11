@@ -17,11 +17,11 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace {
 using namespace opossum;
 
-constexpr auto TBL_FILE = "../../data/100000_pings.tbl";
+constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
 constexpr auto TABLE_NAME = "ping";
-const auto CHUNK_SIZES = std::vector{size_t{10000}};
+const auto CHUNK_SIZES = std::vector{size_t{1000000}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "timestamp", "captain_status"};
-const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary};
+const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4, EncodingType::RunLength};
 
 std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
     const std::string order_by_column_name, const size_t chunk_size, const std::optional<ChunkEncodingSpec>& chunk_encoding_spec = std::nullopt,
