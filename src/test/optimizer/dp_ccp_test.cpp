@@ -75,10 +75,10 @@ TEST_F(DpCcpTest, JoinOrdering) {
   const auto expected_lqp =
   PredicateNode::make(equals_(b_a, c_a),
     JoinNode::make(JoinMode::Inner, expression_vector(equals_(a_a, c_a)),
+      node_c,
       JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
         node_a,
-        node_b),
-      node_c));
+        node_b)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -100,10 +100,10 @@ TEST_F(DpCcpTest, CrossJoin) {
   // clang-format off
   const auto expected_lqp =
   JoinNode::make(JoinMode::Cross,
+    node_c,
     JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
       node_a,
-      node_b),
-    node_c);
+      node_b));
   // clang-format on
 
   EXPECT_LQP_EQ(expected_lqp, actual_lqp);
@@ -196,13 +196,13 @@ TEST_F(DpCcpTest, HyperEdge) {
   // clang-format off
   const auto expected_lqp =
   JoinNode::make(JoinMode::Cross,
+    node_d,
     PredicateNode::make(hyper_edge_predicate,
       JoinNode::make(JoinMode::Inner, equals_(c_a, a_a),
+        node_c,
         JoinNode::make(JoinMode::Inner, equals_(b_a, a_a),
           node_a,
-          node_b),
-        node_c)),
-    node_d);
+          node_b))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -232,10 +232,10 @@ TEST_F(DpCcpTest, UncorrelatedPredicates) {
   // clang-format off
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(d_a, a_a),
-    node_a,
     PredicateNode::make(uncorrelated_predicate_b,
       PredicateNode::make(uncorrelated_predicate_a,
-        node_d)));
+        node_d)),
+    node_a);
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

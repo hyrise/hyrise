@@ -69,7 +69,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
 };
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Predicates, OperatorsTableScanSortedSegmentSearchTest,
     ::testing::Combine(
         ::testing::Values(

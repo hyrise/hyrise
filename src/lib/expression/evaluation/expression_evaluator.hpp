@@ -197,7 +197,13 @@ class ExpressionEvaluator final {
   // One entry for each segment in the _chunk, may be nullptr if the segment hasn't been materialized
   std::vector<std::shared_ptr<BaseExpressionResult>> _segment_materializations;
 
+  // Optionally, uncorrelated selects can be evaluated by the caller and passed in to the evaluator. This way, they
+  // do not have to be executed multiple times by different evaluators
   const std::shared_ptr<const UncorrelatedSubqueryResults> _uncorrelated_subquery_results;
+
+  // Some expressions can be reused, either in the same result column (SELECT (a+3)*(a+3)), or across columns
+  // (TPC-H Q1)
+  ConstExpressionUnorderedMap<std::shared_ptr<BaseExpressionResult>> _cached_expression_results;
 };
 
 }  // namespace opossum

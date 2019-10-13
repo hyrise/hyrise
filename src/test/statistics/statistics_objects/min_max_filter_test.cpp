@@ -51,7 +51,7 @@ class MinMaxFilterTest<pmr_string> : public ::testing::Test {
 };
 
 using FilterTypes = ::testing::Types<int, float, double, pmr_string>;
-TYPED_TEST_CASE(MinMaxFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(MinMaxFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());
@@ -92,6 +92,47 @@ TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_in_between}));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_max_value}));
   EXPECT_TRUE(filter->does_not_contain(PredicateCondition::GreaterThan, {this->_after_range}));
+
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenInclusive, {this->_before_range}, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, {this->_min_value}, {this->_in_between}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenInclusive, {this->_in_between}, {this->_in_between2}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenInclusive, {this->_in_between2}, {this->_max_value}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenInclusive, {this->_max_value}, {this->_after_range}));
+
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenLowerExclusive, {this->_before_range}, {this->_min_value}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenLowerExclusive, {this->_min_value}, {this->_in_between}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenLowerExclusive, {this->_in_between}, {this->_in_between2}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenLowerExclusive, {this->_in_between2}, {this->_max_value}));
+  EXPECT_TRUE(
+      filter->does_not_contain(PredicateCondition::BetweenLowerExclusive, {this->_max_value}, {this->_after_range}));
+
+  EXPECT_TRUE(
+      filter->does_not_contain(PredicateCondition::BetweenUpperExclusive, {this->_before_range}, {this->_min_value}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenUpperExclusive, {this->_min_value}, {this->_in_between}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenUpperExclusive, {this->_in_between}, {this->_in_between2}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenUpperExclusive, {this->_in_between2}, {this->_max_value}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenUpperExclusive, {this->_max_value}, {this->_after_range}));
+
+  EXPECT_TRUE(
+      filter->does_not_contain(PredicateCondition::BetweenExclusive, {this->_before_range}, {this->_min_value}));
+  EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenExclusive, {this->_min_value}, {this->_in_between}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenExclusive, {this->_in_between}, {this->_in_between2}));
+  EXPECT_FALSE(
+      filter->does_not_contain(PredicateCondition::BetweenExclusive, {this->_in_between2}, {this->_max_value}));
+  EXPECT_TRUE(filter->does_not_contain(PredicateCondition::BetweenExclusive, {this->_max_value}, {this->_after_range}));
 
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, NULL_VALUE));
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::IsNull, {this->_in_between}));
