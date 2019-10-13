@@ -1,5 +1,7 @@
 #include "query_response_builder.hpp"
 
+#include <boost/lexical_cast.hpp>
+
 #include "server/postgres_wire_handler.hpp"
 #include "sql/sql_pipeline.hpp"
 

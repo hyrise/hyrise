@@ -4,6 +4,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     add_compile_options(-Wno-format-overflow)
 endif()
 
+# Multiple third-party libraries are not written with unity builds in minds, so we disable
+# unity builds for this folder, even if the user manually activated it.
+set(CMAKE_UNITY_BUILD "OFF")
+
 # Build google benchmark
 add_library(
     benchmark
@@ -169,7 +173,7 @@ endif()
 
 include(ExternalProject)
 if(APPLE)
-    set(MAC_INCLUDES "SDKROOT=\"/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk\" CPATH=\"/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include\"")
+    set(MAC_INCLUDES "SDKROOT=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk\" CPATH=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include\"")
 else()
     set(MAC_INCLUDES "")
 endif()
