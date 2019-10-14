@@ -27,6 +27,7 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
+        lld \
         llvm \
         llvm-7-tools \
         man \
