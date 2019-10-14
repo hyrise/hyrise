@@ -18,9 +18,9 @@ namespace opossum {
 
 ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id,
-                                                       const PredicateCondition& predicate_condition,
+                                                       const PredicateCondition& new_predicate_condition,
                                                        const AllTypeVariant& value)
-    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition}, value{value} {
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, new_predicate_condition}, value{value} {
   Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(value),
          "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "
          "ExpressionEvaluatorTableScanImpl.");
@@ -118,7 +118,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  _with_operator_for_dict_segment_scan(predicate_condition, [&](auto predicate_comparator) {
+  _with_operator_for_dict_segment_scan([&](auto predicate_comparator) {
     auto comparator = [predicate_comparator, search_value_id](const auto& position) {
       return predicate_comparator(position.value(), search_value_id);
     };

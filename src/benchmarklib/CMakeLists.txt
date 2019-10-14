@@ -3,6 +3,10 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/third_party
 )
 
+# The TPC-DS implementation redefines macros and structs with great liberty.
+# That breaks with unity builds, so we turn them off here.
+set(CMAKE_UNITY_BUILD "OFF")
+
 set(
     SOURCES
 

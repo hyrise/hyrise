@@ -8,8 +8,9 @@
 namespace opossum {
 
 AbstractPredicateExpression::AbstractPredicateExpression(
-    const PredicateCondition predicate_condition, const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
-    : AbstractExpression(ExpressionType::Predicate, arguments), predicate_condition(predicate_condition) {}
+    const PredicateCondition new_predicate_condition,
+    const std::vector<std::shared_ptr<AbstractExpression>>& new_arguments)
+    : AbstractExpression(ExpressionType::Predicate, new_arguments), predicate_condition(new_predicate_condition) {}
 
 DataType AbstractPredicateExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
 
