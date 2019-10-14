@@ -164,7 +164,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
 
         if (check_visibility_on_chunk_level &&
             is_entire_chunk_visible(referenced_chunk, snapshot_commit_id, mvcc_data)) {
-          // We can simply copy the whole PosList since it is entirely visible. Copying is usually forbidden for PosLists.
+          // We can simply copy the whole PosList since it is entirely visible. Copying is forbidden for PosLists.
+          // Because of that, we use memcpy here for now.
           const auto pos_list_size = pos_list_in.size();
           pos_list_out->resize(pos_list_size);
           std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
