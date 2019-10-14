@@ -69,6 +69,17 @@ TEST_F(StorageChunkTest, RetrieveSegment) {
   EXPECT_EQ(base_segment->size(), 4u);
 }
 
+TEST_F(StorageChunkTest, UpdateMaxBeginCid) {
+  auto mvcc_data = std::make_shared<MvccData>(3, 0);
+  mvcc_data->begin_cids = {1, 2, 3};
+
+  chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
+  chunk->update_max_begin_cid();
+
+  auto mvcc_data_chunk = chunk->get_scoped_mvcc_data_lock();
+  EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
+}
+
 TEST_F(StorageChunkTest, UnknownColumnType) {
   // Exception will only be thrown in debug builds
   if (!HYRISE_DEBUG) GTEST_SKIP();
