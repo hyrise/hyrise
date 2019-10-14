@@ -95,10 +95,10 @@ if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
     endif()
 endif()
 
-# On Linux, use the gold linker, which is twice as fast for incremental debug builds
+# On Linux, use the lld linker, which is twice as fast for incremental debug builds
 if (UNIX)
-    set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=gold")
-    set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=gold")
+    set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld")
+    set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
 endif()
 
 # Require NCurses over Curses

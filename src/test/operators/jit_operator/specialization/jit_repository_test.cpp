@@ -38,7 +38,7 @@ TEST_F(JitRepositoryTest, ProvidesAccessToDefinedFunctions) {
   ASSERT_FALSE(repository.get_function("_ZN8DerivedD3barEv"));
 }
 
-TEST_F(JitRepositoryTest, CorrectlyParsesVTablesAcrossClassHierarchy) {
+TEST_F(JitRepositoryTest, DISABLED_CorrectlyParsesVTablesAcrossClassHierarchy /* #1881 */) {
   auto repository = JitRepository(std::string(&jit_llvm_bundle, jit_llvm_bundle_size));
 
   auto base_bar = repository.get_function("_ZN4Base3barEv");
