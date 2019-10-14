@@ -1,13 +1,13 @@
-# Configure server
-add_executable(
-    hyriseServer
-
-    server.cpp
-)
-target_link_libraries(
-    hyriseServer
-    hyrise
-)
+## Configure server
+#add_executable(
+#    hyriseServer
+#
+#    server.cpp
+#)
+#target_link_libraries(
+#    hyriseServer
+#    hyrise
+#)
 
 # Configure playground
 add_executable(
