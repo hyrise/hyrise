@@ -80,6 +80,13 @@ TEST_F(StorageChunkTest, UpdateMaxBeginCid) {
   EXPECT_EQ(mvcc_data_chunk->max_begin_cid, 3);
 }
 
+TEST_F(StorageChunkTest, UpdateMaxBeginCidFailsWithoutMVCCData) {
+  chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}));
+  if (HYRISE_DEBUG) {
+    EXPECT_THROW(chunk->update_max_begin_cid(), std::exception);
+  }
+}
+
 TEST_F(StorageChunkTest, UnknownColumnType) {
   // Exception will only be thrown in debug builds
   if (!HYRISE_DEBUG) GTEST_SKIP();

@@ -37,6 +37,13 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
   return snapshot_commit_id < end_cid && ((snapshot_commit_id >= begin_cid) != (row_tid == our_tid));
 }
 
+bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, CommitID snapshot_commit_id, const SharedScopedLockingPtr<MvccData>& mvcc_data) {
+  const auto max_begin_cid = mvcc_data->max_begin_cid;
+  if (!max_begin_cid) return false;
+
+  return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
+}
+
 Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
     : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
 
@@ -52,13 +59,6 @@ void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 
 std::shared_ptr<const Table> Validate::_on_execute() {
   Fail("Validate can't be called without a transaction context.");
-}
-
-bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, CommitID snapshot_commit_id, const SharedScopedLockingPtr<MvccData>& mvcc_data) {
-  const auto max_begin_cid = mvcc_data->max_begin_cid;
-  if (!max_begin_cid) return false;
-
-  return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
 
 std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
@@ -79,10 +79,16 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   auto job_end_chunk_id = ChunkID{0};
   auto job_row_count = uint32_t{0};
 
+  // Checking visibility on chunk level is an optimization to reduce the work done during validation.
+  // Instead of checking each row for visibility, we determine the largest begin CommitID (max_begin_cid) for an entire
+  // chunk and check this one for visibility. Determining max_begin_cid is not the responsibility of the Validate
+  // operator itself.
+  // There are more optimizations possible but right now, we are only applying this optimization if the chunk does not
+  // contain any invalid rows and if no delete operators are registered for the same transaction.
   bool check_visibility_on_chunk_level = true;
   const auto& rw_operators = transaction_context->read_write_operators();
 
-  // Not possible if a delete is registerd for the same transaction context
+  // Not allowed if a delete is registerd for the same transaction context
   for (const auto& rw_operator : rw_operators) {
     if (rw_operator->type() == OperatorType::Delete) {
       check_visibility_on_chunk_level = false;
@@ -156,6 +162,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
         if (check_visibility_on_chunk_level && is_entire_chunk_visible(referenced_chunk, snapshot_commit_id, mvcc_data)) {
+          // We can simply copy the whole PosList since it is entirely visible. Copying is usually forbidden for PosLists.
           const auto pos_list_size = pos_list_in.size();
           pos_list_out->resize(pos_list_size);
           std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
