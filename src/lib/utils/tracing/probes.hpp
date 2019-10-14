@@ -31,8 +31,7 @@ constexpr bool is_valid_name(const char* name) {
   provider##_##probe(__VA_ARGS__);                                                                                 \
   static_assert(true, "End DTRACE_PROBE statement with a semicolon")
 #else
-#define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
-  static_assert(true, "End DTRACE_PROBE statement with a semicolon")
+#define BUILD_PROBE_NAME(provider, probe, ...) static_assert(true, "End DTRACE_PROBE statement with a semicolon")
 #endif
 #endif
 
