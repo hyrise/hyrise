@@ -1,7 +1,8 @@
 #include "print.hpp"
 
-#include <algorithm>
 #include <boost/lexical_cast.hpp>
+
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <memory>

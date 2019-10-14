@@ -1,7 +1,8 @@
 #include "difference.hpp"
 
-#include <algorithm>
 #include <boost/lexical_cast.hpp>
+
+#include <algorithm>
 #include <iterator>
 #include <memory>
 #include <sstream>

@@ -124,6 +124,8 @@ target_include_directories(
     ${LZ4_LIBRARY_DIR}
 )
 
+target_compile_options(lz4 PRIVATE -fPIC)
+
 ## Build zstd
 set(ZSTD_LIBRARY_DIR zstd/lib)
 
