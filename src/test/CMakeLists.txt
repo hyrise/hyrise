@@ -312,9 +312,9 @@ add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
-# target_precompile_headers(hyrise PUBLIC
-#     <gtest/gtest.h>
-# )
+target_precompile_headers(hyriseTest PUBLIC
+    <gtest/gtest.h>
+)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})

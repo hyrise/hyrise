@@ -704,34 +704,17 @@ add_custom_command (
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
-add_library(hyrise STATIC ${SOURCES})
+add_library(hyrise SHARED ${SOURCES})
 
-
-
-
-
-
-
-
-
-
-
-# target_precompile_headers(hyrise PUBLIC
-#   all_parameter_variant.hpp
-#   all_type_variant.hpp
-#   storage/create_iterable_from_segment.hpp
-#   storage/table.hpp
-#   types.hpp
-# )
-
-
-
-
-
-
-
-
-
+# Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
+# of negatively affecting the build time
+target_precompile_headers(hyrise PUBLIC
+  all_parameter_variant.hpp
+  all_type_variant.hpp
+  storage/create_iterable_from_segment.hpp
+  storage/table.hpp
+  types.hpp
+)
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)
@@ -746,6 +729,7 @@ add_custom_target(resourceLink
     COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
 )
 
+# Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
