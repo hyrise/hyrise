@@ -111,11 +111,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   bool check_visibility_on_chunk_level = true;
   const auto& rw_operators = transaction_context->read_write_operators();
 
-  // Not allowed if any modifiying operator is registerd in the same transaction context
-  // if (rw_operators.empty())
-  //   check_visibility_on_chunk_level = true;
-
-  // Not allowed if a delete is registerd in the same transaction context
+  // Not possible if a delete is registerd for the same transaction context
   for (const auto& rw_operator : rw_operators) {
     if (rw_operator->type() == OperatorType::Delete) {
       check_visibility_on_chunk_level = false;
@@ -188,27 +184,11 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        // if (!mvcc_data->dirty && _is_entire_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
-        //   // *pos_list_out = pos_list_in.copy();
-        //   pos_list_out->resize(pos_list_in.size());
-        //   std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
-        //   // auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
-        //   // pos_list_out->resize(chunk_size);
-        //   // for (auto i = 0u; i < chunk_size; i++) {
-        //   //   (*pos_list_out)[i] = RowID{chunk_id, i};
-        //   // }
-        // } else {
-
-        if (check_visibility_on_chunk_level && _is_entire_chunk_visible(chunk_in, snapshot_commit_id, mvcc_data)) {
-          std::cout << "Case 1.1.1" << std::endl;
+        if (check_visibility_on_chunk_level && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id, mvcc_data)) {
           const auto pos_list_size = pos_list_in.size();
           pos_list_out->resize(pos_list_size);
-          // for (size_t row = 0; row < pos_list_size; ++row) {
-            // (*pos_list_out)[i] = RowID{chunk_id, i};
-          // }
           std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
         } else {
-          std::cout << "Case 1.1.2" << std::endl;
           for (auto row_id : pos_list_in) {
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               pos_list_out->emplace_back(row_id);
@@ -218,7 +198,6 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
 
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
-        std::cout << "Case 1.2.1" << std::endl;
         for (auto row_id : pos_list_in) {
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
@@ -246,17 +225,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
       pos_list_out->guarantee_single_chunk();
 
-      // if (!mvcc_data->dirty && _is_entire_chunk_visible(our_tid, snapshot_commit_id, *mvcc_data)) {
-      //   // return;
-      //   auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
-      //   pos_list_out->resize(chunk_size);
-      //   for (auto i = 0u; i < chunk_size; i++) {
-      //     (*pos_list_out)[i] = RowID{chunk_id, i};
-      //   }
-      // } else {
-
       if (check_visibility_on_chunk_level && _is_entire_chunk_visible(chunk_in, snapshot_commit_id, mvcc_data)) {
-        std::cout << "Case 2.1.1" << std::endl;
         const auto chunk_size = chunk_in->size();
         pos_list_out->resize(chunk_size);
         for (auto chunk_offset = 0u; chunk_offset < chunk_size; ++chunk_offset) {
@@ -264,7 +233,6 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         }
       } else {
         // Generate pos_list_out.
-        std::cout << "Case 2.1.2" << std::endl;
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
         for (auto i = 0u; i < chunk_size; i++) {
           if (opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
