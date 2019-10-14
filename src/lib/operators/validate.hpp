@@ -26,6 +26,8 @@ class Validate : public AbstractReadOnlyOperator {
   static bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, const TransactionID row_tid,
                              const CommitID begin_cid, const CommitID end_cid);
 
+  static bool is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, CommitID snapshot_commit_id, const SharedScopedLockingPtr<MvccData>& mvcc_data);
+
  private:
   void _validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
                         const ChunkID chunk_id_end, const TransactionID our_tid, const TransactionID snapshot_commit_id,
@@ -39,8 +41,6 @@ class Validate : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-
-  bool _is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, CommitID snapshot_commit_id, const SharedScopedLockingPtr<MvccData>& mvcc_data);
 };
 
 }  // namespace opossum

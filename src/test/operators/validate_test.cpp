@@ -29,7 +29,6 @@ class OperatorsValidateTest : public BaseTest {
     set_all_records_visible(*_test_table);
     set_record_invisible_for(*_test_table, RowID{ChunkID{1}, 0u}, 2u);
 
-    const auto _table2_name = "table_b";
     const auto _test_table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
 
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
@@ -49,6 +48,8 @@ class OperatorsValidateTest : public BaseTest {
   std::shared_ptr<Table> _test_table;
   std::shared_ptr<TableWrapper> _table_wrapper;
   std::shared_ptr<GetTable> _gt;
+
+  const std::string _table2_name = "table_b";
 };
 
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
@@ -124,6 +125,47 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
 
   EXPECT_EQ(validate2->get_output()->row_count(), 7);
   t2_context->commit();
+}
+
+TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithHigherBeginCid) {
+  Segments empty_segment = {std::make_shared<ValueSegment<int32_t>>()};
+  auto chunk = std::make_shared<Chunk>(empty_segment, std::make_shared<MvccData>(0, 0));
+  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, 1, mvcc_data));
+}
+
+TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithMaxBeginCid) {
+  auto begin_cid = CommitID{2};
+  auto vs_int = std::make_shared<ValueSegment<int32_t>>();
+  vs_int->append(4);
+  auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
+  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, 1, mvcc_data));
+}
+
+TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
+  auto begin_cid = CommitID{0};
+  auto vs_int = std::make_shared<ValueSegment<int32_t>>();
+  vs_int->append(4);
+  auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
+  chunk->increase_invalid_row_count(1);
+  chunk->update_max_begin_cid();
+  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, 1, mvcc_data));
+}
+
+TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
+  auto begin_cid = CommitID{0};
+  auto vs_int = std::make_shared<ValueSegment<int32_t>>();
+  vs_int->append(4);
+  auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
+  chunk->update_max_begin_cid();
+  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+
+  EXPECT_TRUE(Validate::is_entire_chunk_visible(chunk, 1, mvcc_data));
 }
 
 TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
