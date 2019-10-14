@@ -708,13 +708,15 @@ add_library(hyrise SHARED ${SOURCES})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time
-target_precompile_headers(hyrise PUBLIC
-  all_parameter_variant.hpp
-  all_type_variant.hpp
-  storage/create_iterable_from_segment.hpp
-  storage/table.hpp
-  types.hpp
-)
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    target_precompile_headers(hyrise PUBLIC
+      all_parameter_variant.hpp
+      all_type_variant.hpp
+      storage/create_iterable_from_segment.hpp
+      storage/table.hpp
+      types.hpp
+    )
+endif()
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)

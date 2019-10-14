@@ -88,11 +88,18 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -O0")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0")
 
+# Check for unity builds
+if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    if(DEFINED CMAKE_UNITY_BUILD)
+        message(FATAL_ERROR "-DCMAKE_UNITY_BUILD=ON was set, but your cmake version does not support unity builds.")
+    endif()
+endif()
+
 # On Linux, use the gold linker, which is twice as fast for incremental debug builds
 if (UNIX)
     set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=gold")
     set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=gold")
-endif ()
+endif()
 
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)

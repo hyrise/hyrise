@@ -63,6 +63,7 @@ try {
 
           // Configure the rest in parallel
           sh "mkdir clang-debug-tidy && cd clang-debug-tidy && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-unity && cd clang-debug-unity && cmake -DCI_BUILD=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON -DCMAKE_UNITY_BUILD=On -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
           mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 .. &\
@@ -134,6 +135,15 @@ try {
               sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
             } else {
               Utils.markStageSkippedForConditional("clangDebugRunShuffled")
+            }
+          }
+        }, clangDebugUnity: {
+          stage("clang-debug-unity") {
+            if (env.BRANCH_NAME == 'master' || full_ci) {
+              // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-unity && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            } else {
+              Utils.markStageSkippedForConditional("clangDebugUnity")
             }
           }
         }, clangDebugTidy: {
