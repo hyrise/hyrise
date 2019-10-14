@@ -38,34 +38,34 @@ TEST_F(JitRepositoryTest, ProvidesAccessToDefinedFunctions) {
   ASSERT_FALSE(repository.get_function("_ZN8DerivedD3barEv"));
 }
 
-TEST_F(JitRepositoryTest, DISABLED_CorrectlyParsesVTablesAcrossClassHierarchy /* #1881 */) {
-  auto repository = JitRepository(std::string(&jit_llvm_bundle, jit_llvm_bundle_size));
+// TEST_F(JitRepositoryTest, CorrectlyParsesVTablesAcrossClassHierarchy /* #1881 */) {
+//   auto repository = JitRepository(std::string(&jit_llvm_bundle, jit_llvm_bundle_size));
 
-  auto base_bar = repository.get_function("_ZN4Base3barEv");
-  auto derived_a_foo = repository.get_function("_ZN8DerivedA3fooEv");
-  auto derived_b_foo = repository.get_function("_ZN8DerivedB3fooEv");
-  auto derived_b_bar = repository.get_function("_ZN8DerivedB3barEv");
-  auto derived_c_bar = repository.get_function("_ZN8DerivedC3barEv");
-  auto derived_d_foo = repository.get_function("_ZN8DerivedD3fooEv");
+//   auto base_bar = repository.get_function("_ZN4Base3barEv");
+//   auto derived_a_foo = repository.get_function("_ZN8DerivedA3fooEv");
+//   auto derived_b_foo = repository.get_function("_ZN8DerivedB3fooEv");
+//   auto derived_b_bar = repository.get_function("_ZN8DerivedB3barEv");
+//   auto derived_c_bar = repository.get_function("_ZN8DerivedC3barEv");
+//   auto derived_d_foo = repository.get_function("_ZN8DerivedD3fooEv");
 
-  // Check that all vtables in the class hierarcy have been parsed correctly
-  // and that the correct implementation is returned for each class / index combination.
-  // See "src/test/llvm/virtual_methods.cpp" for the class hierarchy.
+//   // Check that all vtables in the class hierarcy have been parsed correctly
+//   // and that the correct implementation is returned for each class / index combination.
+//   // See "src/test/llvm/virtual_methods.cpp" for the class hierarchy.
 
-  ASSERT_FALSE(repository.get_vtable_entry("4Base", 0));
-  ASSERT_EQ(repository.get_vtable_entry("4Base", 1), base_bar);
+//   ASSERT_FALSE(repository.get_vtable_entry("4Base", 0));
+//   ASSERT_EQ(repository.get_vtable_entry("4Base", 1), base_bar);
 
-  ASSERT_EQ(repository.get_vtable_entry("8DerivedA", 0), derived_a_foo);
-  ASSERT_EQ(repository.get_vtable_entry("8DerivedA", 1), base_bar);
+//   ASSERT_EQ(repository.get_vtable_entry("8DerivedA", 0), derived_a_foo);
+//   ASSERT_EQ(repository.get_vtable_entry("8DerivedA", 1), base_bar);
 
-  ASSERT_EQ(repository.get_vtable_entry("8DerivedB", 0), derived_b_foo);
-  ASSERT_EQ(repository.get_vtable_entry("8DerivedB", 1), derived_b_bar);
+//   ASSERT_EQ(repository.get_vtable_entry("8DerivedB", 0), derived_b_foo);
+//   ASSERT_EQ(repository.get_vtable_entry("8DerivedB", 1), derived_b_bar);
 
-  ASSERT_FALSE(repository.get_vtable_entry("8DerivedC", 0));
-  ASSERT_EQ(repository.get_vtable_entry("8DerivedC", 1), derived_c_bar);
+//   ASSERT_FALSE(repository.get_vtable_entry("8DerivedC", 0));
+//   ASSERT_EQ(repository.get_vtable_entry("8DerivedC", 1), derived_c_bar);
 
-  ASSERT_EQ(repository.get_vtable_entry("8DerivedD", 0), derived_d_foo);
-  ASSERT_EQ(repository.get_vtable_entry("8DerivedD", 1), derived_c_bar);
-}
+//   ASSERT_EQ(repository.get_vtable_entry("8DerivedD", 0), derived_d_foo);
+//   ASSERT_EQ(repository.get_vtable_entry("8DerivedD", 1), derived_c_bar);
+// }
 
 }  // namespace opossum
