@@ -5,9 +5,9 @@
 #include <utility>
 #include <vector>
 
-#include "operators/delete.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
+#include "operators/delete.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
@@ -37,7 +37,8 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
   return snapshot_commit_id < end_cid && ((snapshot_commit_id >= begin_cid) != (row_tid == our_tid));
 }
 
-bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, CommitID snapshot_commit_id, const SharedScopedLockingPtr<MvccData>& mvcc_data) {
+bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, CommitID snapshot_commit_id,
+                                       const SharedScopedLockingPtr<MvccData>& mvcc_data) {
   const auto max_begin_cid = mvcc_data->max_begin_cid;
   if (!max_begin_cid) return false;
 
@@ -161,7 +162,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (check_visibility_on_chunk_level && is_entire_chunk_visible(referenced_chunk, snapshot_commit_id, mvcc_data)) {
+        if (check_visibility_on_chunk_level &&
+            is_entire_chunk_visible(referenced_chunk, snapshot_commit_id, mvcc_data)) {
           // We can simply copy the whole PosList since it is entirely visible. Copying is usually forbidden for PosLists.
           const auto pos_list_size = pos_list_in.size();
           pos_list_out->resize(pos_list_size);
