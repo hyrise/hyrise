@@ -50,7 +50,8 @@ class MinMaxFilterTest<pmr_string> : public ::testing::Test {
   pmr_string _before_range, _min_value, _max_value, _after_range, _in_between, _in_between2;
 };
 
-TYPED_TEST_SUITE(MinMaxFilterTest, ::testing::Types<int, float, double, pmr_string>, );  // NOLINT(whitespace/parens)
+using MixMaxFilterTypes = ::testing::Types<int, float, double, pmr_string>;
+TYPED_TEST_SUITE(MinMaxFilterTest, MixMaxFilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(MinMaxFilterTest, CanPruneOnBounds) {
   auto filter = std::make_unique<MinMaxFilter<TypeParam>>(this->_values.front(), this->_values.back());

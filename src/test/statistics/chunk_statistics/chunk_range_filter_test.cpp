@@ -15,7 +15,7 @@
 namespace opossum {
 
 template <typename T>
-class RangeFilterTest : public ::testing::Test {
+class ChunkRangeFilterTest : public ::testing::Test {
  protected:
   void SetUp() override {
     // Manually created vector. Largest exlusive gap (only gap when gap_count == 1) will
@@ -36,9 +36,10 @@ class RangeFilterTest : public ::testing::Test {
   T _value_smaller_than_minimum, _min_value, _max_value, _value_larger_than_maximum, _value_in_gap;
 };
 
-TYPED_TEST_SUITE(RangeFilterTest, ::testing::Types<int, float, double>, );  // NOLINT(whitespace/parens)
+using ChunkRangeFilterTypes = ::testing::Types<int, float, double>;
+TYPED_TEST_SUITE(ChunkRangeFilterTest, ChunkRangeFilterTypes, );  // NOLINT(whitespace/parens)
 
-TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
+TYPED_TEST(ChunkRangeFilterTest, ValueRangeTooLarge) {
   const auto lowest = std::numeric_limits<TypeParam>::lowest();
   const auto max = std::numeric_limits<TypeParam>::max();
   // Create vector with a huge gap in the middle whose length exceeds the type's limits.
@@ -54,7 +55,7 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   EXPECT_TRUE(filter->can_prune(PredicateCondition::Equals, static_cast<TypeParam>(lowest * 0.95)));
 }
 
-TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
+TYPED_TEST(ChunkRangeFilterTest, ThrowOnUnsortedData) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   const pmr_vector<TypeParam> test_vector{std::numeric_limits<TypeParam>::max(),
@@ -65,7 +66,7 @@ TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
 }
 
 // a single range is basically a min/max filter
-TYPED_TEST(RangeFilterTest, SingleRange) {
+TYPED_TEST(ChunkRangeFilterTest, SingleRange) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 1);
 
   for (const auto& value : this->_values) {
@@ -86,7 +87,7 @@ TYPED_TEST(RangeFilterTest, SingleRange) {
 }
 
 // create range filters with varying number of ranges/gaps
-TYPED_TEST(RangeFilterTest, MultipleRanges) {
+TYPED_TEST(ChunkRangeFilterTest, MultipleRanges) {
   const auto first_gap_min = TypeParam{104};
   const auto first_gap_max = TypeParam{123455};
 
@@ -137,7 +138,7 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
 }
 
 // create more ranges than distinct values in the test data
-TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
+TYPED_TEST(ChunkRangeFilterTest, MoreRangesThanValues) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, 10'000);
 
   for (const auto& value : this->_values) {
@@ -154,7 +155,7 @@ TYPED_TEST(RangeFilterTest, MoreRangesThanValues) {
 
 // this test checks the correct pruning on the bounds (min/max) of the test data for various predicate conditions
 // for better understanding, see min_max_filter_test.cpp
-TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
+TYPED_TEST(ChunkRangeFilterTest, CanPruneOnBounds) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   for (const auto& value : this->_values) {
@@ -193,7 +194,7 @@ TYPED_TEST(RangeFilterTest, CanPruneOnBounds) {
 }
 
 // Test larger value ranges.
-TYPED_TEST(RangeFilterTest, Between) {
+TYPED_TEST(ChunkRangeFilterTest, Between) {
   const auto filter = RangeFilter<TypeParam>::build_filter(this->_values);
 
   // This one has bounds in gaps, but cannot prune.
@@ -218,7 +219,7 @@ TYPED_TEST(RangeFilterTest, Between) {
 }
 
 // Test larger value ranges.
-TYPED_TEST(RangeFilterTest, LargeValueRange) {
+TYPED_TEST(ChunkRangeFilterTest, LargeValueRange) {
   const auto lowest = std::numeric_limits<TypeParam>::lowest();
   const auto max = std::numeric_limits<TypeParam>::max();
 
@@ -254,7 +255,7 @@ TYPED_TEST(RangeFilterTest, LargeValueRange) {
 }
 
 // Test predicates which are not supported by the range filter
-TEST(RangeFilterTest, DoNotPruneUnsupportedPredicates) {
+TEST(ChunkRangeFilterTest, DoNotPruneUnsupportedPredicates) {
   const pmr_vector<int> values{-1000, -900, 900, 1000};
   const auto filter = RangeFilter<int>::build_filter(values);
 
