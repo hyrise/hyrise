@@ -145,7 +145,6 @@ set(
     statistics/cardinality_estimator_test.cpp
     statistics/attribute_statistics_test.cpp
     statistics/join_graph_statistics_cache_test.cpp
-    statistics/chunk_statistics/chunk_range_filter_test.cpp
     statistics/statistics_objects/equal_distinct_count_histogram_test.cpp
     statistics/statistics_objects/generic_histogram_test.cpp
     statistics/statistics_objects/string_histogram_domain_test.cpp
