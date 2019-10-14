@@ -38,8 +38,7 @@ class RangeFilterTest : public ::testing::Test {
   T _value_smaller_than_minimum, _min_value, _max_value, _value_larger_than_maximum, _value_in_gap;
 };
 
-using FilterTypes = ::testing::Types<int, float, double>;
-TYPED_TEST_SUITE(RangeFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(RangeFilterTest, ::testing::Types<int, float, double>, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   const auto lowest = std::numeric_limits<TypeParam>::lowest();
