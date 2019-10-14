@@ -63,7 +63,7 @@ try {
 
           // Configure the rest in parallel
           sh "mkdir clang-debug-tidy && cd clang-debug-tidy && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_CLANG_TIDY=ON .. &\
-          mkdir clang-debug-unity && cd clang-debug-unity && cmake -DCI_BUILD=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON -DCMAKE_UNITY_BUILD=On -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-unity && cd clang-debug-unity && /cmake-3.16 -DCI_BUILD=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON -DCMAKE_UNITY_BUILD=On -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
           mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 .. &\
