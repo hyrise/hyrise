@@ -17,6 +17,9 @@ void AbstractReadWriteOperator::execute() {
   DebugAssert(transaction_context()->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
 
+  transaction_context()->register_read_write_operator(
+      std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
+
   try {
     AbstractOperator::execute();
   } catch (...) {
@@ -30,10 +33,6 @@ void AbstractReadWriteOperator::execute() {
   if (_state == ReadWriteOperatorState::Failed) return;
 
   _state = ReadWriteOperatorState::Executed;
-}
-
-void AbstractReadWriteOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
-  this->transaction_context()->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 }
 
 void AbstractReadWriteOperator::commit_records(const CommitID commit_id) {
