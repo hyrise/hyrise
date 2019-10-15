@@ -321,6 +321,7 @@ if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
     # Exclude files that use gmock as these are incompatible with unity builds and pre-compiled headers
     set_source_files_properties(
         server/server_session_test.cpp
+        operators/jit_operator_wrapper_test.cpp
         PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON SKIP_PRECOMPILE_HEADERS ON
     )
 endif()
