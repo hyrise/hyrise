@@ -6,29 +6,27 @@ namespace opossum {
 // Mock JitOperator that records whether tuples are passed to it
 class MockSink : public AbstractJittable {
  public:
-  std::string description() const final { return "MockSink"; }
+  std::string description() const final;
 
-  void reset() const { _consume_was_called = false; }
+  void reset() const;
 
-  bool consume_was_called() const { return _consume_was_called; }
+  bool consume_was_called() const;
 
  private:
-  void _consume(JitRuntimeContext& context) const final { _consume_was_called = true; }
+  void _consume(JitRuntimeContext& context) const final;
 
   // Must be static, since _consume is const
   static bool _consume_was_called;
 };
 
-bool MockSink::_consume_was_called = false;
-
 // Mock JitOperator that passes on individual tuples
 class MockSource : public AbstractJittable {
  public:
-  std::string description() const final { return "MockSource"; }
+  std::string description() const final;
 
-  void emit(JitRuntimeContext& context) { _emit(context); }
+  void emit(JitRuntimeContext& context);
 
  private:
-  void _consume(JitRuntimeContext& context) const final {}
+  void _consume(JitRuntimeContext& context);
 };
 }  // namespace opossum
