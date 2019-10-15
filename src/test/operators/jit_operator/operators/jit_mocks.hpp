@@ -1,5 +1,7 @@
 #pragma once
 
+#include "operators/jit_operator/operators/abstract_jittable.hpp"
+
 namespace opossum {
   // Mock JitOperator that records whether tuples are passed to it
   class MockSink : public AbstractJittable {
