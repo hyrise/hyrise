@@ -1,4 +1,5 @@
 #include "../../../base_test.hpp"
+#include "jit_mocks.hpp"
 #include "operators/jit_operator/operators/jit_validate.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
