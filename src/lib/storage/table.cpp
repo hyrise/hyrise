@@ -118,7 +118,7 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
   auto last_chunk = !_chunks.empty() ? get_chunk(ChunkID{chunk_count() - 1}) : nullptr;
   if (!last_chunk || last_chunk->size() >= _max_chunk_size) {
     // One chunk reached its capacity just now. We prepare this chunk for MVCC optimizations.
-    if (chunk_count() > 0 && _use_mvcc == UseMvcc::Yes) {
+    if (last_chunk && _use_mvcc == UseMvcc::Yes) {
       last_chunk->update_max_begin_cid();
     }
 

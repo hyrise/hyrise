@@ -84,12 +84,12 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   // Instead of checking each row for visibility, we determine the largest begin CommitID (max_begin_cid) for an entire
   // chunk and check this one for visibility. Determining max_begin_cid is not the responsibility of the Validate
   // operator itself.
-  // There are more optimizations possible but right now, we are only applying this optimization if the chunk does not
+  // There are more possible optimizations but right now, we are only applying this optimization if the chunk does not
   // contain any invalid rows and if no delete operators are registered for the same transaction.
   bool check_visibility_on_chunk_level = true;
-  const auto& rw_operators = transaction_context->read_write_operators();
 
   // Not allowed if a delete is registerd for the same transaction context
+  const auto& rw_operators = transaction_context->read_write_operators();
   for (const auto& rw_operator : rw_operators) {
     if (rw_operator->type() == OperatorType::Delete) {
       check_visibility_on_chunk_level = false;
