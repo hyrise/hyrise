@@ -6,6 +6,19 @@
 
 namespace opossum {
 
+class JitAggregateTest : public BaseTest {
+ protected:
+  void SetUp() override {
+    // Create a chain of two operators.
+    _source = std::make_shared<MockSource>();
+    _aggregate = std::make_shared<JitAggregate>();
+    _source->set_next_operator(_aggregate);
+  }
+
+  std::shared_ptr<MockSource> _source;
+  std::shared_ptr<JitAggregate> _aggregate;
+};
+
 // Make sure that groupby columns are properly added to the output table
 TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
   const auto column_definitions = TableColumnDefinitions({{"a", DataType::Int, false},
