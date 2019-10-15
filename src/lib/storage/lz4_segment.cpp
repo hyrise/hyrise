@@ -259,7 +259,10 @@ std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
    * decompressed block.
    */
   if (!cached_block_index || block_index != *cached_block_index) {
+    // std::cout << "cache miss" << std::endl;
     _decompress_block_to_bytes(block_index, cached_block);
+  } else if (cached_block_index && block_index == *cached_block_index) {
+    // std::cout << "cache hit" << std::endl;
   }
 
   const auto value_offset = (memory_offset % _block_size) / sizeof(T);
@@ -307,7 +310,10 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
      * decompressed block.
      */
     if (!cached_block_index || start_block != *cached_block_index) {
+      // std::cout << "cache miss" << std::endl;
       _decompress_block_to_bytes(start_block, cached_block);
+    } else if (cached_block_index && start_block == *cached_block_index) {
+      // std::cout << "cache hit" << std::endl;
     }
 
     // Extract the string from the block via the offsets.

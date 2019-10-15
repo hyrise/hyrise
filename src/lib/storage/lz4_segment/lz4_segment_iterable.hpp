@@ -39,17 +39,56 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     using ValueIterator = typename std::vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
+    const auto position_filter_size = position_filter->size();
+
+    //////////////////////////////////////
+    //////////////////////////////////////
+    //////////////////////////////////////
+
+    // std::vector<std::pair<RowID, size_t>> position_filter_indexed;
+    // position_filter_indexed.reserve(position_filter_size);
+    // for (auto index = size_t{0}; index < position_filter_size; ++index) {
+    //   const auto& row_id = (*position_filter)[index];
+    //   position_filter_indexed[index] = {row_id, index};
+    // }
+    // std::sort(position_filter_indexed.begin(), position_filter_indexed.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    // auto decompressed_filtered_segment = std::vector<ValueType>(position_filter->size());
+    // // if (!position_filter_is_sorted) {
+    // //   std::cout << "----------------------> " << position_filter_size << ": \t";
+    // // }
+    // for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+    //   const auto& position = (*position_filter)[index];
+    //   // if (!position_filter_is_sorted) std::cout << position.chunk_offset << " ";
+    //   // NOLINTNEXTLINE
+    //   auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+    //   decompressed_filtered_segment[index] = std::move(value);
+    //   cached_block_index = block_index;
+    // }
+
+    //////////////////////////////////////
+    //////////////////////////////////////
+    //////////////////////////////////////
+
+    // const auto position_filter_is_sorted = std::is_sorted(position_filter->cbegin(), position_filter->cend());
 
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter->size());
-    auto cached_block = std::vector<char>{};
-    auto cached_block_index = std::optional<size_t>{};
-    for (auto index = size_t{0u}; index < position_filter->size(); ++index) {
+    // if (!position_filter_is_sorted) {
+    //   std::cout << "----------------------> " << position_filter_size << ": \t";
+    //   const auto [min, max] = std::minmax_element(position_filter->cbegin(), position_filter->cend());
+    //   std::cout << "min: " << (*min).chunk_offset << "\t max: " << (*max).chunk_offset << std::endl;
+    // }
+
+    for (auto index = size_t{0u}; index < position_filter_size; ++index) {
       const auto& position = (*position_filter)[index];
       // NOLINTNEXTLINE
       auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
       decompressed_filtered_segment[index] = std::move(value);
       cached_block_index = block_index;
     }
+    //////////////////////////////////////
+    //////////////////////////////////////
+    //////////////////////////////////////
 
     std::optional<NullValueIterator> null_opt_value_iter;
     auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), _segment.null_values() ? _segment.null_values()->cbegin() : null_opt_value_iter,
@@ -64,6 +103,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
  private:
   const LZ4Segment<T>& _segment;
+  mutable std::vector<char> cached_block;
+  mutable std::optional<size_t> cached_block_index = std::nullopt;
 
  private:
   template <typename ValueIterator>
