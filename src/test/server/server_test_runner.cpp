@@ -34,10 +34,14 @@ class ServerTestRunner : public BaseTest {
 
   void TearDown() override {
     _server->shutdown();
+
+    // Give the server time to shut down gracefully before force-closing the socket it's working on
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     _server_thread->join();
   }
 
-  std::unique_ptr<Server> _server = std::make_unique<Server>(boost::asio::ip::address(), 0, false);  // Port 0 to select random open port
+  std::unique_ptr<Server> _server = std::make_unique<Server>(
+      boost::asio::ip::address(), 0, SendExecutionInfo::No);  // Port 0 to select random open port
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 

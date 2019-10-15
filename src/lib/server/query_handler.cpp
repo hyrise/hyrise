@@ -7,7 +7,8 @@
 
 namespace opossum {
 
-ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql, const bool debug_note) {
+ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql,
+                                                    const SendExecutionInfo send_execution_info) {
   // A simple query command invalidates unnamed statements
   // See: https://postgresql.org/docs/11/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
@@ -27,14 +28,14 @@ ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql, cons
     execution_info.result_table = result_table;
     execution_info.root_operator = sql_pipeline->get_physical_plans().front()->type();
 
-    if (debug_note) {
+    if (send_execution_info == SendExecutionInfo::Yes) {
       std::stringstream stream;
       stream << sql_pipeline->metrics();
       execution_info.execution_information = stream.str();
     }
   } else {
     const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();
-    execution_info.error = "Error during pipeline execution! Failed statement: " + failed_statement;
+    execution_info.error = "Error during pipeline execution. Failed statement: " + failed_statement;
   }
   return execution_info;
 }

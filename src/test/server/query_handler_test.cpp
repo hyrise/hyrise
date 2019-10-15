@@ -15,7 +15,7 @@ class QueryHandlerTest : public BaseTest {
 
 TEST_F(QueryHandlerTest, ExecutePipeline) {
   const std::string query = "SELECT 1;";
-  const auto& result = QueryHandler::execute_pipeline(query, true);
+  const auto& result = QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes);
 
   EXPECT_TRUE(result.error.empty());
   EXPECT_EQ(result.result_table->column_count(), 1);
@@ -26,7 +26,7 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
 
 TEST_F(QueryHandlerTest, ExecutePipelineInvalidStatement) {
   const std::string query = "SELECT * FROM;";
-  const auto& result = QueryHandler::execute_pipeline(query, true);
+  const auto& result = QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes);
 
   EXPECT_FALSE(result.error.empty());
   EXPECT_FALSE(result.result_table);
@@ -101,7 +101,7 @@ TEST_F(QueryHandlerTest, CorrectlyInvalidateStatements) {
 
   // Simple queries invalidate an existing plan as well
   const std::string query = "SELECT 1;";
-  QueryHandler::execute_pipeline(query, true);
+  QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes);
 
   EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan(""));
 }

@@ -48,7 +48,7 @@ TEST_F(RingBufferTest, ReadValues) {
 TEST_F(RingBufferTest, ReadString) {
   const std::string original_content = {"somerandom\0string\0", 19};
   _mocked_socket->write(original_content);
-  EXPECT_EQ(_read_buffer->get_string(4, false), "some");
+  EXPECT_EQ(_read_buffer->get_string(4, IgnoreNullTerminator::Yes), "some");
   EXPECT_EQ(_read_buffer->get_string(), "random");
   EXPECT_EQ(_read_buffer->get_string(7), "string");
   const std::string buffer_content = {_read_buffer->data(), 19};
@@ -58,7 +58,7 @@ TEST_F(RingBufferTest, ReadString) {
 TEST_F(RingBufferTest, ReadLargeString) {
   const std::string original_content = std::string(BUFFER_SIZE + 2u, 'a');
   _mocked_socket->write(original_content);
-  EXPECT_EQ(_read_buffer->get_string(original_content.size(), false), original_content);
+  EXPECT_EQ(_read_buffer->get_string(original_content.size(), IgnoreNullTerminator::Yes), original_content);
   _mocked_socket->write(original_content);
   _mocked_socket->write(std::string{"\0", 1});
   EXPECT_EQ(_read_buffer->get_string(), original_content);
@@ -96,7 +96,7 @@ TEST_F(RingBufferTest, WriteValues) {
 
 TEST_F(RingBufferTest, WriteString) {
   _write_buffer->put_string("somerandom");
-  _write_buffer->put_string("string", false);
+  _write_buffer->put_string("string", IgnoreNullTerminator::Yes);
   const std::string whole_content = {"somerandom\0string", 17};
   const std::string buffer_content = {_write_buffer->data(), 17};
   EXPECT_EQ(buffer_content, whole_content);
@@ -106,7 +106,7 @@ TEST_F(RingBufferTest, WriteString) {
 
 TEST_F(RingBufferTest, WriteLargeString) {
   const std::string original_content = std::string(BUFFER_SIZE + 2u, 'a');
-  _write_buffer->put_string(original_content, false);
+  _write_buffer->put_string(original_content, IgnoreNullTerminator::Yes);
   _write_buffer->flush();
   EXPECT_EQ(_mocked_socket->read(), original_content);
 }

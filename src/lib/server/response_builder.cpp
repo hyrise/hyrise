@@ -13,8 +13,8 @@ void ResponseBuilder::build_and_send_row_description(
     column_lengths_total += column_name.size();
   }
 
-  postgres_protocol_handler->set_row_description_header(column_lengths_total,
-                                                        static_cast<uint16_t>(table->column_count()));
+  postgres_protocol_handler->send_row_description_header(column_lengths_total,
+                                                         static_cast<uint16_t>(table->column_count()));
 
   for (ColumnID column_id{0u}; column_id < table->column_count(); ++column_id) {
     uint32_t object_id;
@@ -75,7 +75,7 @@ void ResponseBuilder::build_and_send_query_response(
         }
         attribute_strings[current_segment] = std::move(string_value);
       }
-      postgres_protocol_handler->send_data_row(attribute_strings, string_lengths);
+      postgres_protocol_handler->send_values_as_strings(attribute_strings, string_lengths);
     }
   }
 }

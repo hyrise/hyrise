@@ -37,14 +37,14 @@ TEST_F(PostgresProtocolHandlerTest, ReadStartupMessage) {
   // No SSL request, just length (8 Byte) and no SSL (0)
   // Values must be converted to network byte order
   _mocked_socket->write(std::string{'\0', '\0', '\0', '\b', '\0', '\0', '\0', '\0'});
-  EXPECT_EQ(_protocol_handler->read_startup_packet(), 0);
+  EXPECT_EQ(_protocol_handler->read_startup_packet_header(), 0);
 
   // SSL request contains length (8 B) and SSL request code 80877103
   _mocked_socket->write(std::string{'\0', '\0', '\0', '\b', '\x04', '\xd2', '\x16', '\x2f'});
   // Server will wait for new message with authentication details. Message contains length (12 B), protocol (0) and
   // body (4 B). No body provided here, since we throw it away anyway.
   _mocked_socket->write(std::string{'\0', '\0', '\0', '\f', '\0', '\0', '\0', '\0'});
-  EXPECT_EQ(_protocol_handler->read_startup_packet(), 4);
+  EXPECT_EQ(_protocol_handler->read_startup_packet_header(), 4);
   const std::string file_content = _mocked_socket->read();
   EXPECT_EQ(file_content.back(), 'N');
 }
@@ -55,7 +55,7 @@ TEST_F(PostgresProtocolHandlerTest, GetMessageType) {
 }
 
 TEST_F(PostgresProtocolHandlerTest, SendAuthentication) {
-  _protocol_handler->send_authentication();
+  _protocol_handler->send_authentication_response();
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
@@ -143,8 +143,8 @@ TEST_F(PostgresProtocolHandlerTest, SendDataRow) {
   const std::string value1 = "some";
   const std::string value2 = "string";
 
-  _protocol_handler->send_data_row({value1, value2, std::nullopt},
-                                   static_cast<uint32_t>(value1.size() + value2.size()));
+  _protocol_handler->send_values_as_strings({value1, value2, std::nullopt},
+                                            static_cast<uint32_t>(value1.size() + value2.size()));
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
@@ -174,7 +174,7 @@ TEST_F(PostgresProtocolHandlerTest, SendDataRow) {
 TEST_F(PostgresProtocolHandlerTest, SetRowDescriptionHeader) {
   const auto total_column_name_length = 42;
   const auto column_count = 5;
-  _protocol_handler->set_row_description_header(total_column_name_length, column_count);
+  _protocol_handler->send_row_description_header(total_column_name_length, column_count);
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 

@@ -38,7 +38,8 @@ std::string ReadBuffer<SocketType>::get_string() {
 }
 
 template <typename SocketType>
-std::string ReadBuffer<SocketType>::get_string(const size_t string_length, const bool has_null_terminator) {
+std::string ReadBuffer<SocketType>::get_string(const size_t string_length,
+                                               const IgnoreNullTerminator ignore_null_terminator) {
   std::string result = "";
   result.reserve(string_length);
 
@@ -57,7 +58,7 @@ std::string ReadBuffer<SocketType>::get_string(const size_t string_length, const
   }
 
   // Ignore last character if it is \0
-  if (has_null_terminator) {
+  if (ignore_null_terminator == IgnoreNullTerminator::No) {
     result.pop_back();
   }
 
@@ -111,7 +112,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
 }
 
 template <typename SocketType>
-void WriteBuffer<SocketType>::put_string(const std::string& value, const bool terminate) {
+void WriteBuffer<SocketType>::put_string(const std::string& value, const IgnoreNullTerminator ignore_null_terminator) {
   auto position_in_string = 0u;
 
   // Use available space first
@@ -131,7 +132,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const bool te
   }
 
   // Add string terminator if necessary
-  if (terminate) {
+  if (ignore_null_terminator == IgnoreNullTerminator::No) {
     _flush_if_necessary(sizeof(char));
     *_current_position = '\0';
     _current_position++;

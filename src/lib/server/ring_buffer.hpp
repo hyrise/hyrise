@@ -3,6 +3,7 @@
 #include <array>
 #include <boost/asio.hpp>  // NOLINT
 #include "postgres_message_types.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -127,7 +128,8 @@ class ReadBuffer : public RingBuffer {
   }
 
   // String functions
-  std::string get_string(const size_t string_length, const bool has_null_terminator = true);
+  std::string get_string(const size_t string_length,
+                         const IgnoreNullTerminator ignore_null_terminator = IgnoreNullTerminator::No);
   std::string get_string();
 
   PostgresMessageType get_message_type();
@@ -147,7 +149,8 @@ class WriteBuffer : public RingBuffer {
   void flush(const size_t bytes_required = 0);
 
   // Put string into the buffer. If the string is longer than the buffer itself the buffer will flush automatically.
-  void put_string(const std::string& value, const bool terminate = true);
+  void put_string(const std::string& value,
+                  const IgnoreNullTerminator ignore_null_terminator = IgnoreNullTerminator::No);
 
   // Put numerical values into the buffer. Values will be converted into the correct byte order if necessary.
   template <typename T, typename std::enable_if_t<std::is_same_v<uint32_t, T> || std::is_same_v<int32_t, T>, int> = 0>

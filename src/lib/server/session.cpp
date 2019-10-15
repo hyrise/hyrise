@@ -6,14 +6,14 @@
 
 namespace opossum {
 
-Session::Session(boost::asio::io_service& io_service, const bool send_execution_info)
+Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info)
     : _socket(std::make_shared<Socket>(io_service)),
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
       _send_execution_info(send_execution_info) {}
 
 std::shared_ptr<Socket> Session::get_socket() { return _socket; }
 
-void Session::start() {
+void Session::run() {
   _socket->set_option(boost::asio::ip::tcp::no_delay(true));
   _establish_connection();
   while (!_terminate_session) {
@@ -22,11 +22,11 @@ void Session::start() {
 }
 
 void Session::_establish_connection() {
-  const auto body_length = _postgres_protocol_handler->read_startup_packet();
+  const auto body_length = _postgres_protocol_handler->read_startup_packet_header();
 
   // Currently, the information available in the start up packet body (such as db name, user name) is ignored
   _postgres_protocol_handler->read_startup_packet_body(body_length);
-  _postgres_protocol_handler->send_authentication();
+  _postgres_protocol_handler->send_authentication_response();
   _postgres_protocol_handler->send_parameter("server_version", "11");
   _postgres_protocol_handler->send_parameter("server_encoding", "UTF8");
   _postgres_protocol_handler->send_parameter("client_encoding", "UTF8");
@@ -88,7 +88,7 @@ void Session::_handle_simple_query() {
       ResponseBuilder::build_and_send_query_response(execution_information.result_table, _postgres_protocol_handler);
       row_count = execution_information.result_table->row_count();
     }
-    if (_send_execution_info) {
+    if (_send_execution_info == SendExecutionInfo::Yes) {
       _postgres_protocol_handler->send_execution_info(execution_information.execution_information);
     }
     _postgres_protocol_handler->send_command_complete(
