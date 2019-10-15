@@ -1,34 +1,10 @@
 #include <random>
 
 #include "base_test.hpp"
+#include "jit_mocks.hpp"
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
 
 namespace opossum {
-
-// Mock JitOperator that passes individual tuples into the chain.
-// This operator is used as the tuple source in this test.
-class MockSource : public AbstractJittable {
- public:
-  std::string description() const final { return "MockOperator"; }
-
-  void emit(JitRuntimeContext& context) { _emit(context); }
-
- private:
-  void _consume(JitRuntimeContext& context) const final {}
-};
-
-class JitAggregateTest : public BaseTest {
- protected:
-  void SetUp() override {
-    // Create a chain of two operators.
-    _source = std::make_shared<MockSource>();
-    _aggregate = std::make_shared<JitAggregate>();
-    _source->set_next_operator(_aggregate);
-  }
-
-  std::shared_ptr<MockSource> _source;
-  std::shared_ptr<JitAggregate> _aggregate;
-};
 
 // Make sure that groupby columns are properly added to the output table
 TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
