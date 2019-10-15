@@ -37,8 +37,8 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
   return snapshot_commit_id < end_cid && ((snapshot_commit_id >= begin_cid) != (row_tid == our_tid));
 }
 
-bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, CommitID snapshot_commit_id,
-                                       const SharedScopedLockingPtr<MvccData>& mvcc_data) {
+bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id) {
+  const auto mvcc_data = chunk->mvcc_data();
   const auto max_begin_cid = mvcc_data->max_begin_cid;
   if (!max_begin_cid) return false;
 
@@ -80,19 +80,19 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   auto job_end_chunk_id = ChunkID{0};
   auto job_row_count = uint32_t{0};
 
-  // Checking visibility on chunk level is an optimization to reduce the work done during validation.
-  // Instead of checking each row for visibility, we determine the largest begin CommitID (max_begin_cid) for an entire
-  // chunk and check this one for visibility. Determining max_begin_cid is not the responsibility of the Validate
-  // operator itself.
-  // There are more possible optimizations but right now, we are only applying this optimization if the chunk does not
-  // contain any invalid rows and if no delete operators are registered for the same transaction.
-  bool check_visibility_on_chunk_level = true;
+  // Instead of checking each row for visibility individually, the visbility can be checked on chunk level.
+  // Simply said, if the youngest row in a chunk is visible, all other rows are older and hence visible, too. This is
+  // possible if the largest begin CommitID (max_begin_cid) for an entire chunk is known. Determining max_begin_cid is
+  // not the responsibility of the Validate operator itself.
+  // We are only applying this optimization if the chunk does not contain any invalid rows and if no delete operators
+  // are registered for the same transaction.
+  bool can_use_chunk_shortcut = true;
 
   // Not allowed if a delete is registerd for the same transaction context
-  const auto& rw_operators = transaction_context->read_write_operators();
-  for (const auto& rw_operator : rw_operators) {
-    if (rw_operator->type() == OperatorType::Delete) {
-      check_visibility_on_chunk_level = false;
+  const auto& read_write_operators = transaction_context->read_write_operators();
+  for (const auto& read_write_operator : read_write_operators) {
+    if (read_write_operator->type() == OperatorType::Delete) {
+      can_use_chunk_shortcut = false;
       break;
     }
   }
@@ -110,11 +110,11 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       if (execute_directly) {
         _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
-                         output_mutex, check_visibility_on_chunk_level);
+                         output_mutex, can_use_chunk_shortcut);
       } else {
         jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
           _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
-                           output_mutex, check_visibility_on_chunk_level);
+                           output_mutex, can_use_chunk_shortcut);
         }));
         jobs.back()->schedule();
 
@@ -135,7 +135,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
                                 const TransactionID snapshot_commit_id,
                                 std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex,
-                                const bool check_visibility_on_chunk_level) {
+                                const bool can_use_chunk_shortcut) {
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
@@ -162,8 +162,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (check_visibility_on_chunk_level &&
-            is_entire_chunk_visible(referenced_chunk, snapshot_commit_id, mvcc_data)) {
+        if (can_use_chunk_shortcut &&
+            is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
           // We can simply copy the whole PosList since it is entirely visible. Copying is forbidden for PosLists.
           // Because of that, we use memcpy here for now.
           const auto pos_list_size = pos_list_in.size();
@@ -199,14 +199,14 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         output_segments.push_back(ref_segment_out);
       }
 
-      // Otherwise we have a non-reference Segment and simply iterate over all rows to build a poslist.
+    // Otherwise we have a non-reference Segment and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = in_table;
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
       pos_list_out->guarantee_single_chunk();
 
-      if (check_visibility_on_chunk_level && is_entire_chunk_visible(chunk_in, snapshot_commit_id, mvcc_data)) {
+      if (can_use_chunk_shortcut && is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
         const auto chunk_size = chunk_in->size();
         pos_list_out->resize(chunk_size);
         for (auto chunk_offset = 0u; chunk_offset < chunk_size; ++chunk_offset) {

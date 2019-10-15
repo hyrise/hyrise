@@ -103,7 +103,7 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
 }
 
 void Chunk::update_max_begin_cid() {
-  DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
+  DebugAssert(has_mvcc_data(), "Chunk does not have mvcc data");
   auto mvcc = get_scoped_mvcc_data_lock();
 
   if (mvcc->begin_cids.empty()) {
@@ -111,6 +111,7 @@ void Chunk::update_max_begin_cid() {
   }
 
   mvcc->max_begin_cid = *(std::max_element(mvcc->begin_cids.begin(), mvcc->begin_cids.end()));
+  Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID, "max_begin_cid should not be MAX_COMMIT_ID.");
 }
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {

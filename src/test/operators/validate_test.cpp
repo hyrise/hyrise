@@ -134,7 +134,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
   auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
   // We explicitly do not call update_max_begin_cid
 
-  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid, mvcc_data));
+  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
@@ -147,7 +147,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
   chunk->update_max_begin_cid();
   auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid, mvcc_data));
+  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
@@ -161,7 +161,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
   chunk->update_max_begin_cid();
   auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid, mvcc_data));
+  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
@@ -173,7 +173,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
   chunk->update_max_begin_cid();
   auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-  EXPECT_TRUE(Validate::is_entire_chunk_visible(chunk, snapshot_cid, mvcc_data));
+  EXPECT_TRUE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {

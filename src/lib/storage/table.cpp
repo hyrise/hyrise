@@ -205,10 +205,10 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   }
 #endif
 
-  auto c = std::make_shared<Chunk>(segments, mvcc_data, alloc);
-  _chunks.push_back(c);
+  auto chunk = std::make_shared<Chunk>(segments, mvcc_data, alloc);
+  _chunks.push_back(chunk);
 
-  if (mvcc_data) c->update_max_begin_cid();
+  if (mvcc_data) chunk->update_max_begin_cid();
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
