@@ -319,6 +319,12 @@ if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
     )
 endif()
 
+# Exclude files that use gmock from unity builds as these are incompatible
+set_source_file_properties(
+    server/server_session_test.cpp
+    PROPERTIES SKIP_UNITY_BUILD_INCLUSION
+)
+
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
