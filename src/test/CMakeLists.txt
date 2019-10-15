@@ -322,7 +322,7 @@ endif()
 # Exclude files that use gmock from unity builds as these are incompatible
 set_source_files_properties(
     server/server_session_test.cpp
-    PROPERTIES SKIP_UNITY_BUILD_INCLUSION
+    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
 )
 
 # Configure hyriseSystemTest
