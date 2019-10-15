@@ -705,7 +705,12 @@ add_custom_command (
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
-add_library(hyrise SHARED ${SOURCES})
+if(NOT ${ENABLE_COVERAGE})
+    add_library(hyrise SHARED ${SOURCES})
+else()
+    # Use a static build for coverage information - otherwise .cpp files are missing from the report
+    add_library(hyrise STATIC ${SOURCES})
+endif()
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time

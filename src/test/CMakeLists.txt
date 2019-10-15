@@ -317,13 +317,13 @@ if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
     target_precompile_headers(hyriseTest PUBLIC
         <gtest/gtest.h>
     )
-endif()
 
-# Exclude files that use gmock from unity builds as these are incompatible
-set_source_files_properties(
-    server/server_session_test.cpp
-    PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON
-)
+    # Exclude files that use gmock as these are incompatible with unity builds and pre-compiled headers
+    set_source_files_properties(
+        server/server_session_test.cpp
+        PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON SKIP_PRECOMPILE_HEADERS ON
+    )
+endif()
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
