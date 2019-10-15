@@ -1,3 +1,5 @@
+#pragma once
+
 #include "lossless_cast.hpp"
 #include "types.hpp"
 

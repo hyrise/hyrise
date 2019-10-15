@@ -128,7 +128,7 @@ class SortedSegmentSearch {
     }
 
     const auto range =
-        boost::join(boost::make_iterator_range(_begin, first_bound), boost::make_iterator_range(last_bound, _end));
+        boost::range::join(boost::make_iterator_range(_begin, first_bound), boost::make_iterator_range(last_bound, _end));
     result_consumer(range.begin(), range.end());
   }
 
