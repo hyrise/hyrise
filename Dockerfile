@@ -46,6 +46,7 @@ RUN apt-get update \
     && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer
 
 # Temporarily for cmake release candidate:
+# TODO: Remove this once the default cmake version is >= 3.16, most likely not before Ubuntu 20.04.
 RUN apt-get update && apt-get install -y wget && apt-get clean \
     && wget https://github.com/Kitware/CMake/releases/download/v3.16.0-rc1/cmake-3.16.0-rc1-Linux-x86_64.tar.gz \
     && tar xf cmake-3.16.0-rc1-Linux-x86_64.tar.gz
