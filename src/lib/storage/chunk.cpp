@@ -106,7 +106,7 @@ void Chunk::update_max_begin_cid() {
   DebugAssert((has_mvcc_data()), "Chunk does not have mvcc data");
   auto mvcc = get_scoped_mvcc_data_lock();
 
-  if (mvcc->begin_cids.size() == 0) {
+  if (mvcc->begin_cids.empty()) {
     return;
   }
 
