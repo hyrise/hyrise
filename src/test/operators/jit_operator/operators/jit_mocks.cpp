@@ -1,4 +1,4 @@
-#include "jit_mocks.cpp"
+#include "jit_mocks.hpp"
 
 #include "operators/jit_operator/operators/abstract_jittable.hpp"
 

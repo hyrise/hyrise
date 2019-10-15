@@ -27,6 +27,7 @@ class MockSource : public AbstractJittable {
   void emit(JitRuntimeContext& context);
 
  private:
-  void _consume(JitRuntimeContext& context);
+  void _consume(JitRuntimeContext& context) const final;
 };
+
 }  // namespace opossum
