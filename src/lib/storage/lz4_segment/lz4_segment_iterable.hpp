@@ -29,6 +29,19 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     functor(begin, end);
   }
 
+  // If the LZ4 segment stores strings, the underlying segment will have more blocks than a numeric segment.
+  // To maximize the hitting of cached blocks, we sort the pos list before materializing it. This threshold
+  // shall determine which (type dependent) number of items is necessary to have blocks at all. If we only
+  // expect a single block, no sorting is necessary.
+  template <typename T2>
+  static size_t get_poslist_sorting_threshold() {
+    if constexpr (std::is_same_v<T2, pmr_string>) {
+      return size_t{400}; // assuming a string length of 10 chars each
+    } else {
+      return size_t{1'000};
+    }
+  }
+
   /**
    * For the point access, we first retrieve the values for all chunk offsets in the position list and then save
    * the decompressed values in a vector. The first value in that vector (index 0) is the value for the chunk offset
@@ -46,9 +59,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     //////////////////////////////////////
 
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
-    if (position_filter_size > 100) {
-      std::vector<std::pair<RowID, size_t>> position_filter_indexed;
-      position_filter_indexed.resize(position_filter_size);
+    if (position_filter_size >= get_poslist_sorting_threshold<T>()) {
+      std::vector<std::pair<RowID, size_t>> position_filter_indexed(position_filter_size);
+
       for (auto index = size_t{0}; index < position_filter_size; ++index) {
         const auto& row_id = (*position_filter)[index];
         position_filter_indexed[index] = {row_id, index};
