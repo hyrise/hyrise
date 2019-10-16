@@ -55,7 +55,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
 template <typename T, typename SegmentType, typename IterableType>
 class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
  public:
-  explicit SegmentAccessor2(const SegmentType& segment, IterableType iterable) : AbstractSegmentAccessor<T>{}, _segment{segment}, _iterable{iterable} {}
+  explicit SegmentAccessor2(const SegmentType& segment, IterableType iterable) : AbstractSegmentAccessor<T>{}, _segment{segment}, _iterable{std::move(iterable)} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     const auto tmp_poslist = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, offset}});
@@ -139,7 +139,7 @@ template <typename T, typename Segment, typename IterableType>
 class SingleChunkReferenceSegmentAccessor2 final : public AbstractSegmentAccessor<T> {
  public:
   explicit SingleChunkReferenceSegmentAccessor2(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment, IterableType iterable)
-      : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment), _iterable{iterable} {}
+      : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment), _iterable{std::move(iterable)} {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
     const auto tmp_poslist = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, _pos_list[offset].chunk_offset}});
