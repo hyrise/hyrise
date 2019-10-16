@@ -41,5 +41,11 @@ class PredicatePlacementRule : public AbstractRule {
 
   // Judge whether a predicate is expensive and should be pulled up. All non-expensive predicates get pushed down.
   static bool _is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate);
+
+  mutable std::shared_ptr<AbstractCardinalityEstimator> _estimator;
+
+  // For predicates that cannot be pushed down below a join, create a pre-join predicate if it reduces the selectivity
+  // sufficiently:
+  static constexpr auto MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE = .25;
 };
 }  // namespace opossum

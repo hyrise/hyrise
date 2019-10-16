@@ -21,6 +21,9 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   // The traversal functions require the existence of a root of the LQP, so make sure we have that
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 
+  _estimator = cost_estimator->cardinality_estimator->new_instance();
+  _estimator->guarantee_bottom_up_construction(); 
+
   std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes);
 
@@ -180,16 +183,23 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               }
             }
 
-            const auto add_disjunction_to_nodes = [](const auto& disjunction, auto& predicate_nodes) {
+            const auto add_disjunction_if_beneficial = [&](const auto& disjunction, const auto& input_node, auto& predicate_nodes) {
               if (disjunction.empty()) return;
 
               const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
-              const auto predicate_node = PredicateNode::make(expression);
+              const auto predicate_node = PredicateNode::make(expression, input_node);
+
+              // Determine the selectivity of the predicate if executed on input_node
+              const auto cardinality_in = _estimator->estimate_cardinality(input_node);
+              const auto cardinality_out = _estimator->estimate_cardinality(predicate_node);
+              if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE) return;
+              predicate_node->set_left_input(nullptr);
+
               predicate_nodes.emplace_back(predicate_node);
             };
 
-            add_disjunction_to_nodes(left_disjunction, left_push_down_nodes); // TODO test this
-            add_disjunction_to_nodes(right_disjunction, right_push_down_nodes); // TODO test this
+            add_disjunction_if_beneficial(left_disjunction, join_node->left_input(), left_push_down_nodes); // TODO test this
+            add_disjunction_if_beneficial(right_disjunction, join_node->right_input(), right_push_down_nodes); // TODO test this
 
             _insert_nodes(current_node, input_side, {push_down_node});
 
