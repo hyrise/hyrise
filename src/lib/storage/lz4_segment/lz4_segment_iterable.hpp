@@ -45,30 +45,40 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     //////////////////////////////////////
     //////////////////////////////////////
 
-    std::vector<std::pair<RowID, size_t>> position_filter_indexed;
-    position_filter_indexed.resize(position_filter_size);
-    for (auto index = size_t{0}; index < position_filter_size; ++index) {
-      const auto& row_id = (*position_filter)[index];
-      position_filter_indexed[index] = {row_id, index};
-      // if (position_filter_size > 1) std::cout << "adding " << row_id << " with index " << index << std::endl;
-    }
-    std::stable_sort(position_filter_indexed.begin(), position_filter_indexed.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-
-    // if (position_filter_size > 1) {
-    //   for (const auto& [a,b] : position_filter_indexed) {
-    //     std::cout << a << "|" << b << std::endl;
-    //   }
-    // }
-
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
-    for (auto index = size_t{0u}; index < position_filter_size; ++index) {
-      const auto& position = position_filter_indexed[index].first;
-      // if (!position_filter_is_sorted) std::cout << position.chunk_offset << " ";
-      // NOLINTNEXTLINE
-      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
-      const auto write_position = position_filter_indexed[index].second;
-      decompressed_filtered_segment[write_position] = std::move(value);
-      cached_block_index = block_index;
+    if (position_filter_size > 100) {
+      std::vector<std::pair<RowID, size_t>> position_filter_indexed;
+      position_filter_indexed.resize(position_filter_size);
+      for (auto index = size_t{0}; index < position_filter_size; ++index) {
+        const auto& row_id = (*position_filter)[index];
+        position_filter_indexed[index] = {row_id, index};
+        // if (position_filter_size > 1) std::cout << "adding " << row_id << " with index " << index << std::endl;
+      }
+      std::stable_sort(position_filter_indexed.begin(), position_filter_indexed.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+
+      // if (position_filter_size > 1) {
+      //   for (const auto& [a,b] : position_filter_indexed) {
+      //     std::cout << a << "|" << b << std::endl;
+      //   }
+      // }
+
+      for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+        const auto& position = position_filter_indexed[index].first;
+        // if (!position_filter_is_sorted) std::cout << position.chunk_offset << " ";
+        // NOLINTNEXTLINE
+        auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+        const auto write_position = position_filter_indexed[index].second;
+        decompressed_filtered_segment[write_position] = std::move(value);
+        cached_block_index = block_index;
+      }
+    } else {
+      for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+        const auto& position = (*position_filter)[index];
+        // NOLINTNEXTLINE
+        auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+        decompressed_filtered_segment[index] = std::move(value);
+        cached_block_index = block_index;
+      }
     }
 
     std::optional<NullValueIterator> null_opt_value_iter;
