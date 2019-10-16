@@ -46,7 +46,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {} //, _iterable{create_iterable_from_segment(segment)} {
 
-  const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
+  const std::optional<T> access(const ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
 
  protected:
   const SegmentType& _segment;
@@ -57,7 +57,7 @@ class SegmentAccessor2 final : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor2(const SegmentType& segment, IterableType iterable) : AbstractSegmentAccessor<T>{}, _segment{segment}, _iterable{std::move(iterable)} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  const std::optional<T> access(const ChunkOffset offset) const final {
     const auto tmp_poslist = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, offset}});
     // std::cout << "NEW ACCESS: new segment accessor" << std::endl;
 
@@ -87,7 +87,7 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
   explicit MultipleChunkReferenceSegmentAccessor(const ReferenceSegment& segment)
       : _segment{segment}, _table{segment.referenced_table()}, _accessors{1} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  const std::optional<T> access(const ChunkOffset offset) const final {
     const auto& row_id = (*_segment.pos_list())[offset];
     if (row_id.is_null()) {
       return std::nullopt;
@@ -122,7 +122,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   explicit SingleChunkReferenceSegmentAccessor(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  const std::optional<T> access(const ChunkOffset offset) const final {
     // std::cout << "ACCESS: single chunk ref accessor" << std::endl;
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
     return _segment.get_typed_value(referenced_chunk_offset);
@@ -141,7 +141,7 @@ class SingleChunkReferenceSegmentAccessor2 final : public AbstractSegmentAccesso
   explicit SingleChunkReferenceSegmentAccessor2(const PosList& pos_list, const ChunkID chunk_id, const Segment& segment, IterableType iterable)
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment), _iterable{std::move(iterable)} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final {
+  const std::optional<T> access(const ChunkOffset offset) const final {
     const auto tmp_poslist = std::make_shared<PosList>(PosList{RowID{ChunkID{0u}, _pos_list[offset].chunk_offset}});
 
     std::optional<T> ret;
@@ -163,7 +163,7 @@ class SingleChunkReferenceSegmentAccessor2 final : public AbstractSegmentAccesso
 // Accessor for ReferenceSegments that reference only NULL values
 template <typename T>
 class NullAccessor final : public AbstractSegmentAccessor<T> {
-  const std::optional<T> access(ChunkOffset offset) const final { return std::nullopt; }
+  const std::optional<T> access(const ChunkOffset offset) const final { return std::nullopt; }
 };
 
 }  // namespace opossum
