@@ -141,7 +141,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
     Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
 
     Segments output_segments;
-    auto pos_list_out = std::make_shared<PosList>();
+    auto pos_list_out = std::make_shared<const PosList>();
+    PosList internal_mutable_pos_list;
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(ColumnID{0}));
 
@@ -154,39 +155,36 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       referenced_table = ref_segment_in->referenced_table();
       DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
-      const auto& pos_list_in = *ref_segment_in->pos_list();
-      if (pos_list_in.references_single_chunk() && !pos_list_in.empty()) {
+      const auto& pos_list_in = ref_segment_in->pos_list();
+      if (pos_list_in->references_single_chunk() && !pos_list_in->empty()) {
         // Fast path - we are looking at a single referenced chunk and thus need to get the MVCC data vector only once.
-        pos_list_out->guarantee_single_chunk();
-
-        const auto referenced_chunk = referenced_table->get_chunk(pos_list_in.common_chunk_id());
+        const auto referenced_chunk = referenced_table->get_chunk(pos_list_in->common_chunk_id());
         auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
         if (can_use_chunk_shortcut &&
             is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
-          // We can simply copy the whole PosList since it is entirely visible. Copying is forbidden for PosLists.
-          // Because of that, we use memcpy here for now.
-          const auto pos_list_size = pos_list_in.size();
-          pos_list_out->resize(pos_list_size);
-          std::memcpy(pos_list_out->data(), pos_list_in.data(), pos_list_in.size() * sizeof(RowID));
+          // We can reuse the old PosList since it is entirely visible.
+          pos_list_out = pos_list_in;
         } else {
-          for (auto row_id : pos_list_in) {
+          internal_mutable_pos_list.guarantee_single_chunk();
+          for (auto row_id : *pos_list_in) {
             if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
-              pos_list_out->emplace_back(row_id);
+              internal_mutable_pos_list.emplace_back(row_id);
             }
           }
+          pos_list_out = std::make_shared<const PosList>(std::move(internal_mutable_pos_list));
         }
 
       } else {
         // Slow path - we are looking at multiple referenced chunks and need to get the MVCC data vector for every row.
-        for (auto row_id : pos_list_in) {
+        for (auto row_id : *pos_list_in) {
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
-
           if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
-            pos_list_out->emplace_back(row_id);
+            internal_mutable_pos_list.emplace_back(row_id);
           }
+          pos_list_out = std::make_shared<const PosList>(std::move(internal_mutable_pos_list));
         }
       }
 
@@ -204,23 +202,25 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
       referenced_table = in_table;
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
-      pos_list_out->guarantee_single_chunk();
+
+      internal_mutable_pos_list.guarantee_single_chunk();
 
       if (can_use_chunk_shortcut && is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
         const auto chunk_size = chunk_in->size();
-        pos_list_out->resize(chunk_size);
+        internal_mutable_pos_list.resize(chunk_size);
         for (auto chunk_offset = 0u; chunk_offset < chunk_size; ++chunk_offset) {
-          (*pos_list_out)[chunk_offset] = RowID{chunk_id, chunk_offset};
+          internal_mutable_pos_list[chunk_offset] = RowID{chunk_id, chunk_offset};
         }
       } else {
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
         for (auto i = 0u; i < chunk_size; i++) {
           if (opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
-            pos_list_out->emplace_back(RowID{chunk_id, i});
+            internal_mutable_pos_list.emplace_back(RowID{chunk_id, i});
           }
         }
       }
+      pos_list_out = std::make_shared<const PosList>(std::move(internal_mutable_pos_list));
 
       // Create actual ReferenceSegment objects.
       for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
