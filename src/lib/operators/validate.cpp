@@ -184,8 +184,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
             internal_mutable_pos_list.emplace_back(row_id);
           }
-          pos_list_out = std::make_shared<const PosList>(std::move(internal_mutable_pos_list));
         }
+        pos_list_out = std::make_shared<const PosList>(std::move(internal_mutable_pos_list));
       }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
