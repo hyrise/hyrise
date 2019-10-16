@@ -150,7 +150,6 @@ class Console : public Singleton<Console> {
   std::ofstream _log;
   bool _verbose;
   bool _pagination_active;
-  bool _use_jit;
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
   std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;

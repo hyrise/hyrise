@@ -13,7 +13,6 @@
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
-#include "strategy/insert_limit_in_exists_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
@@ -113,8 +112,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
-
-  optimizer->add_rule(std::make_unique<InsertLimitInExistsRule>());
 
   // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the

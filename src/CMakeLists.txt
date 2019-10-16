@@ -6,35 +6,6 @@ endif()
 
 add_definitions(-DHYRISE_DEBUG=${HYRISE_DEBUG})
 
-# Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang 7.*
-# ENABLE_JIT_SUPPORT is OFF on MacOS by default as JIT compilation currently fails on MacOS because the specialized code
-# contains asm code on MacOS which the JIT compiler cannot handle
-if (APPLE)
-    option(ENABLE_JIT_SUPPORT "Build with JIT support" OFF)
-else()
-    option(ENABLE_JIT_SUPPORT "Build with JIT support" ON)
-endif()
-
-if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7 OR NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
-    set(ENABLE_JIT_SUPPORT OFF)
-elseif (APPLE AND ENABLE_JIT_SUPPORT)
-    message(WARNING "Jit does not work on MacOS (see https://github.com/hyrise/hyrise/issues/1569 for details).")
-endif()
-
-if (${ENABLE_JIT_SUPPORT})
-    add_definitions(-DHYRISE_JIT_SUPPORT=1)
-    MESSAGE(STATUS "Building with JIT support")
-else()
-    add_definitions(-DHYRISE_JIT_SUPPORT=0)
-    MESSAGE(STATUS "Building without JIT support")
-
-    # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
-    if(DEFINED CI_BUILD AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        message(FATAL_ERROR "-DCI_BUILD=ON was set, but LLVM was not found.")
-    endif()
-
-endif()
-
 # Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
 option(ENABLE_NUMA_SUPPORT "Build with NUMA support" ON)
 if (NOT ${NUMA_FOUND})
@@ -106,10 +77,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
 )
 
-if (${ENABLE_JIT_SUPPORT})
-    include_directories(SYSTEM ${LLVM_INCLUDE_DIR})
-endif()
-
 if (${ENABLE_NUMA_SUPPORT})
     include_directories(SYSTEM ${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
     include_directories(SYSTEM ${PROJECT_BINARY_DIR}/third_party/pgasus/src)
@@ -119,8 +86,6 @@ set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)
     message(STATUS "clang-tidy enabled")
     set(CMAKE_CXX_CLANG_TIDY "${CMAKE_SOURCE_DIR}/scripts/clang_tidy_wrapper.sh;${CMAKE_SOURCE_DIR}")
-
-    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/CloneFunction.cpp ${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/InlineFunction.cpp PROPERTIES CMAKE_CXX_CLANG_TIDY "")
 endif()
 
 add_subdirectory(benchmarklib)
