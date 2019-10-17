@@ -43,6 +43,7 @@
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -1369,14 +1370,18 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::CountDistinct:
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
-              auto stored_table_node = _current_lqp;
-              if (_current_lqp->type == LQPNodeType::Validate) {
-                stored_table_node = _current_lqp->left_input();
-              }
-              if (stored_table_node->type != LQPNodeType::StoredTable) {
-                std::cout << *stored_table_node << std::endl;
-              }
-              Assert(stored_table_node->type == LQPNodeType::StoredTable, "No StoredTable found below COUNT(*)");
+
+              // Find any StoredTableNode below COUNT(*)
+              std::shared_ptr<StoredTableNode> stored_table_node = nullptr;
+              visit_lqp(_current_lqp, [&](const auto& node) {
+                stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
+                if (stored_table_node) {
+                  return LQPVisitation::DoNotVisitInputs;
+                }
+                return LQPVisitation::VisitInputs;
+              });
+              Assert(stored_table_node, "No StoredTableNode found below COUNT(*)");
+
               const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, INVALID_COLUMN_ID});
               return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
