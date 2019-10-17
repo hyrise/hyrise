@@ -1,7 +1,7 @@
 # Disable some warnings for the third-party subfolder
-add_compile_options(-Wno-unused-function -Wno-deprecated-declarations -Wno-stringop-truncation)
+add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    add_compile_options(-Wno-format-overflow)
+    add_compile_options(-Wno-format-overflow -Wno-stringop-truncation -Wno-stringop-overflow)
 endif()
 
 # Build google benchmark
@@ -303,9 +303,7 @@ target_compile_options(
   PRIVATE
 
   -Wno-implicit-int
-  -Wno-stringop-overflow
   -Wno-format
   -Wno-incompatible-pointer-types
   -Wno-unused-result
-  -Wno-stringop-truncation
 )
