@@ -576,6 +576,27 @@ TEST_F(CardinalityEstimatorTest, PredicateTwoOnTheSameColumn) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 25);
 }
 
+TEST_F(CardinalityEstimatorTest, PredicateAnd) {
+  // Same as PredicateTwoOnTheSameColumn, but the conditions are within one predicate
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(and_(greater_than_(a_a, 50), less_than_equals_(a_a, 75)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 25);
+}
+
+TEST_F(CardinalityEstimatorTest, PredicateOr) {
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(or_(less_than_equals_(a_a, 10), greater_than_(a_a, 90)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
+}
+
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format off
   const auto input_lqp =
