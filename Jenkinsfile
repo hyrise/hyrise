@@ -1,7 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
-exclude_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings.*:TpcdsTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
+exclude_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TpcdsTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 try {
   node('master') {
