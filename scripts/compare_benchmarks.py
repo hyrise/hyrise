@@ -137,9 +137,9 @@ if github_format:
     red_control_sequence = colored('', 'red')[0:5]
 
     for line in result.splitlines():
-        if green_control_sequence in line:
+        if green_control_sequence + '+' in line:
             new_result += '+'
-        elif red_control_sequence in line:
+        elif red_control_sequence + '-' in line:
             new_result += '-'
         else:
             new_result += ' '
