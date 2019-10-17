@@ -1374,7 +1374,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                 stored_table_node = _current_lqp->left_input();
               }
               Assert(stored_table_node->type == LQPNodeType::StoredTable, "No StoredTable found below COUNT(*)");
-              const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, ColumnID{INVALID_COLUMN_ID}});
+              const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, INVALID_COLUMN_ID});
               return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
               return std::make_shared<AggregateExpression>(

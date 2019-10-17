@@ -39,12 +39,12 @@ std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const
   return std::make_shared<PQPColumnExpression>(column_id, data_type, nullable, column_name);
 }
 
-std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doesn't like the suffix
-  return std::make_shared<AggregateExpression>(AggregateFunction::Count, nullptr); // todo(jj): find a better way than nullptr
-}
+//std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doesn't like the suffix
+//  return std::make_shared<AggregateExpression>(AggregateFunction::Count, nullptr); // todo(jj): find a better way than nullptr
+//}
 
 std::shared_ptr<AggregateExpression> count_star_(const std::shared_ptr<AbstractLQPNode> lqp_node) {  // NOLINT - clang-tidy doesn't like the suffix
-  const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{lqp_node, ColumnID{INVALID_COLUMN_ID}});
+  const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{lqp_node, INVALID_COLUMN_ID});
   return std::make_shared<AggregateExpression>(AggregateFunction::Count, column_expression); // todo(jj): find a better way than nullptr
 }
 

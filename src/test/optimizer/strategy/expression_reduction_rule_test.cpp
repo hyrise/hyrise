@@ -172,14 +172,14 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   {
     // SELECT SUM(a), COUNT(*), AVG(a) -> SUM(a), COUNT(*), SUM(a) / COUNT(*) AS AVG(a) as a is not NULLable
     // clang-format off
-    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(), avg_(col_a)),                                            // NOLINT
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node), avg_(col_a)),                                            // NOLINT
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(*)", "AVG(a)"};
     // The cast will become unnecessary once #1799 is fixed
-    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(), div_(cast_(sum_(col_a), DataType::Double), count_star_())), expected_aliases,  // NOLINT
-                                ProjectionNode::make(expression_vector(sum_(col_a), count_star_(), div_(cast_(sum_(col_a), DataType::Double), count_star_())),             // NOLINT
-                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_()),                                                  // NOLINT
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(stored_table_node), div_(cast_(sum_(col_a), DataType::Double), count_star_(stored_table_node))), expected_aliases,  // NOLINT
+                                ProjectionNode::make(expression_vector(sum_(col_a), count_star_(stored_table_node), div_(cast_(sum_(col_a), DataType::Double), count_star_(stored_table_node))),             // NOLINT
+                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node)),                                                  // NOLINT
                                     stored_table_node)));
     // clang-format on
 
@@ -206,7 +206,7 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   {
     // SELECT SUM(b), COUNT(*), AVG(b) stays unmodified as b is NULLable
     // clang-format off
-    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_b), count_star_(), avg_(col_b)),  // NOLINT
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_b), count_star_(stored_table_node), avg_(col_b)),  // NOLINT
                              stored_table_node);
     // clang-format on
 
