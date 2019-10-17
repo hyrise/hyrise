@@ -127,7 +127,7 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
   }
 }
 
-enum class LQPUpwardVisitation { VisitInputs, DoNotVisitInputs };
+enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
 
 /**
  * Calls the passed @param visitor on @param lqp and recursively on each node that uses it as an OUTPUT. If the LQP is
