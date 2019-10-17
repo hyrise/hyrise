@@ -93,7 +93,6 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
-find_package(PQ REQUIRED)
 find_package(Boost REQUIRED COMPONENTS container system thread)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)

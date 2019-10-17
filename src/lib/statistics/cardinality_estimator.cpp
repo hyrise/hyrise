@@ -159,10 +159,20 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
+
       const auto stored_table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
       Assert(stored_table->table_statistics(), "Stored Table should have cardinality estimation statistics");
-      output_table_statistics =
-          prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
+
+      if (stored_table_node->table_statistics) {
+        // TableStatistics have changed from the original table's statistics
+        Assert(stored_table_node->table_statistics->column_statistics.size() == stored_table->column_count(),
+               "Statistics in StoredTableNode should have same number of columns as original table");
+        output_table_statistics =
+            prune_column_statistics(stored_table_node->table_statistics, stored_table_node->pruned_column_ids());
+      } else {
+        output_table_statistics =
+            prune_column_statistics(stored_table->table_statistics(), stored_table_node->pruned_column_ids());
+      }
     } break;
 
     case LQPNodeType::Validate: {
@@ -288,9 +298,30 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns' statistics are
   // scaled with the estimated selectivity of the predicate.
 
-  const auto& predicate = *predicate_node.predicate();
+  const auto predicate = predicate_node.predicate();
 
-  const auto operator_scan_predicates = OperatorScanPredicate::from_expression(predicate, predicate_node);
+  // Estimating correlated parameters is tricky. Example:
+  //   SELECT c_custkey, (SELECT AVG(o_totalprice) FROM orders WHERE o_custkey = c_custkey) FROM customer
+  // If the subquery was executed for each customer row, assuming that the predicate has a selectivity matching that
+  // of searching for a single value would be reasonable. However, it is likely that the SubqueryToJoinRule will
+  // rewrite this query so that the CorrelatedParameterExpression will turn into an LQPColumnExpression that is part
+  // of a join predicate. However, since the JoinOrderingRule is executed before the SubqueryToJoinRule, it would
+  // create a different join order if it assumes `orders` to be filtered down to very few values. For now, we return
+  // PLACEHOLDER_SELECTIVITY_HIGH. This is not perfect, but better than estimating `num_rows / distinct_values`.
+  if (expression_contains_correlated_parameter(predicate)) {
+    auto output_column_statistics =
+        std::vector<std::shared_ptr<BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};
+
+    for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
+      output_column_statistics[column_id] =
+          input_table_statistics->column_statistics[column_id]->scaled(PLACEHOLDER_SELECTIVITY_HIGH);
+    }
+
+    const auto row_count = Cardinality{input_table_statistics->row_count * PLACEHOLDER_SELECTIVITY_HIGH};
+    return std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+  }
+
+  const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
 
   // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates
@@ -870,9 +901,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     output_table_statistics = std::make_shared<TableStatistics>(std::move(column_statistics), cardinality);
   });
 
-  DebugAssert(output_table_statistics->row_count <=
-                  left_input_table_statistics.row_count * (1 + std::numeric_limits<float>::epsilon()),
-              "Semi join should not increase cardinality");
+  Assert(output_table_statistics->row_count <= left_input_table_statistics.row_count * 1.01f,
+         "Semi join should not increase cardinality");
 
   return output_table_statistics;
 }

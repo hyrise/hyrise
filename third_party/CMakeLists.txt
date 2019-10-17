@@ -87,8 +87,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 # Add Libraries with their own build setup
-add_subdirectory(tpch-dbgen)
 add_subdirectory(googletest)
+add_subdirectory(libpqxx)
+add_subdirectory(tpch-dbgen)
+
 
 # Add PGASUS
 if(${NUMA_FOUND})
@@ -154,59 +156,6 @@ target_include_directories(
     ${ZSTD_LIBRARY_DIR}/compress
     ${ZSTD_LIBRARY_DIR}/dictBuilder
 )
-
-# TODO(lawben): There is currently a PR open for CMake support in libpqxx.
-# Once that is merged, this should be updated to add_subdirectory(libpqxx)
-add_library(
-    pqxx
-
-    STATIC
-
-    libpqxx/src/array.cxx
-    libpqxx/src/binarystring.cxx
-    libpqxx/src/connection.cxx
-    libpqxx/src/connection_base.cxx
-    libpqxx/src/cursor.cxx
-    libpqxx/src/dbtransaction.cxx
-    libpqxx/src/errorhandler.cxx
-    libpqxx/src/except.cxx
-    libpqxx/src/field.cxx
-    libpqxx/src/largeobject.cxx
-    libpqxx/src/nontransaction.cxx
-    libpqxx/src/notification.cxx
-    libpqxx/src/pipeline.cxx
-    libpqxx/src/prepared_statement.cxx
-    libpqxx/src/result.cxx
-    libpqxx/src/robusttransaction.cxx
-    libpqxx/src/row.cxx
-    libpqxx/src/statement_parameters.cxx
-    libpqxx/src/strconv.cxx
-    libpqxx/src/subtransaction.cxx
-    libpqxx/src/tablereader.cxx
-    libpqxx/src/tablestream.cxx
-    libpqxx/src/tablewriter.cxx
-    libpqxx/src/transaction.cxx
-    libpqxx/src/transaction_base.cxx
-    libpqxx/src/util.cxx
-    libpqxx/src/version.cxx
-)
-
-target_compile_options(
-    pqxx
-    PRIVATE
-    -O3 -std=c++1z
-    -DPQXX_HIDE_EXP_OPTIONAL
-)
-
-target_include_directories(
-    pqxx
-    PUBLIC
-    ${PQ_INCLUDE_DIR}
-    libpqxx/include
-    libpqxx/config/sample-headers/compiler/gcc-7.2
-)
-
-target_link_libraries(pqxx PUBLIC ${PQ_LIBRARY})
 
 add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)

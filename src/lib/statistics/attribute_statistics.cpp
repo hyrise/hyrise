@@ -108,6 +108,43 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
   return statistics;
 }
 
+template <typename T>
+std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
+    const size_t num_values_pruned, const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+    const std::optional<AllTypeVariant>& variant_value2) const {
+  const auto statistics = std::make_shared<AttributeStatistics<T>>();
+
+  if (histogram) {
+    statistics->set_statistics_object(
+        histogram->pruned(num_values_pruned, predicate_condition, variant_value, variant_value2));
+  }
+
+  if (null_value_ratio) {
+    // As the null value ratio statistics have no absolute row counts, we cannot prune here. Create an unmodified copy.
+    statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(null_value_ratio->ratio));
+  }
+
+  // As pruning is on a table-level granularity, it does not make too much sense to implement pruning on chunk-level
+  // statistics such as the filters below.
+
+  if (min_max_filter) {
+    Fail("Pruning not implemented for min/max filters");
+  }
+
+  if (counting_quotient_filter) {
+    Fail("Pruning not implemented for counting quotient filters");
+  }
+
+  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+  if constexpr (std::is_arithmetic_v<T>) {
+    if (range_filter) {
+      Fail("Pruning not implemented for range filters");
+    }
+  }
+
+  return statistics;
+}
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(AttributeStatistics);
 
 }  // namespace opossum

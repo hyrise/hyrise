@@ -100,7 +100,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     job_end_chunk_id++;
   }
 
-  Hyrise::get().scheduler().wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

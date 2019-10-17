@@ -1,6 +1,5 @@
 #include "benchmark_sql_executor.hpp"
 
-#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/timer.hpp"
@@ -8,16 +7,15 @@
 #include "visualization/pqp_visualizer.hpp"
 
 namespace opossum {
-BenchmarkSQLExecutor::BenchmarkSQLExecutor(bool enable_jit, const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
+BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix)
-    : _enable_jit(enable_jit), _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {}
+    : _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {}
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(
     const std::string& sql, const std::shared_ptr<const Table>& expected_result_table) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
   if (_visualize_prefix) pipeline_builder.dont_cleanup_temporaries();
   if (transaction_context) pipeline_builder.with_transaction_context(transaction_context);
-  if (_enable_jit) pipeline_builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
 
   auto pipeline = pipeline_builder.create_pipeline();
 
