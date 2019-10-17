@@ -70,7 +70,7 @@ echo Coverage Information is in ./coverage/index.html
 # Continuing only if diff output is needed with Linux/gcc
 if [ "true" == "$generate_badge" ]; then
 
-  ${path_to_compiler}llvm-cov report -ignore-filename-regex=specialization/llvm/ -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.txt
+  ${path_to_compiler}llvm-cov report -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.txt
 
   # coverage badge generation
   coverage_percent=$(tail -c 7 coverage.txt)
