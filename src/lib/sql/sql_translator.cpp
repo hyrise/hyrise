@@ -886,7 +886,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
         if (pre_aggregate_expression_set.emplace(argument).second) {
           // Handle COUNT(*)
           const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument);
-          if(!column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID) {
+          if (!column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID) {
             pre_aggregate_expressions.emplace_back(argument);
           }
         }
@@ -1382,7 +1382,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
               });
               Assert(stored_table_node, "No StoredTableNode found below COUNT(*)");
 
-              const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, INVALID_COLUMN_ID});
+              const auto column_expression =
+                  std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, INVALID_COLUMN_ID});
               return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
               return std::make_shared<AggregateExpression>(

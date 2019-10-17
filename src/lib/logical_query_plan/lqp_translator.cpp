@@ -499,7 +499,6 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
   visit_expression(pqp_expression, [&](auto& expression) {
     // Try to resolve the Expression to a column from the input node
     const auto column_id = node->find_column_id(*expression);
-
     if (column_id) {
       const auto referenced_expression = node->column_expressions()[*column_id];
       expression =

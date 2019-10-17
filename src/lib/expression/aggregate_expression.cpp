@@ -22,7 +22,7 @@ std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
 }
 
 std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
-    return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
+  return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
 }
 
 std::string AggregateExpression::as_column_name() const {
@@ -31,7 +31,9 @@ std::string AggregateExpression::as_column_name() const {
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
     stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
-  } else if (aggregate_function == AggregateFunction::Count && dynamic_cast<const LQPColumnExpression*>(&*argument())->column_reference.original_column_id() == INVALID_COLUMN_ID) {
+  } else if (aggregate_function == AggregateFunction::Count &&
+             dynamic_cast<const LQPColumnExpression*>(&*argument())->column_reference.original_column_id() ==
+                 INVALID_COLUMN_ID) {
     stream << "COUNT(*)";
   } else {
     stream << aggregate_function << "(";

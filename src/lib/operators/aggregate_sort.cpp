@@ -496,7 +496,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * but the function call expects an input type, we choose Int arbitrarily.
      * This is NOT the result type of COUNT(*), which is Long.
      */
-    const auto data_type = *aggregate.column == INVALID_COLUMN_ID ? DataType::Int : input_table->column_data_type(*aggregate.column);
+    const auto data_type =
+        *aggregate.column == INVALID_COLUMN_ID ? DataType::Int : input_table->column_data_type(*aggregate.column);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
