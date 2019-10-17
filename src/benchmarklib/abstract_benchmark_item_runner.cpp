@@ -63,7 +63,7 @@ std::tuple<bool, std::vector<SQLPipelineMetrics>, bool> AbstractBenchmarkItemRun
     visualize_prefix = std::move(name);
   }
 
-  BenchmarkSQLExecutor sql_executor(_config->enable_jit, _sqlite_wrapper, visualize_prefix);
+  BenchmarkSQLExecutor sql_executor(_sqlite_wrapper, visualize_prefix);
   auto success = _on_execute_item(item_id, sql_executor);
   return {success, std::move(sql_executor.metrics), sql_executor.any_verification_failed};
 }

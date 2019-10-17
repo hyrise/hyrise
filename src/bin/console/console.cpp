@@ -23,7 +23,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
@@ -110,7 +109,6 @@ Console::Console()
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
       _pagination_active(false),
-      _use_jit(false),
       _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
       _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
@@ -240,9 +238,6 @@ bool Console::_initialize_pipeline(const std::string& sql) {
                        .dont_cleanup_temporaries();  // keep tables for debugging and visualization
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
-    }
-    if (_use_jit) {
-      builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
     }
     _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
   } catch (const InvalidInputException& exception) {
@@ -419,9 +414,6 @@ int Console::_help(const std::string&) {
   out("  help                                    - Show this message\n\n");
   out("  setting [property] [value]              - Change a runtime setting\n\n");
   out("           scheduler (on|off)             - Turn the scheduler on (default) or off\n\n");
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    out("           jit       (on|off)             - Turn just-in-time query compilation on or off (default)\n\n");
-  }
   // clang-format on
 
   return Console::ReturnCode::Ok;
@@ -813,21 +805,6 @@ int Console::_change_runtime_setting(const std::string& input) {
       return 1;
     }
     return 0;
-  } else if (property == "jit") {
-    if constexpr (HYRISE_JIT_SUPPORT) {
-      _pqp_cache->clear();
-      if (value == "on") {
-        _use_jit = true;
-        out("Just-in-time query compilation turned on\n");
-      } else if (value == "off") {
-        _use_jit = false;
-        out("Just-in-time query compilation turned off\n");
-      } else {
-        out("Usage: jit (on|off)\n");
-        return 1;
-      }
-      return 0;
-    }
   }
 
   out("Error: Unknown property\n");
