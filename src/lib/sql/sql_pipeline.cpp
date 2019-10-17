@@ -15,8 +15,7 @@
 namespace opossum {
 
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
-                         const UseMvcc use_mvcc, const std::shared_ptr<LQPTranslator>& lqp_translator,
-                         const std::shared_ptr<Optimizer>& optimizer,
+                         const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
                          const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                          const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
                          const CleanupTemporaries cleanup_temporaries)
@@ -81,9 +80,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
-    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(
-        statement_string, std::move(parsed_statement), use_mvcc, transaction_context, lqp_translator, optimizer,
-        pqp_cache, lqp_cache, cleanup_temporaries);
+    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
+                                                                     use_mvcc, transaction_context, optimizer,
+                                                                     pqp_cache, lqp_cache, cleanup_temporaries);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
 
