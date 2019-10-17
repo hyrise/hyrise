@@ -221,7 +221,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
     const auto num_successful_runs = result.successful_runs.size();
-    const auto duration_per_item = num_successful_runs > 0 ? static_cast<float>(duration_seconds) / num_successful_runs : NAN;
+    const auto duration_per_item =
+        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / num_successful_runs : NAN;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
