@@ -147,7 +147,7 @@ try {
         }, clangDebugAddrUBSanitizers: {
           stage("clang-debug:addr-ub-sanitizers") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-debug-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
@@ -172,7 +172,7 @@ try {
         }, clangReleaseAddrUBSanitizers: {
           stage("clang-release:addr-ub-sanitizers") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1 --scheduler"
@@ -193,7 +193,7 @@ try {
         }, clangReleaseThreadSanitizer: {
           stage("clang-release:thread-sanitizer") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
               sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
               sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-thread-sanitizer"
               sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 1 --scheduler"
