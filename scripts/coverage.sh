@@ -41,15 +41,6 @@ if [[ "$unamestr" == 'Darwin' ]]; then
    path_to_compiler='/usr/local/opt/llvm/bin/'
 fi
 
-# We need at least clang 7.0.1 for coverage: https://github.com/hyrise/hyrise/pull/1433#issuecomment-458082341
-installed_clang_version=`${path_to_compiler}clang++ --version | head -n1 | cut -d" " -f3 | cut -d"-" -f1`
-required_clang_version=7.0.1
-
-if verlt ${installed_clang_version} ${required_clang_version} ; then
-    echo "Minimum clang version $required_clang_version not met, is $installed_clang_version"
-    exit -1
-fi
-
 cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
