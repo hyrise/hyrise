@@ -933,7 +933,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     if (!pre_aggregate_expressions.empty()) {
       const auto any_expression_not_yet_available =
           std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
-                      [&](const auto& expression) {return !_current_lqp->find_column_id(*expression);});
+                      [&](const auto& expression) { return !_current_lqp->find_column_id(*expression); });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);

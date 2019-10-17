@@ -46,7 +46,7 @@ class Table : private Noncopyable {
 
   size_t column_count() const;
 
-  const std::string column_name(const ColumnID column_id) const;
+  const std::string& column_name(const ColumnID column_id) const;
   std::vector<std::string> column_names() const;
 
   DataType column_data_type(const ColumnID column_id) const;

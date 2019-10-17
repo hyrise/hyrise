@@ -39,16 +39,6 @@ void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionCont
 std::shared_ptr<const Table> Projection::_on_execute() {
   const auto& input_table = *input_table_left();
 
-    std::cout << "INPUT TABLE:" << std::endl;
-    const auto& materialized_table = input_table.get_rows();
-    for (const auto& row : materialized_table) {
-      for (const auto& cell : row) {
-        std::cout << cell << ' ';
-      }
-      std::cout << std::endl;
-    }
-    std::cout << std::endl << std::endl;
-
   /**
    * If an expression is a PQPColumnExpression then it might be possible to forward the input column, if the
    * input TableType (References or Data) matches the output column type (ReferenceSegment or not).
@@ -117,20 +107,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
   }
 
-  const auto& output_table = std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
+  return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
                                  input_table.has_mvcc());
-
-
-    std::cout << "OUTPUT TABLE:" << std::endl;
-    const auto& materialized_output_table = output_table->get_rows();
-    for (const auto& row : materialized_output_table) {
-      for (const auto& cell : row) {
-        std::cout << cell << ' ';
-      }
-      std::cout << std::endl;
-    }
-    std::cout << std::endl << std::endl;
-    return output_table;
 }
 
 // returns the singleton dummy table used for literal projections
