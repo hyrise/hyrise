@@ -306,26 +306,31 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       // For now, we handle OR by assuming that predicates do not overlap, i.e., by adding the selectivities. Also, we
       // simply forward the column statistics of the original input.
 
-      const auto left_predicate_node = PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
+      const auto left_predicate_node =
+          PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
       const auto left_statistics = estimate_predicate_node(*left_predicate_node, input_table_statistics);
 
-      const auto right_predicate_node = PredicateNode::make(logical_expression->right_operand(), predicate_node.left_input());
+      const auto right_predicate_node =
+          PredicateNode::make(logical_expression->right_operand(), predicate_node.left_input());
       const auto right_statistics = estimate_predicate_node(*right_predicate_node, input_table_statistics);
 
-      // TODO test that cardinality does not increase
-      const auto row_count = Cardinality{std::min(left_statistics->row_count + right_statistics->row_count, input_table_statistics->row_count)};
+      const auto row_count = Cardinality{
+          std::min(left_statistics->row_count + right_statistics->row_count, input_table_statistics->row_count)};
       auto output_column_statistics = input_table_statistics->column_statistics;
-      const auto output_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
+      const auto output_table_statistics =
+          std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 
       return output_table_statistics;
     } else if (logical_expression->logical_operator == LogicalOperator::And) {
       // Estimate AND by splitting it up into two consecutive predicate nodes
 
-      const auto first_predicate_node = PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
+      const auto first_predicate_node =
+          PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
       const auto first_predicate_statistics = estimate_predicate_node(*first_predicate_node, input_table_statistics);
 
       const auto second_predicate_node = PredicateNode::make(logical_expression->right_operand(), first_predicate_node);
-      const auto second_predicate_statistics = estimate_predicate_node(*second_predicate_node, first_predicate_statistics);
+      const auto second_predicate_statistics =
+          estimate_predicate_node(*second_predicate_node, first_predicate_statistics);
 
       return second_predicate_statistics;
     }

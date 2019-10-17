@@ -26,7 +26,7 @@ class PredicatePlacementRule : public AbstractRule {
   // @param push_down_nodes stores nodes from higher up in the tree for which we're currently searching the lowest
   //                        possible position.
   void _push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side,
-                                   std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes) const;
+                            std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes) const;
 
   // Traverse the LQP and pull up expensive predicates.
   // @returns expensive predicates from the LQP below @param current_node @param input_side.

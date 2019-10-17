@@ -22,7 +22,7 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 
   _estimator = cost_estimator->cardinality_estimator->new_instance();
-  _estimator->guarantee_bottom_up_construction(); 
+  _estimator->guarantee_bottom_up_construction();
 
   std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes);
@@ -184,7 +184,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                 }
               }
 
-              const auto add_disjunction_if_beneficial = [&](const auto& disjunction, const auto& input_node, auto& predicate_nodes) {
+              const auto add_disjunction_if_beneficial = [&](const auto& disjunction, const auto& input_node,
+                                                             auto& predicate_nodes) {
                 if (disjunction.empty()) return;
 
                 const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
@@ -201,7 +202,6 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
               add_disjunction_if_beneficial(left_disjunction, join_node->left_input(), left_push_down_nodes);
               add_disjunction_if_beneficial(right_disjunction, join_node->right_input(), right_push_down_nodes);
-
 
               // End of the pre-join filter code
             }

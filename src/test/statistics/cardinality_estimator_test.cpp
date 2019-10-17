@@ -597,6 +597,17 @@ TEST_F(CardinalityEstimatorTest, PredicateOr) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 20);
 }
 
+TEST_F(CardinalityEstimatorTest, PredicateOrDoesNotIncreaseCardinality) {
+  // While we do not handle overlapping ranges yet, we at least want to make sure that tables don't become bigger.
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(or_(less_than_equals_(a_a, 60), greater_than_(a_a, 20)),
+      node_a);
+  // clang-format on
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 100);
+}
+
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format off
   const auto input_lqp =
