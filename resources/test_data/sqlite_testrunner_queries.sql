@@ -1,3 +1,4 @@
+SELECT SUM(b) FROM mixed GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
 SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM mixed;
 SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed;

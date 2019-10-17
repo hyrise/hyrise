@@ -373,6 +373,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
       }
       aggregate_column_definitions.emplace_back(argument_column_id, aggregate_expression->aggregate_function);
     } else {
+      Assert(false, "todo(jj): I assumed that only COUNT(*) had no arguments.");
       aggregate_column_definitions.emplace_back(std::nullopt, aggregate_expression->aggregate_function);
     }
   }
@@ -503,6 +504,12 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
   visit_expression(pqp_expression, [&](auto& expression) {
     // Try to resolve the Expression to a column from the input node
     const auto column_id = node->find_column_id(*expression);
+
+    // Handle COUNT(*)
+    const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*expression);
+    bool is_count_star = column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID;
+    Assert(!is_count_star, "todo(jj): COUNT(*) must not be in a ProjectionNode.");
+
     if (column_id) {
       const auto referenced_expression = node->column_expressions()[*column_id];
       expression =
@@ -541,7 +548,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
-    AssertInput(expression->type != ExpressionType::LQPColumn, // last_todo: Do not skip "if (column_id) {"
+    AssertInput(expression->type != ExpressionType::LQPColumn,
                 "Failed to resolve Column '"s + expression->as_column_name() + "', LQP is invalid");
 
     return ExpressionVisitation::VisitArguments;

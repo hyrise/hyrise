@@ -455,6 +455,36 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, SelectAggregate) {
+  const auto actual_lqp = compile_query("SELECT COUNT(*) FROM int_float");
+
+  const auto aggregate = count_star_(stored_table_node_int_float);
+
+  // clang-format off
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(aggregate),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectAggregates) {
+  const auto actual_lqp = compile_query("SELECT COUNT(*), SUM(a + b) FROM int_float");
+
+  const auto aggregate0 = count_star_(stored_table_node_int_float);
+  const auto aggregate1 = sum_(add_(int_float_a, int_float_b));
+
+  // clang-format off
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(aggregate0, aggregate1),
+    ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b)),
+      stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, SelectAggregatesFromSubqueries) {
   const auto actual_lqp = compile_query(
       "SELECT * FROM ("

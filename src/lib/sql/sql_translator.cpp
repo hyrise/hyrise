@@ -883,7 +883,11 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
       aggregate_expressions.emplace_back(aggregate_expression);
       for (const auto& argument : aggregate_expression->arguments) {
         if (pre_aggregate_expression_set.emplace(argument).second) {
-          pre_aggregate_expressions.emplace_back(argument);
+          // Handle COUNT(*)
+          const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument);
+          if(!column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID) {
+            pre_aggregate_expressions.emplace_back(argument);
+          }
         }
       }
     }
@@ -928,15 +932,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     if (!pre_aggregate_expressions.empty()) {
       const auto any_expression_not_yet_available =
           std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
-                      [&](const auto& expression) {
-             if (_current_lqp->find_column_id(*expression)) {
-               return false;
-             }
-
-             // Handle COUNT(*)
-             const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*expression);
-             return !column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID;
-          });
+                      [&](const auto& expression) {return !_current_lqp->find_column_id(*expression);});
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
