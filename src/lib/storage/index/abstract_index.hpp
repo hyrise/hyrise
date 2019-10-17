@@ -62,7 +62,6 @@ class AbstractIndex : private Noncopyable {
   AbstractIndex() = delete;
   explicit AbstractIndex(const SegmentIndexType type);
   AbstractIndex(AbstractIndex&&) = default;
-  AbstractIndex& operator=(AbstractIndex&&) = default;
   virtual ~AbstractIndex() = default;
 
   /**

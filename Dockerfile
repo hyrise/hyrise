@@ -26,7 +26,6 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        llvm-8-tools \
         man \
         parallel \
         postgresql-server-dev-all \
