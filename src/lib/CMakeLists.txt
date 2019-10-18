@@ -557,6 +557,8 @@ set(
     utils/format_duration.cpp
     utils/format_duration.hpp
     utils/invalid_input_exception.hpp
+    utils/list_directory.cpp
+    utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/lossless_predicate_cast.cpp
@@ -638,6 +640,13 @@ set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
+
+# Work around an stdlibc++ bug, see list_directory.hpp for details
+set_source_files_properties(
+    utils/list_directory.cpp
+    PROPERTIES
+    COMPILE_FLAGS -O0
+)
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)

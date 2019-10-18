@@ -267,24 +267,18 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
-// clang-format off
-#ifdef __clang__
-// Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
-[[clang::optnone]]
-#endif
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
-  // clang-format on
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
   // try to load cached tables
   const auto cache_directory = "tpcds_cached_tables/sf-" + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
-      const auto table_name = table_file.path().stem();
+    for (const auto& table_file : list_directory(cache_directory)) {
+      const auto table_name = table_file.stem();
       auto timer = Timer{};
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
 
-      table_info_by_name[table_name].table = ImportBinary::read_binary(table_file.path());
+      table_info_by_name[table_name].table = ImportBinary::read_binary(table_file);
       table_info_by_name[table_name].loaded_from_binary = true;
 
       std::cout << " (" << timer.lap_formatted() << ")" << std::endl;

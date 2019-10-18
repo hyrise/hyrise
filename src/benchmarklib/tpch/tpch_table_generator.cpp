@@ -119,11 +119,6 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, uint32_t chunk_size)
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
-// clang-format off
-#ifdef __clang__
-// Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
-[[clang::optnone]]
-#endif
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   // clang-format on
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
@@ -133,13 +128,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
-      const auto table_name = table_file.path().stem();
+    for (const auto& table_file : list_directory(cache_directory)) {
+      const auto table_name = table_file.stem();
       Timer timer;
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
 
       BenchmarkTableInfo table_info;
-      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.table = ImportBinary::read_binary(table_file);
       table_info.loaded_from_binary = true;
       table_info_by_name[table_name] = table_info;
 

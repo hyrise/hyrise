@@ -7,20 +7,15 @@
 #include "SQLParser.h"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
+#include "utils/list_directory.hpp"
 
 namespace opossum {
 
-// clang-format off
-#ifdef __clang__
-// Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
-[[clang::optnone]]
-#endif
 FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
     const std::unordered_set<std::string>& filename_blacklist,
     const std::optional<std::unordered_set<std::string>>& query_subset)
     : AbstractBenchmarkItemRunner(config) {
-  // clang-format on
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   std::filesystem::path path{query_path};
@@ -31,12 +26,12 @@ FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     _parse_query_file(query_path, query_subset);
   } else {
     // Recursively walk through the specified directory and add all files on the way
-    for (const auto& entry : std::filesystem::recursive_directory_iterator(path)) {
-      if (std::filesystem::is_regular_file(entry) && is_sql_file(entry.path())) {
-        if (filename_blacklist.find(entry.path().filename()) != filename_blacklist.end()) {
+    for (const auto& entry : list_directory(path)) {
+      if (is_sql_file(entry)) {
+        if (filename_blacklist.find(entry.filename()) != filename_blacklist.end()) {
           continue;
         }
-        _parse_query_file(entry.path(), query_subset);
+        _parse_query_file(entry, query_subset);
       }
     }
   }
