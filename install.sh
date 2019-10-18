@@ -52,7 +52,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
                 # packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc ccache clang-8 clang-format-8 clang-tidy-8 cmake curl g++-9 gcc-9 gcovr git graphviz $boostall libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev llvm-8-tools man parallel postgresql-server-dev-all python2.7 python-glob2 python-pexpect python-pip sudo systemtap systemtap-sdt-dev valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc ccache clang-8 clang-format-8 clang-tidy-7 cmake curl g++-9 gcc-9 gcovr git graphviz $boostall libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev llvm-8-tools man parallel postgresql-server-dev-all python2.7 python-glob2 python-pexpect python-pip sudo systemtap systemtap-sdt-dev valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
