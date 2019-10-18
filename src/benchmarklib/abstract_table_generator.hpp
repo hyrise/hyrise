@@ -6,7 +6,6 @@
 #include "encoding_config.hpp"
 #include "storage/chunk.hpp"
 #include "types.hpp"
-#include "utils/list_directory.hpp"
 
 namespace opossum {
 

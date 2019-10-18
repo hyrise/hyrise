@@ -4,6 +4,7 @@
 
 #include "benchmark_sql_executor.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {

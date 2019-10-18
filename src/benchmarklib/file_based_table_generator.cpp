@@ -7,6 +7,7 @@
 #include "import_export/csv_parser.hpp"
 #include "operators/import_binary.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
 

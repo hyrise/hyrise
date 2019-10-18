@@ -302,8 +302,8 @@ target_compile_options(
   tpcds_dbgen
   PRIVATE
 
-  -Wno-implicit-int
   -Wno-format
+  -Wno-implicit-int
   -Wno-incompatible-pointer-types
   -Wno-unused-result
 )

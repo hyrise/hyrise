@@ -39,6 +39,7 @@ extern "C" {
 #include "benchmark_config.hpp"
 #include "operators/import_binary.hpp"
 #include "table_builder.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 namespace {
