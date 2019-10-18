@@ -97,7 +97,7 @@ def main():
   benchmark.expect("Max duration per item is 10 seconds")
   benchmark.expect("Warmup duration per item is 10 seconds")
   benchmark.expect("Benchmarking Queries: \[ 2, 4, 6, \]")
-  benchmark.expect("TPCH scale factor is 0.005")
+  benchmark.expect("TPCH scale factor is 0.01")
   benchmark.expect("Using prepared statements: no")
   benchmark.expect("Multi-threaded Topology:")
 
