@@ -31,7 +31,6 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   explicit SimdBp128Decompressor(const SimdBp128Vector& vector);
   SimdBp128Decompressor(const SimdBp128Decompressor& other);
 
-  SimdBp128Decompressor(SimdBp128Decompressor&& other) = default;
   ~SimdBp128Decompressor() = default;
 
   uint32_t get(size_t i) final {

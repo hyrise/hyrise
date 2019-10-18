@@ -169,7 +169,7 @@ endif()
 
 include(ExternalProject)
 if(APPLE)
-    set(MAC_INCLUDES "SDKROOT=\"/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk\" CPATH=\"/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include\"")
+    set(MAC_INCLUDES "SDKROOT=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk\" CPATH=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include\"")
 else()
     set(MAC_INCLUDES "")
 endif()

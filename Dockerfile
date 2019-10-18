@@ -8,9 +8,9 @@ RUN apt-get update \
         bash-completion \
         bc \
         ccache \
-        clang-7 \
-        clang-format-7 \
-        clang-tidy-7 \
+        clang-8 \
+        clang-format-8 \
+        clang-tidy-8 \
         cmake \
         curl \
         g++-8 \
@@ -19,7 +19,6 @@ RUN apt-get update \
         git \
         graphviz \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
-        libclang-7-dev \
         libncurses5-dev \
         libnuma-dev \
         libnuma1 \
@@ -27,8 +26,6 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        llvm \
-        llvm-7-tools \
         man \
         parallel \
         postgresql-server-dev-all \
