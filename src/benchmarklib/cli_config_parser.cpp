@@ -53,7 +53,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
-      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false")
+      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false");
     }
   }
 

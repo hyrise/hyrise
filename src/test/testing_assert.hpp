@@ -71,7 +71,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 // clang-format off
 #define EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode) \
   EXPECT_TRUE(segment_to_test && expected_segment && check_segment_equal(                                             \
-              segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode));
+              segment_to_test, expected_segment, order_sensitivity, type_cmp_mode, float_comparison_mode))
 // clang-format on
 
 /**

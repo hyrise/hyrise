@@ -4,20 +4,18 @@
 | ------------------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf                  | >= 2.69          |    All   |                                    No |
 | boost                     | >= 1.65.0        |    All   |                                    No |
-| clang                     | 7.{0,1}          |    All   |                 Yes, if gcc installed |
-| clang-format              | 7.{0,1}          |    All   |                      Yes (formatting) |
-| clang-tidy                | 7.{0,1}          |    All   |                         Yes (linting) |
+| clang                     | >= 8.0           |    All   |                 Yes, if gcc installed |
+| clang-format              | >= 8.0           |    All   |                      Yes (formatting) |
+| clang-tidy                | >= 8.0           |    All   |                         Yes (linting) |
 | cmake                     | >= 3.9           |    All   |                                    No |
 | gcc                       | >= 9.0           |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
 | glob2                     | >= 0.5           |    All   |                     Yes (tests in CI) |
 | graphviz                  | any              |    All   |             Yes (query visualization) |
-| libclang-dev              | 7.1              |    Linux |                             Yes (JIT) |
 | libnuma-dev               | any              |    Linux |                            Yes (numa) |
 | libnuma1                  | any              |    Linux |                            Yes (numa) |
 | libpq-dev                 | >= 9             |    All   |                                    No |
-| llvm                      | any              |    All   |                 Yes (code sanitizers) |
-| llvm-7-tools              | 7                |    Linux |                                    No |
+| llvm-8-tools              | 8                |    Linux |                                    No |
 | parallel                  | any              |    All   |                                   Yes |
 | pexpect                   | >= 4             |    All   |                     Yes (tests in CI) |
 | postgresql-server-dev-all | >= 154           |    Linux |                                    No |
