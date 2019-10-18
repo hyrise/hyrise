@@ -117,11 +117,6 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
 void Table::append(const std::vector<AllTypeVariant>& values) {
   auto last_chunk = !_chunks.empty() ? get_chunk(ChunkID{chunk_count() - 1}) : nullptr;
   if (!last_chunk || last_chunk->size() >= _max_chunk_size) {
-    // One chunk reached its capacity just now. We prepare this chunk for MVCC optimizations.
-    if (last_chunk && _use_mvcc == UseMvcc::Yes) {
-      last_chunk->update_max_begin_cid();
-    }
-
     append_mutable_chunk();
     last_chunk = get_chunk(ChunkID{chunk_count() - 1});
   }
@@ -207,8 +202,6 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
 
   auto chunk = std::make_shared<Chunk>(segments, mvcc_data, alloc);
   _chunks.push_back(chunk);
-
-  if (mvcc_data) chunk->update_max_begin_cid();
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {

@@ -144,7 +144,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
   vs_int->append(4);
 
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
-  chunk->update_max_begin_cid();
+  chunk->finalize();
   auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
@@ -158,7 +158,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
 
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
   chunk->increase_invalid_row_count(1);
-  chunk->update_max_begin_cid();
+  chunk->finalize();
   auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
@@ -170,7 +170,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
   auto vs_int = std::make_shared<ValueSegment<int32_t>>();
   vs_int->append(4);
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
-  chunk->update_max_begin_cid();
+  chunk->finalize();
   auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   EXPECT_TRUE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));

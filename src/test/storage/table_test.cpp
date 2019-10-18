@@ -169,24 +169,6 @@ TEST_F(StorageTableTest, FillingUpAChunkUpdatesMaxBeginCid) {
   EXPECT_EQ(*mvcc_data->max_begin_cid, 0);
 }
 
-TEST_F(StorageTableTest, AppendingAChunkUpdatesMaxBeginCid) {
-  t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-
-  auto vs_int = std::make_shared<ValueSegment<int32_t>>();
-  vs_int->append(1);
-  vs_int->append(7);
-  auto mvcc_data = std::make_shared<MvccData>(2, 0);
-  mvcc_data->begin_cids = {1, 3};
-
-  EXPECT_FALSE(mvcc_data->max_begin_cid);
-
-  t->append_chunk(Segments({vs_int}), mvcc_data);
-  const auto c = t->get_chunk(ChunkID{0});
-  auto mvcc_data_c = c->get_scoped_mvcc_data_lock();
-
-  EXPECT_EQ(*mvcc_data_c->max_begin_cid, 3);
-}
-
 TEST_F(StorageTableTest, EmplaceChunk) {
   EXPECT_EQ(t->chunk_count(), 0u);
 

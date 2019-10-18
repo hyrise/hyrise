@@ -181,7 +181,11 @@ class Chunk : private Noncopyable {
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
-  void update_max_begin_cid();
+  /**
+     * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
+     * the MVCC max_begin_cid is set.
+     */
+  void finalize();
 
  private:
   std::vector<std::shared_ptr<const BaseSegment>> _get_segments_for_ids(const std::vector<ColumnID>& column_ids) const;
