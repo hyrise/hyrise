@@ -18,6 +18,9 @@ class BaseSegment : private Noncopyable {
   // the type of the data contained in this segment
   DataType data_type() const;
 
+  // id of segment
+  uint32_t id() const;
+
   // returns the value at a given position
   virtual const AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
 
@@ -34,5 +37,7 @@ class BaseSegment : private Noncopyable {
 
  private:
   const DataType _data_type;
+  const uint32_t _id;
+  static uint32_t _id_counter;
 };
 }  // namespace opossum

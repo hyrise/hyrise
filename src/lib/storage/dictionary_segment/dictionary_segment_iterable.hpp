@@ -29,9 +29,10 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
 
       auto begin = Iterator<ZsIteratorType, DictionaryIteratorType>{_dictionary->cbegin(), _segment.null_value_id(),
-                                                                    vector.cbegin(), ChunkOffset{0u}};
+                                                                    vector.cbegin(), ChunkOffset{0u}, _segment.id()};
       auto end = Iterator<ZsIteratorType, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), vector.cend(), static_cast<ChunkOffset>(_segment.size())};
+          _dictionary->cbegin(), _segment.null_value_id(), vector.cend(), static_cast<ChunkOffset>(_segment.size()),
+          _segment.id()};
 
       functor(begin, end);
     });
@@ -46,14 +47,17 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       auto begin = PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), std::move(decompressor), position_filter->cbegin(),
-          position_filter->cbegin()};
+          position_filter->cbegin(), _segment.id()};
       auto end = PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>{
-          _dictionary->cbegin(), _segment.null_value_id(), nullptr, position_filter->cbegin(), position_filter->cend()};
+          _dictionary->cbegin(), _segment.null_value_id(), nullptr, position_filter->cbegin(), position_filter->cend(),
+          _segment.id()};
       functor(begin, end);
     });
   }
 
   size_t _on_size() const { return _segment.size(); }
+
+  const BaseDictionarySegment& segment() const { return _segment; }
 
  private:
   template <typename ZsIteratorType, typename DictionaryIteratorType>
@@ -63,11 +67,12 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     using IterableType = DictionarySegmentIterable<T, Dictionary>;
 
     Iterator(DictionaryIteratorType dictionary_begin_it, ValueID null_value_id, ZsIteratorType attribute_it,
-             ChunkOffset chunk_offset)
+             ChunkOffset chunk_offset, uint32_t segment_id)
         : _dictionary_begin_it{dictionary_begin_it},
           _null_value_id{null_value_id},
           _attribute_it{attribute_it},
-          _chunk_offset{chunk_offset} {}
+          _chunk_offset{chunk_offset},
+          _segment_id{segment_id} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -97,6 +102,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentPosition<T>{T{}, true, _chunk_offset};
 
+      SegmentAccessCounter::instance().increase(_segment_id, SegmentAccessCounter::IteratorAccess);
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
     }
 
@@ -105,6 +111,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     ValueID _null_value_id;
     ZsIteratorType _attribute_it;
     ChunkOffset _chunk_offset;
+    uint32_t _segment_id;
   };
 
   template <typename ZsDecompressorType, typename DictionaryIteratorType>
@@ -117,13 +124,15 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
     PointAccessIterator(DictionaryIteratorType dictionary_begin_it, const ValueID null_value_id,
                         const std::shared_ptr<ZsDecompressorType>& attribute_decompressor,
-                        PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
+                        PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it,
+                        uint32_t segment_id)
         : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecompressorType, DictionaryIteratorType>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _dictionary_begin_it{dictionary_begin_it},
           _null_value_id{null_value_id},
-          _attribute_decompressor{attribute_decompressor} {}
+          _attribute_decompressor{attribute_decompressor},
+          _segment_id{segment_id}{}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -136,6 +145,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
 
+      SegmentAccessCounter::instance().increase(_segment_id,
+          SegmentAccessCounter::IteratorPointAccess);
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }
 
@@ -143,6 +154,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     DictionaryIteratorType _dictionary_begin_it;
     ValueID _null_value_id;
     std::shared_ptr<ZsDecompressorType> _attribute_decompressor;
+    uint32_t _segment_id;
   };
 
  private:

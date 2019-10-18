@@ -4,10 +4,11 @@
 #include <optional>
 #include <type_traits>
 
+#include "types.hpp"
 #include "storage/base_segment_accessor.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "types.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/segment_access_counter.hpp"
 
 namespace opossum {
 
@@ -45,7 +46,10 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
  public:
   explicit SegmentAccessor(const SegmentType& segment) : AbstractSegmentAccessor<T>{}, _segment{segment} {}
 
-  const std::optional<T> access(ChunkOffset offset) const final { return _segment.get_typed_value(offset); }
+  const std::optional<T> access(ChunkOffset offset) const final {
+    SegmentAccessCounter::instance().increase(_segment.id(), SegmentAccessCounter::AccessorAccess);
+    return _segment.get_typed_value(offset);
+  }
 
  protected:
   const SegmentType& _segment;
@@ -71,7 +75,7 @@ class MultipleChunkReferenceSegmentAccessor final : public AbstractSegmentAccess
 
     const auto chunk_id = row_id.chunk_id;
 
-    // Grow the _accessors vector faster than linearly if the chunk_id is out of its current bounds
+    // Grow the _accessors vector faster than linear if the chunk_id is out of its current bounds
     if (static_cast<size_t>(chunk_id) >= _accessors.size()) {
       _accessors.resize(static_cast<size_t>(chunk_id + _accessors.size()));
     }
@@ -99,6 +103,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
       : _pos_list{pos_list}, _chunk_id(chunk_id), _segment(segment) {}
 
   const std::optional<T> access(ChunkOffset offset) const final {
+    SegmentAccessCounter::instance().increase(_segment.id(), SegmentAccessCounter::ReferenceAccessorAccess);
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
     return _segment.get_typed_value(referenced_chunk_offset);
   }

@@ -22,9 +22,9 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       using OffsetValueIteratorT = decltype(offset_values.cbegin());
 
       auto begin = Iterator<OffsetValueIteratorT>{_segment.block_minima().cbegin(), offset_values.cbegin(),
-                                                  _segment.null_values().cbegin()};
+                                                  _segment.null_values().cbegin(), _segment.id()};
 
-      auto end = Iterator<OffsetValueIteratorT>{offset_values.cend()};
+      auto end = Iterator<OffsetValueIteratorT>{offset_values.cend(), _segment.id()};
 
       functor(begin, end);
     });
@@ -38,15 +38,18 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
       auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
                                                                  std::move(decompressor), position_filter->cbegin(),
-                                                                 position_filter->cbegin()};
+                                                                 position_filter->cbegin(), _segment.id()};
 
-      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter->cbegin(), position_filter->cend()};
+      auto end = PointAccessIterator<OffsetValueDecompressorT>{position_filter->cbegin(), position_filter->cend(),
+                                                               _segment.id()};
 
       functor(begin, end);
     });
   }
 
   size_t _on_size() const { return _segment.size(); }
+
+  const FrameOfReferenceSegment<T>& segment() const { return _segment; }
 
  private:
   const FrameOfReferenceSegment<T>& _segment;
@@ -63,15 +66,17 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
    public:
     // Begin Iterator
     explicit Iterator(ReferenceFrameIterator block_minimum_it, OffsetValueIteratorT offset_value_it,
-                      NullValueIterator null_value_it)
+                      NullValueIterator null_value_it, uint32_t segment_id)
         : _block_minimum_it{block_minimum_it},
           _offset_value_it{offset_value_it},
           _null_value_it{null_value_it},
           _index_within_frame{0u},
-          _chunk_offset{0u} {}
+          _chunk_offset{0u},
+          _segment_id{segment_id} {}
 
     // End iterator
-    explicit Iterator(OffsetValueIteratorT offset_value_it) : Iterator{{}, offset_value_it, {}} {}
+    explicit Iterator(OffsetValueIteratorT offset_value_it, uint32_t segment_id) : Iterator{{}, offset_value_it, {},
+                                                                                            segment_id} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -120,6 +125,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
     SegmentPosition<T> dereference() const {
       const auto value = static_cast<T>(*_offset_value_it) + *_block_minimum_it;
+      SegmentAccessCounter::instance().increase(_segment_id, SegmentAccessCounter::IteratorAccess);
       return SegmentPosition<T>{value, *_null_value_it, _chunk_offset};
     }
 
@@ -129,6 +135,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     NullValueIterator _null_value_it;
     size_t _index_within_frame;
     ChunkOffset _chunk_offset;
+    uint32_t _segment_id;
   };
 
   template <typename OffsetValueDecompressorT>
@@ -141,19 +148,21 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                         const std::shared_ptr<OffsetValueDecompressorT>& attribute_decompressor,
-                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
+                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it,
+                        uint32_t segment_id)
         : BasePointAccessSegmentIterator<PointAccessIterator<OffsetValueDecompressorT>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _block_minima{block_minima},
           _null_values{null_values},
-          _offset_value_decompressor{attribute_decompressor} {}
+          _offset_value_decompressor{attribute_decompressor},
+          _segment_id{segment_id} {}
 
     // End Iterator
     explicit PointAccessIterator(const PosList::const_iterator position_filter_begin,
-                                 PosList::const_iterator position_filter_it)
+                                 PosList::const_iterator position_filter_it, uint32_t segment_id)
         : PointAccessIterator{nullptr, nullptr, nullptr, std::move(position_filter_begin),
-                              std::move(position_filter_it)} {}
+                              std::move(position_filter_it), segment_id} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -168,6 +177,8 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       const auto offset_value = _offset_value_decompressor->get(chunk_offsets.offset_in_referenced_chunk);
       const auto value = static_cast<T>(offset_value) + block_minimum;
 
+      SegmentAccessCounter::instance().increase(_segment_id,
+          SegmentAccessCounter::IteratorPointAccess);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
@@ -175,6 +186,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     const pmr_vector<T>* _block_minima;
     const pmr_vector<bool>* _null_values;
     std::shared_ptr<OffsetValueDecompressorT> _offset_value_decompressor;
+    uint32_t _segment_id;
   };
 };
 

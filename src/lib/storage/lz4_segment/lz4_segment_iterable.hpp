@@ -28,8 +28,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
      */
     const auto null_values = _segment.null_values() ? *_segment.null_values() : pmr_vector<bool>(_segment.size());
 
-    auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), null_values.cbegin()};
-    auto end = Iterator<ValueIterator>{decompressed_segment.cend(), null_values.cend()};
+    auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), null_values.cbegin(), _segment.id()};
+    auto end = Iterator<ValueIterator>{decompressed_segment.cend(), null_values.cend(), _segment.id()};
 
     functor(begin, end);
   }
@@ -55,14 +55,18 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     }
 
     auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
-                                                    position_filter->cbegin(), position_filter->cbegin()};
+                                                    position_filter->cbegin(), position_filter->cbegin(),
+                                                    _segment.id()};
     auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment, &_segment.null_values(),
-                                                  position_filter->cbegin(), position_filter->cend()};
+                                                  position_filter->cbegin(), position_filter->cend(),
+                                                  _segment.id()};
 
     functor(begin, end);
   }
 
   size_t _on_size() const { return _segment.size(); }
+
+  const LZ4Segment<T>& segment() const { return _segment; }
 
  private:
   const LZ4Segment<T>& _segment;
@@ -77,8 +81,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
    public:
     // Begin and End Iterator
-    explicit Iterator(ValueIterator data_it, const NullValueIterator null_value_it)
-        : _chunk_offset{0u}, _data_it{data_it}, _null_value_it{null_value_it} {}
+    explicit Iterator(ValueIterator data_it, const NullValueIterator null_value_it, uint32_t segment_id)
+        : _chunk_offset{0u}, _data_it{data_it}, _null_value_it{null_value_it}, _segment_id{segment_id} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -114,12 +118,16 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
     }
 
-    SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_data_it, *_null_value_it, _chunk_offset}; }
+    SegmentPosition<T> dereference() const {
+      SegmentAccessCounter::instance().increase(_segment_id, SegmentAccessCounter::IteratorAccess);
+      return SegmentPosition<T>{*_data_it, *_null_value_it, _chunk_offset};
+    }
 
    private:
     ChunkOffset _chunk_offset;
     ValueIterator _data_it;
     NullValueIterator _null_value_it;
+    uint32_t _segment_id;
   };
 
   template <typename ValueIterator>
@@ -131,12 +139,14 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     // Begin Iterator
     PointAccessIterator(const std::vector<T>& data, const std::optional<pmr_vector<bool>>* null_values,
-                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it)
+                        const PosList::const_iterator position_filter_begin, PosList::const_iterator position_filter_it,
+                        uint32_t segment_id)
         : BasePointAccessSegmentIterator<PointAccessIterator<ValueIterator>,
                                          SegmentPosition<T>>{std::move(position_filter_begin),
                                                              std::move(position_filter_it)},
           _data{data},
-          _null_values{null_values} {}
+          _null_values{null_values},
+          _segment_id{segment_id} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -145,12 +155,14 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       const auto& chunk_offsets = this->chunk_offsets();
       const auto& value = _data[chunk_offsets.offset_in_poslist];
       const auto is_null = *_null_values && (**_null_values)[chunk_offsets.offset_in_referenced_chunk];
+      SegmentAccessCounter::instance().increase(_segment_id, SegmentAccessCounter::IteratorPointAccess);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 
    private:
     const std::vector<T> _data;
     const std::optional<pmr_vector<bool>>* _null_values;
+    uint32_t _segment_id;
   };
 };
 

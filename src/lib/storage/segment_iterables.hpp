@@ -2,9 +2,11 @@
 
 #include <type_traits>
 
-#include "storage/segment_iterables/base_segment_iterators.hpp"
 #include "types.hpp"
+#include "storage/segment_iterables/base_segment_iterators.hpp"
 #include "utils/assert.hpp"
+#include "utils/segment_access_counter.hpp"
+
 
 namespace opossum {
 
@@ -146,7 +148,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   template <typename Functor>
   void with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     if (!position_filter) {
-      _self()._on_with_iterators(functor);
+      with_iterators(functor);
     } else {
       DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");
       _self()._on_with_iterators(position_filter, functor);

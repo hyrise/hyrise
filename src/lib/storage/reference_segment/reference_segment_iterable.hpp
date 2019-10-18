@@ -118,6 +118,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
   size_t _on_size() const { return _segment.size(); }
 
+  const ReferenceSegment& segment() const { return _segment; }
+
  private:
   const ReferenceSegment& _segment;
 
