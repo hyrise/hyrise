@@ -67,7 +67,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 --slave /usr/bin/g++ g++ /usr/bin/g++-9
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-8 80 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-8 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-8
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-8 80 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-8 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-7
             else
                 echo "Error during installation."
                 exit 1
