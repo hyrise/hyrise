@@ -290,7 +290,7 @@ try {
           sh "./clang-debug/hyriseTest"
           sh "./clang-debug/hyriseSystemTest"
           sh "./scripts/test/hyriseConsole_test.py clang-debug"
-          sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {
           sh "ls -A1 | xargs rm -rf"
         }
