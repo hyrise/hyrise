@@ -22,7 +22,7 @@ class OperatorsExportBinaryTest : public BaseTest {
  protected:
   void SetUp() override {}
 
-  void TearDown() override { std::remove(filename.c_str()); }
+  void TearDown() override { std::remove(filename.c_str());}
 
   bool file_exists(const std::string& name) {
     std::ifstream file{name};
@@ -164,6 +164,27 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   EXPECT_TRUE(compare_files("resources/test_data/bin/StringDictionarySegment.bin", filename));
 }
 
+TEST_F(OperatorsExportBinaryTest, StringRunLengthSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  ChunkEncoder::encode_all_chunks(table, EncodingType::RunLength);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/StringRunLengthSegment.bin", filename));
+}
+
 TEST_F(OperatorsExportBinaryTest, AllTypesValueSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
@@ -213,6 +234,33 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
 
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesDictionarySegment.bin", filename));
+}
+
+TEST_F(OperatorsExportBinaryTest, AllTypesRunLengthSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+
+  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  ChunkEncoder::encode_all_chunks(table, EncodingType::RunLength);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesRunLengthSegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
@@ -314,6 +362,29 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
 
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("resources/test_data/bin/EmptyStringsDictionarySegment.bin", filename));
+}
+
+TEST_F(OperatorsExportBinaryTest, EmptyStringsRunLengthSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({""});
+  table->append({""});
+  table->append({""});
+  table->append({""});
+  table->append({""});
+
+  ChunkEncoder::encode_all_chunks(table, EncodingType::RunLength);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/EmptyStringsRunLengthSegment.bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {

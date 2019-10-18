@@ -12,7 +12,7 @@ template <typename T>
 RunLengthSegment<T>::RunLengthSegment(const std::shared_ptr<const pmr_vector<T>>& values,
                                       const std::shared_ptr<const pmr_vector<bool>>& null_values,
                                       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions)
-    : BaseEncodedSegment(data_type_from_type<T>()),
+    : BaseRunLengthSegment(data_type_from_type<T>()),
       _values{values},
       _null_values{null_values},
       _end_positions{end_positions} {}

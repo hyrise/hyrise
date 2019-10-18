@@ -11,6 +11,7 @@
 #include "import_export/binary.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
 
 namespace opossum {
@@ -142,6 +143,9 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
                                                                         AttributeVectorWidth attribute_vector_width);
+
+  template <typename T>
+  static std::shared_ptr<RunLengthSegment<T>> _import_run_length_segment(std::ifstream& file, ChunkOffset row_count);
 
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>

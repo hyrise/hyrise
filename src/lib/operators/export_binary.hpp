@@ -167,6 +167,32 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
   void handle_segment(const BaseEncodedSegment& base_segment,
                       std::shared_ptr<SegmentVisitorContext> base_context) override;
 
+  void handle_segment(const BaseRunLengthSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+
+  /**
+   * RunLength Segments are dumped with the following layout:
+   *
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column Type            | ColumnType                            |   1
+   * Size of values v.      | uint32_t                              |   4
+   * Values                 | T (int, float, double, long)          |   values size * sizeof(T)
+   * Size of NULL values v. | uint32_t                              |   4
+   * NULL values            | vector<bool> (BoolAsByteType)         |   rows * 1
+   * Size of End Position v.| uint32_t                              |   4
+   * End Positions          | ChunkOffset                           |   values size * 4
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   * ^: These fields are only written if the type of the column IS a string.
+   * °: This field is written if the type of the column is NOT a string
+   *
+   * @param base_segment The segment to export
+   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   */
+
  private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.
   static void _export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,

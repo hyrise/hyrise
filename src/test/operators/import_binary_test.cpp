@@ -75,6 +75,25 @@ TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_F(OperatorsImportBinaryTest, StringRunLengthSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10, UseMvcc::Yes);
+  expected_table->append({"This"});
+  expected_table->append({"is"});
+  expected_table->append({"a"});
+  expected_table->append({"test"});
+
+  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::RunLength);
+
+  Hyrise::get().storage_manager.add_table("table_a", expected_table);
+
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/StringRunLengthSegment.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 TEST_F(OperatorsImportBinaryTest, AllTypesValueSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
@@ -119,6 +138,30 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_F(OperatorsImportBinaryTest, AllTypesRunLengthSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+  expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::RunLength);
+
+  Hyrise::get().storage_manager.add_table("expected_table", expected_table);
+
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesRunLengthSegment.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 TEST_F(OperatorsImportBinaryTest, AllTypesMixColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
@@ -153,7 +196,7 @@ TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
   column_definitions.emplace_back("FirstColumn", DataType::Int, false);
   column_definitions.emplace_back("SecondColumn", DataType::String, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30'000);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/TwoColumnsNoValues.bin");
   importer->execute();
@@ -192,6 +235,26 @@ TEST_F(OperatorsImportBinaryTest, EmptyStringsDictionarySegment) {
   expected_table->append({""});
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/EmptyStringsDictionarySegment.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, EmptyStringsRunLengthSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+
+  expected_table->append({""});
+  expected_table->append({""});
+  expected_table->append({""});
+  expected_table->append({""});
+  expected_table->append({""});
+
+  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::RunLength);
+
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/EmptyStringsRunLengthSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);

@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include "base_encoded_segment.hpp"
+#include "base_run_length_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -26,7 +26,7 @@ class BaseCompressedVector;
  * additional boolean vector.
  */
 template <typename T>
-class RunLengthSegment : public BaseEncodedSegment {
+class RunLengthSegment : public BaseRunLengthSegment {
  public:
   explicit RunLengthSegment(const std::shared_ptr<const pmr_vector<T>>& values,
                             const std::shared_ptr<const pmr_vector<bool>>& null_values,

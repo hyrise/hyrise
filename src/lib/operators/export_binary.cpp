@@ -8,6 +8,7 @@
 
 #include "import_export/binary.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/run_length_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
@@ -76,6 +77,12 @@ void export_values(std::ofstream& ofstream, const std::vector<pmr_string>& value
 }
 
 // specialized implementation for bool values
+template <>
+void export_values(std::ofstream& ofstream, const pmr_vector<bool>& values) {
+  // Cast to fixed-size format used in binary file
+  const auto writable_bools = std::vector<BoolAsByteType>(values.begin(), values.end());
+  export_values(ofstream, writable_bools);
+}
 template <>
 void export_values(std::ofstream& ofstream, const std::vector<bool>& values) {
   // Cast to fixed-size format used in binary file
@@ -289,6 +296,28 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
   Assert(base_segment.compressed_vector_type(),
          "Expected DictionarySegment to use vector compression for attribute vector");
   _export_attribute_vector(context->ofstream, *base_segment.compressed_vector_type(), *base_segment.attribute_vector());
+}
+
+template <typename T>
+void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseRunLengthSegment& base_segment,
+                                                          std::shared_ptr<SegmentVisitorContext> base_context){
+  auto context = std::static_pointer_cast<ExportContext>(base_context);
+
+  export_value(context->ofstream, BinarySegmentType::run_length_segment);
+
+  const auto& segment = static_cast<const RunLengthSegment<T>&>(base_segment);
+  
+  // Write value size and values
+  export_value(context->ofstream, static_cast<uint32_t>(segment.values()->size()));
+  export_values(context->ofstream, *segment.values());
+
+  // Write NULL value size and NULL values
+  export_value(context->ofstream, static_cast<uint32_t>(segment.null_values()->size()));
+  export_values(context->ofstream, *segment.null_values());
+
+  // Write end position size and end positions
+  export_value(context->ofstream, static_cast<uint32_t>(segment.end_positions()->size()));
+  export_values(context->ofstream, *segment.end_positions());
 }
 
 template <typename T>
