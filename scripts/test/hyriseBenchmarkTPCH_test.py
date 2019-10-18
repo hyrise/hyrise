@@ -71,7 +71,7 @@ def main():
   return_error = check_json(output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error)
 
   arguments = {}
-  arguments["--scale"] = ".005"
+  arguments["--scale"] = ".01"
   arguments["--chunk_size"] = "10000"
   arguments["--queries"] = "'2,4,6'"
   arguments["--time"] = "10"
