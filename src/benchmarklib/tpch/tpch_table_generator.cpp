@@ -119,7 +119,7 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, uint32_t chunk_size)
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
-std::unordered_map<std::string, BenchmarkTableInfo> __attribute__((optnone)) TPCHTableGenerator::generate() {
+[[clang::optnone]] std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
 

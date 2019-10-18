@@ -35,7 +35,7 @@ class TPCHTableGenerator final : public AbstractTableGenerator {
   // Constructor for creating a TPCHTableGenerator in a benchmark
   explicit TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
-  std::unordered_map<std::string, BenchmarkTableInfo> __attribute__((optnone)) generate() override;
+  [[clang::optnone]] std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
   IndexesByTable _indexes_by_table() const override;
