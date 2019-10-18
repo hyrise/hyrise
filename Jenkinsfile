@@ -251,7 +251,7 @@ try {
         }, tpchQueryPlans: {
           stage("tpchQueryPlans") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ../../clang-release/hyriseBenchmarkTPCH -r 1 --visualize --verify"
+              sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCH -r 1 --visualize --verify"
               archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
             } else {
               Utils.markStageSkippedForConditional("tpchQueryPlans")
