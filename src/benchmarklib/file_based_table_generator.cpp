@@ -18,7 +18,13 @@ FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<Benchmark
                                                  const std::string& path)
     : AbstractTableGenerator(benchmark_config), _path(path) {}
 
+// clang-format off
+#ifdef __clang__
+// Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
+[[clang::optnone]]
+#endif
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
+  // clang-format on
   Assert(std::filesystem::is_directory(_path), "Table path must be a directory");
 
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};

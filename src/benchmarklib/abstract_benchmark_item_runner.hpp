@@ -41,14 +41,8 @@ class AbstractBenchmarkItemRunner {
   // Returns true if an item without an associated dedicated result exists, else false.
   bool has_item_without_dedicated_result();
 
-// Loads the dedicated expected restuls as tables into _dedicated_expected_results
-// clang-format off
-#ifdef __clang__
-  // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
-  [[clang::optnone]]
-#endif
+// Loads the dedicated expected resuls as tables into _dedicated_expected_results
   void load_dedicated_expected_results(const std::filesystem::path& expected_results_directory_path);
-  // clang-format on
 
   // Set the SQLite wrapper used for query verification. `nullptr` disables verification. Default is disabled.
   void set_sqlite_wrapper(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper);

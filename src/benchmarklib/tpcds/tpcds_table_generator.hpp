@@ -36,13 +36,7 @@ class TpcdsTableGenerator final : public AbstractTableGenerator {
   TpcdsTableGenerator(uint32_t scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config,
                       int rng_seed = 19620718);
 
-// clang-format off
-#ifdef __clang__
-  // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
-  [[clang::optnone]]
-#endif
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
-  // clang-format on
 
   // max_rows is used to limit the number of rows generated in tests
   std::shared_ptr<Table> generate_call_center(ds_key_t max_rows = _ds_key_max) const;

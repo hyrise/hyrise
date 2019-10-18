@@ -15,15 +15,9 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   //                              generated. If "q7.sql" contains a single query, the query has the name "q7". If
   //                              it contains multiple queries, they are called "q7.0", "q7.1", ...
 
-// clang-format off
-#ifdef __clang__
-// Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
-[[clang::optnone]]
-#endif
   FileBasedBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
                                const std::unordered_set<std::string>& filename_blacklist = {},
                                const std::optional<std::unordered_set<std::string>>& query_subset = {});
-  // clang-format on
 
   std::string item_name(const BenchmarkItemID item_id) const override;
   const std::vector<BenchmarkItemID>& items() const override;
