@@ -11,8 +11,14 @@ namespace opossum {
 AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config)
     : _config(config) {}
 
+// clang-format off
+#ifdef __clang__
+// Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
+[[clang::optnone]]
+#endif
 void AbstractBenchmarkItemRunner::load_dedicated_expected_results(
     const std::filesystem::path& expected_results_directory_path) {
+  // clang-format on
   Assert(std::filesystem::is_directory(expected_results_directory_path),
          "Expected results path (" + expected_results_directory_path.string() + ") has to be a directory.");
 

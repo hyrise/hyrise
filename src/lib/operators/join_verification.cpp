@@ -177,8 +177,8 @@ bool JoinVerification::_evaluate_predicate(const OperatorJoinPredicate& predicat
 
       if constexpr (std::is_same_v<ColumnDataTypeLeft, pmr_string> == std::is_same_v<ColumnDataTypeRight, pmr_string>) {
         with_comparator(predicate.predicate_condition, [&](const auto comparator) {
-          result = comparator(boost::get<ColumnDataTypeLeft>(variant_left),
-                                boost::get<ColumnDataTypeRight>(variant_right));
+          result =
+              comparator(boost::get<ColumnDataTypeLeft>(variant_left), boost::get<ColumnDataTypeRight>(variant_right));
         });
       } else {
         Fail("Cannot compare string with non-string type");

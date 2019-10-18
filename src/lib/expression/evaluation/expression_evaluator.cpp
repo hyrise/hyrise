@@ -778,8 +778,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
     case FunctionType::Substring:
       if constexpr (std::is_same_v<Result, pmr_string>) {
         switch (expression.function_type) {
-          case FunctionType::Substring: return _evaluate_substring(expression.arguments);
-          case FunctionType::Concatenate: return _evaluate_concatenate(expression.arguments);
+          case FunctionType::Substring:
+            return _evaluate_substring(expression.arguments);
+          case FunctionType::Concatenate:
+            return _evaluate_concatenate(expression.arguments);
         }
       } else {
         Fail("Function can only be evaluated to a string");

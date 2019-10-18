@@ -267,7 +267,13 @@ TpcdsTableGenerator::TpcdsTableGenerator(uint32_t scale_factor,
   init_tpcds_tools(scale_factor, rng_seed);
 }
 
+// clang-format off
+#ifdef __clang__
+// Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
+[[clang::optnone]]
+#endif
 std::unordered_map<std::string, BenchmarkTableInfo> TpcdsTableGenerator::generate() {
+  // clang-format on
   auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
   // try to load cached tables

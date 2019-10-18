@@ -35,10 +35,13 @@ class TPCHTableGenerator final : public AbstractTableGenerator {
   // Constructor for creating a TPCHTableGenerator in a benchmark
   explicit TPCHTableGenerator(float scale_factor, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
+// clang-format off
 #ifdef __clang__
+  // Workaround for https://gcc.gnu.org/bugzilla/show_bug.cgi?id=91067
   [[clang::optnone]]
 #endif
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
+  // clang-format on
 
  protected:
   IndexesByTable _indexes_by_table() const override;
