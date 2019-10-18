@@ -120,8 +120,8 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
 // Workaround for https://bugs.llvm.org/show_bug.cgi?id=43079
-extern template class __shared_ptr<filesystem::_Dir>;
-extern template class __shared_ptr<filesystem::recursive_directory_iterator::_Dir_stack>;
+extern template class std::__shared_ptr<std::filesystem::_Dir>;
+extern template class std::__shared_ptr<std::filesystem::recursive_directory_iterator::_Dir_stack>;
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
