@@ -12,6 +12,6 @@ std::vector<std::filesystem::path> list_directory(const std::string& directory) 
   }
 
   return files;
-};
+}
 
 }  // namespace opossum
