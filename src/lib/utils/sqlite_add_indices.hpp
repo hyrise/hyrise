@@ -18,8 +18,8 @@ class SQLiteWrapper;
  * 
  *
  * @param schema_file_path              the path to an SQL file which creates the data schema
- * @param create_indices_file_path			the path to an SQL file which creates indices
- * @param sqlite_wrapper								the used sqlite_wrapper
+ * @param create_indices_file_path      the path to an SQL file which creates indices (if separate, else "")
+ * @param sqlite_wrapper                the used sqlite_wrapper
  */
 void add_indices_to_sqlite(const std::string& schema_file_path, const std::string& create_indices_file_path,
                            std::shared_ptr<SQLiteWrapper>& sqlite_wrapper);

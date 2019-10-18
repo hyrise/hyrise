@@ -21,6 +21,7 @@
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
+#include "utils/sqlite_add_indices.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -128,10 +129,15 @@ int main(int argc, char* argv[]) {
   context.emplace("scale_factor", scale_factor);
   context.emplace("use_prepared_statements", use_prepared_statements);
 
-  // Run the benchmark
   auto item_runner = std::make_unique<TPCHBenchmarkItemRunner>(config, use_prepared_statements, scale_factor, item_ids);
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(
       *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
+
+  if (config->verify) {
+    add_indices_to_sqlite("resources/benchmark/tpch/schema.sql", "resources/benchmark/tpch/indices.sql",
+                          benchmark_runner->sqlite_wrapper);
+  }
+
   benchmark_runner->run();
 }
