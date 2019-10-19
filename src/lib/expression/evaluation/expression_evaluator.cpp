@@ -853,10 +853,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
   _resolve_to_expression_result(*unary_minus_expression.argument(), [&](const auto& argument_result) {
     using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
 
-    // clang-format off
     if constexpr (!std::is_same_v<ArgumentType, pmr_string> && std::is_same_v<Result, ArgumentType>) {
       values.resize(argument_result.size());
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(argument_result.size()); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(argument_result.size());
+           ++chunk_offset) {
         // NOTE: Actual negation happens in this line
         values[chunk_offset] = -argument_result.values[chunk_offset];
       }
@@ -864,7 +864,6 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
     } else {
       Fail("Can't negate a Strings, can't negate an argument to a different type");
     }
-    // clang-format on
   });
 
   return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
@@ -991,19 +990,20 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
   _resolve_to_expression_result_view(expression, [&](const auto& view) {
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
 
-    // clang-format off
     if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
       Fail("Can't create a Segment from a NULL");
     } else {
       std::vector<ColumnDataType> values(_output_row_count);
 
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+           ++chunk_offset) {
         values[chunk_offset] = std::move(view.value(chunk_offset));
       }
 
       if (view.is_nullable()) {
         nulls.resize(_output_row_count);
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+             ++chunk_offset) {
           nulls[chunk_offset] = view.is_null(chunk_offset);
         }
         segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
@@ -1011,7 +1011,6 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
         segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
       }
     }
-    // clang-format on
   });
 
   return segment;
