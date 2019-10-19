@@ -70,7 +70,7 @@ std::pair<bool, bool> calculate_safe_recursion_sides(const std::shared_ptr<Abstr
     default:
       return {false, false};
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 /**

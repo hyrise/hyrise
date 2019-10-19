@@ -172,30 +172,13 @@ bool JoinVerification::_evaluate_predicate(const OperatorJoinPredicate& predicat
   resolve_data_type(data_type_from_all_type_variant(variant_left), [&](const auto data_type_left_t) {
     using ColumnDataTypeLeft = typename decltype(data_type_left_t)::type;
 
-    // Capturing references in nested lambda to avoid GCC bug
-    // "internal compiler error: in tsubst_copy, at cp/pt.c:15347"
-    auto& variant_left_1 = variant_left;
-    auto& variant_right_1 = variant_right;
-
     resolve_data_type(data_type_from_all_type_variant(variant_right), [&](const auto data_type_right_t) {
       using ColumnDataTypeRight = typename decltype(data_type_right_t)::type;
 
-      // Capturing references in nested lambda to avoid GCC bug
-      // "internal compiler error: in tsubst_copy, at cp/pt.c:15347"
-      auto& result_2 = result;
-      auto& variant_left_2 = variant_left_1;
-      auto& variant_right_2 = variant_right_1;
-
       if constexpr (std::is_same_v<ColumnDataTypeLeft, pmr_string> == std::is_same_v<ColumnDataTypeRight, pmr_string>) {
-        // Capturing references in nested lambda to avoid GCC bug
-        // "internal compiler error: in tsubst_copy, at cp/pt.c:15347"
-        auto& result_3 = result_2;
-        auto& variant_left_3 = variant_left_2;
-        auto& variant_right_3 = variant_right_2;
-
         with_comparator(predicate.predicate_condition, [&](const auto comparator) {
-          result_3 = comparator(boost::get<ColumnDataTypeLeft>(variant_left_3),
-                                boost::get<ColumnDataTypeRight>(variant_right_3));
+          result =
+              comparator(boost::get<ColumnDataTypeLeft>(variant_left), boost::get<ColumnDataTypeRight>(variant_right));
         });
       } else {
         Fail("Cannot compare string with non-string type");

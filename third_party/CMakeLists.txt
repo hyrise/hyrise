@@ -1,7 +1,7 @@
 # Disable some warnings for the third-party subfolder
 add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    add_compile_options(-Wno-format-overflow)
+    add_compile_options(-Wno-format-overflow -Wno-stringop-truncation -Wno-stringop-overflow)
 endif()
 
 # Build google benchmark
@@ -297,3 +297,22 @@ target_compile_definitions(
   tpcds_dbgen
   PUBLIC
   -DLINUX)
+
+target_compile_options(
+  tpcds_dbgen
+  PRIVATE
+
+  -Wno-format
+  -Wno-implicit-int
+  -Wno-incompatible-pointer-types
+  -Wno-unused-result
+)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(
+  tpcds_dbgen
+  PRIVATE
+
+  -Wno-parentheses-equality
+)
+endif()

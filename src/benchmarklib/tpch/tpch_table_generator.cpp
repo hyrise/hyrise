@@ -13,6 +13,7 @@ extern "C" {
 #include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "table_builder.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 extern char** asc_date;
@@ -127,13 +128,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
-      const auto table_name = table_file.path().stem();
+    for (const auto& table_file : list_directory(cache_directory)) {
+      const auto table_name = table_file.stem();
       Timer timer;
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
 
       BenchmarkTableInfo table_info;
-      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.table = ImportBinary::read_binary(table_file);
       table_info.loaded_from_binary = true;
       table_info_by_name[table_name] = table_info;
 

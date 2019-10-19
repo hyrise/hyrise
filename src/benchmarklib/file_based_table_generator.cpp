@@ -7,6 +7,7 @@
 #include "import_export/csv_parser.hpp"
 #include "operators/import_binary.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 #include "utils/timer.hpp"
 
@@ -30,14 +31,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    * determined by its filename. Multiple file extensions per table are allowed, for example there could be a CSV and a
    * binary version of a table.
    */
-  for (const auto& directory_entry : std::filesystem::recursive_directory_iterator(_path)) {
-    if (!std::filesystem::is_regular_file(directory_entry)) continue;
-
-    const auto extension = directory_entry.path().extension();
+  for (const auto& directory_entry : list_directory(_path)) {
+    const auto extension = directory_entry.extension();
 
     if (table_extensions.find(extension) == table_extensions.end()) continue;
 
-    auto table_name = directory_entry.path().filename();
+    auto table_name = directory_entry.filename();
     table_name.replace_extension("");
 
     auto table_info_by_name_iter = table_info_by_name.find(table_name);
@@ -50,10 +49,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
     if (extension == ".bin") {
       Assert(!table_info.binary_file_path, "Multiple binary files found for table '"s + table_name.string() + "'");
-      table_info.binary_file_path = directory_entry.path();
+      table_info.binary_file_path = directory_entry;
     } else {
       Assert(!table_info.text_file_path, "Multiple text files found for table '"s + table_name.string() + "'");
-      table_info.text_file_path = directory_entry.path();
+      table_info.text_file_path = directory_entry;
     }
   }
 

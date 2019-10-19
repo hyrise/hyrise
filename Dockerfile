@@ -13,8 +13,8 @@ RUN apt-get update \
         clang-tidy-8 \
         cmake \
         curl \
-        g++-8 \
-        gcc-8 \
+        g++-9 \
+        gcc-9 \
         gcovr \
         git \
         graphviz \
