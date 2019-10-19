@@ -322,7 +322,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
     if (node->type == LQPNodeType::Alias) updated_an_alias = true;
 
-    return LQPVisitation::VisitInputs;
+    return LQPUpwardVisitation::VisitOutputs;
   });
 
   // If there is no upward AliasNode, we need to add one that renames "SUM/COUNT" to "AVG"

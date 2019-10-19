@@ -252,7 +252,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
     case ArithmeticOperator::Modulo:         return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 template <>
@@ -601,7 +601,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       return _evaluate_is_null_expression<ExpressionEvaluator::Bool>(
           static_cast<const IsNullExpression&>(predicate_expression));
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 template <typename Result>
@@ -776,18 +776,18 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
   switch (expression.function_type) {
     case FunctionType::Concatenate:
     case FunctionType::Substring:
-      // clang-format off
       if constexpr (std::is_same_v<Result, pmr_string>) {
         switch (expression.function_type) {
-          case FunctionType::Substring: return _evaluate_substring(expression.arguments);
-          case FunctionType::Concatenate: return _evaluate_concatenate(expression.arguments);
+          case FunctionType::Substring:
+            return _evaluate_substring(expression.arguments);
+          case FunctionType::Concatenate:
+            return _evaluate_concatenate(expression.arguments);
         }
       } else {
         Fail("Function can only be evaluated to a string");
       }
-      // clang-format on
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 template <>
@@ -808,7 +808,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
     case DatetimeComponent::Second:
       Fail("Hour, Minute and Second not available in String Datetimes");
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 template <typename Result>
@@ -1188,7 +1188,7 @@ ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(con
   }
   // clang-format on
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 template <typename Result>
@@ -1418,7 +1418,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
 
     const auto& string = strings->value(chunk_offset);
     DebugAssert(
-        string.size() < std::numeric_limits<int32_t>::max(),
+        string.size() < size_t{std::numeric_limits<int32_t>::max()},
         "String is too long to be handled by SUBSTR. Switch to int64_t in the SUBSTR implementation if you really "
         "need to.");
 

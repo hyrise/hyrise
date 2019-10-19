@@ -127,6 +127,8 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
   }
 }
 
+enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
+
 /**
  * Calls the passed @param visitor on @param lqp and recursively on each node that uses it as an OUTPUT. If the LQP is
  * used as a subquery, the users of the subquery are not visited.
@@ -135,7 +137,7 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
  * Each node is visited exactly once.
  *
  * @tparam Visitor      Functor called with every node as a param.
- *                      Returns `LQPVisitation`
+ *                      Returns `LQPUpwardVisitation`
  */
 template <typename Visitor>
 void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
@@ -150,7 +152,7 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
 
     if (!visited_nodes.emplace(node).second) continue;
 
-    if (visitor(node) == LQPVisitation::VisitInputs) {
+    if (visitor(node) == LQPUpwardVisitation::VisitOutputs) {
       for (const auto& output : node->outputs()) node_queue.push(output);
     }
   }
