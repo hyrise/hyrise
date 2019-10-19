@@ -803,11 +803,11 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
 
   switch (extract_expression.datetime_component) {
     case DatetimeComponent::Year:
-      return _evaluate_extract_substr<0, 4>(*from_result);  // NOLINT - magic number is fine here
+      return _evaluate_extract_substr<0, 4>(*from_result);
     case DatetimeComponent::Month:
-      return _evaluate_extract_substr<5, 2>(*from_result);  // NOLINT
+      return _evaluate_extract_substr<5, 2>(*from_result);
     case DatetimeComponent::Day:
-      return _evaluate_extract_substr<8, 2>(*from_result);  // NOLINT
+      return _evaluate_extract_substr<8, 2>(*from_result);
 
     case DatetimeComponent::Hour:
     case DatetimeComponent::Minute:

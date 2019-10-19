@@ -7,7 +7,6 @@
 #include "benchmark_item_result.hpp"
 #include "benchmark_sql_executor.hpp"
 #include "strong_typedef.hpp"
-#include "utils/list_directory.hpp"
 
 STRONG_TYPEDEF(size_t, BenchmarkItemID);
 

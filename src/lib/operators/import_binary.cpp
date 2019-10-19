@@ -37,9 +37,7 @@ std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
 
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
-  std::shared_ptr<Table> table;
-  ChunkID chunk_count;
-  std::tie(table, chunk_count) = _read_header(file);
+  auto [table, chunk_count] = _read_header(file);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     _import_chunk(file, table);
   }
