@@ -25,7 +25,7 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
 
   const auto column_definitions = input_table_left()->column_definitions();
 
-  stream << "Create Table '" << table_name << "' (";
+  stream << "CreateTable '" << table_name << "' (";
   for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
     const auto& column_definition = column_definitions[column_id];
 

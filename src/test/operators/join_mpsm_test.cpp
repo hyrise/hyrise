@@ -23,15 +23,15 @@ TEST_F(OperatorsJoinMPSMTest, DescriptionAndName) {
                                  OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "Join MPSM (Inner Join where Column #0 = Column #0)");
+            "JoinMPSM (Inner Join where Column #0 = Column #0)");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "Join MPSM\n(Inner Join where Column #0 = Column #0)");
+            "JoinMPSM\n(Inner Join where Column #0 = Column #0)");
 
   dummy_input->execute();
-  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine), "Join MPSM (Inner Join where a = a)");
-  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine), "Join MPSM\n(Inner Join where a = a)");
+  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine), "JoinMPSM (Inner Join where a = a)");
+  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine), "JoinMPSM\n(Inner Join where a = a)");
 
-  EXPECT_EQ(join_operator->name(), "Join MPSM");
+  EXPECT_EQ(join_operator->name(), "JoinMPSM");
 }
 
 TEST_F(OperatorsJoinMPSMTest, DeepCopy) {

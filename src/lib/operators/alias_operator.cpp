@@ -16,7 +16,7 @@ AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& inpu
 }
 
 const std::string& AliasOperator::name() const {
-  static const auto name = std::string{"AliasOperator"};
+  static const auto name = std::string{"Alias"};
   return name;
 }
 
