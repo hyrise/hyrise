@@ -307,3 +307,12 @@ target_compile_options(
   -Wno-incompatible-pointer-types
   -Wno-unused-result
 )
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(
+  tpcds_dbgen
+  PRIVATE
+
+  -Wno-parentheses-equality
+)
+endif()
