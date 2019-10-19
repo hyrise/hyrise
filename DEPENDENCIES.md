@@ -10,7 +10,6 @@
 | cmake                     | >= 3.9           |    All   |                                    No |
 | gcc                       | >= 9.1           |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
-| glob2                     | >= 0.5           |    All   |                     Yes (tests in CI) |
 | graphviz                  | any              |    All   |             Yes (query visualization) |
 | libnuma-dev               | any              |    Linux |                            Yes (numa) |
 | libnuma1                  | any              |    Linux |                            Yes (numa) |
