@@ -13,9 +13,12 @@ CreateTable::CreateTable(const std::string& table_name, const bool if_not_exists
                          const std::shared_ptr<const AbstractOperator>& in)
     : AbstractReadWriteOperator(OperatorType::CreateTable, in), table_name(table_name), if_not_exists(if_not_exists) {}
 
-const std::string CreateTable::name() const { return "Create Table"; }
+const std::string& CreateTable::name() const {
+  static const auto name = std::string{"CreateTable"};
+  return name;
+}
 
-const std::string CreateTable::description(DescriptionMode description_mode) const {
+std::string CreateTable::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
 
   const auto separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n";
@@ -42,7 +45,7 @@ const std::string CreateTable::description(DescriptionMode description_mode) con
   return stream.str();
 }
 
-const TableColumnDefinitions CreateTable::column_definitions() const {
+const TableColumnDefinitions& CreateTable::column_definitions() const {
   return input_table_left()->column_definitions();
 }
 

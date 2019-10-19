@@ -17,7 +17,7 @@ extern "C" {
 #include "utils/timer.hpp"
 
 extern char** asc_date;
-extern seed_t seed[];
+extern seed_t seed[];  // NOLINT
 
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #pragma clang diagnostic ignored "-Wfloat-conversion"
@@ -121,6 +121,7 @@ TPCHTableGenerator::TPCHTableGenerator(float scale_factor, const std::shared_ptr
     : AbstractTableGenerator(benchmark_config), _scale_factor(scale_factor) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate() {
+  // clang-format on
   Assert(_scale_factor < 1.0f || std::round(_scale_factor) == _scale_factor,
          "Due to tpch_dbgen limitations, only scale factors less than one can have a fractional part.");
 

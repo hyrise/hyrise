@@ -8,13 +8,13 @@
 
 #include "lossless_cast.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"
-#define ANSI_COLOR_GREEN "\x1B[32m"
-#define ANSI_COLOR_BG_RED "\x1B[41m"
-#define ANSI_COLOR_BG_GREEN "\x1B[42m"
-#define ANSI_COLOR_RESET "\x1B[0m"
+static constexpr auto ANSI_COLOR_RED = "\x1B[31m";
+static constexpr auto ANSI_COLOR_GREEN = "\x1B[32m";
+static constexpr auto ANSI_COLOR_BG_RED = "\x1B[41m";
+static constexpr auto ANSI_COLOR_BG_GREEN = "\x1B[42m";
+static constexpr auto ANSI_COLOR_RESET = "\x1B[0m";
 
-#define EPSILON 0.0001
+static constexpr auto EPSILON = 0.0001;
 
 namespace {
 
@@ -110,7 +110,7 @@ bool check_segment_equal(const std::shared_ptr<BaseSegment>& actual_segment,
   const auto definitions =
       std::vector<TableColumnDefinition>{TableColumnDefinition("single_column", actual_segment->data_type(), true)};
 
-  auto table_type = [&](const std::shared_ptr<BaseSegment> segment) {
+  auto table_type = [&](const std::shared_ptr<BaseSegment>& segment) {
     if (const auto reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(segment)) {
       return TableType::References;
     }
@@ -174,13 +174,11 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   }
 
   //  - column names and types
-  DataType actual_column_type, expected_column_type;
-  bool actual_column_is_nullable, expected_column_is_nullable;
   for (auto column_id = ColumnID{0}; column_id < expected_table->column_count(); ++column_id) {
-    actual_column_type = actual_table->column_data_type(column_id);
-    actual_column_is_nullable = actual_table->column_is_nullable(column_id);
-    expected_column_type = expected_table->column_data_type(column_id);
-    expected_column_is_nullable = expected_table->column_is_nullable(column_id);
+    auto actual_column_type = actual_table->column_data_type(column_id);
+    const auto actual_column_is_nullable = actual_table->column_is_nullable(column_id);
+    auto expected_column_type = expected_table->column_data_type(column_id);
+    const auto expected_column_is_nullable = expected_table->column_is_nullable(column_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     // Also, as sqlite returns a generic type for all-NULL columns, we need to adapt those columns to our type.
     if (type_cmp_mode == TypeCmpMode::Lenient) {

@@ -25,7 +25,10 @@ JoinVerification::JoinVerification(const std::shared_ptr<const AbstractOperator>
     : AbstractJoinOperator(OperatorType::JoinVerification, left, right, mode, primary_predicate, secondary_predicates) {
 }
 
-const std::string JoinVerification::name() const { return "JoinVerification"; }
+const std::string& JoinVerification::name() const {
+  static const auto name = std::string{"JoinVerification"};
+  return name;
+}
 
 std::shared_ptr<const Table> JoinVerification::_on_execute() {
   const auto output_table = _build_output_table({}, TableType::Data);

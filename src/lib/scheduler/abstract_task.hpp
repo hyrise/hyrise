@@ -62,7 +62,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Make this Task the dependency of another
    * @param successor Task that will be executed after this
    */
-  void set_as_predecessor_of(std::shared_ptr<AbstractTask> successor);
+  void set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor);
 
   /**
    * @return the predecessors of this Task

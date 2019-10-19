@@ -359,11 +359,11 @@ ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(con
     result_values.resize(view.size());
 
     if (expression.predicate_condition == PredicateCondition::IsNull) {
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(view.size()); ++chunk_offset) {
         result_values[chunk_offset] = view.is_null(chunk_offset);
       }
     } else {  // PredicateCondition::IsNotNull
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(view.size()); ++chunk_offset) {
         result_values[chunk_offset] = !view.is_null(chunk_offset);
       }
     }
@@ -459,7 +459,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             result_nulls.resize(left_view.size());
           }
 
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < left_view.size(); ++chunk_offset) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(left_view.size());
+               ++chunk_offset) {
             if (left_view.is_nullable() && left_view.is_null(chunk_offset)) {
               result_nulls[chunk_offset] = true;
               continue;
@@ -508,7 +509,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
           result_nulls.resize(result_size);
 
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size);
+               ++chunk_offset) {
             // If the SELECT returned just one list, always perform the IN check with that one list
             // If the SELECT returned multiple lists, then the Subquery was correlated and we need to do the IN check
             // against the list of the current row
@@ -516,7 +518,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
             auto list_contains_null = false;
 
-            for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
+            for (auto list_element_idx = ChunkOffset{0}; list_element_idx < static_cast<ChunkOffset>(list.size());
+                 ++list_element_idx) {
               // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
               // here as well.
               EqualsEvaluator{}(result_values[chunk_offset], list.value(list_element_idx),
@@ -640,7 +643,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
           values.resize(result_size);
           nulls.resize(result_size);
 
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size);
+               ++chunk_offset) {
             if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
               values[chunk_offset] = to_value<Result>(then_result.value(chunk_offset));
               nulls[chunk_offset] = then_result.is_null(chunk_offset);
@@ -678,7 +682,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
 
     values.resize(result_size);
 
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
       const auto& argument_value = argument_result.value(chunk_offset);
 
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
@@ -721,13 +725,15 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
 
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_tables.size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(subquery_result_tables.size());
+           ++chunk_offset) {
         result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() > 0;
       }
       break;
 
     case ExistsExpressionType::NotExists:
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_tables.size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(subquery_result_tables.size());
+           ++chunk_offset) {
         result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() == 0;
       }
       break;
@@ -797,11 +803,11 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
 
   switch (extract_expression.datetime_component) {
     case DatetimeComponent::Year:
-      return _evaluate_extract_substr<0, 4>(*from_result);
+      return _evaluate_extract_substr<0, 4>(*from_result);  // NOLINT - magic number is fine here
     case DatetimeComponent::Month:
-      return _evaluate_extract_substr<5, 2>(*from_result);
+      return _evaluate_extract_substr<5, 2>(*from_result);  // NOLINT
     case DatetimeComponent::Day:
-      return _evaluate_extract_substr<8, 2>(*from_result);
+      return _evaluate_extract_substr<8, 2>(*from_result);  // NOLINT
 
     case DatetimeComponent::Hour:
     case DatetimeComponent::Minute:
@@ -825,7 +831,8 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
   std::vector<pmr_string> values(from_result.size());
 
   from_result.as_view([&](const auto& from_view) {
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view.size(); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(from_view.size());
+         ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
         DebugAssert(from_view.value(chunk_offset).size() == 10u,
                     "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
@@ -849,7 +856,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
     // clang-format off
     if constexpr (!std::is_same_v<ArgumentType, pmr_string> && std::is_same_v<Result, ArgumentType>) {
       values.resize(argument_result.size());
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < argument_result.size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(argument_result.size()); ++chunk_offset) {
         // NOTE: Actual negation happens in this line
         values[chunk_offset] = -argument_result.values[chunk_offset];
       }
@@ -876,7 +883,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
   std::vector<bool> result_nulls;
 
   // Materialize values
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_results.size(); ++chunk_offset) {
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(subquery_results.size());
+       ++chunk_offset) {
     Assert(subquery_results[chunk_offset]->size() == 1,
            "Expected precisely one row to be returned from SelectExpression");
     result_values[chunk_offset] = subquery_results[chunk_offset]->value(0);
@@ -888,7 +896,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
 
   if (nullable) {
     result_nulls.resize(subquery_results.size());
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_results.size(); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(subquery_results.size());
+         ++chunk_offset) {
       result_nulls[chunk_offset] = subquery_results[chunk_offset]->is_null(0);
     }
   }
@@ -919,7 +928,7 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
 
   std::vector<std::shared_ptr<const Table>> results(_output_row_count);
 
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
     results[chunk_offset] = _evaluate_subquery_expression_for_row(expression, chunk_offset);
   }
 
@@ -988,13 +997,13 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
     } else {
       std::vector<ColumnDataType> values(_output_row_count);
 
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
         values[chunk_offset] = std::move(view.value(chunk_offset));
       }
 
       if (view.is_nullable()) {
         nulls.resize(_output_row_count);
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
           nulls[chunk_offset] = view.is_null(chunk_offset);
         }
         segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(nulls));
@@ -1052,7 +1061,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
               if constexpr (ExpressionFunctorType::template supports<ExpressionEvaluator::Bool, LeftDataType,
                                                                      RightDataType>::value) {
-                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+                for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+                     ++chunk_offset) {
                   if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
 
                   auto matches = ExpressionEvaluator::Bool{0};
@@ -1079,11 +1089,13 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
           _resolve_to_expression_result_view(*is_null_expression.operand(), [&](const auto& result) {
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+                   ++chunk_offset) {
                 if (result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             } else {  // PredicateCondition::IsNotNull
-              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+              for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+                   ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
             }
@@ -1102,7 +1114,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
           // b) Like/In are on the slower end anyway
           const auto result = evaluate_expression_to_result<ExpressionEvaluator::Bool>(expression);
           result->as_view([&](const auto& result_view) {
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+                 ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
                 result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
               }
@@ -1140,14 +1153,16 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
 
       const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
       if (subquery_expression->is_correlated()) {
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+             ++chunk_offset) {
           if ((subquery_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
             result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
           }
         }
       } else {
         if ((subquery_result_tables.front()->row_count() > 0) ^ invert) {
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+               ++chunk_offset) {
             result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
           }
         }
@@ -1162,7 +1177,8 @@ PosList ExpressionEvaluator::evaluate_expression_to_pos_list(const AbstractExpre
       // TRUE literal returns the entire Chunk, FALSE literal returns empty PosList
       if (boost::get<ExpressionEvaluator::Bool>(value_expression.value) != 0) {
         result_pos_list.resize(_output_row_count);
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
+             ++chunk_offset) {
           result_pos_list[chunk_offset] = {_chunk_id, chunk_offset};
         }
       }
@@ -1412,7 +1428,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
   std::vector<pmr_string> result_values(row_count);
   std::vector<bool> result_nulls(row_count);
 
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(row_count); ++chunk_offset) {
     result_nulls[chunk_offset] =
         strings->is_null(chunk_offset) || starts->is_null(chunk_offset) || lengths->is_null(chunk_offset);
 
@@ -1502,7 +1518,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
   std::vector<pmr_string> result_values(result_size);
   for (const auto& argument_result : argument_results) {
     argument_result->as_view([&](const auto& argument_view) {
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
         // The actual CONCAT
         result_values[chunk_offset] += argument_view.value(chunk_offset);
       }
@@ -1515,7 +1531,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
     result_nulls.resize(result_size, false);
     for (const auto& argument_result : argument_results) {
       argument_result->as_view([&](const auto& argument_view) {
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
           // This was `result_nulls[chunk_offset] = result_nulls[chunk_offset] || argument_view.is_null(chunk_offset);`
           // but valgrind reported access to uninitialized memory in release builds (and ONLY in them!). I can't see
           // how there was anything uninitialised given the `result_nulls.resize(result_size, false);` above.

@@ -78,7 +78,10 @@ std::shared_ptr<AbstractOperator> JoinMPSM::_on_deep_copy(
 
 void JoinMPSM::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-const std::string JoinMPSM::name() const { return "Join MPSM"; }
+const std::string& JoinMPSM::name() const {
+  static const auto name = std::string{"JoinMPSM"};
+  return name;
+}
 
 template <typename T>
 class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {

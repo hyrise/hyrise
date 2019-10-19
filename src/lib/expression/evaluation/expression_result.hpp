@@ -64,7 +64,8 @@ class ExpressionResult : public BaseExpressionResult {
 
   explicit ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {})
       : values(std::move(values)), nulls(std::move(nulls)) {
-    DebugAssert(nulls.empty() || nulls.size() == values.size(), "Need as many nulls as values or no nulls at all");
+    DebugAssert(this->nulls.empty() || this->nulls.size() == this->values.size(),
+                "Need as many nulls as values or no nulls at all");
   }
 
   bool is_nullable_series() const { return size() != 1; }

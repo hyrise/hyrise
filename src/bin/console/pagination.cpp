@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#define CURSES_CTRL_C (uint('c') & 31u)
+constexpr auto CURSES_CTRL_C = (uint('c') & 31u);
 
 namespace opossum {
 

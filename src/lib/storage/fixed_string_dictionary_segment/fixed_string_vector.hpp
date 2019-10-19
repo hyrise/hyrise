@@ -43,7 +43,7 @@ class FixedStringVector {
 
   FixedString at(const size_t pos);
 
-  const pmr_string get_string_at(const size_t pos) const;
+  pmr_string get_string_at(const size_t pos) const;
 
   // Make the FixedStringVector of FixedStrings iterable in different ways
   FixedStringIterator<false> begin() noexcept;

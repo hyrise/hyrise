@@ -39,7 +39,10 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
 Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
     : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
 
-const std::string Validate::name() const { return "Validate"; }
+const std::string& Validate::name() const {
+  static const auto name = std::string{"Validate"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
