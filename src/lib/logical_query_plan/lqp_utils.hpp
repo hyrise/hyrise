@@ -132,7 +132,7 @@ enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
 /**
  * Calls the passed @param visitor on @param lqp and recursively on each node that uses it as an OUTPUT. If the LQP is
  * used as a subquery, the users of the subquery are not visited.
- * The visitor returns `LQPVisitation`, indicating whether the current nodes's input should be visited
+ * The visitor returns `LQPUpwardVisitation`, indicating whether the current nodes's input should be visited
  * as well.
  * Each node is visited exactly once.
  *
