@@ -27,7 +27,6 @@ enum class OperatorType {
   ImportCsv,
   IndexScan,
   Insert,
-  JitOperatorWrapper,
   JoinHash,
   JoinIndex,
   JoinNestedLoop,

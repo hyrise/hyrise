@@ -122,8 +122,6 @@ set(
     logical_query_plan/enable_make_for_lqp_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
-    logical_query_plan/jit_aware_lqp_translator.cpp
-    logical_query_plan/jit_aware_lqp_translator.hpp
     logical_query_plan/join_node.cpp
     logical_query_plan/join_node.hpp
     logical_query_plan/limit_node.cpp
@@ -294,8 +292,6 @@ set(
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/in_expression_rewrite_rule.cpp
     optimizer/strategy/in_expression_rewrite_rule.hpp
-    optimizer/strategy/insert_limit_in_exists_rule.cpp
-    optimizer/strategy/insert_limit_in_exists_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/join_predicate_ordering_rule.cpp
@@ -556,8 +552,9 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
-    utils/ignore_unused_variable.hpp
     utils/invalid_input_exception.hpp
+    utils/list_directory.cpp
+    utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/lossless_predicate_cast.cpp
@@ -605,7 +602,6 @@ set(
     lz4
     zstd
     custom_jemalloc
-    ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
@@ -613,69 +609,6 @@ set(
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
 )
-
-if (${ENABLE_JIT_SUPPORT})
-    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
-    set(JIT_EMBEDDED_SOURCES
-        # Files listed here will be embedded into the binary as LLVM-IR
-        operators/validate.cpp
-        operators/validate.hpp
-        operators/jit_operator/jit_types.cpp
-        operators/jit_operator/jit_types.hpp
-        operators/jit_operator/jit_operations.cpp
-        operators/jit_operator/jit_operations.hpp
-        operators/jit_operator/operators/abstract_jittable.hpp
-        operators/jit_operator/operators/abstract_jittable_sink.hpp
-        operators/jit_operator/operators/jit_aggregate.cpp
-        operators/jit_operator/operators/jit_aggregate.hpp
-        operators/jit_operator/operators/jit_compute.cpp
-        operators/jit_operator/operators/jit_compute.hpp
-        operators/jit_operator/operators/jit_expression.cpp
-        operators/jit_operator/operators/jit_expression.hpp
-        operators/jit_operator/operators/jit_filter.cpp
-        operators/jit_operator/operators/jit_filter.hpp
-        operators/jit_operator/operators/jit_limit.cpp
-        operators/jit_operator/operators/jit_limit.hpp
-        operators/jit_operator/operators/jit_read_tuples.cpp
-        operators/jit_operator/operators/jit_read_tuples.hpp
-        operators/jit_operator/operators/jit_validate.cpp
-        operators/jit_operator/operators/jit_validate.hpp
-        operators/jit_operator/operators/jit_write_references.cpp
-        operators/jit_operator/operators/jit_write_references.hpp
-        operators/jit_operator/operators/jit_write_tuples.cpp
-        operators/jit_operator/operators/jit_write_tuples.hpp
-    )
-    embed_llvm(LLVM_BUNDLE_FILE jit_llvm_bundle ${JIT_EMBEDDED_SOURCES})
-    set(
-        SOURCES
-        logical_query_plan/jit_aware_lqp_translator.cpp
-        logical_query_plan/jit_aware_lqp_translator.hpp
-        operators/jit_operator/jit_constant_mappings.cpp
-        operators/jit_operator/jit_constant_mappings.hpp
-        operators/jit_operator/specialization/jit_compiler.cpp
-        operators/jit_operator/specialization/jit_compiler.hpp
-        operators/jit_operator/specialization/jit_code_specializer.cpp
-        operators/jit_operator/specialization/jit_code_specializer.hpp
-        operators/jit_operator/specialization/jit_repository.cpp
-        operators/jit_operator/specialization/jit_repository.hpp
-        operators/jit_operator/specialization/jit_runtime_pointer.cpp
-        operators/jit_operator/specialization/jit_runtime_pointer.hpp
-        operators/jit_operator/specialization/llvm/CloneFunction.cpp
-        operators/jit_operator/specialization/llvm/InlineFunction.cpp
-        operators/jit_operator/specialization/llvm_extensions.cpp
-        operators/jit_operator/specialization/llvm_extensions.hpp
-        operators/jit_operator/specialization/llvm_utils.cpp
-        operators/jit_operator/specialization/llvm_utils.hpp
-        operators/jit_operator_wrapper.cpp
-        operators/jit_operator_wrapper.hpp
-        ${SOURCES}
-        ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE}
-    )
-    # Prevent clang from complaining about unused defines when compiling the assembly file
-    set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
-    set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
-endif()
 
 if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
@@ -704,6 +637,13 @@ set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
 
+# Work around an stdlibc++ bug, see list_directory.hpp for details
+set_source_files_properties(
+    utils/list_directory.cpp
+    PROPERTIES
+    COMPILE_FLAGS -O0
+)
+
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)
     set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise>)
@@ -727,9 +667,3 @@ target_compile_options(hyrise PRIVATE -fPIC)
 # Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
 # isn't updated when HEAD changes
 add_dependencies(hyrise AlwaysCheckGit resourceLink)
-
-if (${ENABLE_JIT_SUPPORT})
-    # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
-    # This silences some compiler warnings (uses -isystem instead of -I).
-    # target_include_directories(hyrise SYSTEM PUBLIC ${LLVM_INCLUDE_DIR})
-endif()

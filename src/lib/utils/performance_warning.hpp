@@ -63,6 +63,7 @@ class PerformanceWarningDisabler {
   {                                                                                                    \
     static PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \
                                         ":" BOOST_PP_STRINGIZE(__LINE__));                             \
-  }  // NOLINT
+  }                                                                                                    \
+  static_assert(true, "End call of macro with a semicolon")
 
 }  // namespace opossum

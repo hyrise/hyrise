@@ -53,7 +53,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
-      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false")
+      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false");
     }
   }
 
@@ -144,16 +144,10 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
-  auto enable_jit = false;
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    enable_jit = json_config.value("jit", default_config.enable_jit);
-  }
-  std::cout << "- JIT is " << (enable_jit ? "enabled" : "disabled") << std::endl;
-
   return BenchmarkConfig{
-      benchmark_mode,  chunk_size,          *encoding_config, indexes,    max_runs, timeout_duration,
-      warmup_duration, output_file_path,    enable_scheduler, cores,      clients,  enable_visualization,
-      verify,          cache_binary_tables, enable_jit,       sql_metrics};
+      benchmark_mode,  chunk_size,          *encoding_config, indexes, max_runs, timeout_duration,
+      warmup_duration, output_file_path,    enable_scheduler, cores,   clients,  enable_visualization,
+      verify,          cache_binary_tables, sql_metrics};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -179,9 +173,6 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("verify", parse_result["verify"].as<bool>());
   json_config.emplace("cache_binary_tables", parse_result["cache_binary_tables"].as<bool>());
   json_config.emplace("sql_metrics", parse_result["sql_metrics"].as<bool>());
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    json_config.emplace("jit", parse_result["jit"].as<bool>());
-  }
 
   return json_config;
 }

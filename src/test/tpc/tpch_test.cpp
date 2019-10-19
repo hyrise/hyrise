@@ -8,7 +8,6 @@
 #include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
-#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
@@ -26,7 +25,7 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-using TPCHTestParam = std::tuple<BenchmarkItemID, bool /* use_jit */, bool /* use_prepared_statements */>;
+using TPCHTestParam = std::tuple<BenchmarkItemID, bool /* use_prepared_statements */>;
 
 class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
  public:
@@ -46,7 +45,7 @@ class TPCHTest : public BaseTestWithParam<TPCHTestParam> {
 };
 
 TEST_P(TPCHTest, Test) {
-  const auto [item_idx, use_jit, use_prepared_statements] = GetParam();  // NOLINT
+  const auto [item_idx, use_prepared_statements] = GetParam();  // NOLINT
   const auto tpch_idx = item_idx + 1;
 
   /**
@@ -56,7 +55,7 @@ TEST_P(TPCHTest, Test) {
 
   TPCHTableGenerator{scale_factor, 10'000}.generate_and_store();
 
-  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + (use_jit ? " with JIT" : " without JIT") + " and " +
+  SCOPED_TRACE("TPC-H " + std::to_string(tpch_idx) + " " +
                (use_prepared_statements ? "with prepared statements" : "without prepared statements"));
 
   // The scale factor passed to the query generator will be ignored as we only use deterministic queries
@@ -66,16 +65,7 @@ TEST_P(TPCHTest, Test) {
 
   const auto query = get_deterministic_query(benchmark_item_runner, item_idx);
 
-  /**
-   * Pick a LQPTranslator, depending on whether we use JIT or not
-   */
-  std::shared_ptr<LQPTranslator> lqp_translator;
-  if (use_jit) {
-    lqp_translator = std::make_shared<JitAwareLQPTranslator>();
-  } else {
-    lqp_translator = std::make_shared<LQPTranslator>();
-  }
-  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
 
   /**
    * Run the query and obtain the result tables, TPC-H 15 needs special handling
@@ -105,30 +95,19 @@ TEST_P(TPCHTest, Test) {
                   FloatComparisonMode::RelativeDifference);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    TPCHTestNoJITNoPreparedStatements, TPCHTest,
-    // TPCHBenchmarkItemRunner{false, 1.0f} is used only to get the list of all available queries
-    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
-                         std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
-                                           .items()),
-                     testing::ValuesIn({false}), testing::ValuesIn({false})));
+INSTANTIATE_TEST_SUITE_P(TPCHTestNoPreparedStatements, TPCHTest,
+                         // TPCHBenchmarkItemRunner{false, 1.0f} is used only to get the list of all available queries
+                         testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
+                                              std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()),
+                                              false, 1.0f}
+                                                                .items()),
+                                          testing::ValuesIn({false})));
 
-INSTANTIATE_TEST_SUITE_P(
-    TPCHTestNoJITPreparedStatements, TPCHTest,
-    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
-                         std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
-                                           .items()),
-                     testing::ValuesIn({false}), testing::ValuesIn({true})));
-
-#if HYRISE_JIT_SUPPORT
-
-INSTANTIATE_TEST_SUITE_P(
-    TPCHTestJITPreparedStatements, TPCHTest,
-    testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
-                         std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1.0f}
-                                           .items()),
-                     testing::ValuesIn({true}), testing::ValuesIn({true})));
-
-#endif
+INSTANTIATE_TEST_SUITE_P(TPCHTestPreparedStatements, TPCHTest,
+                         testing::Combine(testing::ValuesIn(TPCHBenchmarkItemRunner{
+                                              std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()),
+                                              false, 1.0f}
+                                                                .items()),
+                                          testing::ValuesIn({true})));
 
 }  // namespace opossum

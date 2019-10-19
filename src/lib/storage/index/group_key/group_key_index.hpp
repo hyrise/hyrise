@@ -66,7 +66,6 @@ class GroupKeyIndex : public AbstractIndex {
   GroupKeyIndex& operator=(const GroupKeyIndex&) = delete;
 
   GroupKeyIndex(GroupKeyIndex&&) = default;
-  GroupKeyIndex& operator=(GroupKeyIndex&&) = default;
 
   explicit GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
 
