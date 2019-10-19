@@ -311,7 +311,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
       constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
       constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
+      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {  // NOLINT
         // Erase the `predicate_condition` into a std::function<>
         auto erased_comparator = std::function<bool(const LeftType&, const RightType&)>{};
         with_comparator(params.predicate_condition, [&](auto comparator) { erased_comparator = comparator; });
