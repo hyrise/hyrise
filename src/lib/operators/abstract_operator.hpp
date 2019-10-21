@@ -29,7 +29,6 @@ enum class OperatorType {
   Insert,
   JoinHash,
   JoinIndex,
-  JoinMPSM,
   JoinNestedLoop,
   JoinSortMerge,
   JoinVerification,
