@@ -21,8 +21,10 @@
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
+#include "utils/segment_access_counter.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
+
 
 using namespace opossum;  // NOLINT
 
@@ -134,4 +136,6 @@ int main(int argc, char* argv[]) {
       *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
   benchmark_runner->run();
+
+  SegmentAccessCounter::instance().save_to_csv(Hyrise::get().storage_manager.tables(), "tpch_access_statistics.csv");
 }

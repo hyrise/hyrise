@@ -7,20 +7,22 @@
 #include <random>
 #include <string>
 
-#include "SQLParser.h"
-#include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
+#include "hyrise.hpp"
 #include "json.hpp"
+#include "SQLParser.h"
+#include "SQLParserResult.h"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
+#include "utils/segment_access_counter.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
@@ -104,4 +106,6 @@ int main(int argc, char* argv[]) {
   std::cout << "done." << std::endl;
 
   benchmark_runner.run();
+
+  SegmentAccessCounter::instance().save_to_csv(Hyrise::get().storage_manager.tables(), "tpcds_access_statistics.csv");
 }

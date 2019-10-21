@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
 #include "constant_mappings.hpp"
@@ -45,6 +46,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
+#include "utils/segment_access_counter.hpp"
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -136,6 +138,7 @@ Console::Console()
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
+  register_command("ssac", std::bind(&Console::_save_segment_access_counter, this, std::placeholders::_1));
 }
 
 int Console::read() {
@@ -460,6 +463,27 @@ int Console::_generate_tpch(const std::string& args) {
 
   out("Generating all TPCH tables (this might take a while) ...\n");
   TPCHTableGenerator{scale_factor, chunk_size}.generate_and_store();
+
+  return ReturnCode::Ok;
+}
+
+int Console::_save_segment_access_counter(const std::string& args) {
+  auto input = args;
+  boost::algorithm::trim<std::string>(input);
+  auto arguments = std::vector<std::string>{};
+  boost::algorithm::split(arguments, input, boost::is_space());
+
+  // Check whether there is eaxctly one argument.
+  auto args_valid = !arguments.empty() && arguments.size() <= 1;
+  if (!args_valid || arguments[0].empty()) {
+    out("Wrong input.\n");
+    out("Usage: ssac PATH");
+    return ReturnCode::Error;
+  }
+
+  const auto path = arguments[0];
+
+  SegmentAccessCounter::instance().save_to_csv(Hyrise::get().storage_manager.tables(), path);
 
   return ReturnCode::Ok;
 }
