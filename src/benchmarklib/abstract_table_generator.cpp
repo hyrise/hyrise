@@ -79,8 +79,7 @@ void AbstractTableGenerator::generate_and_store() {
   for (auto& [table_name, table_info] : table_info_by_name) {
     auto& table = table_info_by_name[table_name].table;
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      auto& chunk = table->get_chunk(chunk_id);
-      chunk->finalize();
+      table->get_chunk(chunk_id)->finalize();
     }
   }
 

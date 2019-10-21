@@ -80,15 +80,15 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   auto job_end_chunk_id = ChunkID{0};
   auto job_row_count = uint32_t{0};
 
-  // Instead of checking each row for visibility individually, the visbility can be checked on chunk level.
-  // Simply said, if the youngest row in a chunk is visible, all other rows are older and hence visible, too. This is
-  // possible if the largest begin CommitID (max_begin_cid) for an entire chunk is known. Determining max_begin_cid is
-  // not the responsibility of the Validate operator itself.
-  // We are only applying this optimization if the chunk does not contain any invalid rows and if no delete operators
-  // are registered for the same transaction.
+  // In some cases, we can identify a chunk as being entirely visible for the current transaction. Simply said,
+  // if the youngest row in a chunk is visible, all other rows are older and hence visible, too. This 
+  // (1) all rows in the chunk have been commited (i.e., their begin_cid has been set),
+  // (2) the highest begin_cid in the chunk is lower than the snapshot_cid of the transaction
+  //     (the max_begin_cid is stored in the chunk, not determined by the ValidateOperator),
+  // (3) no rows in the chunk have been deleted and committed,
+  // (4) the current transaction has no in-flight deletes.
   bool can_use_chunk_shortcut = true;
 
-  // Not allowed if a delete is registerd for the same transaction context
   const auto& read_write_operators = transaction_context->read_write_operators();
   for (const auto& read_write_operator : read_write_operators) {
     if (read_write_operator->type() == OperatorType::Delete) {
