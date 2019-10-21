@@ -183,7 +183,7 @@ class Chunk : private Noncopyable {
 
   /**
      * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
-     * the MVCC max_begin_cid is set.
+     * the MVCC max_begin_cid is set. Finalizing a chunk is the insert's responsibility.
      */
   void finalize();
 

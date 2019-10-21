@@ -38,7 +38,6 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Sort tables if a sort order was defined by the benchmark
    */
-
   const auto& sort_order_by_table = _sort_order_by_table();
   if (!sort_order_by_table.empty()) {
     std::cout << "- Sorting tables" << std::endl;
@@ -74,7 +73,19 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
-   * Encode the Tables
+   * Finalizing all chunks of all tables
+   */
+  // TODO(any): Finalization should trigger encoding in the future.
+  for (auto& [table_name, table_info] : table_info_by_name) {
+    auto& table = table_info_by_name[table_name].table;
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      auto& chunk = table->get_chunk(chunk_id);
+      chunk->finalize();
+    }
+  }
+
+  /**
+   * Encode the tables
    */
   std::cout << "- Encoding tables if necessary" << std::endl;
   for (auto& [table_name, table_info] : table_info_by_name) {

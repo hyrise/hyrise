@@ -69,6 +69,15 @@ TEST_F(StorageChunkTest, RetrieveSegment) {
   EXPECT_EQ(base_segment->size(), 4u);
 }
 
+TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
+  chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}));
+  chunk->append({2, "two"});
+
+  chunk->finalize();
+
+  EXPECT_THROW(chunk->finalize(), std::logic_error);
+}
+
 TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
   auto mvcc_data = std::make_shared<MvccData>(3, 0);
   mvcc_data->begin_cids = {1, 2, 3};

@@ -78,6 +78,13 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
     mvcc_data->begin_cids.back() = 0;
   }
+
+  // All other chunks have been finalized by Table::append() when they reached their capacity.
+  if (table->chunk_count() > ChunkID{0}) {
+    const auto last_chunk = table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1));
+    last_chunk->finalize();
+  }
+
   return table;
 }
 
