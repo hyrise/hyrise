@@ -29,7 +29,7 @@ class Update : public AbstractReadWriteOperator {
   explicit Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
                   const std::shared_ptr<AbstractOperator>& update_values_op);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;

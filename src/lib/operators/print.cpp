@@ -34,7 +34,10 @@ namespace opossum {
 Print::Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out, PrintFlags flags)
     : AbstractReadOnlyOperator(OperatorType::Print, in), _out(out), _flags(flags) {}
 
-const std::string Print::name() const { return "Print"; }
+const std::string& Print::name() const {
+  static const auto name = std::string{"Print"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

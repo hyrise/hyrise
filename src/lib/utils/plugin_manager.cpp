@@ -54,7 +54,7 @@ void PluginManager::unload_plugin(const PluginName& name) {
   _unload_erase_plugin(plugin);
 }
 
-const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(
+std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(
     const std::unordered_map<PluginName, PluginHandleWrapper>::iterator it) {
   const PluginName name = it->first;
   auto plugin_handle_wrapper = it->second;

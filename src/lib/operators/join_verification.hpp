@@ -20,7 +20,7 @@ class JoinVerification : public AbstractJoinOperator {
                    const OperatorJoinPredicate& primary_predicate,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

@@ -33,12 +33,13 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
 class SQLPipeline : public Noncopyable {
  public:
   // Prefer using the SQLPipelineBuilder interface for constructing SQLPipelines conveniently
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
-              const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
+  SQLPipeline(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
+              const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
+              const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
               const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache, const CleanupTemporaries cleanup_temporaries);
 
   // Returns the original SQL string
-  const std::string get_sql() const;
+  const std::string& get_sql() const;
 
   // Returns the SQL string for each statement.
   const std::vector<std::string>& get_sql_per_statement();

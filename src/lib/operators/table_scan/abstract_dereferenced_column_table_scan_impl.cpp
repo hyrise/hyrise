@@ -68,7 +68,8 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
 
     // The scan has filled `matches` assuming that `position_filter` was the entire ReferenceSegment, so we need to fix
     // that:
-    for (auto match_idx = static_cast<ChunkOffset>(num_previous_matches); match_idx < matches.size(); ++match_idx) {
+    for (auto match_idx = static_cast<ChunkOffset>(num_previous_matches);
+         match_idx < static_cast<ChunkOffset>(matches.size()); ++match_idx) {
       matches[match_idx].chunk_offset = sub_pos_list.original_positions[matches[match_idx].chunk_offset];
     }
   }

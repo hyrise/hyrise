@@ -41,9 +41,9 @@ class RunLengthSegment : public BaseEncodedSegment {
    * @{
    */
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
     const auto index = std::distance(_end_positions->cbegin(), end_position_it);
@@ -56,7 +56,7 @@ class RunLengthSegment : public BaseEncodedSegment {
     return (*_values)[index];
   }
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
