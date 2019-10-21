@@ -81,7 +81,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   auto job_row_count = uint32_t{0};
 
   // In some cases, we can identify a chunk as being entirely visible for the current transaction. Simply said,
-  // if the youngest row in a chunk is visible, all other rows are older and hence visible, too. This 
+  // if the youngest row in a chunk is visible, all other rows are older and hence visible, too. This
   // (1) all rows in the chunk have been commited (i.e., their begin_cid has been set),
   // (2) the highest begin_cid in the chunk is lower than the snapshot_cid of the transaction
   //     (the max_begin_cid is stored in the chunk, not determined by the ValidateOperator),
