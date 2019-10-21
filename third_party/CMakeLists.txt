@@ -133,6 +133,8 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_literals.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_sequences.c
     ${ZSTD_LIBRARY_DIR}/compress/huf_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.c
     ${ZSTD_LIBRARY_DIR}/common/xxhash.c
