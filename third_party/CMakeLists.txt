@@ -12,7 +12,10 @@ add_library(
 
     benchmark_fix/dummy.cc
     benchmark/src/benchmark.cc
+    benchmark/src/benchmark_api_internal.cc
+    benchmark/src/benchmark_name.cc
     benchmark/src/benchmark_register.cc
+    benchmark/src/benchmark_runner.cc
     benchmark/src/colorprint.cc
     benchmark/src/commandlineflags.cc
     benchmark/src/complexity.cc
@@ -39,7 +42,6 @@ target_include_directories(
     PRIVATE
     benchmark/include
 )
-
 
 # Build sql-parser
 add_library(
@@ -90,7 +92,7 @@ endif()
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(tpch-dbgen)
-
+add_subdirectory(nlohmann_json)
 
 # Add PGASUS
 if(${NUMA_FOUND})

@@ -200,7 +200,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     const auto type_encoding = encoding_config_json["type"];
     Assert(type_encoding.is_object(), "The type encoding needs to be specified as a json object.");
 
-    for (const auto& type : nlohmann::json::iterator_wrapper(type_encoding)) {
+    for (const auto& type : type_encoding.items()) {
       const auto type_str = boost::to_lower_copy(type.key());
       const auto data_type_it = data_type_to_string.right.find(type_str);
       Assert(data_type_it != data_type_to_string.right.end(), "Unknown data type for encoding: " + type_str);
@@ -220,14 +220,14 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     const auto custom_encoding = encoding_config_json["custom"];
     Assert(custom_encoding.is_object(), "The custom table encoding needs to be specified as a json object.");
 
-    for (const auto& table : nlohmann::json::iterator_wrapper(custom_encoding)) {
+    for (const auto& table : custom_encoding.items()) {
       const auto& table_name = table.key();
       const auto& columns = table.value();
 
       Assert(columns.is_object(), "The custom encoding for column types needs to be specified as a json object.");
       custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, SegmentEncodingSpec>());
 
-      for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
+      for (const auto& column : columns.items()) {
         const auto& column_name = column.key();
         const auto& encoding_info = column.value();
         Assert(encoding_info.is_object(),

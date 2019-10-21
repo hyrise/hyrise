@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 #include "storage/chunk.hpp"
 
 namespace opossum {

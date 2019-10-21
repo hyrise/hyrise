@@ -595,6 +595,7 @@ set(
 
 set(
     LIBRARIES
+    nlohmann_json::nlohmann_json
     pthread
     sqlparser
     cqf

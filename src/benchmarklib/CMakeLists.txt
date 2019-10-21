@@ -61,6 +61,7 @@ add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 target_link_libraries(
     hyriseBenchmarkLib
     hyrise
+    nlohmann_json::nlohmann_json
     tpch_dbgen
     tpcds_dbgen
 )
