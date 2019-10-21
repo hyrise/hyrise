@@ -218,7 +218,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
-    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
+    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
     const auto duration_per_item = static_cast<float>(duration_seconds) / result.successful_runs.size();
 
@@ -352,7 +352,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
     const auto reported_item_duration_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000;
+    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
 
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really

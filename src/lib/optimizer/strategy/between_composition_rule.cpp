@@ -27,7 +27,7 @@ namespace opossum {
  * of the BinaryPredicateExpression
  *
  **/
-const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
+BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
     const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) const {
   auto type = ColumnBoundaryType::None;
   const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->left_operand());
@@ -110,7 +110,7 @@ const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_bounda
   };
 }
 
-const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(
+BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(
     const std::shared_ptr<ColumnBoundary>& column_boundary) const {
   auto type = ColumnBoundaryType::None;
   switch (column_boundary->type) {

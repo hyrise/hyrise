@@ -64,7 +64,7 @@ class AggregateSort : public AbstractAggregateOperator {
   AggregateSort(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
                 const std::vector<ColumnID>& groupby_column_ids);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   /**
    * Creates the aggregate column definitions and appends it to <code>_output_column_definitions</code>

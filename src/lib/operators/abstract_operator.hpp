@@ -88,8 +88,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // clears the output of this operator to free up space
   void clear_output();
 
-  virtual const std::string name() const = 0;
-  virtual const std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
+  virtual const std::string& name() const = 0;
+  virtual std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
 
   // This only checks if the operator has/had a transaction context without having to convert the weak_ptr
   bool transaction_context_is_set() const;

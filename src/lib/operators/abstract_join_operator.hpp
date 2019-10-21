@@ -45,7 +45,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   const OperatorJoinPredicate& primary_predicate() const;
   const std::vector<OperatorJoinPredicate>& secondary_predicates() const;
 
-  const std::string description(DescriptionMode description_mode) const override;
+  std::string description(DescriptionMode description_mode) const override;
 
  protected:
   const JoinMode _mode;

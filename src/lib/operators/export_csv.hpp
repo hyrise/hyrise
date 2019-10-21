@@ -36,7 +36,7 @@ class ExportCsv : public AbstractReadOnlyOperator {
    */
   explicit ExportCsv(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   /*

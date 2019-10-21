@@ -82,7 +82,10 @@ JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& le
   // TODO(moritz) incorporate into supports()?
 }
 
-const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
+const std::string& JoinNestedLoop::name() const {
+  static const auto name = std::string{"JoinNestedLoop"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -181,7 +184,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
     if (is_outer_join) {
       // Add unmatched rows on the left for Left and Full Outer joins
-      for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < static_cast<ChunkOffset>(left_matches.size()); ++chunk_offset) {
         if (!left_matches[chunk_offset]) {
           pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
           pos_list_right->emplace_back(NULL_ROW_ID);
@@ -308,7 +311,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
       constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
       constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
+      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {  // NOLINT
         // Erase the `predicate_condition` into a std::function<>
         auto erased_comparator = std::function<bool(const LeftType&, const RightType&)>{};
         with_comparator(params.predicate_condition, [&](auto comparator) { erased_comparator = comparator; });
