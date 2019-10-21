@@ -15,6 +15,7 @@ SegmentAccessCounter& SegmentAccessCounter::instance() {
 }
 
 void SegmentAccessCounter::increase(const uint32_t segment_id, AccessType type) {
+  std::lock_guard<std::mutex> lock(_statistics_lock);
   ++_statistics[segment_id].count[type];
 }
 
@@ -44,6 +45,11 @@ void SegmentAccessCounter::save_to_csv(const std::map<std::string, std::shared_p
       }
     }
   }
+
+  for (auto& [key, value] : _statistics)
+    output_file << "key" << key << ": " << value.to_string() << std::endl;
+
+  output_file.close();
 }
 
 }  // namespace opossum

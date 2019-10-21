@@ -4,6 +4,7 @@
 #include <array>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <numeric>
 #include <sstream>
 #include <string>
@@ -31,7 +32,7 @@ class SegmentAccessCounter : Noncopyable {
   };
 
   struct AccessStatistics {
-    std::array<uint32_t, AccessType::Count> count;
+    std::array<uint64_t, AccessType::Count> count;
     std::string to_string() const {
       std::string str;
       str.reserve(AccessType::Count * 4);
@@ -57,7 +58,8 @@ class SegmentAccessCounter : Noncopyable {
   SegmentAccessCounter(const SegmentAccessCounter&) = delete;
   const SegmentAccessCounter& operator=(const SegmentAccessCounter&) = delete;
 // TODO: change type og segment_id
-  std::unordered_map<uint32_t, AccessStatistics> _statistics;
+  std::mutex _statistics_lock;
+  std::unordered_map<uint64_t, AccessStatistics> _statistics;
 };
 
 }  // namespace opossum
