@@ -14,7 +14,7 @@
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
+SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
                          const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
                          const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                          const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
@@ -91,7 +91,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   _requires_execution = seen_altering_statement && statement_count() > 1;
 }
 
-const std::string SQLPipeline::get_sql() const { return _sql; }
+const std::string& SQLPipeline::get_sql() const { return _sql; }
 
 const std::vector<std::string>& SQLPipeline::get_sql_per_statement() {
   if (!_sql_strings.empty()) {

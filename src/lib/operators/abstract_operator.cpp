@@ -79,7 +79,7 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 
 void AbstractOperator::clear_output() { _output = nullptr; }
 
-const std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
+std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;

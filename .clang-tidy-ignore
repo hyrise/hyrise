@@ -1,9 +1,6 @@
 # Used by clang_tidy_wrapper.sh, no wildcards etc. supported
 
-src/lib/operators/jit_operator/specialization/llvm/InlineFunction.cpp  # File clone from LLVM - Hyrise code style does not apply
-src/lib/operators/jit_operator/specialization/llvm/CloneFunction.cpp   # dto.
-
-src/lib/server/client_connection.cpp                                   # clang-tidy doesn't like htons
-src/lib/server/postgres_wire_handler.cpp                               # dto.
-
-src/lib/utils/uninitialized_vector.hpp                                 # external source
+src/lib/server/client_connection.cpp            # clang-tidy doesn't like the htons function
+src/lib/server/postgres_wire_handler.cpp        # dto.
+src/lib/server/server_session.cpp               # will be replaced by #1868
+src/benchmarklib/tpcc/tpcc_table_generator.cpp  # suggested fixes make compile time worse
