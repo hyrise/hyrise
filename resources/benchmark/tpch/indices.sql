@@ -1,3 +1,6 @@
+-- Based on some online resource, not necessarily the indexes prescribed / allowed by TPC-H
+-- Used to make sqlite as fast as possible
+
 CREATE INDEX I_L_SHIPDATE ON LINEITEM(L_SHIPDATE);
 CREATE INDEX I_L_SUPPKEY_PARTKEY ON LINEITEM(L_PARTKEY, L_SUPPKEY);
 CREATE INDEX I_L_PARTKEY ON LINEITEM(L_PARTKEY);

@@ -212,7 +212,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
                             convert_money(part.retailprice), part.comment);
 
     // Some scale factors (e.g., 0.05) are not supported by tpch-dbgen as they produce non-unique partkey/suppkey
-    // combinations. The reason is probably somewhere in the mathemagic in PART_SUPP_BRIDGE. As the partkey is
+    // combinations. The reason is probably somewhere in the magic in PART_SUPP_BRIDGE. As the partkey is
     // ascending, those are easy to identify:
 
     DSS_HUGE last_partkey = {};

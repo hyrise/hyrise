@@ -9,7 +9,7 @@ namespace opossum {
 
 TEST(TPCHTableGeneratorTest, SmallScaleFactor) {
   /**
-   * Check whether that data TPCHTableGenerator generates with a scale factor of 0.01 is the exact same that dbgen
+   * Check whether the data that TPCHTableGenerator generates with a scale factor of 0.01 is the exact same that dbgen
    *     generates
    */
 
