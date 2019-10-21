@@ -441,4 +441,31 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesDictionaryNullValues.bin", filename));
 }
 
+TEST_F(OperatorsExportBinaryTest, AllTypesRunLengthNullValues) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
+
+  table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
+  table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
+  table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
+  table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
+  table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
+
+  ChunkEncoder::encode_all_chunks(table, EncodingType::RunLength);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesRunLengthNullValues.bin", filename));
+}
 }  // namespace opossum

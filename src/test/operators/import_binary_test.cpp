@@ -337,4 +337,28 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_F(OperatorsImportBinaryTest, AllTypesRunLengthNullValues) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
+
+  expected_table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
+  expected_table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
+  expected_table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
+  expected_table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
+  expected_table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
+
+  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::RunLength);
+
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/AllTypesRunLengthNullValues.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 }  // namespace opossum
