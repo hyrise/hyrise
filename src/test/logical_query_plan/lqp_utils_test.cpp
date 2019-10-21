@@ -155,7 +155,7 @@ TEST_F(LQPUtilsTest, VisitLQPUpwards) {
     auto actual_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
     visit_lqp_upwards(node_a, [&](const auto& node) {
       actual_nodes.emplace_back(node);
-      return LQPVisitation::VisitInputs;
+      return LQPUpwardVisitation::VisitOutputs;
     });
 
     EXPECT_EQ(actual_nodes, expected_nodes);

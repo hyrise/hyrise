@@ -162,10 +162,6 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
       }
     };
 
-    // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
-    const auto chunk_id_copy = chunk_id;
-    const auto& matches_out_ref = matches_out;
-
     with_comparator_light(maybe_flipped_condition, [&](auto predicate_comparator) {
       const auto comparator = [predicate_comparator](const auto& left, const auto& right) {
         return predicate_comparator(left.value(), right.value());
@@ -173,12 +169,12 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
 
       if (condition_was_flipped) {
         const auto erased_comparator = conditionally_erase_comparator_type(comparator, right_it, left_it);
-        AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, right_it, right_end, chunk_id_copy,
-                                                          *matches_out_ref, left_it);
+        AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, right_it, right_end, chunk_id,
+                                                          *matches_out, left_it);
       } else {
         const auto erased_comparator = conditionally_erase_comparator_type(comparator, left_it, right_it);
-        AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, left_it, left_end, chunk_id_copy,
-                                                          *matches_out_ref, right_it);
+        AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, left_it, left_end, chunk_id, *matches_out,
+                                                          right_it);
       }
     });
   } else {

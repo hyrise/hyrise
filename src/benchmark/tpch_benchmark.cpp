@@ -101,7 +101,9 @@ int main(int argc, char* argv[]) {
 
   std::cout << "- Benchmarking Queries: [ ";
   for (const auto& item_id : item_ids) {
-    std::cout << (item_id + 1) << ", ";
+    std::cout << (item_id + 1);
+    if (item_id != item_ids.back()) { std::cout << ","; }
+    std::cout << " ";
   }
   std::cout << "]" << std::endl;
 

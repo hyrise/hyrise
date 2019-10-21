@@ -12,7 +12,6 @@
 namespace opossum {
 
 class AbstractScheduler;
-class JitRepository;
 class BenchmarkRunner;
 
 // This should be the only singleton in the src/lib world. It provides a unified way of accessing components like the
@@ -35,8 +34,6 @@ class Hyrise : public Singleton<Hyrise> {
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
   Topology topology;
-
-  std::shared_ptr<JitRepository> jit_repository;
 
   // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark
   // result JSON.

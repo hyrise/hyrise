@@ -18,7 +18,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/create_view_node.hpp"
-#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/print.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -33,7 +32,7 @@
 
 namespace opossum {
 
-using SQLiteTestRunnerParam = std::tuple<std::string /* sql */, bool /* use_jit */, EncodingType>;
+using SQLiteTestRunnerParam = std::tuple<std::string /* sql */, EncodingType>;
 
 class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
  public:
