@@ -140,7 +140,7 @@ try {
           stage("clang-debug:tidy") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -l -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             } else {
               Utils.markStageSkippedForConditional("clangDebugTidy")
             }

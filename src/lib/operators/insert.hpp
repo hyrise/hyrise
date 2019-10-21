@@ -24,7 +24,7 @@ class Insert : public AbstractReadWriteOperator {
   explicit Insert(const std::string& target_table_name,
                   const std::shared_ptr<const AbstractOperator>& values_to_insert);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
