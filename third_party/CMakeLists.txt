@@ -1,8 +1,5 @@
 # Disable some warnings for the third-party subfolder
 add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    add_compile_options(-Wno-documentation-unknown-command -Wno-documentation-pedantic)
-endif()
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     add_compile_options(-Wno-format-overflow -Wno-stringop-truncation -Wno-stringop-overflow)
 endif()

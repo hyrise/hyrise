@@ -595,7 +595,6 @@ set(
 
 set(
     LIBRARIES
-    nlohmann_json::nlohmann_json
     pthread
     sqlparser
     cqf
@@ -660,6 +659,7 @@ add_custom_target(resourceLink
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
+target_link_libraries_system(hyrise nlohmann_json::nlohmann_json)
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
