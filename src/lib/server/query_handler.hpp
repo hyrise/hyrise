@@ -14,7 +14,7 @@ struct ExecutionInformation {
   // Since the PostgreSQL Wire Protocol requires the query type (such as SELECT, INSERT, UPDATE,...) we need to store
   // the root operator's type.
   OperatorType root_operator;
-  std::string execution_information;
+  std::string pipeline_metrics;
   std::string error;
 };
 

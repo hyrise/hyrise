@@ -7,19 +7,22 @@
 
 namespace opossum {
 
-// The ResponseBuilder serializes the result data returned by Hyrise.
-class ResponseBuilder {
+// The ResultSerializer serializes the result data returned by Hyrise.
+class ResultSerializer {
  public:
+  // Serialize information about the result table
   template <typename SocketType>
-  static void build_and_send_row_description(
+  static void send_table_description(
       std::shared_ptr<const Table> table,
       const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler);
 
   template <typename SocketType>
-  static void build_and_send_query_response(
+  // Cast attributes of the result table and send them row-wise
+  static void send_query_response(
       std::shared_ptr<const Table> table,
       const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler);
 
+  // Build completion message after query execution containing the statement type and the number of rows affected
   static std::string build_command_complete_message(const OperatorType root_operator_type, const uint64_t row_count);
 };
 

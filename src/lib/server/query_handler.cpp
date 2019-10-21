@@ -31,7 +31,7 @@ ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql,
     if (send_execution_info == SendExecutionInfo::Yes) {
       std::stringstream stream;
       stream << sql_pipeline->metrics();
-      execution_info.execution_information = stream.str();
+      execution_info.pipeline_metrics = stream.str();
     }
   } else {
     const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();

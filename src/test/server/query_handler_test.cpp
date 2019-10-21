@@ -20,7 +20,7 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
   EXPECT_TRUE(result.error.empty());
   EXPECT_EQ(result.result_table->column_count(), 1);
   EXPECT_EQ(result.result_table->row_count(), 1);
-  EXPECT_PRED_FORMAT2(testing::IsSubstring, "Execution info:", result.execution_information);
+  EXPECT_PRED_FORMAT2(testing::IsSubstring, "Execution info:", result.pipeline_metrics);
   EXPECT_EQ(result.root_operator, OperatorType::Projection);
 }
 
@@ -30,7 +30,7 @@ TEST_F(QueryHandlerTest, ExecutePipelineInvalidStatement) {
 
   EXPECT_FALSE(result.error.empty());
   EXPECT_FALSE(result.result_table);
-  EXPECT_TRUE(result.execution_information.empty());
+  EXPECT_TRUE(result.pipeline_metrics.empty());
 }
 
 TEST_F(QueryHandlerTest, CreatePreparedPlan) {

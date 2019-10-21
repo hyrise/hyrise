@@ -4,11 +4,11 @@
 #include "mock_socket.hpp"
 
 #include "server/postgres_protocol_handler.hpp"
-#include "server/response_builder.hpp"
+#include "server/result_serializer.hpp"
 
 namespace opossum {
 
-class ResponseBuilderTest : public BaseTest {
+class ResultSerializerTest : public BaseTest {
  protected:
   void SetUp() override {
     _test_table = load_table("resources/test_data/tbl/all_data_types_sorted.tbl", 2);
@@ -36,8 +36,8 @@ class ResponseBuilderTest : public BaseTest {
   std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>> _protocol_handler;
 };
 
-TEST_F(ResponseBuilderTest, RowDescription) {
-  ResponseBuilder::build_and_send_row_description(_test_table, _protocol_handler);
+TEST_F(ResultSerializerTest, RowDescription) {
+  ResultSerializer::send_table_description(_test_table, _protocol_handler);
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
@@ -48,8 +48,8 @@ TEST_F(ResponseBuilderTest, RowDescription) {
   }
 }
 
-TEST_F(ResponseBuilderTest, QueryResponse) {
-  ResponseBuilder::build_and_send_query_response(_test_table, _protocol_handler);
+TEST_F(ResultSerializerTest, QueryResponse) {
+  ResultSerializer::send_query_response(_test_table, _protocol_handler);
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
@@ -57,11 +57,11 @@ TEST_F(ResponseBuilderTest, QueryResponse) {
   EXPECT_EQ(std::count(file_content.begin(), file_content.end(), 'D'), _test_table->row_count());
 }
 
-TEST_F(ResponseBuilderTest, CommandCompleteMessage) {
-  EXPECT_EQ(ResponseBuilder::build_command_complete_message(OperatorType::Insert, 1), "INSERT 0 1");
-  EXPECT_EQ(ResponseBuilder::build_command_complete_message(OperatorType::Update, 1), "UPDATE -1");
-  EXPECT_EQ(ResponseBuilder::build_command_complete_message(OperatorType::Delete, 1), "DELETE -1");
-  EXPECT_EQ(ResponseBuilder::build_command_complete_message(OperatorType::Projection, 1), "SELECT 1");
+TEST_F(ResultSerializerTest, CommandCompleteMessage) {
+  EXPECT_EQ(ResultSerializer::build_command_complete_message(OperatorType::Insert, 1), "INSERT 0 1");
+  EXPECT_EQ(ResultSerializer::build_command_complete_message(OperatorType::Update, 1), "UPDATE -1");
+  EXPECT_EQ(ResultSerializer::build_command_complete_message(OperatorType::Delete, 1), "DELETE -1");
+  EXPECT_EQ(ResultSerializer::build_command_complete_message(OperatorType::Projection, 1), "SELECT 1");
 }
 
 }  // namespace opossum

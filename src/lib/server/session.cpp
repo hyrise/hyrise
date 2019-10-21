@@ -2,7 +2,7 @@
 
 #include "postgres_message_types.hpp"
 #include "query_handler.hpp"
-#include "response_builder.hpp"
+#include "result_serializer.hpp"
 
 namespace opossum {
 
@@ -84,15 +84,15 @@ void Session::_handle_simple_query() {
     uint64_t row_count = 0;
     // If there is no result table, e.g. after an INSERT command, we cannot send row data
     if (execution_information.result_table) {
-      ResponseBuilder::build_and_send_row_description(execution_information.result_table, _postgres_protocol_handler);
-      ResponseBuilder::build_and_send_query_response(execution_information.result_table, _postgres_protocol_handler);
+      ResultSerializer::send_table_description(execution_information.result_table, _postgres_protocol_handler);
+      ResultSerializer::send_query_response(execution_information.result_table, _postgres_protocol_handler);
       row_count = execution_information.result_table->row_count();
     }
     if (_send_execution_info == SendExecutionInfo::Yes) {
-      _postgres_protocol_handler->send_execution_info(execution_information.execution_information);
+      _postgres_protocol_handler->send_execution_info(execution_information.pipeline_metrics);
     }
     _postgres_protocol_handler->send_command_complete(
-        ResponseBuilder::build_command_complete_message(execution_information.root_operator, row_count));
+        ResultSerializer::build_command_complete_message(execution_information.root_operator, row_count));
   }
   _postgres_protocol_handler->send_ready_for_query();
 }
@@ -172,15 +172,15 @@ void Session::_handle_execute() {
   uint64_t row_count = 0;
   // If there is no result table, e.g. after an INSERT command, we cannot send row data
   if (result_table) {
-    ResponseBuilder::build_and_send_row_description(result_table, _postgres_protocol_handler);
-    ResponseBuilder::build_and_send_query_response(result_table, _postgres_protocol_handler);
+    ResultSerializer::send_table_description(result_table, _postgres_protocol_handler);
+    ResultSerializer::send_query_response(result_table, _postgres_protocol_handler);
     row_count = result_table->row_count();
   } else {
     _postgres_protocol_handler->send_status_message(PostgresMessageType::NoDataResponse);
   }
 
   _postgres_protocol_handler->send_command_complete(
-      ResponseBuilder::build_command_complete_message(physical_plan->type(), row_count));
+      ResultSerializer::build_command_complete_message(physical_plan->type(), row_count));
   // Ready for query + flush will be done after reading sync message
 }
 }  // namespace opossum

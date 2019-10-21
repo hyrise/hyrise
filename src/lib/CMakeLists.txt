@@ -335,8 +335,8 @@ set(
     server/postgres_protocol_handler.hpp
     server/query_handler.cpp
     server/query_handler.hpp
-    server/response_builder.cpp
-    server/response_builder.hpp
+    server/result_serializer.cpp
+    server/result_serializer.hpp
     server/ring_buffer.cpp
     server/ring_buffer.hpp
     server/server.cpp

@@ -9,10 +9,6 @@ static constexpr auto LENGTH_FIELD_SIZE = 4u;
 // Documentation of the message types can be found here:
 // https://www.postgresql.org/docs/current/protocol-message-formats.html?
 enum class PostgresMessageType : unsigned char {
-  // Important: The character '0' is treated as a null message
-  // That means we cannot have an invalid type
-  NullCommand = '0',
-
   // Responses
   ParseComplete = '1',
   BindComplete = '2',

@@ -1,24 +1,24 @@
-#include "response_builder.hpp"
+#include "result_serializer.hpp"
 #include "lossy_cast.hpp"
 
 namespace opossum {
 
 template <typename SocketType>
-void ResponseBuilder::build_and_send_row_description(
+void ResultSerializer::send_table_description(
     std::shared_ptr<const Table> table,
     const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
   // Calculate sum of length of all column names
-  uint32_t column_lengths_total = 0;
+  uint32_t column_name_length_sum = 0;
   for (auto& column_name : table->column_names()) {
-    column_lengths_total += column_name.size();
+    column_name_length_sum += column_name.size();
   }
 
-  postgres_protocol_handler->send_row_description_header(column_lengths_total,
+  postgres_protocol_handler->send_row_description_header(column_name_length_sum,
                                                          static_cast<uint16_t>(table->column_count()));
 
   for (ColumnID column_id{0u}; column_id < table->column_count(); ++column_id) {
-    uint32_t object_id;
-    int16_t type_width;
+    uint32_t object_id = 0;
+    int16_t type_width = 0;
 
     // Documentation of the PostgreSQL object_ids can be found at:
     // https://crate.io/docs/crate/reference/en/latest/interfaces/postgres.html
@@ -43,7 +43,12 @@ void ResponseBuilder::build_and_send_row_description(
         object_id = 25;
         type_width = -1;
         break;
-      default:
+      // TODO(toni): remove
+      case DataType::Bool:
+        object_id = 16;
+        type_width = 1;
+        break;
+      case DataType::Null:
         Fail("Bad DataType");
     }
     postgres_protocol_handler->send_row_description(table->column_name(column_id), object_id, type_width);
@@ -51,7 +56,7 @@ void ResponseBuilder::build_and_send_row_description(
 }
 
 template <typename SocketType>
-void ResponseBuilder::build_and_send_query_response(
+void ResultSerializer::send_query_response(
     std::shared_ptr<const Table> table,
     const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
   auto attribute_strings = std::vector<std::optional<std::string>>(table->column_count());
@@ -60,28 +65,30 @@ void ResponseBuilder::build_and_send_query_response(
 
   // Iterate over each chunk in result table
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; chunk_id++) {
-    const auto chunk_size = table->get_chunk(chunk_id)->size();
-    const auto segments = table->get_chunk(chunk_id)->segments();
+    const auto& current_chunk = table->get_chunk(chunk_id);
+    const auto chunk_size = current_chunk->size();
+    const auto& segments = current_chunk->segments();
     // Iterate over each row in chunk
     for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
-      auto string_lengths = 0;
+      auto string_length_sum = 0;
       // Iterate over each attribute in row
       for (size_t current_segment = 0; current_segment < segments.size(); current_segment++) {
-        const auto attribute_value = segments[current_segment]->operator[](current_chunk_offset);
+        const auto attribute_value = (*segments[current_segment])[current_chunk_offset];
+        // The PostgreSQL protocol requires the conversion of values to strings
         const auto string_value = lossy_variant_cast<pmr_string>(attribute_value);
         if (string_value.has_value()) {
           // Sum up string lengths for a row to save an extra loop during serialization
-          string_lengths += string_value.value().size();
+          string_length_sum += string_value.value().size();
         }
         attribute_strings[current_segment] = std::move(string_value);
       }
-      postgres_protocol_handler->send_values_as_strings(attribute_strings, string_lengths);
+      postgres_protocol_handler->send_values_as_strings(attribute_strings, string_length_sum);
     }
   }
 }
 
-std::string ResponseBuilder::build_command_complete_message(const OperatorType root_operator_type,
-                                                            const uint64_t row_count) {
+std::string ResultSerializer::build_command_complete_message(const OperatorType root_operator_type,
+                                                             const uint64_t row_count) {
   switch (root_operator_type) {
     case OperatorType::Insert: {
       // 0 is ignored OID and 1 inserted row
@@ -103,17 +110,17 @@ std::string ResponseBuilder::build_command_complete_message(const OperatorType r
   }
 }
 
-template void ResponseBuilder::build_and_send_row_description<Socket>(
-    std::shared_ptr<const Table>, const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
+template void ResultSerializer::send_table_description<Socket>(std::shared_ptr<const Table>,
+                                                               const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
 
-template void ResponseBuilder::build_and_send_row_description<boost::asio::posix::stream_descriptor>(
+template void ResultSerializer::send_table_description<boost::asio::posix::stream_descriptor>(
     std::shared_ptr<const Table>,
     const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
 
-template void ResponseBuilder::build_and_send_query_response<Socket>(
-    std::shared_ptr<const Table>, const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
+template void ResultSerializer::send_query_response<Socket>(std::shared_ptr<const Table>,
+                                                            const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
 
-template void ResponseBuilder::build_and_send_query_response<boost::asio::posix::stream_descriptor>(
+template void ResultSerializer::send_query_response<boost::asio::posix::stream_descriptor>(
     std::shared_ptr<const Table>,
     const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
 
