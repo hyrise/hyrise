@@ -64,7 +64,7 @@ TableType Table::type() const { return _type; }
 
 UseMvcc Table::has_mvcc() const { return _use_mvcc; }
 
-size_t Table::column_count() const { return _column_definitions.size(); }
+uint16_t Table::column_count() const { return static_cast<uint16_t>(_column_definitions.size()); }
 
 const std::string& Table::column_name(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
