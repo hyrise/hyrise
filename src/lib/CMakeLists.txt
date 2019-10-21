@@ -199,10 +199,6 @@ set(
     operators/join_hash/join_hash_traits.hpp
     operators/join_index.cpp
     operators/join_index.hpp
-    operators/join_mpsm/column_materializer_numa.hpp
-    operators/join_mpsm.cpp
-    operators/join_mpsm.hpp
-    operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
