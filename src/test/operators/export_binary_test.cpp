@@ -22,7 +22,7 @@ class OperatorsExportBinaryTest : public BaseTest {
  protected:
   void SetUp() override {}
 
-  void TearDown() override { std::remove(filename.c_str());}
+  void TearDown() override { std::remove(filename.c_str()); }
 
   bool file_exists(const std::string& name) {
     std::ifstream file{name};
