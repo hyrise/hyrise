@@ -15,14 +15,14 @@ WarningsAsErrors: '*'
 #   cppcoreguidelines-pro-type-static-cast-downcast           We do allow static downcasts for performance reasons
 #   misc-unused-parameters                                    We don't care about unused parameters
 #   cppcoreguidelines-pro-bounds-array-to-pointer-decay       Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
-#   hicpp-no-array-decay                                      dto.
+#   hicpp-no-array-decay                                       (same)
 #   readability-named-parameter                               Unused parameters don't need names
 #   cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
 #   clang-analyzer-optin.cplusplus.VirtualCall                false positive in boost::lexical_cast
 #   modernize-avoid-bind                                      meh, bind isn't thaaaat bad
 #   hicpp-no-assembler                                        Sometimes we need assembler...
 #   cppcoreguidelines-pro-type-vararg                         We use old C functions for ncurses
-#   hicpp-vararg                                              dto.
+#   hicpp-vararg                                               (same)
 #   cert-env33-c                                              Yes, we do call system()
 #   misc-macro-parentheses                                    Causes weird problems with BOOST_PP_TUPLE_ELEM
 #   readability-else-after-return                             "do not use 'else' after 'return'" - no idea who originally came up with that...
@@ -36,12 +36,12 @@ WarningsAsErrors: '*'
 #   fuchsia-statically-constructed-objects                    We have too many static objects
 #   bugprone-exception-escape                                 We throw exceptions in many places (even destructors) and are completely fine with std::terminate
 #   hicpp-uppercase-literal-suffix                            Don't really care if it's 1.0f or 1.0F
-#   cert-dcl16-c                                              dto.
-#   readability-uppercase-literal-suffix                      dto.
+#   cert-dcl16-c                                               (same)
+#   readability-uppercase-literal-suffix                       (same)
 #   cppcoreguidelines-avoid-magic-numbers                     Too many false positives
-#   readability-magic-numbers                                 dto.
+#   readability-magic-numbers                                  (same)
 #   misc-non-private-member-variables-in-classes              We like making things public
-#   cppcoreguidelines-non-private-member-variables-in-classes dto.
+#   cppcoreguidelines-non-private-member-variables-in-classes  (same)
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase

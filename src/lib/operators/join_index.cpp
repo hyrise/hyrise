@@ -333,7 +333,7 @@ void JoinIndex::_reference_join_two_segments_using_index(
 }
 
 template <typename SegmentPosition>
-std::vector<IndexRange> JoinIndex::_index_ranges_for_value(SegmentPosition probe_side_position,
+std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
                                                            const std::shared_ptr<AbstractIndex>& index) const {
   std::vector<IndexRange> index_ranges{};
   index_ranges.reserve(2);
