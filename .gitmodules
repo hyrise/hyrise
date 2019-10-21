@@ -30,10 +30,10 @@
 	url = https://github.com/jtv/libpqxx.git
 [submodule "third_party/lz4"]
 	path = third_party/lz4
-	url = https://github.com/lz4/lz4
+	url = https://github.com/lz4/lz4.git
 [submodule "third_party/nlohmann_json"]
 	path = third_party/nlohmann_json
-	url = git@github.com:nlohmann/json.git
+	url = https://github.com/nlohmann/json.git
 [submodule "third_party/pgasus"]
 	path = third_party/pgasus
 	url = https://github.com/hyrise/pgasus.git
