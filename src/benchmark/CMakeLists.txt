@@ -68,6 +68,7 @@ target_link_libraries_system(hyriseBenchmarkFileBased nlohmann_json::nlohmann_js
 
 # Configure hyriseBenchmarkTPCH
 add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
+
 target_link_libraries(
     hyriseBenchmarkTPCH
 
@@ -75,14 +76,19 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+target_link_libraries_system(hyriseBenchmarkTPCH nlohmann_json::nlohmann_json)
+
 # Configure hyriseBenchmarkTPCDS
 add_executable(hyriseBenchmarkTPCDS tpcds_benchmark.cpp)
+
 target_link_libraries(
     hyriseBenchmarkTPCDS
 
     hyrise
     hyriseBenchmarkLib
 )
+
+target_link_libraries_system(hyriseBenchmarkTPCDS nlohmann_json::nlohmann_json)
 
 # Configure hyriseBenchmarkJoinOrder
 add_executable(

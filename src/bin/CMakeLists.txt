@@ -50,6 +50,7 @@ target_link_libraries(
     ncurses
     ${READLINE_LIBRARY}
 )
+target_link_libraries_system(hyriseConsole nlohmann_json::nlohmann_json)
 target_include_directories(
     hyriseConsole
 
