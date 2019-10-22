@@ -205,7 +205,6 @@ set (
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
     synthetic_table_generator_test.cpp
     tpc/tpcds_db_generator_test.cpp
-    tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
 )
