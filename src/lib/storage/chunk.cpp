@@ -31,7 +31,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
   for (const auto& segment : _segments) {
     DebugAssert(
         !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
-        "Chunks containing ReferenceSegments should not contains MvccData. They implicitly use the MvccData of the "
+        "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
         "referenced Table");
     DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
     DebugAssert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,

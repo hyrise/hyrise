@@ -156,7 +156,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     const auto stored_chunk = stored_table->get_chunk(stored_chunk_id);
 
     // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
-    // pruned and will be set on the outputted chunk.
+    // pruned and will be set on the output chunk.
     const auto& current_chunk_order = stored_chunk->ordered_by();
     std::optional<std::pair<ColumnID, OrderByMode>> adapted_chunk_order;
 
@@ -191,9 +191,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
+
       if (adapted_chunk_order) {
         (*output_chunks_iter)->set_ordered_by(*adapted_chunk_order);
       }
+
+      (*output_chunks_iter)->increase_invalid_row_count(stored_chunk->invalid_row_count());
     }
 
     ++output_chunks_iter;

@@ -38,6 +38,8 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
 }
 
 bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id) {
+  DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})), "is_entire_chunk_visible cannot be called on reference chunks.");
+
   const auto mvcc_data = chunk->mvcc_data();
   const auto max_begin_cid = mvcc_data->max_begin_cid;
   if (!max_begin_cid) return false;
@@ -83,7 +85,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   // In some cases, we can identify a chunk as being entirely visible for the current transaction. Simply said,
   // if the youngest row in a chunk is visible, all other rows are older and hence visible, too. This
   // (1) all rows in the chunk have been commited (i.e., their begin_cid has been set),
-  // (2) the highest begin_cid in the chunk is lower than the snapshot_cid of the transaction
+  // (2) the highest begin_cid in the chunk is lower/equal than the snapshot_cid of the transaction
   //     (the max_begin_cid is stored in the chunk, not determined by the ValidateOperator),
   // (3) no rows in the chunk have been deleted and committed,
   // (4) the current transaction has no in-flight deletes.
@@ -200,6 +202,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
     // Otherwise we have a non-reference Segment and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = in_table;
+
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
 

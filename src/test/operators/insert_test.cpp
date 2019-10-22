@@ -139,7 +139,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   EXPECT_EQ(t->row_count(), 13u);
 }
 
-TEST_F(OperatorsInsertTest, FinalizesTablesChunkIfFull) {
+TEST_F(OperatorsInsertTest, CommitFinalizesTablesChunkIfFull) {
   auto t_name = "test3";
 
   auto t = load_table("resources/test_data/tbl/int.tbl", 3u);
@@ -160,11 +160,31 @@ TEST_F(OperatorsInsertTest, FinalizesTablesChunkIfFull) {
   }
 }
 
+TEST_F(OperatorsInsertTest, CommitDoesNotFinalizeTablesChunkIfNotFull) {
+  auto t_name = "test3";
+
+  auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
+  Hyrise::get().storage_manager.add_table(t_name, t);
+
+  auto gt1 = std::make_shared<GetTable>(t_name);
+  gt1->execute();
+
+  auto ins = std::make_shared<Insert>(t_name, gt1);
+  auto context = Hyrise::get().transaction_manager.new_transaction_context();
+  ins->set_transaction_context(context);
+  ins->execute();
+
+  context->commit();
+
+  EXPECT_FALSE(t->get_chunk(ChunkID{0})->is_mutable());
+  EXPECT_TRUE(t->get_chunk(ChunkID{1})->is_mutable());
+}
+
 // Rollback should also increase the invalid row count and finalize the last chunk.
 TEST_F(OperatorsInsertTest, Rollback) {
   auto t_name = "test3";
 
-  auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
+  auto t = load_table("resources/test_data/tbl/int.tbl", 3u);
   Hyrise::get().storage_manager.add_table(t_name, t);
 
   auto gt1 = std::make_shared<GetTable>(t_name);

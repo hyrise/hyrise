@@ -130,11 +130,21 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
   t2_context->commit();
 }
 
+TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto snapshot_cid = CommitID{1};
+  auto pos_list = std::make_shared<PosList>();
+  Segments empty_segment = {std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
+  auto chunk = std::make_shared<Chunk>(empty_segment);
+
+  EXPECT_THROW(Validate::is_entire_chunk_visible(chunk, snapshot_cid), std::logic_error);
+}
+
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
   auto snapshot_cid = CommitID{1};
   Segments empty_segment = {std::make_shared<ValueSegment<int32_t>>()};
   auto chunk = std::make_shared<Chunk>(empty_segment, std::make_shared<MvccData>(0, 0));
-  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
   // We explicitly do not call update_max_begin_cid
 
   EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
@@ -148,7 +158,6 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
 
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
   chunk->finalize();
-  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
 }
@@ -162,7 +171,6 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
   chunk->increase_invalid_row_count(1);
   chunk->finalize();
-  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
 }
@@ -174,7 +182,6 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
   vs_int->append(4);
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
   chunk->finalize();
-  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   EXPECT_TRUE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
 }

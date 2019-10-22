@@ -106,6 +106,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     output_chunks[chunk_id] =
         std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
+    output_chunks[chunk_id]->increase_invalid_row_count(input_chunk->invalid_row_count());
   }
 
   return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
