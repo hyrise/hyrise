@@ -12,7 +12,10 @@ add_library(
 
     benchmark_fix/dummy.cc
     benchmark/src/benchmark.cc
+    benchmark/src/benchmark_api_internal.cc
+    benchmark/src/benchmark_name.cc
     benchmark/src/benchmark_register.cc
+    benchmark/src/benchmark_runner.cc
     benchmark/src/colorprint.cc
     benchmark/src/commandlineflags.cc
     benchmark/src/complexity.cc
@@ -39,7 +42,6 @@ target_include_directories(
     PRIVATE
     benchmark/include
 )
-
 
 # Build sql-parser
 add_library(
@@ -90,7 +92,7 @@ endif()
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(tpch-dbgen)
-
+add_subdirectory(nlohmann_json)
 
 # Add PGASUS
 if(${NUMA_FOUND})
@@ -131,6 +133,8 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_literals.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_sequences.c
     ${ZSTD_LIBRARY_DIR}/compress/huf_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.c
     ${ZSTD_LIBRARY_DIR}/common/xxhash.c

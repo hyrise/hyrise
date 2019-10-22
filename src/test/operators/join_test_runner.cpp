@@ -1,7 +1,7 @@
 #include <fstream>
 
 #include "base_test.hpp"
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"

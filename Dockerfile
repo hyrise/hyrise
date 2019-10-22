@@ -30,7 +30,6 @@ RUN apt-get update \
         parallel \
         postgresql-server-dev-all \
         python2.7 \
-        python-glob2 \
         python-pexpect \
         python-pip \
         sudo \

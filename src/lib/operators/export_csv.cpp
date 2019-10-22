@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "json.hpp"
-
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
 #include "storage/materialize.hpp"

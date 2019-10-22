@@ -1,5 +1,3 @@
-#include <json.hpp>
-
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
 #include <fstream>
