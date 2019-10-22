@@ -25,7 +25,10 @@ ColumnID Sort::column_id() const { return _column_id; }
 
 OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
-const std::string Sort::name() const { return "Sort"; }
+const std::string& Sort::name() const {
+  static const auto name = std::string{"Sort"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

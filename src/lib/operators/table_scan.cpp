@@ -19,10 +19,10 @@
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "hyrise.hpp"
 #include "lossless_cast.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
@@ -46,9 +46,12 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 
-const std::string TableScan::name() const { return "TableScan"; }
+const std::string& TableScan::name() const {
+  static const auto name = std::string{"TableScan"};
+  return name;
+}
 
-const std::string TableScan::description(DescriptionMode description_mode) const {
+std::string TableScan::description(DescriptionMode description_mode) const {
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;
@@ -163,7 +166,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     job_task->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }

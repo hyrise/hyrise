@@ -29,7 +29,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
 }
 
 template <typename T>
-const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
@@ -46,8 +46,8 @@ std::shared_ptr<const pmr_vector<T>> DictionarySegment<T>::dictionary() const {
 }
 
 template <typename T>
-size_t DictionarySegment<T>::size() const {
-  return _attribute_vector->size();
+ChunkOffset DictionarySegment<T>::size() const {
+  return static_cast<ChunkOffset>(_attribute_vector->size());
 }
 
 template <typename T>
@@ -116,7 +116,7 @@ std::shared_ptr<const BaseCompressedVector> DictionarySegment<T>::attribute_vect
 }
 
 template <typename T>
-const ValueID DictionarySegment<T>::null_value_id() const {
+ValueID DictionarySegment<T>::null_value_id() const {
   return _null_value_id;
 }
 

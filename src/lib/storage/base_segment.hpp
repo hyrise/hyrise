@@ -19,10 +19,10 @@ class BaseSegment : private Noncopyable {
   DataType data_type() const;
 
   // returns the value at a given position
-  virtual const AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
+  virtual AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
 
   // returns the number of values
-  virtual size_t size() const = 0;
+  virtual ChunkOffset size() const = 0;
 
   // Copies a segment using a new allocator. This is useful for placing the segment on a new NUMA node.
   virtual std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;

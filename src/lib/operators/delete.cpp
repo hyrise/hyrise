@@ -14,7 +14,10 @@ namespace opossum {
 Delete::Delete(const std::shared_ptr<const AbstractOperator>& referencing_table_op)
     : AbstractReadWriteOperator{OperatorType::Delete, referencing_table_op}, _transaction_id{0} {}
 
-const std::string Delete::name() const { return "Delete"; }
+const std::string& Delete::name() const {
+  static const auto name = std::string{"Delete"};
+  return name;
+}
 
 std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
   _referencing_table = input_table_left();
@@ -22,8 +25,6 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
   DebugAssert(_referencing_table->type() == TableType::References,
               "_referencing_table needs to reference another table");
   DebugAssert(_referencing_table->column_count() > 0, "_referencing_table needs columns to determine referenced table");
-
-  context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
   _transaction_id = context->transaction_id();
 

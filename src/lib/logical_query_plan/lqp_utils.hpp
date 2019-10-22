@@ -40,7 +40,14 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
                       const std::shared_ptr<AbstractLQPNode>& replacement_node);
 
-void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node);
+/**
+ * Removes a node from the plan, using the output of its left input as input for its output nodes. Unless
+ * allow_right_input is set, the node must not have a right input. If allow_right_input is set, the caller has to
+ * retie that right input of the node (or reinsert the node at a different position where the right input is valid).
+ */
+enum class AllowRightInput { No, Yes };
+void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node,
+                     const AllowRightInput allow_right_input = AllowRightInput::No);
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
                      const std::shared_ptr<AbstractLQPNode>& node);
@@ -59,10 +66,9 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes. It traverses the LQP from the
  * begin node until it reaches the end node if set or an LQP node which is a not a Predicate, Union, Projection, Sort,
  * Validate or Limit node. The end node is necessary if a certain Predicate should not be part of the created expression
- * (e.g., the jit-aware LQP translator uses it to prevent that non-jittable Predicate nodes are added to the boolean
- * expression used to create jittable expressions). Subsequent Predicate nodes are turned into a LogicalExpression with
- * AND. UnionNodes into a LogicalExpression with OR. Projection, Sort, Validate or Limit LQP nodes are ignored during
- * the traversal.
+ * 
+ * Subsequent Predicate nodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
+ * Projection, Sort, Validate or Limit LQP nodes are ignored during the traversal.
  *
  *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression
  *
@@ -91,16 +97,50 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(
 enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
- * Calls the passed @param visitor on each node of the @param lqp. This will NOT visit subqueries.
- * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
- * as well.
+ * Calls the passed @param visitor on @param lqp and recursively on its INPUTS. This will NOT visit subqueries.
+ * The visitor returns `LQPVisitation`, indicating whether the current nodes's input should be visited
+ * as well. The algorithm is breadth-first search.
  * Each node is visited exactly once.
  *
  * @tparam Visitor      Functor called with every node as a param.
  *                      Returns `LQPVisitation`
  */
+template <typename Node, typename Visitor>
+void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
+  using AbstractNodeType = std::conditional_t<std::is_const_v<Node>, const AbstractLQPNode, AbstractLQPNode>;
+
+  std::queue<std::shared_ptr<AbstractNodeType>> node_queue;
+  node_queue.push(lqp);
+
+  std::unordered_set<std::shared_ptr<AbstractNodeType>> visited_nodes;
+
+  while (!node_queue.empty()) {
+    auto node = node_queue.front();
+    node_queue.pop();
+
+    if (!visited_nodes.emplace(node).second) continue;
+
+    if (visitor(node) == LQPVisitation::VisitInputs) {
+      if (node->left_input()) node_queue.push(node->left_input());
+      if (node->right_input()) node_queue.push(node->right_input());
+    }
+  }
+}
+
+enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
+
+/**
+ * Calls the passed @param visitor on @param lqp and recursively on each node that uses it as an OUTPUT. If the LQP is
+ * used as a subquery, the users of the subquery are not visited.
+ * The visitor returns `LQPUpwardVisitation`, indicating whether the current nodes's input should be visited
+ * as well.
+ * Each node is visited exactly once.
+ *
+ * @tparam Visitor      Functor called with every node as a param.
+ *                      Returns `LQPUpwardVisitation`
+ */
 template <typename Visitor>
-void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
+void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
   std::queue<std::shared_ptr<AbstractLQPNode>> node_queue;
   node_queue.push(lqp);
 
@@ -112,9 +152,8 @@ void visit_lqp(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
 
     if (!visited_nodes.emplace(node).second) continue;
 
-    if (visitor(node) == LQPVisitation::VisitInputs) {
-      if (node->left_input()) node_queue.push(node->left_input());
-      if (node->right_input()) node_queue.push(node->right_input());
+    if (visitor(node) == LQPUpwardVisitation::VisitOutputs) {
+      for (const auto& output : node->outputs()) node_queue.push(output);
     }
   }
 }

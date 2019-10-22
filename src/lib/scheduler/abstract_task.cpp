@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_scheduler.hpp"
-#include "current_scheduler.hpp"
+#include "hyrise.hpp"
 #include "task_queue.hpp"
 #include "utils/tracing/probes.hpp"
 #include "worker.hpp"
@@ -35,7 +35,7 @@ std::string AbstractTask::description() const {
 
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
-void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor) {
+void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
   DebugAssert((!_is_scheduled), "Possible race: Don't set dependencies after the Task was scheduled");
 
   successor->_pending_predecessors++;
@@ -60,12 +60,7 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 void AbstractTask::schedule(NodeID preferred_node_id) {
   _mark_as_scheduled();
 
-  if (CurrentScheduler::is_set()) {
-    CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, _priority);
-  } else {
-    // If the Task isn't ready, it will execute() once its dependency counter reaches 0
-    if (is_ready()) execute();
-  }
+  Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
 }
 
 void AbstractTask::_join() {
@@ -105,10 +100,9 @@ void AbstractTask::_mark_as_scheduled() {
 void AbstractTask::_on_predecessor_done() {
   auto new_predecessor_count = --_pending_predecessors;  // atomically decrement
   if (new_predecessor_count == 0) {
-    if (CurrentScheduler::is_set()) {
-      auto worker = Worker::get_this_thread_worker();
-      DebugAssert(static_cast<bool>(worker), "No worker");
+    auto worker = Worker::get_this_thread_worker();
 
+    if (worker) {
       worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
     } else {
       if (_is_scheduled) execute();

@@ -77,6 +77,8 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping&
       expressions_copy_and_adapt_to_different_lqp(aggregate_expressions, node_mapping));
 }
 
+size_t AggregateNode::_shallow_hash() const { return aggregate_expressions_begin_idx; }
+
 bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);
 

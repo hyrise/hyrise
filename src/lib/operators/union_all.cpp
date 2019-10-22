@@ -14,7 +14,10 @@ UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,
   // nothing to do here
 }
 
-const std::string UnionAll::name() const { return "UnionAll"; }
+const std::string& UnionAll::name() const {
+  static const auto name = std::string{"UnionAll"};
+  return name;
+}
 
 std::shared_ptr<const Table> UnionAll::_on_execute() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),

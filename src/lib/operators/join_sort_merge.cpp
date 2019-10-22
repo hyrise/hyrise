@@ -9,11 +9,11 @@
 #include <utility>
 #include <vector>
 
+#include "hyrise.hpp"
 #include "join_sort_merge/radix_cluster_sort.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
@@ -77,7 +77,10 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
 
 void JoinSortMerge::_on_cleanup() { _impl.reset(); }
 
-const std::string JoinSortMerge::name() const { return "JoinSortMerge"; }
+const std::string& JoinSortMerge::name() const {
+  static const auto name = std::string{"JoinSortMerge"};
+  return name;
+}
 
 /**
 ** Start of implementation.
@@ -786,7 +789,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       jobs.back()->schedule();
     }
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
     // The outer joins for the non-equi cases
     // Note: Equi outer joins can be integrated into the main algorithm, while these can not.
@@ -824,8 +827,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the segments from an input table to the output table
   **/
-  void _add_output_segments(Segments& output_segments, std::shared_ptr<const Table> input_table,
-                            std::shared_ptr<const PosList> pos_list) {
+  void _add_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
+                            const std::shared_ptr<const PosList>& pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the segment data (in the form of a poslist)

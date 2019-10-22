@@ -98,6 +98,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 
   const auto pqp = _translate_by_node_type(node->type, node);
   _operator_by_lqp_node.emplace(node, pqp);
+
   return pqp;
 }
 
@@ -154,7 +155,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
       return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
@@ -431,7 +432,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
     case UnionMode::All:
       return std::make_shared<UnionAll>(input_operator_left, input_operator_right);
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(

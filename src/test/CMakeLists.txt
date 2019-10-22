@@ -79,7 +79,6 @@ set(
     operators/join_hash_steps_test.cpp
     operators/join_hash_traits_test.cpp
     operators/join_index_test.cpp
-    operators/join_mpsm_test.cpp
     operators/join_nested_loop_test.cpp
     operators/join_sort_merge_test.cpp
     operators/join_test_runner.cpp
@@ -114,12 +113,14 @@ set(
     optimizer/join_graph_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/between_composition_rule_test.cpp
-    optimizer/strategy/chunk_pruning_test.cpp
+    optimizer/strategy/chunk_pruning_rule_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
-    optimizer/strategy/insert_limit_in_exists_rule_test.cpp
+    optimizer/strategy/in_expression_rewrite_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
+    optimizer/strategy/join_predicate_ordering_rule_test.cpp
+    optimizer/strategy/predicate_merge_rule_test.cpp
     optimizer/strategy/predicate_placement_rule_test.cpp
     optimizer/strategy/predicate_reordering_rule_test.cpp
     optimizer/strategy/predicate_split_up_rule_test.cpp
@@ -175,6 +176,7 @@ set(
     storage/single_segment_index_test.cpp
     storage/storage_manager_test.cpp
     storage/table_test.cpp
+    storage/table_column_definition_test.cpp
     storage/value_segment_test.cpp
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
@@ -201,87 +203,16 @@ set (
     ${SHARED_SOURCES}
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+<<<<<<< HEAD
     tpc/tpcc_test.cpp
     tpc/tpch_test.cpp
+=======
+    synthetic_table_generator_test.cpp
+    tpc/tpcds_db_generator_test.cpp
+>>>>>>> master
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
 )
-
-if (${ENABLE_JIT_SUPPORT})
-    # Some of the JIT test cases require pre-compiled LLVM bitcode.
-    # To ensure this bitcode is always up-to-date and works across operating systems, the bitcode is automatically
-    # compiled along with the hyriseTest binary (see cmake/EmbedLLVM.cmake for details of this process).
-    # The C++ input files for the bitcode generation are located in
-    # src/test/operators/jit_operator/specialization/modules/.
-    # Each line below starting with "embed_llvm(" embeds on of these test files and exposes it as a different symbol
-    # name. Each test case can the access the required bitcode using this symbol.
-    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
-    embed_llvm(
-        JIT_CODE_SPECIALIZER_TEST_MODULE
-        jit_code_specializer_test_module
-        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
-    )
-    embed_llvm(
-        JIT_COMPILER_TEST_MODULE
-        jit_compiler_test_module
-        operators/jit_operator/specialization/modules/jit_compiler_test_module.cpp
-    )
-    embed_llvm(
-        JIT_REPOSITORY_TEST_MODULE
-        jit_repository_test_module
-        operators/jit_operator/specialization/modules/jit_repository_test_module.cpp
-    )
-    embed_llvm(
-        RESOLVE_CONDITION_TEST_MODULE
-        resolve_condition_test_module
-        operators/jit_operator/specialization/modules/resolve_condition_test_module.cpp
-    )
-
-    # Prevent clang from complaining about unused defines when compiling the assembly file
-    set_property(
-        SOURCE
-        ${JIT_CODE_SPECIALIZER_TEST_MODULE}
-        ${JIT_COMPILER_TEST_MODULE}
-        ${JIT_REPOSITORY_TEST_MODULE}
-        ${RESOLVE_CONDITION_TEST_MODULE}
-        PROPERTY COMPILE_FLAGS -Qunused-arguments
-    )
-
-    set(HYRISE_UNIT_TEST_SOURCES
-        ${HYRISE_UNIT_TEST_SOURCES}
-        ${JIT_CODE_SPECIALIZER_TEST_MODULE}
-        ${JIT_COMPILER_TEST_MODULE}
-        ${JIT_REPOSITORY_TEST_MODULE}
-        ${RESOLVE_CONDITION_TEST_MODULE}
-        operators/jit_operator_wrapper_test.cpp
-        logical_query_plan/jit_aware_lqp_translator_test.cpp
-        operators/jit_operator/jit_hashmap_entry_test.cpp
-        operators/jit_operator/jit_operations_test.cpp
-        operators/jit_operator/jit_tuple_entry_test.cpp
-        operators/jit_operator/jit_variant_vector_test.cpp
-        operators/jit_operator/operators/jit_aggregate_test.cpp
-        operators/jit_operator/operators/jit_compute_test.cpp
-        operators/jit_operator/operators/jit_expression_test.cpp
-        operators/jit_operator/operators/jit_filter_test.cpp
-        operators/jit_operator/operators/jit_limit_test.cpp
-        operators/jit_operator/operators/jit_read_write_tuple_test.cpp
-        operators/jit_operator/operators/jit_validate_test.cpp
-        operators/jit_operator/operators/jit_write_reference_test.cpp
-        operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
-        operators/jit_operator/specialization/jit_code_specializer_test.cpp
-        operators/jit_operator/specialization/jit_compiler_test.cpp
-        operators/jit_operator/specialization/jit_repository_test.cpp
-        operators/jit_operator/specialization/jit_runtime_pointer_test.cpp
-        operators/jit_operator/specialization/resolve_condition_test.cpp
-        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
-        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp
-        tasks/load_server_file_task_test.cpp)
-
-    set(SYSTEM_TEST_SOURCES
-        ${SYSTEM_TEST_SOURCES}
-        sql/sqlite_testrunner/sqlite_testrunner_jit.cpp
-    )
-endif()
 
 # Both hyriseTest and hyriseSystemTest link against these
 set(
@@ -289,7 +220,6 @@ set(
     gtest
     gmock
     sqlite3
-    ${FILESYSTEM_LIBRARY}
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -307,9 +237,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest pqxx)
+target_link_libraries_system(hyriseSystemTest nlohmann_json::nlohmann_json pqxx_static)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

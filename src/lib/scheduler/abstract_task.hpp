@@ -20,7 +20,7 @@ class Worker;
  * Derive and implement logic in _on_execute()
  */
 class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
-  friend class CurrentScheduler;
+  friend class AbstractScheduler;
 
  public:
   explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
@@ -62,7 +62,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Make this Task the dependency of another
    * @param successor Task that will be executed after this
    */
-  void set_as_predecessor_of(std::shared_ptr<AbstractTask> successor);
+  void set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor);
 
   /**
    * @return the predecessors of this Task
@@ -123,7 +123,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   /**
    * Blocks the calling thread until the Task finished executing.
-   * This is only called from non-Worker threads and from CurrentScheduler::wait_for_tasks().
+   * This is only called from non-Worker threads and from Hyrise::get().scheduler()->wait_for_tasks().
    */
   void _join();
 

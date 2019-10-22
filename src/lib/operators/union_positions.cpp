@@ -67,7 +67,10 @@ std::shared_ptr<AbstractOperator> UnionPositions::_on_deep_copy(
 
 void UnionPositions::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-const std::string UnionPositions::name() const { return "UnionPositions"; }
+const std::string& UnionPositions::name() const {
+  static const auto name = std::string{"UnionPositions"};
+  return name;
+}
 
 std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto early_result = _prepare_operator();

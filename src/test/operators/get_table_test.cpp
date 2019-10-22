@@ -244,4 +244,49 @@ TEST_F(OperatorsGetTableTest, Copy) {
   EXPECT_EQ(get_table_b_copy->pruned_column_ids(), std::vector{ColumnID{0}});
 }
 
+TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
+  auto table = Hyrise::get().storage_manager.get_table("int_int_float");
+  table->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
+  table->get_chunk(ChunkID{1})->set_ordered_by({ColumnID{2}, OrderByMode::Descending});
+
+  // with column pruning
+  {
+    auto get_table =
+        std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 2);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->first, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{1});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->second, OrderByMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{2})->ordered_by().has_value());
+  }
+
+  // without column pruning
+  {
+    auto get_table =
+        std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 3);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{2});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+  }
+
+  // pruning the columns on which chunks are sorted
+  {
+    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{},
+                                                         std::vector{ColumnID{0}, ColumnID{2}});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 1);
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by());
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by());
+  }
+}
+
 }  // namespace opossum

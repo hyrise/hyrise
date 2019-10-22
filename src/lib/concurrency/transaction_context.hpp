@@ -103,7 +103,6 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
 
   /**
    * Add an operator to the list of read-write operators.
-   * Update must not call this because it consists of a Delete and an Insert, which call this themselves.
    */
   void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
 
@@ -150,7 +149,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    *
    * @param callback called when transaction is committed
    */
-  void _mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback);
+  void _mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback);
 
   /**@}*/
 

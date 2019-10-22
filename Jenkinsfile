@@ -1,6 +1,7 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 full_ci = env.BRANCH_NAME == 'master' || pullRequest.labels.contains('FullCI')
+exclude_in_sanitizer_builds = '--gtest_filter=-SQLiteTestRunnerEncodings/*:TpcdsTableGeneratorTest.GenerateAndStoreRowCounts:TPCHTableGeneratorTest.RowCountsMediumScaleFactor'
 
 try {
   node('master') {
@@ -58,16 +59,16 @@ try {
           sh "./install.sh"
 
           // Run cmake once in isolation and build jemalloc to avoid race conditions with autoconf (#1413)
-          sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 .. && make -j libjemalloc-build"
+          sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. && make -j libjemalloc-build"
 
           // Configure the rest in parallel
-          sh "mkdir clang-debug-tidy && cd clang-debug-tidy && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_CLANG_TIDY=ON .. &\
-          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 .. &\
-          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
-          mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_THREAD_SANITIZATION=ON .. &\
-          mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7 -DENABLE_THREAD_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ .. &\
+          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DENABLE_THREAD_SANITIZATION=ON .. &\
+          mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DENABLE_THREAD_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
           mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
           wait"
@@ -75,12 +76,12 @@ try {
 
         parallel clangDebug: {
           stage("clang-debug") {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 4))"
             sh "./clang-debug/hyriseTest clang-debug"
           }
         }, gccDebug: {
           stage("gcc-debug") {
-            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 4))"
             sh "cd gcc-debug && ./hyriseTest"
           }
         }, lint: {
@@ -94,13 +95,13 @@ try {
         parallel clangRelease: {
           stage("clang-release") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "./clang-release/hyriseTest clang-release"
               sh "./clang-release/hyriseSystemTest clang-release"
               sh "./scripts/test/hyriseConsole_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
-              sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-release"
+              sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
               Utils.markStageSkippedForConditional("clangRelease")
@@ -114,11 +115,11 @@ try {
               sh "./scripts/test/hyriseConsole_test.py clang-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-              sh "./scripts/test/hyriseBenchmarkTPCH_test.py clang-debug"
+              sh "cd clang-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
               sh "./scripts/test/hyriseConsole_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
-              sh "./scripts/test/hyriseBenchmarkTPCH_test.py gcc-debug"
+              sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
               Utils.markStageSkippedForConditional("debugSystemTests")
@@ -138,7 +139,7 @@ try {
           stage("clang-debug:tidy") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -l -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
             } else {
               Utils.markStageSkippedForConditional("clangDebugTidy")
             }
@@ -146,9 +147,10 @@ try {
         }, clangDebugAddrUBSanitizers: {
           stage("clang-debug:addr-ub-sanitizers") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
-              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest clang-debug-addr-ub-sanitizers"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-debug-addr-ub-sanitizers"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1"
             } else {
               Utils.markStageSkippedForConditional("clangDebugAddrUBSanitizers")
             }
@@ -156,13 +158,13 @@ try {
         }, gccRelease: {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             stage("gcc-release") {
-              sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
               sh "./scripts/test/hyriseConsole_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
-              sh "./scripts/test/hyriseBenchmarkTPCH_test.py gcc-release"
+              sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
             }
           } else {
               Utils.markStageSkippedForConditional("gccRelease")
@@ -170,9 +172,10 @@ try {
         }, clangReleaseAddrUBSanitizers: {
           stage("clang-release:addr-ub-sanitizers") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
-              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest clang-release-addr-ub-sanitizers"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1 --scheduler"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
             }
@@ -180,9 +183,9 @@ try {
         }, clangReleaseAddrUBSanitizersNoNuma: {
           stage("clang-release:addr-ub-sanitizers w/o NUMA") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
-              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseSystemTest clang-release-addr-ub-sanitizers-no-numa"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-addr-ub-sanitizers-no-numa"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizersNoNuma")
             }
@@ -190,9 +193,10 @@ try {
         }, clangReleaseThreadSanitizer: {
           stage("clang-release:thread-sanitizer") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
-              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseSystemTest clang-release-thread-sanitizer"
+              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-thread-sanitizer"
+              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 1 --scheduler"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
             }
@@ -200,9 +204,9 @@ try {
         }, clangReleaseThreadSanitizerNoNuma: {
           stage("clang-release:thread-sanitizer w/o NUMA") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
-              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseSystemTest clang-release-thread-sanitizer-no-numa"
+              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-thread-sanitizer-no-numa"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
             }
@@ -239,6 +243,7 @@ try {
               sh "mkdir ./clang-release-memcheck-test"
               // If this shows a leak, try --leak-check=full, which is slower but more precise
               sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck-test --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+              sh "valgrind --tool=memcheck --error-exitcode=1 --gen-suppressions=all --num-callers=25 --suppressions=resources/.valgrind-ignore.txt ./clang-release/hyriseBenchmarkTPCH -s .01 --verify -r 1"
             } else {
               Utils.markStageSkippedForConditional("memcheckReleaseTest")
             }
@@ -246,7 +251,7 @@ try {
         }, tpchQueryPlans: {
           stage("tpchQueryPlans") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ../../clang-release/hyriseBenchmarkTPCH -r 1 --visualize"
+              sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCH -r 1 --visualize --verify"
               archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
             } else {
               Utils.markStageSkippedForConditional("tpchQueryPlans")
@@ -255,7 +260,7 @@ try {
         }, tpcdsQueryPlans: {
           stage("tpcdsQueryPlans") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
-              sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize"
+              sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize --verify"
               archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
             } else {
               Utils.markStageSkippedForConditional("tpcdsQueryPlans")
@@ -279,10 +284,13 @@ try {
           // We do not use install.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4"
 
-          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm\\@7/7.0.1/bin/clang++ .."
+          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/8.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/8.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro CCACHE_BASEDIR=`pwd` make -j8"
           sh "./clang-debug/hyriseTest"
+          sh "./clang-debug/hyriseSystemTest"
+          sh "./scripts/test/hyriseConsole_test.py clang-debug"
+          sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {
           sh "ls -A1 | xargs rm -rf"
         }

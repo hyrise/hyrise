@@ -382,7 +382,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.
-    if (expression_contains_placeholders(column_expressions[column_id]) ||
+    if (expression_contains_placeholder(column_expressions[column_id]) ||
         target_table->column_data_type(column_id) != column_expressions[column_id]->data_type()) {
       column_expressions[column_id] = cast_(column_expressions[column_id], target_table->column_data_type(column_id));
     }
@@ -459,7 +459,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
     // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
     // until it is replaced.
-    if (expression_contains_placeholders(update_expressions[column_id]) ||
+    if (expression_contains_placeholder(update_expressions[column_id]) ||
         target_table->column_data_type(column_id) != update_expressions[column_id]->data_type()) {
       update_expressions[column_id] = cast_(update_expressions[column_id], target_table->column_data_type(column_id));
     }
@@ -867,10 +867,8 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   auto aggregate_expression_set = ExpressionUnorderedSet{};
   auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
 
-  // Visitor that identifies AggregateExpressions and their arguments.
-  const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
-    if (sub_expression->type != ExpressionType::Aggregate) return ExpressionVisitation::VisitArguments;
-
+  // Visitor that identifies still uncomputed AggregateExpressions and their arguments.
+  const auto find_uncomputed_aggregates_and_arguments = [&](auto& sub_expression) {
     /**
      * If the AggregateExpression has already been computed in a previous node (consider "x" in
      * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it doesn't count as a new Aggregate and is therefore not
@@ -878,6 +876,8 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
      * but it's the best solution I can come up with right now.
      */
     if (_current_lqp->find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
+
+    if (sub_expression->type != ExpressionType::Aggregate) return ExpressionVisitation::VisitArguments;
 
     auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
     if (aggregate_expression_set.emplace(aggregate_expression).second) {
@@ -895,7 +895,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   // Identify all Aggregates and their arguments needed for SELECT
   for (const auto& element : select_list_elements) {
     if (element.expression) {
-      visit_expression(element.expression, find_aggregates_and_arguments);
+      visit_expression(element.expression, find_uncomputed_aggregates_and_arguments);
     }
   }
 
@@ -916,7 +916,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   auto having_expression = std::shared_ptr<AbstractExpression>{};
   if (select.groupBy && select.groupBy->having) {
     having_expression = _translate_hsql_expr(*select.groupBy->having, _sql_identifier_resolver);
-    visit_expression(having_expression, find_aggregates_and_arguments);
+    visit_expression(having_expression, find_uncomputed_aggregates_and_arguments);
   }
 
   const auto is_aggregate = !aggregate_expressions.empty() || !group_by_expressions.empty();
@@ -1242,7 +1242,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
       FailInput("Cannot use this ExpressionType as predicate");
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
@@ -1605,7 +1605,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
       Fail("Can't invert non-boolean expression");
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements(

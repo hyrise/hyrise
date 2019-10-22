@@ -139,7 +139,7 @@ class OperatorsAggregateTest : public BaseTest {
 };
 
 using AggregateTypes = ::testing::Types<AggregateHash, AggregateSort>;
-TYPED_TEST_CASE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(OperatorsAggregateTest, AggregateTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(OperatorsAggregateTest, OperatorName) {
   auto aggregate = std::make_shared<TypeParam>(
@@ -147,7 +147,7 @@ TYPED_TEST(OperatorsAggregateTest, OperatorName) {
       std::vector<ColumnID>{ColumnID{0}});
 
   if constexpr (std::is_same_v<TypeParam, AggregateHash>) {
-    EXPECT_EQ(aggregate->name(), "Aggregate");
+    EXPECT_EQ(aggregate->name(), "AggregateHash");
   } else if constexpr (std::is_same_v<TypeParam, AggregateSort>) {
     EXPECT_EQ(aggregate->name(), "AggregateSort");
   } else {

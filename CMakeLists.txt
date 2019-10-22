@@ -19,7 +19,7 @@ function(compiler_not_supported message)
 endfunction(compiler_not_supported)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.2)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.1)
         compiler_not_supported("Your GCC version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
     if (APPLE)
@@ -27,7 +27,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         compiler_not_supported("We had to drop support for GCC on OS X because it caused segfaults when used with tbb. You can continue, but don't hold us responsible for any segmentation faults.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.0)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.0)
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
@@ -86,23 +86,14 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_AL
 set(CURSES_NEED_NCURSES TRUE)
 
 # Dependencies
-find_package(FS REQUIRED)
 find_package(Numa)
-find_package(LLVM 7 CONFIG)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
-find_package(PQ REQUIRED)
 find_package(Boost REQUIRED COMPONENTS container system thread)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
-
-if(${LLVM_FOUND})
-    # FindLLVM does not provide a LLVM_LIBRARY or LLVM_LIBRARIES output variable, so we have to build it ourselves
-    set(LLVM_LIBRARY ${LLVM_LIBRARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}LLVM${CMAKE_SHARED_LIBRARY_SUFFIX})
-    message(STATUS "Found llvm library: inc=${LLVM_INCLUDE_DIR}, lib=${LLVM_LIBRARY}")
-endif()
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
 if(DEFINED CI_BUILD)

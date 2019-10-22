@@ -1,4 +1,7 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/third_party
+)
 
 set(
     SOURCES
@@ -30,6 +33,9 @@ set(
     tpch/tpch_table_generator.cpp
     tpch/tpch_table_generator.hpp
 
+    tpcds/tpcds_table_generator.cpp
+    tpcds/tpcds_table_generator.hpp
+
     abstract_table_generator.cpp
     abstract_table_generator.hpp
     abstract_benchmark_item_runner.hpp
@@ -58,8 +64,8 @@ set(
     file_based_table_generator.hpp
     random_generator.hpp
     table_builder.hpp
-    table_generator.cpp
-    table_generator.hpp
+    synthetic_table_generator.cpp
+    synthetic_table_generator.hpp
 )
 
 
@@ -69,4 +75,8 @@ add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 target_link_libraries(
     hyriseBenchmarkLib
     hyrise
-    tpch_dbgen)
+    tpch_dbgen
+    tpcds_dbgen
+)
+
+target_link_libraries_system(hyriseBenchmarkLib nlohmann_json::nlohmann_json)

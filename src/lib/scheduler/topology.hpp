@@ -7,7 +7,6 @@
 
 #include "memory/numa_memory_resource.hpp"
 #include "types.hpp"
-#include "utils/singleton.hpp"
 
 namespace boost {
 namespace container {
@@ -40,7 +39,7 @@ std::ostream& operator<<(std::ostream& stream, const TopologyNode& topology_node
  *
  * The static 'use_*_topology()' methods replace the current topology information by the new one, and should be used carefully.
  */
-class Topology final : public Singleton<Topology> {
+class Topology final : public Noncopyable {
  public:
   /**
    * Use the default system topology.
@@ -48,7 +47,7 @@ class Topology final : public Singleton<Topology> {
    * Calls _init_default_topology() internally.
    * Calls _init_numa_topology() or _init_non_numa_topology() if on a NUMA or non-NUMA system respectively.
    */
-  static void use_default_topology(uint32_t max_num_cores = 0);
+  void use_default_topology(uint32_t max_num_cores = 0);
 
   /**
    * Use a NUMA topology.
@@ -59,7 +58,7 @@ class Topology final : public Singleton<Topology> {
    * Calls _init_numa_topology() internally.
    * Calls _init_fake_numa_topology() if on a non-NUMA system.
    */
-  static void use_numa_topology(uint32_t max_num_cores = 0);
+  void use_numa_topology(uint32_t max_num_cores = 0);
 
   /**
    * Use a non-NUMA topology.
@@ -68,7 +67,7 @@ class Topology final : public Singleton<Topology> {
    *
    * Calls _init_non_numa_topology() internally.
    */
-  static void use_non_numa_topology(uint32_t max_num_cores = 0);
+  void use_non_numa_topology(uint32_t max_num_cores = 0);
 
   /**
    * Use a fake-NUMA topology.
@@ -77,7 +76,7 @@ class Topology final : public Singleton<Topology> {
    *
    * Calls _init_fake_numa_topology() internally.
    */
-  static void use_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
+  void use_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
   const std::vector<TopologyNode>& nodes() const;
 
@@ -89,7 +88,7 @@ class Topology final : public Singleton<Topology> {
   Topology();
 
   friend std::ostream& operator<<(std::ostream& stream, const Topology& topology);
-  friend class Singleton;
+  friend class Hyrise;
 
   void _init_default_topology(uint32_t max_num_cores = 0);
   void _init_numa_topology(uint32_t max_num_cores = 0);

@@ -23,7 +23,7 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             const std::optional<uint32_t> max_chunk_size, const UseMvcc use_mvcc)
+             const std::optional<ChunkOffset> max_chunk_size, const UseMvcc use_mvcc)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
@@ -155,7 +155,7 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
 
-uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
+ChunkOffset Table::max_chunk_size() const { return _max_chunk_size; }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
@@ -179,7 +179,7 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
 
 void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  DebugAssert(([this, chunk_id]() {
+  DebugAssert(([this, chunk_id]() {  // NOLINT
                 const auto chunk = get_chunk(chunk_id);
                 return (chunk->invalid_row_count() == chunk->size());
               }()),
@@ -188,7 +188,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
   std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
 }
 
-void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,
+void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables iff MVCC is enabled");

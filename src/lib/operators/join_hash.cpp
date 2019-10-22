@@ -10,10 +10,10 @@
 #include <vector>
 
 #include "bytell_hash_map.hpp"
+#include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -45,9 +45,12 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
       _radix_bits(radix_bits) {}
 
-const std::string JoinHash::name() const { return "JoinHash"; }
+const std::string& JoinHash::name() const {
+  static const auto name = std::string{"JoinHash"};
+  return name;
+}
 
-const std::string JoinHash::description(DescriptionMode description_mode) const {
+std::string JoinHash::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
   stream << AbstractJoinOperator::description(description_mode);
   stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
@@ -96,9 +99,9 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   // slightly skewed data distributions and aim for a fill level of 80%.
   const auto complete_hash_map_size =
       // number of items in map
-      build_relation_size *
+      static_cast<double>(build_relation_size) *
       // key + value (and one byte overhead, see link above)
-      sizeof(uint32_t) / 0.8;
+      static_cast<double>(sizeof(uint32_t)) / 0.8;
 
   auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 
@@ -380,7 +383,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }));
     jobs.back()->schedule();
 
-    CurrentScheduler::wait_for_tasks(jobs);
+    Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
     // Short cut for AntiNullAsTrue
     //   If there is any NULL value on the build side, do not bother probing as no tuples can be emitted

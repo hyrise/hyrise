@@ -56,10 +56,10 @@ class CsvConverter : public BaseCsvConverter {
     }
 
     if (boost::to_lower_copy(value) == ParseConfig::NULL_STRING) {
-      Assert(!_config.reject_null_strings,
-             "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null value, "
-             "or set 'reject_null_strings' to false in parse config.");
-      if (_is_nullable) {
+      Assert(_config.null_handling != NullHandling::RejectNullStrings,
+             "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null "
+             "value, or set 'null_handling' to the appropriate strategy in parse config.");
+      if (_is_nullable && _config.null_handling == NullHandling::NullStringAsNull) {
         _null_values[position] = true;
         return;
       }

@@ -13,9 +13,9 @@
 
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
@@ -58,7 +58,10 @@ AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
 
-const std::string AggregateHash::name() const { return "Aggregate"; }
+const std::string& AggregateHash::name() const {
+  static const auto name = std::string{"AggregateHash"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -228,8 +231,8 @@ void AggregateHash::_aggregate() {
         auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
         auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
-        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
-                                         std::equal_to<ColumnDataType>, decltype(allocator)>(allocator);
+        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>, std::equal_to<>,
+                                         decltype(allocator)>(allocator);
         AggregateKeyEntry id_counter = 1u;
 
         const auto chunk_count = input_table->chunk_count();
@@ -268,7 +271,7 @@ void AggregateHash::_aggregate() {
     jobs.back()->schedule();
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
   /*
   AGGREGATION PHASE

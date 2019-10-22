@@ -37,7 +37,7 @@ class RangeFilterTest : public ::testing::Test {
 };
 
 using FilterTypes = ::testing::Types<int, float, double>;
-TYPED_TEST_CASE(RangeFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
+TYPED_TEST_SUITE(RangeFilterTest, FilterTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
   const auto lowest = std::numeric_limits<TypeParam>::lowest();

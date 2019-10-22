@@ -13,10 +13,11 @@ extern "C" {
 #include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "table_builder.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 extern char** asc_date;
-extern seed_t seed[];
+extern seed_t seed[];  // NOLINT
 
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #pragma clang diagnostic ignored "-Wfloat-conversion"
@@ -127,13 +128,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
-      const auto table_name = table_file.path().stem();
+    for (const auto& table_file : list_directory(cache_directory)) {
+      const auto table_name = table_file.stem();
       Timer timer;
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
 
       BenchmarkTableInfo table_info;
-      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.table = ImportBinary::read_binary(table_file);
       table_info.loaded_from_binary = true;
       table_info_by_name[table_name] = table_info;
 
@@ -147,12 +148,12 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
-  const auto customer_count = static_cast<size_t>(tdefs[CUST].base * scale);
-  const auto order_count = static_cast<size_t>(tdefs[ORDER].base * scale);
-  const auto part_count = static_cast<size_t>(tdefs[PART].base * scale);
-  const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * scale);
-  const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
-  const auto region_count = static_cast<size_t>(tdefs[REGION].base);
+  const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);
+  const auto order_count = static_cast<ChunkOffset>(tdefs[ORDER].base * scale);
+  const auto part_count = static_cast<ChunkOffset>(tdefs[PART].base * scale);
+  const auto supplier_count = static_cast<ChunkOffset>(tdefs[SUPP].base * scale);
+  const auto nation_count = static_cast<ChunkOffset>(tdefs[NATION].base);
+  const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
@@ -210,7 +211,26 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
                             convert_money(part.retailprice), part.comment);
 
+    // Some scale factors (e.g., 0.05) are not supported by tpch-dbgen as they produce non-unique partkey/suppkey
+    // combinations. The reason is probably somewhere in the magic in PART_SUPP_BRIDGE. As the partkey is
+    // ascending, those are easy to identify:
+
+    DSS_HUGE last_partkey = {};
+    auto suppkeys = std::vector<DSS_HUGE>{};
+
     for (const auto& partsupp : part.s) {
+      {
+        // Make sure we do not generate non-unique combinations (see above)
+        if (partsupp.partkey != last_partkey) {
+          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order");
+          last_partkey = partsupp.partkey;
+          suppkeys.clear();
+        }
+        Assert(std::find(suppkeys.begin(), suppkeys.end(), partsupp.suppkey) == suppkeys.end(),
+               "Scale factor unsupported by tpch-dbgen. Consider choosing a \"round\" number.");
+        suppkeys.emplace_back(partsupp.suppkey);
+      }
+
       partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, convert_money(partsupp.scost),
                                   partsupp.comment);
     }
@@ -272,6 +292,25 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   }
 
   return table_info_by_name;
+}
+
+AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() const {
+  return {
+      {"part", {{"p_partkey"}}},
+      {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
+      // TODO(anyone): multi-column indexes are currently not used by the index scan rule and the translator
+      {"partsupp", {{"ps_partkey", "ps_suppkey"}, {"ps_suppkey"}}},  // ps_partkey is subset of {ps_partkey, ps_suppkey}
+      {"customer", {{"c_custkey"}, {"c_nationkey"}}},
+      {"orders", {{"o_orderkey"}, {"o_custkey"}}},
+      {"lineitem", {{"l_orderkey", "l_linenumber"}, {"l_partkey", "l_suppkey"}}},
+      {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
+      {"region", {{"r_regionkey"}}},
+  };
+}
+
+AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
+  // Allowed as per TPC-H Specification, paragraph 1.5.2
+  return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
 }
 
 }  // namespace opossum

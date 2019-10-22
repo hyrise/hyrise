@@ -20,8 +20,8 @@ class GetTable : public AbstractReadOnlyOperator {
   GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
            const std::vector<ColumnID>& pruned_column_ids);
 
-  const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
+  const std::string& name() const override;
+  std::string description(DescriptionMode description_mode) const override;
 
   const std::string& table_name() const;
   const std::vector<ChunkID>& pruned_chunk_ids() const;
