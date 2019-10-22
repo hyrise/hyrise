@@ -12,7 +12,6 @@
 
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "encoding_config.hpp"
 #include "resolve_type.hpp"
 #include "tpcc_random_generator.hpp"
 

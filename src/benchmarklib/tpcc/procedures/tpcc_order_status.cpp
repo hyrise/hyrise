@@ -20,7 +20,7 @@ TPCCOrderStatus::TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor&
   if (select_customer_by_name) {
     customer = pmr_string{_tpcc_random_generator.last_name(_tpcc_random_generator.nurand(255, 0, 999))};
   } else {
-    customer = _tpcc_random_generator.nurand(1023, 1, 3000);
+    customer = static_cast<int32_t>(_tpcc_random_generator.nurand(1023, 1, 3000));
   }
 }
 

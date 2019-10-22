@@ -87,6 +87,8 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
+target_link_libraries_system(hyriseBenchmarkTPCC nlohmann_json::nlohmann_json)
+
 # Configure hyriseBenchmarkTPCDS
 add_executable(hyriseBenchmarkTPCDS tpcds_benchmark.cpp)
 

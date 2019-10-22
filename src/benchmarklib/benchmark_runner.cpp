@@ -138,9 +138,9 @@ void BenchmarkRunner::run() {
     Assert(!any_verification_failed, "Verification failed");
   }
 
-  if (Hyrise::get().scheduler()::is_set()) {
+  if (Hyrise::get().scheduler()) {
     Hyrise::get().scheduler()->finish();
-    Hyrise::get().scheduler()->set(nullptr);
+    Hyrise::get().set_scheduler(nullptr);
   }
 }
 
@@ -418,7 +418,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
-    ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value("Ordered")) // NOLINT
+    ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value(default_mode)) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT
