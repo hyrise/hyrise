@@ -140,7 +140,6 @@ void BenchmarkRunner::run() {
 
   if (Hyrise::get().scheduler()) {
     Hyrise::get().scheduler()->finish();
-    Hyrise::get().set_scheduler(nullptr);
   }
 }
 
