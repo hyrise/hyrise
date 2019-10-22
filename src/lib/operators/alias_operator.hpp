@@ -13,8 +13,8 @@ class AliasOperator : public AbstractReadOnlyOperator {
   AliasOperator(const std::shared_ptr<const AbstractOperator>& input, const std::vector<ColumnID>& column_ids,
                 const std::vector<std::string>& aliases);
 
-  const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
+  const std::string& name() const override;
+  std::string description(DescriptionMode description_mode) const override;
 
  protected:
   std::shared_ptr<AbstractOperator> _on_deep_copy(

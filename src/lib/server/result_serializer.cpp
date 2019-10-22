@@ -43,11 +43,6 @@ void ResultSerializer::send_table_description(
         object_id = 25;
         type_width = -1;
         break;
-      // TODO(toni): remove
-      case DataType::Bool:
-        object_id = 16;
-        type_width = 1;
-        break;
       case DataType::Null:
         Fail("Bad DataType");
     }

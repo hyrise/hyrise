@@ -47,21 +47,20 @@ class JoinGraphBuilder final {
    */
   void _traverse(const std::shared_ptr<AbstractLQPNode>& node);
   /**
-   * A subgraph in the LQP consisting of UnionNodes and PredicateNodes can be translated into a single complex predicate
+   * A subgraph in the LQP consisting of PredicateNodes can be translated into a single complex predicate
    *
-   *         ______________UnionNode________
-   *        /                               \
-   *    PredicateNode(a > 5)            PredicateNode(a < 3)
-   *       |                                 |
-   *       |                            PredicateNode(b > 12)
-   *       \____________AggregateNode_______/
+   *                  PredicateNode(a < 3)
+   *                           |
+   *                  PredicateNode(b > 12)
+   *                           |
+   *                    AggregateNode
    *                           |
    *                         [...]
    *
-   *  Represents the JoinPlanPredicate "a > 5 OR (a < 3 AND b > 12)". The AggregateNode is the Predicate's "base_node"
+   *  Represents the JoinPlanPredicate "a < 3 AND b > 12". The AggregateNode is the Predicate's "base_node"
    *  i.e. the node on which's output the Predicate operates on.
    *
-   *  _parse_predicate() and _parse_union() perform this conversion, calling each other recursively
+   *  _parse_predicate() performs this conversion.
    */
   struct PredicateParseResult {
     PredicateParseResult(const std::shared_ptr<AbstractLQPNode>& base_node,
@@ -73,7 +72,6 @@ class JoinGraphBuilder final {
   };
 
   PredicateParseResult _parse_predicate(const std::shared_ptr<AbstractLQPNode>& node) const;
-  PredicateParseResult _parse_union(const std::shared_ptr<UnionNode>& union_node) const;
 
   /**
    * Returns whether a node of the given type is a JoinGraph vertex in all cases. This is true for all node types that

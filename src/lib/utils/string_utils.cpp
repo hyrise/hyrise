@@ -27,7 +27,7 @@ std::vector<std::string> split_string_by_delimiter(const std::string& str, char 
   return internal;
 }
 
-const std::string plugin_name_from_path(const std::filesystem::path& path) {
+std::string plugin_name_from_path(const std::filesystem::path& path) {
   const auto filename = path.stem().string();
 
   // Remove "lib" prefix of shared library file

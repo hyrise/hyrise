@@ -24,7 +24,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
                  const OperatorJoinPredicate& primary_predicate,
                  const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   struct JoinParams {
     PosList& pos_list_left;

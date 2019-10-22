@@ -47,7 +47,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   // Returns the name of the operator
-  const std::string name() const final;
+  const std::string& name() const final;
 
  private:
   /*

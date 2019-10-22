@@ -54,18 +54,20 @@ def calculate_and_format_p_value(old, new):
     new_runtime = sum(runtime for runtime in new_durations)
     if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns):
         is_significant = False
-        notes += "(run time too short) "
-
-    if (len(old_durations) < min_iterations or len(new_durations) < min_iterations):
+        return "(run time too short)"
+    elif (len(old_durations) < min_iterations or len(new_durations) < min_iterations):
         is_significant = False
-        notes += "(not enough runs) "
+        return "(not enough runs)"
+    else:
+        color = 'green' if is_significant else 'white'
+        return colored("{0:.4f}".format(p_value), color)
 
-    color = 'green' if is_significant else 'white'
-    return colored(notes + "{0:.4f}".format(p_value), color)
 
+if (not len(sys.argv) in [3, 4]):
+    exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json [--github]")
 
-if(len(sys.argv) != 3):
-    exit("Usage: " + sys.argv[0] + " benchmark1.json benchmark2.json")
+# Format the output as a diff (prepending - and +) so that Github shows colors
+github_format = bool(len(sys.argv) == 4 and sys.argv[3] == '--github')
 
 with open(sys.argv[1]) as old_file:
     old_data = json.load(old_file)
@@ -79,7 +81,7 @@ if old_data['context']['benchmark_mode'] != new_data['context']['benchmark_mode'
 diffs = []
 
 table_data = []
-table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "p-value (significant if <" + str(p_value_significance_threshold) + ")"])
+table_data.append(["Benchmark", "prev. iter/s", "runs", "new iter/s", "runs", "change [%]", "p-value"])
 
 for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
     name = old['name']
@@ -123,6 +125,29 @@ table_data.append(['geometric mean', '', '', '', '', format_diff(geometric_mean(
 table = AsciiTable(table_data)
 table.justify_columns[6] = 'right'
 
+# If github_format is set, format the output in the style of a diff file where added lines (starting with +) are
+# colored green, removed lines (starting with -) are red, and others (starting with an empty space) are black.
+# Because terminaltables (unsurprisingly) does not support this hack, we need to post-process the result string,
+# searching for the control codes that define text to be formatted as green or red.
+
+result = str(table.table)
+if github_format:
+    new_result = '```diff\n'
+    green_control_sequence = colored('', 'green')[0:5]
+    red_control_sequence = colored('', 'red')[0:5]
+
+    for line in result.splitlines():
+        if green_control_sequence in line:
+            new_result += '+'
+        elif red_control_sequence in line:
+            new_result += '-'
+        else:
+            new_result += ' '
+
+        new_result += line + '\n'
+    new_result += '```'
+    result = new_result
+
 print("")
-print(table.table)
+print(result)
 print("")

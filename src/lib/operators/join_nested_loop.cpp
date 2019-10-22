@@ -11,7 +11,6 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
-#include "utils/ignore_unused_variable.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace {
@@ -83,7 +82,10 @@ JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& le
   // TODO(moritz) incorporate into supports()?
 }
 
-const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
+const std::string& JoinNestedLoop::name() const {
+  static const auto name = std::string{"JoinNestedLoop"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -182,7 +184,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
 
     if (is_outer_join) {
       // Add unmatched rows on the left for Left and Full Outer joins
-      for (ChunkOffset chunk_offset{0}; chunk_offset < left_matches.size(); ++chunk_offset) {
+      for (ChunkOffset chunk_offset{0}; chunk_offset < static_cast<ChunkOffset>(left_matches.size()); ++chunk_offset) {
         if (!left_matches[chunk_offset]) {
           pos_list_left->emplace_back(RowID{chunk_id_left, chunk_offset});
           pos_list_right->emplace_back(NULL_ROW_ID);
@@ -297,8 +299,8 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
    * SLOW PATH
    */
   // clang-format off
-  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, const auto left_end) {  // NOLINT
-    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it, const auto right_end) {  // NOLINT
+  segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_left, [&](auto left_it, [[maybe_unused]] const auto left_end) {  // NOLINT
+    segment_with_iterators<ResolveDataTypeTag, EraseTypes::Always>(base_segment_right, [&](auto right_it, [[maybe_unused]] const auto right_end) {  // NOLINT
       using LeftType = typename std::decay_t<decltype(left_it)>::ValueType;
       using RightType = typename std::decay_t<decltype(right_it)>::ValueType;
 
@@ -309,28 +311,13 @@ void JoinNestedLoop::_join_two_untyped_segments(const BaseSegment& base_segment_
       constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
       constexpr auto BOTH_ARE_STRING_COLUMN = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
-      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {
-        // Dirty hack to avoid https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
-        const auto left_it_copy = left_it;
-        const auto left_end_copy = left_end;
-        const auto right_it_copy = right_it;
-        const auto right_end_copy = right_end;
-        const auto params_copy = params;
-        const auto chunk_id_left_copy = chunk_id_left;
-        const auto chunk_id_right_copy = chunk_id_right;
-
+      if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMN) {  // NOLINT
         // Erase the `predicate_condition` into a std::function<>
         auto erased_comparator = std::function<bool(const LeftType&, const RightType&)>{};
-        with_comparator(params_copy.predicate_condition, [&](auto comparator) { erased_comparator = comparator; });
+        with_comparator(params.predicate_condition, [&](auto comparator) { erased_comparator = comparator; });
 
-        join_two_typed_segments(erased_comparator, left_it_copy, left_end_copy, right_it_copy, right_end_copy,
-                                       chunk_id_left_copy, chunk_id_right_copy, params_copy);
-      } else {
-        // gcc complains without these
-        ignore_unused_variable(right_end);
-        ignore_unused_variable(left_end);
-
-        Fail("Cannot join String with non-String column");
+        join_two_typed_segments(erased_comparator, left_it, left_end, right_it, right_end,
+                                       chunk_id_left, chunk_id_right, params);
       }
     });
   });

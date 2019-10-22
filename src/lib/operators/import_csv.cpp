@@ -19,7 +19,10 @@ ImportCsv::ImportCsv(const std::string& filename, const ChunkOffset chunk_size,
       _tablename(tablename),
       _csv_meta(csv_meta) {}
 
-const std::string ImportCsv::name() const { return "ImportCSV"; }
+const std::string& ImportCsv::name() const {
+  static const auto name = std::string{"ImportCsv"};
+  return name;
+}
 
 std::shared_ptr<const Table> ImportCsv::_on_execute() {
   if (_tablename && Hyrise::get().storage_manager.has_table(*_tablename)) {

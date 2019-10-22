@@ -173,13 +173,12 @@ TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
 
   const std::string prepared_name = "";
   const auto param = 1234u;
-  // Ill-formed prepared statement
-  connection.prepare(prepared_name, "SELECT * FROM WHERE a > ?");
-  EXPECT_THROW(transaction.exec_prepared(prepared_name, param), pqxx::sql_error);
 
-  // // Well-formed but table does not exist
-  connection.prepare(prepared_name, "SELECT * FROM non_existent WHERE a > ?");
-  EXPECT_THROW(transaction.exec_prepared(prepared_name, param), pqxx::sql_error);
+  // Ill-formed prepared statement
+  EXPECT_THROW(connection.prepare(prepared_name, "SELECT * FROM WHERE a > ?"), pqxx::sql_error);
+
+  // Well-formed but table does not exist
+  EXPECT_THROW(connection.prepare(prepared_name, "SELECT * FROM non_existent WHERE a > ?"), pqxx::sql_error);
 
   // Wrong number of parameters
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ? and a > ?");

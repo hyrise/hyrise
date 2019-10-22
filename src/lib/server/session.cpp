@@ -82,7 +82,8 @@ void Session::_handle_simple_query() {
     _postgres_protocol_handler->send_error_message(execution_information.error);
   } else {
     uint64_t row_count = 0;
-    // If there is no result table, e.g. after an INSERT command, we cannot send row data
+    // If there is no result table, e.g. after an INSERT command, we cannot send row data. Otherwise, the result table
+    // of the last statement will be send back.
     if (execution_information.result_table) {
       ResultSerializer::send_table_description(execution_information.result_table, _postgres_protocol_handler);
       ResultSerializer::send_query_response(execution_information.result_table, _postgres_protocol_handler);

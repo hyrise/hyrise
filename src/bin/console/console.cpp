@@ -23,7 +23,6 @@
 #include "concurrency/transaction_context.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
@@ -50,13 +49,13 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"
-#define ANSI_COLOR_GREEN "\x1B[32m"
-#define ANSI_COLOR_RESET "\x1B[0m"
+#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT
+#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT
+#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT
 
-#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"
-#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"
-#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"
+#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT
+#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT
+#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"   // NOLINT
 
 namespace {
 
@@ -110,7 +109,6 @@ Console::Console()
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
       _pagination_active(false),
-      _use_jit(false),
       _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
       _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
@@ -241,9 +239,6 @@ bool Console::_initialize_pipeline(const std::string& sql) {
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }
-    if (_use_jit) {
-      builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
-    }
     _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + '\n');
@@ -342,7 +337,8 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  int size_y, size_x;
+  int size_y;
+  int size_x;
   rl_get_screen_size(&size_y, &size_x);
 
   const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
@@ -419,9 +415,6 @@ int Console::_help(const std::string&) {
   out("  help                                    - Show this message\n\n");
   out("  setting [property] [value]              - Change a runtime setting\n\n");
   out("           scheduler (on|off)             - Turn the scheduler on (default) or off\n\n");
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    out("           jit       (on|off)             - Turn just-in-time query compilation on or off (default)\n\n");
-  }
   // clang-format on
 
   return Console::ReturnCode::Ok;
@@ -662,12 +655,12 @@ int Console::_visualize(const std::string& input) {
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
-  constexpr char EXEC[] = "exec";
-  constexpr char NOEXEC[] = "noexec";
-  constexpr char PQP[] = "pqp";
-  constexpr char LQP[] = "lqp";
-  constexpr char UNOPTLQP[] = "unoptlqp";
-  constexpr char JOINS[] = "joins";
+  constexpr auto EXEC = "exec";
+  constexpr auto NOEXEC = "noexec";
+  constexpr auto PQP = "pqp";
+  constexpr auto LQP = "lqp";
+  constexpr auto UNOPTLQP = "unoptlqp";
+  constexpr auto JOINS = "joins";
 
   // Determine whether the specified query is to be executed before visualization
   auto no_execute = false;  // Default
@@ -813,21 +806,6 @@ int Console::_change_runtime_setting(const std::string& input) {
       return 1;
     }
     return 0;
-  } else if (property == "jit") {
-    if constexpr (HYRISE_JIT_SUPPORT) {
-      _pqp_cache->clear();
-      if (value == "on") {
-        _use_jit = true;
-        out("Just-in-time query compilation turned on\n");
-      } else if (value == "off") {
-        _use_jit = false;
-        out("Just-in-time query compilation turned off\n");
-      } else {
-        out("Usage: jit (on|off)\n");
-        return 1;
-      }
-      return 0;
-    }
   }
 
   out("Error: Unknown property\n");

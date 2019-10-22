@@ -14,7 +14,6 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/join_predicate_ordering_rule.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"

@@ -18,7 +18,10 @@ Difference::Difference(const std::shared_ptr<const AbstractOperator>& left_in,
                        const std::shared_ptr<const AbstractOperator>& right_in)
     : AbstractReadOnlyOperator(OperatorType::Difference, left_in, right_in) {}
 
-const std::string Difference::name() const { return "Difference"; }
+const std::string& Difference::name() const {
+  static const auto name = std::string{"Difference"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Difference::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

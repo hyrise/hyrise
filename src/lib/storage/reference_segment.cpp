@@ -27,7 +27,7 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
   Assert(pos->size() <= Chunk::MAX_SIZE, "PosList exceeds Chunk::MAX_SIZE");
 }
 
-const AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
   const auto row_id = (*_pos_list)[chunk_offset];
@@ -43,7 +43,7 @@ const std::shared_ptr<const PosList>& ReferenceSegment::pos_list() const { retur
 const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const { return _referenced_table; }
 ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_column_id; }
 
-size_t ReferenceSegment::size() const { return _pos_list->size(); }
+ChunkOffset ReferenceSegment::size() const { return static_cast<ChunkOffset>(_pos_list->size()); }
 
 std::shared_ptr<BaseSegment> ReferenceSegment::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   // ReferenceSegments are considered as intermediate datastructures and are

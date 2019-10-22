@@ -102,7 +102,8 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   }
 
   // Socket was closed by client during execution
-  if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset) {
+  if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset ||
+      bytes_read == 0) {
     // Terminate session by stopping the current thread
     pthread_exit(nullptr);
   } else if (error_code) {
@@ -160,7 +161,8 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   }
 
   // Socket was closed by client during execution
-  if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset) {
+  if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset ||
+      bytes_sent == 0) {
     // Terminate session by stopping the current thread
     pthread_exit(nullptr);
   } else if (error_code) {

@@ -42,7 +42,10 @@ class CommitFuncOp : public AbstractReadWriteOperator {
  public:
   explicit CommitFuncOp(std::function<void()> func) : AbstractReadWriteOperator(OperatorType::Mock), _func{func} {}
 
-  const std::string name() const override { return "CommitOp"; }
+  const std::string& name() const override {
+    static const auto name = std::string{"CommitOp"};
+    return name;
+  }
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override { return nullptr; }

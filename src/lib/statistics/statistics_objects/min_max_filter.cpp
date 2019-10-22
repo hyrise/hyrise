@@ -30,7 +30,8 @@ std::shared_ptr<AbstractStatisticsObject> MinMaxFilter<T>::sliced(
     return nullptr;
   }
 
-  T sliced_min, sliced_max;
+  T sliced_min;
+  T sliced_max;
   const auto value = boost::get<T>(variant_value);
 
   // If value is either sliced_min or max, we do not take the opportunity to slightly improve the new object.
