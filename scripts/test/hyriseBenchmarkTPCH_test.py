@@ -71,7 +71,7 @@ def main():
   return_error = check_json(output["context"]["clients"], int(arguments["--clients"]), "Client count doesn't match with JSON:", return_error)
 
   arguments = {}
-  arguments["--scale"] = ".005"
+  arguments["--scale"] = ".01"
   arguments["--chunk_size"] = "10000"
   arguments["--queries"] = "'2,4,6'"
   arguments["--time"] = "10"
@@ -97,7 +97,7 @@ def main():
   benchmark.expect("Max duration per item is 10 seconds")
   benchmark.expect("Warmup duration per item is 10 seconds")
   benchmark.expect("Benchmarking Queries: \[ 2, 4, 6 \]")
-  benchmark.expect("TPCH scale factor is 0.005")
+  benchmark.expect("TPCH scale factor is 0.01")
   benchmark.expect("Using prepared statements: no")
   benchmark.expect("Multi-threaded Topology:")
 
@@ -110,7 +110,7 @@ def main():
     sys.exit(1)
   with open(visualization_file) as f:
     # Check whether the (a) the GetTable node exists and (b) the chunk count is correct for the given scale factor
-    if not '/4 chunk(s)' in f.read():
+    if not '/7 chunk(s)' in f.read():
       print ("ERROR: Did not find expected pruning information in the visualization file")
       sys.exit(1)
 

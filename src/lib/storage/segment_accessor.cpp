@@ -2,9 +2,7 @@
 
 #include "resolve_type.hpp"
 
-namespace opossum {
-
-namespace detail {
+namespace opossum::detail {
 template <typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
     const std::shared_ptr<const BaseSegment>& segment) {
@@ -13,7 +11,7 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
     using SegmentType = std::decay_t<decltype(typed_segment)>;
     if constexpr (std::is_same_v<SegmentType, ReferenceSegment>) {
       const auto& pos_list = *typed_segment.pos_list();
-      if (pos_list.references_single_chunk() && pos_list.size() > 0) {
+      if (pos_list.references_single_chunk() && !pos_list.empty()) {
         // If the pos list stores a NULL value, its chunk_id references a non-existing chunk. If all entries reference
         // the same chunk_id, we can safely assume that all other entries are also NULL. Instead of using an accessor
         // that checks for the reference being NULL, we can simply use the NullAccessor, which always returns nullopt,
@@ -48,6 +46,4 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
   return accessor;
 }
 EXPLICITLY_INSTANTIATE_DATA_TYPES(CreateSegmentAccessor);
-}  // namespace detail
-
-}  // namespace opossum
+}  // namespace opossum::detail

@@ -72,7 +72,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
   UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  private:
   // See docs at the top of the cpp

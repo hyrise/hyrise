@@ -49,13 +49,13 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"
-#define ANSI_COLOR_GREEN "\x1B[32m"
-#define ANSI_COLOR_RESET "\x1B[0m"
+#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT
+#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT
+#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT
 
-#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"
-#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"
-#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"
+#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT
+#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT
+#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"   // NOLINT
 
 namespace {
 
@@ -337,7 +337,8 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  int size_y, size_x;
+  int size_y;
+  int size_x;
   rl_get_screen_size(&size_y, &size_x);
 
   const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
@@ -654,12 +655,12 @@ int Console::_visualize(const std::string& input) {
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
-  constexpr char EXEC[] = "exec";
-  constexpr char NOEXEC[] = "noexec";
-  constexpr char PQP[] = "pqp";
-  constexpr char LQP[] = "lqp";
-  constexpr char UNOPTLQP[] = "unoptlqp";
-  constexpr char JOINS[] = "joins";
+  constexpr auto EXEC = "exec";
+  constexpr auto NOEXEC = "noexec";
+  constexpr auto PQP = "pqp";
+  constexpr auto LQP = "lqp";
+  constexpr auto UNOPTLQP = "unoptlqp";
+  constexpr auto JOINS = "joins";
 
   // Determine whether the specified query is to be executed before visualization
   auto no_execute = false;  // Default

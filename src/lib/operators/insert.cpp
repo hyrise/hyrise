@@ -76,7 +76,10 @@ namespace opossum {
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
     : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
 
-const std::string Insert::name() const { return "Insert"; }
+const std::string& Insert::name() const {
+  static const auto name = std::string{"Insert"};
+  return name;
+}
 
 std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionContext> context) {
   _target_table = Hyrise::get().storage_manager.get_table(_target_table_name);

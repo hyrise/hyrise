@@ -17,7 +17,7 @@ extern "C" {
 #include "utils/timer.hpp"
 
 extern char** asc_date;
-extern seed_t seed[];
+extern seed_t seed[];  // NOLINT
 
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #pragma clang diagnostic ignored "-Wfloat-conversion"
@@ -211,7 +211,26 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
                             convert_money(part.retailprice), part.comment);
 
+    // Some scale factors (e.g., 0.05) are not supported by tpch-dbgen as they produce non-unique partkey/suppkey
+    // combinations. The reason is probably somewhere in the magic in PART_SUPP_BRIDGE. As the partkey is
+    // ascending, those are easy to identify:
+
+    DSS_HUGE last_partkey = {};
+    auto suppkeys = std::vector<DSS_HUGE>{};
+
     for (const auto& partsupp : part.s) {
+      {
+        // Make sure we do not generate non-unique combinations (see above)
+        if (partsupp.partkey != last_partkey) {
+          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order");
+          last_partkey = partsupp.partkey;
+          suppkeys.clear();
+        }
+        Assert(std::find(suppkeys.begin(), suppkeys.end(), partsupp.suppkey) == suppkeys.end(),
+               "Scale factor unsupported by tpch-dbgen. Consider choosing a \"round\" number.");
+        suppkeys.emplace_back(partsupp.suppkey);
+      }
+
       partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, convert_money(partsupp.scost),
                                   partsupp.comment);
     }

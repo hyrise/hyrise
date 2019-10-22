@@ -11,9 +11,9 @@ class CreateTable : public AbstractReadWriteOperator {
  public:
   CreateTable(const std::string& table_name, bool if_not_exists, const std::shared_ptr<const AbstractOperator>& in);
 
-  const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
-  const TableColumnDefinitions column_definitions() const;
+  const std::string& name() const override;
+  std::string description(DescriptionMode description_mode) const override;
+  const TableColumnDefinitions& column_definitions() const;
 
   const std::string table_name;
   const bool if_not_exists;

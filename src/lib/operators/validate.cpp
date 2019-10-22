@@ -50,7 +50,10 @@ bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk
 Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
     : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
 
-const std::string Validate::name() const { return "Validate"; }
+const std::string& Validate::name() const {
+  static const auto name = std::string{"Validate"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

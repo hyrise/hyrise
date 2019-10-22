@@ -139,7 +139,7 @@ void TransactionContext::_prepare_commit() {
   _commit_context = Hyrise::get().transaction_manager._new_commit_context();
 }
 
-void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback) {
+void TransactionContext::_mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback) {
   DebugAssert(([this]() {
                 for (const auto& op : _read_write_operators) {
                   if (op->state() != ReadWriteOperatorState::Committed) return false;

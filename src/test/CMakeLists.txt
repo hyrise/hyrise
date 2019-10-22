@@ -205,7 +205,6 @@ set (
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
     synthetic_table_generator_test.cpp
     tpc/tpcds_db_generator_test.cpp
-    tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
 )
@@ -233,9 +232,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest pqxx_static)
+target_link_libraries_system(hyriseSystemTest nlohmann_json::nlohmann_json pqxx_static)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

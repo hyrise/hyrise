@@ -32,9 +32,12 @@ GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_c
               "Expected vector of unique ColumnIDs");
 }
 
-const std::string GetTable::name() const { return "GetTable"; }
+const std::string& GetTable::name() const {
+  static const auto name = std::string{"GetTable"};
+  return name;
+}
 
-const std::string GetTable::description(DescriptionMode description_mode) const {
+std::string GetTable::description(DescriptionMode description_mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
