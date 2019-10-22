@@ -38,7 +38,8 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
 }
 
 bool Validate::is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id) {
-  DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})), "is_entire_chunk_visible cannot be called on reference chunks.");
+  DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})),
+    "is_entire_chunk_visible cannot be called on reference chunks.");
 
   const auto mvcc_data = chunk->mvcc_data();
   const auto max_begin_cid = mvcc_data->max_begin_cid;
