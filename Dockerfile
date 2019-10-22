@@ -1,6 +1,6 @@
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
-FROM ubuntu:19.10
+FROM ubuntu:19.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y \
