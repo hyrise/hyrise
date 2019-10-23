@@ -1,6 +1,3 @@
--- SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM id_int_int_int_50 AS L, id_int_int_int_50 AS R WHERE L.a = R.a) AS S2;
--- SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.b = R.b) AS S2;
-
 -- Select entire table
 SELECT * FROM mixed;
 SELECT * FROM mixed_null;
@@ -128,6 +125,8 @@ SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM 
 SELECT b AS b1, b AS b2 FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > b1);
 SELECT * FROM (SELECT COUNT(*) AS cnt1 FROM id_int_int_int_50) AS s1, (SELECT COUNT(*) AS cnt2 FROM id_int_int_int_100) AS s2;
 SELECT * FROM (SELECT COUNT(a) AS cnt1 FROM id_int_int_int_50) AS s1, (SELECT COUNT(a) AS cnt2 FROM id_int_int_int_100) AS s2;
+SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.b = R.b) AS S2;
+SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM id_int_int_int_50 AS L, id_int_int_int_50 AS R WHERE L.a = R.a) AS S2;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
