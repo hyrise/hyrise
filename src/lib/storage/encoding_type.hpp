@@ -1,5 +1,10 @@
 #pragma once
 
+#include <boost/version.hpp>
+#if BOOST_VERSION < 107100
+#include "utils/boost_curry_override.hpp" // NOLINT
+#endif
+
 #include <boost/hana/at_key.hpp>
 #include <boost/hana/contains.hpp>
 #include <boost/hana/equal.hpp>
