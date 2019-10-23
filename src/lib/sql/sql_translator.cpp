@@ -1243,15 +1243,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+    const std::shared_ptr<AbstractLQPNode>& node, const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   if (expressions_equal(node->column_expressions(), expressions)) return node;
   return ProjectionNode::make(expressions, node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+    const std::shared_ptr<AbstractLQPNode>& node, const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> projection_expressions;
 
   for (const auto& expression : expressions) {
