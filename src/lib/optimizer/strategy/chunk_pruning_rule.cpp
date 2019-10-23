@@ -79,9 +79,8 @@ void ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
   }
 }
 
-std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const Table& table, const AbstractExpression& predicate,
-    const std::shared_ptr<StoredTableNode>& stored_table_node) const {
+std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(const Table& table, const AbstractExpression& predicate,
+                                                          const std::shared_ptr<StoredTableNode>& stored_table_node) {
   // Hacky:
   // `table->table_statistics()` contains AttributeStatistics for all columns, even those that are pruned in
   // `stored_table_node`.
@@ -169,9 +168,8 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
 }
 
 bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_statistics,
-                                         const PredicateCondition predicate_condition,
-                                         const AllTypeVariant& variant_value,
-                                         const std::optional<AllTypeVariant>& variant_value2) {
+                                  const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+                                  const std::optional<AllTypeVariant>& variant_value2) {
   auto can_prune = false;
 
   resolve_data_type(base_segment_statistics.data_type, [&](const auto data_type_t) {
@@ -203,8 +201,8 @@ bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) {
 }
 
 std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const TableStatistics& old_statistics,
-                                                                                  OperatorScanPredicate predicate,
-                                                                                  size_t num_rows_pruned) {
+                                                                           OperatorScanPredicate predicate,
+                                                                           size_t num_rows_pruned) {
   // If a chunk is pruned, we update the table statistics. This is so that the selectivity of the predicate that was
   // used for pruning can be correctly estimated. Example: For a table that has sorted values from 1 to 100 and a chunk
   // size of 10, the predicate `x > 90` has a selectivity of 10%. However, if the ChunkPruningRule removes nine chunks

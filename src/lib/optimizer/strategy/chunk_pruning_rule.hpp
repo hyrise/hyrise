@@ -29,8 +29,8 @@ class ChunkPruningRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
-  std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
-                                          const std::shared_ptr<StoredTableNode>& stored_table_node) const;
+  static std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
+                                                 const std::shared_ptr<StoredTableNode>& stored_table_node);
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
   static bool _can_prune(const BaseAttributeStatistics& base_segment_statistics,

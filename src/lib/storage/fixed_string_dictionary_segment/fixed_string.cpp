@@ -26,8 +26,6 @@ FixedString::~FixedString() {
 FixedString& FixedString::operator=(const FixedString& other) {
   DebugAssert(other.maximum_length() <= _maximum_length,
               "Other FixedString is longer than current maximum string length");
-  DebugAssert(other._mem + _maximum_length < _mem + 1 || _mem + _maximum_length < other._mem + 1,
-              "This and the other's FixedString memory can't overlap");
 
   const auto copied_length = std::min(other.maximum_length(), _maximum_length);
   std::memmove(_mem, other._mem, copied_length);

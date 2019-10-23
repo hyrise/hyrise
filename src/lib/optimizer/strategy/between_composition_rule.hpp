@@ -58,10 +58,9 @@ class BetweenCompositionRule : public AbstractRule {
 
   static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary);
 
-  void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) const;
+  static void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates);
 
-  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression,
-                                      const size_t id);
+  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
 };
 
 }  // namespace opossum

@@ -1348,7 +1348,7 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 }
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,
-                                                                    const std::vector<bool>& right) const {
+                                                                    const std::vector<bool>& right) {
   if (left.size() == right.size()) {
     std::vector<bool> nulls(left.size());
     std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](auto l, auto r) { return l || r; });

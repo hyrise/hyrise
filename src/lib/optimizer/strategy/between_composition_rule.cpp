@@ -158,7 +158,7 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
  * Furthermore BinaryPredicateExpressions which are obsolete after the substitution
  * are removed.
 **/
-void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
+void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
