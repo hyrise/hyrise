@@ -43,12 +43,13 @@ def main():
   benchmark.expect("Using prepared statements: yes")
   benchmark.expect("Creating index on customer \[ c_custkey \]")
   benchmark.expect("Preparing queries")
-  benchmark.expect("-> Executed")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
-    
+  if benchmark.before.count('Verification failed'):
+    return_error = True
+
   if not os.path.isfile(arguments["--output"].replace("'", "")):
     print ("ERROR: Cannot find output file " + arguments["--output"])
     return_error = True
@@ -86,8 +87,8 @@ def main():
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
-  benchmark.expect("Running in single-threaded mode")
-  benchmark.expect("1 simulated clients are scheduling items in parallel")
+  benchmark.expect("Running in multi-threaded mode using all available cores")
+  benchmark.expect("4 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Ordered' mode")
   benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'LZ4'")
@@ -98,6 +99,7 @@ def main():
   benchmark.expect("Benchmarking Queries: \[ 2, 4, 6 \]")
   benchmark.expect("TPCH scale factor is 0.01")
   benchmark.expect("Using prepared statements: no")
+  benchmark.expect("Multi-threaded Topology:")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
