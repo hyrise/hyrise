@@ -19,18 +19,6 @@ class ResultSerializerTest : public BaseTest {
         std::make_shared<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>(_mocked_socket->get_socket());
   }
 
-  uint32_t _get_message_length(std::string::const_iterator start) {
-    uint32_t network_value = 0;
-    std::copy_n(start, sizeof(uint32_t), reinterpret_cast<char*>(&network_value));
-    return ntohl(network_value);
-  }
-
-  uint16_t _get_small_int(std::string::const_iterator start) {
-    uint16_t network_value = 0;
-    std::copy_n(start, sizeof(uint16_t), reinterpret_cast<char*>(&network_value));
-    return ntohs(network_value);
-  }
-
   std::shared_ptr<Table> _test_table;
   std::shared_ptr<MockSocket> _mocked_socket;
   std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>> _protocol_handler;
@@ -41,8 +29,8 @@ TEST_F(ResultSerializerTest, RowDescription) {
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 
-  EXPECT_EQ(_get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
-  EXPECT_EQ(_get_small_int(file_content.cbegin() + 5), _test_table->column_count());
+  EXPECT_EQ(NetworkConversionHelper::get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
+  EXPECT_EQ(NetworkConversionHelper::get_small_int(file_content.cbegin() + 5), _test_table->column_count());
   for (ColumnID column_id{0}; column_id < _test_table->column_count(); column_id++) {
     EXPECT_NE(file_content.find(_test_table->column_name(column_id)), std::string::npos);
   }
