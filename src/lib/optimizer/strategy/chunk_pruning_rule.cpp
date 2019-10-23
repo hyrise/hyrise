@@ -168,7 +168,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
   return result;
 }
 
-static bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_statistics,
+bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_segment_statistics,
                                          const PredicateCondition predicate_condition,
                                          const AllTypeVariant& variant_value,
                                          const std::optional<AllTypeVariant>& variant_value2) {
@@ -198,11 +198,11 @@ static bool ChunkPruningRule::_can_prune(const BaseAttributeStatistics& base_seg
   return can_prune;
 }
 
-static bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) {
+bool ChunkPruningRule::_is_non_filtering_node(const AbstractLQPNode& node) {
   return node.type == LQPNodeType::Alias || node.type == LQPNodeType::Projection || node.type == LQPNodeType::Sort;
 }
 
-static std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const TableStatistics& old_statistics,
+std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const TableStatistics& old_statistics,
                                                                                   OperatorScanPredicate predicate,
                                                                                   size_t num_rows_pruned) {
   // If a chunk is pruned, we update the table statistics. This is so that the selectivity of the predicate that was
