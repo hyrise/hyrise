@@ -225,8 +225,7 @@ std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(st
   const auto null_values_size = _read_value<uint32_t>(file);
   const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, null_values_size));
 
-  const auto end_positions_size = _read_value<uint32_t>(file);
-  const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, end_positions_size));
+  const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, values_size));
 
   return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
 }

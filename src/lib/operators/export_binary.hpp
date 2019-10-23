@@ -180,7 +180,6 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * Values                 | T (int, float, double, long)          |   values size * sizeof(T)
    * Size of NULL values v. | uint32_t                              |   4
    * NULL values            | vector<bool> (BoolAsByteType)         |   rows * 1
-   * Size of End Position v.| uint32_t                              |   4
    * End Positions          | ChunkOffset                           |   values size * 4
    *
    * Please note that the number of rows are written in the header of the chunk.
