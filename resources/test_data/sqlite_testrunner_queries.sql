@@ -1,13 +1,3 @@
-SELECT SUM(b) FROM mixed GROUP BY a;
-SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
-SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM mixed;
-SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed;
-SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed GROUP BY a;
-SELECT a1, b2, a3 FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM mixed) AS R;
-SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed) AS R;
-SELECT * FROM (SELECT COUNT(*) AS cnt1 FROM id_int_int_int_50) AS s1, (SELECT COUNT(*) AS cnt2 FROM id_int_int_int_100) AS s2;
-SELECT * FROM (SELECT COUNT(a) AS cnt1 FROM id_int_int_int_50) AS s1, (SELECT COUNT(a) AS cnt2 FROM id_int_int_int_100) AS s2;
-SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a;
 -- SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM id_int_int_int_50 AS L, id_int_int_int_50 AS R WHERE L.a = R.a) AS S2;
 -- SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.b = R.b) AS S2;
 
@@ -244,6 +234,7 @@ SELECT * FROM id_int_int_int_100 AS r WHERE a >= (SELECT MIN(s.a) FROM id_int_in
 SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT SUM(min_a) FROM (SELECT MIN(s.a) AS min_a FROM id_int_int_int_50 AS s WHERE s.b = r.b GROUP BY s.c) min_a_per_c)
 
 -- GROUP BY
+SELECT SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
@@ -265,6 +256,8 @@ SELECT COUNT(*) FROM mixed;
 SELECT COUNT(*) FROM mixed GROUP BY a;
 SELECT a, COUNT(*) FROM mixed GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
+SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a;
+SELECT COUNT(*) FROM id_int_int_int_50, id_int_int_int_100;
 
 -- COUNT(DISTINCT)
 SELECT a, COUNT(DISTINCT b) as d FROM mixed GROUP BY a;
