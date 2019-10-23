@@ -88,7 +88,6 @@ set(
     expression/value_expression.hpp
     hyrise.cpp
     hyrise.hpp
-    import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
     import_export/csv_meta.cpp
@@ -396,6 +395,7 @@ set(
     statistics/attribute_statistics.hpp
     storage/abstract_segment_visitor.hpp
     storage/base_dictionary_segment.hpp
+    storage/base_run_length_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
     storage/base_segment_accessor.hpp

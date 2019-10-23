@@ -6,10 +6,10 @@
 #include <string>
 #include <vector>
 
-#include "import_export/binary.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/run_length_segment.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/run_length_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
@@ -200,7 +200,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseValueSegment
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& segment = static_cast<const ValueSegment<T>&>(base_segment);
 
-  export_value(context->ofstream, BinarySegmentType::value_segment);
+  export_value(context->ofstream, EncodingType::Unencoded);
 
   if (segment.is_nullable()) {
     export_values(context->ofstream, segment.null_values());
@@ -215,7 +215,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference segments and save them as value segments
-  export_value(context->ofstream, BinarySegmentType::value_segment);
+  export_value(context->ofstream, EncodingType::Unencoded);
 
   // Unfortunately, we have to iterate over all values of the reference segment
   // to materialize its contents. Then we can write them to the file
@@ -231,7 +231,7 @@ void ExportBinary::ExportBinaryVisitor<pmr_string>::handle_segment(
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference segments and save them as value segments
-  export_value(context->ofstream, BinarySegmentType::value_segment);
+  export_value(context->ofstream, EncodingType::Unencoded);
 
   // If there is no data, we can skip all of the coming steps.
   if (ref_segment.size() == 0) return;
@@ -261,7 +261,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
   Assert(is_fixed_size_byte_aligned(*base_segment.compressed_vector_type()),
          "Does only support fixed-size byte-aligned compressed attribute vectors.");
 
-  export_value(context->ofstream, BinarySegmentType::dictionary_segment);
+  export_value(context->ofstream, EncodingType::Dictionary);
 
   const auto attribute_vector_width = [&]() {
     Assert(base_segment.compressed_vector_type(),
@@ -303,10 +303,10 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseRunLengthSegment& base_segment,
-                                                          std::shared_ptr<SegmentVisitorContext> base_context){
+                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
-  export_value(context->ofstream, BinarySegmentType::run_length_segment);
+  export_value(context->ofstream, EncodingType::RunLength);
 
   const auto& segment = static_cast<const RunLengthSegment<T>&>(base_segment);
 

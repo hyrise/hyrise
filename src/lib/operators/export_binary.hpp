@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "import_export/binary.hpp"
 #include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
@@ -166,7 +165,6 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
 
   void handle_segment(const BaseEncodedSegment& base_segment,
                       std::shared_ptr<SegmentVisitorContext> base_context) override;
-
 
   /**
    * RunLength Segments are dumped with the following layout:
