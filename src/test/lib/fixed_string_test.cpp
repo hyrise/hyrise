@@ -87,6 +87,22 @@ TEST_F(FixedStringTest, CompareStrings) {
   EXPECT_FALSE(bar_string_view == fixed_string1);
 }
 
+TEST_F(FixedStringTest, Assign) {
+  std::vector<char> char_vector1 = {'f', 'o', 'o', 'b', 'a', 'r'};
+  FixedString fixed_string1 = FixedString(&char_vector1[0], 7u);
+  EXPECT_EQ(fixed_string1, "foobar");
+
+  std::vector<char> char_vector2 = {'b', 'a', 'r'};
+  FixedString fixed_string2 = FixedString(&char_vector2[0], 4u);
+  EXPECT_EQ(fixed_string2, "bar");
+
+  fixed_string1 = fixed_string2;
+  EXPECT_EQ(fixed_string1, "bar");
+
+  fixed_string1 = ((true) ? fixed_string1 : fixed_string2);  // sneak around -Wself-assign-overloaded
+  EXPECT_EQ(fixed_string1, "bar");
+}
+
 TEST_F(FixedStringTest, Swap) {
   std::vector<char> char_vector = {'b', 'a', 'r'};
   FixedString fixed_string = FixedString(&char_vector[0], 3u);

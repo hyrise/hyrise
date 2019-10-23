@@ -23,6 +23,7 @@ FixedString::~FixedString() {
   if (_owns_memory) delete[] _mem;
 }
 
+// NOLINTNEXTLINE(bugprone-unhandled-self-assignment): Tested by FixedStringTest.Assign
 FixedString& FixedString::operator=(const FixedString& other) {
   DebugAssert(other.maximum_length() <= _maximum_length,
               "Other FixedString is longer than current maximum string length");

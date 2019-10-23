@@ -637,7 +637,7 @@ set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
 if(NOT ${ENABLE_COVERAGE})
-    add_library(hyrise SHARED ${SOURCES})
+    add_library(hyrise STATIC ${SOURCES})
 else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
     add_library(hyrise STATIC ${SOURCES})
