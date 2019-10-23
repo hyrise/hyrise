@@ -42,7 +42,7 @@ WarningsAsErrors: '*'
 #   readability-magic-numbers                                  (same)
 #   misc-non-private-member-variables-in-classes              We like making things public
 #   cppcoreguidelines-non-private-member-variables-in-classes  (same)
-#   modernize-use-trailing-return-type                        https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-trailing-return-type.html - no that, is way too weird
+#   modernize-use-trailing-return-type                        https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-trailing-return-type.html - no that is way too weird
 #   fuchsia-default-arguments-calls                           We don't have a problem with default arguments, that why we put them there
 
 
