@@ -83,7 +83,7 @@ def main():
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
   arguments["--visualize"] = "true"
-  arguments["--verify"] = "true"
+  arguments["--verify"] = "false"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
