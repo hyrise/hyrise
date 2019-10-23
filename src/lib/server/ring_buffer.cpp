@@ -87,18 +87,16 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   boost::system::error_code error_code;
   // We can't forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
   // distinguish between reading into continuous memory or partially read the data.
-  if ((_current_position - _start_position) < 0 || _start_position.get_raw_pointer() == &_data[0]) {
-    bytes_read =
-        boost::asio::read(*_socket, boost::asio::buffer(_current_position.get_raw_pointer(), maximum_readable_size),
-                          boost::asio::transfer_at_least(bytes_required - size()), error_code);
+  if ((_current_position - _start_position) < 0 || &*_start_position == &_data[0]) {
+    bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&*_current_position, maximum_readable_size),
+                                   boost::asio::transfer_at_least(bytes_required - size()), error_code);
   } else {
-    bytes_read = boost::asio::read(
-        *_socket,
-        std::array<boost::asio::mutable_buffer, 2>{
-            boost::asio::buffer(_current_position.get_raw_pointer(),
-                                std::distance(_current_position.get_raw_pointer(), _data.end())),
-            boost::asio::buffer(_data.begin(), std::distance(_data.begin(), _start_position.get_raw_pointer() - 1))},
-        boost::asio::transfer_at_least(bytes_required - size()), error_code);
+    bytes_read =
+        boost::asio::read(*_socket,
+                          std::array<boost::asio::mutable_buffer, 2>{
+                              boost::asio::buffer(&*_current_position, std::distance(&*_current_position, _data.end())),
+                              boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_start_position - 1))},
+                          boost::asio::transfer_at_least(bytes_required - size()), error_code);
   }
 
   // Socket was closed by client during execution
@@ -148,15 +146,14 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   boost::system::error_code error_code;
   if ((_current_position - _start_position) < 0) {
     // Data not continuously stored in buffer
-    bytes_sent = boost::asio::write(
-        *_socket,
-        std::array<boost::asio::mutable_buffer, 2>{
-            boost::asio::buffer(_start_position.get_raw_pointer(),
-                                std::distance(_start_position.get_raw_pointer(), _data.end())),
-            boost::asio::buffer(_data.begin(), std::distance(_data.begin(), _current_position.get_raw_pointer()))},
-        boost::asio::transfer_at_least(bytes_to_send), error_code);
+    bytes_sent =
+        boost::asio::write(*_socket,
+                           std::array<boost::asio::mutable_buffer, 2>{
+                               boost::asio::buffer(&*_start_position, std::distance(&*_start_position, _data.end())),
+                               boost::asio::buffer(_data.begin(), std::distance(_data.begin(), &*_current_position))},
+                           boost::asio::transfer_at_least(bytes_to_send), error_code);
   } else {
-    bytes_sent = boost::asio::write(*_socket, boost::asio::buffer(_start_position.get_raw_pointer(), size()),
+    bytes_sent = boost::asio::write(*_socket, boost::asio::buffer(&*_start_position, size()),
                                     boost::asio::transfer_at_least(bytes_to_send), error_code);
   }
 

@@ -18,17 +18,10 @@ class RingBufferTest : public BaseTest {
     _write_buffer = std::make_shared<WriteBuffer<boost::asio::posix::stream_descriptor>>(_mocked_socket->get_socket());
   }
 
-  RingBuffer _ring_buffer;
   std::shared_ptr<MockSocket> _mocked_socket;
   std::shared_ptr<ReadBuffer<boost::asio::posix::stream_descriptor>> _read_buffer;
   std::shared_ptr<WriteBuffer<boost::asio::posix::stream_descriptor>> _write_buffer;
 };
-
-TEST_F(RingBufferTest, GetSize) { EXPECT_EQ(_ring_buffer.size(), 0u); }
-
-TEST_F(RingBufferTest, Full) { EXPECT_FALSE(_ring_buffer.full()); }
-
-TEST_F(RingBufferTest, MaximumSize) { EXPECT_EQ(_ring_buffer.maximum_capacity(), BUFFER_SIZE - 1); }
 
 TEST_F(RingBufferTest, ReadValues) {
   const auto converted_short = htons(16);
@@ -51,8 +44,6 @@ TEST_F(RingBufferTest, ReadString) {
   EXPECT_EQ(_read_buffer->get_string(4, IgnoreNullTerminator::Yes), "some");
   EXPECT_EQ(_read_buffer->get_string(), "random");
   EXPECT_EQ(_read_buffer->get_string(7), "string");
-  const std::string buffer_content = {_read_buffer->data(), 19};
-  EXPECT_EQ(buffer_content, original_content);
 }
 
 TEST_F(RingBufferTest, ReadLargeString) {
@@ -98,8 +89,6 @@ TEST_F(RingBufferTest, WriteString) {
   _write_buffer->put_string("somerandom");
   _write_buffer->put_string("string", IgnoreNullTerminator::Yes);
   const std::string whole_content = {"somerandom\0string", 17};
-  const std::string buffer_content = {_write_buffer->data(), 17};
-  EXPECT_EQ(buffer_content, whole_content);
   _write_buffer->flush();
   EXPECT_EQ(_mocked_socket->read(), whole_content);
 }
