@@ -146,7 +146,6 @@ __declspec(selectany) use_boost_future_t<> use_boost_future;
 
 #include "use_boost_future_impl.hpp"
 
-#endif  // defined(BOOST_ASIO_HAS_STD_FUTURE_CLASS) \
-        //   || defined(GENERATING_DOCUMENTATION)
+#endif  // defined(BOOST_ASIO_HAS_STD_FUTURE_CLASS) || defined(GENERATING_DOCUMENTATION)
 
 #endif  // BOOST_ASIO_USE_BOOST_FUTURE_HPP
