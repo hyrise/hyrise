@@ -227,6 +227,4 @@ std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(st
   return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
 }
 
-} 
-
- // namespace opossum
+} // namespace opossum
