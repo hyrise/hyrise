@@ -3,7 +3,7 @@
 #include <optional>
 #include <unordered_map>
 
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"

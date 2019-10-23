@@ -1,8 +1,6 @@
 #include "expression_functional.hpp"
 
-namespace opossum {
-
-namespace expression_functional {
+namespace opossum::expression_functional {
 
 std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression) {
   return expression;
@@ -53,6 +51,4 @@ std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpr
 }
 // clang-format on
 
-}  // namespace expression_functional
-
-}  // namespace opossum
+}  // namespace opossum::expression_functional

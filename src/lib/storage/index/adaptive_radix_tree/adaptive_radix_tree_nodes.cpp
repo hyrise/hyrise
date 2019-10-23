@@ -29,7 +29,7 @@ ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& ch
             [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
                const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
   _partial_keys.fill(INVALID_INDEX);
-  for (uint8_t i = 0u; i < children.size(); ++i) {
+  for (auto i = size_t{0}; i < children.size(); ++i) {
     _partial_keys[i] = children[i].first;
     _children[i] = children[i].second;
   }
@@ -107,7 +107,7 @@ ARTNode16::ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& 
             [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
                const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
   _partial_keys.fill(INVALID_INDEX);
-  for (uint8_t i = 0u; i < children.size(); ++i) {
+  for (auto i = size_t{0}; i < children.size(); ++i) {
     _partial_keys[i] = children[i].first;
     _children[i] = children[i].second;
   }
@@ -205,8 +205,8 @@ AbstractIndex::Iterator ARTNode16::end() const {
 
 ARTNode48::ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
   _index_to_child.fill(INVALID_INDEX);
-  for (uint8_t i = 0u; i < children.size(); ++i) {
-    _index_to_child[children[i].first] = i;
+  for (auto i = size_t{0}; i < children.size(); ++i) {
+    _index_to_child[children[i].first] = static_cast<uint8_t>(i);
     _children[i] = children[i].second;
   }
 }

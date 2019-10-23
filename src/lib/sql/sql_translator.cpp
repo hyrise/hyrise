@@ -1246,7 +1246,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
       FailInput("Cannot use this ExpressionType as predicate");
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
@@ -1623,7 +1623,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
       Fail("Can't invert non-boolean expression");
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements(

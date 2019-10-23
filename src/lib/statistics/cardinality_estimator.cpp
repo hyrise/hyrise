@@ -386,7 +386,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
             case PredicateCondition::IsNotNull:
               Fail("IS NULL is an invalid join predicate");
           }
-          Fail("GCC thinks this is reachable");
+          Fail("Invalid enum value");
 
         case JoinMode::Cross:
           // Should have been forwarded to estimate_cross_join()
@@ -407,7 +407,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
     }
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
@@ -524,8 +524,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
 
         const auto right_data_type = input_table_statistics->column_data_type(*right_column_id);
 
-        if (left_data_type != right_data_type) {
+        if (left_data_type != right_data_type || left_data_type == DataType::String) {
           // TODO(anybody) Cannot estimate column-vs-column scan for differing data types, yet
+          // Also, as split_at_bin_bounds is not yet supported for strings, we cannot properly estimate string
+          // comparisons, either.
           selectivity = PLACEHOLDER_SELECTIVITY_ALL;
           return;
         }

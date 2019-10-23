@@ -232,7 +232,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
     const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node) {
   // Create a list of all sums, counts, and averages in the aggregate node.
-  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums, counts, avgs;
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums;
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
   for (auto& input_expression : input_expressions) {
     if (input_expression->type != ExpressionType::Aggregate) continue;
     auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
@@ -323,7 +325,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
     if (node->type == LQPNodeType::Alias) updated_an_alias = true;
 
-    return LQPVisitation::VisitInputs;
+    return LQPUpwardVisitation::VisitOutputs;
   });
 
   // If there is no upward AliasNode, we need to add one that renames "SUM/COUNT" to "AVG"

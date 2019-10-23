@@ -24,7 +24,7 @@ AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<Abstr
 const std::vector<AggregateColumnDefinition>& AbstractAggregateOperator::aggregates() const { return _aggregates; }
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
 
-const std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
+std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
   std::stringstream desc;
   desc << "[" << name() << "] "
        << "GroupBy ColumnIDs: ";

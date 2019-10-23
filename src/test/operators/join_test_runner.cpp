@@ -1,10 +1,9 @@
 #include <fstream>
 
 #include "base_test.hpp"
-#include "json.hpp"
+#include "nlohmann/json.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/join_verification.hpp"
@@ -591,7 +590,5 @@ INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinSortMerge>()));
 // INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
 //                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
-INSTANTIATE_TEST_SUITE_P(JoinMPSM, JoinTestRunner,
-                         testing::ValuesIn(JoinTestRunner::create_configurations<JoinMPSM>()));
 
 }  // namespace opossum
