@@ -75,6 +75,17 @@ void AbstractTask::execute() {
   DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
+  // Besides being another sanity check, reading the atomic _is_scheduled is important for thread safety. We need to
+  // order writes in whoever scheduled this task with reads within this task. Usually, a memory fence would the weapon
+  // of choice. However, as tsan does not identify standalone memory fences (as of Oct 2019), we need an atomic
+  // read/write combination in whoever scheduled this task and the task itself. As schedule() (in "thread" A) writes to
+  // _is_scheduled and this assert (potentially in "thread" B) reads it, it is guaranteed that no writes of whoever
+  // spawned the task are pushed down to a point where this thread is already running.
+  //
+  // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
+  // _done_condition_variable.
+  Assert(_is_scheduled, "Task should be scheduled");
+
   _on_execute();
 
   for (auto& successor : _successors) {

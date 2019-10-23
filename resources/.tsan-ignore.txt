@@ -15,3 +15,12 @@ race:thread_data
 
 # A DebugAssert makes sure that predecessors are not added to scheduled tasks, but it is missing in release builds
 race:^opossum::AbstractTask::set_as_predecessor_of
+
+# Adding/removing tables is not thread-safe
+race:^opossum::StorageManager::add_table
+race:^opossum::StorageManager::drop_table
+race:^opossum::StorageManager::add_view
+race:^opossum::StorageManager::drop_view
+
+# TODO doc
+race:^opossum::AbstractOperator::transaction_context_is_set
