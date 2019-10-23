@@ -310,12 +310,11 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseRunLengthSeg
 
   const auto& segment = static_cast<const RunLengthSegment<T>&>(base_segment);
   
-  // Write value size and values
+  // Write size and values
   export_value(context->ofstream, static_cast<uint32_t>(segment.values()->size()));
   export_values(context->ofstream, *segment.values());
 
   // Write NULL value size and NULL values
-  export_value(context->ofstream, static_cast<uint32_t>(segment.null_values()->size()));
   export_values(context->ofstream, *segment.null_values());
 
   // Write end position size and end positions

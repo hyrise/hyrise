@@ -219,13 +219,10 @@ std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_segment(s
 template <typename T>
 std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(std::ifstream& file,
                                                                               ChunkOffset row_count) {
-  const auto values_size = _read_value<uint32_t>(file);
-  const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, values_size));
-
-  const auto null_values_size = _read_value<uint32_t>(file);
-  const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, null_values_size));
-
-  const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, values_size));
+  const auto size = _read_value<uint32_t>(file);
+  const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
+  const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));
+  const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, size));
 
   return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
 }
