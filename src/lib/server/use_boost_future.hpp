@@ -1,3 +1,13 @@
+// This is an adaptation of boost's own implementation boost::asio::use_future,
+// which returns a std::future<>. However, because we want to use features not
+// yet included in the STL, we need boost::future<>s instead. Suprisingly boost
+// does not include an implementation, so we adapted boost's implementation by
+// repacing all occurrences of std::future with boost::future and std::promise
+// with boost::promise, respectively.
+// https://github.com/boostorg/asio/blob/master/include/boost/asio/use_future.hpp 
+
+
+
 //
 // use_boost_future.hpp
 // ~~~~~~~~~~~~~~

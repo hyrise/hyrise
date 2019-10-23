@@ -63,6 +63,7 @@ target_compile_options(
     PRIVATE
     -std=c++1z
     -O3 -Wno-sign-compare
+    -fPIC
 )
 
 add_library(
@@ -75,7 +76,7 @@ add_library(
     cqf/src/cqf32.cpp
 )
 
-target_compile_options(cqf PRIVATE -Wno-format)
+target_compile_options(cqf PRIVATE -Wno-format -fPIC)
 
 target_include_directories(
     cqf
@@ -121,6 +122,8 @@ target_include_directories(
     ${LZ4_LIBRARY_DIR}
 )
 
+target_compile_options(lz4 PRIVATE -fPIC)
+
 ## Build zstd
 set(ZSTD_LIBRARY_DIR zstd/lib)
 
@@ -160,6 +163,8 @@ target_include_directories(
     ${ZSTD_LIBRARY_DIR}/compress
     ${ZSTD_LIBRARY_DIR}/dictBuilder
 )
+
+target_compile_options(zstd PRIVATE -fPIC)
 
 add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
