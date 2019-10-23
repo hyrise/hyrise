@@ -54,7 +54,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 sudo apt-get install --no-install-recommends -y software-properties-common
                 sudo add-apt-repository -y ppa:mhier/libboost-latest
                 sudo apt-get update
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc ccache clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libboost1.70-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev llvm-9-tools man parallel postgresql-server-dev-all python2.7 python-pexpect python-pip sudo systemtap systemtap-sdt-dev valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc ccache clang-9 clang-format-9 clang-tidy-9 cmake curl g++-9 gcc-9 gcovr git graphviz libboost1.70-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev llvm-9-tools man parallel postgresql-server-dev-all python2.7 python-pexpect python-pip sudo systemtap systemtap-sdt-dev valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
