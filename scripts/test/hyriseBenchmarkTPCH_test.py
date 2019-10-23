@@ -29,8 +29,8 @@ def main():
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
   benchmark.expect("Writing benchmark results to 'json_output.txt'")
-  benchmark.expect("Running in multi-threaded mode using all available cores")
-  benchmark.expect("4 simulated clients are scheduling items in parallel")
+  benchmark.expect("Running in single-threaded mode")
+  benchmark.expect("1 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Shuffled' mode")
   benchmark.expect("Encoding is 'Dictionary'")
   benchmark.expect("Chunk size is 100000")
