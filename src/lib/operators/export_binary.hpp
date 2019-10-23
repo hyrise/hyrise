@@ -34,7 +34,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
   /**
    * Name of the operator is ExportBinary
    */
-  const std::string name() const final;
+  const std::string& name() const final;
 
  protected:
   std::shared_ptr<AbstractOperator> _on_deep_copy(

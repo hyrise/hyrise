@@ -22,7 +22,7 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
       _decompressor{_attribute_vector->create_base_decompressor()} {}
 
 template <typename T>
-const AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
@@ -34,7 +34,7 @@ const AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffs
 }
 
 template <typename T>
-const std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset < size(), "ChunkOffset out of bounds.");
 
   const auto value_id = _decompressor->get(chunk_offset);
@@ -55,8 +55,8 @@ std::shared_ptr<const FixedStringVector> FixedStringDictionarySegment<T>::fixed_
 }
 
 template <typename T>
-size_t FixedStringDictionarySegment<T>::size() const {
-  return _attribute_vector->size();
+ChunkOffset FixedStringDictionarySegment<T>::size() const {
+  return static_cast<ChunkOffset>(_attribute_vector->size());
 }
 
 template <typename T>
@@ -124,7 +124,7 @@ std::shared_ptr<const BaseCompressedVector> FixedStringDictionarySegment<T>::att
 }
 
 template <typename T>
-const ValueID FixedStringDictionarySegment<T>::null_value_id() const {
+ValueID FixedStringDictionarySegment<T>::null_value_id() const {
   return _null_value_id;
 }
 

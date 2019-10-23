@@ -41,15 +41,6 @@ if [[ "$unamestr" == 'Darwin' ]]; then
    path_to_compiler='/usr/local/opt/llvm/bin/'
 fi
 
-# We need at least clang 7.0.1 for coverage: https://github.com/hyrise/hyrise/pull/1433#issuecomment-458082341
-installed_clang_version=`${path_to_compiler}clang++ --version | head -n1 | cut -d" " -f3 | cut -d"-" -f1`
-required_clang_version=7.0.1
-
-if verlt ${installed_clang_version} ${required_clang_version} ; then
-    echo "Minimum clang version $required_clang_version not met, is $installed_clang_version"
-    exit -1
-fi
-
 cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
@@ -70,7 +61,7 @@ echo Coverage Information is in ./coverage/index.html
 # Continuing only if diff output is needed with Linux/gcc
 if [ "true" == "$generate_badge" ]; then
 
-  ${path_to_compiler}llvm-cov report -ignore-filename-regex=specialization/llvm/ -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.txt
+  ${path_to_compiler}llvm-cov report -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.txt
 
   # coverage badge generation
   coverage_percent=$(tail -c 7 coverage.txt)

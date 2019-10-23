@@ -1,45 +1,48 @@
-[submodule "third_party/googletest"]
-	path = third_party/googletest
-	url = https://github.com/abseil/googletest.git
+[submodule "resources/benchmark/tpcds/tpcds-result-reproduction"]
+	path = resources/benchmark/tpcds/tpcds-result-reproduction
+	url = https://github.com/hyrise-mp/tpcds-result-reproduction.git
 [submodule "third_party/benchmark"]
 	path = third_party/benchmark
 	url = https://github.com/google/benchmark.git
-[submodule "third_party/sql-parser"]
-	path = third_party/sql-parser
-	url = https://github.com/hyrise/sql-parser
-[submodule "third_party/pgasus"]
-	path = third_party/pgasus
-	url = https://github.com/hyrise/pgasus.git
-[submodule "third_party/cxxopts"]
-	path = third_party/cxxopts
-	url = https://github.com/jarro2783/cxxopts.git
-[submodule "third_party/libpqxx"]
-	path = third_party/libpqxx
-	url = https://github.com/jtv/libpqxx.git
 [submodule "third_party/cpp-btree"]
 	path = third_party/cpp-btree
 	url = https://github.com/algorithm-ninja/cpp-btree
 [submodule "third_party/cqf"]
 	path = third_party/cqf
 	url = https://github.com/ArneMayer/cqf.git
+[submodule "third_party/cxxopts"]
+	path = third_party/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
 [submodule "flat_hash_map"]
 	path = third_party/flat_hash_map
 	url = https://github.com/skarupke/flat_hash_map.git
-[submodule "third_party/lz4"]
-	path = third_party/lz4
-	url = https://github.com/lz4/lz4
-[submodule "third_party/join-order-benchmark"]
-	path = third_party/join-order-benchmark
-	url = https://github.com/gregrahn/join-order-benchmark.git
-[submodule "third_party/zstd"]
-	path = third_party/zstd
-	url = https://github.com/facebook/zstd.git
+[submodule "third_party/googletest"]
+	path = third_party/googletest
+	url = https://github.com/abseil/googletest.git
 [submodule "third_party/jemalloc"]
 	path = third_party/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
+[submodule "third_party/join-order-benchmark"]
+	path = third_party/join-order-benchmark
+	url = https://github.com/gregrahn/join-order-benchmark.git
+[submodule "third_party/libpqxx"]
+	path = third_party/libpqxx
+	url = https://github.com/jtv/libpqxx.git
+[submodule "third_party/lz4"]
+	path = third_party/lz4
+	url = https://github.com/lz4/lz4.git
+[submodule "third_party/nlohmann_json"]
+	path = third_party/nlohmann_json
+	url = https://github.com/nlohmann/json.git
+[submodule "third_party/pgasus"]
+	path = third_party/pgasus
+	url = https://github.com/hyrise/pgasus.git
+[submodule "third_party/sql-parser"]
+	path = third_party/sql-parser
+	url = https://github.com/hyrise/sql-parser
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
-[submodule "resources/benchmark/tpcds/tpcds-result-reproduction"]
-	path = resources/benchmark/tpcds/tpcds-result-reproduction
-	url = https://github.com/hyrise-mp/tpcds-result-reproduction.git
+[submodule "third_party/zstd"]
+	path = third_party/zstd
+	url = https://github.com/facebook/zstd.git

@@ -6,8 +6,8 @@
 
 namespace opossum {
 
-const std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t original_table_column_count,
-                                                                    const std::vector<ColumnID>& pruned_column_ids) {
+std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t original_table_column_count,
+                                                              const std::vector<ColumnID>& pruned_column_ids) {
   std::vector<std::optional<ColumnID>> column_id_mapping(original_table_column_count);
   std::vector<bool> column_pruned_bitvector(original_table_column_count);
 

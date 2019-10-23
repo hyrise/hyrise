@@ -24,7 +24,10 @@ namespace opossum {
 ImportBinary::ImportBinary(const std::string& filename, const std::optional<std::string>& tablename)
     : AbstractReadOnlyOperator(OperatorType::ImportBinary), _filename(filename), _tablename(tablename) {}
 
-const std::string ImportBinary::name() const { return "ImportBinary"; }
+const std::string& ImportBinary::name() const {
+  static const auto name = std::string{"ImportBinary"};
+  return name;
+}
 
 std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
   std::ifstream file;
@@ -34,9 +37,7 @@ std::shared_ptr<Table> ImportBinary::read_binary(const std::string& filename) {
 
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
-  std::shared_ptr<Table> table;
-  ChunkID chunk_count;
-  std::tie(table, chunk_count) = _read_header(file);
+  auto [table, chunk_count] = _read_header(file);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     _import_chunk(file, table);
   }

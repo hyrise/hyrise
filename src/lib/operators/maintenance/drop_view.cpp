@@ -12,7 +12,10 @@ namespace opossum {
 DropView::DropView(const std::string& view_name, const bool if_exists)
     : AbstractReadOnlyOperator(OperatorType::DropView), view_name(view_name), if_exists(if_exists) {}
 
-const std::string DropView::name() const { return "DropView"; }
+const std::string& DropView::name() const {
+  static const auto name = std::string{"DropView"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> DropView::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
