@@ -4,9 +4,7 @@
 // does not include an implementation, so we adapted boost's implementation by
 // repacing all occurrences of std::future with boost::future and std::promise
 // with boost::promise, respectively.
-// https://github.com/boostorg/asio/blob/master/include/boost/asio/use_future.hpp 
-
-
+// https://github.com/boostorg/asio/blob/master/include/boost/asio/use_future.hpp
 
 //
 // use_boost_future.hpp

@@ -338,7 +338,7 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
 }
 
 bool UnionPositions::_compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
-                                                    const ReferenceMatrix& right_matrix, size_t right_row_idx) const {
+                                                    const ReferenceMatrix& right_matrix, size_t right_row_idx) {
   for (size_t column_idx = 0; column_idx < left_matrix.size(); ++column_idx) {
     if (left_matrix[column_idx][left_row_idx] < right_matrix[column_idx][right_row_idx]) return true;
     if (right_matrix[column_idx][right_row_idx] < left_matrix[column_idx][left_row_idx]) return false;
