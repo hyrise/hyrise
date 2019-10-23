@@ -90,7 +90,7 @@ TEST_F(TPCCTest, Delivery) {
   auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   const auto old_time = time(nullptr);
 
-  BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
+  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
   auto delivery = TPCCDelivery{NUM_WAREHOUSES, sql_executor};
   EXPECT_TRUE(delivery.execute());
 
@@ -198,7 +198,7 @@ TEST_F(TPCCTest, NewOrder) {
   const auto old_order_line_size = static_cast<int>(Hyrise::get().storage_manager.get_table("ORDER_LINE")->row_count());
   const auto old_time = time(nullptr);
 
-  BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
+  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
   // Generate random NewOrders until we have one without invalid item IDs and where both local and remote order lines
   // occur
@@ -278,7 +278,7 @@ TEST_F(TPCCTest, NewOrder) {
 }
 
 TEST_F(TPCCTest, NewOrderUnusedOrderId) {
-  BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
+  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
   // Generate random NewOrders until we have one with an invalid item ID
   while (new_order.order_lines.back().ol_i_id != TPCCNewOrder::INVALID_ITEM_ID) {
@@ -309,7 +309,7 @@ TEST_F(TPCCTest, NewOrderUnusedOrderId) {
 TEST_F(TPCCTest, PaymentCustomerByName) {
   const auto old_time = time(nullptr);
 
-  BenchmarkSQLExecutor sql_executor{false, nullptr, std::nullopt};
+  BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
   auto payment = TPCCPayment{NUM_WAREHOUSES, sql_executor};
   // Generate random payments until we have one that identified the customer by name
   while (!payment.select_customer_by_name) {
@@ -387,11 +387,11 @@ TEST_F(TPCCTest, OrderStatusCustomerById) {
   // We have covered customer selection by name in PaymentCustomerByName
   // As Order-Status has no externally visible changes, we create a new order and test for correct return values
 
-  BenchmarkSQLExecutor new_order_sql_executor{false, nullptr, std::nullopt};
+  BenchmarkSQLExecutor new_order_sql_executor{nullptr, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, new_order_sql_executor};
   EXPECT_TRUE(new_order.execute());
 
-  BenchmarkSQLExecutor order_status_sql_executor{false, nullptr, std::nullopt};
+  BenchmarkSQLExecutor order_status_sql_executor{nullptr, std::nullopt};
   auto order_status = TPCCOrderStatus{NUM_WAREHOUSES, order_status_sql_executor};
   order_status.w_id = new_order.w_id;
   order_status.d_id = new_order.d_id;
