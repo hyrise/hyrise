@@ -22,7 +22,7 @@ constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
 //constexpr auto TBL_FILE = "../../data/100_pings.tbl";
 constexpr auto TABLE_NAME = "ping";
 const auto CHUNK_SIZES = std::vector{size_t{1000000}};
-//const auto CHUNK_SIZES = std::vector{size_t{10}};
+//const auto CHUNK_SIZES = std::vector{size_t{100}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "timestamp", "captain_status"};
 const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4, EncodingType::RunLength};
 
@@ -143,6 +143,39 @@ static void BM_Ping_Print_Sorted_Tables(benchmark::State& state) {
 }
 BENCHMARK(BM_Ping_Print_Sorted_Tables);
 
+// investigate which scan operation is used (more a test than a benchmark)
+BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Penis_Test)(benchmark::State& state) {
+  auto& storage_manager = Hyrise::get().storage_manager;
+  
+  const auto chunk_size = CHUNK_SIZES[state.range(0)];
+  const auto order_by_column = ORDER_COLUMNS[state.range(1)];
+  const auto encoding = CHUNK_ENCODINGS[state.range(2)];
+  const auto sort_column = ORDER_COLUMNS[state.range(3)];
+
+
+  const auto encoding_type = encoding_type_to_string.left.at(encoding);
+  const auto table_name = get_table_name(TABLE_NAME, chunk_size, order_by_column, encoding_type);
+  
+  auto table = storage_manager.get_table(table_name);
+
+  auto operand = pqp_column_(table->column_id_by_name(sort_column), table->column_data_type(table->column_id_by_name(sort_column)), false, sort_column);
+
+  // scan
+  std::shared_ptr<BinaryPredicateExpression> predicate;
+  // should by nicer dicer
+  if (state.range(3) == 0) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_ID[state.range(4)]));}
+  if (state.range(3) == 1) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_LATITUDE[state.range(4)]));}
+  if (state.range(3) == 2) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_TIMESTAMP[state.range(4)]));}
+  if (state.range(3) == 3) {predicate = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, operand, value_(BM_VAL_CAPTAIN_STATUS[state.range(4)]));}
+
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+  
+  const auto table_scan = std::make_shared<TableScan>(table_wrapper, predicate);
+  table_scan->execute();
+  std::cout << "Test:" << state.range(0) <<  state.range(1) << state.range(2) << state.range(3) << state.range(4) <<std::endl;
+}
+
 BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEqualsPerformance)(benchmark::State& state) {
   auto& storage_manager = Hyrise::get().storage_manager;
   
@@ -225,5 +258,6 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
 }
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEqualsPerformance)->Apply(CustomArguments);
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Penis_Test)->Apply(CustomArguments);
 
 }  // namespace opossum
