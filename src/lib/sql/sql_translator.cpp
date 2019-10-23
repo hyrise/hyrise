@@ -1056,6 +1056,7 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
   _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
@@ -1154,6 +1155,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
@@ -1214,12 +1216,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
   switch (expression->type) {
     case ExpressionType::Predicate: {
       const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
-
-      if (predicate_expression->predicate_condition == PredicateCondition::In) {
-        return PredicateNode::make(expression, current_node);
-      } else {
-        return PredicateNode::make(expression, current_node);
-      }
+      return PredicateNode::make(expression, current_node);
     }
 
     case ExpressionType::Logical: {
@@ -1247,14 +1244,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
     const std::shared_ptr<AbstractLQPNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   if (expressions_equal(node->column_expressions(), expressions)) return node;
   return ProjectionNode::make(expressions, node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
     const std::shared_ptr<AbstractLQPNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> projection_expressions;
 
   for (const auto& expression : expressions) {
@@ -1609,7 +1606,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements(
-    const std::vector<SelectListElement>& select_list_elements) const {
+    const std::vector<SelectListElement>& select_list_elements) {
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
   expressions.reserve(select_list_elements.size());
   for (const auto& element : select_list_elements) {

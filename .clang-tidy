@@ -8,7 +8,8 @@ WarningsAsErrors: '*'
 #   google-build-using-namespace                              While we discourage its use, in some cases, using namespace makes sense
 #   clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls
 #   readability-implicit-bool-conversion                      Doesn't like if(map.count(foo))
-#   cppcoreguidelines-pro-type-reinterpret-cast               We need reinterpret_cast for jitting
+#   cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast
+#   readability-misleading-indentation                        Doesn't like if constexpr
 #   modernize-pass-by-value                                   We don't trust people to properly use std::move
 #   cppcoreguidelines-pro-bounds-constant-array-index         Weird stuff. "do not use array subscript when the index is not an integer constant expression"?!
 #   cppcoreguidelines-pro-type-static-cast-downcast           We do allow static downcasts for performance reasons

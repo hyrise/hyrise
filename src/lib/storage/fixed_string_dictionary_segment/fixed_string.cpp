@@ -30,7 +30,7 @@ FixedString& FixedString::operator=(const FixedString& other) {
               "This and the other's FixedString memory can't overlap");
 
   const auto copied_length = std::min(other.maximum_length(), _maximum_length);
-  std::memcpy(_mem, other._mem, copied_length);
+  std::memmove(_mem, other._mem, copied_length);
 
   // Fill unused fields of char array with null terminator, in order to overwrite the content of
   // the old FixedString. This is especially important if the old FixedString was longer than the other FixedString.

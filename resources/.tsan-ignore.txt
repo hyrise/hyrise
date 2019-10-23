@@ -12,3 +12,6 @@ race:shared_count
 # Boost is not built with tsan support, either
 race:boost::detail::thread_data_base
 race:thread_data
+
+# A DebugAssert makes sure that predecessors are not added to scheduled tasks, but it is missing in release builds
+race:^opossum::AbstractTask::set_as_predecessor_of

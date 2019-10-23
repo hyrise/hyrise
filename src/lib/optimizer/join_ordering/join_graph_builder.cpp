@@ -103,7 +103,7 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
   }
 }
 
-bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) const {
+bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) {
   return node_type != LQPNodeType::Join && node_type != LQPNodeType::Predicate;
 }
 

@@ -157,7 +157,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
     /**
      * Begin derived from std::union()
      */
-    if (left_idx == num_rows_left) {
+    if (left_idx == num_rows_left) {  // NOLINT(bugprone-branch-clone)
       emit_row(reference_matrix_right, virtual_pos_list_right[right_idx]);
       ++right_idx;
     } else if (right_idx == num_rows_right) {

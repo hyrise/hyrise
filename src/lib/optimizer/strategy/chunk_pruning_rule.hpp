@@ -33,14 +33,14 @@ class ChunkPruningRule : public AbstractRule {
                                           const std::shared_ptr<StoredTableNode>& stored_table_node) const;
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
-  bool _can_prune(const BaseAttributeStatistics& base_segment_statistics, const PredicateCondition predicate_condition,
-                  const AllTypeVariant& variant_value, const std::optional<AllTypeVariant>& variant_value2) const;
+  static bool _can_prune(const BaseAttributeStatistics& base_segment_statistics, const PredicateCondition predicate_condition,
+                  const AllTypeVariant& variant_value, const std::optional<AllTypeVariant>& variant_value2);
 
-  bool _is_non_filtering_node(const AbstractLQPNode& node) const;
+  static bool _is_non_filtering_node(const AbstractLQPNode& node);
 
-  std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
+  static std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
                                                            OperatorScanPredicate predicate,
-                                                           size_t num_rows_pruned) const;
+                                                           size_t num_rows_pruned);
 };
 
 }  // namespace opossum

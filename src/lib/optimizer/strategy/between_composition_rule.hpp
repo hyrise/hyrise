@@ -1,4 +1,4 @@
-#pragma once
+#static pragma once
 
 #include <memory>
 #include <string>
@@ -56,11 +56,11 @@ class BetweenCompositionRule : public AbstractRule {
     size_t id;
   };
 
-  ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary) const;
+  static ColumnBoundary _create_inverse_boundary(const std::shared_ptr<ColumnBoundary>& column_boundary) const;
 
   void _replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) const;
 
-  ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) const;
+  static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) const;
 };
 
 }  // namespace opossum
