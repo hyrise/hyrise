@@ -635,7 +635,7 @@ add_custom_command (
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
-add_library(hyrise STATIC ${SOURCES})
+add_library(hyrise SHARED ${SOURCES})
 
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(

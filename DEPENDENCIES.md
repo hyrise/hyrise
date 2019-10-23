@@ -4,9 +4,9 @@
 | ------------------------- | ---------------- | -------- | ------------------------------------- |
 | autoconf                  | >= 2.69          |    All   |                                    No |
 | boost                     | >= 1.65.0        |    All   |                                    No |
-| clang                     | >= 8.0           |    All   |                 Yes, if gcc installed |
-| clang-format              | >= 8.0           |    All   |                      Yes (formatting) |
-| clang-tidy                | >= 8.0           |    All   |                         Yes (linting) |
+| clang                     | >= 9.0           |    All   |                 Yes, if gcc installed |
+| clang-format              | >= 9.0           |    All   |                      Yes (formatting) |
+| clang-tidy                | >= 9.0           |    All   |                         Yes (linting) |
 | cmake                     | >= 3.9           |    All   |                                    No |
 | gcc                       | >= 9.1           |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
@@ -14,7 +14,7 @@
 | libnuma-dev               | any              |    Linux |                            Yes (numa) |
 | libnuma1                  | any              |    Linux |                            Yes (numa) |
 | libpq-dev                 | >= 9             |    All   |                                    No |
-| llvm-8-tools              | 8                |    Linux |                                    No |
+| llvm-9-tools              | 9                |    Linux |                                    No |
 | parallel                  | any              |    All   |                                   Yes |
 | pexpect                   | >= 4             |    All   |                     Yes (tests in CI) |
 | postgresql-server-dev-all | >= 154           |    Linux |                                    No |
