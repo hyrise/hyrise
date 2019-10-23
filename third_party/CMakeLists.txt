@@ -1,5 +1,5 @@
 # Disable some warnings for the third-party subfolder
-add_compile_options(-Wno-unused-function -Wno-deprecated-declarations -Wno-unused-function)
+add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     add_compile_options(-Wno-format-overflow -Wno-stringop-truncation -Wno-stringop-overflow)
 endif()
