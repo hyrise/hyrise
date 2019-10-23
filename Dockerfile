@@ -3,6 +3,9 @@
 FROM ubuntu:19.10
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
+    && apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:mhier/libboost-latest \
+    && apt-get update
     && apt-get install -y \
         autoconf \
         bash-completion \
@@ -18,7 +21,7 @@ RUN apt-get update \
         gcovr \
         git \
         graphviz \
-        $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
+        libboost1.70-dev \
         libncurses5-dev \
         libnuma-dev \
         libnuma1 \
