@@ -10,10 +10,10 @@
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
-  _methods["tables"] = std::bind(&MetaTableManager::generate_tables_table, this);
-  _methods["columns"] = std::bind(&MetaTableManager::generate_columns_table, this);
-  _methods["chunks"] = std::bind(&MetaTableManager::generate_chunks_table, this);
-  _methods["segments"] = std::bind(&MetaTableManager::generate_segments_table, this);
+  _methods["tables"] = &MetaTableManager::generate_tables_table;
+  _methods["columns"] = &MetaTableManager::generate_columns_table;
+  _methods["chunks"] = &MetaTableManager::generate_chunks_table;
+  _methods["segments"] = &MetaTableManager::generate_segments_table;
 
   _table_names.reserve(_methods.size());
   for (const auto& [table_name, _] : _methods) {
