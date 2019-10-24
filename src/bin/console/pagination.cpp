@@ -139,7 +139,7 @@ void Pagination::_print_page(size_t first_line) {
   refresh();
 }
 
-void Pagination::_print_help_screen() {
+static void Pagination::_print_help_screen() {
   WINDOW* help_screen = newwin(0, 0, 0, 0);
 
   wclear(help_screen);

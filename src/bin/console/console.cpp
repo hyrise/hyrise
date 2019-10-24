@@ -206,7 +206,7 @@ int Console::_eval(const std::string& input) {
   return ReturnCode::Multiline;
 }
 
-int Console::_eval_command(const CommandFunction& func, const std::string& command) {
+static int Console::_eval_command(const CommandFunction& func, const std::string& command) {
   std::string cmd = command;
   if (command.back() == ';') {
     cmd = command.substr(0, command.size() - 1);
@@ -364,7 +364,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
-int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
+static int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
   auto encoding_options = std::string{"                                               Encoding options: "};
@@ -1003,6 +1003,8 @@ char** Console::_command_completion(const char* text, int start, int end) {
     }
     // Turn off filepath completion
     rl_attempted_completion_over = 1;
+
+    // NOLINTNEXTLINE(bugprone-branch-clone)
   } else if (first_word == "quit" || first_word == "exit" || first_word == "help") {
     // Turn off filepath completion
     rl_attempted_completion_over = 1;

@@ -98,7 +98,7 @@ class Console : public Singleton<Console> {
   /*
    * Evaluates given Console command.
    */
-  int _eval_command(const CommandFunction& func, const std::string& command);
+  static int _eval_command(const CommandFunction& func, const std::string& command);
 
   /*
    * Evaluates given SQL statement using opossum::SqlQueryTranslator.
@@ -106,7 +106,7 @@ class Console : public Singleton<Console> {
   int _eval_sql(const std::string& sql);
 
   // Command functions, registered to be called from the Console
-  int _exit(const std::string& args);
+  static int _exit(const std::string& args);
   int _help(const std::string& args);
   int _generate_tpch(const std::string& args);
   int _generate_tpcds(const std::string& args);
