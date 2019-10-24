@@ -6,6 +6,7 @@ namespace opossum {
 
 BenchmarkState::BenchmarkState(const opossum::Duration max_duration) : max_duration(max_duration) {}
 
+// NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp)
 BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {
   Assert(state != State::Running && other.state != State::Running, "Cannot assign to or from a running benchmark");
   state = other.state.load();
