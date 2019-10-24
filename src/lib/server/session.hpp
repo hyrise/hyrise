@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-// The session class implements the communication flow and stores session specific information such as portals.
+// The session class implements the communication flow and stores session-specific information such as portals.
 class Session {
  public:
   explicit Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info);

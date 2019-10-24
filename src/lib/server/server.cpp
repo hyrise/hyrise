@@ -12,6 +12,11 @@ Server::Server(const boost::asio::ip::address& address, const uint16_t port,
   std::cout << "Server starting using address " << get_address() << " and port " << get_port() << std::endl;
 }
 
+void Server::run() {
+  _accept_new_session();
+  _io_service.run();
+}
+
 void Server::_accept_new_session() {
   // Create a new session. This will also open a new data socket in order to communicate with the client
   // For more information on TCP ports + Asio see:
@@ -31,15 +36,10 @@ void Server::_start_session(const std::shared_ptr<Session>& new_session, const b
   _accept_new_session();
 }
 
-void Server::run() {
-  _accept_new_session();
-  _io_service.run();
-}
-
-void Server::shutdown() { _io_service.stop(); }
+boost::asio::ip::address Server::get_address() const { return _acceptor.local_endpoint().address(); }
 
 uint16_t Server::get_port() const { return _acceptor.local_endpoint().port(); }
 
-boost::asio::ip::address Server::get_address() const { return _acceptor.local_endpoint().address(); }
+void Server::shutdown() { _io_service.stop(); }
 
 }  // namespace opossum

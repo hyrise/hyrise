@@ -14,6 +14,9 @@ Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo se
 std::shared_ptr<Socket> Session::get_socket() { return _socket; }
 
 void Session::run() {
+  // Set TCP_NODELAY in order to disable Nagle's algorithm. It handles congestion control in TCP networks. Therefore,
+  // small packets are buffered and sent out later as one large packet. This might introduce a delay of up to 40 ms
+  // which we have to avoid. Further reading: https://howdoesinternetwork.com/2015/nagles-algorithm
   _socket->set_option(boost::asio::ip::tcp::no_delay(true));
   _establish_connection();
   while (!_terminate_session) {
@@ -58,7 +61,9 @@ void Session::_handle_request() {
       break;
     }
     case PostgresMessageType::DescribeCommand: {
-      _handle_describe();
+      // The contents of this packet are not used for further processing. The actual "describe" happens after
+      // executing the PQP.
+      _postgres_protocol_handler->read_describe_packet();
       break;
     }
     case PostgresMessageType::ExecuteCommand: {
@@ -139,8 +144,6 @@ void Session::_handle_bind_command() {
   // Ready for query + flush will be done after reading sync message
 }
 
-void Session::_handle_describe() { _postgres_protocol_handler->read_describe_packet(); }
-
 void Session::_sync() {
   _postgres_protocol_handler->read_sync_packet();
   if (_transaction) {
@@ -156,6 +159,8 @@ void Session::_handle_execute() {
   auto portal_it = _portals.find(portal_name);
   Assert(portal_it != _portals.end(), "The specified portal does not exist.");
 
+  // In case of an error occured during binding there is no pqp available. Hence, early return here since there is
+  // nothing to execute.
   if (!portal_it->second) {
     _portals.erase(portal_it);
     return;
