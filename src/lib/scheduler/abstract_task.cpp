@@ -36,7 +36,7 @@ std::string AbstractTask::description() const {
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
-  DebugAssert((!_is_scheduled), "Possible race: Don't set dependencies after the Task was scheduled");
+  Assert((!_is_scheduled), "Possible race: Don't set dependencies after the Task was scheduled");
 
   successor->_pending_predecessors++;
   _successors.emplace_back(successor);

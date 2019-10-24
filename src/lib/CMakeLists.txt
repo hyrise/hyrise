@@ -611,6 +611,10 @@ set(
     ${CMAKE_DL_LIBS}
 )
 
+if (NOT APPLE)
+    set(LIBRARIES ${LIBRARIES} atomic)
+endif()
+
 if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()

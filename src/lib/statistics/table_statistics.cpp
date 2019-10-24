@@ -13,7 +13,6 @@ namespace opossum {
 
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
-  std::mutex column_statistics_mutex;
 
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
@@ -22,19 +21,18 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   const auto histogram_bin_count = std::min<size_t>(100, std::max<size_t>(5, table.row_count() / 2'000));
 
   auto next_column_id = std::atomic<size_t>{0u};
-  const auto column_count = table.column_count();
-  const auto thread_count = std::min(static_cast<uint>(column_count), std::thread::hardware_concurrency() + 1);
   auto threads = std::vector<std::thread>{};
-  threads.reserve(thread_count);
 
   /**
    * Parallely create statistics objects for the Table's columns
    */
-  for (auto thread_id = 0u; thread_id < thread_count; ++thread_id) {
+  for (auto thread_id = 0u;
+       thread_id < std::min(static_cast<uint>(table.column_count()), std::thread::hardware_concurrency() + 1);
+       ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
         auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(next_column_id++)};
-        if (static_cast<size_t>(my_column_id) >= column_count) return;
+        if (static_cast<size_t>(my_column_id) >= table.column_count()) return;
 
         const auto column_data_type = table.column_data_type(my_column_id);
 
@@ -62,12 +60,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
             output_column_statistics->set_statistics_object(std::make_shared<NullValueRatioStatistics>(1.0f));
           }
 
-          {
-            // Pretty sure that this is unnecessary, but without it, tsan on Mac complains. Since the lock costs us
-            // virtually nothing in this place, it is probably better than a suppression.
-            std::lock_guard<std::mutex> lock_guard{column_statistics_mutex};
-            column_statistics[my_column_id] = output_column_statistics;
-          }
+          column_statistics[my_column_id] = output_column_statistics;
         });
       }
     });
