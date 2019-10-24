@@ -14,8 +14,7 @@ static constexpr size_t BUFFER_SIZE = 4096u;
 
 // This class implements a circular buffer. If all data has been processed and the end of the underlying data
 // structure is reached, the iterator wraps around and starts at the beginning of the data structure.
-class RingBufferIterator
-    : public boost::iterator_facade<RingBufferIterator, char, std::random_access_iterator_tag, char&> {
+class RingBufferIterator : public boost::iterator_facade<RingBufferIterator, char, std::forward_iterator_tag, char&> {
  public:
   explicit RingBufferIterator(std::array<char, BUFFER_SIZE>& data, size_t position = 0)
       : _data(data), _position(position) {}
@@ -37,11 +36,6 @@ class RingBufferIterator
     return &_data == &other._data && _position == other._position;
   }
 
-  std::ptrdiff_t distance_to(RingBufferIterator const& other) const {  // NOLINT
-    DebugAssert(&_data == &other._data, "Can't convert iterators from different arrays");
-    return std::ptrdiff_t(other._position - _position);
-  }
-
   void advance(size_t increment) {  // NOLINT
     _position = (_position + increment) % BUFFER_SIZE;
   }
@@ -50,11 +44,7 @@ class RingBufferIterator
     _position = (_position + 1) % BUFFER_SIZE;
   }
 
-  void decrement() {  // NOLINT
-    _position = _position == 0 ? BUFFER_SIZE - 1 : _position - 1;
-  }
-
-  char& dereference() const {  // NOLINT
+  reference dereference() const {  // NOLINT
     return _data[_position];
   }
 
@@ -72,7 +62,7 @@ class ReadBuffer {
   // Solution: Full state is tail + 1 == head
   //           Empty state is head == tail
   size_t size() const {
-    const auto current_size = _current_position - _start_position;
+    const auto current_size = std::distance(_start_position, _current_position);
     if (current_size < 0) {
       return current_size + BUFFER_SIZE;
     } else {
@@ -91,7 +81,7 @@ class ReadBuffer {
     _receive_if_necessary(sizeof(T));
     T network_value = 0;
     std::copy_n(_start_position, sizeof(T), reinterpret_cast<char*>(&network_value));
-    _start_position += sizeof(T);
+    std::advance(_start_position, sizeof(T));
     if constexpr (std::is_same_v<T, uint16_t> || std::is_same_v<T, int16_t>) {
       return ntohs(network_value);
     } else if constexpr (std::is_same_v<T, uint32_t> || std::is_same_v<T, int32_t>) {
@@ -126,7 +116,7 @@ class WriteBuffer {
   // Solution: Full state is tail + 1 == head
   //           Empty state is head == tail
   size_t size() const {
-    const auto current_size = _current_position - _start_position;
+    const auto current_size = std::distance(_start_position, _current_position);
     if (current_size < 0) {
       return current_size + BUFFER_SIZE;
     } else {
@@ -159,7 +149,7 @@ class WriteBuffer {
       converted_value = network_value;
     }
     std::copy_n(reinterpret_cast<const char*>(&converted_value), sizeof(T), _current_position);
-    _current_position += sizeof(T);
+    std::advance(_current_position, sizeof(T));
   }
 
  private:

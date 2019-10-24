@@ -14,7 +14,7 @@ std::string ReadBuffer<SocketType>::get_string() {
   if (size() != 0) {
     string_end = std::find(_start_position, _current_position, '\0');
     std::copy(_start_position, string_end, std::back_inserter(result));
-    _start_position += result.size();
+    std::advance(_start_position, result.size());
   }
 
   // String might already be complete at this point
@@ -46,7 +46,7 @@ std::string ReadBuffer<SocketType>::get_string(const size_t string_length,
   // First, use bytes available in buffer
   if (size() != 0) {
     std::copy_n(_start_position, std::min(string_length, size()), std::back_inserter(result));
-    _start_position += result.size();
+    std::advance(_start_position, result.size());
   }
 
   // Read from network device until string is complete or skip if string is already complete.
@@ -54,7 +54,7 @@ std::string ReadBuffer<SocketType>::get_string(const size_t string_length,
     const auto substring_length = std::min(string_length - result.size(), maximum_capacity());
     _receive_if_necessary(substring_length);
     std::copy_n(_start_position, substring_length, std::back_inserter(result));
-    _start_position += substring_length;
+    std::advance(_start_position, substring_length);
   }
 
   // Ignore last character if it is \0
@@ -87,7 +87,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   boost::system::error_code error_code;
   // We can't forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
   // distinguish between reading into continuous memory or partially read the data.
-  if ((_current_position - _start_position) < 0 || &*_start_position == &_data[0]) {
+  if (std::distance(&*_start_position, &*_current_position) < 0 || &*_start_position == &_data[0]) {
     bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&*_current_position, maximum_readable_size),
                                    boost::asio::transfer_at_least(bytes_required - size()), error_code);
   } else {
@@ -107,7 +107,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   } else if (error_code) {
     std::cerr << error_code.category().name() << ": " << error_code.message() << std::endl;
   }
-  _current_position += bytes_read;
+  std::advance(_current_position, bytes_read);
 }
 
 template <typename SocketType>
@@ -118,7 +118,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const IgnoreN
   if (!full()) {
     position_in_string = static_cast<uint32_t>(std::min(maximum_capacity() - size(), value.size()));
     std::copy_n(value.cbegin(), position_in_string, _current_position);
-    _current_position += position_in_string;
+    std::advance(_current_position, position_in_string);
   }
 
   // Write to network device until string is complete. Ignore last character since it is \0
@@ -126,7 +126,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const IgnoreN
     const auto bytes_to_transfer = std::min(maximum_capacity(), value.size() - position_in_string);
     _flush_if_necessary(bytes_to_transfer);
     std::copy_n(value.cbegin() + position_in_string, bytes_to_transfer, _current_position);
-    _current_position += bytes_to_transfer;
+    std::advance(_current_position, bytes_to_transfer);
     position_in_string += bytes_to_transfer;
   }
 
@@ -144,7 +144,7 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   size_t bytes_sent;
 
   boost::system::error_code error_code;
-  if ((_current_position - _start_position) < 0) {
+  if (std::distance(&*_start_position, &*_current_position) < 0) {
     // Data not continuously stored in buffer
     bytes_sent =
         boost::asio::write(*_socket,
@@ -165,7 +165,7 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   } else if (error_code) {
     std::cerr << error_code.category().name() << ": " << error_code.message() << std::endl;
   }
-  _start_position += bytes_sent;
+  std::advance(_start_position, bytes_sent);
 }
 
 template <typename SocketType>

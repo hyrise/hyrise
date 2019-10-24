@@ -144,10 +144,12 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
   const auto param = 1234u;
   const auto result1 = transaction.exec_prepared(prepared_name, param);
   EXPECT_EQ(result1.size(), 1u);
+  const auto result2 = transaction.exec_prepared(prepared_name, 123);
+  EXPECT_EQ(result2.size(), 2u);
 
   transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
-  const auto result2 = transaction.exec_prepared(prepared_name, param);
-  EXPECT_EQ(result2.size(), 2u);
+  const auto result3 = transaction.exec_prepared(prepared_name, param);
+  EXPECT_EQ(result3.size(), 2u);
 }
 
 TEST_F(ServerTestRunner, TestUnnamedPreparedStatement) {
