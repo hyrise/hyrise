@@ -28,9 +28,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
   /**
    * Parallely create statistics objects for the Table's columns
    */
-  for (auto thread_id = 0u;
-       thread_id < thread_count;
-       ++thread_id) {
+  for (auto thread_id = 0u; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
         auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(next_column_id++)};

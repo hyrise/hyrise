@@ -17,9 +17,9 @@ namespace {
 using namespace opossum;  // NOLINT
 
 template <typename T>
-void add_segment_to_value_distribution(
-    const BaseSegment& segment, std::unordered_map<T, HistogramCountType>& value_distribution,
-    const HistogramDomain<T>& domain) {
+void add_segment_to_value_distribution(const BaseSegment& segment,
+                                       std::unordered_map<T, HistogramCountType>& value_distribution,
+                                       const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
     if (iterator_value.is_null()) return;
 

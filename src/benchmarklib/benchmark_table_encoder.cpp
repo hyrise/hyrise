@@ -141,9 +141,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   auto threads = std::vector<std::thread>{};
   threads.reserve(thread_count);
 
-  for (auto thread_id = 0u;
-       thread_id < thread_count;
-       ++thread_id) {
+  for (auto thread_id = 0u; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
         auto my_chunk = next_chunk++;
