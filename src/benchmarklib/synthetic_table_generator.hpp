@@ -61,10 +61,8 @@ struct ColumnDataDistribution {
 class SyntheticTableGenerator {
  public:
   // Simple table generation, mainly for simple tests
-  static std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows,
-                                               const ChunkOffset chunk_size,
-                                               const SegmentEncodingSpec segment_encoding_spec = {
-                                                   EncodingType::Unencoded});
+  std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows, const ChunkOffset chunk_size,
+                                        const SegmentEncodingSpec segment_encoding_spec = {EncodingType::Unencoded});
 
   static std::shared_ptr<Table> generate_table(
       const std::vector<ColumnDataDistribution>& column_data_distributions,
@@ -130,6 +128,9 @@ class SyntheticTableGenerator {
       return result;
     }
   }
+
+ protected:
+  const int _max_different_value = 10'000;
 };
 
 }  // namespace opossum
