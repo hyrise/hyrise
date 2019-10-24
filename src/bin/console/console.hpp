@@ -106,7 +106,7 @@ class Console : public Singleton<Console> {
   int _eval_sql(const std::string& sql);
 
   // Command functions, registered to be called from the Console
-  static int _exit(const std::string& args);
+  int _exit(const std::string& args);
   int _help(const std::string& args);
   int _generate_tpch(const std::string& args);
   int _generate_tpcds(const std::string& args);

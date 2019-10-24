@@ -206,7 +206,7 @@ int Console::_eval(const std::string& input) {
   return ReturnCode::Multiline;
 }
 
-static int Console::_eval_command(const CommandFunction& func, const std::string& command) {
+int Console::_eval_command(const CommandFunction& func, const std::string& command) {
   std::string cmd = command;
   if (command.back() == ';') {
     cmd = command.substr(0, command.size() - 1);
@@ -364,7 +364,8 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
-static int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
+int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
   auto encoding_options = std::string{"                                               Encoding options: "};
