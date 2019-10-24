@@ -193,7 +193,7 @@ void AbstractTableGenerator::generate_and_store() {
     metrics.index_duration = timer.lap();
     std::cout << "- Creating indexes done (" << format_duration(metrics.index_duration) << ")" << std::endl;
   } else {
-    std::cout << "- No indexes created as --indexes was not specified" << std::endl;
+    std::cout << "- No indexes created as --indexes was not specified or set to false" << std::endl;
   }
 }
 
