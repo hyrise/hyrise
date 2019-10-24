@@ -75,6 +75,7 @@ def main():
 
   arguments = {}
   arguments["--table_path"] = "'resources/test_data/imdb_sample/'"
+  arguments["--queries"] = "'3b'"
   arguments["--time"] = "10"
   arguments["--runs"] = "100"
   arguments["--warmup"] = "10"
@@ -100,6 +101,7 @@ def main():
   benchmark.expect("Not caching tables as binary files")
   benchmark.expect("Benchmarking queries from third_party/join-order-benchmark")
   benchmark.expect("Running on tables from resources/test_data/imdb_sample/")
+  benchmark.expect("Running subset of queries: 3b")
   benchmark.expect("Multi-threaded Topology:")
 
   close_benchmark(benchmark)
