@@ -199,6 +199,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
         (*output_chunks_iter)->set_ordered_by(*adapted_chunk_order);
       }
 
+      // The output chunk contains all the rows that are in the stored chunk, including invalid rows. We have to keep
+      // this information because following operators might rely on that.
       (*output_chunks_iter)->increase_invalid_row_count(stored_chunk->invalid_row_count());
     }
 
