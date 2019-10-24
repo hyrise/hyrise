@@ -14,7 +14,6 @@
 | libnuma-dev               | any              |    Linux |                            Yes (numa) |
 | libnuma1                  | any              |    Linux |                            Yes (numa) |
 | libpq-dev                 | >= 9             |    All   |                                    No |
-| llvm-9-tools              | 9                |    Linux |                                    No |
 | parallel                  | any              |    All   |                                   Yes |
 | pexpect                   | >= 4             |    All   |                     Yes (tests in CI) |
 | postgresql-server-dev-all | >= 154           |    Linux |                                    No |
