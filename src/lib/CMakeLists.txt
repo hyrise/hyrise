@@ -636,10 +636,11 @@ add_custom_command (
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # Configure the regular hyrise library used for tests/server/playground...
-if(NOT ${ENABLE_COVERAGE})
-    add_library(hyrise STATIC ${SOURCES})
+if(NOT ${ENABLE_COVERAGE} AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
+    add_library(hyrise SHARED ${SOURCES})
 else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
+    # Also, the sanitizer builds on Mac require static linkage
     add_library(hyrise STATIC ${SOURCES})
 endif() 
 

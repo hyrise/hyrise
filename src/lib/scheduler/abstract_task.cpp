@@ -64,7 +64,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 }
 
 void AbstractTask::_join() {
-  DebugAssert((_is_scheduled), "Task must be scheduled before it can be waited for");
+  DebugAssert(_is_scheduled, "Task must be scheduled before it can be waited for");
 
   std::unique_lock<std::mutex> lock(_done_mutex);
   _done_condition_variable.wait(lock, [&]() { return static_cast<bool>(_done); });
@@ -84,7 +84,7 @@ void AbstractTask::execute() {
   //
   // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
   // _done_condition_variable.
-  Assert(_is_scheduled, "Task should be scheduled");
+  Assert(_is_scheduled, "Task should be have been scheduled before being executed");
 
   _on_execute();
 
@@ -111,6 +111,12 @@ void AbstractTask::_mark_as_scheduled() {
 void AbstractTask::_on_predecessor_done() {
   auto new_predecessor_count = --_pending_predecessors;  // atomically decrement
   if (new_predecessor_count == 0) {
+
+    // If the first task was executed faster than the other calls were scheduled, we might end up in a situation where
+    // the successor is not properly scheduled yet. At the time of writing, this did not make a difference, but for the
+    // sake of a clearly defined life cycle, we wait for the task to be scheduled.
+    while (!is_scheduled()) {}
+
     auto worker = Worker::get_this_thread_worker();
 
     if (worker) {

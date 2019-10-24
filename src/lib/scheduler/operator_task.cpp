@@ -24,7 +24,7 @@ std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operato
     const std::shared_ptr<AbstractOperator>& op, CleanupTemporaries cleanup_temporaries) {
   std::vector<std::shared_ptr<OperatorTask>> tasks;
   std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>> task_by_op;
-  OperatorTask::_add_tasks_from_operator(op, tasks, task_by_op, cleanup_temporaries);
+  _add_tasks_from_operator(op, tasks, task_by_op, cleanup_temporaries);
   return tasks;
 }
 
@@ -39,12 +39,12 @@ std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
   task_by_op.emplace(op, task);
 
   if (auto left = op->mutable_input_left()) {
-    auto subtree_root = OperatorTask::_add_tasks_from_operator(left, tasks, task_by_op, cleanup_temporaries);
+    auto subtree_root = add_tasks_from_operator(left, tasks, task_by_op, cleanup_temporaries);
     subtree_root->set_as_predecessor_of(task);
   }
 
   if (auto right = op->mutable_input_right()) {
-    auto subtree_root = OperatorTask::_add_tasks_from_operator(right, tasks, task_by_op, cleanup_temporaries);
+    auto subtree_root = add_tasks_from_operator(right, tasks, task_by_op, cleanup_temporaries);
     subtree_root->set_as_predecessor_of(task);
   }
 
