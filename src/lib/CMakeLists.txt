@@ -329,14 +329,17 @@ set(
     server/postgres_protocol_handler.hpp
     server/query_handler.cpp
     server/query_handler.hpp
+    server/read_buffer.cpp
+    server/read_buffer.hpp
     server/result_serializer.cpp
     server/result_serializer.hpp
-    server/ring_buffer.cpp
-    server/ring_buffer.hpp
+    server/ring_buffer_iterator.hpp
     server/server.cpp
     server/server.hpp
     server/session.cpp
     server/session.hpp
+    server/write_buffer.cpp
+    server/write_buffer.hpp
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp
     sql/parameter_id_allocator.cpp

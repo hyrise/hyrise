@@ -60,7 +60,7 @@ void PostgresProtocolHandler<SocketType>::send_ready_for_query() {
 
 template <typename SocketType>
 PostgresMessageType PostgresProtocolHandler<SocketType>::read_packet_type() {
-  return _read_buffer.get_message_type();
+  return static_cast<PostgresMessageType>(_read_buffer.template get_value<char>());
 }
 
 template <typename SocketType>

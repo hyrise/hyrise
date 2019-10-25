@@ -132,7 +132,8 @@ set(
     server/postgres_protocol_handler_test.cpp
     server/query_handler_test.cpp
     server/result_serializer_test.cpp
-    server/ring_buffer_test.cpp
+    server/read_buffer_test.cpp
+    server/write_buffer_test.cpp
     sql/sql_identifier_resolver_test.cpp
     sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp

@@ -2,7 +2,8 @@
 
 #include "all_type_variant.hpp"
 #include "postgres_message_types.hpp"
-#include "ring_buffer.hpp"
+#include "read_buffer.hpp"
+#include "write_buffer.hpp"
 
 namespace opossum {
 
