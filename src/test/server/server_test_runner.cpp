@@ -41,7 +41,8 @@ class ServerTestRunner : public BaseTest {
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(
-      boost::asio::ip::address(), 0, SendExecutionInfo::No);  // Port 0 to select random open port
+      boost::asio::ip::address(), 5432, SendExecutionInfo::No);  // Port 0 to select random open port
+  // boost::asio::ip::address(), 0, SendExecutionInfo::No);  // Port 0 to select random open port
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 
@@ -51,7 +52,8 @@ class ServerTestRunner : public BaseTest {
 TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
+  // We use nontransactions because the regular transactions use "begin" and "end" keywords that we don't support.
+  // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   const auto result = transaction.exec("SELECT * FROM table_a;");
@@ -180,7 +182,7 @@ TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
   EXPECT_THROW(connection.prepare(prepared_name, "SELECT * FROM WHERE a > ?"), pqxx::sql_error);
 
   // Well-formed but table does not exist
-  EXPECT_THROW(connection.prepare(prepared_name, "SELECT * FROM non_existent WHERE a > ?"), pqxx::sql_error);
+  EXPECT_ANY_THROW(connection.prepare(prepared_name, "SELECT * FROM non_existent WHERE a > ?"));
 
   // Wrong number of parameters
   connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ? and a > ?");

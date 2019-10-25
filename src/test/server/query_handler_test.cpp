@@ -24,37 +24,10 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
   EXPECT_EQ(result.root_operator, OperatorType::Projection);
 }
 
-TEST_F(QueryHandlerTest, ExecutePipelineInvalidStatement) {
-  const std::string query = "SELECT * FROM;";
-  const auto& result = QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes);
-
-  EXPECT_FALSE(result.error.empty());
-  EXPECT_FALSE(result.result_table);
-  EXPECT_TRUE(result.pipeline_metrics.empty());
-}
-
 TEST_F(QueryHandlerTest, CreatePreparedPlan) {
-  const auto& error = QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?");
+  QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?");
 
-  EXPECT_FALSE(error.has_value());
   EXPECT_TRUE(Hyrise::get().storage_manager.has_prepared_plan("test_statement"));
-}
-
-TEST_F(QueryHandlerTest, CreateInvalidPreparedPlan) {
-  // Error: table does not exist
-  const auto& error1 = QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM non_existent WHERE a > ?");
-
-  EXPECT_TRUE(error1.has_value());
-  EXPECT_PRED_FORMAT2(testing::IsSubstring, "Did not find a table", error1.value());
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan("test_statement"));
-
-  // Error: Invalid SQL statement
-  const auto& error2 = QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM WHERE a > ?");
-
-  EXPECT_TRUE(error2.has_value());
-  EXPECT_PRED_FORMAT2(testing::IsSubstring, "SQL query not valid", error2.value());
-
-  EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan("test_statement"));
 }
 
 TEST_F(QueryHandlerTest, BindParameters) {
@@ -62,26 +35,15 @@ TEST_F(QueryHandlerTest, BindParameters) {
   const auto specification = PreparedStatementDetails{"test_statement", "", {123}};
 
   const auto result = QueryHandler::bind_prepared_plan(specification);
-  EXPECT_TRUE(std::holds_alternative<std::shared_ptr<AbstractOperator>>(result));
-  EXPECT_EQ(std::get<1>(result)->type(), OperatorType::TableScan);
-}
-
-TEST_F(QueryHandlerTest, BindInvalidParameters) {
-  QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?");
-  // Error: Wrong number of parameters
-  const auto specification = PreparedStatementDetails{"test_statement", "", {123, 12}};
-
-  const auto result = QueryHandler::bind_prepared_plan(specification);
-  EXPECT_TRUE(std::holds_alternative<std::string>(result));
-  EXPECT_PRED_FORMAT2(testing::IsSubstring, "Incorrect number of parameters supplied", std::get<0>(result));
+  EXPECT_EQ(result->type(), OperatorType::TableScan);
 }
 
 TEST_F(QueryHandlerTest, ExecutePreparedStatement) {
   QueryHandler::setup_prepared_plan("test_statement", "SELECT * FROM table_a WHERE a > ?");
   const auto specification = PreparedStatementDetails{"test_statement", "", {123}};
-  const auto pqp = std::get<1>(QueryHandler::bind_prepared_plan(specification));
+  const auto pqp = QueryHandler::bind_prepared_plan(specification);
 
-  auto transaction_context = QueryHandler::get_new_transaction_context();
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   pqp->set_transaction_context_recursively(transaction_context);
 
   const auto& result_table = QueryHandler::execute_prepared_statement(pqp);

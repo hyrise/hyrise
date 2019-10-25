@@ -14,34 +14,27 @@ ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql,
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
   auto execution_info = ExecutionInformation();
-  std::unique_ptr<SQLPipeline> sql_pipeline;
-  try {
-    sql_pipeline = std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}.create_pipeline());
-    sql_pipeline->get_result_table();
-  } catch (const InvalidInputException& exception) {
-    execution_info.error = exception.what();
-    return execution_info;
-  }
+  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  sql_pipeline.get_result_table();
 
-  const auto [pipeline_status, result_table] = sql_pipeline->get_result_table();
+  const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
   if (pipeline_status == SQLPipelineStatus::Success) {
     execution_info.result_table = result_table;
-    execution_info.root_operator = sql_pipeline->get_physical_plans().front()->type();
+    execution_info.root_operator = sql_pipeline.get_physical_plans().back()->type();
 
     if (send_execution_info == SendExecutionInfo::Yes) {
       std::stringstream stream;
-      stream << sql_pipeline->metrics();
+      stream << sql_pipeline.metrics();
       execution_info.pipeline_metrics = stream.str();
     }
   } else {
-    const std::string failed_statement = sql_pipeline->failed_pipeline_statement()->get_sql_string();
+    const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
     execution_info.error = "Error during pipeline execution. Failed statement: " + failed_statement;
   }
   return execution_info;
 }
 
-std::optional<std::string> QueryHandler::setup_prepared_plan(const std::string& statement_name,
-                                                             const std::string& query) {
+void QueryHandler::setup_prepared_plan(const std::string& statement_name, const std::string& query) {
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message.
   // An unnamed prepared statement lasts only until the next Parse statement specifying the unnamed statement as
   // destination is issued
@@ -54,25 +47,21 @@ std::optional<std::string> QueryHandler::setup_prepared_plan(const std::string& 
 
   auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
   auto sql_translator = SQLTranslator{UseMvcc::Yes};
-  auto prepared_plans = std::vector<std::shared_ptr<AbstractLQPNode>>();
-  try {
-    prepared_plans = sql_translator.translate_parser_result(*pipeline_statement.get_parsed_sql_statement());
-  } catch (const InvalidInputException& exception) {
-    return std::string(exception.what());
-  }
-  Assert(prepared_plans.size() == 1u, "Only a single statement allowed in prepared statement");
+  auto prepared_plans = sql_translator.translate_parser_result(*pipeline_statement.get_parsed_sql_statement());
+
+  // The PostgreSQL communication protocol does not allow more than one prepared statement within the parse message.
+  // See note at: https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
+  AssertInput(prepared_plans.size() == 1u, "Only a single statement allowed in prepared statement");
 
   const auto prepared_plan =
       std::make_shared<PreparedPlan>(prepared_plans[0], sql_translator.parameter_ids_of_value_placeholders());
 
   Hyrise::get().storage_manager.add_prepared_plan(statement_name, std::move(prepared_plan));
-  return {};
 }
 
-std::variant<std::string, std::shared_ptr<AbstractOperator>> QueryHandler::bind_prepared_plan(
-    const PreparedStatementDetails& statement_details) {
-  Assert(Hyrise::get().storage_manager.has_prepared_plan(statement_details.statement_name),
-         "The specified statement does not exist.");
+std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const PreparedStatementDetails& statement_details) {
+  AssertInput(Hyrise::get().storage_manager.has_prepared_plan(statement_details.statement_name),
+              "The specified statement does not exist.");
 
   const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(statement_details.statement_name);
 
@@ -82,19 +71,8 @@ std::variant<std::string, std::shared_ptr<AbstractOperator>> QueryHandler::bind_
         std::make_shared<ValueExpression>(statement_details.parameters[parameter_idx]);
   }
 
-  std::shared_ptr<AbstractOperator> pqp;
-  std::string error = "";
-  try {
-    const auto lqp = prepared_plan->instantiate(parameter_expressions);
-    pqp = LQPTranslator{}.translate_node(lqp);
-    return pqp;
-  } catch (const std::exception& exception) {
-    return exception.what();
-  }
-}
-
-std::shared_ptr<TransactionContext> QueryHandler::get_new_transaction_context() {
-  return Hyrise::get().transaction_manager.new_transaction_context();
+  const auto lqp = prepared_plan->instantiate(parameter_expressions);
+  return LQPTranslator{}.translate_node(lqp);
 }
 
 std::shared_ptr<const Table> QueryHandler::execute_prepared_statement(

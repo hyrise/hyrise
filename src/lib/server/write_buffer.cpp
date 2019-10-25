@@ -73,9 +73,9 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
     // Terminate session by stopping the current thread
     // TODO(all): find a better solution for this
     pthread_exit(nullptr);
-  } else if (error_code) {
-    std::cerr << error_code.category().name() << ": " << error_code.message() << std::endl;
   }
+  Assert(!error_code, error_code.message());
+
   std::advance(_start_position, bytes_sent);
 }
 

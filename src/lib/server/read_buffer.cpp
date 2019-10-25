@@ -107,9 +107,10 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
     // Terminate session by stopping the current thread
     // TODO(all): find a better solution for this
     pthread_exit(nullptr);
-  } else if (error_code) {
-    std::cerr << error_code.category().name() << ": " << error_code.message() << std::endl;
   }
+
+  Assert(!error_code, error_code.message());
+
   std::advance(_current_position, bytes_read);
 }
 

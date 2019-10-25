@@ -20,7 +20,15 @@ void Session::run() {
   _socket->set_option(boost::asio::ip::tcp::no_delay(true));
   _establish_connection();
   while (!_terminate_session) {
-    _handle_request();
+    try {
+      _handle_request();
+    } catch (const std::exception& e) {
+      _postgres_protocol_handler->send_error_message(e.what());
+      _postgres_protocol_handler->send_ready_for_query();
+      // In order to avoid multiple ReadyForQuery in case of an error, we set this flag for further operations. As soon
+      // as a new query arrives it must be set to false again.
+      _sync_send_after_error = true;
+    }
   }
 }
 
@@ -30,7 +38,7 @@ void Session::_establish_connection() {
   // Currently, the information available in the start up packet body (such as db name, user name) is ignored
   _postgres_protocol_handler->read_startup_packet_body(body_length);
   _postgres_protocol_handler->send_authentication_response();
-  _postgres_protocol_handler->send_parameter("server_version", "11");
+  _postgres_protocol_handler->send_parameter("server_version", "12");
   _postgres_protocol_handler->send_parameter("server_encoding", "UTF8");
   _postgres_protocol_handler->send_parameter("client_encoding", "UTF8");
   _postgres_protocol_handler->send_ready_for_query();
@@ -45,18 +53,25 @@ void Session::_handle_request() {
       break;
     }
     case PostgresMessageType::SimpleQueryCommand: {
+      _sync_send_after_error = false;
       _handle_simple_query();
       break;
     }
     case PostgresMessageType::ParseCommand: {
+      _sync_send_after_error = false;
       _handle_parse_command();
       break;
     }
     case PostgresMessageType::SyncCommand: {
-      _sync();
+      if (!_sync_send_after_error) {
+        _sync();
+      } else {
+        _postgres_protocol_handler->read_sync_packet();
+      }
       break;
     }
     case PostgresMessageType::BindCommand: {
+      _sync_send_after_error = false;
       _handle_bind_command();
       break;
     }
@@ -105,13 +120,10 @@ void Session::_handle_simple_query() {
 
 void Session::_handle_parse_command() {
   const auto [statement_name, query] = _postgres_protocol_handler->read_parse_packet();
-  const auto error = QueryHandler::setup_prepared_plan(statement_name, query);
+  QueryHandler::setup_prepared_plan(statement_name, query);
 
-  if (error.has_value()) {
-    _postgres_protocol_handler->send_error_message(error.value());
-  } else {
-    _postgres_protocol_handler->send_status_message(PostgresMessageType::ParseComplete);
-  }
+  _postgres_protocol_handler->send_status_message(PostgresMessageType::ParseComplete);
+
   // Ready for query + flush will be done after reading sync message
 }
 
@@ -127,20 +139,16 @@ void Session::_handle_bind_command() {
     _portals.erase(portal_it);
   }
 
-  const auto result = QueryHandler::bind_prepared_plan(parameters);
+  // Since describe and execute packet usually arrive together, we still have to handle the execute packet. Therefore,
+  // we first store a nullptr in the portals map to signalize an error. However, if binding succeeds in the next step
+  // this nullptr gets replaced by the correct pqp. Before executing the prepared statement we make a check for errors.
+  _portals.emplace(parameters.portal, nullptr);
 
-  // In case of an error
-  if (std::holds_alternative<std::string>(result)) {
-    // In case of an error, we store a nullptr in portals map. Since describe and execute packet usually arrive
-    // together, we still have to handle the execute packet. Before executing the prepared statement we make a
-    // nullptr check.
-    _portals.emplace(parameters.portal, nullptr);
-    _postgres_protocol_handler->send_error_message(std::get<0>(result));
-    // No error
-  } else {
-    _portals.emplace(parameters.portal, std::get<1>(result));
-    _postgres_protocol_handler->send_status_message(PostgresMessageType::BindComplete);
-  }
+  const auto pqp = QueryHandler::bind_prepared_plan(parameters);
+
+  _portals[parameters.portal] = pqp;
+  _postgres_protocol_handler->send_status_message(PostgresMessageType::BindComplete);
+
   // Ready for query + flush will be done after reading sync message
 }
 
@@ -170,7 +178,7 @@ void Session::_handle_execute() {
 
   if (portal_name.empty()) _portals.erase(portal_it);
 
-  if (!_transaction) _transaction = QueryHandler::get_new_transaction_context();
+  if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
   physical_plan->set_transaction_context_recursively(_transaction);
 
   const auto result_table = QueryHandler::execute_prepared_statement(physical_plan);

@@ -1,5 +1,7 @@
 #include "server.hpp"
 
+#include <pthread.h>
+
 #include <iostream>
 #include <thread>
 
@@ -27,12 +29,15 @@ void Server::_accept_new_session() {
 }
 
 void Server::_start_session(const std::shared_ptr<Session>& new_session, const boost::system::error_code& error) {
-  if (!error) {
-    std::thread session_thread([new_session] { new_session->run(); });
-    session_thread.detach();
-  } else {
-    std::cerr << error.category().name() << ": " << error.message() << std::endl;
-  }
+  Assert(!error, error.message());
+
+  std::thread session_thread([new_session] {
+    const std::string thread_name = "port_" + std::to_string(new_session->get_socket()->local_endpoint().port());
+    pthread_setname_np(pthread_self(), thread_name.c_str());
+    new_session->run();
+  });
+
+  session_thread.detach();
   _accept_new_session();
 }
 

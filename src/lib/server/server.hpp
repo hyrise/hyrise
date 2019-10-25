@@ -7,7 +7,25 @@
 
 namespace opossum {
 
-// The server class is responsible for setting up and listening to the system port.
+/* In the following a short description of the classes used for the server implementation.
+
+*  Server - Opens and binds a server socket. Starts a new session per client.
+*  Session - Creates a data socket for client server communication. It is responsible for the message flow and holds
+*            session specific data.
+*  PostgresProtocolHandler - This class operates on the message level. It serializes and de-serializes information from
+*                            messages.
+*  PostgresMessageTypes - Set of different message types supported by Hyrise.
+*  ReadBuffer - Dedicated ring buffer for reading information from the network socket. Also does network to host byte
+*               conversion for integer types.
+*  WriteBuffer - Dedicated ring buffer for writing information to the network socket. Does host to network byte
+*                conversion for integer types.
+*  RingBufferIterator - Implements ring buffer logic used by the two buffers.
+*  QueryHandler - Interface between the server and the database logic. Operations, such as creating an SQLPipeline or
+*                 PQP are handled in this class.
+*  ResultSerializer - Converts query result information (such as ColumnTypes, but also the data itself) to appropriate
+*                     PostgreSQL protocol types.
+*/
+
 class Server {
  public:
   Server(const boost::asio::ip::address& address, const uint16_t port, const SendExecutionInfo send_execution_info);
