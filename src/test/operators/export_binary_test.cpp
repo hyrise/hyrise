@@ -52,7 +52,8 @@ class OperatorsExportBinaryTest : public BaseTest {
   const std::string filename = test_data_path + "export_test.bin";
 };
 
-class OperatorsExportBinaryMultiEncodingTest : public OperatorsExportBinaryTest, public ::testing::WithParamInterface<EncodingType> {};
+class OperatorsExportBinaryMultiEncodingTest : public OperatorsExportBinaryTest,
+                                               public ::testing::WithParamInterface<EncodingType> {};
 
 auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
@@ -65,9 +66,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsExportBinaryMultiEncodingTest,
-                         ::testing::Values(EncodingType::Unencoded,
-                                           EncodingType::Dictionary,
-                                           EncodingType::RunLength),
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength),
                          formatter);
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
@@ -154,11 +153,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/SingleChunkSingleFloatColumnValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/SingleChunkSingleFloatColumnDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/SingleChunkSingleFloatColumnRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/SingleChunkSingleFloatColumnValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/SingleChunkSingleFloatColumnDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/SingleChunkSingleFloatColumnRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
 }
@@ -177,11 +175,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/MultipleChunkSingleFloatColumnValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/MultipleChunkSingleFloatColumnDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/MultipleChunkSingleFloatColumnRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/MultipleChunkSingleFloatColumnValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/MultipleChunkSingleFloatColumnDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/MultipleChunkSingleFloatColumnRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
 }
@@ -202,12 +199,11 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
-  
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/StringValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/StringDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/StringRunLengthSegment.bin"}
-  };
+
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/StringValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/StringDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/StringRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
 }
@@ -235,11 +231,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegment) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/AllTypesValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/AllTypesDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/AllTypesRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/AllTypesRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
 }
@@ -266,11 +261,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesMixColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/AllTypesMixColumnValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/AllTypesMixColumnDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/AllTypesMixColumnRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesMixColumnValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesMixColumnDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/AllTypesMixColumnRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
 }
@@ -294,11 +288,13 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/EmptyStringsValueSegment.bin",},
-    {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {
+          EncodingType::Unencoded,
+          "resources/test_data/bin/EmptyStringsValueSegment.bin",
+      },
+      {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
 }
@@ -327,11 +323,13 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/AllTypesNullValuesValueSegment.bin",},
-    {EncodingType::Dictionary, "resources/test_data/bin/AllTypesNullValuesDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/AllTypesNullValuesRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {
+          EncodingType::Unencoded,
+          "resources/test_data/bin/AllTypesNullValuesValueSegment.bin",
+      },
+      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesNullValuesDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/AllTypesNullValuesRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
 }

@@ -14,7 +14,8 @@ namespace opossum {
 
 class OperatorsImportBinaryTest : public BaseTest {};
 
-class OperatorsImportBinaryMultiEncodingTest : public OperatorsImportBinaryTest, public ::testing::WithParamInterface<EncodingType> {};
+class OperatorsImportBinaryMultiEncodingTest : public OperatorsImportBinaryTest,
+                                               public ::testing::WithParamInterface<EncodingType> {};
 
 auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
@@ -27,9 +28,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsImportBinaryMultiEncodingTest,
-                         ::testing::Values(EncodingType::Unencoded,
-                                           EncodingType::Dictionary,
-                                           EncodingType::RunLength),
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength),
                          formatter);
 
 TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
@@ -41,11 +40,10 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
 
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/SingleChunkSingleFloatColumnValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/SingleChunkSingleFloatColumnDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/SingleChunkSingleFloatColumnRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/SingleChunkSingleFloatColumnValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/SingleChunkSingleFloatColumnDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/SingleChunkSingleFloatColumnRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
   importer->execute();
 
@@ -62,11 +60,10 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
 
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/MultipleChunkSingleFloatColumnValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/MultipleChunkSingleFloatColumnDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/MultipleChunkSingleFloatColumnRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/MultipleChunkSingleFloatColumnValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/MultipleChunkSingleFloatColumnDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/MultipleChunkSingleFloatColumnRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
   importer->execute();
 
@@ -87,11 +84,10 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, StringSegment) {
 
   Hyrise::get().storage_manager.add_table("table_a", expected_table);
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/StringValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/StringDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/StringRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/StringValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/StringDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/StringRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
   importer->execute();
 
@@ -116,11 +112,10 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesSegment) {
 
   Hyrise::get().storage_manager.add_table("expected_table", expected_table);
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/AllTypesValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/AllTypesDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/AllTypesRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/AllTypesRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
   importer->execute();
 
@@ -145,11 +140,10 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesMixColumn) {
 
   Hyrise::get().storage_manager.add_table("expected_table", expected_table);
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/AllTypesMixColumnValueSegment.bin"},
-    {EncodingType::Dictionary, "resources/test_data/bin/AllTypesMixColumnDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/AllTypesMixColumnRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesMixColumnValueSegment.bin"},
+      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesMixColumnDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/AllTypesMixColumnRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
   importer->execute();
 
@@ -170,11 +164,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, EmptyStringsSegment) {
 
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/EmptyStringsValueSegment.bin",},
-    {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}
-  };
+  std::map<EncodingType, std::string> reference_filenames{
+      {
+          EncodingType::Unencoded,
+          "resources/test_data/bin/EmptyStringsValueSegment.bin",
+      },
+      {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
   importer->execute();
 
@@ -199,11 +195,13 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesNullValues) {
 
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
-  std::map<EncodingType, std::string> reference_filenames {
-    {EncodingType::Unencoded, "resources/test_data/bin/AllTypesNullValuesValueSegment.bin",},
-    {EncodingType::Dictionary, "resources/test_data/bin/AllTypesNullValuesDictionarySegment.bin"},
-    {EncodingType::RunLength, "resources/test_data/bin/AllTypesNullValuesRunLengthSegment.bin"}
-  }; 
+  std::map<EncodingType, std::string> reference_filenames{
+      {
+          EncodingType::Unencoded,
+          "resources/test_data/bin/AllTypesNullValuesValueSegment.bin",
+      },
+      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesNullValuesDictionarySegment.bin"},
+      {EncodingType::RunLength, "resources/test_data/bin/AllTypesNullValuesRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
   importer->execute();
 
