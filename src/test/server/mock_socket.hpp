@@ -1,14 +1,12 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <filesystem>
 #include <fstream>
 
 namespace opossum {
 
-static constexpr char file_prefix[] = "socket_file";
+static constexpr char file_name[] = "socket_file";
 
 typedef boost::asio::posix::stream_descriptor file_stream;
 
@@ -18,30 +16,28 @@ class MockSocket {
  public:
   MockSocket() {
     boost::asio::io_service io_service;
-    _file_name = file_prefix + boost::uuids::to_string(boost::uuids::random_generator()());
-    auto file_descriptor = open(_file_name.c_str(), O_RDWR | O_CREAT | O_APPEND, 0755);
+    auto file_descriptor = open(file_name, O_RDWR | O_CREAT | O_APPEND, 0755);
     _stream = std::make_shared<file_stream>(io_service, file_descriptor);
     io_service.run();
   }
 
-  ~MockSocket() { std::filesystem::remove(std::filesystem::path{_file_name}); }
+  ~MockSocket() { std::filesystem::remove(std::filesystem::path{file_name}); }
 
   std::shared_ptr<file_stream> get_socket() { return _stream; }
 
   void write(const std::string& value) {
-    std::ofstream(std::filesystem::path{_file_name}, std::ios_base::app) << value;
+    std::ofstream(std::filesystem::path{file_name}, std::ios_base::app) << value;
   }
 
   std::string read() {
-    std::ifstream file_stream(_file_name);
+    std::ifstream file_stream(file_name);
     return {std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>()};
   }
 
-  bool empty() { return std::ifstream(std::filesystem::path{_file_name}).peek() == std::ifstream::traits_type::eof(); }
+  bool empty() { return std::ifstream(std::filesystem::path{file_name}).peek() == std::ifstream::traits_type::eof(); }
 
  private:
   std::shared_ptr<file_stream> _stream;
-  std::string _file_name;
 };
 
 // Helper class to convert integers from network byte order to host byte order.

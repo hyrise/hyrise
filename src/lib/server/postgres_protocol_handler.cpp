@@ -90,7 +90,10 @@ template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_row_description(const std::string& column_name, const uint32_t object_id,
                                                                const int16_t type_width) {
   _write_buffer.put_string(column_name);
-  _write_buffer.template put_value<int32_t>(0u);          // No object id
+  // This field contains the table ID (OID in postgres). We have to set it in order to fulfill the protocol
+  // specification. We don't know what it's good for.
+  _write_buffer.template put_value<int32_t>(0u);  // No object id
+  // This field contains the attribute ID (OID in postgres). We don't know what it's good for either.
   _write_buffer.template put_value<int16_t>(0u);          // No attribute number
   _write_buffer.template put_value<int32_t>(object_id);   // Object id of type
   _write_buffer.template put_value<int16_t>(type_width);  // Data type size

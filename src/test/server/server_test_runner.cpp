@@ -41,8 +41,7 @@ class ServerTestRunner : public BaseTest {
   }
 
   std::unique_ptr<Server> _server = std::make_unique<Server>(
-      boost::asio::ip::address(), 5432, SendExecutionInfo::No);  // Port 0 to select random open port
-  // boost::asio::ip::address(), 0, SendExecutionInfo::No);  // Port 0 to select random open port
+      boost::asio::ip::address(), 0, SendExecutionInfo::No);  // Port 0 to select random open port
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 
@@ -52,7 +51,7 @@ class ServerTestRunner : public BaseTest {
 TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "end" keywords that we don't support.
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we don't support.
   // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
