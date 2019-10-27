@@ -141,8 +141,9 @@ TEST_F(OperatorsExportBinaryTest, RepeatedIntRunLengthSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
   table->append({1});
+  table->append({2});
   table->append({2});
   table->append({2});
   table->append({2});

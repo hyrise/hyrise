@@ -24,10 +24,10 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // Writes the content of the vector to the ofstream
-template <typename T, typename Alloc>
-void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
+template <typename T, typename Alloc, template <typename, typename...> typename Container>
+void export_values(std::ofstream& ofstream, const Container<T, Alloc>& values);
 
-/* Writes the given strings to the ofstream. First an array of string lengths is written. After that the string are
+/* Writes the given strings to the ofstream. First an array of string lengths is written. After that the strings are
  * written without any gaps between them.
  * In order to reduce the number of memory allocations we iterate twice over the string vector.
  * After the first iteration we know the number of byte that must be written to the file and can construct a buffer of
@@ -36,7 +36,7 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
  */
 template <typename Alloc>
 void export_string_values(std::ofstream& ofstream, const std::vector<pmr_string, Alloc>& values) {
-  std::vector<size_t> string_lengths(values.size());
+  pmr_vector<size_t> string_lengths(values.size());
   size_t total_length = 0;
 
   // Save the length of each string.
@@ -51,7 +51,7 @@ void export_string_values(std::ofstream& ofstream, const std::vector<pmr_string,
   if (total_length == 0) return;
 
   // Write all string contents into to buffer.
-  std::vector<char> buffer(total_length);
+  pmr_vector<char> buffer(total_length);
   size_t start = 0;
   for (const auto& str : values) {
     std::memcpy(buffer.data() + start, str.data(), str.size());
@@ -61,8 +61,8 @@ void export_string_values(std::ofstream& ofstream, const std::vector<pmr_string,
   export_values(ofstream, buffer);
 }
 
-template <typename T, typename Alloc>
-void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
+template <typename T, typename Alloc, template <typename, typename...> typename Container>
+void export_values(std::ofstream& ofstream, const Container<T, Alloc>& values) {
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
@@ -71,20 +71,10 @@ template <>
 void export_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values) {
   export_string_values(ofstream, values);
 }
-template <>
-void export_values(std::ofstream& ofstream, const std::vector<pmr_string>& values) {
-  export_string_values(ofstream, values);
-}
 
 // specialized implementation for bool values
-template <>
-void export_values(std::ofstream& ofstream, const pmr_vector<bool>& values) {
-  // Cast to fixed-size format used in binary file
-  const auto writable_bools = std::vector<BoolAsByteType>(values.begin(), values.end());
-  export_values(ofstream, writable_bools);
-}
-template <>
-void export_values(std::ofstream& ofstream, const std::vector<bool>& values) {
+template <typename Alloc, template <typename, typename...> typename Container>
+void export_values(std::ofstream& ofstream, const Container<bool, Alloc>& values) {
   // Cast to fixed-size format used in binary file
   const auto writable_bools = std::vector<BoolAsByteType>(values.begin(), values.end());
   export_values(ofstream, writable_bools);
@@ -108,9 +98,7 @@ void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<pmr_stri
 // specialized implementation for bool values
 template <>
 void export_values(std::ofstream& ofstream, const pmr_concurrent_vector<bool>& values) {
-  // Cast to fixed-size format used in binary file
-  const auto writable_bools = std::vector<BoolAsByteType>(values.begin(), values.end());
-  export_values(ofstream, writable_bools);
+  export_values(ofstream, pmr_vector<bool>(values.begin(), values.end()));
 }
 
 // Writes a shallow copy of the given value to the ofstream
@@ -118,6 +106,7 @@ template <typename T>
 void export_value(std::ofstream& ofstream, const T& value) {
   ofstream.write(reinterpret_cast<const char*>(&value), sizeof(T));
 }
+
 }  // namespace
 
 namespace opossum {
@@ -160,9 +149,9 @@ void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
   export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
 
-  std::vector<pmr_string> column_types(table.column_count());
-  std::vector<pmr_string> column_names(table.column_count());
-  std::vector<bool> columns_are_nullable(table.column_count());
+  pmr_vector<pmr_string> column_types(table.column_count());
+  pmr_vector<pmr_string> column_names(table.column_count());
+  pmr_vector<bool> columns_are_nullable(table.column_count());
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table.column_count(); ++column_id) {
@@ -238,7 +227,7 @@ void ExportBinary::ExportBinaryVisitor<pmr_string>::handle_segment(
 
   std::stringstream values;
   pmr_string value;
-  std::vector<size_t> string_lengths(ref_segment.size());
+  pmr_vector<size_t> string_lengths(ref_segment.size());
 
   // We export the values materialized
   for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {

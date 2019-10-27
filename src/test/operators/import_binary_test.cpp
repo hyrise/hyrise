@@ -224,9 +224,10 @@ TEST_F(OperatorsImportBinaryTest, RepeatedIntRunLengthSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
 
   expected_table->append({1});
+  expected_table->append({2});
   expected_table->append({2});
   expected_table->append({2});
   expected_table->append({2});
