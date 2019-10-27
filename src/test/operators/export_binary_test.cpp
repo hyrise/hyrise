@@ -137,6 +137,28 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesValueSegmentMaxChunkSize.bin", filename));
 }
 
+TEST_F(OperatorsExportBinaryTest, RepeatedIntRunLengthSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({1});
+  table->append({2});
+  table->append({2});
+  table->append({2});
+  table->append({1});
+
+  ChunkEncoder::encode_all_chunks(table, EncodingType::RunLength);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/RepeatedIntRunLengthSegment.bin", filename));
+}
+
 TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float, false);
@@ -289,10 +311,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
   ex->execute();
 
   std::map<EncodingType, std::string> reference_filenames{
-      {
-          EncodingType::Unencoded,
-          "resources/test_data/bin/EmptyStringsValueSegment.bin",
-      },
+      {EncodingType::Unencoded, "resources/test_data/bin/EmptyStringsValueSegment.bin"},
       {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
       {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
@@ -324,10 +343,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
   ex->execute();
 
   std::map<EncodingType, std::string> reference_filenames{
-      {
-          EncodingType::Unencoded,
-          "resources/test_data/bin/AllTypesNullValuesValueSegment.bin",
-      },
+      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesNullValuesValueSegment.bin"},
       {EncodingType::Dictionary, "resources/test_data/bin/AllTypesNullValuesDictionarySegment.bin"},
       {EncodingType::RunLength, "resources/test_data/bin/AllTypesNullValuesRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));

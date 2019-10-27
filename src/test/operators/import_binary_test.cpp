@@ -165,10 +165,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, EmptyStringsSegment) {
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::map<EncodingType, std::string> reference_filenames{
-      {
-          EncodingType::Unencoded,
-          "resources/test_data/bin/EmptyStringsValueSegment.bin",
-      },
+      {EncodingType::Unencoded, "resources/test_data/bin/EmptyStringsValueSegment.bin"},
       {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
       {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
@@ -196,10 +193,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesNullValues) {
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::map<EncodingType, std::string> reference_filenames{
-      {
-          EncodingType::Unencoded,
-          "resources/test_data/bin/AllTypesNullValuesValueSegment.bin",
-      },
+      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesNullValuesValueSegment.bin"},
       {EncodingType::Dictionary, "resources/test_data/bin/AllTypesNullValuesDictionarySegment.bin"},
       {EncodingType::RunLength, "resources/test_data/bin/AllTypesNullValuesRunLengthSegment.bin"}};
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filenames.at(GetParam()));
@@ -221,6 +215,26 @@ TEST_F(OperatorsImportBinaryTest, TwoColumnsNoValues) {
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/TwoColumnsNoValues.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, RepeatedIntRunLengthSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+
+  expected_table->append({1});
+  expected_table->append({2});
+  expected_table->append({2});
+  expected_table->append({2});
+  expected_table->append({1});
+
+  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::RunLength);
+
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/RepeatedIntRunLengthSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
