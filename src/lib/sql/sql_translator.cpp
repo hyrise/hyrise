@@ -1371,19 +1371,19 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
 
-              // Find any StoredTableNode below COUNT(*)
-              std::shared_ptr<StoredTableNode> stored_table_node = nullptr;
+              // Find any leaf node below COUNT(*)
+              std::shared_ptr<AbstractLQPNode> leaf_node = nullptr;
               visit_lqp(_current_lqp, [&](const auto& node) {
-                stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-                if (stored_table_node) {
+                if (!node->left_input() && !node->right_input()) {
+                  leaf_node = node;
                   return LQPVisitation::DoNotVisitInputs;
                 }
                 return LQPVisitation::VisitInputs;
               });
-              Assert(stored_table_node, "No StoredTableNode found below COUNT(*)");
+              Assert(leaf_node, "No leaf node found below COUNT(*)");
 
               const auto column_expression =
-                  std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, INVALID_COLUMN_ID});
+                  std::make_shared<LQPColumnExpression>(LQPColumnReference{leaf_node, INVALID_COLUMN_ID});
               return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
               return std::make_shared<AggregateExpression>(
