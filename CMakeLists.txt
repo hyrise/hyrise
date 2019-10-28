@@ -27,7 +27,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         compiler_not_supported("We had to drop support for GCC on OS X because it caused segfaults when used with tbb. You can continue, but don't hold us responsible for any segmentation faults.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8.0)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
@@ -84,6 +84,12 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${FLAGS_AL
 
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
+
+# Surprisingly, this makes the linking process on Mac faster by 5x
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -O0")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0")
 
 # Dependencies
 find_package(Numa)
