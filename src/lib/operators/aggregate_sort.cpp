@@ -304,7 +304,9 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * Special case for COUNT(*), which is the only case where column equals INVALID_COLUMN_ID:
      * Usually, the data type of the aggregate can depend on the data type of the corresponding input column.
      * For example, the sum of ints is an int, while the sum of doubles is a double.
-     * For COUNT(*), the aggregate type is always Long, regardless of the input type, because AggregateTraits uses Long.
+     * For COUNT(*), the aggregate type is always Long, regardless of the input type.
+     * As the input type does not matter and we do not even have an input column,
+     * but the function call expects an input type, we choose Long to be consistent with the output type.
      */
     const auto data_type = column == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(column);
 
