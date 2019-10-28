@@ -22,7 +22,7 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction();
+  estimator.guarantee_bottom_up_construction();
 
   std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);
@@ -198,8 +198,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                     const auto predicate_node = PredicateNode::make(expression, disjunction_input_node);
 
                     // Determine the selectivity of the predicate if executed on disjunction_input_node
-                    const auto cardinality_in = estimator->estimate_cardinality(disjunction_input_node);
-                    const auto cardinality_out = estimator->estimate_cardinality(predicate_node);
+                    const auto cardinality_in = estimator.estimate_cardinality(disjunction_input_node);
+                    const auto cardinality_out = estimator.estimate_cardinality(predicate_node);
                     if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE) return;
 
                     // predicate_node was found to be beneficial. Add it to predicate_nodes so that _insert_nodes will
