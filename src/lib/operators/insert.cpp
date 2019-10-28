@@ -224,6 +224,10 @@ void Insert::_on_commit_records(const CommitID cid) {
       mvcc_data->begin_cids[chunk_offset] = cid;
       mvcc_data->tids[chunk_offset] = 0u;
     }
+
+    if (target_chunk->size() == _target_table->max_chunk_size()) {
+      target_chunk->finalize();
+    }
   }
 }
 
@@ -259,6 +263,11 @@ void Insert::_on_rollback_records() {
          ++chunk_offset) {
       mvcc_data->begin_cids[chunk_offset] = 0u;
       mvcc_data->tids[chunk_offset] = 0u;
+    }
+
+    // We have to finalize chunks even when a transaction is rolled back because later operators might rely on that.
+    if (target_chunk->size() == _target_table->max_chunk_size()) {
+      target_chunk->finalize();
     }
   }
 }
