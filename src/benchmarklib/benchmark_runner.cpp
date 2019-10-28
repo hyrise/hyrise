@@ -265,9 +265,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
       },
       SchedulePriority::High);
 
-  // No need to check if the benchmark uses the scheduler or not as this method executes tasks immediately if the
-  // scheduler is not set.
-  Hyrise::get().scheduler()->schedule_tasks<JobTask>({task});
+  task->schedule();
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {

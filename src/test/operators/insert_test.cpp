@@ -44,18 +44,14 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   context->commit();
 
   // Check that row has been inserted.
-  EXPECT_EQ(t->row_count(), 6u);
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{1})->size(), 3u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->size(), 6u);
   EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
   EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
-  EXPECT_EQ((*t->get_chunk(ChunkID{1})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*t->get_chunk(ChunkID{1})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[3], AllTypeVariant(12345));
+  EXPECT_EQ((*t->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[3], AllTypeVariant(458.7f));
 
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_segment(ColumnID{1})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{1})->get_segment(ColumnID{0})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{1})->get_segment(ColumnID{1})->size(), 3u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->size(), 6u);
+  EXPECT_EQ(t->get_chunk(ChunkID{0})->get_segment(ColumnID{1})->size(), 6u);
 }
 
 TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
@@ -80,8 +76,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   context->commit();
 
   EXPECT_EQ(t->chunk_count(), 4u);
-  EXPECT_EQ(t->get_chunk(ChunkID{0})->size(), 3u);
-  EXPECT_EQ(t->get_chunk(ChunkID{3})->size(), 2u);
+  EXPECT_EQ(t->get_chunk(ChunkID{3})->size(), 1u);
   EXPECT_EQ(t->row_count(), 13u);
 }
 
@@ -107,8 +102,7 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   context->commit();
 
   EXPECT_EQ(t->chunk_count(), 7u);
-  EXPECT_EQ(t->get_chunk(ChunkID{1})->size(), 1u);
-  EXPECT_EQ(t->get_chunk(ChunkID{6})->size(), 2u);
+  EXPECT_EQ(t->get_chunk(ChunkID{6})->size(), 1u);
   EXPECT_EQ(t->row_count(), 13u);
 }
 
@@ -139,52 +133,10 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   EXPECT_EQ(t->row_count(), 13u);
 }
 
-TEST_F(OperatorsInsertTest, CommitFinalizesTablesChunkIfFull) {
-  auto t_name = "test3";
-
-  auto t = load_table("resources/test_data/tbl/int.tbl", 3u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
-
-  auto gt1 = std::make_shared<GetTable>(t_name);
-  gt1->execute();
-
-  auto ins = std::make_shared<Insert>(t_name, gt1);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
-
-  context->commit();
-
-  for (auto chunk_id = ChunkID{0}; chunk_id < t->chunk_count(); ++chunk_id) {
-    EXPECT_FALSE(t->get_chunk(chunk_id)->is_mutable());
-  }
-}
-
-TEST_F(OperatorsInsertTest, CommitDoesNotFinalizeTablesChunkIfNotFull) {
-  auto t_name = "test3";
-
-  auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
-  Hyrise::get().storage_manager.add_table(t_name, t);
-
-  auto gt1 = std::make_shared<GetTable>(t_name);
-  gt1->execute();
-
-  auto ins = std::make_shared<Insert>(t_name, gt1);
-  auto context = Hyrise::get().transaction_manager.new_transaction_context();
-  ins->set_transaction_context(context);
-  ins->execute();
-
-  context->commit();
-
-  EXPECT_FALSE(t->get_chunk(ChunkID{0})->is_mutable());
-  EXPECT_TRUE(t->get_chunk(ChunkID{1})->is_mutable());
-}
-
-// Rollback should also increase the invalid row count and finalize the last chunk.
 TEST_F(OperatorsInsertTest, Rollback) {
   auto t_name = "test3";
 
-  auto t = load_table("resources/test_data/tbl/int.tbl", 3u);
+  auto t = load_table("resources/test_data/tbl/int.tbl", 4u);
   Hyrise::get().storage_manager.add_table(t_name, t);
 
   auto gt1 = std::make_shared<GetTable>(t_name);
@@ -195,14 +147,6 @@ TEST_F(OperatorsInsertTest, Rollback) {
   ins->set_transaction_context(context1);
   ins->execute();
   context1->rollback();
-
-  uint64_t invalid_row_count = 0;
-  for (auto chunk_id = ChunkID{0}; chunk_id < t->chunk_count(); ++chunk_id) {
-    invalid_row_count += t->get_chunk(chunk_id)->invalid_row_count();
-  }
-
-  EXPECT_EQ(invalid_row_count, 3);
-  EXPECT_FALSE(t->get_chunk(static_cast<ChunkID>(t->chunk_count() - 1))->is_mutable());
 
   auto gt2 = std::make_shared<GetTable>(t_name);
   gt2->execute();
@@ -259,13 +203,13 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   ins->execute();
   context->commit();
 
-  EXPECT_EQ(t->chunk_count(), 4u);
+  EXPECT_EQ(t->chunk_count(), 3u);
   EXPECT_EQ(t->row_count(), 8u);
 
-  auto null_val_int = (*(t->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[2];
+  auto null_val_int = (*(t->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[0];
   EXPECT_TRUE(variant_is_null(null_val_int));
 
-  auto null_val_float = (*(t->get_chunk(ChunkID{2})->get_segment(ColumnID{1})))[1];
+  auto null_val_float = (*(t->get_chunk(ChunkID{1})->get_segment(ColumnID{1})))[2];
   EXPECT_TRUE(variant_is_null(null_val_float));
 }
 
