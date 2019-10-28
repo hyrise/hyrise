@@ -322,8 +322,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
           std::vector<std::shared_ptr<BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};
 
       for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
-        output_column_statistics[column_id] =
-            input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+        output_column_statistics[column_id] = input_table_statistics->column_statistics[column_id]->scaled(selectivity);
       }
 
       const auto output_table_statistics =

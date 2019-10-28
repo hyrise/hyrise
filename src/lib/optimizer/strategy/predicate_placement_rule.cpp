@@ -27,12 +27,13 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);
 
-  _pull_up_traversal(root_node, LQPInputSide::Left, *estimator);
+  _pull_up_traversal(root_node, LQPInputSide::Left);
 }
 
 void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node,
                                                   const LQPInputSide input_side,
-                                                  std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes, AbstractCostEstimator& estimator) {
+                                                  std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes,
+                                                  AbstractCardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
   if (!input_node) return;  // Allow calling without checks
 
