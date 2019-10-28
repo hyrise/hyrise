@@ -168,10 +168,12 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                 }
 
                 if (!left_conjunction.empty()) {
-                  // If we have found one or more predicates for the left side, connect them using AND and add them to
+                  // If we have found multiple predicates for the left side, connect them using AND and add them to
                   // the disjunction that will be pushed to the left side:
-                  //  Example: `(l1 AND r2) OR (l2 AND r1)` lead to `left_conjunction = [l1, l2]`, which is now turned
-                  //           into `l1 AND l2`.
+                  //  Example: `(l1 AND l2 AND r1) OR (l3 AND r2)` is first split into the two conjunctions. When
+                  //  looking at the first conjunction, l1 and l2 will end up in left_conjunction. Before it gets added
+                  //  to the left_disjunction, it needs to be connected using AND: (l1 AND l2).
+                  //  The result for the left_disjunction will be ((l1 AND l2) OR l3)
                   left_disjunction.emplace_back(inflate_logical_expressions(left_conjunction, LogicalOperator::And));
                 } else {
                   // If, within the current expression_in_disjunction, we have not found a matching predicate for the
