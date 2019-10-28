@@ -46,7 +46,6 @@ std::string FunctionExpression::as_column_name() const {
 DataType FunctionExpression::data_type() const {
   switch (function_type) {
     case FunctionType::Substring:
-      return DataType::String;
     case FunctionType::Concatenate:
       return DataType::String;
   }

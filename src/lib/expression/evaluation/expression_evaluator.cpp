@@ -685,6 +685,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
       const auto& argument_value = argument_result.value(chunk_offset);
 
+      // NOLINTNEXTLINE(bugprone-branch-clone)
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
         // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
       } else if constexpr (std::is_same_v<Result, pmr_string>) {  // NOLINT
@@ -1347,7 +1348,7 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 }
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,
-                                                                    const std::vector<bool>& right) const {
+                                                                    const std::vector<bool>& right) {
   if (left.size() == right.size()) {
     std::vector<bool> nulls(left.size());
     std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](auto l, auto r) { return l || r; });

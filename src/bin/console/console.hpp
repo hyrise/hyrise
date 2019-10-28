@@ -98,7 +98,7 @@ class Console : public Singleton<Console> {
   /*
    * Evaluates given Console command.
    */
-  int _eval_command(const CommandFunction& func, const std::string& command);
+  static int _eval_command(const CommandFunction& func, const std::string& command);
 
   /*
    * Evaluates given SQL statement using opossum::SqlQueryTranslator.

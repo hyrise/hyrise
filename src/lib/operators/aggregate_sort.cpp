@@ -128,7 +128,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
       auto segment = sorted_table->get_chunk(chunk_id)->get_segment(*column);
       segment_iterate<ColumnType>(*segment, [&](const auto& position) {
         const auto row_id = RowID{current_chunk_id, position.chunk_offset()};
-        const auto is_new_group = !group_boundaries.empty() && row_id == *group_boundary_iter;
+        const auto is_new_group = group_boundary_iter != group_boundaries.cend() && row_id == *group_boundary_iter;
         const auto& new_value = position.value();
         if (is_new_group) {
           // New group is starting. Store the aggregate value of the just finished group

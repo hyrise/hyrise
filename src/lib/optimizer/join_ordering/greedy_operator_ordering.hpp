@@ -37,9 +37,9 @@ class GreedyOperatorOrdering : public AbstractJoinOrderingAlgorithm {
   using PlanCardinalityPair = std::pair<std::shared_ptr<AbstractLQPNode>, float>;
 
   // Build a plan from joining all vertex clusters connected by @param edge
-  PlanCardinalityPair _build_plan_for_edge(
+  static PlanCardinalityPair _build_plan_for_edge(
       const JoinGraphEdge& edge, const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters,
-      const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const;
+      const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
 };
 
 }  // namespace opossum

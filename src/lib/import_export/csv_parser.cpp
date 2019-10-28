@@ -210,8 +210,11 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
   }
 
   // Transform the field_offsets to segments and add segments to chunk.
-  for (auto& converter : converters) {
-    segments.push_back(converter->finish());
+  {
+    std::lock_guard<std::mutex> lock(_append_chunk_mutex);
+    for (auto& converter : converters) {
+      segments.push_back(converter->finish());
+    }
   }
 
   return row_count;
