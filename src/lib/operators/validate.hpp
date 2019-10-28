@@ -32,7 +32,7 @@ class Validate : public AbstractReadOnlyOperator {
   static void _validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
                                const ChunkID chunk_id_end, const TransactionID our_tid,
                                const TransactionID snapshot_commit_id,
-                               std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex
+                               std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex,
                                const bool can_use_chunk_shortcut);
 
  protected:
