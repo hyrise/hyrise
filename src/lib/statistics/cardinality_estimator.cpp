@@ -303,8 +303,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
   if (const auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(predicate)) {
     if (logical_expression->logical_operator == LogicalOperator::Or) {
-      // For now, we handle OR by assuming that predicates do not overlap, i.e., by adding the selectivities. Also, we
-      // simply forward the column statistics of the original input.
+      // For now, we handle OR by assuming that predicates do not overlap, i.e., by adding the selectivities.
 
       const auto left_predicate_node =
           PredicateNode::make(logical_expression->left_operand(), predicate_node.left_input());
@@ -316,7 +315,17 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
 
       const auto row_count = Cardinality{
           std::min(left_statistics->row_count + right_statistics->row_count, input_table_statistics->row_count)};
-      auto output_column_statistics = input_table_statistics->column_statistics;
+
+      const auto selectivity = row_count / input_table_statistics->row_count;
+
+      auto output_column_statistics =
+          std::vector<std::shared_ptr<BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};
+
+      for (auto column_id = ColumnID{0}; column_id < output_column_statistics.size(); ++column_id) {
+        output_column_statistics[column_id] =
+            input_table_statistics->column_statistics[column_id]->scaled(selectivity);
+      }
+
       const auto output_table_statistics =
           std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 

@@ -25,8 +25,8 @@ class PredicatePlacementRule : public AbstractRule {
   // Traverse the LQP and perform push downs of predicates.
   // @param push_down_nodes stores nodes from higher up in the tree for which we're currently searching the lowest
   //                        possible position.
-  void _push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side,
-                            std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes) const;
+  static void _push_down_traversal(const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side,
+                            std::vector<std::shared_ptr<PredicateNode>>& push_down_nodes, AbstractCardinalityEstimator& estimator);
 
   // Traverse the LQP and pull up expensive predicates.
   // @returns expensive predicates from the LQP below @param current_node @param input_side.
@@ -42,10 +42,8 @@ class PredicatePlacementRule : public AbstractRule {
   // Judge whether a predicate is expensive and should be pulled up. All non-expensive predicates get pushed down.
   static bool _is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate);
 
-  mutable std::shared_ptr<AbstractCardinalityEstimator> _estimator;
-
   // For predicates that cannot be pushed down below a join, create a pre-join predicate if it reduces the selectivity
-  // sufficiently:
+  // sufficiently. Search for "pre-join predicates" in the cpp for a detailed description.
   static constexpr auto MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE = .25;
 };
 }  // namespace opossum

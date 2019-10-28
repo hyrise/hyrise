@@ -533,8 +533,8 @@ TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnBothSides) {
 
 TEST_F(PredicatePlacementRuleTest, CreatePreJoinPredicateOnlyWhereBeneficial) {
   // SELECT * FROM d JOIN e on d.a = e.a WHERE (d.b = 1 AND e.a < 10) OR (d.b = 2 AND e.a = 3) should lead to
-  // (b = 1 OR b = 2) being created on the left side of the join, but no predicate on the right side, as is it
-  // is not selective enough
+  // (b = 1 OR b = 2) being created on the left side of the join, but no predicate on the right side, as it only
+  // removes 2 out of 11 values and thus is not selective enough
 
   // clang-format off
   const auto input_lqp = PredicateNode::make(or_(and_(equals_(_d_b, 1), less_than_(_e_a, 10)), and_(equals_(_d_b, 2), equals_(_e_a, 1))),  // NOLINT
