@@ -363,8 +363,7 @@ void AggregateHash::_aggregate() {
          * specific output logic for COUNT(*).
          */
         if (aggregate.column == INVALID_COLUMN_ID) {
-          Assert(aggregate.function == AggregateFunction::Count,
-                 "Only COUNT may have an invalid ColumnID");
+          Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
           auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>(
               _contexts_per_column[column_index]);
 
@@ -720,6 +719,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
   if (aggregate.column != INVALID_COLUMN_ID) {
     column_name_stream << input_table_left()->column_name(aggregate.column);
   } else {
+    Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
     column_name_stream << "*";
   }
   column_name_stream << ")";
