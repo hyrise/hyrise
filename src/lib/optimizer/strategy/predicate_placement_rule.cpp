@@ -22,7 +22,7 @@ void PredicatePlacementRule::apply_to(const std::shared_ptr<AbstractLQPNode>& no
   const auto root_node = node->type == LQPNodeType::Root ? node : LogicalPlanRootNode::make(node);
 
   const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator.guarantee_bottom_up_construction();
+  estimator->guarantee_bottom_up_construction();
 
   std::vector<std::shared_ptr<PredicateNode>> push_down_nodes;
   _push_down_traversal(root_node, LQPInputSide::Left, push_down_nodes, *estimator);
