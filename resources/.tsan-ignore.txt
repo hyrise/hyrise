@@ -3,10 +3,21 @@ race:^tbb*
 
 # "libstdc++ is not instrumented, so tsan misses atomic operations related to shared_ptr"
 # https://groups.google.com/forum/#!topic/thread-sanitizer/vz_s-t226Vg
-race:^std::__1::shared_ptr*
-race:^std::__1::weak_ptr*
+race:^std::__shared_ptr
+race:^std::__1::shared_ptr
+race:^std::__weak_ptr
+race:^std::__1::weak_ptr
+race:^std::__unique_ptr
+race:^std::__1::unique_ptr
+race:^std::__1::__unique_if
 race:shared_count
 
 # Boost is not built with tsan support, either
 race:boost::detail::thread_data_base
 race:thread_data
+
+# A DebugAssert makes sure that predecessors are not added to scheduled tasks, but it is missing in release builds
+race:^opossum::AbstractTask::set_as_predecessor_of
+
+# This is likely false positive seen only on Mac, as even the strictest locking does not "fix" the warning
+race:^opossum::TableStatistics::from_table

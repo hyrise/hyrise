@@ -147,14 +147,6 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::shared_ptr<AbstractLQPNode> _prune_expressions(
-      const std::shared_ptr<AbstractLQPNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
-
-  std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(
-      const std::shared_ptr<AbstractLQPNode>& node,
-      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
-
   std::shared_ptr<AbstractExpression> _translate_hsql_expr(
       const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) const;
   std::shared_ptr<LQPSubqueryExpression> _translate_hsql_subquery(
@@ -164,8 +156,16 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractExpression> _inverse_predicate(const AbstractExpression& expression) const;
 
-  std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
-      const std::vector<SelectListElement>& select_list_elements) const;
+  static std::shared_ptr<AbstractLQPNode> _prune_expressions(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+
+  static std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+
+  static std::vector<std::shared_ptr<AbstractExpression>> _unwrap_elements(
+      const std::vector<SelectListElement>& select_list_elements);
 
  private:
   const UseMvcc _use_mvcc;
