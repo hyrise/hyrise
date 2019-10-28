@@ -96,7 +96,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Performs a sanity check in order to prevent an execution of a predictably failing DDL operator (e.g., creating a
   // table that already exists).
   // Throws an InvalidInputException if an invalid PQP is detected.
-  void _precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) const;
+  static void _precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp);
 
   const std::string _sql_string;
   const UseMvcc _use_mvcc;

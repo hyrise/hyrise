@@ -32,7 +32,7 @@ class IndexScanRule : public AbstractRule {
  protected:
   bool _is_index_scan_applicable(const IndexStatistics& index_statistics,
                                  const std::shared_ptr<PredicateNode>& predicate_node) const;
-  inline bool _is_single_segment_index(const IndexStatistics& index_statistics) const;
+  static bool _is_single_segment_index(const IndexStatistics& index_statistics);
 };
 
 }  // namespace opossum

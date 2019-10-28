@@ -134,14 +134,14 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   auto encoding_performed = std::atomic<bool>{false};
   const auto column_data_types = table->column_data_types();
 
-  // Encode chunks in parallel, using `hardware_concurrency + 1` worker
+  // Encode chunks in parallel, using `hardware_concurrency + 1` workers
   // Not using JobTasks here because we want parallelism even if the scheduler is disabled.
   auto next_chunk = std::atomic_uint{0};
+  const auto thread_count = std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
   auto threads = std::vector<std::thread>{};
+  threads.reserve(thread_count);
 
-  for (auto thread_id = 0u;
-       thread_id < std::min(static_cast<uint>(table->chunk_count()), std::thread::hardware_concurrency() + 1);
-       ++thread_id) {
+  for (auto thread_id = 0u; thread_id < thread_count; ++thread_id) {
     threads.emplace_back([&] {
       while (true) {
         auto my_chunk = next_chunk++;

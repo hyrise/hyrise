@@ -20,13 +20,13 @@ class MetaTableManager : public Noncopyable {
   std::shared_ptr<Table> generate_table(const std::string& table_name) const;
 
   // Generator methods for the different meta tables
-  std::shared_ptr<Table> generate_tables_table() const;
-  std::shared_ptr<Table> generate_columns_table() const;
-  std::shared_ptr<Table> generate_chunks_table() const;
-  std::shared_ptr<Table> generate_segments_table() const;
+  static std::shared_ptr<Table> generate_tables_table();
+  static std::shared_ptr<Table> generate_columns_table();
+  static std::shared_ptr<Table> generate_chunks_table();
+  static std::shared_ptr<Table> generate_segments_table();
 
   // Returns name.starts_with(META_PREFIX) as stdlibc++ does not support starts_with yet.
-  bool is_meta_table_name(const std::string& name) const;
+  static bool is_meta_table_name(const std::string& name);
 
  protected:
   friend class Hyrise;

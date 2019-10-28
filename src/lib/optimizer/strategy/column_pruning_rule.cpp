@@ -167,9 +167,8 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
     auto referenced_projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
     for (const auto& expression : projection_node->node_expressions) {
       // We keep all non-column expressions
-      if (expression->type != ExpressionType::LQPColumn) {
-        referenced_projection_expressions.emplace_back(expression);
-      } else if (referenced_columns.find(expression) != referenced_columns.end()) {
+      if (expression->type != ExpressionType::LQPColumn ||
+          referenced_columns.find(expression) != referenced_columns.end()) {
         referenced_projection_expressions.emplace_back(expression);
       }
     }

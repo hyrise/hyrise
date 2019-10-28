@@ -64,12 +64,11 @@ class SyntheticTableGenerator {
   std::shared_ptr<Table> generate_table(const size_t num_columns, const size_t num_rows, const ChunkOffset chunk_size,
                                         const SegmentEncodingSpec segment_encoding_spec = {EncodingType::Unencoded});
 
-  std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
-                                        const std::vector<DataType>& column_data_types, const size_t num_rows,
-                                        const ChunkOffset chunk_size,
-                                        const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
-                                        const std::optional<std::vector<std::string>>& column_names = std::nullopt,
-                                        const UseMvcc use_mvcc = UseMvcc::No);
+  static std::shared_ptr<Table> generate_table(
+      const std::vector<ColumnDataDistribution>& column_data_distributions,
+      const std::vector<DataType>& column_data_types, const size_t num_rows, const ChunkOffset chunk_size,
+      const std::optional<ChunkEncodingSpec>& segment_encoding_specs = std::nullopt,
+      const std::optional<std::vector<std::string>>& column_names = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No);
 
   /**
     * Function to create a typed value from an integer. The data generation creates integers with the requested
@@ -131,8 +130,6 @@ class SyntheticTableGenerator {
   }
 
  protected:
-  const size_t _num_columns = 10;
-  const size_t _num_rows = 40'000;
   const int _max_different_value = 10'000;
 };
 
