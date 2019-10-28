@@ -28,11 +28,9 @@ std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_refe
 
   const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
   const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-  if (column_reference.original_column_id() == INVALID_COLUMN_ID) {
-    os << "Invalid ColumnID";
-  } else {
-    os << table->column_name(column_reference.original_column_id());
-  }
+  Assert(column_reference.original_column_id() != INVALID_COLUMN_ID,
+    "Tried to print and uninitialized column or COUNT(*)");
+  os << table->column_name(column_reference.original_column_id());
 
   return os;
 }

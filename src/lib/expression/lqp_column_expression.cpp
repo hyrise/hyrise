@@ -45,7 +45,7 @@ DataType LQPColumnExpression::data_type() const {
   const auto original_node = column_reference.original_node();
   if (column_reference.original_column_id() == INVALID_COLUMN_ID) {
     // Handle COUNT(*)
-    return DataType::Int;
+    return DataType::Long;
   } else if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
     const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
     const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);

@@ -366,7 +366,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     auto argument_column_id = ColumnID{};
     if (column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID) {
       // Handle COUNT(*)
-      argument_column_id = column_expression->column_reference.original_column_id();
+      argument_column_id = INVALID_COLUMN_ID;
     } else {
       argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
     }
