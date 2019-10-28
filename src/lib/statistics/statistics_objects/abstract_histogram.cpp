@@ -78,7 +78,7 @@ typename AbstractHistogram<T>::HistogramWidthType AbstractHistogram<T>::bin_widt
   // For a float bin [0.0, 3.0] it is obvious that only two-thirds of the bin are smaller than 2:
   // 2 - 0 / (width=3) -> 0.6666
 
-  if constexpr (std::is_same_v<T, pmr_string>) {
+  if constexpr (std::is_same_v<T, pmr_string>) {  // NOLINT(bugprone-branch-clone)
     const auto repr_min = _domain.string_to_number(bin_minimum(index));
     const auto repr_max = _domain.string_to_number(bin_maximum(index));
     return repr_max - repr_min + 1u;

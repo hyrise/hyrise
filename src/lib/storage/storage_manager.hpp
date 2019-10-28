@@ -21,7 +21,7 @@ class AbstractLQPNode;
 class StorageManager : public Noncopyable {
  public:
   /**
-   * @defgroup Manage Tables
+   * @defgroup Manage Tables, not thread-safe
    * @{
    */
   void add_table(const std::string& name, std::shared_ptr<Table> table);
@@ -33,7 +33,7 @@ class StorageManager : public Noncopyable {
   /** @} */
 
   /**
-   * @defgroup Manage SQL VIEWs
+   * @defgroup Manage SQL VIEWs, not thread-safe
    * @{
    */
   void add_view(const std::string& name, const std::shared_ptr<LQPView>& view);
@@ -45,7 +45,7 @@ class StorageManager : public Noncopyable {
   /** @} */
 
   /**
-   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements
+   * @defgroup Manage prepared plans - comparable to SQL PREPAREd statements, not thread-safe
    * @{
    */
   void add_prepared_plan(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);

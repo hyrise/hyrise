@@ -174,7 +174,7 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
   return widths;
 }
 
-std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
+std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) {
   auto cell_string = boost::lexical_cast<std::string>(cell);
   DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
   if (cell_string.length() > max_width) {
@@ -183,7 +183,7 @@ std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width
   return cell_string;
 }
 
-std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) const {
+std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) {
   std::string segment_type;
   segment_type.reserve(8);
   segment_type += "<";

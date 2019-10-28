@@ -29,10 +29,11 @@ class Validate : public AbstractReadOnlyOperator {
   static bool is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id);
 
  private:
-  void _validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
-                        const ChunkID chunk_id_end, const TransactionID our_tid, const TransactionID snapshot_commit_id,
-                        std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex,
-                        const bool can_use_chunk_shortcut);
+  static void _validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
+                               const ChunkID chunk_id_end, const TransactionID our_tid,
+                               const TransactionID snapshot_commit_id,
+                               std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex
+                               const bool can_use_chunk_shortcut);
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> transaction_context) override;

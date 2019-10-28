@@ -74,5 +74,7 @@ class CsvParser {
   CsvMeta _meta;
 
   std::string _escaped_linebreak;
+
+  std::mutex _append_chunk_mutex;
 };
 }  // namespace opossum

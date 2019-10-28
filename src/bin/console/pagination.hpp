@@ -38,7 +38,7 @@ class Pagination {
    * The help screen is displayed on a separate ncurses window. When the help screen is closed (by pressing 'q'),
    * the separate window gets destroyed, and the previous contend is restored, showing the table as before.
    */
-  void _print_help_screen();
+  static void _print_help_screen();
 
   std::vector<std::string> _lines;
   size_t _size_x{0};

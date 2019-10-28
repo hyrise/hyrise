@@ -77,7 +77,7 @@ class JoinGraphBuilder final {
    * Returns whether a node of the given type is a JoinGraph vertex in all cases. This is true for all node types that
    * aren't Predicates, Joins or Unions.
    */
-  bool _lqp_node_type_is_vertex(const LQPNodeType node_type) const;
+  static bool _lqp_node_type_is_vertex(const LQPNodeType node_type);
 
   /**
    * Lookup which vertices an expression references

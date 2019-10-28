@@ -16,7 +16,9 @@ namespace opossum {
 
 template <typename T>
 RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> ranges)
-    : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(ranges)) {}
+    : AbstractStatisticsObject(data_type_from_type<T>()), ranges(std::move(ranges)) {
+      DebugAssert(!this->ranges.empty(), "Cannot construct empty RangeFilter");
+    }
 
 template <typename T>
 Cardinality RangeFilter<T>::estimate_cardinality(const PredicateCondition predicate_condition,
@@ -105,6 +107,8 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       sliced_ranges = ranges;
   }
 
+  DebugAssert(!sliced_ranges.empty(), "As does_not_contain was false, the sliced_ranges should not be empty");
+
   return std::make_shared<RangeFilter<T>>(sliced_ranges);
 }
 
@@ -122,7 +126,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
 
   if (dictionary.empty()) {
     // Empty dictionaries will, e.g., occur in segments with only NULLs - or empty segments.
-    return std::make_unique<RangeFilter<T>>(std::vector<std::pair<T, T>>{});
+    return nullptr;
   }
 
   if (dictionary.size() == 1) {
