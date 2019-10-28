@@ -58,6 +58,14 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 }
 
 void AbstractTask::schedule(NodeID preferred_node_id) {
+  // We need to make sure that data written by the scheduling thread is visible in the thread executing the task. While
+  // spawning a thread is an implicit barrier, we have no such guarantee when we simply add a task to a queue and it is
+  // executed by an unrelated thread. Thus, we add a memory barrier.
+  //
+  // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
+  // _done_condition_variable.
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+
   _mark_as_scheduled();
 
   Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
@@ -75,15 +83,12 @@ void AbstractTask::execute() {
   DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
-  // Besides being another sanity check, reading the atomic _is_scheduled is important for thread safety. We need to
-  // order writes in whoever scheduled this task with reads within this task. Usually, a memory fence would be the
-  // weapon of choice. However, as tsan does not identify standalone memory fences (as of Oct 2019), we need an atomic
+  std::atomic_thread_fence(std::memory_order_seq_cst);  // See documentation in AbstractTask::schedule
+
+  // As tsan does not identify the order imposed by standalone memory fences (as of Oct 2019), we need an atomic
   // read/write combination in whoever scheduled this task and the task itself. As schedule() (in "thread" A) writes to
   // _is_scheduled and this assert (potentially in "thread" B) reads it, it is guaranteed that no writes of whoever
   // spawned the task are pushed down to a point where this thread is already running.
-  //
-  // For the other direction (making sure that this task's writes are visible to whoever scheduled it), we have the
-  // _done_condition_variable.
   Assert(_is_scheduled, "Task should be have been scheduled before being executed");
 
   _on_execute();
