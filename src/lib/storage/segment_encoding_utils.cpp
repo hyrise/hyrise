@@ -66,7 +66,7 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
     case CompressedVectorType::SimdBp128:
       return VectorCompressionType::SimdBp128;
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 }  // namespace opossum

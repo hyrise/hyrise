@@ -49,6 +49,6 @@ class BaseDictionarySegment : public BaseEncodedSegment {
   /**
    * @brief Returns encoding specific null value ID
    */
-  virtual const ValueID null_value_id() const = 0;
+  virtual ValueID null_value_id() const = 0;
 };
 }  // namespace opossum

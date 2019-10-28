@@ -149,7 +149,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    *
    * @param callback called when transaction is committed
    */
-  void _mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback);
+  void _mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback);
 
   /**@}*/
 

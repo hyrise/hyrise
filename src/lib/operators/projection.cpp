@@ -20,7 +20,10 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, in), expressions(expressions) {}
 
-const std::string Projection::name() const { return "Projection"; }
+const std::string& Projection::name() const {
+  static const auto name = std::string{"Projection"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

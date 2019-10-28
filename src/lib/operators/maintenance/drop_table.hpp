@@ -9,8 +9,8 @@ class DropTable : public AbstractReadOnlyOperator {
  public:
   DropTable(const std::string& table_name, bool if_exists);
 
-  const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
+  const std::string& name() const override;
+  std::string description(DescriptionMode description_mode) const override;
 
   const std::string table_name;
   const bool if_exists;

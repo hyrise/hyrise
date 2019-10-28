@@ -35,7 +35,7 @@ std::string AbstractTask::description() const {
 
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
-void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor) {
+void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
   DebugAssert((!_is_scheduled), "Possible race: Don't set dependencies after the Task was scheduled");
 
   successor->_pending_predecessors++;
@@ -103,6 +103,11 @@ void AbstractTask::_on_predecessor_done() {
     auto worker = Worker::get_this_thread_worker();
 
     if (worker) {
+      // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
+      // the successor is not properly scheduled yet. At the time of writing, this did not make a difference, but for
+      // the sake of a clearly defined life cycle, we wait for the task to be scheduled.
+      if (!_is_scheduled) return;
+
       worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
     } else {
       if (_is_scheduled) execute();

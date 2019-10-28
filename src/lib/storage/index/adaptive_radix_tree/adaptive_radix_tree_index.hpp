@@ -47,8 +47,6 @@ class AdaptiveRadixTreeIndex : public AbstractIndex {
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;
 
-  AdaptiveRadixTreeIndex& operator=(AdaptiveRadixTreeIndex&&) = default;
-
   virtual ~AdaptiveRadixTreeIndex() = default;
 
   /**

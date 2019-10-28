@@ -1,5 +1,3 @@
-#include <json.hpp>
-
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
 #include <fstream>
@@ -218,9 +216,11 @@ void BenchmarkRunner::_benchmark_ordered() {
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
-    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
+    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
-    const auto duration_per_item = static_cast<float>(duration_seconds) / result.successful_runs.size();
+    const auto num_successful_runs = result.successful_runs.size();
+    const auto duration_per_item =
+        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / num_successful_runs : NAN;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
@@ -265,9 +265,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
       },
       SchedulePriority::High);
 
-  // No need to check if the benchmark uses the scheduler or not as this method executes tasks immediately if the
-  // scheduler is not set.
-  Hyrise::get().scheduler()->schedule_tasks<JobTask>({task});
+  task->schedule();
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
@@ -352,7 +350,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
     const auto reported_item_duration_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000;
+    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
 
     // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
@@ -414,11 +412,6 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("sql_metrics", "Track SQL metrics (parse time etc.) for each SQL query and add it to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")); // NOLINT
-
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    cli_options.add_options()
-      ("jit", "Enable just-in-time query compilation", cxxopts::value<bool>()->default_value("false")); // NOLINT
-  }
   // clang-format on
 
   return cli_options;
@@ -454,7 +447,6 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
       {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},
       {"using_scheduler", config.enable_scheduler},
-      {"using_jit", config.enable_jit},
       {"cores", config.cores},
       {"clients", config.clients},
       {"verify", config.verify},

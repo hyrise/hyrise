@@ -13,10 +13,11 @@ extern "C" {
 #include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "table_builder.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 extern char** asc_date;
-extern seed_t seed[];
+extern seed_t seed[];  // NOLINT
 
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #pragma clang diagnostic ignored "-Wfloat-conversion"
@@ -127,13 +128,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
-      const auto table_name = table_file.path().stem();
+    for (const auto& table_file : list_directory(cache_directory)) {
+      const auto table_name = table_file.stem();
       Timer timer;
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
 
       BenchmarkTableInfo table_info;
-      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.table = ImportBinary::read_binary(table_file);
       table_info.loaded_from_binary = true;
       table_info_by_name[table_name] = table_info;
 
@@ -210,7 +211,26 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
                             convert_money(part.retailprice), part.comment);
 
+    // Some scale factors (e.g., 0.05) are not supported by tpch-dbgen as they produce non-unique partkey/suppkey
+    // combinations. The reason is probably somewhere in the magic in PART_SUPP_BRIDGE. As the partkey is
+    // ascending, those are easy to identify:
+
+    DSS_HUGE last_partkey = {};
+    auto suppkeys = std::vector<DSS_HUGE>{};
+
     for (const auto& partsupp : part.s) {
+      {
+        // Make sure we do not generate non-unique combinations (see above)
+        if (partsupp.partkey != last_partkey) {
+          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order");
+          last_partkey = partsupp.partkey;
+          suppkeys.clear();
+        }
+        Assert(std::find(suppkeys.begin(), suppkeys.end(), partsupp.suppkey) == suppkeys.end(),
+               "Scale factor unsupported by tpch-dbgen. Consider choosing a \"round\" number.");
+        suppkeys.emplace_back(partsupp.suppkey);
+      }
+
       partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, convert_money(partsupp.scost),
                                   partsupp.comment);
     }

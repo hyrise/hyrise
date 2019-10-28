@@ -24,7 +24,7 @@ class Print : public AbstractReadOnlyOperator {
   explicit Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out = std::cout,
                  PrintFlags flags = PrintFlags::None);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   static void print(const std::shared_ptr<const Table>& table, PrintFlags flags = PrintFlags::None,
                     std::ostream& out = std::cout);

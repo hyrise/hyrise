@@ -30,13 +30,8 @@ MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, cons
           auto right_accessors = _create_accessors<RightColumnDataType>(right, predicate.column_ids.second);
           auto join_mode_copy = join_mode;
 
-          // We need to do this assignment to work around an internal compiler error.
-          // The compiler error would occur, if you tried to directly access _comparators within the following
-          // lambda. This error is discussed at https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740
-          auto& comparators = _comparators;
-
           with_comparator(predicate.predicate_condition, [&](auto comparator) {
-            comparators.emplace_back(
+            _comparators.emplace_back(
                 std::make_unique<FieldComparator<decltype(comparator), LeftColumnDataType, RightColumnDataType>>(
                     comparator, join_mode_copy, std::move(left_accessors), std::move(right_accessors)));
           });

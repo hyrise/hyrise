@@ -97,7 +97,7 @@ class LZ4Segment : public BaseEncodedSegment {
                       const size_t num_elements);
 
   const std::optional<pmr_vector<bool>>& null_values() const;
-  const std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
+  std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
 
   /**
@@ -105,11 +105,11 @@ class LZ4Segment : public BaseEncodedSegment {
    * @{
    */
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   /**
    * Decompresses the whole segment at once into a single vector.

@@ -34,7 +34,7 @@ SegmentEncodingSpec get_segment_encoding_spec(const BaseEncodedSegment& base_enc
         return {base_encoded_segment.encoding_type(), VectorCompressionType::SimdBp128};
     }
 
-    Fail("GCC thinks this is reachable");
+    Fail("Invalid enum value");
   } else {
     return {base_encoded_segment.encoding_type()};
   }
