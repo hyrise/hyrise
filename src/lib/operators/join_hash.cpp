@@ -45,9 +45,12 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
       _radix_bits(radix_bits) {}
 
-const std::string JoinHash::name() const { return "JoinHash"; }
+const std::string& JoinHash::name() const {
+  static const auto name = std::string{"JoinHash"};
+  return name;
+}
 
-const std::string JoinHash::description(DescriptionMode description_mode) const {
+std::string JoinHash::description(DescriptionMode description_mode) const {
   std::ostringstream stream;
   stream << AbstractJoinOperator::description(description_mode);
   stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
@@ -96,9 +99,9 @@ size_t JoinHash::calculate_radix_bits(const size_t build_relation_size, const si
   // slightly skewed data distributions and aim for a fill level of 80%.
   const auto complete_hash_map_size =
       // number of items in map
-      build_relation_size *
+      static_cast<double>(build_relation_size) *
       // key + value (and one byte overhead, see link above)
-      sizeof(uint32_t) / 0.8;
+      static_cast<double>(sizeof(uint32_t)) / 0.8;
 
   auto cluster_count = std::max(1.0, complete_hash_map_size / l2_cache_max_usable);
 

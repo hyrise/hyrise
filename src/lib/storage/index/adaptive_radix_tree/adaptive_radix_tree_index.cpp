@@ -130,7 +130,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
   // call recursively for each non-empty partition and gather the children
   std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>> children;
 
-  for (uint16_t partition_id = 0; partition_id < partitions.size(); ++partition_id) {
+  for (auto partition_id = size_t{0}; partition_id < partitions.size(); ++partition_id) {
     if (!partitions[partition_id].empty()) {
       auto child =
           std::make_pair(static_cast<uint8_t>(partition_id), _bulk_insert(partitions[partition_id], depth + 1, it));

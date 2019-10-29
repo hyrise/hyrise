@@ -30,17 +30,17 @@ class ValueSegment : public BaseValueSegment {
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
   // Returns whether a value is NULL
   bool is_null(const ChunkOffset chunk_offset) const;
 
   // return the value at a certain position.
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
-  const T get(const ChunkOffset chunk_offset) const;
+  T get(const ChunkOffset chunk_offset) const;
 
   // return the value at a certain position.
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     // Column supports null values and value is null
     if (is_nullable() && (*_null_values)[chunk_offset]) {
@@ -72,7 +72,7 @@ class ValueSegment : public BaseValueSegment {
   pmr_concurrent_vector<bool>& null_values() final;
 
   // Return the number of entries in the segment.
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   // Copies a ValueSegment using a new allocator. This is useful for placing the ValueSegment on a new NUMA node.
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;

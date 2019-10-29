@@ -14,7 +14,6 @@
 #include "cxxopts.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
-#include "json.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -97,7 +96,7 @@ int main(int argc, char* argv[]) {
   auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator),
                                           opossum::BenchmarkRunner::create_context(*config)};
-  if (config->verify && benchmark_runner.sqlite_wrapper) {
+  if (config->verify) {
     add_indices_to_sqlite("resources/benchmark/tpcds/schema.sql", "resources/benchmark/tpcds/create_indices.sql",
                           benchmark_runner.sqlite_wrapper);
   }

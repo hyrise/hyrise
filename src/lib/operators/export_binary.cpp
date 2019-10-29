@@ -130,7 +130,10 @@ void ExportBinary::write_binary(const Table& table, const std::string& filename)
   }
 }
 
-const std::string ExportBinary::name() const { return "ExportBinary"; }
+const std::string& ExportBinary::name() const {
+  static const auto name = std::string{"ExportBinary"};
+  return name;
+}
 
 std::shared_ptr<const Table> ExportBinary::_on_execute() {
   write_binary(*input_table_left(), _filename);

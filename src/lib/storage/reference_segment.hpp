@@ -24,9 +24,9 @@ class ReferenceSegment : public BaseSegment {
   ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
                    const std::shared_ptr<const PosList>& pos);
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   const std::shared_ptr<const PosList>& pos_list() const;
   const std::shared_ptr<const Table>& referenced_table() const;

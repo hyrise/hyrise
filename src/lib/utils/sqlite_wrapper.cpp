@@ -25,8 +25,10 @@ using namespace opossum;  // NOLINT
 namespace opossum {
 
 SQLiteWrapper::SQLiteWrapper() {
-  const auto r = sqlite3_open(":memory:", &_db);
-  if (r != SQLITE_OK) {
+  // Explicity set parallel mode. On Linux it seems to be the default, on Mac, it seems to make a difference.
+  const auto ret =
+      sqlite3_open_v2(":memory:", &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr);  // NOLINT
+  if (ret != SQLITE_OK) {
     sqlite3_close(_db);
     Fail("Cannot open database: " + std::string(sqlite3_errmsg(_db)));
   }
@@ -54,7 +56,6 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
         column_types.emplace_back("TEXT");
         break;
       case DataType::Null:
-      case DataType::Bool:
         Fail("SQLiteWrapper: column type not supported.");
         break;
     }
@@ -132,7 +133,6 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
               // clang-format on
             } break;
             case DataType::Null:
-            case DataType::Bool:
               Fail("SQLiteWrapper: column type not supported.");
               break;
           }

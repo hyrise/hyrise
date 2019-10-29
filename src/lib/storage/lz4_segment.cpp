@@ -45,7 +45,7 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::option
       _num_elements{num_elements} {}
 
 template <typename T>
-const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
@@ -57,7 +57,7 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
 }
 
 template <typename T>
-const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   if (_null_values && (*_null_values)[chunk_offset]) {
     return std::nullopt;
   }
@@ -71,7 +71,7 @@ const std::optional<pmr_vector<bool>>& LZ4Segment<T>::null_values() const {
 }
 
 template <typename T>
-const std::optional<std::unique_ptr<BaseVectorDecompressor>> LZ4Segment<T>::string_offset_decompressor() const {
+std::optional<std::unique_ptr<BaseVectorDecompressor>> LZ4Segment<T>::string_offset_decompressor() const {
   if (_string_offsets && *_string_offsets) {
     return (*_string_offsets)->create_base_decompressor();
   } else {
@@ -85,8 +85,8 @@ const pmr_vector<char>& LZ4Segment<T>::dictionary() const {
 }
 
 template <typename T>
-size_t LZ4Segment<T>::size() const {
-  return _num_elements;
+ChunkOffset LZ4Segment<T>::size() const {
+  return static_cast<ChunkOffset>(_num_elements);
 }
 
 template <typename T>

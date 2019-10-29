@@ -27,8 +27,8 @@ namespace opossum {
  * of the BinaryPredicateExpression
  *
  **/
-const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
-    const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) const {
+BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
+    const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) {
   auto type = ColumnBoundaryType::None;
   const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->left_operand());
   auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->right_operand());
@@ -110,8 +110,8 @@ const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_bounda
   };
 }
 
-const BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(
-    const std::shared_ptr<ColumnBoundary>& column_boundary) const {
+BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(
+    const std::shared_ptr<ColumnBoundary>& column_boundary) {
   auto type = ColumnBoundaryType::None;
   switch (column_boundary->type) {
     case ColumnBoundaryType::UpperBoundaryInclusive:
@@ -158,7 +158,7 @@ static PredicateCondition get_between_predicate_condition(bool left_inclusive, b
  * Furthermore BinaryPredicateExpressions which are obsolete after the substitution
  * are removed.
 **/
-void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
+void BetweenCompositionRule::_replace_predicates(const std::vector<std::shared_ptr<PredicateNode>>& predicates) {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();
