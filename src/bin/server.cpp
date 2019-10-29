@@ -35,10 +35,7 @@ int main(int argc, char* argv[]) {
   boost::system::error_code error;
   const auto address = boost::asio::ip::make_address(parsed_options["address"].as<std::string>(), error);
 
-  if (error) {
-    Fail("Not a valid IPv4 address: " + parsed_options["address"].as<std::string>() + ", terminating...");
-    return error.value();
-  }
+  Assert(!error, "Not a valid IPv4 address: " + parsed_options["address"].as<std::string>() + ", terminating...");
 
   // Set scheduler so that the server can execute the tasks on separate threads.
   opossum::Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
