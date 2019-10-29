@@ -9,7 +9,10 @@ namespace opossum {
 TableWrapper::TableWrapper(const std::shared_ptr<const Table>& table)
     : AbstractReadOnlyOperator(OperatorType::TableWrapper), table(table) {}
 
-const std::string TableWrapper::name() const { return "TableWrapper"; }
+const std::string& TableWrapper::name() const {
+  static const auto name = std::string{"TableWrapper"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> TableWrapper::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,

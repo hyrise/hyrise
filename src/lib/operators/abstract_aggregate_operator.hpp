@@ -168,9 +168,9 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
 
   const std::vector<ColumnID>& groupby_column_ids() const;
 
-  const std::string name() const override = 0;
+  const std::string& name() const override = 0;
 
-  const std::string description(DescriptionMode description_mode) const override;
+  std::string description(DescriptionMode description_mode) const override;
 
  protected:
   void _validate_aggregates() const;

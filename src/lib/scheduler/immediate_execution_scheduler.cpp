@@ -14,6 +14,8 @@ const std::vector<std::shared_ptr<TaskQueue>>& ImmediateExecutionScheduler::queu
 
 void ImmediateExecutionScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                            SchedulePriority priority) {
+  DebugAssert(task->is_scheduled(), "Don't call ImmediateExecutionScheduler::schedule(), call schedule() on the task");
+
   // If the task is not ready yet, it will be executed once its predecessors are done.
   if (task->is_ready()) task->execute();
 }

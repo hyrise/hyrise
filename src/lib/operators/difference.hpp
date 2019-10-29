@@ -19,7 +19,7 @@ class Difference : public AbstractReadOnlyOperator {
   Difference(const std::shared_ptr<const AbstractOperator>& left_in,
              const std::shared_ptr<const AbstractOperator>& right_in);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -29,6 +29,6 @@ class Difference : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
-  void _append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value);
+  static void _append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value);
 };
 }  // namespace opossum

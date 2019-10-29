@@ -15,7 +15,7 @@ class CreateView : public AbstractReadOnlyOperator {
  public:
   CreateView(const std::string& view_name, const std::shared_ptr<LQPView>& view, bool if_not_exists);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   const std::string& view_name() const;
   bool if_not_exists() const;

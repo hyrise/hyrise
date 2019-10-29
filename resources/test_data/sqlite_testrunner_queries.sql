@@ -11,6 +11,7 @@ SELECT 22 / 5 AS col;
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
 SELECT * FROM mixed WHERE a > d AND b > 1;
+SELECT * FROM mixed WHERE a = d;
 SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
@@ -68,6 +69,7 @@ SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 90;
 SELECT * FROM id_int_int_int_100 WHERE a > 20 AND a <= 91;
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a < 91;
 SELECT * FROM id_int_int_int_100 WHERE a > 20 AND a < 91;
+SELECT * FROM id_int_int_int_100 WHERE a = 20 AND b = 93; -- negative example
 
 SELECT * FROM id_int_int_int_100 WHERE 90 >= a AND 20 <= a;
 SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 <= a;
@@ -77,6 +79,17 @@ SELECT * FROM id_int_int_int_100 WHERE 91 > a AND 20 < a;
 -- Scans with potential for predicate pruning
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 40 OR b >= 50 AND b <= 95;
 SELECT * FROM id_int_int_int_100 WHERE a >= 20 AND a <= 40 AND c <= 35 AND b >= 49 AND a >= 21 AND b <= 95 AND c <= 40 AND c >= 23;
+
+-- Scans with potential for predicate split-up and predicate merge
+SELECT a FROM mixed WHERE 1 OR 3 > 2;
+SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_100 AS c WHERE c.b = a.b)
+SELECT * FROM mixed AS a WHERE EXISTS (SELECT * FROM id_int_int_int_50 AS b WHERE b.b = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS c WHERE c.b + 1 = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS d WHERE d.b + 2 = a.b) OR EXISTS (SELECT * FROM id_int_int_int_50 AS e WHERE e.b + 3 = a.b)
+SELECT * FROM (SELECT a.a FROM id_int_int_int_100 AS a, mixed AS b WHERE a.a = b.b OR a.b = b.c) r JOIN (SELECT a.b FROM id_int_int_int_100 AS a, mixed AS b WHERE a.a = b.b OR a.b = b.c) s ON r.a = s.b
+SELECT * FROM mixed WHERE (b > 10 OR b < 8) AND (c <= 7 OR 11 = c)
+SELECT * FROM (SELECT b, c FROM mixed WHERE b < c AND b = 19) r WHERE (b > 10 OR b < 8) AND (c <= 60 OR 11 = c) OR ((b = 5 AND c = 7) AND 13 = 13)
+SELECT b FROM mixed WHERE (2 > 1 OR 2 > 0) AND b = 1;
+SELECT * FROM (SELECT a FROM id_int_int_int_50 WHERE a < 1 OR 3 > 2) AS S WHERE a < 10 OR 30 > 20;
+SELECT * FROM (SELECT * FROM id_int_int_int_50 WHERE a < 1 OR 3 > 2) AS L JOIN (SELECT * FROM id_int_int_int_50 WHERE a < 10 OR 30 > 20) AS R ON L.a = R.a;
 
 -- Projection
 SELECT a FROM mixed;

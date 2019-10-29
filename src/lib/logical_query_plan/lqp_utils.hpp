@@ -66,10 +66,9 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes. It traverses the LQP from the
  * begin node until it reaches the end node if set or an LQP node which is a not a Predicate, Union, Projection, Sort,
  * Validate or Limit node. The end node is necessary if a certain Predicate should not be part of the created expression
- * (e.g., the jit-aware LQP translator uses it to prevent that non-jittable Predicate nodes are added to the boolean
- * expression used to create jittable expressions). Subsequent Predicate nodes are turned into a LogicalExpression with
- * AND. UnionNodes into a LogicalExpression with OR. Projection, Sort, Validate or Limit LQP nodes are ignored during
- * the traversal.
+ * 
+ * Subsequent Predicate nodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
+ * Projection, Sort, Validate or Limit LQP nodes are ignored during the traversal.
  *
  *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression
  *
@@ -99,8 +98,8 @@ enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
  * Calls the passed @param visitor on @param lqp and recursively on its INPUTS. This will NOT visit subqueries.
- * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
- * as well.
+ * The visitor returns `LQPVisitation`, indicating whether the current nodes's input should be visited
+ * as well. The algorithm is breadth-first search.
  * Each node is visited exactly once.
  *
  * @tparam Visitor      Functor called with every node as a param.
@@ -128,15 +127,17 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
   }
 }
 
+enum class LQPUpwardVisitation { VisitOutputs, DoNotVisitOutputs };
+
 /**
  * Calls the passed @param visitor on @param lqp and recursively on each node that uses it as an OUTPUT. If the LQP is
  * used as a subquery, the users of the subquery are not visited.
- * The visitor returns `ExpressionVisitation`, indicating whether the current nodes's input should be visited
+ * The visitor returns `LQPUpwardVisitation`, indicating whether the current nodes's input should be visited
  * as well.
  * Each node is visited exactly once.
  *
  * @tparam Visitor      Functor called with every node as a param.
- *                      Returns `LQPVisitation`
+ *                      Returns `LQPUpwardVisitation`
  */
 template <typename Visitor>
 void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visitor) {
@@ -151,7 +152,7 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
 
     if (!visited_nodes.emplace(node).second) continue;
 
-    if (visitor(node) == LQPVisitation::VisitInputs) {
+    if (visitor(node) == LQPUpwardVisitation::VisitOutputs) {
       for (const auto& output : node->outputs()) node_queue.push(output);
     }
   }

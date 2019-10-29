@@ -14,7 +14,7 @@ class UnionAll : public AbstractReadOnlyOperator {
  public:
   UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,
            const std::shared_ptr<const AbstractOperator>& right_in);
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

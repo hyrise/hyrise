@@ -1,2 +1,0 @@
-# Ignore false positive in check whether a Jit pointer is valid
-interceptor_via_fun:opossum::JitKnownRuntimePointer::is_valid(*)
