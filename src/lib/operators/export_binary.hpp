@@ -5,9 +5,10 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "storage/abstract_segment_visitor.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/run_length_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -72,7 +73,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Row count             | ChunkOffset                           |  4
    *
    * Next, it dumps the contents of the segments in the respective format (depending on the type
-   * of the segment, such as ReferenceSegment, DictionarySegment, ValueSegment).
+   * of the segment, such as ReferenceSegment, DictionarySegment, ValueSegment, RunLengthSegment).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -81,17 +82,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    */
   static void _write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id);
 
-  template <typename T>
-  class ExportBinaryVisitor;
+  static void _write_segment(const BaseEncodedSegment& base_segment, std::ofstream& ofstream);
 
-  struct ExportContext : SegmentVisitorContext {
-    explicit ExportContext(std::ofstream& ofstream) : ofstream(ofstream) {}
-    std::ofstream& ofstream;
-  };
-};
-
-template <typename T>
-class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
   /**
    * Value Segments are dumped with the following layout:
    *
@@ -114,7 +106,8 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_segment(const BaseValueSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) final;
+  template <typename T>
+  static void _write_segment(const ValueSegment<T>& base_segment, std::ofstream& ofstream);
 
   /**
    * Reference Segments are dumped with the following layout, which is similar to value segments:
@@ -135,8 +128,7 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_segment(const ReferenceSegment& ref_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  static void _write_segment(const ReferenceSegment& ref_segment, std::ofstream& ofstream);
 
   /**
    * Dictionary Segments are dumped with the following layout:
@@ -160,11 +152,7 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_segment(const BaseDictionarySegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
-
-  void handle_segment(const BaseEncodedSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  static void _write_segment(const BaseDictionarySegment& base_segment, std::ofstream& ofstream);
 
   /**
    * RunLength Segments are dumped with the following layout:
@@ -184,12 +172,11 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * @param base_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_segment(const BaseRunLengthSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+  template <typename T>
+  static void _write_segment(const RunLengthSegment<T>& base_segment, std::ofstream& ofstream);
 
- private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.
   static void _export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
-                                       const BaseCompressedVector& attribute_vector);
+                                        const BaseCompressedVector& attribute_vector);
 };
 }  // namespace opossum

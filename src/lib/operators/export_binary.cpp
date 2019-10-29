@@ -152,90 +152,72 @@ void ExportBinary::_write_header(const Table& table, std::ofstream& ofstream) {
 void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
   const auto chunk = table.get_chunk(chunk_id);
   Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
-
-  const auto context = std::make_shared<ExportContext>(ofstream);
-
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
   // Iterating over all segments of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    auto visitor =
-        make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table.column_data_type(column_id));
     resolve_data_and_segment_type(*chunk->get_segment(column_id),
                                   [&](const auto data_type_t, const auto& resolved_segment) {
-                                    visitor->handle_segment(resolved_segment, context);
+                                    _write_segment(resolved_segment, ofstream);
                                   });
   }
 }
 
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseValueSegment& base_segment,
-                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& segment = static_cast<const ValueSegment<T>&>(base_segment);
+[[noreturn]] void ExportBinary::_write_segment(const BaseEncodedSegment& base_segment, std::ofstream& ofstream) {
+  Fail("Binary export for segment type is not supported yet.");
+}
 
-  export_value(context->ofstream, EncodingType::Unencoded);
+
+template<typename T>
+void ExportBinary::_write_segment(const ValueSegment<T>& segment, std::ofstream& ofstream) {
+  export_value(ofstream, EncodingType::Unencoded);
 
   if (segment.is_nullable()) {
-    export_values(context->ofstream, segment.null_values());
+    export_values(ofstream, segment.null_values());
   }
 
-  export_values(context->ofstream, segment.values());
+  export_values(ofstream, segment.values());
 }
 
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment& ref_segment,
-                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<ExportContext>(base_context);
-
+void ExportBinary::_write_segment(const ReferenceSegment& ref_segment, std::ofstream& ofstream) {
   // We materialize reference segments and save them as value segments
-  export_value(context->ofstream, EncodingType::Unencoded);
+  export_value(ofstream, EncodingType::Unencoded);
 
-  // Unfortunately, we have to iterate over all values of the reference segment
-  // to materialize its contents. Then we can write them to the file
-  for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
-    export_value(context->ofstream, boost::get<T>(ref_segment[row]));
+  if (ref_segment.data_type() == DataType::String) {
+    if (ref_segment.size() == 0) return;
+
+    std::stringstream values;
+    pmr_string value;
+    pmr_vector<size_t> string_lengths(ref_segment.size());
+
+    // We export the values materialized
+    for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
+      value = boost::get<pmr_string>(ref_segment[row]);
+      string_lengths[row] = value.length();
+      values << value;
+    }
+
+    export_values(ofstream, string_lengths);
+    ofstream << values.rdbuf();
+
+  } else {
+    resolve_data_type(ref_segment.data_type(), [&](auto type) {
+      using SegmentDataType = typename decltype(type)::type;
+      // Unfortunately, we have to iterate over all values of the reference segment
+      // to materialize its contents. Then we can write them to the file
+      for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
+        export_value(ofstream, boost::get<SegmentDataType>(ref_segment[row]));
+      }
+    });
   }
 }
 
-// handle_segment implementation for string segments
-template <>
-void ExportBinary::ExportBinaryVisitor<pmr_string>::handle_segment(
-    const ReferenceSegment& ref_segment, std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<ExportContext>(base_context);
-
-  // We materialize reference segments and save them as value segments
-  export_value(context->ofstream, EncodingType::Unencoded);
-
-  // If there is no data, we can skip all of the coming steps.
-  if (ref_segment.size() == 0) return;
-
-  std::stringstream values;
-  pmr_string value;
-  pmr_vector<size_t> string_lengths(ref_segment.size());
-
-  // We export the values materialized
-  for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
-    value = boost::get<pmr_string>(ref_segment[row]);
-    string_lengths[row] = value.length();
-    values << value;
-  }
-
-  export_values(context->ofstream, string_lengths);
-  context->ofstream << values.rdbuf();
-}
-
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySegment& base_segment,
-                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<ExportContext>(base_context);
-
+void ExportBinary::_write_segment(const BaseDictionarySegment& base_segment, std::ofstream& ofstream) {
   Assert(base_segment.compressed_vector_type(),
          "Expected DictionarySegment to use vector compression for attribute vector");
   Assert(is_fixed_size_byte_aligned(*base_segment.compressed_vector_type()),
          "Does only support fixed-size byte-aligned compressed attribute vectors.");
-
-  export_value(context->ofstream, EncodingType::Dictionary);
+  export_value(ofstream, EncodingType::Dictionary);
 
   const auto attribute_vector_width = [&]() {
     Assert(base_segment.compressed_vector_type(),
@@ -252,59 +234,50 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
     }
   }();
 
-  // Write attribute vector width
-  export_value(context->ofstream, static_cast<const AttributeVectorWidth>(attribute_vector_width));
+  resolve_data_type(base_segment.data_type(), [&](auto type) {
+    using SegmentDataType = typename decltype(type)::type;
 
-  if (base_segment.encoding_type() == EncodingType::FixedStringDictionary) {
-    const auto& segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(base_segment);
+    // Write attribute vector width
+    export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
 
-    // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
-    export_values(context->ofstream, *segment.dictionary());
-  } else {
-    const auto& segment = static_cast<const DictionarySegment<T>&>(base_segment);
+    if (base_segment.encoding_type() == EncodingType::FixedStringDictionary) {
+      const auto& segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(base_segment);
 
-    // Write the dictionary size and dictionary
-    export_value(context->ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
-    export_values(context->ofstream, *segment.dictionary());
-  }
+      // Write the dictionary size and dictionary
+      export_value(ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
+      export_values(ofstream, *segment.dictionary());
+    } else {
+      const auto& segment = static_cast<const DictionarySegment<SegmentDataType>&>(base_segment);
 
+      // Write the dictionary size and dictionary
+      export_value(ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
+      export_values(ofstream, *segment.dictionary());
+    }
+  });
   // Write attribute vector
   Assert(base_segment.compressed_vector_type(),
          "Expected DictionarySegment to use vector compression for attribute vector");
-  _export_attribute_vector(context->ofstream, *base_segment.compressed_vector_type(), *base_segment.attribute_vector());
+  _export_attribute_vector(ofstream, *base_segment.compressed_vector_type(), *base_segment.attribute_vector());
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseRunLengthSegment& base_segment,
-                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
-  auto context = std::static_pointer_cast<ExportContext>(base_context);
-
-  export_value(context->ofstream, EncodingType::RunLength);
-
-  const auto& segment = static_cast<const RunLengthSegment<T>&>(base_segment);
+void ExportBinary::_write_segment(const RunLengthSegment<T>& base_segment, std::ofstream& ofstream) {
+  export_value(ofstream, EncodingType::RunLength);
 
   // Write size and values
-  export_value(context->ofstream, static_cast<uint32_t>(segment.values()->size()));
-  export_values(context->ofstream, *segment.values());
+  export_value(ofstream, static_cast<uint32_t>(base_segment.values()->size()));
+  export_values(ofstream, *base_segment.values());
 
   // Write NULL values
-  export_values(context->ofstream, *segment.null_values());
+  export_values(ofstream, *base_segment.null_values());
 
   // Write end positions
-  export_values(context->ofstream, *segment.end_positions());
+  export_values(ofstream, *base_segment.end_positions());
 }
 
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseEncodedSegment& base_segment,
-                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
-  Fail("Binary export not implemented yet for encoded segments.");
-}
-
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::_export_attribute_vector(std::ofstream& ofstream,
-                                                                    const CompressedVectorType type,
-                                                                    const BaseCompressedVector& attribute_vector) {
+void ExportBinary::_export_attribute_vector(std::ofstream& ofstream,
+                                            const CompressedVectorType type,
+                                            const BaseCompressedVector& attribute_vector) {
   switch (type) {
     case CompressedVectorType::FixedSize4ByteAligned:
       export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(attribute_vector).data());
@@ -319,5 +292,4 @@ void ExportBinary::ExportBinaryVisitor<T>::_export_attribute_vector(std::ofstrea
       Fail("Any other type should have been caught before.");
   }
 }
-
 }  // namespace opossum
