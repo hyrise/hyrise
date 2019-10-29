@@ -363,13 +363,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
     // Always resolve the aggregate to a column, even if it is a Value. The Aggregate operator only takes columns as
     // arguments
-    if (aggregate_expression->argument()) {
-      const auto argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
-      aggregate_column_definitions.emplace_back(argument_column_id, aggregate_expression->aggregate_function);
-
+    const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*aggregate_expression->argument());
+    auto argument_column_id = ColumnID{};
+    if (column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID) {
+      // Handle COUNT(*)
+      argument_column_id = INVALID_COLUMN_ID;
     } else {
-      aggregate_column_definitions.emplace_back(std::nullopt, aggregate_expression->aggregate_function);
+      argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
     }
+    aggregate_column_definitions.emplace_back(argument_column_id, aggregate_expression->aggregate_function);
   }
 
   // Create GroupByColumns from the GroupBy expressions
