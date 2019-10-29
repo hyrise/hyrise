@@ -245,7 +245,7 @@ enum class UseMvcc : bool { Yes = true, No = false };
 
 enum class CleanupTemporaries : bool { Yes = true, No = false };
 
-enum class IgnoreNullTerminator : bool { Yes = true, No = false };
+enum class HasNullTerminator : bool { Yes = true, No = false };
 
 enum class SendExecutionInfo : bool { Yes = true, No = false };
 

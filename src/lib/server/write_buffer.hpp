@@ -43,8 +43,7 @@ class WriteBuffer {
   }
 
   // Put string into the buffer. If the string is longer than the buffer itself the buffer will flush automatically.
-  void put_string(const std::string& value,
-                  const IgnoreNullTerminator ignore_null_terminator = IgnoreNullTerminator::No);
+  void put_string(const std::string& value, const HasNullTerminator has_null_terminator = HasNullTerminator::Yes);
 
   // Flush whole buffer, e. g. after a finished request
   void flush(const size_t bytes_required = 0);

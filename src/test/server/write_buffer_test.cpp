@@ -22,13 +22,13 @@ class WriteBufferTest : public BaseTest {
 
 TEST_F(WriteBufferTest, Full) {
   EXPECT_FALSE(_write_buffer->full());
-  _write_buffer->put_string(std::string(_write_buffer->maximum_capacity(), 'a'), IgnoreNullTerminator::Yes);
+  _write_buffer->put_string(std::string(_write_buffer->maximum_capacity(), 'a'), HasNullTerminator::No);
   EXPECT_TRUE(_write_buffer->full());
 }
 
 TEST_F(WriteBufferTest, GetSize) {
   EXPECT_EQ(_write_buffer->size(), 0u);
-  _write_buffer->put_string("random", IgnoreNullTerminator::Yes);
+  _write_buffer->put_string("random", HasNullTerminator::No);
   EXPECT_EQ(_write_buffer->size(), 6u);
 }
 
@@ -59,7 +59,7 @@ TEST_F(WriteBufferTest, WriteValues) {
 
 TEST_F(WriteBufferTest, WriteString) {
   _write_buffer->put_string("somerandom");
-  _write_buffer->put_string("string", IgnoreNullTerminator::Yes);
+  _write_buffer->put_string("string", HasNullTerminator::No);
   const std::string whole_content = {"somerandom\0string", 17};
   _write_buffer->flush();
   EXPECT_EQ(_mocked_socket->read(), whole_content);
@@ -67,7 +67,7 @@ TEST_F(WriteBufferTest, WriteString) {
 
 TEST_F(WriteBufferTest, WriteLargeString) {
   const std::string original_content = std::string(BUFFER_SIZE + 2u, 'a');
-  _write_buffer->put_string(original_content, IgnoreNullTerminator::Yes);
+  _write_buffer->put_string(original_content, HasNullTerminator::No);
   _write_buffer->flush();
   EXPECT_EQ(_mocked_socket->read(), original_content);
 }

@@ -21,7 +21,7 @@ bool WriteBuffer<SocketType>::full() const {
 }
 
 template <typename SocketType>
-void WriteBuffer<SocketType>::put_string(const std::string& value, const IgnoreNullTerminator ignore_null_terminator) {
+void WriteBuffer<SocketType>::put_string(const std::string& value, const HasNullTerminator has_null_terminator) {
   auto position_in_string = 0u;
 
   // Use available space first
@@ -41,7 +41,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const IgnoreN
   }
 
   // Add string terminator if necessary
-  if (ignore_null_terminator == IgnoreNullTerminator::No) {
+  if (has_null_terminator == HasNullTerminator::Yes) {
     _flush_if_necessary(sizeof(char));
     *_current_position = '\0';
     _current_position++;

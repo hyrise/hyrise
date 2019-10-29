@@ -54,7 +54,7 @@ template <typename SocketType>
 void ResultSerializer::send_query_response(
     std::shared_ptr<const Table> table,
     const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
-  auto attribute_strings = std::vector<std::optional<std::string>>(table->column_count());
+  auto values_as_strings = std::vector<std::optional<std::string>>(table->column_count());
 
   const auto chunk_count = table->chunk_count();
 
@@ -75,9 +75,9 @@ void ResultSerializer::send_query_response(
           // Sum up string lengths for a row to save an extra loop during serialization
           string_length_sum += string_value.value().size();
         }
-        attribute_strings[current_segment] = std::move(string_value);
+        values_as_strings[current_segment] = std::move(string_value);
       }
-      postgres_protocol_handler->send_values_as_strings(attribute_strings, string_length_sum);
+      postgres_protocol_handler->send_data_row(values_as_strings, string_length_sum);
     }
   }
 }

@@ -44,7 +44,7 @@ class ReadBuffer {
 
   // String functions
   std::string get_string(const size_t string_length,
-                         const IgnoreNullTerminator ignore_null_terminator = IgnoreNullTerminator::No);
+                         const HasNullTerminator has_null_terminator = HasNullTerminator::Yes);
   std::string get_string();
 
  private:

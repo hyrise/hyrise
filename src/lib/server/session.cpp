@@ -23,10 +23,14 @@ void Session::run() {
     try {
       _handle_request();
     } catch (const std::exception& e) {
+      std::cerr << "Exception in session with port " << _socket->local_endpoint().port() << ":" << std::endl
+                << e.what() << std::endl;
       _postgres_protocol_handler->send_error_message(e.what());
       _postgres_protocol_handler->send_ready_for_query();
-      // In order to avoid multiple ReadyForQuery in case of an error, we set this flag for further operations. As soon
-      // as a new query arrives it must be set to false again.
+      // In case of an error, an error message has to be send to the client followed by a "ReadyForQuery" message.
+      // Messages that have already been received are processed further. A "sync" message makes the server send another
+      // "ReadyForQuery" message. In order to avoid this, we set this flag for further operations. As soon as a new
+      // query arrives it must be set to false again to ensure correct message flow.
       _sync_send_after_error = true;
     }
   }
@@ -135,7 +139,7 @@ void Session::_handle_bind_command() {
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
   auto portal_it = _portals.find(parameters.portal);
   if (portal_it != _portals.end()) {
-    Assert(parameters.portal.empty(), "Named portals must be explicitly closed before they can be redefined.");
+    AssertInput(parameters.portal.empty(), "Named portals must be explicitly closed before they can be redefined.");
     _portals.erase(portal_it);
   }
 
@@ -165,7 +169,7 @@ void Session::_handle_execute() {
   const std::string& portal_name = _postgres_protocol_handler->read_execute_packet();
 
   auto portal_it = _portals.find(portal_name);
-  Assert(portal_it != _portals.end(), "The specified portal does not exist.");
+  AssertInput(portal_it != _portals.end(), "The specified portal does not exist.");
 
   // In case of an error occured during binding there is no pqp available. Hence, early return here since there is
   // nothing to execute.

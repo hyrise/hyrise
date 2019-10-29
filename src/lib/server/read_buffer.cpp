@@ -49,7 +49,7 @@ std::string ReadBuffer<SocketType>::get_string() {
 
 template <typename SocketType>
 std::string ReadBuffer<SocketType>::get_string(const size_t string_length,
-                                               const IgnoreNullTerminator ignore_null_terminator) {
+                                               const HasNullTerminator has_null_terminator) {
   std::string result = "";
   result.reserve(string_length);
 
@@ -68,7 +68,7 @@ std::string ReadBuffer<SocketType>::get_string(const size_t string_length,
   }
 
   // Ignore last character if it is \0
-  if (ignore_null_terminator == IgnoreNullTerminator::No) {
+  if (has_null_terminator == HasNullTerminator::Yes) {
     result.pop_back();
   }
 

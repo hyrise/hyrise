@@ -36,8 +36,7 @@ int main(int argc, char* argv[]) {
   const auto address = boost::asio::ip::make_address(parsed_options["address"].as<std::string>(), error);
 
   if (error) {
-    std::cerr << "Not a valid IPv4 address: " << parsed_options["address"].as<std::string>() << ", terminating..."
-              << std::endl;
+    Fail("Not a valid IPv4 address: " + parsed_options["address"].as<std::string>() + ", terminating...");
     return error.value();
   }
 

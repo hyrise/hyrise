@@ -29,7 +29,7 @@ void PostgresProtocolHandler<SocketType>::read_startup_packet_body(const uint32_
   // As of now, we don't do anything with the startup packet body. It contains authentication data and the
   // database name the user desires to connect to. Hence, we read this information from the network device as
   // one large string and throw it away.
-  _read_buffer.get_string(size, IgnoreNullTerminator::Yes);
+  _read_buffer.get_string(size, HasNullTerminator::No);
 }
 
 template <typename SocketType>
@@ -102,28 +102,28 @@ void PostgresProtocolHandler<SocketType>::send_row_description(const std::string
 }
 
 template <typename SocketType>
-void PostgresProtocolHandler<SocketType>::send_values_as_strings(
-    const std::vector<std::optional<std::string>>& row_strings, const uint32_t string_lengths) {
+void PostgresProtocolHandler<SocketType>::send_data_row(
+    const std::vector<std::optional<std::string>>& values_as_strings, const uint32_t string_length_sum) {
   // The documentation of the fields in this message can be found at:
   // https://www.postgresql.org/docs/current/static/protocol-message-formats.html
 
   _write_buffer.template put_value(PostgresMessageType::DataRow);
 
   const auto packet_size =
-      LENGTH_FIELD_SIZE + sizeof(uint16_t) + row_strings.size() * LENGTH_FIELD_SIZE + string_lengths;
+      LENGTH_FIELD_SIZE + sizeof(uint16_t) + values_as_strings.size() * LENGTH_FIELD_SIZE + string_length_sum;
 
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
   // Number of columns in row
-  _write_buffer.template put_value<uint16_t>(static_cast<uint16_t>(row_strings.size()));
+  _write_buffer.template put_value<uint16_t>(static_cast<uint16_t>(values_as_strings.size()));
 
-  for (const auto& value_string : row_strings) {
+  for (const auto& value_string : values_as_strings) {
     if (value_string.has_value()) {
       // Size of string representation of value, NOT of value type's size
       _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(value_string.value().size()));
 
       // Text mode means all values are sent as non-terminated strings
-      _write_buffer.put_string(value_string.value(), IgnoreNullTerminator::Yes);
+      _write_buffer.put_string(value_string.value(), HasNullTerminator::No);
     } else {
       // NULL values are represented by setting the value's length to -1
       _write_buffer.template put_value<int32_t>(-1);
@@ -200,8 +200,7 @@ PreparedStatementDetails PostgresProtocolHandler<SocketType>::read_bind_packet()
   std::vector<AllTypeVariant> parameter_values;
   for (auto i = 0; i < num_parameter_values; ++i) {
     const auto parameter_value_length = _read_buffer.template get_value<int32_t>();
-    parameter_values.emplace_back(
-        pmr_string{_read_buffer.get_string(parameter_value_length, IgnoreNullTerminator::Yes)});
+    parameter_values.emplace_back(pmr_string{_read_buffer.get_string(parameter_value_length, HasNullTerminator::No)});
   }
 
   const auto num_result_column_format_codes = _read_buffer.template get_value<int16_t>();

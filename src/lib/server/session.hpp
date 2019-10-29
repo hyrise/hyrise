@@ -33,10 +33,10 @@ class Session {
   // Bind prepared statement.
   void _handle_bind_command();
 
-  // Send parameter and row description.
+  // Read describe message. Row description will be send after execution.
   void _handle_describe();
 
-  // Execute prepared statement.
+  // Execute prepared statement and send row description.
   void _handle_execute();
 
   // Commit current transaction.

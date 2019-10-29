@@ -132,8 +132,8 @@ TEST_F(PostgresProtocolHandlerTest, SendValuesAsStrings) {
   const std::string value1 = "some";
   const std::string value2 = "string";
 
-  _protocol_handler->send_values_as_strings({value1, value2, std::nullopt},
-                                            static_cast<uint32_t>(value1.size() + value2.size()));
+  _protocol_handler->send_data_row({value1, value2, std::nullopt},
+                                   static_cast<uint32_t>(value1.size() + value2.size()));
   _protocol_handler->force_flush();
   const std::string file_content = _mocked_socket->read();
 

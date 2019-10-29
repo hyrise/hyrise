@@ -41,8 +41,8 @@ class PostgresProtocolHandler {
   // Send query result
   void send_row_description_header(const uint32_t total_column_name_length, const uint16_t column_count);
   void send_row_description(const std::string& column_name, const uint32_t object_id, const int16_t type_width);
-  void send_values_as_strings(const std::vector<std::optional<std::string>>& row_strings,
-                              const uint32_t string_lengths);
+  void send_data_row(const std::vector<std::optional<std::string>>& values_as_strings,
+                     const uint32_t string_length_sum);
   void send_command_complete(const std::string& command_complete_message);
 
   // Series of packets for handling prepared statements

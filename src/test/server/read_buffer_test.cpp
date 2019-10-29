@@ -23,7 +23,7 @@ class ReadBufferTest : public BaseTest {
 TEST_F(ReadBufferTest, Full) {
   EXPECT_FALSE(_read_buffer->full());
   _mocked_socket->write(std::string(_read_buffer->maximum_capacity(), 'a'));
-  _read_buffer->get_string(1, IgnoreNullTerminator::Yes);
+  _read_buffer->get_string(1, HasNullTerminator::No);
   EXPECT_FALSE(_read_buffer->full());
 }
 
@@ -52,7 +52,7 @@ TEST_F(ReadBufferTest, ReadValues) {
 TEST_F(ReadBufferTest, ReadString) {
   const std::string original_content = {"somerandom\0string\0", 19};
   _mocked_socket->write(original_content);
-  EXPECT_EQ(_read_buffer->get_string(4, IgnoreNullTerminator::Yes), "some");
+  EXPECT_EQ(_read_buffer->get_string(4, HasNullTerminator::No), "some");
   EXPECT_EQ(_read_buffer->get_string(), "random");
   EXPECT_EQ(_read_buffer->get_string(7), "string");
 }
@@ -60,7 +60,7 @@ TEST_F(ReadBufferTest, ReadString) {
 TEST_F(ReadBufferTest, ReadLargeString) {
   const std::string original_content = std::string(BUFFER_SIZE + 2u, 'a');
   _mocked_socket->write(original_content);
-  EXPECT_EQ(_read_buffer->get_string(original_content.size(), IgnoreNullTerminator::Yes), original_content);
+  EXPECT_EQ(_read_buffer->get_string(original_content.size(), HasNullTerminator::No), original_content);
   _mocked_socket->write(original_content);
   _mocked_socket->write(std::string{"\0", 1});
   EXPECT_EQ(_read_buffer->get_string(), original_content);
