@@ -121,7 +121,8 @@ ExpressionUnorderedSet gather_required_expressions(const std::shared_ptr<Abstrac
     // For ProjectionNodes, collect all expressions that
     //   (1) were already computed and are re-used as arguments in this projection
     //   (2) cannot be computed (i.e., Aggregate and LQPColumn inputs)
-    // As PredicateNodes use the ExpressionEvaluator, they have the same requirements.
+    // PredicateNodes have the same requirements - if they have their own implementation, they require all columns to
+    // be already computed, if they use the ExpressionEvaluator the columns should at least be computable.
     case LQPNodeType::Predicate:
     case LQPNodeType::Projection: {
       for (const auto& expression : node->node_expressions) {
@@ -162,10 +163,12 @@ void recursive_gather_required_expressions(
     const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node,
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t>& outputs_visited_by_node) {
-  const auto additional_columns = gather_required_expressions(node);
+  const auto locally_required_expressions = gather_required_expressions(node);
   auto& required_expressions = required_expressions_by_node[node];
-  required_expressions.insert(additional_columns.begin(), additional_columns.end());
+  required_expressions.insert(locally_required_expressions.begin(), locally_required_expressions.end());
 
+  // We only continue with node's inputs once we have visited all paths above node. We check this by counting the
+  // number of the node's outputs that have already been visited. Once we reach the output count, we can continue.
   ++outputs_visited_by_node[node];
   if (outputs_visited_by_node[node] < node->output_count()) return;
 
@@ -174,12 +177,15 @@ void recursive_gather_required_expressions(
   for (const auto& input : {node->left_input(), node->right_input()}) {
     if (!input) continue;
 
-    // Make sure the entry exists, then insert all expressions that the current node needs
-    required_expressions_by_node[input];
+    // Make sure the entry in required_expressions_by_node exists, then insert all expressions that the current node
+    // needs
+    auto& required_expressions_for_input = required_expressions_by_node[input];
     for (const auto& required_expression : required_expressions) {
-      // Add the columns needed here (and above) if they come from the input node
+      // Add the columns needed here (and above) if they come from the input node. Reasons why this might NOT be the
+      // case are: (1) The expression is calculated in this node (and is thus not available in the input node), or
+      // (2) we have two input nodes (i.e., a join) and the expressions comes from the other side.
       if (input->find_column_id(*required_expression)) {
-        required_expressions_by_node[input].emplace(required_expression);
+        required_expressions_for_input.emplace(required_expression);
       }
     }
 
@@ -187,9 +193,9 @@ void recursive_gather_required_expressions(
   }
 }
 
-void prune_join_node(
+void try_join_to_semi_rewrite(
     const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+    const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
   // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
   // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
   // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
@@ -203,7 +209,7 @@ void prune_join_node(
   auto left_input_is_used = false;
   auto right_input_is_used = false;
   for (const auto& output : node->outputs()) {
-    for (const auto& required_expression : required_expressions_by_node[output]) {
+    for (const auto& required_expression : required_expressions_by_node.at(output)) {
       if (expression_evaluable_on_lqp(required_expression, *node->left_input())) left_input_is_used = true;
       if (expression_evaluable_on_lqp(required_expression, *node->right_input())) right_input_is_used = true;
     }
@@ -263,8 +269,8 @@ void prune_join_node(
 
 void prune_projection_node(
     const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
-  // Iterate over the ProjectionNode's expressions and add them to the pruned expressions if at least one output node
+    const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+  // Iterate over the ProjectionNode's expressions and add them to the required expressions if at least one output node
   // requires them
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
 
@@ -273,7 +279,7 @@ void prune_projection_node(
 
   for (const auto& expression : projection_node->node_expressions) {
     for (const auto& output : node->outputs()) {
-      const auto& required_expressions = required_expressions_by_node[output];
+      const auto& required_expressions = required_expressions_by_node.at(output);
       if (std::find_if(required_expressions.begin(), required_expressions.end(), [&expression](const auto& other) {
             return *expression == *other;
           }) != required_expressions.end()) {
@@ -332,7 +338,7 @@ void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
       } break;
 
       case LQPNodeType::Join: {
-        prune_join_node(node, required_expressions_by_node);
+        try_join_to_semi_rewrite(node, required_expressions_by_node);
       } break;
 
       case LQPNodeType::Projection: {
