@@ -23,7 +23,7 @@ void Session::run() {
     try {
       _handle_request();
     } catch (const std::exception& e) {
-      std::cerr << "Exception in session with port " << _socket->local_endpoint().port() << ":" << std::endl
+      std::cerr << "Exception in session with client port " << _socket->remote_endpoint().port() << ":" << std::endl
                 << e.what() << std::endl;
       _postgres_protocol_handler->send_error_message(e.what());
       _postgres_protocol_handler->send_ready_for_query();
@@ -45,6 +45,7 @@ void Session::_establish_connection() {
   _postgres_protocol_handler->send_parameter("server_version", "12");
   _postgres_protocol_handler->send_parameter("server_encoding", "UTF8");
   _postgres_protocol_handler->send_parameter("client_encoding", "UTF8");
+  _postgres_protocol_handler->send_parameter("DateStyle", "ISO, DMY");
   _postgres_protocol_handler->send_ready_for_query();
 }
 

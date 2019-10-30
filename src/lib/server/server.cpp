@@ -32,7 +32,7 @@ void Server::_start_session(const std::shared_ptr<Session>& new_session, const b
   Assert(!error, error.message());
 
   std::thread session_thread([new_session] {
-    const std::string thread_name = "port_" + std::to_string(new_session->get_socket()->local_endpoint().port());
+    const std::string thread_name = "port_" + std::to_string(new_session->get_socket()->remote_endpoint().port());
     pthread_setname_np(pthread_self(), thread_name.c_str());
     new_session->run();
   });
