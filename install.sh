@@ -3,7 +3,7 @@
 if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
     BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost1.67-dev 2>/dev/null | grep "install ok installed")
     if [ "" != "$BOOST_INSTALLED" ]; then
-         read -p 'libbost1.67-dev is installed, 1.70 is required. Ok to remove 1.76-dev? [y|n] ' -n 1 -r < /dev/tty
+         read -p 'libbost1.67-dev is installed, 1.70 is required. Ok to remove 1.67-dev? [y|n] ' -n 1 -r < /dev/tty
         echo
          if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
              sudo apt-get remove libboost1.67-dev
