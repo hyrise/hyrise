@@ -202,6 +202,24 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesNullValues) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_F(OperatorsImportBinaryTest, FixedStringDictionarySegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  expected_table->append({"This"});
+  expected_table->append({"is"});
+  expected_table->append({"a"});
+  expected_table->append({"test"});
+
+  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::FixedStringDictionary);
+
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/FixedStringDictionarySegment.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 TEST_F(OperatorsImportBinaryTest, FileDoesNotExist) {
   auto importer = std::make_shared<opossum::ImportBinary>("not_existing_file");
   EXPECT_THROW(importer->execute(), std::exception);
