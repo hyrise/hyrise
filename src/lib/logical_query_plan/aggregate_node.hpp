@@ -28,7 +28,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // node_expression contains both the group_by- and the aggregate_expressions in that order.
-  const size_t aggregate_expressions_begin_idx;
+  size_t aggregate_expressions_begin_idx;
 
  protected:
   size_t _shallow_hash() const override;
