@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct, StandardDeviationSample };
+enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct, StandardDeviationSample, Any };
 
 class AggregateExpression : public AbstractExpression {
  public:

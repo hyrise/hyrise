@@ -553,6 +553,12 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
               group_boundaries, aggregate_index, sorted_table);
           break;
         }
+        case AggregateFunction::Any: {
+          using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Any>::AggregateType;
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(group_boundaries, aggregate_index,
+                                                                                   sorted_table);
+          break;
+        }
       }
     });
 
@@ -604,6 +610,9 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
       break;
     case AggregateFunction::StandardDeviationSample:
       create_aggregate_column_definitions<ColumnType, AggregateFunction::StandardDeviationSample>(column_index);
+      break;
+    case AggregateFunction::Any:
+      create_aggregate_column_definitions<ColumnType, AggregateFunction::Any>(column_index);
       break;
   }
 }

@@ -141,6 +141,21 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 };
 
 template <typename ColumnDataType, typename AggregateType>
+class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Any> {
+ public:
+  auto get_aggregate_function() {
+    return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
+              std::vector<AggregateType>& current_secondary_aggregates) {
+      DebugAssert(!current_primary_aggregate || *current_primary_aggregate == new_value, "Any violation");
+
+      if (!current_primary_aggregate) {
+        current_primary_aggregate = new_value;
+      }
+    };
+  }
+};
+
+template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Count> {
  public:
   auto get_aggregate_function() {
