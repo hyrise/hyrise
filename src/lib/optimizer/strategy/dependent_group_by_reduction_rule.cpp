@@ -137,7 +137,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 						    }
 						  });
 			      }
-			      return LQPUpwardVisitation::VisitInputs;
+			      return LQPUpwardVisitation::VisitOutputs;
 			    });
 
     			--aggregate_node.aggregate_expressions_begin_idx;
