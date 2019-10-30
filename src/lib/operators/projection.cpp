@@ -20,7 +20,10 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, in), expressions(expressions) {}
 
-const std::string Projection::name() const { return "Projection"; }
+const std::string& Projection::name() const {
+  static const auto name = std::string{"Projection"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -78,7 +81,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression->column_id);
         column_is_nullable[column_id] =
             column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
-
       } else {
         auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();

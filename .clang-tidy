@@ -1,40 +1,46 @@
-Checks: '*,-*-default-arguments,-*braces-around-statements,-google-build-using-namespace,-clang-analyzer-security.insecureAPI.rand,-readability-implicit-bool-conversion,-cppcoreguidelines-pro-type-reinterpret-cast,-readability-misleading-indentation,-modernize-pass-by-value,-cppcoreguidelines-pro-bounds-constant-array-index,-cppcoreguidelines-pro-type-static-cast-downcast,-misc-unused-parameters,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-hicpp-no-array-decay,-readability-named-parameter,-cert-dcl58-cpp,-clang-analyzer-optin.cplusplus.VirtualCall,-modernize-avoid-bind,-hicpp-no-assembler,-cppcoreguidelines-pro-type-vararg,-hicpp-vararg,-cert-env33-c,-misc-macro-parentheses,-readability-else-after-return,-fuchsia-overloaded-operator,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-google-runtime-references,-cert-err58-cpp,-llvm-include-order,-clang-analyzer-cplusplus.NewDelete*,-cert-msc32-c,-cert-msc51-cpp,-fuchsia-statically-constructed-objects,-bugprone-exception-escape'
+Checks: '*,-*-default-arguments*,-*braces-around-statements,-google-build-using-namespace,-clang-analyzer-security.insecureAPI.rand,-readability-implicit-bool-conversion,-cppcoreguidelines-pro-type-reinterpret-cast,-readability-misleading-indentation,-modernize-pass-by-value,-cppcoreguidelines-pro-bounds-constant-array-index,-cppcoreguidelines-pro-type-static-cast-downcast,-misc-unused-parameters,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-hicpp-no-array-decay,-readability-named-parameter,-cert-dcl58-cpp,-clang-analyzer-optin.cplusplus.VirtualCall,-modernize-avoid-bind,-hicpp-no-assembler,-cppcoreguidelines-pro-type-vararg,-hicpp-vararg,-cert-env33-c,-misc-macro-parentheses,-readability-else-after-return,-fuchsia-overloaded-operator,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-google-runtime-references,-cert-err58-cpp,-llvm-include-order,-clang-analyzer-cplusplus.NewDelete*,-cert-msc32-c,-cert-msc51-cpp,-fuchsia-statically-constructed-objects,-bugprone-exception-escape,-*-uppercase-literal-suffix,-cert-dcl16-c,-*-magic-numbers,-*-non-private-member-variables-in-classes,-modernize-use-trailing-return-type'
 
 WarningsAsErrors: '*'
 
 # Explanation of disabled checks:
-#   *-default-arguments                                   We do use default arguments (and like them)
-#   *braces-around-statements                             We do allow then blocks without braces if they are in the same line
-#   google-build-using-namespace                          While we discourage its use, in some cases, using namespace makes sense
-#   clang-analyzer-security.insecureAPI.rand              We don't care about cryptographically unsafe rand() calls
-#   readability-implicit-bool-conversion                  Doesn't like if(map.count(foo))
-#   cppcoreguidelines-pro-type-reinterpret-cast           We need reinterpret_cast for jitting
-#   readability-misleading-indentation                    Doesn't like if constexpr
-#   modernize-pass-by-value                               We don't trust people to properly use std::move
-#   cppcoreguidelines-pro-bounds-constant-array-index     Weird stuff. "do not use array subscript when the index is not an integer constant expression"?!
-#   cppcoreguidelines-pro-type-static-cast-downcast       We do allow static downcasts for performance reasons
-#   misc-unused-parameters                                We don't care about unused parameters
-#   cppcoreguidelines-pro-bounds-array-to-pointer-decay   Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
-#   hicpp-no-array-decay                                  dto.
-#   readability-named-parameter                           Unused parameters don't need names
-#   cert-dcl58-cpp                                        Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
-#   clang-analyzer-optin.cplusplus.VirtualCall            false positive in boost::lexical_cast
-#   modernize-avoid-bind                                  meh, bind isn't thaaaat bad
-#   hicpp-no-assembler                                    Sometimes we need assembler...
-#   cppcoreguidelines-pro-type-vararg                     We use old C functions for ncurses
-#   hicpp-vararg                                          dto.
-#   cert-env33-c                                          Yes, we do call system()
-#   misc-macro-parentheses                                Causes weird problems with BOOST_PP_TUPLE_ELEM
-#   readability-else-after-return                         "do not use 'else' after 'return'" - no idea who originally came up with that...
-#   fuchsia-overloaded-operator                           We are not supposed to overload operator()?!
-#   cppcoreguidelines-pro-bounds-pointer-arithmetic       Doesn't like DebugAssert
-#   google-runtime-references                             Doesn't like mutable references
-#   cert-err58-cpp                                        We reeeeeally don't care about uncaught exceptions
-#   llvm-include-order                                    Handled by cpplint.py which is way faster
-#   clang-analyzer-cplusplus.NewDelete*                   False positives with shared_ptr::operator=
-#   cert-msc32-c, -cert-msc51-cpp                         Ok, so our generated tables are not cryptographically safe
-#   fuchsia-statically-constructed-objects                We have too many static objects
-#   bugprone-exception-escape                             We throw exceptions in many places (even destructors) and are completely fine with std::terminate
+#   *-default-arguments*                                      We do use default arguments (and like them)
+#   *braces-around-statements                                 We do allow then blocks without braces if they are in the same line
+#   google-build-using-namespace                              While we discourage its use, in some cases, using namespace makes sense
+#   clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls
+#   readability-implicit-bool-conversion                      Doesn't like if(map.count(foo))
+#   cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast
+#   readability-misleading-indentation                        Doesn't like if constexpr
+#   modernize-pass-by-value                                   We don't trust people to properly use std::move
+#   cppcoreguidelines-pro-bounds-constant-array-index         Weird stuff. "do not use array subscript when the index is not an integer constant expression"?!
+#   cppcoreguidelines-pro-type-static-cast-downcast           We do allow static downcasts for performance reasons
+#   misc-unused-parameters                                    We don't care about unused parameters
+#   cppcoreguidelines-pro-bounds-array-to-pointer-decay       Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
+#   hicpp-no-array-decay                                       (same)
+#   readability-named-parameter                               Unused parameters don't need names
+#   cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
+#   clang-analyzer-optin.cplusplus.VirtualCall                false positive in boost::lexical_cast
+#   modernize-avoid-bind                                      meh, bind isn't thaaaat bad
+#   hicpp-no-assembler                                        Sometimes we need assembler...
+#   cppcoreguidelines-pro-type-vararg                         We use old C functions for ncurses
+#   hicpp-vararg                                               (same)
+#   cert-env33-c                                              Yes, we do call system()
+#   misc-macro-parentheses                                    Causes weird problems with BOOST_PP_TUPLE_ELEM
+#   readability-else-after-return                             "do not use 'else' after 'return'" - no idea who originally came up with that...
+#   fuchsia-overloaded-operator                               We are not supposed to overload operator()?!
+#   cppcoreguidelines-pro-bounds-pointer-arithmetic           Doesn't like DebugAssert
+#   google-runtime-references                                 Doesn't like mutable references
+#   cert-err58-cpp                                            We reeeeeally don't care about uncaught exceptions
+#   llvm-include-order                                        Handled by cpplint.py which is way faster
+#   clang-analyzer-cplusplus.NewDelete*                       False positives with shared_ptr::operator=
+#   cert-msc32-c, -cert-msc51-cpp                             Ok, so our generated tables are not cryptographically safe
+#   fuchsia-statically-constructed-objects                    We have too many static objects
+#   bugprone-exception-escape                                 We throw exceptions in many places (even destructors) and are completely fine with std::terminate
+#   *-uppercase-literal-suffix                                Don't really care if it's 1.0f or 1.0F
+#   cert-dcl16-c                                               (same)
+#   *-magic-numbers                                           Too many false positives
+#   *-non-private-member-variables-in-classes                 We like making things public
+#   modernize-use-trailing-return-type                        https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-trailing-return-type.html - no that is way too weird
+
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase

@@ -84,8 +84,9 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
                                     const std::shared_ptr<AbstractLQPNode>& to, const InputSide side) {
-  float row_count, row_percentage = 100.0f;
+  float row_count;
   double pen_width;
+  auto row_percentage = 100.0f;
 
   try {
     row_count = _cardinality_estimator.estimate_cardinality(from);

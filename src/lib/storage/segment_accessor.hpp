@@ -35,7 +35,7 @@ std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(const std::s
  * A SegmentAccessor is templated per SegmentType and DataType (T).
  * It requires that the underlying segment implements an implicit interface:
  *
- *   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+ *   std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
  *
  * Accessors are not guaranteed to be thread-safe. For multiple threads that access the same segment, create one
  * accessor each.

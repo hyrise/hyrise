@@ -34,7 +34,10 @@ namespace opossum {
 Print::Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out, PrintFlags flags)
     : AbstractReadOnlyOperator(OperatorType::Print, in), _out(out), _flags(flags) {}
 
-const std::string Print::name() const { return "Print"; }
+const std::string& Print::name() const {
+  static const auto name = std::string{"Print"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -171,7 +174,7 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
   return widths;
 }
 
-std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
+std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) {
   auto cell_string = boost::lexical_cast<std::string>(cell);
   DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
   if (cell_string.length() > max_width) {
@@ -180,7 +183,7 @@ std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width
   return cell_string;
 }
 
-std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) const {
+std::string Print::_segment_type(const std::shared_ptr<BaseSegment>& segment) {
   std::string segment_type;
   segment_type.reserve(8);
   segment_type += "<";

@@ -95,7 +95,7 @@ class AggregateHash : public AbstractAggregateOperator {
   AggregateHash(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
                 const std::vector<ColumnID>& groupby_column_ids);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnDataType, AggregateFunction function>
@@ -145,7 +145,7 @@ struct hash<std::vector<opossum::AggregateKeyEntry>> {
 
 template <>
 struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
-  // gcc7 doesn't support templating by `int N` here.
+  // gcc9 doesn't support templating by `int N` here.
   size_t operator()(const std::array<opossum::AggregateKeyEntry, 2>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }

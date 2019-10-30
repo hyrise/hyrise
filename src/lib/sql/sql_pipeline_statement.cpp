@@ -27,7 +27,6 @@ namespace opossum {
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc,
                                            const std::shared_ptr<TransactionContext>& transaction_context,
-                                           const std::shared_ptr<LQPTranslator>& lqp_translator,
                                            const std::shared_ptr<Optimizer>& optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
@@ -38,7 +37,6 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
       _transaction_context(transaction_context),
-      _lqp_translator(lqp_translator),
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
@@ -171,7 +169,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
     // Reset time to exclude previous pipeline steps
     started = std::chrono::high_resolution_clock::now();
-    _physical_plan = _lqp_translator->translate_node(lqp);
+    _physical_plan = LQPTranslator{}.translate_node(lqp);
   }
 
   done = std::chrono::high_resolution_clock::now();
@@ -263,7 +261,7 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
-void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) const {
+void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) {
   const auto& storage_manager = Hyrise::get().storage_manager;
 
   /**

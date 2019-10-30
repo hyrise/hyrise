@@ -13,7 +13,7 @@ namespace opossum {
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_to_plan(
     const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates,
-    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   /**
    * Add a number of predicates on top of a plan; try to bring them into an efficient order
    *
@@ -49,8 +49,8 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_plan(
     std::shared_ptr<AbstractLQPNode> left_lqp, std::shared_ptr<AbstractLQPNode> right_lqp,
-    std::vector<std::shared_ptr<AbstractExpression>> join_predicates,
-    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+    const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates,
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   /**
    * To make the input sides more deterministic, we make sure that the larger input is on the right side. This helps
    * future rules to identify common subplans. For plans with equal cardinalities, this might still result in

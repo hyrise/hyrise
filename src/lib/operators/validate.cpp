@@ -39,7 +39,10 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
 Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
     : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
 
-const std::string Validate::name() const { return "Validate"; }
+const std::string& Validate::name() const {
+  static const auto name = std::string{"Validate"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -86,7 +89,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                          output_mutex);
       } else {
-        jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
+        jobs.push_back(std::make_shared<JobTask>([=, &output_chunks, &output_mutex] {
           _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                            output_mutex);
         }));

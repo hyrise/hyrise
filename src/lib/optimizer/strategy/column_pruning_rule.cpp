@@ -261,24 +261,29 @@ void prune_join_node(
   }
 }
 
-void prune_projection_node(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
-  // Iterate over the ProjectionNode's expressions and add them to the pruned expressions if at least one output node
-  // requires them
-  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
+void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                      const ExpressionUnorderedSet& referenced_columns) {
+  /**
+   * Prune otherwise unused columns that are forwarded by ProjectionNodes
+   */
 
-  auto new_node_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  new_node_expressions.reserve(projection_node->node_expressions.size());
+  // First collect all the ProjectionNodes. Don't prune while visiting because visit_lqp() can't deal with nodes being
+  // replaced
+  auto projection_nodes = std::vector<std::shared_ptr<ProjectionNode>>{};
+  visit_lqp(lqp, [&](auto& node) {
+    if (node->type != LQPNodeType::Projection) return LQPVisitation::VisitInputs;
+    projection_nodes.emplace_back(std::static_pointer_cast<ProjectionNode>(node));
+    return LQPVisitation::VisitInputs;
+  });
 
-  for (const auto& expression : projection_node->node_expressions) {
-    for (const auto& output : node->outputs()) {
-      const auto& required_expressions = required_expressions_by_node[output];
-      if (std::find_if(required_expressions.begin(), required_expressions.end(), [&expression](const auto& other) {
-            return *expression == *other;
-          }) != required_expressions.end()) {
-        new_node_expressions.emplace_back(expression);
-        break;
+  // Replace ProjectionNodes with pruned ProjectionNodes if necessary
+  for (const auto& projection_node : projection_nodes) {
+    auto referenced_projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+    for (const auto& expression : projection_node->node_expressions) {
+      // We keep all non-column expressions
+      if (expression->type != ExpressionType::LQPColumn ||
+          referenced_columns.find(expression) != referenced_columns.end()) {
+        referenced_projection_expressions.emplace_back(expression);
       }
     }
   }
