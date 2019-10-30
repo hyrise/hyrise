@@ -1,6 +1,14 @@
 #!/bin/bash
 
 if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
+    BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost1.67-dev 2>/dev/null | grep "install ok installed")
+    if [ "" != "$BOOST_INSTALLED" ]; then
+         read -p 'libboost1.67-dev is installed but 1.70 is required. Ok to remove 1.67-dev? [y|n] ' -n 1 -r < /dev/tty
+        echo
+         if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
+             sudo apt-get remove libboost1.67-dev
+         fi
+    fi
     read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
     REPLY="y"
