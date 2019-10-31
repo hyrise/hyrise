@@ -200,7 +200,7 @@ class AbstractTableScanImpl {
       // vectorized automatically.
 
       // NOLINTNEXTLINE
-      ;  // clang-format off
+      {}  // clang-format off
       #pragma omp simd safelen(BLOCK_SIZE)
       // clang-format on
       for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
