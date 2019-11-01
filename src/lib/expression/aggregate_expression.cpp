@@ -6,16 +6,12 @@
 
 #include "constant_mappings.hpp"
 #include "expression_utils.hpp"
+#include "lqp_column_expression.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
-
-AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function)
-    : AbstractExpression(ExpressionType::Aggregate, {}), aggregate_function(aggregate_function) {
-  Assert(aggregate_function == AggregateFunction::Count, "Only COUNT aggregates can have no arguments");
-}
 
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
                                          const std::shared_ptr<AbstractExpression>& argument)
@@ -26,11 +22,7 @@ std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
 }
 
 std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
-  if (argument()) {
-    return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
-  } else {
-    return std::make_shared<AggregateExpression>(aggregate_function);
-  }
+  return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
 }
 
 std::string AggregateExpression::as_column_name() const {
@@ -39,7 +31,9 @@ std::string AggregateExpression::as_column_name() const {
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
     stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
-  } else if (aggregate_function == AggregateFunction::Count && !argument()) {
+  } else if (aggregate_function == AggregateFunction::Count &&
+             dynamic_cast<const LQPColumnExpression*>(&*argument())->column_reference.original_column_id() ==
+                 INVALID_COLUMN_ID) {
     stream << "COUNT(*)";
   } else {
     stream << aggregate_function << "(";
