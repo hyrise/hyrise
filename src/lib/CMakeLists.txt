@@ -324,7 +324,8 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    server/postgres_message_types.hpp
+    server/client_disconnect_exception.hpp
+    server/postgres_message_type.hpp
     server/postgres_protocol_handler.cpp
     server/postgres_protocol_handler.hpp
     server/query_handler.cpp

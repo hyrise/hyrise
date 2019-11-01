@@ -29,7 +29,7 @@ class ServerTestRunner : public BaseTest {
     _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_server));
 
     // Get randomly assigned port number for client connection
-    _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server->get_port());
+    _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server->server_port());
   }
 
   void TearDown() override {

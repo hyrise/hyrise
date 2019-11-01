@@ -28,8 +28,7 @@ class QueryHandler {
 
   static std::shared_ptr<AbstractOperator> bind_prepared_plan(const PreparedStatementDetails& statement_details);
 
-  static std::shared_ptr<const Table> execute_prepared_statement(
-      const std::shared_ptr<AbstractOperator>& physical_plan);
+  static std::shared_ptr<const Table> execute_prepared_plan(const std::shared_ptr<AbstractOperator>& physical_plan);
 };
 
 }  // namespace opossum

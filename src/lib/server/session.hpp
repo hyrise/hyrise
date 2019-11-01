@@ -15,7 +15,7 @@ class Session {
   // Start new session.
   void run();
 
-  std::shared_ptr<Socket> get_socket();
+  std::shared_ptr<Socket> socket();
 
  private:
   // Establish new connection by exchanging parameters.

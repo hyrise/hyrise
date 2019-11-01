@@ -37,15 +37,12 @@ TEST_F(ReadBufferTest, GetSize) {
 TEST_F(ReadBufferTest, ReadValues) {
   const auto converted_short = htons(16);
   const auto converted = htonl(32);
-  const uint64_t long_value = 64;
   _mocked_socket->write(std::string(reinterpret_cast<const char*>(&converted_short), sizeof(uint16_t)));
   _mocked_socket->write(std::string(reinterpret_cast<const char*>(&converted), sizeof(uint32_t)));
-  _mocked_socket->write(std::string(reinterpret_cast<const char*>(&long_value), sizeof(uint64_t)));
   _mocked_socket->write("A");
 
   EXPECT_EQ(_read_buffer->get_value<uint16_t>(), 16);
   EXPECT_EQ(_read_buffer->get_value<uint32_t>(), 32);
-  EXPECT_EQ(_read_buffer->get_value<uint64_t>(), 64);
   EXPECT_EQ(_read_buffer->get_value<char>(), 'A');
 }
 
@@ -58,7 +55,7 @@ TEST_F(ReadBufferTest, ReadString) {
 }
 
 TEST_F(ReadBufferTest, ReadLargeString) {
-  const std::string original_content = std::string(BUFFER_SIZE + 2u, 'a');
+  const std::string original_content = std::string(SERVER_BUFFER_SIZE + 2u, 'a');
   _mocked_socket->write(original_content);
   EXPECT_EQ(_read_buffer->get_string(original_content.size(), HasNullTerminator::No), original_content);
   _mocked_socket->write(original_content);

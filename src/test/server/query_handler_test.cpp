@@ -46,7 +46,7 @@ TEST_F(QueryHandlerTest, ExecutePreparedStatement) {
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   pqp->set_transaction_context_recursively(transaction_context);
 
-  const auto& result_table = QueryHandler::execute_prepared_statement(pqp);
+  const auto& result_table = QueryHandler::execute_prepared_plan(pqp);
   EXPECT_EQ(result_table->row_count(), 2u);
   EXPECT_EQ(result_table->column_count(), 2u);
 }

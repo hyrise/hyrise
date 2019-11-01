@@ -5,13 +5,14 @@
 
 namespace opossum {
 
-static constexpr size_t BUFFER_SIZE = 4096u;
+static constexpr size_t SERVER_BUFFER_SIZE = 4096u;
 
-// This class implements a circular buffer. If all data has been processed and the end of the underlying data
-// structure is reached, the iterator wraps around and starts at the beginning of the data structure.
+// This class implements an iteration on an array to let it behave like a circular buffer. If all data has been
+// processed and the end of the underlying data structure is reached, the iterator wraps around and starts at the
+// beginning of the data structure.
 class RingBufferIterator : public boost::iterator_facade<RingBufferIterator, char, std::forward_iterator_tag, char&> {
  public:
-  explicit RingBufferIterator(std::array<char, BUFFER_SIZE>& data, size_t position = 0)
+  explicit RingBufferIterator(std::array<char, SERVER_BUFFER_SIZE>& data, size_t position = 0)
       : _data(data), _position(position) {}
 
   RingBufferIterator(const RingBufferIterator&) = default;
@@ -32,14 +33,14 @@ class RingBufferIterator : public boost::iterator_facade<RingBufferIterator, cha
   }
 
   void increment() {  // NOLINT
-    _position = (_position + 1) % BUFFER_SIZE;
+    _position = (_position + 1) % SERVER_BUFFER_SIZE;
   }
 
   reference dereference() const {  // NOLINT
     return _data[_position];
   }
 
-  std::array<char, BUFFER_SIZE>& _data;
+  std::array<char, SERVER_BUFFER_SIZE>& _data;
   size_t _position;
 };
 

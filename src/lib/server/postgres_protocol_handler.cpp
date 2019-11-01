@@ -36,14 +36,15 @@ template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_authentication_response() {
   _write_buffer.template put_value(PostgresMessageType::AuthenticationRequest);
   // Since we don't have any authentication mechanism, authentication is always successful
-  constexpr uint32_t authentication_successful = 0;
-  _write_buffer.template put_value<uint32_t>(sizeof(LENGTH_FIELD_SIZE) + sizeof(authentication_successful));
-  _write_buffer.template put_value<uint32_t>(authentication_successful);
+  constexpr uint32_t authentication_error_code = 0;
+  _write_buffer.template put_value<uint32_t>(LENGTH_FIELD_SIZE + sizeof(authentication_error_code));
+  _write_buffer.template put_value<uint32_t>(authentication_error_code);
 }
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_parameter(const std::string& key, const std::string& value) {
-  const auto packet_size = sizeof(LENGTH_FIELD_SIZE) + key.size() + value.size() + 2u /* null terminator */;
+  // 2 null terminators, one for each string
+  const auto packet_size = LENGTH_FIELD_SIZE + key.size() + value.size() + 2u /* null terminator */;
   _write_buffer.template put_value(PostgresMessageType::ParameterStatus);
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(key);
@@ -53,7 +54,7 @@ void PostgresProtocolHandler<SocketType>::send_parameter(const std::string& key,
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_ready_for_query() {
   _write_buffer.template put_value(PostgresMessageType::ReadyForQuery);
-  _write_buffer.template put_value<uint32_t>(sizeof(LENGTH_FIELD_SIZE) + sizeof(TransactionStatusIndicator::Idle));
+  _write_buffer.template put_value<uint32_t>(LENGTH_FIELD_SIZE + sizeof(TransactionStatusIndicator::Idle));
   _write_buffer.template put_value(TransactionStatusIndicator::Idle);
   _write_buffer.flush();
 }
@@ -82,7 +83,7 @@ void PostgresProtocolHandler<SocketType>::send_row_description_header(const uint
                            column_count * (sizeof('\0') + 3 * sizeof(uint32_t) + 3 * sizeof(uint16_t)) +
                            total_column_name_length;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
-  // Specifies the number of fields in a row (can be zero).
+  // Specifies the number of fields in a row
   _write_buffer.template put_value<uint16_t>(column_count);
 }
 
@@ -133,7 +134,7 @@ void PostgresProtocolHandler<SocketType>::send_data_row(
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_command_complete(const std::string& command_complete_message) {
-  const auto packet_size = sizeof(LENGTH_FIELD_SIZE) + command_complete_message.size() + 1u /* null terminator */;
+  const auto packet_size = LENGTH_FIELD_SIZE + command_complete_message.size() + 1u /* null terminator */;
   _write_buffer.template put_value(PostgresMessageType::CommandComplete);
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(command_complete_message);
@@ -181,7 +182,8 @@ void PostgresProtocolHandler<SocketType>::read_describe_packet() {
   Assert(description_target == 'P', "Only portal descriptions are currently supported.");
 
   // The description itself will be sent out after execution of the prepared statement.
-  /* const auto statement_or_portal_name = */ _read_buffer.get_string(packet_length - LENGTH_FIELD_SIZE - sizeof(char));
+  /* const auto statement_or_portal_name = */ _read_buffer.get_string(packet_length - LENGTH_FIELD_SIZE - sizeof(char),
+                                                                      HasNullTerminator::No);
 }
 
 template <typename SocketType>
@@ -220,13 +222,15 @@ std::string PostgresProtocolHandler<SocketType>::read_execute_packet() {
    The result-row count is only meaningful for portals containing commands that return row sets; in other cases
    the command is always executed to completion, and the row count is ignored.
   */
-  /*const auto max_rows = */ _read_buffer.template get_value<int32_t>();
+  const auto row_limit = _read_buffer.template get_value<int32_t>();
+  Assert(row_limit == 0, "Row limit of 0 (unlimited) expected.");
   return portal;
 }
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_error_message(const std::string& error_message) {
   _write_buffer.template put_value(PostgresMessageType::ErrorResponse);
+  // Message has 2 null terminators: one terminates the error string, the other one terminates the message
   const auto packet_size =
       LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + error_message.size() + 2u /* null terminator */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
@@ -241,6 +245,7 @@ void PostgresProtocolHandler<SocketType>::send_error_message(const std::string& 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_execution_info(const std::string& execution_information) {
   _write_buffer.template put_value(PostgresMessageType::Notice);
+  // Message has 2 null terminators: one terminates the error string, the other one terminates the message
   const auto packet_size =
       LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + execution_information.size() + 2u /* null terminator */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));

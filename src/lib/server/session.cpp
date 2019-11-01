@@ -1,6 +1,7 @@
 #include "session.hpp"
 
-#include "postgres_message_types.hpp"
+#include "client_disconnect_exception.hpp"
+#include "postgres_message_type.hpp"
 #include "query_handler.hpp"
 #include "result_serializer.hpp"
 
@@ -11,7 +12,7 @@ Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo se
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
       _send_execution_info(send_execution_info) {}
 
-std::shared_ptr<Socket> Session::get_socket() { return _socket; }
+std::shared_ptr<Socket> Session::socket() { return _socket; }
 
 void Session::run() {
   // Set TCP_NODELAY in order to disable Nagle's algorithm. It handles congestion control in TCP networks. Therefore,
@@ -22,6 +23,8 @@ void Session::run() {
   while (!_terminate_session) {
     try {
       _handle_request();
+    } catch (const ClientDisconnectException&) {
+      return;
     } catch (const std::exception& e) {
       std::cerr << "Exception in session with client port " << _socket->remote_endpoint().port() << ":" << std::endl
                 << e.what() << std::endl;
@@ -144,7 +147,7 @@ void Session::_handle_bind_command() {
     _portals.erase(portal_it);
   }
 
-  // Since describe and execute packet usually arrive together, we still have to handle the execute packet. Therefore,
+  // Since bind and execute packet usually arrive together, we still have to handle the execute packet. Therefore,
   // we first store a nullptr in the portals map to signalize an error. However, if binding succeeds in the next step
   // this nullptr gets replaced by the correct pqp. Before executing the prepared statement we make a check for errors.
   _portals.emplace(parameters.portal, nullptr);
@@ -186,7 +189,7 @@ void Session::_handle_execute() {
   if (!_transaction) _transaction = Hyrise::get().transaction_manager.new_transaction_context();
   physical_plan->set_transaction_context_recursively(_transaction);
 
-  const auto result_table = QueryHandler::execute_prepared_statement(physical_plan);
+  const auto result_table = QueryHandler::execute_prepared_plan(physical_plan);
 
   uint64_t row_count = 0;
   // If there is no result table, e.g. after an INSERT command, we cannot send row data

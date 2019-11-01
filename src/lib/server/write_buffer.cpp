@@ -1,18 +1,18 @@
 #include "write_buffer.hpp"
 
-#include <pthread.h>
+#include "client_disconnect_exception.hpp"
 
 namespace opossum {
 
 template <typename SocketType>
 size_t WriteBuffer<SocketType>::size() const {
   const auto current_size = std::distance(&*_start_position, &*_current_position);
-  return current_size < 0 ? current_size + BUFFER_SIZE : current_size;
+  return current_size < 0 ? current_size + SERVER_BUFFER_SIZE : current_size;
 }
 
 template <typename SocketType>
 size_t WriteBuffer<SocketType>::maximum_capacity() const {
-  return BUFFER_SIZE - 1;
+  return SERVER_BUFFER_SIZE - 1;
 }
 
 template <typename SocketType>
@@ -50,6 +50,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const HasNull
 
 template <typename SocketType>
 void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
+  Assert(bytes_required <= size(), "Can't flush more byte than available");
   const auto bytes_to_send = bytes_required ? bytes_required : size();
   size_t bytes_sent;
 
@@ -70,9 +71,7 @@ void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
   // Socket was closed by client during execution
   if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset ||
       bytes_sent == 0) {
-    // Terminate session by stopping the current thread
-    // TODO(all): find a better solution for this
-    pthread_exit(nullptr);
+    throw ClientDisconnectException("Write operation failed. Client closed connection.");
   }
   Assert(!error_code, error_code.message());
 

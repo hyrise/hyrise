@@ -11,7 +11,7 @@ namespace opossum {
 
 *  Server - Opens and binds a server socket. Starts a new session per client.
 *  Session - Creates a data socket for client server communication. It is responsible for the message flow and holds
-*            session specific data.
+*            session-specific data.
 *  PostgresProtocolHandler - This class operates on the message level. It serializes and de-serializes information from
 *                            messages.
 *  PostgresMessageTypes - Set of different message types supported by Hyrise.
@@ -23,21 +23,21 @@ namespace opossum {
 *  QueryHandler - Interface between the server and the database logic. Operations, such as creating an SQLPipeline or
 *                 PQP are handled in this class.
 *  ResultSerializer - Converts query result information (such as ColumnTypes, but also the data itself) to appropriate
-*                     PostgreSQL protocol types.
+*                     PostgreSQL protocol types and writes them to the network socket.
 */
 
 class Server {
  public:
   Server(const boost::asio::ip::address& address, const uint16_t port, const SendExecutionInfo send_execution_info);
 
-  // Start server by running boost io_service.
+  // Start server to accept new sessions.
   void run();
 
   // Return the port the server is running on.
-  uint16_t get_port() const;
+  uint16_t server_port() const;
 
   // Get the current address the server is running. This is important especially for multi-NIC devices.
-  boost::asio::ip::address get_address() const;
+  boost::asio::ip::address server_address() const;
 
   // Shutdown Hyrise server.
   void shutdown();

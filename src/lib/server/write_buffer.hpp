@@ -9,7 +9,10 @@ using Socket = boost::asio::ip::tcp::socket;
 
 namespace opossum {
 
-// Dedicated buffer for write operations. The ring buffer gets extended by methods for writing different data types.
+// Dedicated buffer for write operations. It flushes itself automatically if a new value does not fit into the
+// available memory. Strings inserted use the remaining space first. The buffer can also be force flushed. In contrast
+// to the ReadBuffer integer types are converted from host to network byte order and data will only be written to the
+// network device.
 template <typename SocketType>
 class WriteBuffer {
  public:
@@ -45,14 +48,16 @@ class WriteBuffer {
   // Put string into the buffer. If the string is longer than the buffer itself the buffer will flush automatically.
   void put_string(const std::string& value, const HasNullTerminator has_null_terminator = HasNullTerminator::Yes);
 
-  // Flush whole buffer, e. g. after a finished request
+  // Flush buffer by at least bytes_required. 0 means, flush whole buffer.
   void flush(const size_t bytes_required = 0);
 
  private:
   void _flush_if_necessary(const size_t bytes_required);
 
-  std::array<char, BUFFER_SIZE> _data;
+  std::array<char, SERVER_BUFFER_SIZE> _data;
+  // This iterator points to the first element that has not been flushed yet.
   RingBufferIterator _start_position{_data};
+  // This iterator points to the field after the last unflushed element of the array.
   RingBufferIterator _current_position{_data};
   std::shared_ptr<SocketType> _socket;
 };

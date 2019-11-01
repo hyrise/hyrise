@@ -66,7 +66,7 @@ TEST_F(WriteBufferTest, WriteString) {
 }
 
 TEST_F(WriteBufferTest, WriteLargeString) {
-  const std::string original_content = std::string(BUFFER_SIZE + 2u, 'a');
+  const std::string original_content = std::string(SERVER_BUFFER_SIZE + 2u, 'a');
   _write_buffer->put_string(original_content, HasNullTerminator::No);
   _write_buffer->flush();
   EXPECT_EQ(_mocked_socket->read(), original_content);

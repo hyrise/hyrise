@@ -15,7 +15,6 @@ ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql,
 
   auto execution_info = ExecutionInformation();
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
-  sql_pipeline.get_result_table();
 
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
   if (pipeline_status == SQLPipelineStatus::Success) {
@@ -75,7 +74,7 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
   return LQPTranslator{}.translate_node(lqp);
 }
 
-std::shared_ptr<const Table> QueryHandler::execute_prepared_statement(
+std::shared_ptr<const Table> QueryHandler::execute_prepared_plan(
     const std::shared_ptr<AbstractOperator>& physical_plan) {
   const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan, CleanupTemporaries::Yes);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);

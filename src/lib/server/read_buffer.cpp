@@ -1,20 +1,18 @@
 #include "read_buffer.hpp"
 
-#include <pthread.h>
-
-#include <iostream>
+#include "client_disconnect_exception.hpp"
 
 namespace opossum {
 
 template <typename SocketType>
 size_t ReadBuffer<SocketType>::size() const {
   const auto current_size = std::distance(&*_start_position, &*_current_position);
-  return current_size < 0 ? current_size + BUFFER_SIZE : current_size;
+  return current_size < 0 ? current_size + SERVER_BUFFER_SIZE : current_size;
 }
 
 template <typename SocketType>
 size_t ReadBuffer<SocketType>::maximum_capacity() const {
-  return BUFFER_SIZE - 1;
+  return SERVER_BUFFER_SIZE - 1;
 }
 
 template <typename SocketType>
@@ -69,6 +67,7 @@ std::string ReadBuffer<SocketType>::get_string(const size_t string_length,
 
   // Ignore last character if it is \0
   if (has_null_terminator == HasNullTerminator::Yes) {
+    Assert(result.back() == '\0', "Last character is not a null terminator");
     result.pop_back();
   }
 
@@ -104,9 +103,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   // Socket was closed by client during execution
   if (error_code == boost::asio::error::broken_pipe || error_code == boost::asio::error::connection_reset ||
       bytes_read == 0) {
-    // Terminate session by stopping the current thread
-    // TODO(all): find a better solution for this
-    pthread_exit(nullptr);
+    throw ClientDisconnectException("Read operation failed. Client closed connection.");
   }
 
   Assert(!error_code, error_code.message());

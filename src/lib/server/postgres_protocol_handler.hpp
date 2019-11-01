@@ -1,13 +1,13 @@
 #pragma once
 
 #include "all_type_variant.hpp"
-#include "postgres_message_types.hpp"
+#include "postgres_message_type.hpp"
 #include "read_buffer.hpp"
 #include "write_buffer.hpp"
 
 namespace opossum {
 
-// This struct stores information about a prepared statement.
+// This struct stores a prepared statement's name, its portal used and the specified parameters.
 struct PreparedStatementDetails {
   std::string statement_name;
   std::string portal;
@@ -45,12 +45,14 @@ class PostgresProtocolHandler {
                      const uint32_t string_length_sum);
   void send_command_complete(const std::string& command_complete_message);
 
-  // Series of packets for handling prepared statements
+  // Messages for parsing prepared statements
   std::pair<std::string, std::string> read_parse_packet();
   void read_sync_packet();
 
   // Send out status message containing PostgresMessageType and length
   void send_status_message(const PostgresMessageType message_type);
+
+  // Series of packets for binding and executing prepared statements
   void read_describe_packet();
   PreparedStatementDetails read_bind_packet();
   std::string read_execute_packet();
