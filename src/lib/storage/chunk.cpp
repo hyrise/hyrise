@@ -109,7 +109,9 @@ void Chunk::finalize() {
     Assert(!mvcc->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
 
     mvcc->max_begin_cid = *(std::max_element(mvcc->begin_cids.begin(), mvcc->begin_cids.end()));
-    Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID, "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was finalized before all transactions committed/rolled back.");
+    Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID,
+           "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
+           "finalized before all transactions committed/rolled back.");
   }
 }
 

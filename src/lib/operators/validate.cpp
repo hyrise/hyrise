@@ -37,8 +37,11 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
   return snapshot_commit_id < end_cid && ((snapshot_commit_id >= begin_cid) != (row_tid == our_tid));
 }
 
-bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id) const {
-  Assert(_can_use_chunk_shortcut, "This call to _is_entire_chunk_visible is not allowed. Are there any DeleteOperators in the same transaction?");
+bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk,
+                                        const CommitID snapshot_commit_id) const {
+  Assert(
+      _can_use_chunk_shortcut,
+      "This call to _is_entire_chunk_visible is not allowed. Are there any DeleteOperators in the same transaction?");
   DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})),
               "_is_entire_chunk_visible cannot be called on reference chunks.");
 
@@ -140,7 +143,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
                                 const TransactionID snapshot_commit_id,
-                                std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const{
+                                std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const {
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686

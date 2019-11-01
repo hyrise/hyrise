@@ -51,7 +51,9 @@ class OperatorsValidateTest : public BaseTest {
 
   const std::string _table2_name = "table_b";
 
-  static bool forward_is_entire_chunk_visible(std::shared_ptr<Validate> validate, const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id) {
+  static bool forward_is_entire_chunk_visible(std::shared_ptr<Validate> validate,
+                                              const std::shared_ptr<const Chunk>& chunk,
+                                              const CommitID snapshot_commit_id) {
     return validate->_is_entire_chunk_visible(chunk, snapshot_commit_id);
   }
 };
