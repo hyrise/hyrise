@@ -44,8 +44,6 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
 
 bool Chunk::is_mutable() const { return _is_mutable; }
 
-void Chunk::mark_immutable() { _is_mutable = false; }
-
 void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment) {
   std::atomic_store(&_segments.at(column_id), segment);
 }
@@ -104,14 +102,14 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
 
 void Chunk::finalize() {
   Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
-  mark_immutable();
+  _is_mutable = false;
 
   if (has_mvcc_data()) {
     auto mvcc = get_scoped_mvcc_data_lock();
     Assert(!mvcc->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
 
     mvcc->max_begin_cid = *(std::max_element(mvcc->begin_cids.begin(), mvcc->begin_cids.end()));
-    Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID, "max_begin_cid should not be MAX_COMMIT_ID.");
+    Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID, "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was finalized before all transactions committed/rolled back.");
   }
 }
 

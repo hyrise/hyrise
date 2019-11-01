@@ -54,8 +54,6 @@ class Chunk : private Noncopyable {
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
 
-  void mark_immutable();
-
   // Atomically replaces the current segment at column_id with the passed segment
   void replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment);
 
@@ -161,6 +159,8 @@ class Chunk : private Noncopyable {
 
   /**
    * Returns the count of deleted/invalidated rows within this chunk resulting from already committed transactions.
+   * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for
+   * the current transaction.
    */
   uint32_t invalid_row_count() const { return _invalid_row_count.load(); }
 

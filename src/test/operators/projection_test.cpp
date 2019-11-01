@@ -54,9 +54,7 @@ TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
                             load_table("resources/test_data/tbl/projection/int_float_add.tbl"));
 }
 
-TEST_F(OperatorsProjectionTest, InvalidRowCount) {
-  // auto get_table_1 = std::make_shared<opossum::GetTable>("int_int_float");
-  // get_table_1->execute();
+TEST_F(OperatorsProjectionTest, PassThroughInvalidRowCount) {
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThan, 123);
@@ -71,8 +69,6 @@ TEST_F(OperatorsProjectionTest, InvalidRowCount) {
   transaction_context->commit();
 
   const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_a, a_b));
-  // auto get_table_2 = std::make_shared<opossum::GetTable>("int_int_float");
-  // get_table_2->execute();
 
   projection->execute();
   const auto result_table = projection->get_output();

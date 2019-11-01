@@ -62,7 +62,7 @@ TEST_F(OperatorsGetTableTest, Description) {
             "GetTable\n(int_int_float)\npruned:\n1/4 chunk(s)\n1/3 column(s)");
 }
 
-TEST_F(OperatorsGetTableTest, InvalidRowCount) {
+TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
   auto get_table_1 = std::make_shared<opossum::GetTable>("int_int_float");
   get_table_1->execute();
 

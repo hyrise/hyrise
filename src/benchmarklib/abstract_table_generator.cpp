@@ -75,13 +75,12 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Finalizing all chunks of all tables that are still mutable.
    */
-  // TODO(any): Finalization should trigger encoding in the future.
+  // TODO(any): Finalization might trigger encoding in the future.
   for (auto& [table_name, table_info] : table_info_by_name) {
     auto& table = table_info_by_name[table_name].table;
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
-      if (chunk->is_mutable())
-        chunk->finalize();
+      if (chunk->is_mutable()) chunk->finalize();
     }
   }
 

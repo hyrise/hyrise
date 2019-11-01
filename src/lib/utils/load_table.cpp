@@ -80,7 +80,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
   }
 
   // All other chunks have been finalized by Table::append() when they reached their capacity.
-  if (table->chunk_count() > ChunkID{0}) {
+  if (!table->empty()) {
     const auto last_chunk = table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1));
     last_chunk->finalize();
   }

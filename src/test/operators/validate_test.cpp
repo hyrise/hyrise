@@ -27,7 +27,7 @@ class OperatorsValidateTest : public BaseTest {
   void SetUp() override {
     _test_table = load_table("resources/test_data/tbl/validate_input.tbl", 2u);
     set_all_records_visible(*_test_table);
-    set_record_invisible_for(*_test_table, RowID{ChunkID{1}, 0u}, 2u);
+    invalidate_record(*_test_table, RowID{ChunkID{1}, 0u}, 2u);
 
     const auto _test_table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
 
@@ -43,13 +43,17 @@ class OperatorsValidateTest : public BaseTest {
   }
 
   void set_all_records_visible(Table& table);
-  void set_record_invisible_for(Table& table, RowID row, CommitID end_cid);
+  void invalidate_record(Table& table, RowID row, CommitID end_cid);
 
   std::shared_ptr<Table> _test_table;
   std::shared_ptr<TableWrapper> _table_wrapper;
   std::shared_ptr<GetTable> _gt;
 
   const std::string _table2_name = "table_b";
+
+  static bool forward_is_entire_chunk_visible(std::shared_ptr<Validate> validate, const std::shared_ptr<const Chunk>& chunk, const CommitID snapshot_commit_id) {
+    return validate->_is_entire_chunk_visible(chunk, snapshot_commit_id);
+  }
 };
 
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
@@ -64,7 +68,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
   }
 }
 
-void OperatorsValidateTest::set_record_invisible_for(Table& table, RowID row, CommitID end_cid) {
+void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID end_cid) {
   auto chunk = table.get_chunk(row.chunk_id);
 
   chunk->get_scoped_mvcc_data_lock()->end_cids[row.chunk_offset] = end_cid;
@@ -134,20 +138,25 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   auto snapshot_cid = CommitID{1};
-  auto pos_list = std::make_shared<PosList>();
-  Segments empty_segment = {std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
-  auto chunk = std::make_shared<Chunk>(empty_segment);
+  auto pos_list = std::make_shared<PosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, 0}}));
+  Segments segments = {std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
+  auto chunk = std::make_shared<Chunk>(segments);
 
-  EXPECT_THROW(Validate::is_entire_chunk_visible(chunk, snapshot_cid), std::logic_error);
+  auto validate = std::make_shared<Validate>(nullptr);
+
+  EXPECT_THROW(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid), std::logic_error);
 }
 
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
   auto snapshot_cid = CommitID{1};
-  Segments empty_segment = {std::make_shared<ValueSegment<int32_t>>()};
-  auto chunk = std::make_shared<Chunk>(empty_segment, std::make_shared<MvccData>(0, 0));
-  // We explicitly do not call update_max_begin_cid
+  auto vs_int = std::make_shared<ValueSegment<int32_t>>();
+  vs_int->append(4);
+  auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, 0));
+  // We explicitly do not finalize the chunk so that max_begin_cid remains emtpy
 
-  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
+  auto validate = std::make_shared<Validate>(nullptr);
+
+  EXPECT_FALSE(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
@@ -159,7 +168,9 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithLowerSnapshotCid) {
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
   chunk->finalize();
 
-  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
+  auto validate = std::make_shared<Validate>(nullptr);
+
+  EXPECT_FALSE(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
@@ -172,7 +183,9 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
   chunk->increase_invalid_row_count(1);
   chunk->finalize();
 
-  EXPECT_FALSE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
+  auto validate = std::make_shared<Validate>(nullptr);
+
+  EXPECT_FALSE(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
@@ -183,7 +196,9 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisible) {
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
   chunk->finalize();
 
-  EXPECT_TRUE(Validate::is_entire_chunk_visible(chunk, snapshot_cid));
+  auto validate = std::make_shared<Validate>(nullptr);
+
+  EXPECT_TRUE(forward_is_entire_chunk_visible(validate, chunk, snapshot_cid));
 }
 
 TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {

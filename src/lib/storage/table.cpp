@@ -182,6 +182,16 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   }
 }
 
+std::shared_ptr<Chunk> Table::last_chunk() {
+  DebugAssert(!_chunks.empty(), "last_chunk() called on Table without chunks");
+  if (_type == TableType::References) {
+    // Not written concurrently, since reference tables are not modified anymore once they are written.
+    return _chunks.back();
+  } else {
+    return std::atomic_load(&_chunks.back());
+  }
+}
+
 void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   DebugAssert(([this, chunk_id]() {  // NOLINT
@@ -205,8 +215,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   }
 #endif
 
-  auto chunk = std::make_shared<Chunk>(segments, mvcc_data, alloc);
-  _chunks.push_back(chunk);
+  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
