@@ -187,7 +187,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     }
 
     // get added chunk, mark it as immutable and add statistics
-    table->last_chunk()->finalize();
+    const auto& added_chunk = table->last_chunl();
+    added_chunk->finalize();
     if (!added_chunk->pruning_statistics()) {
       generate_chunk_pruning_statistics(added_chunk);
     }
