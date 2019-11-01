@@ -58,7 +58,7 @@ class Chunk : private Noncopyable {
   void replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment);
 
   // returns the number of columns, which is equal to the number of segments (cannot exceed ColumnID (uint16_t))
-  uint16_t column_count() const;
+  ColumnCount column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
   uint32_t size() const;

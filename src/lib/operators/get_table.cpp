@@ -112,7 +112,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   }
 
   // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
-  Assert(_pruned_column_ids.size() < stored_table->column_count(), "Cannot prune all columns from Table");
+  Assert(_pruned_column_ids.size() < static_cast<size_t>(stored_table->column_count()),
+         "Cannot prune all columns from Table");
   DebugAssert(std::all_of(_pruned_column_ids.begin(), _pruned_column_ids.end(),
                           [&](const auto column_id) { return column_id < stored_table->column_count(); }),
               "ColumnID out of range");
