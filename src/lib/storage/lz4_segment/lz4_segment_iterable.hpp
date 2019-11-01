@@ -24,8 +24,10 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     auto decompressed_segment = _segment.decompress();
 
     std::optional<NullValueIterator> null_opt_value_iter;
-    auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values() ? _segment.null_values()->cbegin() : null_opt_value_iter};
-    auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values() ? _segment.null_values()->cend() : null_opt_value_iter};
+    auto begin = Iterator<ValueIterator>{
+        decompressed_segment.cbegin(), _segment.null_values() ? _segment.null_values()->cbegin() : null_opt_value_iter};
+    auto end = Iterator<ValueIterator>{decompressed_segment.cend(),
+                                       _segment.null_values() ? _segment.null_values()->cend() : null_opt_value_iter};
     functor(begin, end);
   }
 
@@ -66,7 +68,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
         const auto& row_id = (*position_filter)[index];
         position_filter_indexed[index] = {row_id, index};
       }
-      std::sort(position_filter_indexed.begin(), position_filter_indexed.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+      std::sort(position_filter_indexed.begin(), position_filter_indexed.end(),
+                [](const auto& a, const auto& b) { return a.first < b.first; });
 
       for (auto index = size_t{0u}; index < position_filter_size; ++index) {
         const auto& position = position_filter_indexed[index].first;
@@ -87,10 +90,14 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     }
 
     std::optional<NullValueIterator> null_opt_value_iter;
-    auto begin = PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), _segment.null_values() ? _segment.null_values()->cbegin() : null_opt_value_iter,
-                                                    position_filter->cbegin(), position_filter->cbegin()};
-    auto end = PointAccessIterator<ValueIterator>{decompressed_filtered_segment.begin(), _segment.null_values() ? _segment.null_values()->cend() : null_opt_value_iter,
-                                                  position_filter->cbegin(), position_filter->cend()};
+    auto begin = PointAccessIterator<ValueIterator>{
+        decompressed_filtered_segment.begin(),
+        _segment.null_values() ? _segment.null_values()->cbegin() : null_opt_value_iter, position_filter->cbegin(),
+        position_filter->cbegin()};
+    auto end = PointAccessIterator<ValueIterator>{
+        decompressed_filtered_segment.begin(),
+        _segment.null_values() ? _segment.null_values()->cend() : null_opt_value_iter, position_filter->cbegin(),
+        position_filter->cend()};
 
     functor(begin, end);
   }
@@ -142,7 +149,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};
     }
 
-    SegmentPosition<T> dereference() const { return SegmentPosition<T>{*_data_it, _null_value_it ? **_null_value_it : false, _chunk_offset}; }
+    SegmentPosition<T> dereference() const {
+      return SegmentPosition<T>{*_data_it, _null_value_it ? **_null_value_it : false, _chunk_offset};
+    }
 
    private:
     ChunkOffset _chunk_offset;
