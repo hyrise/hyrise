@@ -248,22 +248,22 @@ try {
               Utils.markStageSkippedForConditional("memcheckReleaseTest")
             }
           }
-        }, tpchQueryPlans: {
-          stage("tpchQueryPlans") {
+        }, tpchQueryPlansAndVerification: {
+          stage("tpchQueryPlansAndVerification") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCH -r 1 --visualize --verify"
               archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
             } else {
-              Utils.markStageSkippedForConditional("tpchQueryPlans")
+              Utils.markStageSkippedForConditional("tpchQueryPlansAndVerification")
             }
           }
-        }, tpcdsQueryPlans: {
-          stage("tpcdsQueryPlans") {
+        }, tpcdsQueryPlansAndVerification: {
+          stage("tpcdsQueryPlansAndVerification") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize --verify"
               archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
             } else {
-              Utils.markStageSkippedForConditional("tpcdsQueryPlans")
+              Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
             }
           }
         }
