@@ -35,8 +35,10 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   // expect a single block, no sorting is necessary.
   template <typename T2>
   static size_t get_poslist_sorting_threshold() {
+    // Both thresholds have been determined by evluating TPC-H on a recent server machine. Note, both numbers are
+    // chosen to avoid worst-case scenarios and do not reflect the actual break-even.
     if constexpr (std::is_same_v<T2, pmr_string>) {
-      return size_t{400}; // assuming a string length of 10 chars each
+      return size_t{400};
     } else {
       return size_t{1'000};
     }
@@ -54,30 +56,20 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     const auto position_filter_size = position_filter->size();
 
-    //////////////////////////////////////
-    //////////////////////////////////////
-    //////////////////////////////////////
-
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
     if (position_filter_size >= get_poslist_sorting_threshold<T>()) {
+      // In case the pos list is large, LZ4 can benefit from sorting the pos list as the change of hitting the same
+      // decompressed LZ4 block increases. For small pos lists, the sorting causes a unnecessary overhead.
       std::vector<std::pair<RowID, size_t>> position_filter_indexed(position_filter_size);
 
       for (auto index = size_t{0}; index < position_filter_size; ++index) {
         const auto& row_id = (*position_filter)[index];
         position_filter_indexed[index] = {row_id, index};
-        // if (position_filter_size > 1) std::cout << "adding " << row_id << " with index " << index << std::endl;
       }
-      std::stable_sort(position_filter_indexed.begin(), position_filter_indexed.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-
-      // if (position_filter_size > 1) {
-      //   for (const auto& [a,b] : position_filter_indexed) {
-      //     std::cout << a << "|" << b << std::endl;
-      //   }
-      // }
+      std::sort(position_filter_indexed.begin(), position_filter_indexed.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
 
       for (auto index = size_t{0u}; index < position_filter_size; ++index) {
         const auto& position = position_filter_indexed[index].first;
-        // if (!position_filter_is_sorted) std::cout << position.chunk_offset << " ";
         // NOLINTNEXTLINE
         auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
         const auto write_position = position_filter_indexed[index].second;
