@@ -54,7 +54,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
       }
     });
 
-    data_table->get_chunk(static_cast<ChunkID>(data_table->chunk_count() - 1))->finalize();
+    data_table->last_chunk()->finalize();
 
     // We have two full chunks and one open chunk, we only encode the full chunks
     for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {

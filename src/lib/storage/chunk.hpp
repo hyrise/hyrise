@@ -51,7 +51,7 @@ class Chunk : private Noncopyable {
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
 
-  // returns whether new rows can be appended to this Chunk
+  // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during finalize().
   bool is_mutable() const;
 
   // Atomically replaces the current segment at column_id with the passed segment

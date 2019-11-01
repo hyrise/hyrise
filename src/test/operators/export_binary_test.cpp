@@ -132,7 +132,7 @@ TEST_F(OperatorsExportBinaryTest, StringDictionarySegment) {
   table->append({"a"});
   table->append({"test"});
 
-  table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1))->finalize();
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -154,7 +154,7 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   table->append({"a"});
   table->append({"test"});
 
-  table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1))->finalize();
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -205,7 +205,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionarySegment) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1))->finalize();
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -233,7 +233,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1))->finalize();
+  table->last_chunk()->finalize();
 
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, EncodingType::Dictionary);
 
@@ -309,7 +309,7 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionarySegment) {
   table->append({""});
   table->append({""});
 
-  table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1))->finalize();
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -364,7 +364,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
   table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
-  table->get_chunk(static_cast<ChunkID>(table->chunk_count() - 1))->finalize();
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
