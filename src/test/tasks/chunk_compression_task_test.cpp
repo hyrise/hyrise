@@ -93,6 +93,9 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
 
   ASSERT_EQ(table->chunk_count(), 4u);
 
+  table->get_chunk(ChunkID{2})->finalize();
+  table->get_chunk(ChunkID{3})->finalize();
+
   auto compression = std::make_shared<ChunkCompressionTask>(
       "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(

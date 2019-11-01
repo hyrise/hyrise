@@ -43,14 +43,18 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   context->commit();
 
   // Check that row has been inserted.
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 6u);
+  EXPECT_EQ(table->row_count(), 6u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 3u);
   EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
   EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
-  EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[3], AllTypeVariant(12345));
-  EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[3], AllTypeVariant(458.7f));
+  EXPECT_EQ((*table->get_chunk(ChunkID{1})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
+  EXPECT_EQ((*table->get_chunk(ChunkID{1})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
 
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->size(), 6u);
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_segment(ColumnID{1})->size(), 6u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->get_segment(ColumnID{1})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->get_segment(ColumnID{1})->size(), 3u);
 }
 
 TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
@@ -75,7 +79,8 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   context->commit();
 
   EXPECT_EQ(table->chunk_count(), 4u);
-  EXPECT_EQ(table->get_chunk(ChunkID{3})->size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 3u);
+  EXPECT_EQ(table->get_chunk(ChunkID{3})->size(), 2u);
   EXPECT_EQ(table->row_count(), 13u);
 }
 
@@ -101,7 +106,8 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   context->commit();
 
   EXPECT_EQ(table->chunk_count(), 7u);
-  EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 1u);
+  EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2u);
   EXPECT_EQ(table->row_count(), 13u);
 }
 
@@ -202,13 +208,13 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   insert->execute();
   context->commit();
 
-  EXPECT_EQ(table->chunk_count(), 3u);
+  EXPECT_EQ(table->chunk_count(), 4u);
   EXPECT_EQ(table->row_count(), 8u);
 
-  auto null_val_int = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[0];
+  auto null_val_int = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[2];
   EXPECT_TRUE(variant_is_null(null_val_int));
 
-  auto null_val_float = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{1})))[2];
+  auto null_val_float = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{1})))[1];
   EXPECT_TRUE(variant_is_null(null_val_float));
 }
 

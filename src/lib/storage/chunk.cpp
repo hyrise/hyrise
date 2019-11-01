@@ -31,7 +31,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
   for (const auto& segment : _segments) {
     DebugAssert(
         !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
-        "Chunks containing ReferenceSegments should not contains MvccData. They implicitly use the MvccData of the "
+        "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
         "referenced Table");
     DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
     DebugAssert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
@@ -43,8 +43,6 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
 }
 
 bool Chunk::is_mutable() const { return _is_mutable; }
-
-void Chunk::mark_immutable() { _is_mutable = false; }
 
 void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment) {
   std::atomic_store(&_segments.at(column_id), segment);
@@ -100,6 +98,21 @@ std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
   std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(segments); });
   return result;
+}
+
+void Chunk::finalize() {
+  Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
+  _is_mutable = false;
+
+  if (has_mvcc_data()) {
+    auto mvcc = get_scoped_mvcc_data_lock();
+    Assert(!mvcc->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
+
+    mvcc->max_begin_cid = *(std::max_element(mvcc->begin_cids.begin(), mvcc->begin_cids.end()));
+    Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID,
+           "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
+           "finalized before all transactions committed/rolled back.");
+  }
 }
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
@@ -208,7 +221,7 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 
   _pruning_statistics = pruning_statistics;
 }
-void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_row_count += count; }
+void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   DebugAssert(!_cleanup_commit_id, "Cleanup commit ID can only be set once.");

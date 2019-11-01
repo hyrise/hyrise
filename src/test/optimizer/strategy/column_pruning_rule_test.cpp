@@ -251,7 +251,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
 
   // clang-format off
   lqp =
-  AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+  AggregateNode::make(expression_vector(), expression_vector(count_star_(node_a)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_a));
 
@@ -264,7 +264,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+  AggregateNode::make(expression_vector(), expression_vector(count_star_(pruned_node_a)),
     ProjectionNode::make(expression_vector(pruned_a),
       pruned_node_a));
   // clang-format on
@@ -277,7 +277,7 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
 
   // clang-format off
   lqp =
-  AggregateNode::make(expression_vector(b, a), expression_vector(count_star_()),
+  AggregateNode::make(expression_vector(b, a), expression_vector(count_star_(node_a)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_a));
 
@@ -291,7 +291,7 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
-  AggregateNode::make(expression_vector(pruned_b, pruned_a), expression_vector(count_star_()),
+  AggregateNode::make(expression_vector(pruned_b, pruned_a), expression_vector(count_star_(pruned_node_a)),
     ProjectionNode::make(expression_vector(pruned_a, pruned_b),
       pruned_node_a));
   // clang-format on
