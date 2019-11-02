@@ -19,6 +19,7 @@
 namespace opossum {
 
 class AbstractExpression;
+class LQPSubqueryExpression;
 enum class LQPInputSide;
 
 using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>;
@@ -163,5 +164,16 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
  *         subqueries
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+// All SubqueryExpressions referencing the same LQP
+using SubqueryExpressionsByLQP =
+    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubqueryExpression>>>>;
+
+/** 
+ *  @return unique LQPs and the (multiple) SubqueryExpressions referencing each of these unique LQPs.
+ */
+void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
+                                         const std::shared_ptr<AbstractLQPNode>& node,
+                                         std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes);
 
 }  // namespace opossum

@@ -34,6 +34,8 @@ class Optimizer final {
 
   std::shared_ptr<AbstractLQPNode> optimize(const std::shared_ptr<AbstractLQPNode>& input) const;
 
+  static void validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node);
+
  private:
   std::vector<std::unique_ptr<AbstractRule>> _rules;
   std::shared_ptr<AbstractCostEstimator> _cost_estimator;

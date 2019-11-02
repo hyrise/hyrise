@@ -123,6 +123,13 @@ class SubqueryToJoinRule : public AbstractRule {
       const std::map<ParameterID, std::shared_ptr<AbstractExpression>>& parameter_mapping);
 
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
+
+  /**
+   * The SubqueryToJoinRule was written before we required all outputs of a node to be part of the same plan. Other than
+   * that, the rule works correctly and refactoring it only for this additional requirements is not worth the effort.
+   * Thus, we manually remove all outputs that become unused due to the rewrite.
+   */
+  void remove_unused_outputs(const std::shared_ptr<AbstractLQPNode>& root_node);
 };
 
 }  // namespace opossum

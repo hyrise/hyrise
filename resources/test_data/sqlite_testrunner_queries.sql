@@ -28,6 +28,7 @@ SELECT * FROM mixed WHERE b + c < c * b - 100;
 SELECT * FROM mixed WHERE id > b;
 SELECT * FROM mixed WHERE id = b;
 SELECT * FROM mixed WHERE id IN (SELECT 14) AND b > (SELECT 15) AND b < (SELECT 98);
+SELECT * FROM mixed WHERE id IN (SELECT 14 + 1) AND b > (SELECT 15 + 2) AND b < (SELECT 98 + 3)
 SELECT * FROM mixed WHERE id >= 5.5;
 SELECT * FROM mixed WHERE id BETWEEN 5.5 AND 8;
 SELECT * FROM mixed WHERE id < 5.5;
@@ -356,6 +357,8 @@ SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 9 + 2) AND b > (SELECT 9 + 2);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT MAX(id) / 9 FROM mixed) AND b > (SELECT MAX(id) / 9 FROM mixed);
 
 -- Correlated parameter in WHERE statement
 SELECT * FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > id_int_int_int_100.b)

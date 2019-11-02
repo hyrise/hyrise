@@ -20,20 +20,20 @@ namespace opossum {
 class OptimizerTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");
     a = node_a->get_column("a");
     b = node_a->get_column("b");
 
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "node_b");
     x = node_b->get_column("x");
     y = node_b->get_column("y");
 
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}});
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}}, "node_c");
     u = node_c->get_column("u");
 
     subquery_lqp_a = LimitNode::make(to_expression(1), node_b);
     subquery_a = lqp_subquery_(subquery_lqp_a);
-    subquery_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(x, y), node_b));
+    subquery_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(u, 3), node_c));
     subquery_b = lqp_subquery_(subquery_lqp_b);
   }
 
@@ -79,7 +79,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
 
   // Test that the optimizer has reached all nodes (the number includes all nodes created above and the root nodes
   // created by the optimizer for the lqp and each subquery)
-  EXPECT_EQ(nodes.size(), 10u);
+  EXPECT_EQ(nodes.size(), 11u);
 }
 
 TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {

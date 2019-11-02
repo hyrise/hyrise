@@ -6,6 +6,7 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
+#include "optimizer/optimizer.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/table_statistics.hpp"
@@ -23,6 +24,13 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
 
   Assert(root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
 
+  // The JoinOrderingRule largely rewires the in- and outputs of the LQP. For this to work, no node must be referred to
+  // by nodes outside of this LQP. This rule applies to any LQP, but in this rule, it is especially important. Usually,
+  // the optimizer checks for this, but as this rule is also individually called its tests and debugging issues caused
+  // from invalid LQPs is difficult (usually nodes being used in both the input_lqp and the expected_lqp), we manually
+  // validate the LQP here as well.
+  if constexpr (HYRISE_DEBUG) Optimizer::validate_lqp(root);
+
   const auto expected_column_order = root->column_expressions();
 
   auto result_lqp = _perform_join_ordering_recursively(root->left_input());
@@ -31,6 +39,28 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
   if (!expressions_equal(expected_column_order, result_lqp->column_expressions())) {
     result_lqp = ProjectionNode::make(expected_column_order, result_lqp);
   }
+
+  // When the original LQP was converted into a JoinGraph, it was not modified. As such, the sub-LQPs are still used as
+  // inputs by the original LQP. However, as a result of the join ordering, this original LQP will be replaced. As the
+  // new plan is build top-down, the inputs will be set properly. However, we need to make sure that the weak pointers
+  // to the previous output nodes are removed. We do this by first collecting all nodes that are still part of the
+  // LQP and removing all others. This might not be the most efficient way.
+
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> nodes;
+  visit_lqp(result_lqp, [&nodes](const auto& node) {
+    nodes.emplace(node);
+    return LQPVisitation::VisitInputs;
+  });
+  visit_lqp(result_lqp, [&nodes](const auto& node) {
+    const auto outputs = node->outputs();
+    for (const auto& output : outputs) {
+      if (!nodes.contains(output)) {
+        output->set_left_input(nullptr);
+        output->set_right_input(nullptr);
+      }
+    }
+    return LQPVisitation::VisitInputs;
+  });
 
   root->set_left_input(result_lqp);
 }

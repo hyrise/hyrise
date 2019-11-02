@@ -43,44 +43,6 @@
  *                                          to the SubqueryExpressions referencing them.
  */
 
-namespace {
-
-using namespace opossum;  // NOLINT
-
-// All SubqueryExpressions referencing the same LQP
-using SubqueryExpressionsByLQP =
-    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSubqueryExpression>>>>;
-
-// See comment at the top of file for the purpose of this.
-void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
-                                         const std::shared_ptr<AbstractLQPNode>& node,
-                                         std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!node) return;
-  if (!visited_nodes.emplace(node).second) return;
-
-  for (const auto& expression : node->node_expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
-
-      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-        if (*lqp == *subquery_expression->lqp) {
-          subquery_expressions.emplace_back(subquery_expression);
-          return ExpressionVisitation::DoNotVisitArguments;
-        }
-      }
-      subquery_expressions_by_lqp.emplace_back(subquery_expression->lqp, std::vector{subquery_expression});
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    });
-  }
-
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
-}
-
-}  // namespace
-
 namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
@@ -148,6 +110,16 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
 
   for (const auto& rule : _rules) {
     _apply_rule(*rule, root_node);
+
+    // The SubqueryToJoinRule was written before we required all outputs of a node to be part of the same plan
+    // (see validate_lqp). Other than that, the rule works correctly and refactoring it only for this additional
+    // requirements is not worth the effort. Thus, we manually remove all outputs that become unused due to the
+    // rewrite. We trigger this here so that it is only called on the root node, not on any subquery LQPs.
+    if (const auto subquery_to_join_rule = dynamic_cast<SubqueryToJoinRule*>(&*rule)) {
+      subquery_to_join_rule->remove_unused_outputs(root_node);
+    }
+
+    if constexpr (HYRISE_DEBUG) validate_lqp(root_node);  // TODO test impact on CI duration
   }
 
   // Remove LogicalPlanRootNode
@@ -155,6 +127,100 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   root_node->set_left_input(nullptr);
 
   return optimized_node;
+}
+
+void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) {
+  // If you can think of a way in which an LQP can be corrupt, please add it!
+
+  // First, collect all LQPs (the main LQP and all subqueries)
+  auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
+  auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, root_node, visited_nodes);
+  for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+    lqps.emplace_back(lqp);
+  }
+
+  // Next, collect all nodes found in the entire plan (not only the main LQP)
+  std::unordered_set<std::shared_ptr<const AbstractLQPNode>> all_nodes;
+  for (const auto& lqp : lqps) {
+    visit_lqp(lqp, [&all_nodes](const auto& node) {
+      all_nodes.emplace(node);
+      return LQPVisitation::VisitInputs;
+    });
+  }
+
+  // (1) Make sure that all outputs found anywhere in the entire plan are also part of the plan
+  // (2) Make sure each node has the number of inputs expected for that node type
+  // (3) Make sure that for all LQPColumnExpressions, the original_node is part of the LQP
+  for (const auto& lqp : lqps) {
+    visit_lqp(lqp, [&all_nodes](const auto& node) {
+      // Check that all outputs are part of the LQP
+      const auto outputs = node->outputs();
+      for (const auto& output : outputs) {
+        // LQP nodes should only be part of a single LQP and all of their outputs should be part of the same LQP. If you
+        // run into this assertion as part of a new test, there is a good chance that you are using part of the LQP
+        // outside of the LQP that is currently optimized. For example, if you create a bunch of LQP nodes in the test's
+        // SetUp method but these are not used in the current LQP, this can cause this assertion to fail. This is only
+        // enforced when rules are executed through the optimizer, not tests call the rule directly.
+        Assert(all_nodes.contains(output), std::string{"Output `"} + output->description() + "` of node `" +
+                                               node->description() + "` not found in LQP");
+      }
+
+      // Check that all LQPColumnExpressions in the node can be resolved. This does, however, not guarantee that it is
+      // correctly used as one of the (transitive) inputs of `node`. Checking that would be more expensive.
+      for (const auto& node_expression : node->node_expressions) {
+        visit_expression(node_expression, [&all_nodes](const auto& sub_expression) {
+          if (sub_expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+          const auto original_node =
+              dynamic_cast<LQPColumnExpression&>(*sub_expression).column_reference.original_node();
+          Assert(all_nodes.contains(original_node),
+                 std::string{"LQPColumnExpression "} + sub_expression->as_column_name() + " can not be resolved");
+          return ExpressionVisitation::VisitArguments;
+        });
+      }
+
+      // Check that the node has the expected number of inputs
+      auto num_expected_inputs = size_t{0};
+      switch (node->type) {
+        case LQPNodeType::CreatePreparedPlan:
+        case LQPNodeType::CreateView:
+        case LQPNodeType::DummyTable:
+        case LQPNodeType::DropView:
+        case LQPNodeType::DropTable:
+        case LQPNodeType::StaticTable:
+        case LQPNodeType::StoredTable:
+        case LQPNodeType::Mock:
+          num_expected_inputs = 0;
+          break;
+
+        case LQPNodeType::Aggregate:
+        case LQPNodeType::Alias:
+        case LQPNodeType::CreateTable:
+        case LQPNodeType::Delete:
+        case LQPNodeType::Insert:
+        case LQPNodeType::Limit:
+        case LQPNodeType::Predicate:
+        case LQPNodeType::Projection:
+        case LQPNodeType::Root:
+        case LQPNodeType::Sort:
+        case LQPNodeType::Validate:
+          num_expected_inputs = 1;
+          break;
+
+        case LQPNodeType::Join:
+        case LQPNodeType::Update:
+        case LQPNodeType::Union:
+          num_expected_inputs = 2;
+          break;
+      }
+      Assert(node->input_count() == num_expected_inputs, std::string{"Node "} + node->description() + " has " +
+                                                             std::to_string(node->input_count()) + " inputs, while " +
+                                                             std::to_string(num_expected_inputs) + " were expected");
+
+      return LQPVisitation::VisitInputs;
+    });
+  }
 }
 
 void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const {
@@ -173,6 +239,7 @@ void Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
     for (const auto& subquery_expression : subquery_expressions) {
       subquery_expression->lqp = local_root_node->left_input();
     }
+    local_root_node->set_left_input(nullptr);
   }
 }
 
