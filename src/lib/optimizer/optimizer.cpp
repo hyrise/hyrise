@@ -119,7 +119,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
       subquery_to_join_rule->remove_unused_outputs(root_node);
     }
 
-    if constexpr (HYRISE_DEBUG) validate_lqp(root_node);  // TODO test impact on CI duration
+    if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
   }
 
   // Remove LogicalPlanRootNode
