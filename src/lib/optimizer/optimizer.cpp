@@ -108,6 +108,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make(input);
 
+  if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
+
   for (const auto& rule : _rules) {
     _apply_rule(*rule, root_node);
 
