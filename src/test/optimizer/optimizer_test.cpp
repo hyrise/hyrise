@@ -110,8 +110,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   {
     auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
     ASSERT_TRUE(predicate_node_a);
-    auto subquery_a_a =
-        std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
+    auto subquery_a_a = std::dynamic_pointer_cast<LQPSubqueryExpression>(
+        predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
     ASSERT_TRUE(subquery_a_a);
     auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
     ASSERT_TRUE(projection_node);
@@ -159,8 +159,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   {
     auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(optimized_lqp);
     ASSERT_TRUE(predicate_node_a);
-    auto subquery_a_a =
-        std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
+    auto subquery_a_a = std::dynamic_pointer_cast<LQPSubqueryExpression>(
+        predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
     ASSERT_TRUE(subquery_a_a);
     auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(optimized_lqp->left_input());
     ASSERT_TRUE(projection_node);
@@ -169,7 +169,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
     ASSERT_TRUE(subquery_a_b);
     auto predicate_node_b = std::dynamic_pointer_cast<PredicateNode>(optimized_lqp->left_input()->left_input());
     ASSERT_TRUE(predicate_node_b);
-    auto subquery_b_a = std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_b->predicate()->arguments.at(1));
+    auto subquery_b_a =
+        std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_b->predicate()->arguments.at(1));
     ASSERT_TRUE(subquery_b_a);
 
     EXPECT_EQ(subquery_a_a->lqp, subquery_a_b->lqp);

@@ -149,7 +149,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
   // optimized, which could lead to subtle bugs. _optimized_logical_plans will hold the optimized plans as returned
   // from the SQLPipelineStatement and the Optimizer.
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary. Note that this
-  // does not clear the unoptimized LQPs stored in the SQLPipelineStatement - those are cleared as part of 
+  // does not clear the unoptimized LQPs stored in the SQLPipelineStatement - those are cleared as part of
   // SQLPipelineStatement::get_optimized_logical_plan.
   _unoptimized_logical_plans.clear();
 

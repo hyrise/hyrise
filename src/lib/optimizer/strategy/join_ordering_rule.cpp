@@ -6,7 +6,6 @@
 #include "optimizer/join_ordering/dp_ccp.hpp"
 #include "optimizer/join_ordering/greedy_operator_ordering.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
-#include "optimizer/optimizer.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "statistics/table_statistics.hpp"
@@ -23,13 +22,6 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
    */
 
   Assert(root->type == LQPNodeType::Root, "JoinOrderingRule needs root to hold onto");
-
-  // The JoinOrderingRule largely rewires the in- and outputs of the LQP. For this to work, no node must be referred to
-  // by nodes outside of this LQP. This rule applies to any LQP, but in this rule, it is especially important. Usually,
-  // the optimizer checks for this, but as this rule is also individually called its tests and debugging issues caused
-  // from invalid LQPs is difficult (usually nodes being used in both the input_lqp and the expected_lqp), we manually
-  // validate the LQP here as well.
-  if constexpr (HYRISE_DEBUG) Optimizer::validate_lqp(root);
 
   const auto expected_column_order = root->column_expressions();
 
