@@ -107,7 +107,7 @@ TEST_F(OptimizerTest, VerifiesResults) {
 
   class LQPBreakingRule : public AbstractRule {
    public:
-    LQPBreakingRule(const std::shared_ptr<AbstractExpression>& out_of_plan_expression)
+    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& out_of_plan_expression)
         : out_of_plan_expression(out_of_plan_expression) {}
 
     void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
