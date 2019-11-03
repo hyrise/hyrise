@@ -43,6 +43,89 @@ class OptimizerTest : public ::testing::Test {
   std::shared_ptr<LQPSubqueryExpression> subquery_a, subquery_b;
 };
 
+TEST_F(OptimizerTest, RequiresOwnership) {
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b),
+      node_a));
+  // clang-format on
+
+  auto optimizer = Optimizer::create_default_optimizer();
+  // Does not move the LQP into the optimizer
+  EXPECT_THROW(optimizer->optimize(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AssertsValidOutputs) {
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b),
+      node_a));
+  // clang-format on
+
+  auto out_of_plan_node = LimitNode::make(value_(10), lqp->left_input());
+
+  EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AssertsCorrectNumberOfInputs) {
+  // clang-format off
+  auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(b, 1),
+    ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+      PredicateNode::make(greater_than_(a, subquery_b),
+        node_a)));
+  // clang-format on
+
+  EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AssertsInPlanReferences) {
+  // clang-format off
+  auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(x, 1),
+    ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+      PredicateNode::make(greater_than_(a, subquery_b),
+        node_a)));
+  // clang-format on
+
+  EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, VerifiesResults) {
+  // While the Asserts* tests checked the different features of validate_lqp, this test checks that a rule that breaks
+  // an LQP throws an assertion.
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b),
+      node_a));
+  // clang-format on
+
+  Optimizer optimizer{};
+
+  class LQPBreakingRule : public AbstractRule {
+   public:
+    LQPBreakingRule(const std::shared_ptr<AbstractExpression>& out_of_plan_expression)
+        : out_of_plan_expression(out_of_plan_expression) {}
+
+    void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
+      // Change the `b` expression in the projection to `x`, which is not part of the input LQP
+      const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(root->left_input());
+      if (!projection_node) return;
+      projection_node->node_expressions[0] = out_of_plan_expression;
+    }
+
+    std::shared_ptr<AbstractExpression> out_of_plan_expression;
+  };
+
+  optimizer.add_rule(std::make_unique<LQPBreakingRule>(lqp_column_(x)));
+
+  // Does not move the LQP into the optimizer
+  EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
+}
+
 TEST_F(OptimizerTest, OptimizesSubqueries) {
   /**
    * Test that the Optimizer's rules reach subqueries
