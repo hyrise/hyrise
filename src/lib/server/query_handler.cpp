@@ -55,7 +55,7 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
   const auto prepared_plan =
       std::make_shared<PreparedPlan>(prepared_plans[0], sql_translator.parameter_ids_of_value_placeholders());
 
-  Hyrise::get().storage_manager.add_prepared_plan(statement_name, std::move(prepared_plan));
+  Hyrise::get().storage_manager.add_prepared_plan(statement_name, prepared_plan);
 }
 
 std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const PreparedStatementDetails& statement_details) {

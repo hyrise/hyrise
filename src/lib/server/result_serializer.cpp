@@ -5,7 +5,7 @@ namespace opossum {
 
 template <typename SocketType>
 void ResultSerializer::send_table_description(
-    std::shared_ptr<const Table> table,
+    const std::shared_ptr<const Table>& table,
     const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
   // Calculate sum of length of all column names
   uint32_t column_name_length_sum = 0;
@@ -52,7 +52,7 @@ void ResultSerializer::send_table_description(
 
 template <typename SocketType>
 void ResultSerializer::send_query_response(
-    std::shared_ptr<const Table> table,
+    const std::shared_ptr<const Table>& table,
     const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
   auto values_as_strings = std::vector<std::optional<std::string>>(table->column_count());
 
@@ -75,7 +75,7 @@ void ResultSerializer::send_query_response(
           // Sum up string lengths for a row to save an extra loop during serialization
           string_length_sum += string_value.value().size();
         }
-        values_as_strings[current_segment] = std::move(string_value);
+        values_as_strings[current_segment] = string_value;
       }
       postgres_protocol_handler->send_data_row(values_as_strings, string_length_sum);
     }
@@ -105,18 +105,18 @@ std::string ResultSerializer::build_command_complete_message(const OperatorType 
   }
 }
 
-template void ResultSerializer::send_table_description<Socket>(std::shared_ptr<const Table>,
+template void ResultSerializer::send_table_description<Socket>(const std::shared_ptr<const Table>&,
                                                                const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
 
 template void ResultSerializer::send_table_description<boost::asio::posix::stream_descriptor>(
-    std::shared_ptr<const Table>,
+    const std::shared_ptr<const Table>&,
     const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
 
-template void ResultSerializer::send_query_response<Socket>(std::shared_ptr<const Table>,
+template void ResultSerializer::send_query_response<Socket>(const std::shared_ptr<const Table>&,
                                                             const std::shared_ptr<PostgresProtocolHandler<Socket>>&);
 
 template void ResultSerializer::send_query_response<boost::asio::posix::stream_descriptor>(
-    std::shared_ptr<const Table>,
+    const std::shared_ptr<const Table>&,
     const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
 
 }  // namespace opossum

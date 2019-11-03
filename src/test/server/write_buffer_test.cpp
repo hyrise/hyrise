@@ -68,6 +68,10 @@ TEST_F(WriteBufferTest, WriteString) {
 TEST_F(WriteBufferTest, WriteLargeString) {
   const std::string original_content = std::string(SERVER_BUFFER_SIZE + 2u, 'a');
   _write_buffer->put_string(original_content, HasNullTerminator::No);
+  // Since we use transfer_at_least when flushing the buffer we don't know how many bytes are going to written. It is
+  // at least the amount bytes of the characters to be inserted and at maximum the buffer size.
+  EXPECT_TRUE((original_content.size() - _write_buffer->maximum_capacity()) <= _mocked_socket->read().size() &&
+              _mocked_socket->read().size() <= _write_buffer->maximum_capacity());
   _write_buffer->flush();
   EXPECT_EQ(_mocked_socket->read(), original_content);
 }

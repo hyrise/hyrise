@@ -9,13 +9,13 @@ PostgresProtocolHandler<SocketType>::PostgresProtocolHandler(const std::shared_p
 template <typename SocketType>
 uint32_t PostgresProtocolHandler<SocketType>::read_startup_packet_header() {
   // Special SSL version number that we catch to deny SSL support
-  constexpr auto ssl_request_code = 80877103u;
+  constexpr auto SSL_REQUEST_CODE = 80877103u;
 
   const auto body_length = _read_buffer.template get_value<uint32_t>();
   const auto protocol_version = _read_buffer.template get_value<uint32_t>();
 
   // We currently do not support SSL
-  if (protocol_version == ssl_request_code) {
+  if (protocol_version == SSL_REQUEST_CODE) {
     _ssl_deny();
     return read_startup_packet_header();
   } else {
@@ -36,9 +36,9 @@ template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_authentication_response() {
   _write_buffer.template put_value(PostgresMessageType::AuthenticationRequest);
   // Since we don't have any authentication mechanism, authentication is always successful
-  constexpr uint32_t authentication_error_code = 0;
-  _write_buffer.template put_value<uint32_t>(LENGTH_FIELD_SIZE + sizeof(authentication_error_code));
-  _write_buffer.template put_value<uint32_t>(authentication_error_code);
+  constexpr uint32_t AUTHENTICATION_ERROR_CODE = 0;
+  _write_buffer.template put_value<uint32_t>(LENGTH_FIELD_SIZE + sizeof(AUTHENTICATION_ERROR_CODE));
+  _write_buffer.template put_value<uint32_t>(AUTHENTICATION_ERROR_CODE);
 }
 
 template <typename SocketType>

@@ -15,19 +15,16 @@ typedef boost::asio::posix::stream_descriptor file_stream;
 class MockSocket {
  public:
   MockSocket() {
-    boost::asio::io_service io_service;
     auto file_descriptor = open(file_name, O_RDWR | O_CREAT | O_APPEND, 0755);
-    _stream = std::make_shared<file_stream>(io_service, file_descriptor);
-    io_service.run();
+    _stream = std::make_shared<file_stream>(_io_service, file_descriptor);
+    _io_service.run();
   }
 
   ~MockSocket() { std::filesystem::remove(std::filesystem::path{file_name}); }
 
   std::shared_ptr<file_stream> get_socket() { return _stream; }
 
-  void write(const std::string& value) {
-    std::ofstream(std::filesystem::path{file_name}, std::ios_base::app) << value;
-  }
+  void write(const std::string& value) { std::ofstream(std::filesystem::path{file_name}, std::ios_base::app) << value; }
 
   std::string read() {
     std::ifstream file_stream(file_name);
@@ -37,6 +34,7 @@ class MockSocket {
   bool empty() { return std::ifstream(std::filesystem::path{file_name}).peek() == std::ifstream::traits_type::eof(); }
 
  private:
+  boost::asio::io_service _io_service;
   std::shared_ptr<file_stream> _stream;
 };
 
