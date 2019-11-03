@@ -94,6 +94,7 @@ TEST_F(OptimizerTest, AssertsInPlanReferences) {
 }
 
 TEST_F(OptimizerTest, VerifiesResults) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
   // While the Asserts* tests checked the different features of validate_lqp, this test checks that a rule that breaks
   // an LQP throws an assertion.
   // clang-format off
