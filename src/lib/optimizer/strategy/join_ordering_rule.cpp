@@ -40,28 +40,6 @@ void JoinOrderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) co
     result_lqp = ProjectionNode::make(expected_column_order, result_lqp);
   }
 
-  // When the original LQP was converted into a JoinGraph, it was not modified. As such, the sub-LQPs are still used as
-  // inputs by the original LQP. However, as a result of the join ordering, this original LQP will be replaced. As the
-  // new plan is build top-down, the inputs will be set properly. However, we need to make sure that the weak pointers
-  // to the previous output nodes are removed. We do this by first collecting all nodes that are still part of the
-  // LQP and removing all others. This might not be the most efficient way.
-
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> nodes;
-  visit_lqp(result_lqp, [&nodes](const auto& node) {
-    nodes.emplace(node);
-    return LQPVisitation::VisitInputs;
-  });
-  visit_lqp(result_lqp, [&nodes](const auto& node) {
-    const auto outputs = node->outputs();
-    for (const auto& output : outputs) {
-      if (!nodes.contains(output)) {
-        output->set_left_input(nullptr);
-        output->set_right_input(nullptr);
-      }
-    }
-    return LQPVisitation::VisitInputs;
-  });
-
   root->set_left_input(result_lqp);
 }
 

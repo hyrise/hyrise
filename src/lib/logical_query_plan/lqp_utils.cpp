@@ -296,31 +296,4 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::
   return root_nodes;
 }
 
-void collect_subquery_expressions_by_lqp(SubqueryExpressionsByLQP& subquery_expressions_by_lqp,
-                                         const std::shared_ptr<AbstractLQPNode>& node,
-                                         std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!node) return;
-  if (!visited_nodes.emplace(node).second) return;
-
-  for (const auto& expression : node->node_expressions) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
-
-      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-        if (*lqp == *subquery_expression->lqp) {
-          subquery_expressions.emplace_back(subquery_expression);
-          return ExpressionVisitation::DoNotVisitArguments;
-        }
-      }
-      subquery_expressions_by_lqp.emplace_back(subquery_expression->lqp, std::vector{subquery_expression});
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    });
-  }
-
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
-}
-
 }  // namespace opossum

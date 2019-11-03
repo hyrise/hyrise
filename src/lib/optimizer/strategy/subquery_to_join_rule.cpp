@@ -663,37 +663,4 @@ void SubqueryToJoinRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) 
   _apply_to_inputs(join_node);
 }
 
-void SubqueryToJoinRule::remove_unused_outputs(const std::shared_ptr<AbstractLQPNode>& root_node) {
-  // First, collect all LQPs (the main LQP and all subqueries)
-  auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  auto subquery_expressions_by_lqp = SubqueryExpressionsByLQP{};
-  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  collect_subquery_expressions_by_lqp(subquery_expressions_by_lqp, root_node, visited_nodes);
-  for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-    lqps.emplace_back(lqp);
-  }
-
-  // Next, collect all nodes found in the entire plan (not only the main LQP)
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> all_nodes;
-  for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&all_nodes](const auto& node) {
-      all_nodes.emplace(node);
-      return LQPVisitation::VisitInputs;
-    });
-  }
-
-  // Remove all output relations that are not part of the entire plan
-  for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&all_nodes](const auto& node) {
-      const auto outputs = node->outputs();
-      for (const auto& output : outputs) {
-        if (!all_nodes.contains(output)) {
-          node->remove_output(output);
-        }
-      }
-      return LQPVisitation::VisitInputs;
-    });
-  }
-}
-
 }  // namespace opossum
