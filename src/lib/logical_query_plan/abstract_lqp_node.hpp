@@ -124,7 +124,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
 
   /**
-   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
+   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
+   *         has a special treatment (it is represented as an LQPColumnReference with an INVALID_COLUMN_ID), it might
+  *          be evaluable even if find_column_id returns nullopt.
    */
   std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
 

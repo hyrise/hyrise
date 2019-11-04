@@ -31,9 +31,7 @@ std::string AggregateExpression::as_column_name() const {
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
     stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
-  } else if (aggregate_function == AggregateFunction::Count &&
-             dynamic_cast<const LQPColumnExpression*>(&*argument())->column_reference.original_column_id() ==
-                 INVALID_COLUMN_ID) {
+  } else if (is_count_star(*this)) {
     stream << "COUNT(*)";
   } else {
     stream << aggregate_function << "(";
@@ -84,6 +82,19 @@ DataType AggregateExpression::data_type() const {
   });
 
   return aggregate_data_type;
+}
+
+bool AggregateExpression::is_count_star(const AbstractExpression& expression) {
+  if (expression.type != ExpressionType::Aggregate) return false;
+  const auto& aggregate_expression = static_cast<const AggregateExpression&>(expression);
+
+  if (aggregate_expression.aggregate_function != AggregateFunction::Count) return false;
+  if (aggregate_expression.argument()->type != ExpressionType::LQPColumn) return false;
+
+  const auto& lqp_column_expression = static_cast<LQPColumnExpression&>(*aggregate_expression.argument());
+  if (lqp_column_expression.column_reference.original_column_id() != INVALID_COLUMN_ID) return false;
+
+  return true;
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {

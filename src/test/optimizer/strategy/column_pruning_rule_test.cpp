@@ -258,14 +258,15 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
   // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
   lqp = lqp->deep_copy();
 
-  const auto pruned_node_a = pruned(node_a, {ColumnID{1}, ColumnID{2}});
+  const auto pruned_node_a = pruned(node_a, {ColumnID{2}});
   const auto pruned_a = pruned_node_a->get_column("a");
+  const auto pruned_b = pruned_node_a->get_column("b");
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(), expression_vector(count_star_(pruned_node_a)),
-    ProjectionNode::make(expression_vector(pruned_a),
+    ProjectionNode::make(expression_vector(pruned_a, pruned_b, add_(pruned_a, 2)),
       pruned_node_a));
   // clang-format on
 
@@ -292,7 +293,7 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(pruned_b, pruned_a), expression_vector(count_star_(pruned_node_a)),
-    ProjectionNode::make(expression_vector(pruned_a, pruned_b),
+    ProjectionNode::make(expression_vector(pruned_a, pruned_b, add_(pruned_a, 2)),
       pruned_node_a));
   // clang-format on
 
