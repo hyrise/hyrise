@@ -183,7 +183,7 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
 
 TEST_F(OperatorDeepCopyTest, Subquery) {
   // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
-  // this suite. The test is very confusing and error-prone with explicit operators as above.
+  // this suite. The test would be very confusing and error-prone with explicit operators as above.
   const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
   Hyrise::get().storage_manager.add_table("table_3int", table);
 
