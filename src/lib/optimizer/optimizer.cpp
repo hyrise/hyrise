@@ -197,10 +197,10 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
       const auto outputs = node->outputs();
       for (const auto& output : outputs) {
         // LQP nodes should only be part of a single LQP and all of their outputs should be part of the same LQP. If you
-        // run into this assertion as part of a new test, there is a good chance that you are using part of the LQP
+        // run into this assertion as part of a new test, there is a good chance that you are using parts of the LQP
         // outside of the LQP that is currently optimized. For example, if you create a bunch of LQP nodes in the test's
         // SetUp method but these are not used in the current LQP, this can cause this assertion to fail. This is only
-        // enforced when rules are executed through the optimizer, not tests call the rule directly.
+        // enforced when rules are executed through the optimizer, not when tests call the rule directly.
         Assert(all_nodes.contains(output), std::string{"Output `"} + output->description() + "` of node `" +
                                                node->description() + "` not found in LQP");
       }

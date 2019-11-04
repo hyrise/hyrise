@@ -145,10 +145,10 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
          "One or more SQL statement is dependent on the execution of a previous one. "
          "Cannot translate all statements without executing, i.e. calling get_result_table()");
 
-  // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
-  // optimized, which could lead to subtle bugs. _optimized_logical_plans will hold the optimized plans as returned
-  // from the SQLPipelineStatement and the Optimizer.
-  // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary. Note that this
+  // The optimizer modifies the input LQP and requires exclusive ownership of that LQP. This means that we need to
+  // clear _unoptimized_logical_plans. This is not an issue as the unoptimized plans will no longer be needed.
+  // Calls to get_unoptimized_logical_plans are still allowed (e.g., for visualization), in which case the unoptimized
+  // plan will be recreated. Note that this
   // does not clear the unoptimized LQPs stored in the SQLPipelineStatement - those are cleared as part of
   // SQLPipelineStatement::get_optimized_logical_plan.
   _unoptimized_logical_plans.clear();

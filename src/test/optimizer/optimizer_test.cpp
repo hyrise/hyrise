@@ -123,7 +123,6 @@ TEST_F(OptimizerTest, VerifiesResults) {
 
   optimizer.add_rule(std::make_unique<LQPBreakingRule>(lqp_column_(x)));
 
-  // Does not move the LQP into the optimizer
   EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
 }
 
