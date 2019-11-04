@@ -26,9 +26,9 @@ ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql,
       stream << sql_pipeline.metrics();
       execution_info.pipeline_metrics = stream.str();
     }
-  } else {
+  } else if (pipeline_status == SQLPipelineStatus::RolledBack) {
     const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
-    execution_info.error = "Error during pipeline execution. Failed statement: " + failed_statement;
+    execution_info.error = "Transaction conflict, transaction was rolled back. Failed statement: " + failed_statement;
   }
   return execution_info;
 }

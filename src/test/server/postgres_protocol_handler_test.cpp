@@ -264,7 +264,8 @@ TEST_F(PostgresProtocolHandlerTest, ReadExecutePacket) {
 }
 
 TEST_F(PostgresProtocolHandlerTest, SendErrorMessage) {
-  const std::string error_message = "error";
+  const std::string error_description = "error";
+  const auto error_message = ErrorMessage{{PostgresMessageType::HumanReadableError, error_description}};
   _protocol_handler->send_error_message(error_message);
   const std::string file_content = _mocked_socket->read();
 
@@ -273,7 +274,7 @@ TEST_F(PostgresProtocolHandlerTest, SendErrorMessage) {
   start += sizeof(uint32_t) + sizeof(PostgresMessageType);
   EXPECT_EQ(static_cast<PostgresMessageType>(file_content[start]), PostgresMessageType::HumanReadableError);
   start += sizeof(PostgresMessageType);
-  EXPECT_EQ(std::string(file_content, start, error_message.size()), error_message);
+  EXPECT_EQ(std::string(file_content, start, error_description.size()), error_description);
   EXPECT_EQ(NetworkConversionHelper::get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
 }
 

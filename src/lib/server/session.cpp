@@ -28,7 +28,8 @@ void Session::run() {
     } catch (const std::exception& e) {
       std::cerr << "Exception in session with client port " << _socket->remote_endpoint().port() << ":" << std::endl
                 << e.what() << std::endl;
-      _postgres_protocol_handler->send_error_message(e.what());
+      const auto error_message = ErrorMessage{{PostgresMessageType::HumanReadableError, e.what()}};
+      _postgres_protocol_handler->send_error_message(error_message);
       _postgres_protocol_handler->send_ready_for_query();
       // In case of an error, an error message has to be send to the client followed by a "ReadyForQuery" message.
       // Messages that have already been received are processed further. A "sync" message makes the server send another
@@ -107,7 +108,10 @@ void Session::_handle_simple_query() {
   const auto execution_information = QueryHandler::execute_pipeline(query, _send_execution_info);
 
   if (!execution_information.error.empty()) {
-    _postgres_protocol_handler->send_error_message(execution_information.error);
+    const auto error_message = ErrorMessage{{PostgresMessageType::HumanReadableError, execution_information.error},
+                                            {PostgresMessageType::SqlstateCodeError,
+                                             std::to_string(static_cast<uint32_t>(ErrorCode::TransactionRolledBack))}};
+    _postgres_protocol_handler->send_error_message(error_message);
   } else {
     uint64_t row_count = 0;
     // If there is no result table, e.g. after an INSERT command, we cannot send row data. Otherwise, the result table

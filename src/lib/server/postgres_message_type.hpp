@@ -23,7 +23,8 @@ enum class PostgresMessageType : unsigned char {
   RowDescription = 'T',
   DataRow = 'D',
 
-  // Errors
+  // Selection of error and notice message fields. All possible fields are documented at:
+  // https://www.postgresql.org/docs/current/protocol-error-fields.html
   HumanReadableError = 'M',
   SqlstateCodeError = 'C',
 
@@ -48,6 +49,11 @@ enum class TransactionStatusIndicator : unsigned char {
   Idle = 'I',
   InTransactionBlock = 'T',
   InFailedTransactionBlock = 'e'
+};
+
+// SQL error codes
+enum class ErrorCode : uint32_t {
+  TransactionRolledBack = 40001,
 };
 
 }  // namespace opossum

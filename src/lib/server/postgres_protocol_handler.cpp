@@ -228,16 +228,25 @@ std::string PostgresProtocolHandler<SocketType>::read_execute_packet() {
 }
 
 template <typename SocketType>
-void PostgresProtocolHandler<SocketType>::send_error_message(const std::string& error_message) {
+void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessage& error_message) {
   _write_buffer.template put_value(PostgresMessageType::ErrorResponse);
-  // Message has 2 null terminators: one terminates the error string, the other one terminates the message
-  const auto packet_size =
-      LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + error_message.size() + 2u /* null terminator */;
+
+  // Calculate size of error message strings
+  auto string_length_sum = 0;
+  for (const auto& kv : error_message) {
+    string_length_sum += kv.second.size() + 1u /* null terminator */;
+  }
+
+  const auto packet_size = LENGTH_FIELD_SIZE + error_message.size() * sizeof(PostgresMessageType) + string_length_sum +
+                           1u /* null terminator */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
-  // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
-  _write_buffer.template put_value(PostgresMessageType::HumanReadableError);
-  _write_buffer.put_string(error_message);
-  // We need an additional null terminator for this message
+
+  for (const auto& [message_type, content] : error_message) {
+    _write_buffer.template put_value(message_type);
+    _write_buffer.put_string(content);
+  }
+
+  // We need an additional null terminator to terminate whole message
   _write_buffer.template put_value('\0');
   _write_buffer.flush();
 }

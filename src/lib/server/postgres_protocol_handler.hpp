@@ -7,6 +7,8 @@
 
 namespace opossum {
 
+typedef std::unordered_map<PostgresMessageType, std::string> ErrorMessage;
+
 // This struct stores a prepared statement's name, its portal used and the specified parameters.
 struct PreparedStatementDetails {
   std::string statement_name;
@@ -58,7 +60,7 @@ class PostgresProtocolHandler {
   std::string read_execute_packet();
 
   // Send error message to client if there is an error during parsing or execution
-  void send_error_message(const std::string& error_message);
+  void send_error_message(const ErrorMessage& error_message);
 
   // Additional (optional) message containing execution times of different components (such as translator or optimizer)
   void send_execution_info(const std::string& execution_information);
