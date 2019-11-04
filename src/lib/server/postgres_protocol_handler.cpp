@@ -19,14 +19,14 @@ uint32_t PostgresProtocolHandler<SocketType>::read_startup_packet_header() {
     _ssl_deny();
     return read_startup_packet_header();
   } else {
-    // Substract uint32_t twice, since both packet length and protocol version have been read already
+    // Subtract uint32_t twice, since both packet length and protocol version have been read already
     return body_length - 2 * LENGTH_FIELD_SIZE;
   }
 }
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::read_startup_packet_body(const uint32_t size) {
-  // As of now, we don't do anything with the startup packet body. It contains authentication data and the
+  // As of now, we do not do anything with the startup packet body. It contains authentication data and the
   // database name the user desires to connect to. Hence, we read this information from the network device as
   // one large string and throw it away.
   _read_buffer.get_string(size, HasNullTerminator::No);
@@ -35,7 +35,7 @@ void PostgresProtocolHandler<SocketType>::read_startup_packet_body(const uint32_
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_authentication_response() {
   _write_buffer.template put_value(PostgresMessageType::AuthenticationRequest);
-  // Since we don't have any authentication mechanism, authentication is always successful
+  // Since we do not have any authentication mechanism, authentication is always successful
   constexpr uint32_t AUTHENTICATION_ERROR_CODE = 0;
   _write_buffer.template put_value<uint32_t>(LENGTH_FIELD_SIZE + sizeof(AUTHENTICATION_ERROR_CODE));
   _write_buffer.template put_value<uint32_t>(AUTHENTICATION_ERROR_CODE);
@@ -44,7 +44,7 @@ void PostgresProtocolHandler<SocketType>::send_authentication_response() {
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_parameter(const std::string& key, const std::string& value) {
   // 2 null terminators, one for each string
-  const auto packet_size = LENGTH_FIELD_SIZE + key.size() + value.size() + 2u /* null terminator */;
+  const auto packet_size = LENGTH_FIELD_SIZE + key.size() + value.size() + 2u;
   _write_buffer.template put_value(PostgresMessageType::ParameterStatus);
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(key);
@@ -92,9 +92,9 @@ void PostgresProtocolHandler<SocketType>::send_row_description(const std::string
                                                                const int16_t type_width) {
   _write_buffer.put_string(column_name);
   // This field contains the table ID (OID in postgres). We have to set it in order to fulfill the protocol
-  // specification. We don't know what it's good for.
+  // specification. We do not know what it's good for.
   _write_buffer.template put_value<int32_t>(0u);  // No object id
-  // This field contains the attribute ID (OID in postgres). We don't know what it's good for either.
+  // This field contains the attribute ID (OID in postgres). We do not know what it's good for either.
   _write_buffer.template put_value<int16_t>(0u);          // No attribute number
   _write_buffer.template put_value<int32_t>(object_id);   // Object id of type
   _write_buffer.template put_value<int16_t>(type_width);  // Data type size
@@ -173,7 +173,7 @@ void PostgresProtocolHandler<SocketType>::send_status_message(const PostgresMess
 
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::read_describe_packet() {
-  const auto packet_length = _read_buffer.template get_value<uint32_t>();
+  const auto packet_size = _read_buffer.template get_value<uint32_t>();
   // Client asks for a description of a statement or a portal
   // Statement descriptions (S) are returned as two separate messages: ParameterDescription and RowDescription
   // Portal descriptions are just RowDescriptions
@@ -182,7 +182,7 @@ void PostgresProtocolHandler<SocketType>::read_describe_packet() {
   Assert(description_target == 'P', "Only portal descriptions are currently supported.");
 
   // The description itself will be sent out after execution of the prepared statement.
-  /* const auto statement_or_portal_name = */ _read_buffer.get_string(packet_length - LENGTH_FIELD_SIZE - sizeof(char),
+  /* const auto statement_or_portal_name = */ _read_buffer.get_string(packet_size - LENGTH_FIELD_SIZE - sizeof(char),
                                                                       HasNullTerminator::No);
 }
 
@@ -216,9 +216,9 @@ PreparedStatementDetails PostgresProtocolHandler<SocketType>::read_bind_packet()
 
 template <typename SocketType>
 std::string PostgresProtocolHandler<SocketType>::read_execute_packet() {
-  const auto packet_length = _read_buffer.template get_value<uint32_t>();
-  const auto portal = _read_buffer.get_string(packet_length - 2 * sizeof(uint32_t));
-  /* https://www.postgresql.org/docs/11/protocol-flow.html:
+  const auto packet_size = _read_buffer.template get_value<uint32_t>();
+  const auto portal = _read_buffer.get_string(packet_size - 2 * sizeof(uint32_t));
+  /* https://www.postgresql.org/docs/current/protocol-flow.html:
    The result-row count is only meaningful for portals containing commands that return row sets; in other cases
    the command is always executed to completion, and the row count is ignored.
   */
@@ -255,8 +255,7 @@ template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_execution_info(const std::string& execution_information) {
   _write_buffer.template put_value(PostgresMessageType::Notice);
   // Message has 2 null terminators: one terminates the error string, the other one terminates the message
-  const auto packet_size =
-      LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + execution_information.size() + 2u /* null terminator */;
+  const auto packet_size = LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + execution_information.size() + 2u;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
   _write_buffer.template put_value(PostgresMessageType::HumanReadableError);

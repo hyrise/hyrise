@@ -1,20 +1,19 @@
 #include "query_handler.hpp"
 
 #include "expression/value_expression.hpp"
-#include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 
 namespace opossum {
 
-ExecutionInformation QueryHandler::execute_pipeline(const std::string& sql,
+ExecutionInformation QueryHandler::execute_pipeline(const std::string& query,
                                                     const SendExecutionInfo send_execution_info) {
   // A simple query command invalidates unnamed statements
-  // See: https://postgresql.org/docs/11/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
+  // See: https://postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
   auto execution_info = ExecutionInformation();
-  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
 
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
   if (pipeline_status == SQLPipelineStatus::Success) {
@@ -37,7 +36,7 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message.
   // An unnamed prepared statement lasts only until the next Parse statement specifying the unnamed statement as
   // destination is issued
-  // https://www.postgresql.org/docs/11/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
+  // https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan(statement_name)) {
     AssertInput(statement_name.empty(),
                 "Named prepared statements must be explicitly closed before they can be redefined.");

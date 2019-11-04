@@ -33,7 +33,7 @@ std::string ReadBuffer<SocketType>::get_string() {
   }
 
   while (*string_end != '\0') {
-    // We don't know how long this string is going to be. Hence, receive at least 1 char.
+    // We do not know how long this string is going to be. Hence, receive at least 1 char.
     _receive_if_necessary();
     string_end = std::find(_start_position, _current_position, '\0');
     std::copy(_start_position, string_end, std::back_inserter(result));
@@ -81,12 +81,12 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
     return;
   }
 
-  // Buffer might contain unread data, so can't read full buffer size
+  // Buffer might contain unread data, so cannot read full buffer size
   const auto maximum_readable_size = maximum_capacity() - size();
 
   size_t bytes_read;
   boost::system::error_code error_code;
-  // We can't forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
+  // We cannot forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
   // distinguish between reading into continuous memory or partially read the data.
   if (std::distance(&*_start_position, &*_current_position) < 0 || &*_start_position == &_data[0]) {
     bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&*_current_position, maximum_readable_size),

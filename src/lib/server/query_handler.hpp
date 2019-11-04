@@ -22,7 +22,7 @@ struct ExecutionInformation {
 // error handling happens in this class.
 class QueryHandler {
  public:
-  static ExecutionInformation execute_pipeline(const std::string& sql, const SendExecutionInfo send_execution_info);
+  static ExecutionInformation execute_pipeline(const std::string& query, const SendExecutionInfo send_execution_info);
 
   static void setup_prepared_plan(const std::string& statement_name, const std::string& query);
 

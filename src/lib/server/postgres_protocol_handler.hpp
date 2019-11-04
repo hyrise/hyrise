@@ -23,7 +23,7 @@ class PostgresProtocolHandler {
  public:
   explicit PostgresProtocolHandler(const std::shared_ptr<SocketType>& socket);
 
-  // Handling the startup packet header returning the body's size
+  // Handle the startup packet header returning the body's size
   uint32_t read_startup_packet_header();
   void read_startup_packet_body(const uint32_t size);
 
@@ -37,7 +37,7 @@ class PostgresProtocolHandler {
   // Read first byte of next packet to determine its type
   PostgresMessageType read_packet_type();
 
-  // Reading SQL query packet
+  // Read SQL query packet
   std::string read_query_packet();
 
   // Send query result
@@ -65,7 +65,7 @@ class PostgresProtocolHandler {
   // Additional (optional) message containing execution times of different components (such as translator or optimizer)
   void send_execution_info(const std::string& execution_information);
 
-  // This method is required for testing. Otherwise we can't make the protocol handler flush its data.
+  // This method is required for testing. Otherwise we cannot make the protocol handler flush its data.
   void force_flush() { _write_buffer.flush(); }
 
  private:

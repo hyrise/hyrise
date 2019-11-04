@@ -144,7 +144,7 @@ void Session::_handle_bind_command() {
 
   // Named portals must be explicitly closed before they can be redefined by another Bind message,
   // but this is not required for the unnamed portal.
-  // https://www.postgresql.org/docs/10/static/protocol-flow.html
+  // https://www.postgresql.org/docs/current/static/protocol-flow.html
   auto portal_it = _portals.find(parameters.portal);
   if (portal_it != _portals.end()) {
     AssertInput(parameters.portal.empty(), "Named portals must be explicitly closed before they can be redefined.");

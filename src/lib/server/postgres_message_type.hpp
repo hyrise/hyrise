@@ -7,7 +7,7 @@ namespace opossum {
 static constexpr auto LENGTH_FIELD_SIZE = 4u;
 
 // Documentation of the message types can be found here:
-// https://www.postgresql.org/docs/current/protocol-message-formats.html?
+// https://www.postgresql.org/docs/current/protocol-message-formats.html
 enum class PostgresMessageType : unsigned char {
   // Responses
   ParseComplete = '1',

@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-// The ResultSerializer serializes the result data returned by Hyrise.
+// The ResultSerializer serializes the result data returned by Hyrise according to PostgreSQL Wire Protocol.
 class ResultSerializer {
  public:
   // Serialize information about the result table

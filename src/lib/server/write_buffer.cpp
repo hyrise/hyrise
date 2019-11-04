@@ -50,7 +50,7 @@ void WriteBuffer<SocketType>::put_string(const std::string& value, const HasNull
 
 template <typename SocketType>
 void WriteBuffer<SocketType>::flush(const size_t bytes_required) {
-  Assert(bytes_required <= size(), "Can't flush more byte than available");
+  Assert(bytes_required <= size(), "Cannot flush more byte than available");
   const auto bytes_to_send = bytes_required ? bytes_required : size();
   size_t bytes_sent;
 

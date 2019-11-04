@@ -13,6 +13,8 @@
 
 namespace opossum {
 
+// This class tests supported operations of the server implementation. This does not include statements with named
+// portals which are used for CURSOR operations.
 class ServerTestRunner : public BaseTest {
  protected:
   void SetUp() override {
@@ -51,7 +53,7 @@ class ServerTestRunner : public BaseTest {
 TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we don't support.
+  // We use nontransactions because the regular transactions use "begin" and "commit" keywords that we do not support.
   // Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
@@ -65,7 +67,8 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
 
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
+  // We use nontransactions because the regular transactions use SQL that we do not support. Nontransactions auto
+  // commit.
   pqxx::nontransaction transaction{connection};
 
   const auto result = transaction.exec("SELECT * FROM all_types_table;");
@@ -89,7 +92,8 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
 TEST_F(ServerTestRunner, TestInvalidStatement) {
   pqxx::connection connection{_connection_string};
 
-  // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
+  // We use nontransactions because the regular transactions use SQL that we do not support. Nontransactions auto
+  // commit.
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed SQL statement

@@ -22,6 +22,7 @@ void ResultSerializer::send_table_description(
 
     // Documentation of the PostgreSQL object_ids can be found at:
     // https://crate.io/docs/crate/reference/en/latest/interfaces/postgres.html
+    // Or run "SELECT oid, typlen, typname FROM pg_catalog.pg_type ORDER BY oid;" in PostgreSQL
     switch (table->column_data_type(column_id)) {
       case DataType::Int:
         object_id = 23;
@@ -67,15 +68,15 @@ void ResultSerializer::send_query_response(
     for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
       auto string_length_sum = 0;
       // Iterate over each attribute in row
-      for (size_t current_segment = 0; current_segment < segments.size(); current_segment++) {
-        const auto attribute_value = (*segments[current_segment])[current_chunk_offset];
+      for (size_t segment_id = 0; segment_id < segments.size(); segment_id++) {
+        const auto attribute_value = (*segments[segment_id])[current_chunk_offset];
         // The PostgreSQL protocol requires the conversion of values to strings
         const auto string_value = lossy_variant_cast<pmr_string>(attribute_value);
         if (string_value.has_value()) {
           // Sum up string lengths for a row to save an extra loop during serialization
           string_length_sum += string_value.value().size();
         }
-        values_as_strings[current_segment] = string_value;
+        values_as_strings[segment_id] = string_value;
       }
       postgres_protocol_handler->send_data_row(values_as_strings, string_length_sum);
     }
@@ -90,12 +91,12 @@ std::string ResultSerializer::build_command_complete_message(const OperatorType 
       return "INSERT 0 1";
     }
     case OperatorType::Update: {
-      // We do not return how many rows are affected, because we don't track this
+      // We do not return how many rows are affected, because we do not track this
       // information
       return "UPDATE -1";
     }
     case OperatorType::Delete: {
-      // We do not return how many rows are affected, because we don't track this
+      // We do not return how many rows are affected, because we do not track this
       // information
       return "DELETE -1";
     }
