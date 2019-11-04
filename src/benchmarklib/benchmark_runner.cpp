@@ -19,6 +19,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/segment_access_counter.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
@@ -197,8 +198,10 @@ void BenchmarkRunner::_benchmark_ordered() {
 
     const auto& name = _benchmark_item_runner->item_name(item_id);
     std::cout << "- Benchmarking " << name << std::endl;
-
+    _results[item_id] = BenchmarkItemResult{};
     auto& result = _results[item_id];
+
+    SegmentAccessCounter::reset(Hyrise::get().storage_manager.tables());
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
@@ -214,6 +217,10 @@ void BenchmarkRunner::_benchmark_ordered() {
       }
     }
     _state.set_done();
+
+    const std::string locking = SegmentAccessStatistics::use_locking ? "locking" : "non_locking";
+    SegmentAccessCounter::save_to_csv(Hyrise::get().storage_manager.tables(),
+      "access_statistics_" + locking + "_" + name + ".csv");
 
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =

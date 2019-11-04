@@ -5,37 +5,29 @@
 
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
+#include "storage/segment_access_statistics.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 #include "utils/segment_access_counter.hpp"
 
-namespace opossum {
 
-TEST(SegmentAccessCounter, SegmentIDs) {
-  ValueSegment<int32_t> vs1{false};
-  auto id = vs1.id();
-  ValueSegment<int32_t> vs2{false};
-  ++id;
-  EXPECT_EQ(id, vs2.id());
-  ValueSegment<int32_t> vs3{false};
-  ++id;
-  EXPECT_EQ(id, vs3.id());
-}
+namespace opossum {
 
 TEST(SegmentAccessCounter, ManualIncrease) {
   ValueSegment<int32_t> vs{false};
-  EXPECT_EQ(0, SegmentAccessCounter::instance().statistics(vs.id()).count[SegmentAccessCounter::DirectRead]);
-  SegmentAccessCounter::instance().increase(vs.id(), SegmentAccessCounter::DirectRead);
-  EXPECT_EQ(1, SegmentAccessCounter::instance().statistics(vs.id()).count[SegmentAccessCounter::DirectRead]);
+
+  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessStatistics::DirectRead));
+  vs.access_statistics().increase(SegmentAccessStatistics::DirectRead);
+  EXPECT_EQ(1, vs.access_statistics().count(SegmentAccessStatistics::DirectRead));
 }
 
 TEST(SegmentAccessCounter, ValueSegmentAppend) {
   ValueSegment<int32_t> vs{false};
-  EXPECT_EQ(0, SegmentAccessCounter::instance().statistics(vs.id()).count[SegmentAccessCounter::Append]);
+  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessStatistics::Append));
   vs.append(42);
-  EXPECT_EQ(1, SegmentAccessCounter::instance().statistics(vs.id()).count[SegmentAccessCounter::Append]);
+  EXPECT_EQ(1, vs.access_statistics().count(SegmentAccessStatistics::Append));
   vs.append(66);
-  EXPECT_EQ(2, SegmentAccessCounter::instance().statistics(vs.id()).count[SegmentAccessCounter::Append]);
+  EXPECT_EQ(2, vs.access_statistics().count(SegmentAccessStatistics::Append));
 }
 
 TEST(SegmentAccessCounter, ValueSegmentWithIterators) {
@@ -43,11 +35,11 @@ TEST(SegmentAccessCounter, ValueSegmentWithIterators) {
   vs.append(42);
   vs.append(66);
   vs.append(666);
-  EXPECT_EQ(3, SegmentAccessCounter::instance().statistics(vs.id()).count[SegmentAccessCounter::Append]);
+  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessStatistics::Append));
 
   const auto iterable = ValueSegmentIterable{vs};
   iterable.for_each([](const auto& value) { /* do nothing. We just want to increase the access counter */ });
-  EXPECT_EQ(3, SegmentAccessCounter::instance().statistics(vs.id()).count[SegmentAccessCounter::IteratorAccess]);
+  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessStatistics::IteratorAccess));
 }
 
 TEST(SegmentAccessCounter, ExportStatistics) {
@@ -63,7 +55,17 @@ TEST(SegmentAccessCounter, ExportStatistics) {
 
   tables["addresses"] = std::move(table_ptr);
 
-  SegmentAccessCounter::instance().save_to_csv(tables, "segment_access_statistics_test.csv");
+  SegmentAccessCounter::save_to_csv(tables, "segment_access_statistics_test.csv");
+}
+
+TEST(SegmentAccessCounter, Reset) {
+  ValueSegment<int32_t> vs{false};
+  vs.append(42);
+  vs.append(66);
+  vs.append(666);
+  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessStatistics::Append));
+  vs.access_statistics().reset_all();
+  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessStatistics::Append));
 }
 
 

@@ -17,6 +17,7 @@
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/segment_access_statistics.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -135,7 +136,12 @@ int main(int argc, char* argv[]) {
   auto benchmark_runner = std::make_shared<BenchmarkRunner>(
       *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
-  benchmark_runner->run();
 
-  SegmentAccessCounter::instance().save_to_csv(Hyrise::get().storage_manager.tables(), "tpch_access_statistics.csv");
+  std::cout << "Executing with non locking access counters" << std::endl;
+  SegmentAccessStatistics::use_locking = true;
+  benchmark_runner->run();
+//  std::cout << "Executing with locking access counters" << std::endl;
+//  Hyrise::get().scheduler()->begin();
+//  SegmentAccessStatistics::use_locking = true;
+//  benchmark_runner->run();
 }

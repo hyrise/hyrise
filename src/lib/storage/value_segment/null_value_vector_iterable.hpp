@@ -22,16 +22,16 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     const auto& null_values = _segment.null_values();
-    auto begin = Iterator{null_values.cbegin(), null_values.cbegin(), _segment.id()};
-    auto end = Iterator{null_values.cbegin(), null_values.cend(), _segment.id()};
+    auto begin = Iterator{null_values.cbegin(), null_values.cbegin(), &_segment};
+    auto end = Iterator{null_values.cbegin(), null_values.cend(), &_segment};
     functor(begin, end);
   }
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     const auto& null_values = _segment.null_values();
-    auto begin = PointAccessIterator{null_values, position_filter->cbegin(), position_filter->cbegin(), _segment.id()};
-    auto end = PointAccessIterator{null_values, position_filter->begin(), position_filter->cend(), _segment.id()};
+    auto begin = PointAccessIterator{null_values, position_filter->cbegin(), position_filter->cbegin(), &_segment};
+    auto end = PointAccessIterator{null_values, position_filter->begin(), position_filter->cend(), &_segment};
     functor(begin, end);
   }
 
@@ -48,8 +48,8 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
    public:
     explicit Iterator(const NullValueIterator& begin_null_value_it, const NullValueIterator& null_value_it,
-                      uint32_t segment_id)
-        : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it}, _segment_id{segment_id} {}
+                      const BaseSegment* segment)
+        : _begin_null_value_it{begin_null_value_it}, _null_value_it{null_value_it}, _segment{segment} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -61,8 +61,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._null_value_it - _null_value_it; }
 
     IsNullSegmentPosition dereference() const {
-      SegmentAccessCounter::instance().increase(_segment_id,
-                                                SegmentAccessCounter::IteratorAccess);
+      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorAccess);
       return IsNullSegmentPosition{*_null_value_it,
                                    static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
@@ -70,7 +69,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
    private:
     const NullValueIterator _begin_null_value_it;
     NullValueIterator _null_value_it;
-    uint32_t _segment_id;
+    const BaseSegment* _segment;
   };
 
   class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition> {
@@ -82,26 +81,25 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     explicit PointAccessIterator(const NullValueVector& null_values,
                                  const PosList::const_iterator position_filter_begin,
                                  PosList::const_iterator position_filter_it,
-                                 uint32_t segment_id)
+                                 const BaseSegment* segment)
         : BasePointAccessSegmentIterator<PointAccessIterator, IsNullSegmentPosition>{std::move(position_filter_begin),
                                                                                      std::move(position_filter_it)},
           _null_values{null_values},
-          _segment_id{segment_id} {}
+          _segment{segment} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     IsNullSegmentPosition dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      SegmentAccessCounter::instance().increase(_segment_id,
-          SegmentAccessCounter::IteratorPointAccess);
+      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorPointAccess);
       return IsNullSegmentPosition{_null_values[chunk_offsets.offset_in_referenced_chunk],
                                    chunk_offsets.offset_in_poslist};
     }
 
    private:
     const NullValueVector& _null_values;
-    uint32_t _segment_id;
+    const BaseSegment* _segment;
   };
 };
 

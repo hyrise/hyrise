@@ -70,7 +70,7 @@ template <typename T>
 const AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
-  SegmentAccessCounter::instance().increase(id(), SegmentAccessCounter::DirectRead);
+  _access_statistics.increase(SegmentAccessStatistics::DirectRead);
 
   // Segment supports null values and value is null
   if (is_nullable() && _null_values->at(chunk_offset)) {
@@ -82,7 +82,7 @@ const AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset)
 
 template <typename T>
 bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
-  SegmentAccessCounter::instance().increase(id(), SegmentAccessCounter::DirectRead);
+  _access_statistics.increase(SegmentAccessStatistics::DirectRead);
   return is_nullable() && (*_null_values)[chunk_offset];
 }
 
@@ -91,14 +91,14 @@ const T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   Assert(!is_nullable() || !(*_null_values).at(chunk_offset), "Can’t return value of segment type because it is null.");
-  SegmentAccessCounter::instance().increase(id(), SegmentAccessCounter::DirectRead);
+  _access_statistics.increase(SegmentAccessStatistics::DirectRead);
   return _values.at(chunk_offset);
 }
 
 template <typename T>
 void ValueSegment<T>::append(const AllTypeVariant& val) {
   bool is_null = variant_is_null(val);
-  SegmentAccessCounter::instance().increase(id(), SegmentAccessCounter::Append);
+  _access_statistics.increase(SegmentAccessStatistics::Append);
 
   if (is_nullable()) {
     (*_null_values).push_back(is_null);
@@ -113,7 +113,7 @@ void ValueSegment<T>::append(const AllTypeVariant& val) {
 
 template <typename T>
 void ValueSegment<T>::reserve(const size_t capacity) {
-  SegmentAccessCounter::instance().increase(id(), SegmentAccessCounter::Reserve);
+  _access_statistics.increase(SegmentAccessStatistics::Reserve);
   _values.reserve(capacity);
   if (_null_values) _null_values->reserve(capacity);
 }

@@ -5,6 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "segment_access_statistics.hpp"
 
 namespace opossum {
 
@@ -13,13 +14,11 @@ namespace opossum {
 class BaseSegment : private Noncopyable {
  public:
   explicit BaseSegment(const DataType data_type);
+
   virtual ~BaseSegment() = default;
 
   // the type of the data contained in this segment
   DataType data_type() const;
-
-  // id of segment
-  uint32_t id() const;
 
   // returns the value at a given position
   virtual const AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
@@ -35,9 +34,12 @@ class BaseSegment : private Noncopyable {
   // such as strings who memory usage is implementation defined
   virtual size_t estimate_memory_usage() const = 0;
 
+  SegmentAccessStatistics& access_statistics() const;
+
+ protected:
+  mutable SegmentAccessStatistics _access_statistics;
+
  private:
   const DataType _data_type;
-  const uint32_t _id;
-  static uint32_t _id_counter;
 };
 }  // namespace opossum

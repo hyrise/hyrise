@@ -105,7 +105,8 @@ int main(int argc, char* argv[]) {
   }
   std::cout << "done." << std::endl;
 
+  SegmentAccessCounter::reset(Hyrise::get().storage_manager.tables());
+  std::cout << "Executing with non locking access counters" << std::endl;
+  SegmentAccessStatistics::use_locking = false;
   benchmark_runner.run();
-
-  SegmentAccessCounter::instance().save_to_csv(Hyrise::get().storage_manager.tables(), "tpcds_access_statistics.csv");
 }
