@@ -31,21 +31,6 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     functor(begin, end);
   }
 
-  // If the LZ4 segment stores strings, the underlying segment will have more blocks than a numeric segment.
-  // To maximize the hitting of cached blocks, we sort the pos list before materializing it. This threshold
-  // shall determine which (type dependent) number of items is necessary to have blocks at all. If we only
-  // expect a single block, no sorting is necessary.
-  template <typename T2>
-  static size_t get_poslist_sorting_threshold() {
-    // Both thresholds have been determined by evluating TPC-H on a recent server machine. Note, both numbers are
-    // chosen to avoid worst-case scenarios and do not reflect the actual break-even.
-    if constexpr (std::is_same_v<T2, pmr_string>) {
-      return size_t{400};
-    } else {
-      return size_t{1'000};
-    }
-  }
-
   /**
    * For the point access, we first retrieve the values for all chunk offsets in the position list and then save
    * the decompressed values in a vector. The first value in that vector (index 0) is the value for the chunk offset
@@ -59,34 +44,12 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     const auto position_filter_size = position_filter->size();
 
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
-    if (position_filter_size >= get_poslist_sorting_threshold<T>()) {
-      // In case the pos list is large, LZ4 can benefit from sorting the pos list as the change of hitting the same
-      // decompressed LZ4 block increases. For small pos lists, the sorting causes a unnecessary overhead.
-      std::vector<std::pair<RowID, size_t>> position_filter_indexed(position_filter_size);
-
-      for (auto index = size_t{0}; index < position_filter_size; ++index) {
-        const auto& row_id = (*position_filter)[index];
-        position_filter_indexed[index] = {row_id, index};
-      }
-      std::sort(position_filter_indexed.begin(), position_filter_indexed.end(),
-                [](const auto& a, const auto& b) { return a.first < b.first; });
-
-      for (auto index = size_t{0u}; index < position_filter_size; ++index) {
-        const auto& position = position_filter_indexed[index].first;
-        // NOLINTNEXTLINE
-        auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
-        const auto write_position = position_filter_indexed[index].second;
-        decompressed_filtered_segment[write_position] = std::move(value);
-        cached_block_index = block_index;
-      }
-    } else {
-      for (auto index = size_t{0u}; index < position_filter_size; ++index) {
-        const auto& position = (*position_filter)[index];
-        // NOLINTNEXTLINE
-        auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
-        decompressed_filtered_segment[index] = std::move(value);
-        cached_block_index = block_index;
-      }
+    for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+      const auto& position = (*position_filter)[index];
+      // NOLINTNEXTLINE
+      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+      decompressed_filtered_segment[index] = std::move(value);
+      cached_block_index = block_index;
     }
 
     std::optional<NullValueIterator> null_opt_value_iter;
