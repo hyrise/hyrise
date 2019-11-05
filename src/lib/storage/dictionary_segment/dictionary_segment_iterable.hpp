@@ -23,6 +23,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
+    _segment.access_statistics().on_iterator_create(_segment.size());
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
@@ -39,6 +40,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+    _segment.access_statistics().on_iterator_create_with_pos_list(position_filter->size());
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
@@ -101,7 +103,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentPosition<T>{T{}, true, _chunk_offset};
 
-      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorAccess);
+      _segment->access_statistics().on_iterator_dereference(1);
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
     }
 
@@ -144,7 +146,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
 
-      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorPointAccess);
+      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }
 

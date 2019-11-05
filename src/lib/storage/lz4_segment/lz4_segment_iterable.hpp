@@ -28,6 +28,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
      */
     const auto null_values = _segment.null_values() ? *_segment.null_values() : pmr_vector<bool>(_segment.size());
 
+    _segment.access_statistics().on_iterator_create(decompressed_segment.size());
     auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), null_values.cbegin(), &_segment};
     auto end = Iterator<ValueIterator>{decompressed_segment.cend(), null_values.cend(), &_segment};
 
@@ -42,7 +43,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
-
+    _segment.access_statistics().on_iterator_create_with_pos_list(position_filter->size());
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter->size());
     auto cached_block = std::vector<char>{};
     auto cached_block_index = std::optional<size_t>{};
@@ -117,7 +118,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     }
 
     SegmentPosition<T> dereference() const {
-      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorAccess);
+      _segment->access_statistics().on_iterator_dereference(1);
       return SegmentPosition<T>{*_data_it, *_null_value_it, _chunk_offset};
     }
 
@@ -153,7 +154,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       const auto& chunk_offsets = this->chunk_offsets();
       const auto& value = _data[chunk_offsets.offset_in_poslist];
       const auto is_null = *_null_values && (**_null_values)[chunk_offsets.offset_in_referenced_chunk];
-      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorPointAccess);
+      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 

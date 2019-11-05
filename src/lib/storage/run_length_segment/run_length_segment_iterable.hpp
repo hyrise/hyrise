@@ -17,6 +17,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
+    _segment.access_statistics().on_iterator_create(_segment.size());
     auto begin =
         Iterator{_segment.values()->cbegin(), _segment.null_values()->cbegin(), _segment.end_positions()->cbegin(), 0u,
                  &_segment};
@@ -28,6 +29,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
+    _segment.access_statistics().on_iterator_create(position_filter->size());
     auto begin =
         PointAccessIterator{_segment.values().get(), _segment.null_values().get(), _segment.end_positions().get(),
                             position_filter->cbegin(), position_filter->cbegin(), &_segment};
@@ -109,7 +111,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     }
 
     SegmentPosition<T> dereference() const {
-      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorAccess);
+      _segment->access_statistics().on_iterator_dereference(1);
       return SegmentPosition<T>{*_value_it, *_null_value_it, _current_position};
     }
 
@@ -182,7 +184,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       _prev_chunk_offset = current_chunk_offset;
       _prev_index = current_index;
 
-      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorPointAccess);
+      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 

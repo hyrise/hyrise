@@ -34,10 +34,10 @@ class BaseSegment : private Noncopyable {
   // such as strings who memory usage is implementation defined
   virtual size_t estimate_memory_usage() const = 0;
 
-  SegmentAccessStatistics& access_statistics() const;
+  SegmentAccessStatistics_T& access_statistics() const;
 
  protected:
-  mutable SegmentAccessStatistics _access_statistics;
+  mutable SegmentAccessStatistics_T _access_statistics;
 
  private:
   const DataType _data_type;

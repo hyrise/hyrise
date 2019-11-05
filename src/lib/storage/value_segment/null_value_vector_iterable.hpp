@@ -22,6 +22,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     const auto& null_values = _segment.null_values();
+    _segment.access_statistics().on_iterator_create(null_values.size());
     auto begin = Iterator{null_values.cbegin(), null_values.cbegin(), &_segment};
     auto end = Iterator{null_values.cbegin(), null_values.cend(), &_segment};
     functor(begin, end);
@@ -30,6 +31,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     const auto& null_values = _segment.null_values();
+    _segment.access_statistics().on_iterator_create_with_pos_list(position_filter->size());
     auto begin = PointAccessIterator{null_values, position_filter->cbegin(), position_filter->cbegin(), &_segment};
     auto end = PointAccessIterator{null_values, position_filter->begin(), position_filter->cend(), &_segment};
     functor(begin, end);
@@ -61,7 +63,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     std::ptrdiff_t distance_to(const Iterator& other) const { return other._null_value_it - _null_value_it; }
 
     IsNullSegmentPosition dereference() const {
-      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorAccess);
+      _segment->access_statistics().on_iterator_dereference(1);
       return IsNullSegmentPosition{*_null_value_it,
                                    static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
@@ -92,7 +94,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
     IsNullSegmentPosition dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      _segment->access_statistics().increase(SegmentAccessStatistics::IteratorPointAccess);
+      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
       return IsNullSegmentPosition{_null_values[chunk_offsets.offset_in_referenced_chunk],
                                    chunk_offsets.offset_in_poslist};
     }

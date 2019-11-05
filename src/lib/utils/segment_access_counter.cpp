@@ -10,8 +10,8 @@ namespace opossum {
 void SegmentAccessCounter::save_to_csv(const std::map<std::string, std::shared_ptr<Table>>& tables,
                                        const std::string& path) {
   std::ofstream output_file{path};
-  output_file << "table_name,column_name,chunk_id,row_count,DirectRead,Append,Reserve,IteratorAccess"
-              << ",IteratorPointAccess,AccessorAccess,ReferenceAccessorAccess\n";
+  output_file << "table_name,column_name,chunk_id,row_count,Other,IteratorCreate,IteratorAccess,AccessorCreate,"
+                 "AccessorAccess\n";
   // iterate over all tables, chunks and segments
   for (const auto&[table_name, table_ptr] : tables) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {

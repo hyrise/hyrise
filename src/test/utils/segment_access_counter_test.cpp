@@ -15,19 +15,18 @@ namespace opossum {
 
 TEST(SegmentAccessCounter, ManualIncrease) {
   ValueSegment<int32_t> vs{false};
-
-  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessStatistics::DirectRead));
-  vs.access_statistics().increase(SegmentAccessStatistics::DirectRead);
-  EXPECT_EQ(1, vs.access_statistics().count(SegmentAccessStatistics::DirectRead));
+  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessType::Other));
+  vs.access_statistics().on_other_access(1);
+  EXPECT_EQ(1, vs.access_statistics().count(SegmentAccessType::Other));
 }
 
 TEST(SegmentAccessCounter, ValueSegmentAppend) {
   ValueSegment<int32_t> vs{false};
-  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessStatistics::Append));
+  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessType::Other));
   vs.append(42);
-  EXPECT_EQ(1, vs.access_statistics().count(SegmentAccessStatistics::Append));
+  EXPECT_EQ(1, vs.access_statistics().count(SegmentAccessType::Other));
   vs.append(66);
-  EXPECT_EQ(2, vs.access_statistics().count(SegmentAccessStatistics::Append));
+  EXPECT_EQ(2, vs.access_statistics().count(SegmentAccessType::Other));
 }
 
 TEST(SegmentAccessCounter, ValueSegmentWithIterators) {
@@ -35,11 +34,11 @@ TEST(SegmentAccessCounter, ValueSegmentWithIterators) {
   vs.append(42);
   vs.append(66);
   vs.append(666);
-  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessStatistics::Append));
+  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessType::Other));
 
   const auto iterable = ValueSegmentIterable{vs};
   iterable.for_each([](const auto& value) { /* do nothing. We just want to increase the access counter */ });
-  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessStatistics::IteratorAccess));
+  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessType::IteratorAccess));
 }
 
 TEST(SegmentAccessCounter, ExportStatistics) {
@@ -63,9 +62,9 @@ TEST(SegmentAccessCounter, Reset) {
   vs.append(42);
   vs.append(66);
   vs.append(666);
-  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessStatistics::Append));
+  EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessType::Other));
   vs.access_statistics().reset_all();
-  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessStatistics::Append));
+  EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessType::Other));
 }
 
 

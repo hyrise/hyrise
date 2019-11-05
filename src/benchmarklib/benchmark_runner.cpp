@@ -218,9 +218,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
     _state.set_done();
 
-    const std::string locking = SegmentAccessStatistics::use_locking ? "locking" : "non_locking";
     SegmentAccessCounter::save_to_csv(Hyrise::get().storage_manager.tables(),
-      "access_statistics_" + locking + "_" + name + ".csv");
+      "access_statistics_" + name + ".csv");
 
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =

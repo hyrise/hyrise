@@ -137,8 +137,6 @@ int main(int argc, char* argv[]) {
       *config, std::move(item_runner), std::make_unique<TPCHTableGenerator>(scale_factor, config), context);
   Hyrise::get().benchmark_runner = benchmark_runner;
 
-  std::cout << "Executing with non locking access counters" << std::endl;
-  SegmentAccessStatistics::use_locking = true;
   benchmark_runner->run();
 //  std::cout << "Executing with locking access counters" << std::endl;
 //  Hyrise::get().scheduler()->begin();
