@@ -20,11 +20,12 @@ add_library(tpch_dbgen
     print.c
     rng64.c
     shared.h
-    )
+)
 
 target_include_directories(tpch_dbgen
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR})
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 target_compile_definitions(
     tpch_dbgen
@@ -36,3 +37,18 @@ target_compile_definitions(
     #-DRNG_TEST
     -D_FILE_OFFSET_BITS=64
 )
+
+target_compile_options(
+    tpch_dbgen
+    PRIVATE
+    -Wno-unused-result
+)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  target_compile_options(
+    tpch_dbgen
+    PRIVATE
+
+    -Wno-string-plus-int
+  )
+endif()

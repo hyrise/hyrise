@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "cqf16.hpp"
@@ -76,7 +77,7 @@ class CountingQuotientFilter : public AbstractStatisticsObject {
   CountingQuotientFilter operator=(CountingQuotientFilter&&) = delete;
 
  private:
-  boost::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
+  std::variant<gqf2::QF, gqf4::QF, gqf8::QF, gqf16::QF, gqf32::QF> _quotient_filter;
   const size_t _hash_bits;
 };
 

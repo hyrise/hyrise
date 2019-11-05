@@ -46,19 +46,21 @@ std::string FunctionExpression::as_column_name() const {
 DataType FunctionExpression::data_type() const {
   switch (function_type) {
     case FunctionType::Substring:
-      return DataType::String;
     case FunctionType::Concatenate:
       return DataType::String;
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {
+  DebugAssert(dynamic_cast<const FunctionExpression*>(&expression),
+              "Different expression type should have been caught by AbstractExpression::operator==");
+
   const auto& function_expression = static_cast<const FunctionExpression&>(expression);
   return function_type == function_expression.function_type &&
          expressions_equal(arguments, function_expression.arguments);
 }
 
-size_t FunctionExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(function_type)); }
+size_t FunctionExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(function_type)); }
 
 }  // namespace opossum

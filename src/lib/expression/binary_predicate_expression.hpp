@@ -19,7 +19,6 @@ class BinaryPredicateExpression : public AbstractPredicateExpression {
   std::string as_column_name() const override;
 
  protected:
-  bool _shallow_equals(const AbstractExpression& expression) const override;
   ExpressionPrecedence _precedence() const override;
 };
 

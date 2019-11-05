@@ -22,8 +22,6 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
-
 void ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
   // This EXCLUDES columns that are merely forwarded by Projections throughout the LQP
@@ -71,8 +69,6 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const s
       case LQPNodeType::Limit:
       case LQPNodeType::Predicate:
       case LQPNodeType::Root:
-      case LQPNodeType::ShowColumns:
-      case LQPNodeType::ShowTables:
       case LQPNodeType::Sort:
       case LQPNodeType::StaticTable:
       case LQPNodeType::StoredTable:
@@ -171,9 +167,8 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
     auto referenced_projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
     for (const auto& expression : projection_node->node_expressions) {
       // We keep all non-column expressions
-      if (expression->type != ExpressionType::LQPColumn) {
-        referenced_projection_expressions.emplace_back(expression);
-      } else if (referenced_columns.find(expression) != referenced_columns.end()) {
+      if (expression->type != ExpressionType::LQPColumn ||
+          referenced_columns.find(expression) != referenced_columns.end()) {
         referenced_projection_expressions.emplace_back(expression);
       }
     }

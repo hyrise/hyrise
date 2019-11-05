@@ -62,6 +62,35 @@ TEST_F(OperatorsGetTableTest, Description) {
             "GetTable\n(int_int_float)\npruned:\n1/4 chunk(s)\n1/3 column(s)");
 }
 
+TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
+  auto get_table_1 = std::make_shared<opossum::GetTable>("int_int_float");
+  get_table_1->execute();
+
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  auto table_scan = create_table_scan(get_table_1, ColumnID{0}, PredicateCondition::GreaterThan, 9);
+  table_scan->execute();
+
+  const auto rows_to_delete = table_scan->get_output()->row_count();
+
+  auto delete_op = std::make_shared<Delete>(table_scan);
+  delete_op->set_transaction_context(transaction_context);
+  delete_op->execute();
+
+  transaction_context->commit();
+
+  auto get_table_2 = std::make_shared<opossum::GetTable>("int_int_float");
+  get_table_2->execute();
+  const auto result_table = get_table_2->get_output();
+
+  auto total_invalid_row_count = 0;
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
+    total_invalid_row_count += result_table->get_chunk(chunk_id)->invalid_row_count();
+  }
+
+  EXPECT_EQ(total_invalid_row_count, rows_to_delete);
+}
+
 TEST_F(OperatorsGetTableTest, PrunedChunks) {
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}},
                                                        std::vector<ColumnID>{});
@@ -242,6 +271,51 @@ TEST_F(OperatorsGetTableTest, Copy) {
   EXPECT_EQ(get_table_b_copy->table_name(), "int_int_float");
   EXPECT_EQ(get_table_b_copy->pruned_chunk_ids(), std::vector{ChunkID{1}});
   EXPECT_EQ(get_table_b_copy->pruned_column_ids(), std::vector{ColumnID{0}});
+}
+
+TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
+  auto table = Hyrise::get().storage_manager.get_table("int_int_float");
+  table->get_chunk(ChunkID{0})->set_ordered_by({ColumnID{0}, OrderByMode::Ascending});
+  table->get_chunk(ChunkID{1})->set_ordered_by({ColumnID{2}, OrderByMode::Descending});
+
+  // with column pruning
+  {
+    auto get_table =
+        std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 2);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->first, ColumnID{0});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{1});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{0})->ordered_by()->second, OrderByMode::Ascending);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{2})->ordered_by().has_value());
+  }
+
+  // without column pruning
+  {
+    auto get_table =
+        std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 3);
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->first, ColumnID{2});
+    EXPECT_EQ(get_table_output->get_chunk(ChunkID{1})->ordered_by()->second, OrderByMode::Descending);
+  }
+
+  // pruning the columns on which chunks are sorted
+  {
+    auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector<ChunkID>{},
+                                                         std::vector{ColumnID{0}, ColumnID{2}});
+    get_table->execute();
+
+    auto get_table_output = get_table->get_output();
+    EXPECT_EQ(get_table_output->column_count(), 1);
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by());
+    EXPECT_FALSE(get_table_output->get_chunk(ChunkID{0})->ordered_by());
+  }
 }
 
 }  // namespace opossum

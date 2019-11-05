@@ -38,7 +38,10 @@ class AbstractBenchmarkItemRunner {
   // Returns the BenchmarkItemIDs of all selected items
   virtual const std::vector<BenchmarkItemID>& items() const = 0;
 
-  // Loads the dedicated expected restuls as tables into _dedicated_expected_results
+  // Returns true if an item without an associated dedicated result exists, else false.
+  bool has_item_without_dedicated_result();
+
+  // Loads the dedicated expected results as tables into _dedicated_expected_results
   void load_dedicated_expected_results(const std::filesystem::path& expected_results_directory_path);
 
   // Set the SQLite wrapper used for query verification. `nullptr` disables verification. Default is disabled.

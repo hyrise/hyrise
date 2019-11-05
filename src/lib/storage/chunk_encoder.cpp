@@ -1,6 +1,7 @@
 #include "chunk_encoder.hpp"
 
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include "base_value_segment.hpp"
@@ -93,12 +94,13 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
 
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                                 const ChunkEncodingSpec& chunk_encoding_spec) {
-  Assert((column_data_types.size() == chunk->column_count()),
-         "Number of column types must match the chunk’s column count.");
-  Assert((chunk_encoding_spec.size() == chunk->column_count()),
+  const auto column_count = chunk->column_count();
+  Assert((column_data_types.size() == column_count), "Number of column types must match the chunk’s column count.");
+  Assert((chunk_encoding_spec.size() == column_count),
          "Number of column encoding specs must match the chunk’s column count.");
+  Assert(!chunk->is_mutable(), "Only immutable chunks can be encoded.");
 
-  for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
     const auto data_type = column_data_types[column_id];
@@ -107,8 +109,6 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
     const auto encoded_segment = encode_segment(base_segment, data_type, spec);
     chunk->replace_segment(column_id, encoded_segment);
   }
-
-  chunk->mark_immutable();
 
   if (!chunk->pruning_statistics()) {
     generate_chunk_pruning_statistics(chunk);

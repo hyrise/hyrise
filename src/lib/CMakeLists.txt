@@ -86,6 +86,7 @@ set(
     expression/unary_minus_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    hyrise.cpp
     hyrise.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
@@ -121,8 +122,6 @@ set(
     logical_query_plan/enable_make_for_lqp_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
-    logical_query_plan/jit_aware_lqp_translator.cpp
-    logical_query_plan/jit_aware_lqp_translator.hpp
     logical_query_plan/join_node.cpp
     logical_query_plan/join_node.hpp
     logical_query_plan/limit_node.cpp
@@ -141,10 +140,6 @@ set(
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
-    logical_query_plan/show_columns_node.cpp
-    logical_query_plan/show_columns_node.hpp
-    logical_query_plan/show_tables_node.cpp
-    logical_query_plan/show_tables_node.hpp
     logical_query_plan/sort_node.cpp
     logical_query_plan/sort_node.hpp
     logical_query_plan/static_table_node.cpp
@@ -204,10 +199,6 @@ set(
     operators/join_hash/join_hash_traits.hpp
     operators/join_index.cpp
     operators/join_index.hpp
-    operators/join_mpsm/column_materializer_numa.hpp
-    operators/join_mpsm.cpp
-    operators/join_mpsm.hpp
-    operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -228,10 +219,6 @@ set(
     operators/maintenance/drop_table.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-    operators/maintenance/show_columns.cpp
-    operators/maintenance/show_columns.hpp
-    operators/maintenance/show_tables.cpp
-    operators/maintenance/show_tables.hpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.cpp
     operators/multi_predicate_join/multi_predicate_join_evaluator.hpp
     operators/operator_join_predicate.cpp
@@ -303,10 +290,14 @@ set(
     optimizer/strategy/expression_reduction_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
-    optimizer/strategy/insert_limit_in_exists_rule.cpp
-    optimizer/strategy/insert_limit_in_exists_rule.hpp
+    optimizer/strategy/in_expression_rewrite_rule.cpp
+    optimizer/strategy/in_expression_rewrite_rule.hpp
     optimizer/strategy/join_ordering_rule.cpp
     optimizer/strategy/join_ordering_rule.hpp
+    optimizer/strategy/join_predicate_ordering_rule.cpp
+    optimizer/strategy/join_predicate_ordering_rule.hpp
+    optimizer/strategy/predicate_merge_rule.cpp
+    optimizer/strategy/predicate_merge_rule.hpp
     optimizer/strategy/predicate_placement_rule.cpp
     optimizer/strategy/predicate_placement_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
@@ -319,12 +310,12 @@ set(
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp
-    scheduler/current_scheduler.cpp
-    scheduler/current_scheduler.hpp
     scheduler/job_task.cpp
     scheduler/job_task.hpp
     scheduler/node_queue_scheduler.cpp
     scheduler/node_queue_scheduler.hpp
+    scheduler/immediate_execution_scheduler.cpp
+    scheduler/immediate_execution_scheduler.hpp
     scheduler/operator_task.cpp
     scheduler/operator_task.hpp
     scheduler/task_queue.cpp
@@ -439,8 +430,8 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
-    storage/index/base_index.cpp
-    storage/index/base_index.hpp
+    storage/index/abstract_index.cpp
+    storage/index/abstract_index.hpp
     storage/index/b_tree/b_tree_index.cpp
     storage/index/b_tree/b_tree_index.hpp
     storage/index/b_tree/b_tree_index_impl.cpp
@@ -551,6 +542,7 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
+    utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
     utils/column_ids_after_pruning.cpp
@@ -561,15 +553,16 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
-    utils/ignore_unused_variable.hpp
     utils/invalid_input_exception.hpp
+    utils/list_directory.cpp
+    utils/list_directory.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
-    utils/null_streambuf.cpp
-    utils/null_streambuf.hpp
+    utils/meta_table_manager.cpp
+    utils/meta_table_manager.hpp
     utils/pausable_loop_thread.cpp
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
@@ -610,7 +603,6 @@ set(
     lz4
     zstd
     custom_jemalloc
-    ${FILESYSTEM_LIBRARY}
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
@@ -619,67 +611,8 @@ set(
     ${CMAKE_DL_LIBS}
 )
 
-if (${ENABLE_JIT_SUPPORT})
-    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
-    set(JIT_EMBEDDED_SOURCES
-        # Files listed here will be embedded into the binary as LLVM-IR
-        operators/validate.cpp
-        operators/validate.hpp
-        operators/jit_operator/jit_types.cpp
-        operators/jit_operator/jit_types.hpp
-        operators/jit_operator/jit_operations.cpp
-        operators/jit_operator/jit_operations.hpp
-        operators/jit_operator/operators/abstract_jittable.hpp
-        operators/jit_operator/operators/abstract_jittable_sink.hpp
-        operators/jit_operator/operators/jit_aggregate.cpp
-        operators/jit_operator/operators/jit_aggregate.hpp
-        operators/jit_operator/operators/jit_compute.cpp
-        operators/jit_operator/operators/jit_compute.hpp
-        operators/jit_operator/operators/jit_expression.cpp
-        operators/jit_operator/operators/jit_expression.hpp
-        operators/jit_operator/operators/jit_filter.cpp
-        operators/jit_operator/operators/jit_filter.hpp
-        operators/jit_operator/operators/jit_limit.cpp
-        operators/jit_operator/operators/jit_limit.hpp
-        operators/jit_operator/operators/jit_read_tuples.cpp
-        operators/jit_operator/operators/jit_read_tuples.hpp
-        operators/jit_operator/operators/jit_validate.cpp
-        operators/jit_operator/operators/jit_validate.hpp
-        operators/jit_operator/operators/jit_write_references.cpp
-        operators/jit_operator/operators/jit_write_references.hpp
-        operators/jit_operator/operators/jit_write_tuples.cpp
-        operators/jit_operator/operators/jit_write_tuples.hpp
-    )
-    embed_llvm(LLVM_BUNDLE_FILE jit_llvm_bundle ${JIT_EMBEDDED_SOURCES})
-    set(
-        SOURCES
-        logical_query_plan/jit_aware_lqp_translator.cpp
-        logical_query_plan/jit_aware_lqp_translator.hpp
-        operators/jit_operator/jit_constant_mappings.cpp
-        operators/jit_operator/jit_constant_mappings.hpp
-        operators/jit_operator/specialization/jit_compiler.cpp
-        operators/jit_operator/specialization/jit_compiler.hpp
-        operators/jit_operator/specialization/jit_code_specializer.cpp
-        operators/jit_operator/specialization/jit_code_specializer.hpp
-        operators/jit_operator/specialization/jit_repository.cpp
-        operators/jit_operator/specialization/jit_repository.hpp
-        operators/jit_operator/specialization/jit_runtime_pointer.cpp
-        operators/jit_operator/specialization/jit_runtime_pointer.hpp
-        operators/jit_operator/specialization/llvm/CloneFunction.cpp
-        operators/jit_operator/specialization/llvm/InlineFunction.cpp
-        operators/jit_operator/specialization/llvm_extensions.cpp
-        operators/jit_operator/specialization/llvm_extensions.hpp
-        operators/jit_operator/specialization/llvm_utils.cpp
-        operators/jit_operator/specialization/llvm_utils.hpp
-        operators/jit_operator_wrapper.cpp
-        operators/jit_operator_wrapper.hpp
-        ${SOURCES}
-        ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE}
-    )
-    # Prevent clang from complaining about unused defines when compiling the assembly file
-    set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
-    set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
+if (NOT APPLE)
+    set(LIBRARIES ${LIBRARIES} atomic)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
@@ -707,10 +640,24 @@ add_custom_command (
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
-add_library(hyrise_impl STATIC ${SOURCES})
+if(NOT ${ENABLE_COVERAGE} AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
+    add_library(hyrise_impl SHARED ${SOURCES})
+else()
+    # Use a static build for coverage information - otherwise .cpp files are missing from the report
+    # Also, the sanitizer builds on Mac require static linkage
+    add_library(hyrise_impl STATIC ${SOURCES})
+endif()
+
+# Work around an stdlibc++ bug, see list_directory.hpp for details
+set_source_files_properties(
+    utils/list_directory.cpp
+    PROPERTIES
+    COMPILE_FLAGS -O0
+)
 
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
-target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
+target_link_libraries(hyrise_impl ${LIBRARIES} -rdynamic)
+target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
@@ -720,12 +667,6 @@ target_compile_options(hyrise_impl PRIVATE -fPIC)
 # isn't updated when HEAD changes
 
 add_dependencies(hyrise_impl AlwaysCheckGit)
-
-if (${ENABLE_JIT_SUPPORT})
-    # LLVM does not build with -Wshadow-all,-Werror. Overwrite the LLVM include so it is treated as a system library.
-    # This silences some compiler warnings (uses -isystem instead of -I).
-    # target_include_directories(hyrise_impl SYSTEM PUBLIC ${LLVM_INCLUDE_DIR})
-endif()
 
 # This is a wrapper around hyrise_impl that forces the compiler to emit all symbols
 add_library(hyrise INTERFACE)
@@ -745,7 +686,7 @@ target_link_libraries(hyrise INTERFACE hyrise_impl)
 # For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
 # add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
-    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
-)
+        COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
+        )
 
 add_dependencies(hyrise resourceLink)

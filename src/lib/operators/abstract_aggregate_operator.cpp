@@ -24,7 +24,7 @@ AbstractAggregateOperator::AbstractAggregateOperator(const std::shared_ptr<Abstr
 const std::vector<AggregateColumnDefinition>& AbstractAggregateOperator::aggregates() const { return _aggregates; }
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
 
-const std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
+std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
   std::stringstream desc;
   desc << "[" << name() << "] "
        << "GroupBy ColumnIDs: ";
@@ -41,8 +41,8 @@ const std::string AbstractAggregateOperator::description(DescriptionMode descrip
     const auto& aggregate = _aggregates[expression_idx];
     desc << aggregate.function;
 
-    if (aggregate.column) {
-      desc << "(Column #" << *aggregate.column << ")";
+    if (aggregate.column != INVALID_COLUMN_ID) {
+      desc << "(Column #" << aggregate.column << ")";
     } else {
       // COUNT(*) does not use a column
       desc << "(*)";
@@ -60,11 +60,11 @@ const std::string AbstractAggregateOperator::description(DescriptionMode descrip
 void AbstractAggregateOperator::_validate_aggregates() const {
   const auto input_table = input_table_left();
   for (const auto& aggregate : _aggregates) {
-    if (!aggregate.column) {
+    if (aggregate.column == INVALID_COLUMN_ID) {
       Assert(aggregate.function == AggregateFunction::Count, "Aggregate: Asterisk is only valid with COUNT");
     } else {
-      DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
-      Assert(input_table->column_data_type(*aggregate.column) != DataType::String ||
+      DebugAssert(aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
+      Assert(input_table->column_data_type(aggregate.column) != DataType::String ||
                  (aggregate.function != AggregateFunction::Sum && aggregate.function != AggregateFunction::Avg &&
                   aggregate.function != AggregateFunction::StandardDeviationSample),
              "Aggregate: Cannot calculate SUM, AVG or STDDEV_SAMP on string column");

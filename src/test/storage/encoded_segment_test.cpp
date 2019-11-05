@@ -132,16 +132,9 @@ auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   return string;
 };
 
-INSTANTIATE_TEST_CASE_P(
-    SegmentEncodingSpecs, EncodedSegmentTest,
-    ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
-                      SegmentEncodingSpec{EncodingType::RunLength},
-                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::SimdBp128},
-                      SegmentEncodingSpec{EncodingType::LZ4, VectorCompressionType::FixedSizeByteAligned}),
-    formatter);
+INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
+                         ::testing::ValuesIn(BaseTest::get_supporting_segment_encodings_specs(DataType::Int, false)),
+                         formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_concurrent_vector<int32_t>{});

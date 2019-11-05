@@ -40,13 +40,13 @@ void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>
   if (op->input_left()) {
     auto left = op->input_left();
     _build_subtree(left, visualized_ops);
-    _build_dataflow(left, op);
+    _build_dataflow(left, op, InputSide::Left);
   }
 
   if (op->input_right()) {
     auto right = op->input_right();
     _build_subtree(right, visualized_ops);
-    _build_dataflow(right, op);
+    _build_dataflow(right, op, InputSide::Right);
   }
 
   switch (op->type()) {
@@ -91,7 +91,7 @@ void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOp
 }
 
 void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
-                                    const std::shared_ptr<const AbstractOperator>& to) {
+                                    const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
   if (const auto& output = from->get_output()) {
@@ -103,7 +103,10 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
 
     info.label = stream.str();
 
-    info.pen_width = std::fmax(1, std::ceil(std::log10(output->row_count()) / 2));
+    info.pen_width = output->row_count();
+    if (to->input_right() != nullptr) {
+      info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
+    }
   }
 
   _add_edge(from, to, info);
@@ -116,7 +119,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   if (op->get_output()) {
     auto total = op->performance_data().walltime;
     label += "\n\n" + format_duration(total);
-    info.pen_width = std::fmax(1, std::ceil(std::log10(total.count()) / 2));
+    info.pen_width = total.count();
   }
 
   info.label = label;

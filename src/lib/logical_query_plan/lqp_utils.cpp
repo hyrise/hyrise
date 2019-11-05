@@ -137,8 +137,9 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   original_node->set_right_input(nullptr);
 }
 
-void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node) {
-  Assert(!node->right_input(), "Can only remove nodes that only have a left input or no inputs");
+void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRightInput allow_right_input) {
+  Assert(allow_right_input == AllowRightInput::Yes || !node->right_input(),
+         "Caller did not explicitly confirm that right input should be ignored");
 
   /**
    * Back up outputs and in which input side they hold this node
@@ -217,8 +218,6 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
       case LQPNodeType::Predicate:
       case LQPNodeType::Projection:
       case LQPNodeType::Root:
-      case LQPNodeType::ShowColumns:
-      case LQPNodeType::ShowTables:
       case LQPNodeType::Sort:
       case LQPNodeType::StaticTable:
       case LQPNodeType::StoredTable:
@@ -237,7 +236,7 @@ namespace {
  * Function creates a boolean expression from an lqp. It traverses the passed lqp from top to bottom. However, an lqp is
  * evaluated from bottom to top. This requires that the order in which the translated expressions are added to the
  * output expression is the reverse order of how the nodes are traversed. The subsequent_expression parameter passes the
- * translated expressions to the translation of its children nodes which enables to add the translated expression of
+ * translated expressions to the translation of its children nodes, which allows to add the translated expression of
  * child node before its parent node to the output expression.
  */
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(

@@ -16,7 +16,6 @@
 #include "operators/maintenance/drop_table.hpp"
 #include "operators/maintenance/drop_view.hpp"
 #include "optimizer/optimizer.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
@@ -28,7 +27,6 @@ namespace opossum {
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc,
                                            const std::shared_ptr<TransactionContext>& transaction_context,
-                                           const std::shared_ptr<LQPTranslator>& lqp_translator,
                                            const std::shared_ptr<Optimizer>& optimizer,
                                            const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache,
                                            const std::shared_ptr<SQLLogicalPlanCache>& lqp_cache,
@@ -39,7 +37,6 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
       _transaction_context(transaction_context),
-      _lqp_translator(lqp_translator),
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
@@ -116,19 +113,19 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     }
   }
 
-  const auto& unoptimized_lqp = get_unoptimized_logical_plan();
+  auto unoptimized_lqp = get_unoptimized_logical_plan();
 
   const auto started = std::chrono::high_resolution_clock::now();
-
-  _optimized_logical_plan = _optimizer->optimize(unoptimized_lqp);
-
-  const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
+
+  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp));
+
+  const auto done = std::chrono::high_resolution_clock::now();
+  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Cache newly created plan for the according sql statement
   if (lqp_cache) {
@@ -172,7 +169,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
     // Reset time to exclude previous pipeline steps
     started = std::chrono::high_resolution_clock::now();
-    _physical_plan = _lqp_translator->translate_node(lqp);
+    _physical_plan = LQPTranslator{}.translate_node(lqp);
   }
 
   done = std::chrono::high_resolution_clock::now();
@@ -227,7 +224,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
                 reinterpret_cast<uintptr_t>(this));
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   if (was_rolled_back()) {
     return {SQLPipelineStatus::RolledBack, _result_table};
@@ -264,7 +261,7 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
-void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) const {
+void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) {
   const auto& storage_manager = Hyrise::get().storage_manager;
 
   /**

@@ -54,6 +54,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
       }
     });
 
+    data_table->last_chunk()->finalize();
+
     // We have two full chunks and one open chunk, we only encode the full chunks
     for (auto chunk_id = ChunkID{0}; chunk_id < 2; ++chunk_id) {
       ChunkEncoder::encode_chunk(data_table->get_chunk(chunk_id), {data_type, DataType::Int},
@@ -184,7 +186,7 @@ TEST_P(TableScanBetweenTest, Exclusive) {
   _test_between_scan(exclusive_tests, PredicateCondition::BetweenExclusive);
 }
 
-INSTANTIATE_TEST_CASE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
-                        TypedOperatorBaseTest::format);
+INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
+                         TypedOperatorBaseTest::format);
 
 }  // namespace opossum

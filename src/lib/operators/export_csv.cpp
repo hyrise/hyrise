@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "json.hpp"
-
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
 #include "storage/materialize.hpp"
@@ -20,7 +18,10 @@ namespace opossum {
 ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename)
     : AbstractReadOnlyOperator(OperatorType::ExportCsv, in), _filename(filename) {}
 
-const std::string ExportCsv::name() const { return "ExportCSV"; }
+const std::string& ExportCsv::name() const {
+  static const auto name = std::string{"ExportCsv"};
+  return name;
+}
 
 std::shared_ptr<const Table> ExportCsv::_on_execute() {
   _generate_meta_info_file(_input_left->get_output(), _filename + CsvMeta::META_FILE_EXTENSION);

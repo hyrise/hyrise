@@ -9,6 +9,7 @@
 #include "resolve_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -44,7 +45,7 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::option
       _num_elements{num_elements} {}
 
 template <typename T>
-const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
@@ -56,7 +57,7 @@ const AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) c
 }
 
 template <typename T>
-const std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+std::optional<T> LZ4Segment<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   if (_null_values && (*_null_values)[chunk_offset]) {
     return std::nullopt;
   }
@@ -70,7 +71,7 @@ const std::optional<pmr_vector<bool>>& LZ4Segment<T>::null_values() const {
 }
 
 template <typename T>
-const std::optional<std::unique_ptr<BaseVectorDecompressor>> LZ4Segment<T>::string_offset_decompressor() const {
+std::optional<std::unique_ptr<BaseVectorDecompressor>> LZ4Segment<T>::string_offset_decompressor() const {
   if (_string_offsets && *_string_offsets) {
     return (*_string_offsets)->create_base_decompressor();
   } else {
@@ -84,8 +85,8 @@ const pmr_vector<char>& LZ4Segment<T>::dictionary() const {
 }
 
 template <typename T>
-size_t LZ4Segment<T>::size() const {
-  return _num_elements;
+ChunkOffset LZ4Segment<T>::size() const {
+  return static_cast<ChunkOffset>(_num_elements);
 }
 
 template <typename T>
@@ -452,6 +453,17 @@ EncodingType LZ4Segment<T>::encoding_type() const {
 template <typename T>
 std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() const {
   return std::nullopt;
+}
+
+// Right now, vector compression is fixed to SimdBp128. This method nonetheless checks for the actual vector
+// compression type. So if the vector compression becomes configurable, this method does not need to be touched.
+template <>
+std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
+  std::optional<CompressedVectorType> type;
+  if (_string_offsets) {
+    resolve_compressed_vector_type(*(*_string_offsets), [&](const auto& vector) { type = vector.type(); });
+  }
+  return type;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(LZ4Segment);

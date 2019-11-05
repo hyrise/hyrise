@@ -8,10 +8,6 @@ enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct, Standar
 
 class AggregateExpression : public AbstractExpression {
  public:
-  // Constructor for COUNT(*)
-  explicit AggregateExpression(const AggregateFunction aggregate_function);
-
-  // Constructor for any other AggregateFunction
   AggregateExpression(const AggregateFunction aggregate_function, const std::shared_ptr<AbstractExpression>& argument);
 
   std::shared_ptr<AbstractExpression> argument() const;
@@ -24,7 +20,7 @@ class AggregateExpression : public AbstractExpression {
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
-  size_t _on_hash() const override;
+  size_t _shallow_hash() const override;
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 };
 

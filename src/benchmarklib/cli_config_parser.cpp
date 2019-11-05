@@ -7,7 +7,6 @@
 
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"
-#include "utils/null_streambuf.hpp"
 #include "utils/performance_warning.hpp"
 
 namespace opossum {
@@ -54,7 +53,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
-      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false")
+      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false");
     }
   }
 
@@ -99,6 +98,11 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     std::cout << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
+  const auto indexes = json_config.value("indexes", default_config.indexes);
+  if (indexes) {
+    std::cout << "- Creating indexes (as defined by the benchmark)" << std::endl;
+  }
+
   // Get all other variables
   const auto chunk_size = json_config.value("chunk_size", default_config.chunk_size);
   std::cout << "- Chunk size is " << chunk_size << std::endl;
@@ -140,15 +144,10 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
-  auto enable_jit = false;
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    enable_jit = json_config.value("jit", default_config.enable_jit);
-  }
-  std::cout << "- JIT is " << (enable_jit ? "enabled" : "disabled") << std::endl;
-
-  return BenchmarkConfig{benchmark_mode,       chunk_size,       *encoding_config,    max_runs,   timeout_duration,
-                         warmup_duration,      output_file_path, enable_scheduler,    cores,      clients,
-                         enable_visualization, verify,           cache_binary_tables, enable_jit, sql_metrics};
+  return BenchmarkConfig{
+      benchmark_mode,  chunk_size,          *encoding_config, indexes, max_runs, timeout_duration,
+      warmup_duration, output_file_path,    enable_scheduler, cores,   clients,  enable_visualization,
+      verify,          cache_binary_tables, sql_metrics};
 }
 
 BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
@@ -165,6 +164,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("mode", parse_result["mode"].as<std::string>());
   json_config.emplace("encoding", parse_result["encoding"].as<std::string>());
   json_config.emplace("compression", parse_result["compression"].as<std::string>());
+  json_config.emplace("indexes", parse_result["indexes"].as<bool>());
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
   json_config.emplace("cores", parse_result["cores"].as<uint>());
   json_config.emplace("clients", parse_result["clients"].as<uint>());
@@ -173,9 +173,6 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("verify", parse_result["verify"].as<bool>());
   json_config.emplace("cache_binary_tables", parse_result["cache_binary_tables"].as<bool>());
   json_config.emplace("sql_metrics", parse_result["sql_metrics"].as<bool>());
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    json_config.emplace("jit", parse_result["jit"].as<bool>());
-  }
 
   return json_config;
 }
@@ -203,7 +200,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     const auto type_encoding = encoding_config_json["type"];
     Assert(type_encoding.is_object(), "The type encoding needs to be specified as a json object.");
 
-    for (const auto& type : nlohmann::json::iterator_wrapper(type_encoding)) {
+    for (const auto& type : type_encoding.items()) {
       const auto type_str = boost::to_lower_copy(type.key());
       const auto data_type_it = data_type_to_string.right.find(type_str);
       Assert(data_type_it != data_type_to_string.right.end(), "Unknown data type for encoding: " + type_str);
@@ -223,14 +220,14 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
     const auto custom_encoding = encoding_config_json["custom"];
     Assert(custom_encoding.is_object(), "The custom table encoding needs to be specified as a json object.");
 
-    for (const auto& table : nlohmann::json::iterator_wrapper(custom_encoding)) {
+    for (const auto& table : custom_encoding.items()) {
       const auto& table_name = table.key();
       const auto& columns = table.value();
 
       Assert(columns.is_object(), "The custom encoding for column types needs to be specified as a json object.");
       custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, SegmentEncodingSpec>());
 
-      for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
+      for (const auto& column : columns.items()) {
         const auto& column_name = column.key();
         const auto& encoding_info = column.value();
         Assert(encoding_info.is_object(),

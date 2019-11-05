@@ -76,10 +76,6 @@ TEST_F(SQLIdentifierResolverTest, ResetColumnNames) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s, "T1"}), expression_b);
 }
 
-TEST_F(SQLIdentifierResolverTest, ResetColumnNamesForInvalidExpression) {
-  EXPECT_THROW(context.reset_column_names(expression_unnamed), std::exception);
-}
-
 TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
   context.add_column_name(expression_a, "x");
   context.set_table_name(expression_a, "X");

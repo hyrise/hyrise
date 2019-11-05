@@ -9,7 +9,6 @@
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -55,8 +54,8 @@ template <typename T>
 class DeepCopyTestJoin : public OperatorDeepCopyTest {};
 
 // here we define all Join types
-using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
-TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
+using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
+TYPED_TEST_SUITE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
   std::shared_ptr<Table> expected_result =
@@ -184,7 +183,7 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
 
 TEST_F(OperatorDeepCopyTest, Subquery) {
   // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
-  // this suite. The test is very confusing and error-prone with explicit operators as above.
+  // this suite. The test would be very confusing and error-prone with explicit operators as above.
   const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
   Hyrise::get().storage_manager.add_table("table_3int", table);
 
@@ -205,7 +204,7 @@ TEST_F(OperatorDeepCopyTest, Subquery) {
 
   const auto copied_plan = sql_pipeline.get_physical_plan()->deep_copy();
   const auto tasks = OperatorTask::make_tasks_from_operator(copied_plan, CleanupTemporaries::Yes);
-  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   const auto copied_result = tasks.back()->get_operator()->get_output();
 

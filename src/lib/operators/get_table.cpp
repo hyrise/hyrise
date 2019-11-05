@@ -32,9 +32,12 @@ GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_c
               "Expected vector of unique ColumnIDs");
 }
 
-const std::string GetTable::name() const { return "GetTable"; }
+const std::string& GetTable::name() const {
+  static const auto name = std::string{"GetTable"};
+  return name;
+}
 
-const std::string GetTable::description(DescriptionMode description_mode) const {
+std::string GetTable::description(DescriptionMode description_mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
@@ -156,6 +159,11 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     // The Chunk is to be included in the output Table, now we progress to excluding Columns
     const auto stored_chunk = stored_table->get_chunk(stored_chunk_id);
 
+    // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
+    // pruned and will be set on the output chunk.
+    const auto& current_chunk_order = stored_chunk->ordered_by();
+    std::optional<std::pair<ColumnID, OrderByMode>> adapted_chunk_order;
+
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;
     } else {
@@ -171,6 +179,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
           continue;
         }
 
+        if (current_chunk_order && current_chunk_order->first == stored_column_id) {
+          adapted_chunk_order = {
+              ColumnID{static_cast<uint16_t>(std::distance(_pruned_column_ids.begin(), pruned_column_ids_iter))},
+              current_chunk_order->second};
+        }
+
         *output_segments_iter = stored_chunk->get_segment(stored_column_id);
         auto indexes = stored_chunk->get_indexes({*output_segments_iter});
         if (!indexes.empty()) {
@@ -181,6 +195,14 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
       *output_chunks_iter = std::make_shared<Chunk>(std::move(output_segments), stored_chunk->mvcc_data(),
                                                     stored_chunk->get_allocator(), std::move(output_indexes));
+
+      if (adapted_chunk_order) {
+        (*output_chunks_iter)->set_ordered_by(*adapted_chunk_order);
+      }
+
+      // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this
+      // information so that following operators (currently, the Validate operator) can use it for optimizations.
+      (*output_chunks_iter)->increase_invalid_row_count(stored_chunk->invalid_row_count());
     }
 
     ++output_chunks_iter;

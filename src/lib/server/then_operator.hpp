@@ -1,5 +1,7 @@
 #pragma once
 
+#define BOOST_THREAD_PROVIDES_FUTURE
+#define BOOST_THREAD_PROVIDES_FUTURE_CONTINUATION
 #include <boost/thread/future.hpp>
 
 // This code is inspired by the code examples of user Yakk on StackExchange

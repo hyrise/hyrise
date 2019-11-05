@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "base_segment.hpp"
-#include "index/base_index.hpp"
+#include "index/abstract_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -32,7 +32,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
   for (const auto& segment : _segments) {
     DebugAssert(
         !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
-        "Chunks containing ReferenceSegments should not contains MvccData. They implicitly use the MvccData of the "
+        "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
         "referenced Table");
     DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
     DebugAssert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
@@ -44,8 +44,6 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
 }
 
 bool Chunk::is_mutable() const { return _is_mutable; }
-
-void Chunk::mark_immutable() { _is_mutable = false; }
 
 void Chunk::replace_segment(size_t column_id, const std::shared_ptr<BaseSegment>& segment) {
   std::atomic_store(&_segments.at(column_id), segment);
@@ -95,21 +93,36 @@ SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() const {
 
 std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indexes(
+std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
-  auto result = std::vector<std::shared_ptr<BaseIndex>>();
+  auto result = std::vector<std::shared_ptr<AbstractIndex>>();
   std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(segments); });
   return result;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
+void Chunk::finalize() {
+  Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
+  _is_mutable = false;
+
+  if (has_mvcc_data()) {
+    auto mvcc = get_scoped_mvcc_data_lock();
+    Assert(!mvcc->begin_cids.empty(), "Cannot calculate max_begin_cid on an empty begin_cid vector.");
+
+    mvcc->max_begin_cid = *(std::max_element(mvcc->begin_cids.begin(), mvcc->begin_cids.end()));
+    Assert(mvcc->max_begin_cid != MvccData::MAX_COMMIT_ID,
+           "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
+           "finalized before all transactions committed/rolled back.");
+  }
+}
+
+std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
   return get_indexes(segments);
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                            const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
+std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
+                                                const std::vector<std::shared_ptr<const BaseSegment>>& segments) const {
   auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
   });
@@ -117,13 +130,13 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
   return (index_it == _indexes.cend()) ? nullptr : *index_it;
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                            const std::vector<ColumnID>& column_ids) const {
+std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
+                                                const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
   return get_index(index_type, segments);
 }
 
-void Chunk::remove_index(const std::shared_ptr<BaseIndex>& index) {
+void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
   auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
   DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index");
   _indexes.erase(it);
@@ -209,13 +222,11 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 
   _pruning_statistics = pruning_statistics;
 }
-void Chunk::increase_invalid_row_count(const uint64_t count) const { _invalid_row_count += count; }
+void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
 
 const std::optional<std::pair<ColumnID, OrderByMode>>& Chunk::ordered_by() const { return _ordered_by; }
 
 void Chunk::set_ordered_by(const std::pair<ColumnID, OrderByMode>& ordered_by) { _ordered_by.emplace(ordered_by); }
-
-uint64_t Chunk::invalid_row_count() const { return std::atomic_load(&_invalid_row_count); }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
   if (_cleanup_commit_id == 0) {

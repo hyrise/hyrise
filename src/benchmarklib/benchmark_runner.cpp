@@ -1,5 +1,3 @@
-#include <json.hpp>
-
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
 #include <fstream>
@@ -11,7 +9,6 @@
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -38,26 +35,28 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
-    Topology::use_default_topology(config.cores);
+    Hyrise::get().topology.use_default_topology(config.cores);
     std::cout << "- Multi-threaded Topology:" << std::endl;
-    std::cout << Topology::get();
+    std::cout << Hyrise::get().topology;
 
     // Add NUMA topology information to the context, for processing in the benchmark_multithreaded.py script
     auto numa_cores_per_node = std::vector<size_t>();
-    for (const auto& node : Topology::get().nodes()) {
+    for (const auto& node : Hyrise::get().topology.nodes()) {
       numa_cores_per_node.push_back(node.cpus.size());
     }
     _context.push_back({"utilized_cores_per_numa_node", numa_cores_per_node});
 
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
-    CurrentScheduler::set(scheduler);
+    Hyrise::get().set_scheduler(scheduler);
   }
 
   _table_generator->generate_and_store();
 
   _benchmark_item_runner->on_tables_loaded();
 
-  if (_config.verify) {
+  // SQLite data is only loaded if the dedicated result set is not complete, i.e,
+  // items exist for which no dedicated result could be loaded.
+  if (_config.verify && _benchmark_item_runner->has_item_without_dedicated_result()) {
     std::cout << "- Loading tables into SQLite for verification." << std::endl;
     Timer timer;
 
@@ -81,7 +80,7 @@ void BenchmarkRunner::run() {
 
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
-    _results.resize(*std::max_element(items.begin(), items.end()) + 1u);
+    _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
   }
 
   switch (_config.benchmark_mode) {
@@ -126,14 +125,14 @@ void BenchmarkRunner::run() {
 
     for (const auto& item_id : items) {
       const auto& result = _results[item_id];
-      Assert(result.verification_passed, "Verification result should have been set");
-      any_verification_failed |= !result.verification_passed;
+      Assert(result.verification_passed.load(), "Verification result should have been set");
+      any_verification_failed |= !(*result.verification_passed.load());
     }
 
     Assert(!any_verification_failed, "Verification failed");
   }
 
-  if (CurrentScheduler::is_set()) CurrentScheduler::get()->finish();
+  Hyrise::get().scheduler()->finish();
 }
 
 void BenchmarkRunner::_benchmark_shuffled() {
@@ -186,7 +185,7 @@ void BenchmarkRunner::_benchmark_shuffled() {
   }
 
   // Wait for the rest of the tasks that didn't make it in time - they will not count towards the results
-  CurrentScheduler::wait_for_all_tasks();
+  Hyrise::get().scheduler()->wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
 
@@ -217,19 +216,22 @@ void BenchmarkRunner::_benchmark_ordered() {
     result.duration = _state.benchmark_duration;
     const auto duration_of_all_runs_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
-    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000;
+    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+    const auto num_successful_runs = result.successful_runs.size();
+    const auto duration_per_item =
+        num_successful_runs > 0 ? static_cast<float>(duration_seconds) / num_successful_runs : NAN;
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds << " seconds ("
-                << items_per_second << " iter/s)" << std::endl;
+                << items_per_second << " iter/s, " << duration_per_item << " s/iter)" << std::endl;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
     }
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    CurrentScheduler::wait_for_all_tasks();
+    Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
 }
@@ -248,7 +250,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         ++_total_finished_runs;
 
         // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
-        result.verification_passed = result.verification_passed.value_or(true) && !any_run_verification_failed;
+        result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
           if (!_config.sql_metrics) metrics.clear();
@@ -263,9 +265,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
       },
       SchedulePriority::High);
 
-  // No need to check if the benchmark uses the scheduler or not as this method executes tasks immediately if the
-  // scheduler is not set.
-  CurrentScheduler::schedule_tasks<JobTask>({task});
+  task->schedule();
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
@@ -288,13 +288,14 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   }
 
   // Clear the results
-  auto empty_result = BenchmarkItemResult{};
-  _results[item_id] = std::move(empty_result);
+  _results[item_id].successful_runs = {};
+  _results[item_id].unsuccessful_runs = {};
+  _results[item_id].duration = {};
 
   _state.set_done();
 
   // Wait for the rest of the tasks that didn't make it in time
-  CurrentScheduler::wait_for_all_tasks();
+  Hyrise::get().scheduler()->wait_for_all_tasks();
   Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 }
 
@@ -350,8 +351,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         _config.benchmark_mode == BenchmarkMode::Shuffled ? _total_run_duration : result.duration;
     const auto reported_item_duration_ns =
         static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000;
+    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+
+    // The field items_per_second is relied upon by a number of visualization scripts. Carefully consider if you really
+    // want to touch this and potentially break the comparability across commits.
     benchmark["items_per_second"] = items_per_second;
     const auto time_per_item =
         !result.successful_runs.empty() ? reported_item_duration_ns / result.successful_runs.size() : std::nanf("");
@@ -397,22 +401,18 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE))) // NOLINT
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT
-    ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
+    ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "Ordered or Shuffled, default is Ordered", cxxopts::value<std::string>()->default_value("Ordered")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
+    ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint>()->default_value("0")) // NOLINT
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint>()->default_value("1")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("cache_binary_tables", "Cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("sql_metrics", "Track SQL metrics (parse time etc.) for each SQL query", cxxopts::value<bool>()->default_value("false")); // NOLINT
-
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    cli_options.add_options()
-      ("jit", "Enable just-in-time query compilation", cxxopts::value<bool>()->default_value("false")); // NOLINT
-  }
+    ("sql_metrics", "Track SQL metrics (parse time etc.) for each SQL query and add it to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   return cli_options;
@@ -442,12 +442,12 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"compiler", compiler.str()},
       {"build_type", HYRISE_DEBUG ? "debug" : "release"},
       {"encoding", config.encoding_config.to_json()},
+      {"indexes", config.indexes},
       {"benchmark_mode", config.benchmark_mode == BenchmarkMode::Ordered ? "Ordered" : "Shuffled"},
       {"max_runs", config.max_runs},
       {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
       {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},
       {"using_scheduler", config.enable_scheduler},
-      {"using_jit", config.enable_jit},
       {"cores", config.cores},
       {"clients", config.clients},
       {"verify", config.verify},
