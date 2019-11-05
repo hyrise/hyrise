@@ -71,13 +71,17 @@ void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
+  // The chunk count might change while we are in this method as other threads insert new data. Thanks to MVCC, we need
+  // (read: must) not be interested in these chunks
+  const auto chunk_count = stored_table->chunk_count();
+
   /**
    * Build a sorted vector (`excluded_chunk_ids`) of physically/logically deleted and pruned ChunkIDs
    */
   DebugAssert(!transaction_context_is_set() || transaction_context()->phase() == TransactionPhase::Active,
               "Transaction is not active anymore.");
   if (HYRISE_DEBUG && !transaction_context_is_set()) {
-    for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       DebugAssert(stored_table->get_chunk(chunk_id) && !stored_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
                   "For tables with physically deleted chunks, the transaction context must be set.");
     }
@@ -85,7 +89,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   auto excluded_chunk_ids = std::vector<ChunkID>{};
   auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
-  for (ChunkID stored_chunk_id{0}; stored_chunk_id < stored_table->chunk_count(); ++stored_chunk_id) {
+  for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Check whether the Chunk is pruned
     if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
       excluded_chunk_ids.emplace_back(stored_chunk_id);
@@ -143,12 +147,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   /**
    * Build the output Table, omitting pruned Chunks and Columns as well as deleted Chunks
    */
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{stored_table->chunk_count() - excluded_chunk_ids.size()};
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count - excluded_chunk_ids.size()};
   auto output_chunks_iter = output_chunks.begin();
 
   auto excluded_chunk_ids_iter = excluded_chunk_ids.begin();
 
-  for (ChunkID stored_chunk_id{0}; stored_chunk_id < stored_table->chunk_count(); ++stored_chunk_id) {
+  for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Skip `stored_chunk_id` if it is in the sorted vector `excluded_chunk_ids`
     if (excluded_chunk_ids_iter != excluded_chunk_ids.end() && *excluded_chunk_ids_iter == stored_chunk_id) {
       ++excluded_chunk_ids_iter;
