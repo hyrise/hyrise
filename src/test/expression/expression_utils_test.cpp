@@ -87,7 +87,7 @@ TEST_F(ExpressionUtilsTest, ExpressionEvaluableOnLQPAggregate) {
 }
 
 TEST_F(ExpressionUtilsTest, ExpressionEvaluableOnJoin) {
-  // SELECT b, SUM(c) FROM a WHERE a = 1
+  // SELECT * FROM a, b WHERE a.a = b.a AND a.a = 1
   // clang-format off
   const auto input_lqp =
   JoinNode::make(JoinMode::Inner, equals_(lqp_column_(a_a), lqp_column_(b_a)),

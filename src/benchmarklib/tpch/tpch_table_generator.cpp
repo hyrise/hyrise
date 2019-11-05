@@ -276,37 +276,39 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
   auto customer_table = customer_builder.finish_table();
-  customer_table->add_soft_unique_constraint({customer_table->column_id_by_name("c_custkey")}, true);
+  customer_table->add_soft_unique_constraint({customer_table->column_id_by_name("c_custkey")}, IsPrimaryKey::Yes);
   table_info_by_name["customer"].table = customer_table;
 
   auto orders_table = order_builder.finish_table();
-  orders_table->add_soft_unique_constraint({orders_table->column_id_by_name("o_orderkey")}, true);
+  orders_table->add_soft_unique_constraint({orders_table->column_id_by_name("o_orderkey")}, IsPrimaryKey::Yes);
   table_info_by_name["orders"].table = orders_table;
 
   auto lineitem_table = lineitem_builder.finish_table();
   lineitem_table->add_soft_unique_constraint(
-      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")}, true);
+      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
+      IsPrimaryKey::Yes);
   table_info_by_name["lineitem"].table = lineitem_table;
 
   auto part_table = part_builder.finish_table();
-  part_table->add_soft_unique_constraint({part_table->column_id_by_name("p_partkey")}, true);
+  part_table->add_soft_unique_constraint({part_table->column_id_by_name("p_partkey")}, IsPrimaryKey::Yes);
   table_info_by_name["part"].table = part_table;
 
   auto partsupp_table = partsupp_builder.finish_table();
   partsupp_table->add_soft_unique_constraint(
-      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")}, true);
+      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
+      IsPrimaryKey::Yes);
   table_info_by_name["partsupp"].table = partsupp_table;
 
   auto supplier_table = supplier_builder.finish_table();
-  supplier_table->add_soft_unique_constraint({supplier_table->column_id_by_name("s_suppkey")}, true);
+  supplier_table->add_soft_unique_constraint({supplier_table->column_id_by_name("s_suppkey")}, IsPrimaryKey::Yes);
   table_info_by_name["supplier"].table = supplier_table;
 
   auto nation_table = nation_builder.finish_table();
-  nation_table->add_soft_unique_constraint({nation_table->column_id_by_name("n_nationkey")}, true);
+  nation_table->add_soft_unique_constraint({nation_table->column_id_by_name("n_nationkey")}, IsPrimaryKey::Yes);
   table_info_by_name["nation"].table = nation_table;
 
   auto region_table = region_builder.finish_table();
-  region_table->add_soft_unique_constraint({region_table->column_id_by_name("r_regionkey")}, true);
+  region_table->add_soft_unique_constraint({region_table->column_id_by_name("r_regionkey")}, IsPrimaryKey::Yes);
   table_info_by_name["region"].table = region_table;
 
   if (_benchmark_config->cache_binary_tables) {

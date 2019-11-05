@@ -87,7 +87,8 @@ ExpressionUnorderedSet gather_locally_required_expressions(
 
       // Handling COUNT(*) (which is represented as an LQPColumnReference with a valid original_node and an
       // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
-      // original node survives the pruning. For now, we simply stop pruning once we encounter COUNT(*).
+      // original node survives the pruning. Otherwise, we could not resolve that original_node later on.
+      // For now, we simply stop pruning (i.e., add all expressions as required) once we encounter COUNT(*).
       auto has_count_star = false;
       for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
         const auto& expression = node->node_expressions[expression_idx];
@@ -129,7 +130,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       for (const auto& expression : node->node_expressions) {
         if (node->type == LQPNodeType::Projection && !expressions_required_by_consumers.contains(expression)) {
           // An expression produced by a ProjectionNode that is not required by anyone upstream is useless. We should
-          // not collect the expressions required needed for calculating that useless expression.
+          // not collect the expressions required for calculating that useless expression.
           continue;
         }
 
@@ -261,7 +262,9 @@ void try_join_to_semi_rewrite(
     join_is_unique_on_right_side |= is_unique_column(right_operand);
   }
 
-  // If one of the input sides is unused (i.e., its expressions are not needed in the output), check whether
+  // If one of the input sides is unused (i.e., its expressions are not needed in the output) and it is guaranteed
+  // that we will not produce more than a single row on that side for each row on the other side, we can rewrite the
+  // join into a semi join.
   if (!left_input_is_used && join_is_unique_on_left_side) {
     join_node->join_mode = JoinMode::Semi;
     const auto temp = join_node->left_input();
