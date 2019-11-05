@@ -77,7 +77,10 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
 
 void JoinSortMerge::_on_cleanup() { _impl.reset(); }
 
-const std::string JoinSortMerge::name() const { return "JoinSortMerge"; }
+const std::string& JoinSortMerge::name() const {
+  static const auto name = std::string{"JoinSortMerge"};
+  return name;
+}
 
 /**
 ** Start of implementation.
@@ -824,8 +827,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the segments from an input table to the output table
   **/
-  void _add_output_segments(Segments& output_segments, std::shared_ptr<const Table> input_table,
-                            std::shared_ptr<const PosList> pos_list) {
+  void _add_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
+                            const std::shared_ptr<const PosList>& pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the segment data (in the form of a poslist)

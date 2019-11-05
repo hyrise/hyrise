@@ -28,7 +28,7 @@ class Sort : public AbstractReadOnlyOperator {
   ColumnID column_id() const;
   OrderByMode order_by_mode() const;
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

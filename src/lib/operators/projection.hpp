@@ -23,7 +23,7 @@ class Projection : public AbstractReadOnlyOperator {
   Projection(const std::shared_ptr<const AbstractOperator>& in,
              const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   /**
    * The dummy table is used for literal projections that have no input table.

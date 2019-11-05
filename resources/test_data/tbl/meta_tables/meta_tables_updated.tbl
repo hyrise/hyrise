@@ -1,4 +1,4 @@
 table|column_count|row_count|chunk_count|max_chunk_size
 string|int|long|int|int
-int_int|2|4|2|2
+int_int|2|4|3|2
 int_int_int_null|3|5|2|100

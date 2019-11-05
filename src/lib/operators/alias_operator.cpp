@@ -15,9 +15,12 @@ AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& inpu
   Assert(_column_ids.size() == _aliases.size(), "Expected as many aliases as columns");
 }
 
-const std::string AliasOperator::name() const { return "Alias"; }
+const std::string& AliasOperator::name() const {
+  static const auto name = std::string{"Alias"};
+  return name;
+}
 
-const std::string AliasOperator::description(DescriptionMode description_mode) const {
+std::string AliasOperator::description(DescriptionMode description_mode) const {
   std::stringstream stream;
   stream << "Alias [";
   stream << boost::algorithm::join(_aliases, description_mode == DescriptionMode::SingleLine ? ", " : "\n");

@@ -23,14 +23,13 @@ FixedString::~FixedString() {
   if (_owns_memory) delete[] _mem;
 }
 
+// NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): Tested by FixedStringTest.Assign
 FixedString& FixedString::operator=(const FixedString& other) {
   DebugAssert(other.maximum_length() <= _maximum_length,
               "Other FixedString is longer than current maximum string length");
-  DebugAssert(other._mem + _maximum_length < _mem + 1 || _mem + _maximum_length < other._mem + 1,
-              "This and the other's FixedString memory can't overlap");
 
   const auto copied_length = std::min(other.maximum_length(), _maximum_length);
-  std::memcpy(_mem, other._mem, copied_length);
+  std::memmove(_mem, other._mem, copied_length);
 
   // Fill unused fields of char array with null terminator, in order to overwrite the content of
   // the old FixedString. This is especially important if the old FixedString was longer than the other FixedString.

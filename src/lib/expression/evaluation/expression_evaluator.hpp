@@ -176,7 +176,7 @@ class ExpressionEvaluator final {
    * Either operand can be either empty (the operand is not nullable), contain one element (the operand is a literal
    * with null info) or can have n rows (the operand is a nullable series)
    */
-  std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right) const;
+  static std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right);
 
   void _materialize_segment_if_not_yet_materialized(const ColumnID column_id);
 
