@@ -41,6 +41,15 @@ struct MvccData {
    */
   void grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id);
 
+  /**
+   * The thread sanitzer (tsan) complains about concurrent writes and reads to begin/end_cids. That is because it is
+   * unaware of their thread-safety being guaranteed by the update of the global last_cid. Furthermore, we exploit that
+   * writes up to eight bytes are atomic on x64, which C++ and tsan do not know about. These helper methods were added
+   * to .tsan-ignore.txt and can be used (carefully) to avoid those false positives.
+   */
+  void set_begin_cid(const ChunkOffset offset, const CommitID commit_id);
+  void set_end_cid(const ChunkOffset offset, const CommitID commit_id);
+
  private:
   /**
    * @brief Mutex used to manage access to MVCC data
