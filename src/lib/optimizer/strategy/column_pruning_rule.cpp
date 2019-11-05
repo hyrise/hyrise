@@ -85,9 +85,23 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     case LQPNodeType::Aggregate: {
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-      // Tracks whether we have already added a column. For COUNT(*) without GROUP BY, we might otherwise end up
-      // without any expressions.
-      auto has_at_least_one_expression = false;
+      // Handling COUNT(*) (which is represented as an LQPColumnReference with a valid original_node and an
+      // INVALID_COLUMN_ID) is difficult, as we need to make sure that at least one expression from that
+      // original node survives the pruning. For now, we simply stop pruning once we encounter COUNT(*).
+      auto has_count_star = false;
+      for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
+        const auto& expression = node->node_expressions[expression_idx];
+        if (AggregateExpression::is_count_star(*expression)) {
+          has_count_star = true;
+          break;
+        }
+      }
+      if (has_count_star) {
+        for (const auto& input_expression : node->left_input()->column_expressions()) {
+          locally_required_expressions.emplace(input_expression);
+        }
+        break;
+      }
 
       for (auto expression_idx = size_t{0}; expression_idx < node->node_expressions.size(); ++expression_idx) {
         const auto& expression = node->node_expressions[expression_idx];
@@ -97,27 +111,11 @@ ExpressionUnorderedSet gather_locally_required_expressions(
         if (expression_idx < aggregate_node.aggregate_expressions_begin_idx) {
           // This is a group by expression that is required from the input
           locally_required_expressions.emplace(expression);
-          has_at_least_one_expression = true;
         } else {
           // This is an aggregate expression - we need its argument
           DebugAssert(expression->type == ExpressionType::Aggregate, "Expected AggregateExpression");
-          if (expression->arguments.empty()) {
-            DebugAssert(
-                static_cast<const AggregateExpression&>(*expression).aggregate_function == AggregateFunction::Count,
-                "Only COUNT(*) may have empty arguments");
-            // Argument is empty (i.e., COUNT(*)).
-            continue;
-          }
-
           locally_required_expressions.emplace(expression->arguments[0]);
-
-          has_at_least_one_expression = true;
         }
-      }
-
-      if (!has_at_least_one_expression) {
-        // Unsuccessful - add the first expression
-        locally_required_expressions.emplace(node->left_input()->column_expressions()[0]);
       }
     } break;
 

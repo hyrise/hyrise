@@ -251,33 +251,7 @@ TEST_F(ColumnPruningRuleTest, UngroupedCountStar) {
 
   // clang-format off
   lqp =
-  AggregateNode::make(expression_vector(), expression_vector(count_star_()),
-    ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
-      node_a));
-
-  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
-  lqp = lqp->deep_copy();
-
-  const auto pruned_node_a = pruned(node_a, {ColumnID{1}, ColumnID{2}});
-  const auto pruned_a = pruned_node_a->get_column("a");
-
-  const auto actual_lqp = apply_rule(rule, lqp);
-
-  const auto expected_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(count_star_()),
-    ProjectionNode::make(expression_vector(pruned_a),
-      pruned_node_a));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
-  // clang-format off
-  lqp =
-  AggregateNode::make(expression_vector(b, a), expression_vector(count_star_()),
+  AggregateNode::make(expression_vector(), expression_vector(count_star_(node_a)),
     ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
       node_a));
 
@@ -291,8 +265,35 @@ TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
-  AggregateNode::make(expression_vector(pruned_b, pruned_a), expression_vector(count_star_()),
-    ProjectionNode::make(expression_vector(pruned_a, pruned_b),
+  AggregateNode::make(expression_vector(), expression_vector(count_star_(pruned_node_a)),
+    ProjectionNode::make(expression_vector(pruned_a, pruned_b, add_(pruned_a, 2)),
+      pruned_node_a));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(ColumnPruningRuleTest, GroupedCountStar) {
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  // clang-format off
+  lqp =
+  AggregateNode::make(expression_vector(b, a), expression_vector(count_star_(node_a)),
+    ProjectionNode::make(expression_vector(a, b, add_(a, 2)),
+      node_a));
+
+  // Create deep copy so we can set pruned ColumnIDs on node_a below without manipulating the input LQP
+  lqp = lqp->deep_copy();
+
+  const auto pruned_node_a = pruned(node_a, {ColumnID{2}});
+  const auto pruned_a = pruned_node_a->get_column("a");
+  const auto pruned_b = pruned_node_a->get_column("b");
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(pruned_b, pruned_a), expression_vector(count_star_(pruned_node_a)),
+    ProjectionNode::make(expression_vector(pruned_a, pruned_b, add_(pruned_a, 2)),
       pruned_node_a));
   // clang-format on
 
