@@ -24,14 +24,28 @@ class StressTest : public BaseTest {
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
+  double initial_sum = 0.0f;
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(b) FROM table_a"}}.create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    initial_sum = table->get_value<double>(ColumnID{0}, 0);
+  }
+
   // Similar to TestParallelConnections, but this time we modify the table
   const std::string sql = "UPDATE table_a SET b = b + 1 WHERE b = (SELECT MIN(b) FROM table_a);";
 
+  std::atomic_int successful_increments;
+  std::atomic_int conflicted_increments;
   const auto run = [&]() {
     auto pipeline =
         SQLPipelineBuilder{std::string{"UPDATE table_a SET b = b + 1 WHERE b = (SELECT MIN(b) FROM table_a);"}}
             .create_pipeline();
-    (void)pipeline.get_result_table();
+    const auto [status, _] = pipeline.get_result_table();
+    if (status == SQLPipelineStatus::Success) {
+      ++successful_increments;
+    } else {
+      ++conflicted_increments;
+    }
   };
 
   const auto num_threads = 100u;
@@ -51,9 +65,18 @@ TEST_F(StressTest, TestTransactionConflicts) {
     }
   }
 
-  auto pipeline = SQLPipelineBuilder{std::string{"SELECT MIN(b) FROM table_a"}}.create_pipeline();
-  const auto [_, table] = pipeline.get_result_table();
-  std::cout << table->get_value<float>(ColumnID{0}, 0) << std::endl;
+  auto final_sum = 0.0f;
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(b) FROM table_a"}}.create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    final_sum = table->get_value<double>(ColumnID{0}, 0);
+  }
+
+  // Really pessimistic, but at least 2 statements should have made it
+  EXPECT_GT(successful_increments, 2);
+
+  EXPECT_EQ(successful_increments + conflicted_increments, num_threads);
+  EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
 }
 
 }  // namespace opossum
