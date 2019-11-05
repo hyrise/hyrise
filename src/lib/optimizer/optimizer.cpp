@@ -89,6 +89,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
 
+  optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
+
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
