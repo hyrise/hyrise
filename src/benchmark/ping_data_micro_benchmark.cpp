@@ -59,6 +59,7 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
     sorted_table->append_chunk(immutable_sorted_table->get_chunk(ChunkID{0})->segments());
     const auto& added_chunk = sorted_table->get_chunk(chunk_id);
     added_chunk->set_ordered_by(std::make_pair(sorted_table->column_id_by_name(order_by_column_name), order_by_mode));
+    added_chunk->finalize();
 
     // in case a chunk encoding spec is provided, encode chunk
     if (chunk_encoding_spec) {
@@ -227,3 +228,4 @@ BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThan
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
 
 }  // namespace opossum
+
