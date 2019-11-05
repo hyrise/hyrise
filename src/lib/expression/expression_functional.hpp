@@ -231,7 +231,7 @@ std::shared_ptr<CorrelatedParameterExpression> correlated_parameter_(const Param
   return std::make_shared<CorrelatedParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
-std::shared_ptr<AggregateExpression> count_star_(const std::shared_ptr<AbstractLQPNode> lqp_node);
+std::shared_ptr<AggregateExpression> count_star_(const std::shared_ptr<AbstractLQPNode>& lqp_node);
 
 template <typename Argument>
 std::shared_ptr<UnaryMinusExpression> unary_minus_(const Argument& argument) {

@@ -24,6 +24,7 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+	// std::cout << "Before _apply: " << *lqp << std::endl;	
   visit_lqp(lqp, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
@@ -86,6 +87,17 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 	    	continue;
 	    }
 
+			// std::vector<ColumnID> difference;
+	  //   std::set_intersection(unique_columns.begin(), unique_columns.end(),
+	  //                         group_by_columns.begin(), group_by_columns.end(),
+	  //                         std::back_inserter(difference));
+
+	  //   for (const auto& el : difference) {
+	  //   	std::cout << "% " << el << std::endl;
+	  //   }
+
+	    // std::cout << "Before: " << aggregate_node.node_expressions.size() << " and first non-groupby-index is " << aggregate_node.aggregate_expressions_begin_idx << "." << std::endl;
+
       for (const auto& group_by_column : group_by_columns) {
       	// Every column that is not part of the primary key is going to be removed.
       	// Not taking the pair<ColumnID, PositionInAgg> approach since it destroys some set-usage nicecities
@@ -115,7 +127,11 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     			const auto aggregate_any_expression = any_(node_to_replace);
     			aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
 
+    			// modified_aggregates.insert(std::dynamic_pointer_cast<AggregateNode>(node));
+
+    			// TODO: store aggregates and cleanupwards after we have rewritten all nodes?
     			// not using expression_deep_replace here, since we do not want to wrap ANYs inside of ANYs
+    			
     			visit_lqp_upwards(node, [&, stored_table_node = stored_table_node](const auto& upwards_node) {
     				// std::cout << "upward search reaaching " << *upwards_node << std::endl;
 			      for (auto& expression : upwards_node->node_expressions) {
@@ -128,11 +144,15 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 			      				return ExpressionVisitation::DoNotVisitArguments;
 			      			}
 			      		}
+			      		// std::cout << "continue with " << *sub_expression << std::endl;
 
 						    if (*sub_expression == *node_to_replace) {
 						      sub_expression = aggregate_any_expression;
+						      // std::cout << "replaced " << *sub_expression << std::endl;
 						      return ExpressionVisitation::DoNotVisitArguments;
 						    } else {
+						    	// std::cout << *sub_expression << " does not match " << *node_to_replace << std::endl;
+						    	// std::cout << sub_expression->hash() << " does not match " << node_to_replace->hash() << std::endl;
 						      return ExpressionVisitation::VisitArguments;
 						    }
 						  });
@@ -143,9 +163,12 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     			--aggregate_node.aggregate_expressions_begin_idx;
       	}
       }
+
+      // std::cout << "After: " << aggregate_node.node_expressions.size() << " and first non-groupby-index is " << aggregate_node.aggregate_expressions_begin_idx << std::endl;
     }
     return LQPVisitation::VisitInputs;
   });
+	// std::cout << "After _apply: " << *lqp << std::endl;	
 }
 
 }  // namespace opossum
