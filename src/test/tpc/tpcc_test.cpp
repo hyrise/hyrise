@@ -156,7 +156,7 @@ TEST_F(TPCCTest, Delivery) {
 
     int c_id;
 
-    // Verify that O_CARRIER_ID was updated in the ORDER table - not filtering by the district ID to keep it interesting:
+    // Verify that O_CARRIER_ID was updated in the ORDER table - not filtering by the district ID keeps it interesting:
     {
       auto pipeline = SQLPipelineBuilder{std::string{"SELECT * FROM \"ORDER\" WHERE O_W_ID = "} +
                                          std::to_string(delivery.w_id) + " AND O_ID = 2101"}
@@ -276,18 +276,49 @@ TEST_F(TPCCTest, NewOrder) {
 
   // VERIFY ORDER_LINE entries
   for (auto line_idx = size_t{0}; line_idx < order_lines.size(); ++line_idx) {
+    const auto ol_i_id = order_lines[line_idx].ol_i_id;
+
     const auto row_idx = new_sizes["ORDER_LINE"] - order_lines.size() + line_idx;
     const auto order_line_row = Hyrise::get().storage_manager.get_table("ORDER_LINE")->get_row(row_idx);
     EXPECT_EQ(order_line_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});         // OL_O_ID
     EXPECT_EQ(order_line_row[1], AllTypeVariant{new_order.d_id});                      // OL_D_ID
     EXPECT_EQ(order_line_row[2], AllTypeVariant{new_order.w_id});                      // OL_W_ID
     EXPECT_EQ(order_line_row[3], AllTypeVariant{static_cast<int32_t>(line_idx + 1)});  // OL_NUMBER
-    EXPECT_EQ(order_line_row[4], AllTypeVariant{order_lines[line_idx].ol_i_id});       // OL_I_ID
+    EXPECT_EQ(order_line_row[4], AllTypeVariant{ol_i_id});                             // OL_I_ID
     EXPECT_LE(order_lines[line_idx].ol_i_id, NUM_ITEMS);
-    EXPECT_LE(order_line_row[5], AllTypeVariant{NUM_WAREHOUSES});                     // OL_SUPPLY_W_ID
+    EXPECT_LE(order_line_row[5], AllTypeVariant{NUM_WAREHOUSES});  // OL_SUPPLY_W_ID
+    const auto ol_supply_w_id = boost::get<int32_t>(order_line_row[5]);
     EXPECT_EQ(order_line_row[6], AllTypeVariant{-1});                                 // OL_DELIVERY_D
     EXPECT_EQ(order_line_row[7], AllTypeVariant{order_lines[line_idx].ol_quantity});  // OL_QUANTITY
-    // TODO verify OL_AMOUNT, OL_DIST_INFO
+
+    // verify OL_AMOUNT
+    if (ol_i_id != TPCCNewOrder::UNUSED_ITEM_ID) {
+      auto pipeline =
+          SQLPipelineBuilder{std::string{"SELECT I_PRICE FROM ITEM WHERE I_ID = "} + std::to_string(ol_i_id)}
+              .create_pipeline();
+      const auto [_, table] = pipeline.get_result_table();
+      EXPECT_TRUE(table);
+      EXPECT_EQ(table->row_count(), 1);
+      const auto i_price = table->get_value<float>("I_PRICE", 0);
+
+      const auto expected_ol_amount = i_price * order_lines[line_idx].ol_quantity;
+      EXPECT_EQ(order_line_row[8], AllTypeVariant{expected_ol_amount});  // OL_AMOUNT
+    }
+
+    // verify OL_DIST_INFO
+    if (ol_i_id != TPCCNewOrder::UNUSED_ITEM_ID) {
+      auto pipeline = SQLPipelineBuilder{std::string{"SELECT S_DIST_"} + (new_order.d_id < 10 ? "0" : "") +
+                                         std::to_string(new_order.d_id) + " FROM STOCK WHERE S_W_ID = " +
+                                         std::to_string(ol_supply_w_id) + " AND S_I_ID = " + std::to_string(ol_i_id)}
+                          .with_transaction_context(old_transaction_context)
+                          .create_pipeline();
+      const auto [_, table] = pipeline.get_result_table();
+      EXPECT_TRUE(table);
+      EXPECT_EQ(table->row_count(), 1);
+      const auto s_dist = table->get_value<pmr_string>(ColumnID{0}, 0);
+
+      EXPECT_EQ(order_line_row[9], AllTypeVariant{s_dist});  // OL_DIST_INFO
+    }
   }
 }
 
