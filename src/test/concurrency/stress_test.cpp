@@ -22,11 +22,11 @@ class StressTest : public BaseTest {
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
-  auto initial_sum = uint64_t{};
+  auto initial_sum = int64_t{};
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    initial_sum = table->get_value<uint64_t>(ColumnID{0}, 0);
+    initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   // Similar to TestParallelConnections, but this time we modify the table
@@ -63,11 +63,11 @@ TEST_F(StressTest, TestTransactionConflicts) {
     }
   }
 
-  auto final_sum = uint64_t{};
+  auto final_sum = int64_t{};
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    final_sum = table->get_value<uint64_t>(ColumnID{0}, 0);
+    final_sum = table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
   // Really pessimistic, but at least 2 statements should have made it
