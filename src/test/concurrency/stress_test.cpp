@@ -6,8 +6,6 @@
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 
-#include "server/server.hpp"
-
 namespace opossum {
 
 class StressTest : public BaseTest {
@@ -18,27 +16,27 @@ class StressTest : public BaseTest {
     auto table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
     Hyrise::get().storage_manager.add_table("table_a", table_a);
 
-    // Set scheduler so that the server can execute the tasks on separate threads.
+    // Set scheduler so that we can execute multiple SQL statements on separate threads.
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   }
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
-  double initial_sum = 0.0f;
+  long initial_sum = 0.0f;
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(b) FROM table_a"}}.create_pipeline();
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    initial_sum = table->get_value<double>(ColumnID{0}, 0);
+    initial_sum = table->get_value<long>(ColumnID{0}, 0);
   }
 
   // Similar to TestParallelConnections, but this time we modify the table
-  const std::string sql = "UPDATE table_a SET b = b + 1 WHERE b = (SELECT MIN(b) FROM table_a);";
+  const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
 
-  std::atomic_int successful_increments;
-  std::atomic_int conflicted_increments;
+  std::atomic_int successful_increments{0};
+  std::atomic_int conflicted_increments{0};
   const auto run = [&]() {
     auto pipeline =
-        SQLPipelineBuilder{std::string{"UPDATE table_a SET b = b + 1 WHERE b = (SELECT MIN(b) FROM table_a);"}}
+        SQLPipelineBuilder{std::string{"UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);"}}
             .create_pipeline();
     const auto [status, _] = pipeline.get_result_table();
     if (status == SQLPipelineStatus::Success) {
@@ -48,7 +46,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     }
   };
 
-  const auto num_threads = 100u;
+  const auto num_threads = 1000u;
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
 
@@ -67,9 +65,9 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
   auto final_sum = 0.0f;
   {
-    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(b) FROM table_a"}}.create_pipeline();
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
-    final_sum = table->get_value<double>(ColumnID{0}, 0);
+    final_sum = table->get_value<long>(ColumnID{0}, 0);
   }
 
   // Really pessimistic, but at least 2 statements should have made it
