@@ -167,6 +167,8 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
       return _import_dictionary_segment<ColumnDataType>(file, row_count);
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
+    case EncodingType::FrameOfReference:
+      return _import_frame_of_reference_segment<int32_t>(file, row_count);
     default:
       // This case happens if the read column type is not a valid EncodingType.
       Fail("Cannot import column: invalid column type");
@@ -182,6 +184,20 @@ std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
       return std::make_shared<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
     case 4:
       return std::make_shared<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
+    default:
+      Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
+  }
+}
+
+std::unique_ptr<const BaseCompressedVector> ImportBinary::_import_offset_value_vector(
+  std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
+  switch (attribute_vector_width) {
+    case 1:
+      return std::make_unique<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
+    case 2:
+      return std::make_unique<FixedSizeByteAlignedVector<uint16_t>>(_read_values<uint16_t>(file, row_count));
+    case 4:
+      return std::make_unique<FixedSizeByteAlignedVector<uint32_t>>(_read_values<uint32_t>(file, row_count));
     default:
       Fail("Cannot import attribute vector with width: " + std::to_string(attribute_vector_width));
   }
@@ -225,6 +241,25 @@ std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(st
   const auto end_positions = std::make_shared<pmr_vector<ChunkOffset>>(_read_values<ChunkOffset>(file, size));
 
   return std::make_shared<RunLengthSegment<T>>(values, null_values, end_positions);
+}
+
+template <typename T>
+std::shared_ptr<FrameOfReferenceSegment<T>> ImportBinary::_import_frame_of_reference_segment(std::ifstream& file,
+                                                                                             ChunkOffset row_count) {
+  Fail("Frame of Reference Segments not implemented for data type");
+}
+
+template <>
+std::shared_ptr<FrameOfReferenceSegment<int32_t>> ImportBinary::_import_frame_of_reference_segment(std::ifstream& file,
+                                                                                                   ChunkOffset row_count) {
+  const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
+  const auto block_count = _read_value<uint32_t>(file);
+  const auto block_minima = pmr_vector<int32_t>(_read_values<int32_t>(file, block_count));
+  const auto size = _read_value<uint32_t>(file);
+  const auto null_values = pmr_vector<bool>(_read_values<bool>(file, size));
+  auto offset_values = _import_offset_value_vector(file, row_count, attribute_vector_width);
+
+  return std::make_shared<FrameOfReferenceSegment<int32_t>>(block_minima, null_values, std::move(offset_values));
 }
 
 }  // namespace opossum

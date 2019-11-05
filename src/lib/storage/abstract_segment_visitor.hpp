@@ -10,6 +10,7 @@ class BaseEncodedSegment;
 class BaseValueSegment;
 class ReferenceSegment;
 class BaseRunLengthSegment;
+class BaseFrameOfReferenceSegment;
 
 class SegmentVisitorContext {};
 
@@ -24,6 +25,7 @@ class AbstractSegmentVisitor {
   virtual void handle_segment(const ReferenceSegment& segment, std::shared_ptr<SegmentVisitorContext> context) = 0;
   virtual void handle_segment(const BaseEncodedSegment& segment, std::shared_ptr<SegmentVisitorContext> context) = 0;
   virtual void handle_segment(const BaseRunLengthSegment& segment, std::shared_ptr<SegmentVisitorContext> context) = 0;
+  virtual void handle_segment(const BaseFrameOfReferenceSegment& segment, std::shared_ptr<SegmentVisitorContext> context) = 0;
 };
 
 }  // namespace opossum

@@ -163,9 +163,6 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
   void handle_segment(const BaseDictionarySegment& base_segment,
                       std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_segment(const BaseEncodedSegment& base_segment,
-                      std::shared_ptr<SegmentVisitorContext> base_context) override;
-
   /**
    * RunLength Segments are dumped with the following layout:
    *
@@ -185,6 +182,31 @@ class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_segment(const BaseRunLengthSegment& base_segment,
+                      std::shared_ptr<SegmentVisitorContext> base_context) override;
+
+  /**
+   * FrameOfReference Segments are dumped with the following layout:
+   *
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column Type            | ColumnType                            |   1
+   * Number of Blocks       | uint32_t                              |   4
+   * Block minima           | T                                     |   Number of Blocks * sizeof(T)
+   * Size                   | uint32_t                              |   4
+   * NULL values            | vector<bool> (BoolAsByteType)         |   size * 1
+   * Offset values          | uint32_t                              |   size * 4
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   *
+   * @param base_segment The segment to export
+   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   */
+  void handle_segment(const BaseFrameOfReferenceSegment& base_segment,
+                     std::shared_ptr<SegmentVisitorContext> base_context) override;
+
+  void handle_segment(const BaseEncodedSegment& base_segment,
                       std::shared_ptr<SegmentVisitorContext> base_context) override;
 
  private:

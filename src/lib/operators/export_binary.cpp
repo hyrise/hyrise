@@ -10,6 +10,7 @@
 #include "storage/encoding_type.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
+#include "storage/frame_of_reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
@@ -181,6 +182,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseValueSegment
   }
 
   export_values(context->ofstream, segment.values());
+  printf("Export Unencoded");
 }
 
 template <typename T>
@@ -293,6 +295,55 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseRunLengthSeg
 
   // Write end positions
   export_values(context->ofstream, *segment.end_positions());
+}
+
+template <typename T>
+void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseFrameOfReferenceSegment& base_segment,
+                                                          std::shared_ptr<SegmentVisitorContext> base_context){
+  Fail("Frame of Reference Segments not implemented for data type");
+}
+
+template <>
+void ExportBinary::ExportBinaryVisitor<int32_t>::handle_segment(const BaseFrameOfReferenceSegment& base_segment,
+                                                          std::shared_ptr<SegmentVisitorContext> base_context){
+  auto context = std::static_pointer_cast<ExportContext>(base_context);
+
+  export_value(context->ofstream, EncodingType::FrameOfReference);
+
+  const auto& segment = static_cast<const FrameOfReferenceSegment<int32_t>&>(base_segment);
+
+  const auto offset_value_vector_width = [&]() {
+    Assert(base_segment.compressed_vector_type(),
+           "Expected FrameOfReferenceSegment to use vector compression for offset value vector");
+    switch (*base_segment.compressed_vector_type()) {
+      case CompressedVectorType::FixedSize4ByteAligned:
+        return 4u;
+      case CompressedVectorType::FixedSize2ByteAligned:
+        return 2u;
+      case CompressedVectorType::FixedSize1ByteAligned:
+        return 1u;
+      default:
+        return 0u;
+    }
+  }();
+
+  // Write attribute vector width
+  export_value(context->ofstream, static_cast<AttributeVectorWidth>(offset_value_vector_width));
+
+  // Write number of blocks and block minima
+  export_value(context->ofstream, static_cast<uint32_t>(segment.block_minima().size()));
+  export_values(context->ofstream, segment.block_minima());
+
+  // Write NULL value and offset value size
+  export_value(context->ofstream, static_cast<uint32_t>(segment.null_values().size()));
+  
+  // Write NULL values
+  export_values(context->ofstream, segment.null_values());
+
+  // Write offset values
+  Assert(segment.compressed_vector_type(),
+         "Expected FrameOfReference to use vector compression for offset values");
+  _export_attribute_vector(context->ofstream, *base_segment.compressed_vector_type(), segment.offset_values());
 }
 
 template <typename T>
