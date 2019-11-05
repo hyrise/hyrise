@@ -73,7 +73,9 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
       _traverse(node->left_input());
     } break;
 
-    default: { Fail("Node type cannot be used for JoinGraph, should have been detected as a vertex"); }
+    default: {
+      Fail("Node type cannot be used for JoinGraph, should have been detected as a vertex");
+    }
   }
 }
 
@@ -103,7 +105,7 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
   }
 }
 
-bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) const {
+bool JoinGraphBuilder::_lqp_node_type_is_vertex(const LQPNodeType node_type) {
   return node_type != LQPNodeType::Join && node_type != LQPNodeType::Predicate;
 }
 

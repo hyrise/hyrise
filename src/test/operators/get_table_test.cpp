@@ -62,6 +62,35 @@ TEST_F(OperatorsGetTableTest, Description) {
             "GetTable\n(int_int_float)\npruned:\n1/4 chunk(s)\n1/3 column(s)");
 }
 
+TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
+  auto get_table_1 = std::make_shared<opossum::GetTable>("int_int_float");
+  get_table_1->execute();
+
+  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  auto table_scan = create_table_scan(get_table_1, ColumnID{0}, PredicateCondition::GreaterThan, 9);
+  table_scan->execute();
+
+  const auto rows_to_delete = table_scan->get_output()->row_count();
+
+  auto delete_op = std::make_shared<Delete>(table_scan);
+  delete_op->set_transaction_context(transaction_context);
+  delete_op->execute();
+
+  transaction_context->commit();
+
+  auto get_table_2 = std::make_shared<opossum::GetTable>("int_int_float");
+  get_table_2->execute();
+  const auto result_table = get_table_2->get_output();
+
+  auto total_invalid_row_count = 0;
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
+    total_invalid_row_count += result_table->get_chunk(chunk_id)->invalid_row_count();
+  }
+
+  EXPECT_EQ(total_invalid_row_count, rows_to_delete);
+}
+
 TEST_F(OperatorsGetTableTest, PrunedChunks) {
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}},
                                                        std::vector<ColumnID>{});

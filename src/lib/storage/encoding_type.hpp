@@ -1,5 +1,10 @@
 #pragma once
 
+#include <boost/version.hpp>
+#if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
+#include "utils/boost_curry_override.hpp"  // NOLINT
+#endif
+
 #include <boost/hana/at_key.hpp>
 #include <boost/hana/contains.hpp>
 #include <boost/hana/equal.hpp>

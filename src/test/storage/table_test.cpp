@@ -9,6 +9,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -152,6 +153,32 @@ TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
     EXPECT_EQ(new_mvcc_data->begin_cids[i], values[i]);
     EXPECT_EQ(new_mvcc_data->end_cids[i], values[i]);
   }
+}
+
+TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
+  t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+
+  t->append({4, "Hello,"});
+
+  const auto c = t->get_chunk(ChunkID{0});
+  auto mvcc_data = c->get_scoped_mvcc_data_lock();
+  EXPECT_FALSE(mvcc_data->max_begin_cid);
+  EXPECT_TRUE(c->is_mutable());
+
+  t->append({6, "world"});
+  t->append({7, "!"});
+
+  EXPECT_EQ(*mvcc_data->max_begin_cid, 0);
+  EXPECT_FALSE(c->is_mutable());
+}
+
+TEST_F(StorageTableTest, AppendsMutableChunkIfLastChunkImmutableOnAppend) {
+  const auto table = load_table("resources/test_data/tbl/float_int.tbl", 2);
+  EXPECT_EQ(table->chunk_count(), 2);
+  EXPECT_EQ(table->row_count(), 3);
+
+  table->append({13.0f, 27});
+  EXPECT_EQ(table->chunk_count(), 3);
 }
 
 TEST_F(StorageTableTest, EmplaceChunk) {

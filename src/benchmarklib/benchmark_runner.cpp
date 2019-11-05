@@ -86,7 +86,7 @@ void BenchmarkRunner::run() {
 
   const auto& items = _benchmark_item_runner->items();
   if (!items.empty()) {
-    _results.resize(*std::max_element(items.begin(), items.end()) + 1u);
+    _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
   }
 
   switch (_config.benchmark_mode) {
@@ -131,8 +131,8 @@ void BenchmarkRunner::run() {
 
     for (const auto& item_id : items) {
       const auto& result = _results[item_id];
-      Assert(result.verification_passed, "Verification result should have been set");
-      any_verification_failed |= !(*result.verification_passed);
+      Assert(result.verification_passed.load(), "Verification result should have been set");
+      any_verification_failed |= !(*result.verification_passed.load());
     }
 
     Assert(!any_verification_failed, "Verification failed");
@@ -258,7 +258,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         ++_total_finished_runs;
 
         // If result.verification_passed was previously unset, set it; otherwise only invalidate it if the run failed.
-        result.verification_passed = result.verification_passed.value_or(true) && !any_run_verification_failed;
+        result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
           if (!_config.sql_metrics) metrics.clear();
@@ -273,9 +273,7 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
       },
       SchedulePriority::High);
 
-  // No need to check if the benchmark uses the scheduler or not as this method executes tasks immediately if the
-  // scheduler is not set.
-  Hyrise::get().scheduler()->schedule_tasks<JobTask>({task});
+  task->schedule();
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
@@ -298,8 +296,9 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
   }
 
   // Clear the results
-  auto empty_result = BenchmarkItemResult{};
-  _results[item_id] = std::move(empty_result);
+  _results[item_id].successful_runs = {};
+  _results[item_id].unsuccessful_runs = {};
+  _results[item_id].duration = {};
 
   _state.set_done();
 

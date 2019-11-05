@@ -366,6 +366,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
@@ -638,16 +639,16 @@ int Console::_export_table(const std::string& args) {
   const std::string& extension = file_parts.back();
 
   out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
-  auto gt = std::make_shared<GetTable>(tablename);
-  gt->execute();
+  auto get_table = std::make_shared<GetTable>(tablename);
+  get_table->execute();
 
   try {
     if (extension == "bin") {
-      auto ex = std::make_shared<ExportBinary>(gt, filepath);
-      ex->execute();
+      auto exporter = std::make_shared<ExportBinary>(get_table, filepath);
+      exporter->execute();
     } else if (extension == "csv") {
-      auto ex = std::make_shared<ExportCsv>(gt, filepath);
-      ex->execute();
+      auto exporter = std::make_shared<ExportCsv>(get_table, filepath);
+      exporter->execute();
     } else {
       out("Exporting to extension \"" + extension + "\" is not supported.\n");
       return ReturnCode::Error;
@@ -671,15 +672,15 @@ int Console::_print_table(const std::string& args) {
 
   const std::string& tablename = arguments.at(0);
 
-  auto gt = std::make_shared<GetTable>(tablename);
+  auto get_table = std::make_shared<GetTable>(tablename);
   try {
-    gt->execute();
+    get_table->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
-  out(gt->get_output(), PrintFlags::Mvcc);
+  out(get_table->get_output(), PrintFlags::Mvcc);
 
   return ReturnCode::Ok;
 }
@@ -1043,6 +1044,8 @@ char** Console::_command_completion(const char* text, int start, int end) {
     }
     // Turn off filepath completion
     rl_attempted_completion_over = 1;
+
+    // NOLINTNEXTLINE(bugprone-branch-clone)
   } else if (first_word == "quit" || first_word == "exit" || first_word == "help") {
     // Turn off filepath completion
     rl_attempted_completion_over = 1;

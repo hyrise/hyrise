@@ -29,18 +29,19 @@ class ChunkPruningRule : public AbstractRule {
   void apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
-  std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
-                                          const std::shared_ptr<StoredTableNode>& stored_table_node) const;
+  static std::set<ChunkID> _compute_exclude_list(const Table& table, const AbstractExpression& predicate,
+                                                 const std::shared_ptr<StoredTableNode>& stored_table_node);
 
   // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
-  bool _can_prune(const BaseAttributeStatistics& base_segment_statistics, const PredicateCondition predicate_condition,
-                  const AllTypeVariant& variant_value, const std::optional<AllTypeVariant>& variant_value2) const;
+  static bool _can_prune(const BaseAttributeStatistics& base_segment_statistics,
+                         const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+                         const std::optional<AllTypeVariant>& variant_value2);
 
-  bool _is_non_filtering_node(const AbstractLQPNode& node) const;
+  static bool _is_non_filtering_node(const AbstractLQPNode& node);
 
-  std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
-                                                           OperatorScanPredicate predicate,
-                                                           size_t num_rows_pruned) const;
+  static std::shared_ptr<TableStatistics> _prune_table_statistics(const TableStatistics& old_statistics,
+                                                                  OperatorScanPredicate predicate,
+                                                                  size_t num_rows_pruned);
 };
 
 }  // namespace opossum
