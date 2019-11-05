@@ -245,19 +245,23 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
 
   std::atomic_int successful_increments{0};
   std::atomic_int conflicted_increments{0};
+  const auto iterations_per_thread = 10;
+
   const auto connection_run = [&]() {
-    pqxx::connection connection{_connection_string};
-    pqxx::nontransaction transaction{connection};
-    try {
-      transaction.exec(sql);
-      ++successful_increments;
-    } catch (const pqxx::serialization_failure&) {
-      // As expected, some of these updates fail
-      ++conflicted_increments;
+    for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+      pqxx::connection connection{_connection_string};
+      pqxx::nontransaction transaction{connection};
+      try {
+        transaction.exec(sql);
+        ++successful_increments;
+      } catch (const pqxx::serialization_failure&) {
+        // As expected, some of these updates fail
+        ++conflicted_increments;
+      }
     }
   };
 
-  const auto num_threads = 1000u;
+  const auto num_threads = 100u;
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
 
@@ -288,7 +292,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   // We also want to see at least one conflict so that we can be sure that conflict handling in the server works
   EXPECT_GE(successful_increments, 1);
 
-  EXPECT_EQ(successful_increments + conflicted_increments, num_threads);
+  EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
   EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
 }
 

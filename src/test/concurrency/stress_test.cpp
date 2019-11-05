@@ -34,19 +34,23 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
   std::atomic_int successful_increments{0};
   std::atomic_int conflicted_increments{0};
+  const auto iterations_per_thread = 10;
+
   const auto run = [&]() {
-    auto pipeline =
-        SQLPipelineBuilder{std::string{"UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);"}}
-            .create_pipeline();
-    const auto [status, _] = pipeline.get_result_table();
-    if (status == SQLPipelineStatus::Success) {
-      ++successful_increments;
-    } else {
-      ++conflicted_increments;
+    for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+      auto pipeline =
+          SQLPipelineBuilder{std::string{"UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);"}}
+              .create_pipeline();
+      const auto [status, _] = pipeline.get_result_table();
+      if (status == SQLPipelineStatus::Success) {
+        ++successful_increments;
+      } else {
+        ++conflicted_increments;
+      }
     }
   };
 
-  const auto num_threads = 1000u;
+  const auto num_threads = 100u;
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
 
@@ -74,7 +78,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   // Really pessimistic, but at least 2 statements should have made it
   EXPECT_GT(successful_increments, 2);
 
-  EXPECT_EQ(successful_increments + conflicted_increments, num_threads);
+  EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
   EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
 }
 
