@@ -221,13 +221,75 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
     thread_futures.emplace_back(std::async(std::launch::async, connection_run));
   }
 
-  for (auto& thread_fut : thread_futures) {
+  for (auto& thread_future : thread_futures) {
     // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
     // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-    if (thread_fut.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
+    if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      thread_future.get();
     }
   }
+}
+
+TEST_F(ServerTestRunner, TestTransactionConflicts) {
+  // Similar to TestParallelConnections, but this time we modify the table
+  // Also similar to StressTest.TestTransactionConflicts, only that we go through the server
+  auto initial_sum = int64_t{};
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+  }
+
+  const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
+
+  std::atomic_int successful_increments{0};
+  std::atomic_int conflicted_increments{0};
+  const auto connection_run = [&]() {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    try {
+      transaction.exec(sql);
+      ++successful_increments;
+    } catch (const pqxx::serialization_failure& e) {
+      // As expected, some of these updates fail
+      ++conflicted_increments;
+    }
+  };
+
+  const auto num_threads = 1000u;
+  std::vector<std::future<void>> thread_futures;
+  thread_futures.reserve(num_threads);
+
+  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
+    thread_futures.emplace_back(std::async(std::launch::async, connection_run));
+  }
+
+  for (auto& thread_future : thread_futures) {
+    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
+    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
+      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      thread_future.get();
+    }
+  }
+
+  auto final_sum = int64_t{};
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    final_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+  }
+
+  // Really pessimistic, but at least 2 statements should have made it
+  EXPECT_GT(successful_increments, 2);
+
+  // We also want to see at least one conflict so that we can be sure that conflict handling in the server works
+  EXPECT_GE(successful_increments, 1);
+
+  EXPECT_EQ(successful_increments + conflicted_increments, num_threads);
+  EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
 }
 
 }  // namespace opossum

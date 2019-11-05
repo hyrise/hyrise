@@ -60,6 +60,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
     if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      thread_future.get();
     }
   }
 
