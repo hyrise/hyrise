@@ -10,11 +10,11 @@ namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix)
     : _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {
-      if (_sqlite_wrapper) {
-      _sqlite_wrapper->raw_execute_query("BEGIN TRANSACTION");
-        _sqlite_transaction_open = true;
-      }
-    }
+  if (_sqlite_wrapper) {
+    _sqlite_wrapper->raw_execute_query("BEGIN TRANSACTION");
+    _sqlite_transaction_open = true;
+  }
+}
 
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(
     const std::string& sql, const std::shared_ptr<const Table>& expected_result_table) {
@@ -47,8 +47,8 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 }
 
 BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
-  // If the benchmark item did not call commit or rollback, we need to close the sqlite transaction so that the
-  // next item can start a new one:
+  // If the benchmark item does not explicitly manage the transaction life time by calling commit or rollback,
+  // we automatically commit the sqlite transaction so that the next item can start a new one:
   if (_sqlite_transaction_open) _sqlite_wrapper->raw_execute_query("COMMIT TRANSACTION");
 }
 
@@ -78,7 +78,12 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline.get_sql());
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
   DebugAssert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
-  if (!result_table) return;  // Updates do no return a table
+
+  // Modifications (INSERT, UPDATE, DELETE) do not return a table. We do not know what changed - we donot even know
+  // which table has been modified. Extracting that info from the plan and verifying the entire table would take way
+  // too long. As such, we rely on any errors here to be found when the potentially corrupted data is SELECTed the
+  // next time.
+  if (!result_table) return;
 
   _compare_tables(sqlite_result, result_table, "Using SQLite's result table as expected result table");
 }

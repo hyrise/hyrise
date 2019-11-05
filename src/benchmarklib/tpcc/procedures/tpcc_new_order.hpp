@@ -10,7 +10,9 @@ class TPCCNewOrder : public AbstractTPCCProcedure {
 
   [[nodiscard]] bool _on_execute() override;
 
-  static constexpr int INVALID_ITEM_ID = 222'222;
+  // Used to simulate user data entry errors (compare 2.4.1.4). A number that is outside of the range of valid item ids
+  // [1..100000] and is easy to recognize.
+  static constexpr int UNUSED_ITEM_ID = 888'888;
 
   // Values generated BEFORE the procedure is executed:
   int32_t w_id;  // Home warehouse ID             [1..num_warehouses]

@@ -86,6 +86,10 @@ TEST_F(StorageTableTest, GetValue) {
   ASSERT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 0u).compare("Hello,"));
   ASSERT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 2u).compare("!"));
   EXPECT_THROW(t->get_value<int32_t>(ColumnID{3}, 0u), std::exception);
+
+  ASSERT_EQ(t->get_value<int32_t>("column_a", 0u), 4);
+  ASSERT_FALSE(t->get_value<pmr_string>("column_b", 2u).compare("!"));
+  EXPECT_THROW(t->get_value<int32_t>("column_c", 0u), std::exception);
 }
 
 TEST_F(StorageTableTest, GetRow) {

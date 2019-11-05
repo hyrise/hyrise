@@ -19,17 +19,17 @@ def main():
   arguments["--output"] = "'json_output.txt'"
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Unencoded'"
-  arguments["--clients"] = "4"
+  arguments["--clients"] = "1"
   arguments["--cache_binary_tables"] = "true"
-  arguments["--scheduler"] = "true"
+  arguments["--scheduler"] = "false"
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
 
   benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
 
   benchmark.expect("Writing benchmark results to 'json_output.txt'")
-  benchmark.expect("Running in multi-threaded mode using all available cores")
-  benchmark.expect("4 simulated clients are scheduling items in parallel")
+  benchmark.expect("Running in single-threaded mode")
+  benchmark.expect("1 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Shuffled' mode")
   benchmark.expect("Encoding is 'Unencoded'")
   benchmark.expect("Chunk size is 100000")
@@ -42,11 +42,13 @@ def main():
   benchmark.expect("Benchmarking queries from third_party/join-order-benchmark")
   benchmark.expect("Running on tables from resources/test_data/imdb_sample/")
   benchmark.expect("Running subset of queries: 21c,22b,23c,24a")
-  benchmark.expect("Multi-threaded Topology:")
   benchmark.expect("-> Executed")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
+
+  if benchmark.before.count('Verification failed'):
+    return_error = True
 
   if not os.path.isfile(arguments["--output"].replace("'", "")):
     print ("ERROR: Cannot find output file " + arguments["--output"])
@@ -78,15 +80,15 @@ def main():
   arguments["--warmup"] = "2"
   arguments["--encoding"] = "'LZ4'"
   arguments["--compression"] = "'Fixed-size byte-aligned'"
-  arguments["--scheduler"] = "false"
-  arguments["--clients"] = "1"
+  arguments["--scheduler"] = "true"
+  arguments["--clients"] = "4"
   arguments["--visualize"] = "true"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
 
-  benchmark.expect("Running in single-threaded mode")
-  benchmark.expect("1 simulated clients are scheduling items in parallel")
+  benchmark.expect("Running in multi-threaded mode using all available cores")
+  benchmark.expect("4 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Ordered' mode")
   benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'LZ4'")
@@ -98,12 +100,10 @@ def main():
   benchmark.expect("Not caching tables as binary files")
   benchmark.expect("Benchmarking queries from third_party/join-order-benchmark")
   benchmark.expect("Running on tables from resources/test_data/imdb_sample/")
+  benchmark.expect("Multi-threaded Topology:")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
 
   if return_error:
     sys.exit(1)

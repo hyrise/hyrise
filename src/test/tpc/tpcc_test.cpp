@@ -57,8 +57,8 @@ class TPCCTest : public BaseTest {
       const auto table = get_validated(table_name, transaction_context);
 
       if (table_name == "ORDER_LINE" && size == 0) {
-        // For ORDER_LINE, the number of lines per order is in [5, 15] and non-deterministic. If it is not specifically
-        // calculated, we just check if it is within the acceptable range
+        // For ORDER_LINE, the number of lines per order is in [5, 15] (see 4.3.3.1) and non-deterministic. If it is
+        // not specifically calculated, we just check if it is within the acceptable range.
         EXPECT_GE(table->row_count(), sizes.at("ORDER") * 5) << "Failed table: " << table_name;
         EXPECT_LE(table->row_count(), sizes.at("ORDER") * 15) << "Failed table: " << table_name;
       } else {
@@ -87,6 +87,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTest::tables;
 TEST_F(TPCCTest, InitialTables) { verify_table_sizes(initial_sizes); }
 
 TEST_F(TPCCTest, Delivery) {
+  // As the procedures have some internal logic that we do not want to replicate in the tests (e.g., picking a W_ID),
+  // we first create a transaction that has a view on the unmodified database, then execute the procedure, and finally
+  // compare the changes between the final state of the database to that seen by the initial transaction. Those changes
+  // should reflect what we expect the procedure to have done.
   auto old_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   const auto old_time = time(nullptr);
 
@@ -106,9 +110,10 @@ TEST_F(TPCCTest, Delivery) {
     float old_c_balance, expected_c_balance;
     int old_c_delivery_cnt;
 
-    // Retrieve old data
+    // Retrieve old data using old transaction context
     {
       // We have #ORDER (3000) - #NEW_ORDER (900) delivered orders per warehouse, so 2101 is the first undelivered ID
+      // Fetch num_order_lines of first undelivered order
       auto pipeline =
           SQLPipelineBuilder{std::string{"SELECT * FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(delivery.w_id) +
                              " AND OL_D_ID = " + std::to_string(d_id) + " AND OL_O_ID = 2101"}
@@ -120,6 +125,8 @@ TEST_F(TPCCTest, Delivery) {
       EXPECT_GE(num_order_lines, 5);
       EXPECT_LE(num_order_lines, 15);
     }
+
+    // Fetch old c_balance and c_delivery_count as it is seen by old_transaction_context
     {
       auto pipeline = SQLPipelineBuilder{std::string{"SELECT * FROM CUSTOMER WHERE C_W_ID = "} +
                                          std::to_string(delivery.w_id) + " AND C_D_ID = " + std::to_string(d_id) +
@@ -131,8 +138,8 @@ TEST_F(TPCCTest, Delivery) {
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
-      old_c_balance = table->get_value<float>(ColumnID{16}, 0);
-      old_c_delivery_cnt = table->get_value<int32_t>(ColumnID{19}, 0);
+      old_c_balance = table->get_value<float>("C_BALANCE", 0);
+      old_c_delivery_cnt = table->get_value<int32_t>("C_DELIVERY_CNT", 0);
     }
     expected_c_balance = old_c_balance;
 
@@ -149,20 +156,21 @@ TEST_F(TPCCTest, Delivery) {
 
     int c_id;
 
-    // Verify that it was updated in the ORDER table - not filtering by the district ID to keep it interesting:
+    // Verify that O_CARRIER_ID was updated in the ORDER table - not filtering by the district ID to keep it interesting:
     {
       auto pipeline = SQLPipelineBuilder{std::string{"SELECT * FROM \"ORDER\" WHERE O_W_ID = "} +
                                          std::to_string(delivery.w_id) + " AND O_ID = 2101"}
                           .create_pipeline();
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
+      // Ten rows because each district gets 3000 orders at startup (compare 4.3.3.1)
       EXPECT_EQ(table->row_count(), 10);
-      EXPECT_EQ(table->get_value<int32_t>(ColumnID{5}, d_id - 1), delivery.o_carrier_id);  // O_CARRIER_ID
+      EXPECT_EQ(table->get_value<int32_t>("O_CARRIER_ID", d_id - 1), delivery.o_carrier_id);
 
       c_id = table->get_value<int32_t>(ColumnID{3}, d_id - 1);
     }
 
-    // Verify the entries in ORDER_LINE:
+    // Check for delivery dates being set in ORDER_LINE:
     {
       auto pipeline =
           SQLPipelineBuilder{std::string{"SELECT * FROM ORDER_LINE WHERE OL_W_ID = "} + std::to_string(delivery.w_id) +
@@ -171,14 +179,16 @@ TEST_F(TPCCTest, Delivery) {
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), num_order_lines);
-      for (auto ol_number = uint64_t{1}; ol_number <= table->row_count(); ++ol_number) {
-        EXPECT_EQ(table->get_value<int32_t>(ColumnID{3}, ol_number - 1), ol_number);  // OL_NUMBER
-        EXPECT_GE(table->get_value<int32_t>(ColumnID{6}, ol_number - 1), old_time);   // OL_DELIVERY_D
+      for (auto ol_number = uint64_t{1}; ol_number <= num_order_lines; ++ol_number) {
+        EXPECT_EQ(table->get_value<int32_t>("OL_NUMBER", ol_number - 1), ol_number);
+        EXPECT_GE(table->get_value<int32_t>("OL_DELIVERY_D", ol_number - 1), old_time);
+
+        // Add the amount of the order, which was not seen by old_transaction_context above, to expected_c_balance
         expected_c_balance += table->get_value<float>(ColumnID{8}, ol_number - 1);
       }
     }
 
-    // Verify the entry in CUSTOMER:
+    // Check for updated customer balance and delivery count in CUSTOMER:
     {
       auto pipeline = SQLPipelineBuilder{std::string{"SELECT C_BALANCE, C_DELIVERY_CNT FROM CUSTOMER WHERE C_W_ID = "} +
                                          std::to_string(delivery.w_id) + " AND C_D_ID = " + std::to_string(d_id) +
@@ -187,8 +197,8 @@ TEST_F(TPCCTest, Delivery) {
       const auto [_, table] = pipeline.get_result_table();
       EXPECT_TRUE(table);
       EXPECT_EQ(table->row_count(), 1);
-      EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), expected_c_balance);
-      EXPECT_EQ(table->get_value<int32_t>(ColumnID{1}, 0), old_c_delivery_cnt + 1);
+      EXPECT_FLOAT_EQ(table->get_value<float>("C_BALANCE", 0), expected_c_balance);
+      EXPECT_EQ(table->get_value<int32_t>("C_DELIVERY_CNT", 0), old_c_delivery_cnt + 1);
     }
   }
 }
@@ -200,9 +210,9 @@ TEST_F(TPCCTest, NewOrder) {
 
   BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
-  // Generate random NewOrders until we have one without invalid item IDs and where both local and remote order lines
+  // Generate random NewOrders until we have one without unused item IDs and where both local and remote order lines
   // occur
-  while (new_order.order_lines.back().ol_i_id == TPCCNewOrder::INVALID_ITEM_ID ||
+  while (new_order.order_lines.back().ol_i_id == TPCCNewOrder::UNUSED_ITEM_ID ||
          std::find_if(new_order.order_lines.begin(), new_order.order_lines.end(), [&](const auto& order_line) {
            return order_line.ol_supply_w_id != new_order.w_id;
          }) == new_order.order_lines.end()) {
@@ -215,8 +225,10 @@ TEST_F(TPCCTest, NewOrder) {
 
   EXPECT_TRUE(new_order.execute());
 
+  // Verify whether D_NEXT_O_ID has been incremented by one
   int old_d_next_o_id;
   {
+    // Fetch old D_NEXT_O_ID
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} +
                                        std::to_string(new_order.w_id) + " AND D_ID = " + std::to_string(new_order.d_id)}
                         .with_transaction_context(old_transaction_context)
@@ -224,18 +236,18 @@ TEST_F(TPCCTest, NewOrder) {
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
-    old_d_next_o_id = table->get_value<int32_t>(ColumnID{0}, 0);
+    old_d_next_o_id = table->get_value<int32_t>("D_NEXT_O_ID", 0);
   }
 
-  // Verify updated D_NEXT_O_ID
   {
+    // Fetch current D_NEXT_O_ID and compare with old one
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT D_NEXT_O_ID FROM DISTRICT WHERE D_W_ID = "} +
                                        std::to_string(new_order.w_id) + " AND D_ID = " + std::to_string(new_order.d_id)}
                         .create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
-    EXPECT_EQ(table->get_value<int32_t>(ColumnID{0}, 0), old_d_next_o_id + 1);
+    EXPECT_EQ(table->get_value<int32_t>("D_NEXT_O_ID", 0), old_d_next_o_id + 1);
   }
 
   auto new_sizes = initial_sizes;
@@ -246,42 +258,44 @@ TEST_F(TPCCTest, NewOrder) {
 
   // Verify NEW_ORDER entry
   const auto new_order_row = Hyrise::get().storage_manager.get_table("NEW_ORDER")->get_row(new_sizes["NEW_ORDER"] - 1);
-  EXPECT_EQ(new_order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});
-  EXPECT_EQ(new_order_row[1], AllTypeVariant{new_order.d_id});
-  EXPECT_EQ(new_order_row[2], AllTypeVariant{new_order.w_id});
+  EXPECT_EQ(new_order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});  // NO_O_ID
+  EXPECT_EQ(new_order_row[1], AllTypeVariant{new_order.d_id});               // NO_D_ID
+  EXPECT_EQ(new_order_row[2], AllTypeVariant{new_order.w_id});               // NO_W_ID
 
   // Verify ORDER entry
   const auto order_row = Hyrise::get().storage_manager.get_table("ORDER")->get_row(new_sizes["ORDER"] - 1);
-  EXPECT_EQ(order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});
-  EXPECT_EQ(order_row[1], AllTypeVariant{new_order.d_id});
-  EXPECT_EQ(order_row[2], AllTypeVariant{new_order.w_id});
-  EXPECT_EQ(order_row[3], AllTypeVariant{new_order.c_id});
-  EXPECT_GE(order_row[4], AllTypeVariant{static_cast<int32_t>(old_time)});
-  EXPECT_EQ(order_row[5], AllTypeVariant{-1});  // TODO(anyone): Replace with actual NULL for O_CARRIER_ID
-  EXPECT_EQ(order_row[6], AllTypeVariant{static_cast<int32_t>(order_lines.size())});
-  EXPECT_EQ(order_row[7], AllTypeVariant{0});
+  EXPECT_EQ(order_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});     // O_ID
+  EXPECT_EQ(order_row[1], AllTypeVariant{new_order.d_id});                  // O_D_ID
+  EXPECT_EQ(order_row[2], AllTypeVariant{new_order.w_id});                  // O_W_ID
+  EXPECT_EQ(order_row[3], AllTypeVariant{new_order.c_id});                  // O_C_ID
+  EXPECT_GE(order_row[4], AllTypeVariant{static_cast<int32_t>(old_time)});  // O_ENTRY_D
+  // TODO(anyone): Replace with actual NULL for O_CARRIER_ID
+  EXPECT_EQ(order_row[5], AllTypeVariant{-1});                                        // O_CARRIER_ID
+  EXPECT_EQ(order_row[6], AllTypeVariant{static_cast<int32_t>(order_lines.size())});  // O_OL_CNT
+  EXPECT_EQ(order_row[7], AllTypeVariant{0});                                         // O_ALL_LOCAL
 
   // VERIFY ORDER_LINE entries
   for (auto line_idx = size_t{0}; line_idx < order_lines.size(); ++line_idx) {
     const auto row_idx = new_sizes["ORDER_LINE"] - order_lines.size() + line_idx;
     const auto order_line_row = Hyrise::get().storage_manager.get_table("ORDER_LINE")->get_row(row_idx);
-    EXPECT_EQ(order_line_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});
-    EXPECT_EQ(order_line_row[1], AllTypeVariant{new_order.d_id});
-    EXPECT_EQ(order_line_row[2], AllTypeVariant{new_order.w_id});
-    EXPECT_EQ(order_line_row[3], AllTypeVariant{static_cast<int32_t>(line_idx + 1)});
-    EXPECT_EQ(order_line_row[4], AllTypeVariant{order_lines[line_idx].ol_i_id});
+    EXPECT_EQ(order_line_row[0], AllTypeVariant{NUM_ORDERS_PER_DISTRICT + 1});         // OL_O_ID
+    EXPECT_EQ(order_line_row[1], AllTypeVariant{new_order.d_id});                      // OL_D_ID
+    EXPECT_EQ(order_line_row[2], AllTypeVariant{new_order.w_id});                      // OL_W_ID
+    EXPECT_EQ(order_line_row[3], AllTypeVariant{static_cast<int32_t>(line_idx + 1)});  // OL_NUMBER
+    EXPECT_EQ(order_line_row[4], AllTypeVariant{order_lines[line_idx].ol_i_id});       // OL_I_ID
     EXPECT_LE(order_lines[line_idx].ol_i_id, NUM_ITEMS);
-    EXPECT_LE(order_line_row[5], AllTypeVariant{NUM_WAREHOUSES});
-    EXPECT_EQ(order_line_row[6], AllTypeVariant{-1});
-    EXPECT_EQ(order_line_row[7], AllTypeVariant{order_lines[line_idx].ol_quantity});
+    EXPECT_LE(order_line_row[5], AllTypeVariant{NUM_WAREHOUSES});                     // OL_SUPPLY_W_ID
+    EXPECT_EQ(order_line_row[6], AllTypeVariant{-1});                                 // OL_DELIVERY_D
+    EXPECT_EQ(order_line_row[7], AllTypeVariant{order_lines[line_idx].ol_quantity});  // OL_QUANTITY
+    // TODO verify OL_AMOUNT, OL_DIST_INFO
   }
 }
 
-TEST_F(TPCCTest, NewOrderUnusedOrderId) {
+TEST_F(TPCCTest, NewOrderUnusedItemId) {
   BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
-  // Generate random NewOrders until we have one with an invalid item ID
-  while (new_order.order_lines.back().ol_i_id != TPCCNewOrder::INVALID_ITEM_ID) {
+  // Generate random NewOrders until we have one with an unused item ID
+  while (new_order.order_lines.back().ol_i_id != TPCCNewOrder::UNUSED_ITEM_ID) {
     new_order = TPCCNewOrder{NUM_WAREHOUSES, sql_executor};
   }
 
@@ -289,7 +303,7 @@ TEST_F(TPCCTest, NewOrderUnusedOrderId) {
   EXPECT_GE(order_lines.size(), 5);
   EXPECT_LE(order_lines.size(), 15);
 
-  // TPC-C transactions with simulated user input errors are still counted as successful
+  // NewOrder transactions with simulated user input errors (unused item ids) are still counted as successful
   EXPECT_TRUE(new_order.execute());
 
   auto new_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
@@ -307,6 +321,7 @@ TEST_F(TPCCTest, NewOrderUnusedOrderId) {
 }
 
 TEST_F(TPCCTest, PaymentCustomerByName) {
+  // We will cover customer selection by ID in OrderStatusCustomerById
   const auto old_time = time(nullptr);
 
   BenchmarkSQLExecutor sql_executor{nullptr, std::nullopt};
@@ -328,8 +343,8 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     // As all warehouses start with W_YTD = 300'000, this should be the first and only change
-    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), 300'000.0f + payment.h_amount);
-    w_name = table->get_value<pmr_string>(ColumnID{1}, 0);
+    EXPECT_FLOAT_EQ(table->get_value<float>("W_YTD", 0), 300'000.0f + payment.h_amount);
+    w_name = table->get_value<pmr_string>("W_NAME", 0);
   }
 
   // Verify that D_YTD is updated
@@ -342,8 +357,8 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     // As all districts start with D_YTD = 30'000, this should be the first and only change
-    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), 30'000.0f + payment.h_amount);
-    d_name = table->get_value<pmr_string>(ColumnID{1}, 0);
+    EXPECT_FLOAT_EQ(table->get_value<float>("D_YTD", 0), 30'000.0f + payment.h_amount);
+    d_name = table->get_value<pmr_string>("D_NAME", 0);
   }
 
   // Verify that the customer is updated
@@ -357,9 +372,9 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     EXPECT_TRUE(table);
     EXPECT_EQ(table->row_count(), 1);
     // Customers start with C_BALANCE = -10, C_YTD_PAYMENT = 10, C_PAYMENT_CNT = 1
-    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{0}, 0), -10.0f - payment.h_amount);
-    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{1}, 0), 10.0f + payment.h_amount);
-    EXPECT_FLOAT_EQ(table->get_value<int32_t>(ColumnID{2}, 0), 2);
+    EXPECT_FLOAT_EQ(table->get_value<float>("C_BALANCE", 0), -10.0f - payment.h_amount);
+    EXPECT_FLOAT_EQ(table->get_value<float>("C_YTD_PAYMENT", 0), 10.0f + payment.h_amount);
+    EXPECT_FLOAT_EQ(table->get_value<int32_t>("C_PAYMENT_CNT", 0), 2);
   }
 
   // We do not test for C_DATA
@@ -377,9 +392,9 @@ TEST_F(TPCCTest, PaymentCustomerByName) {
     EXPECT_GT(table->row_count(), 0);
 
     const auto row = table->row_count() - 1;
-    EXPECT_GE(table->get_value<int32_t>(ColumnID{0}, row), old_time);
-    EXPECT_FLOAT_EQ(table->get_value<float>(ColumnID{1}, row), payment.h_amount);
-    EXPECT_EQ(table->get_value<pmr_string>(ColumnID{2}, row), w_name + "    " + d_name);
+    EXPECT_GE(table->get_value<int32_t>("H_DATE", row), old_time);
+    EXPECT_FLOAT_EQ(table->get_value<float>("H_AMOUNT", row), payment.h_amount);
+    EXPECT_EQ(table->get_value<pmr_string>("H_DATA", row), w_name + "    " + d_name);
   }
 }
 

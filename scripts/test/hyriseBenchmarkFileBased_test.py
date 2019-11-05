@@ -20,8 +20,8 @@ def main():
   arguments["--output"] = "'json_output.txt'"
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Unencoded'"
-  arguments["--scheduler"] = "true"
-  arguments["--clients"] = "4"
+  arguments["--scheduler"] = "false"
+  arguments["--clients"] = "1"
   arguments["--cache_binary_tables"] = "true"
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
@@ -29,8 +29,8 @@ def main():
   benchmark = initialize(arguments, "hyriseBenchmarkFileBased", True)
 
   benchmark.expect("Writing benchmark results to 'json_output.txt'")
-  benchmark.expect("Running in multi-threaded mode using all available cores")
-  benchmark.expect("4 simulated clients are scheduling items in parallel")
+  benchmark.expect("Running in single-threaded mode")
+  benchmark.expect("1 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Shuffled' mode")
   benchmark.expect("Encoding is 'Unencoded'")
   benchmark.expect("Chunk size is 100000")
@@ -41,11 +41,13 @@ def main():
   benchmark.expect("Benchmarking queries from resources/test_data/queries/file_based/")
   benchmark.expect("Running on tables from resources/test_data/tbl/file_based/")
   benchmark.expect("Running subset of queries: select_statement")
-  benchmark.expect("Multi-threaded Topology:")
   benchmark.expect("-> Executed")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
+
+  if benchmark.before.count('Verification failed'):
+    return_error = True
 
   if not glob.glob(arguments["--table_path"].replace("'", '') + "*.bin"):
     print ("ERROR: Cannot find binary tables in " + arguments["--table_path"])
@@ -78,15 +80,15 @@ def main():
   arguments["--warmup"] = "5"
   arguments["--encoding"] = "'LZ4'"
   arguments["--compression"] = "'SIMD-BP128'"
-  arguments["--scheduler"] = "false"
-  arguments["--clients"] = "1"
+  arguments["--scheduler"] = "true"
+  arguments["--clients"] = "4"
   arguments["--visualize"] = "true"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkFileBased", True)
 
-  benchmark.expect("Running in single-threaded mode")
-  benchmark.expect("1 simulated clients are scheduling items in parallel")
+  benchmark.expect("Running in multi-threaded mode using all available cores")
+  benchmark.expect("4 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Ordered' mode")
   benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'LZ4'")
@@ -99,12 +101,10 @@ def main():
   benchmark.expect("Benchmarking queries from resources/test_data/queries/file_based/")
   benchmark.expect("Running on tables from resources/test_data/tbl/file_based/")
   benchmark.expect("Running subset of queries: select_statement")
+  benchmark.expect("Multi-threaded Topology:")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
 
   if return_error:
     sys.exit(1)

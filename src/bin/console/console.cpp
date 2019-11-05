@@ -97,6 +97,20 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   std::regex expression{"(" + sanitized_sequences + ")"};
   return std::regex_replace(input, expression, "");
 }
+
+std::vector<std::string> tokenize(std::string input) {
+  boost::algorithm::trim<std::string>(input);
+
+  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
+  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
+  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
+
+  std::vector<std::string> tokens;
+  boost::algorithm::split(tokens, input, boost::is_space());
+
+  return tokens;
+}
+
 }  // namespace
 
 namespace opossum {
@@ -425,34 +439,22 @@ int Console::_help(const std::string&) {
 }
 
 int Console::_generate_tpcc(const std::string& args) {
-  auto input = args;
-  boost::algorithm::trim<std::string>(input);
-  auto arguments = std::vector<std::string>{};
-  boost::algorithm::split(arguments, input, boost::is_space());
+  const auto arguments = tokenize(args);
 
-  // Check whether there are one or two arguments.
-  auto args_valid = !arguments.empty() && arguments.size() <= 2;
-
-  // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
-  // and that's not actually an argument.
-  auto num_warehouses = 1;
-  if (!arguments.empty() && !arguments[0].empty()) {
-    num_warehouses = std::stoi(arguments[1]);
-  } else {
-    args_valid = false;
+  if (arguments.size() < 1 || arguments.size() > 2) {
+    // clang-format off
+    out("Usage: ");
+    out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT
+    out("                                              Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT
+    // clang-format on
+    return ReturnCode::Error;
   }
+
+  auto num_warehouses = std::stoi(arguments[1]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
     chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
-  }
-
-  if (!args_valid) {
-    out("Usage: ");
-    out("  generate tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
-    return ReturnCode::Error;
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
@@ -462,34 +464,22 @@ int Console::_generate_tpcc(const std::string& args) {
 }
 
 int Console::_generate_tpch(const std::string& args) {
-  auto input = args;
-  boost::algorithm::trim<std::string>(input);
-  auto arguments = std::vector<std::string>{};
-  boost::algorithm::split(arguments, input, boost::is_space());
+  const auto arguments = tokenize(args);
 
-  // Check whether there are one or two arguments.
-  auto args_valid = !arguments.empty() && arguments.size() <= 2;
-
-  // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
-  // and that's not actually an argument.
-  auto scale_factor = 1.0f;
-  if (!arguments.empty() && !arguments[0].empty()) {
-    scale_factor = std::stof(arguments[0]);
-  } else {
-    args_valid = false;
+  if (arguments.size() < 1 || arguments.size() > 2) {
+    // clang-format off
+    out("Usage: ");
+    out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
+    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT
+    // clang-format on
+    return ReturnCode::Error;
   }
+
+  auto scale_factor = std::stof(arguments[0]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
     chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
-  }
-
-  if (!args_valid) {
-    out("Usage: ");
-    out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
-    return ReturnCode::Error;
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -499,34 +489,21 @@ int Console::_generate_tpch(const std::string& args) {
 }
 
 int Console::_generate_tpcds(const std::string& args) {
-  auto input = args;
-  boost::algorithm::trim<std::string>(input);
-  auto arguments = std::vector<std::string>{};
-  boost::algorithm::split(arguments, input, boost::is_space());
+  const auto arguments = tokenize(args);
 
-  // Check whether there are one or two arguments.
-  auto args_valid = !arguments.empty() && arguments.size() <= 2;
-
-  // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
-  // and that's not actually an argument.
-  auto scale_factor = uint32_t{1};
-  if (!arguments.empty() && !arguments[0].empty()) {
-    scale_factor = static_cast<uint32_t>(std::stoul(arguments[0]));
-  } else {
-    args_valid = false;
+  if (arguments.size() < 1 || arguments.size() > 2) {
+    out("Usage: ");
+    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
+    out("                                             Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
+        " by default. \n");
+    return ReturnCode::Error;
   }
+
+  auto scale_factor = static_cast<uint32_t>(std::stoul(arguments[0]));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
     chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
-  }
-
-  if (!args_valid) {
-    out("Usage: ");
-    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
-    return ReturnCode::Error;
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
@@ -1020,12 +997,7 @@ char** Console::_command_completion(const char* text, int start, int end) {
 
   std::string input(rl_line_buffer);
 
-  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
-  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
-  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
-
-  std::vector<std::string> tokens;
-  boost::algorithm::split(tokens, input, boost::is_space());
+  const auto tokens = tokenize(input);
 
   // Choose completion function depending on the input.
   const std::string& first_word = tokens[0];

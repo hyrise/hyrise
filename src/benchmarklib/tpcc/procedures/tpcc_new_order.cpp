@@ -40,9 +40,9 @@ TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_e
   }
 
   std::uniform_int_distribution<> is_erroneous_dist{1, 100};
-  // 1% chance of erroneous procedures. 17 is a random, but very good number.
-  if (is_erroneous_dist(_random_engine) == 17) {
-    order_lines.back().ol_i_id = INVALID_ITEM_ID;  // A non-existing item ID
+  // 1% chance of erroneous procedures.
+  if (is_erroneous_dist(_random_engine) == 1) {
+    order_lines.back().ol_i_id = UNUSED_ITEM_ID;  // A non-existing item ID
   }
 
   o_entry_d = static_cast<int32_t>(std::time(nullptr));
