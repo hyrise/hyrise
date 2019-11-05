@@ -107,11 +107,8 @@ void Session::_handle_simple_query() {
 
   const auto execution_information = QueryHandler::execute_pipeline(query, _send_execution_info);
 
-  if (!execution_information.error.empty()) {
-    const auto error_message = ErrorMessage{{PostgresMessageType::HumanReadableError, execution_information.error},
-                                            {PostgresMessageType::SqlstateCodeError,
-                                             std::to_string(static_cast<uint32_t>(ErrorCode::TransactionRolledBack))}};
-    _postgres_protocol_handler->send_error_message(error_message);
+  if (!execution_information.error_message.empty()) {
+    _postgres_protocol_handler->send_error_message(execution_information.error_message);
   } else {
     uint64_t row_count = 0;
     // If there is no result table, e.g. after an INSERT command, we cannot send row data. Otherwise, the result table
@@ -144,7 +141,7 @@ void Session::_handle_bind_command() {
 
   // Named portals must be explicitly closed before they can be redefined by another Bind message,
   // but this is not required for the unnamed portal.
-  // https://www.postgresql.org/docs/current/static/protocol-flow.html
+  // https://www.postgresql.org/docs/12/static/protocol-flow.html
   auto portal_it = _portals.find(parameters.portal);
   if (portal_it != _portals.end()) {
     AssertInput(parameters.portal.empty(), "Named portals must be explicitly closed before they can be redefined.");

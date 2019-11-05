@@ -9,7 +9,7 @@ namespace opossum {
 ExecutionInformation QueryHandler::execute_pipeline(const std::string& query,
                                                     const SendExecutionInfo send_execution_info) {
   // A simple query command invalidates unnamed statements
-  // See: https://postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
+  // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
 
   auto execution_info = ExecutionInformation();
@@ -27,7 +27,10 @@ ExecutionInformation QueryHandler::execute_pipeline(const std::string& query,
     }
   } else if (pipeline_status == SQLPipelineStatus::RolledBack) {
     const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
-    execution_info.error = "Transaction conflict, transaction was rolled back. Failed statement: " + failed_statement;
+    execution_info.error_message = {
+        {PostgresMessageType::HumanReadableError,
+         "Transaction conflict, transaction was rolled back. Failed statement: " + failed_statement},
+        {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
   }
   return execution_info;
 }
@@ -36,7 +39,7 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
   // Named prepared statements must be explicitly closed before they can be redefined by another Parse message.
   // An unnamed prepared statement lasts only until the next Parse statement specifying the unnamed statement as
   // destination is issued
-  // https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
+  // https://www.postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   if (Hyrise::get().storage_manager.has_prepared_plan(statement_name)) {
     AssertInput(statement_name.empty(),
                 "Named prepared statements must be explicitly closed before they can be redefined.");
@@ -48,7 +51,7 @@ void QueryHandler::setup_prepared_plan(const std::string& statement_name, const 
   auto prepared_plans = sql_translator.translate_parser_result(*pipeline_statement.get_parsed_sql_statement());
 
   // The PostgreSQL communication protocol does not allow more than one prepared statement within the parse message.
-  // See note at: https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
+  // See note at: https://www.postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
   AssertInput(prepared_plans.size() == 1u, "Only a single statement allowed in prepared statement");
 
   const auto prepared_plan =

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "all_type_variant.hpp"
 #include "postgres_message_type.hpp"
 #include "read_buffer.hpp"
@@ -7,7 +9,7 @@
 
 namespace opossum {
 
-typedef std::unordered_map<PostgresMessageType, std::string> ErrorMessage;
+using ErrorMessage = std::unordered_map<PostgresMessageType, std::string>;
 
 // This struct stores a prepared statement's name, its portal used and the specified parameters.
 struct PreparedStatementDetails {

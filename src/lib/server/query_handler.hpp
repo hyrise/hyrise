@@ -15,7 +15,7 @@ struct ExecutionInformation {
   // the root operator's type.
   OperatorType root_operator;
   std::string pipeline_metrics;
-  std::string error;
+  ErrorMessage error_message;
 };
 
 // This class manages the interaction between the server and the database component. Furthermore, most of the SQL-based

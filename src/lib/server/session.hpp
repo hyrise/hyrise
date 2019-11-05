@@ -10,7 +10,7 @@ namespace opossum {
 // The session class implements the communication flow and stores session-specific information such as portals. Those
 // portals are required by the PostgreSQL message protocol for the execution of prepared statements. However, named
 // portals used for CURSOR operations are currently not supported by Hyrise. For further documentation see here:
-// https://www.postgresql.org/docs/current/protocol-overview.html#PROTOCOL-QUERY-CONCEPTS
+// https://www.postgresql.org/docs/12/protocol-overview.html#PROTOCOL-QUERY-CONCEPTS
 // Example usage can be found here: https://stackoverflow.com/questions/52479293/postgresql-refcursor-and-portal-name
 class Session {
  public:

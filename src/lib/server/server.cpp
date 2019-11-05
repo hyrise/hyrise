@@ -33,7 +33,7 @@ void Server::_start_session(const std::shared_ptr<Session>& new_session, const b
   Assert(!error, error.message());
 
   std::thread session_thread([new_session] {
-    const std::string thread_name = "port_" + std::to_string(new_session->socket()->remote_endpoint().port());
+    const std::string thread_name = "server_p_" + std::to_string(new_session->socket()->remote_endpoint().port());
 #ifdef __APPLE__
     pthread_setname_np(thread_name.c_str());
 #elif __linux__

@@ -17,7 +17,7 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
   const std::string query = "SELECT 1;";
   const auto& result = QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes);
 
-  EXPECT_TRUE(result.error.empty());
+  EXPECT_TRUE(result.error_message.empty());
   EXPECT_EQ(result.result_table->column_count(), 1);
   EXPECT_EQ(result.result_table->row_count(), 1);
   EXPECT_PRED_FORMAT2(testing::IsSubstring, "Execution info:", result.pipeline_metrics);

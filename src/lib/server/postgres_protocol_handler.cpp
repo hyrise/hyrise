@@ -44,7 +44,7 @@ void PostgresProtocolHandler<SocketType>::send_authentication_response() {
 template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_parameter(const std::string& key, const std::string& value) {
   // 2 null terminators, one for each string
-  const auto packet_size = LENGTH_FIELD_SIZE + key.size() + value.size() + 2u;
+  const auto packet_size = LENGTH_FIELD_SIZE + key.size() + value.size() + 2u /* null terminators */;
   _write_buffer.template put_value(PostgresMessageType::ParameterStatus);
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   _write_buffer.put_string(key);
@@ -74,7 +74,7 @@ template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_row_description_header(const uint32_t total_column_name_length,
                                                                       const uint16_t column_count) {
   // The documentation of the fields in this message can be found at:
-  // https://www.postgresql.org/docs/current/static/protocol-message-formats.html
+  // https://www.postgresql.org/docs/12/static/protocol-message-formats.html
   _write_buffer.template put_value(PostgresMessageType::RowDescription);
 
   // Total message length can be calculated this way:
@@ -106,7 +106,7 @@ template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_data_row(
     const std::vector<std::optional<std::string>>& values_as_strings, const uint32_t string_length_sum) {
   // The documentation of the fields in this message can be found at:
-  // https://www.postgresql.org/docs/current/static/protocol-message-formats.html
+  // https://www.postgresql.org/docs/12/static/protocol-message-formats.html
 
   _write_buffer.template put_value(PostgresMessageType::DataRow);
 
@@ -218,7 +218,7 @@ template <typename SocketType>
 std::string PostgresProtocolHandler<SocketType>::read_execute_packet() {
   const auto packet_size = _read_buffer.template get_value<uint32_t>();
   const auto portal = _read_buffer.get_string(packet_size - 2 * sizeof(uint32_t));
-  /* https://www.postgresql.org/docs/current/protocol-flow.html:
+  /* https://www.postgresql.org/docs/12/protocol-flow.html:
    The result-row count is only meaningful for portals containing commands that return row sets; in other cases
    the command is always executed to completion, and the row count is ignored.
   */
@@ -255,7 +255,8 @@ template <typename SocketType>
 void PostgresProtocolHandler<SocketType>::send_execution_info(const std::string& execution_information) {
   _write_buffer.template put_value(PostgresMessageType::Notice);
   // Message has 2 null terminators: one terminates the error string, the other one terminates the message
-  const auto packet_size = LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + execution_information.size() + 2u;
+  const auto packet_size =
+      LENGTH_FIELD_SIZE + sizeof(PostgresMessageType) + execution_information.size() + 2u /* null terminators */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
   // Send the error message with type 'M' that indicates that the following body is a plain message to be displayed
   _write_buffer.template put_value(PostgresMessageType::HumanReadableError);
