@@ -232,7 +232,7 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
 }
 
 TEST_F(ServerTestRunner, TestTransactionConflicts) {
-  // Similar to TestParallelConnections, but this time we modify the table
+  // Similar to TestParallelConnections, but this time we modify the table, expecting some conflicts on the way
   // Also similar to StressTest.TestTransactionConflicts, only that we go through the server
   auto initial_sum = int64_t{};
   {
@@ -251,7 +251,7 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
     try {
       transaction.exec(sql);
       ++successful_increments;
-    } catch (const pqxx::serialization_failure& e) {
+    } catch (const pqxx::serialization_failure&) {
       // As expected, some of these updates fail
       ++conflicted_increments;
     }
