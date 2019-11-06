@@ -483,7 +483,7 @@ int Console::_save_segment_access_counter(const std::string& args) {
 
   const auto path = arguments[0];
 
-  SegmentAccessCounter::instance().save_to_csv(Hyrise::get().storage_manager.tables(), path);
+  SegmentAccessCounter::save_to_csv(Hyrise::get().storage_manager.tables(), path);
 
   return ReturnCode::Ok;
 }
