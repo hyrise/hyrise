@@ -131,7 +131,8 @@ namespace opossum {
 // See also https://www.sqlite.org/inmemorydb.html, starting at "If two or more distinct but shareable
 // in-memory databases"
 SQLiteWrapper::SQLiteWrapper()
-    : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(this) + "?mode=memory&cache=shared"},
+    : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(reinterpret_cast<uintptr_t>(this)) +  // NOLINT
+           "?mode=memory&cache=shared"},
       main_connection{_uri} {}
 
 SQLiteWrapper::Connection::Connection(const std::string& uri) {
