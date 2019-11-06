@@ -97,22 +97,28 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       continue;
     }
 
-    // Check whether the Chunk is deleted
-    if (transaction_context_is_set()) {
-      const auto chunk = stored_table->get_chunk(stored_chunk_id);
+    const auto& chunk = stored_table->get_chunk(stored_chunk_id);
 
-      if (!chunk || (chunk->get_cleanup_commit_id() &&
-                     *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
+    // Skip chunks that were physically deleted
+    if (!chunk) {
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
+      continue;
+    }
+
+    // Skip chunks that were just inserted by a different transaction and that do not have any content yet
+    if (chunk->size() == 0) {
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
+      continue;
+    }
+
+    // Check whether the Chunk is entirely invisible to the current transaction
+    if (transaction_context_is_set()) {
+      if (chunk->get_cleanup_commit_id() &&
+          *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id()) {
         excluded_chunk_ids.emplace_back(stored_chunk_id);
+        continue;
       }
     }
-  }
-
-  /**
-   * Early out if no exclusion of Chunks or Columns is necessary
-   */
-  if (excluded_chunk_ids.empty() && _pruned_column_ids.empty()) {
-    return stored_table;
   }
 
   // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count

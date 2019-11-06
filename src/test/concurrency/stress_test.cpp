@@ -38,9 +38,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
   const auto run = [&]() {
     for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
-      auto pipeline =
-          SQLPipelineBuilder{std::string{"UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);"}}
-              .create_pipeline();
+      auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
       const auto [status, _] = pipeline.get_result_table();
       if (status == SQLPipelineStatus::Success) {
         ++successful_increments;
