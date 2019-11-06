@@ -47,9 +47,6 @@ def main():
   close_benchmark(benchmark)
   check_exit_status(benchmark)
 
-  if benchmark.before.count('Verification failed'):
-    return_error = True
-
   if not os.path.isfile(arguments["--output"].replace("'", "")):
     print ("ERROR: Cannot find output file " + arguments["--output"])
     return_error = True

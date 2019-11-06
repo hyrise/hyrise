@@ -77,15 +77,6 @@ int main(int argc, char* argv[]) {
       .run();
 
   if (config->verify) {
-    // Running TPC-C in parallel with sqlite verification is difficult. While executing multiple modifying statements
-    // in parallel is manageable, the fact that TPC-C procedures span over multiple queries means that we would have
-    // to duplicate the Hyrise transactions in the SQLite wrapper. For now, we have not done that. If we wanted to look
-    // into that, here is a good starting point: https://www.sqlite.org/inmemorydb.html
-    // Note the comment after "If two or more distinct but shareable in-memory databases are needed in a single
-    // process".
-    Assert(config->enable_scheduler,
-           "Cannot combine SQLite verification with parallel execution. Remove either --verify or --scheduler.");
-
     std::cout << "- Running consistency checks at the end of the benchmark" << std::endl;
     check_consistency(num_warehouses);
     std::cout << "- Consistency checks passed" << std::endl;

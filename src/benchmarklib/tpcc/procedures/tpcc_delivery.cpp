@@ -36,7 +36,6 @@ bool TPCCDelivery::_on_execute() {
         _sql_executor.execute(std::string{"DELETE FROM NEW_ORDER WHERE NO_W_ID = "} + std::to_string(w_id) +
                               " AND NO_D_ID = " + std::to_string(d_id) + " AND NO_O_ID = " + std::to_string(no_o_id));
     if (new_order_update_pair.first != SQLPipelineStatus::Success) {
-      _sql_executor.rollback();
       return false;
     }
 
@@ -78,7 +77,6 @@ bool TPCCDelivery::_on_execute() {
                               ", C_DELIVERY_CNT = C_DELIVERY_CNT + 1 WHERE C_W_ID = " + std::to_string(w_id) +
                               " AND C_D_ID = " + std::to_string(d_id) + " AND C_ID = " + std::to_string(o_c_id));
     if (customer_update_pair.first != SQLPipelineStatus::Success) {
-      _sql_executor.rollback();
       return false;
     }
   }

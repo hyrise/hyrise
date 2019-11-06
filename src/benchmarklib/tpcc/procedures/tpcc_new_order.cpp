@@ -77,7 +77,6 @@ bool TPCCNewOrder::_on_execute() {
       _sql_executor.execute(std::string{"UPDATE DISTRICT SET D_NEXT_O_ID = "} + std::to_string(d_next_o_id + 1) +
                             " WHERE D_W_ID = " + std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   if (district_update_pair.first != SQLPipelineStatus::Success) {
-    _sql_executor.rollback();
     return false;
   }
 
@@ -167,7 +166,6 @@ bool TPCCNewOrder::_on_execute() {
         ", S_REMOTE_CNT = " + std::to_string(new_s_remote_cnt) + " WHERE S_I_ID = " +
         std::to_string(order_line.ol_i_id) + " AND S_W_ID = " + std::to_string(order_line.ol_supply_w_id));
     if (stock_update_pair.first != SQLPipelineStatus::Success) {
-      _sql_executor.rollback();
       return false;
     }
 

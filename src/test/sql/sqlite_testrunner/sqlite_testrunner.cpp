@@ -40,8 +40,8 @@ void SQLiteTestRunner::SetUpTestCase() {
     unencoded_table_cache.emplace(table_name, TableCacheEntry{table, table_file});
 
     // Create test table and also table copy which is later used as the master to copy from.
-    _sqlite->create_table(*table, table_name);
-    _sqlite->create_table(*table, table_name + _master_table_suffix);
+    _sqlite->create_sqlite_table(*table, table_name);
+    _sqlite->create_sqlite_table(*table, table_name + _master_table_suffix);
   }
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
@@ -155,7 +155,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   // Execute query in Hyrise and SQLite
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
   ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
-  const auto sqlite_result_table = _sqlite->execute_query(sql);
+  const auto sqlite_result_table = _sqlite->main_connection.execute_query(sql);
 
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
               sqlite_result_table->row_count() > 0)
@@ -190,7 +190,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   // Delete newly created views in sqlite
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     if (const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(plan)) {
-      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name + ";");
+      _sqlite->main_connection.execute_query("DROP VIEW IF EXISTS " + create_view->view_name + ";");
     }
   }
 }

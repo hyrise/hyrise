@@ -27,24 +27,24 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
     // "..._unindexed" name.
     const auto escaped_table_name = std::string{"\""} + table_name + "\"";
 
-    sqlite_wrapper->raw_execute_query(std::string{"ALTER TABLE "}
-                                          .append(escaped_table_name)
-                                          .append(" RENAME TO ")
-                                          .append(table_name)
-                                          .append("_unindexed"));
+    sqlite_wrapper->main_connection.raw_execute_query(std::string{"ALTER TABLE "}
+                                                          .append(escaped_table_name)
+                                                          .append(" RENAME TO ")
+                                                          .append(table_name)
+                                                          .append("_unindexed"));
   }
 
   // Recreate tables using the passed schema sql file
   std::ifstream schema_file(schema_file_path);
   std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
-  sqlite_wrapper->raw_execute_query(schema_sql);
+  sqlite_wrapper->main_connection.raw_execute_query(schema_sql);
 
   // If indices are not part of the schema file, add them here
   if (!create_indices_file_path.empty()) {
     std::ifstream create_indices_file(create_indices_file_path);
     std::string create_indices_sql((std::istreambuf_iterator<char>(create_indices_file)),
                                    std::istreambuf_iterator<char>());
-    sqlite_wrapper->raw_execute_query(create_indices_sql);
+    sqlite_wrapper->main_connection.raw_execute_query(create_indices_sql);
   }
 
   // Copy over data
@@ -54,11 +54,11 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
 
     const auto escaped_table_name = std::string{"\""} + table_name + "\"";
 
-    sqlite_wrapper->raw_execute_query(std::string{"INSERT INTO "}
-                                          .append(escaped_table_name)
-                                          .append(" SELECT * FROM ")
-                                          .append(table_name)
-                                          .append("_unindexed"));
+    sqlite_wrapper->main_connection.raw_execute_query(std::string{"INSERT INTO "}
+                                                          .append(escaped_table_name)
+                                                          .append(" SELECT * FROM ")
+                                                          .append(table_name)
+                                                          .append("_unindexed"));
 
     std::cout << " (" << per_table_time.lap_formatted() << ")" << std::endl;
   }

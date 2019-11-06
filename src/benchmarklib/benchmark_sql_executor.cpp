@@ -9,9 +9,11 @@
 namespace opossum {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix)
-    : _sqlite_wrapper(sqlite_wrapper), _visualize_prefix(visualize_prefix) {
-  if (_sqlite_wrapper) {
-    _sqlite_wrapper->raw_execute_query("BEGIN TRANSACTION");
+    : _sqlite_connection(sqlite_wrapper ? std::optional<SQLiteWrapper::Connection>{sqlite_wrapper->new_connection()}
+                                        : std::optional<SQLiteWrapper::Connection>{}),
+      _visualize_prefix(visualize_prefix) {
+  if (_sqlite_connection) {
+    _sqlite_connection->raw_execute_query("BEGIN TRANSACTION");
     _sqlite_transaction_open = true;
   }
 }
@@ -29,13 +31,13 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   if (pipeline_status == SQLPipelineStatus::RolledBack) {
     return {pipeline_status, nullptr};
   }
-  DebugAssert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Unexpected pipeline status");
 
   metrics.emplace_back(std::move(pipeline.metrics()));
 
   if (expected_result_table) {
     _compare_tables(expected_result_table, result_table, "Using dedicated expected result table");
-  } else if (_sqlite_wrapper) {
+  } else if (_sqlite_connection) {
     _verify_with_sqlite(pipeline);
   }
 
@@ -47,37 +49,45 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
 }
 
 BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
+  if (transaction_context) {
+    Assert(transaction_context->phase() == TransactionPhase::Committed ||
+               transaction_context->phase() == TransactionPhase::RolledBack,
+           "Explicitly created transaction context should have been explicity committed or rolled back");
+  }
+
   // If the benchmark item does not explicitly manage the transaction life time by calling commit or rollback,
   // we automatically commit the sqlite transaction so that the next item can start a new one:
-  if (_sqlite_transaction_open) _sqlite_wrapper->raw_execute_query("COMMIT TRANSACTION");
+  if (_sqlite_transaction_open) {
+    _sqlite_connection->raw_execute_query("COMMIT TRANSACTION");
+  }
 }
 
 void BenchmarkSQLExecutor::commit() {
-  DebugAssert(transaction_context, "Can only explicitly commit transaction if auto-commit is disabled");
-  DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
+  Assert(transaction_context, "Can only explicitly commit transaction if auto-commit is disabled");
+  Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
   transaction_context->commit();
-  if (_sqlite_wrapper) {
+  if (_sqlite_connection) {
     _sqlite_transaction_open = false;
-    _sqlite_wrapper->raw_execute_query("COMMIT TRANSACTION");
+    _sqlite_connection->raw_execute_query("COMMIT TRANSACTION");
   }
 }
 
 void BenchmarkSQLExecutor::rollback() {
-  DebugAssert(transaction_context, "Can only explicitly roll back transaction if auto-commit is disabled");
-  DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
+  Assert(transaction_context, "Can only explicitly roll back transaction if auto-commit is disabled");
+  Assert(transaction_context->phase() == TransactionPhase::Active, "Expected transaction to be active");
   transaction_context->rollback();
-  if (_sqlite_wrapper) {
+  if (_sqlite_connection) {
     _sqlite_transaction_open = false;
-    _sqlite_wrapper->raw_execute_query("ROLLBACK TRANSACTION");
+    _sqlite_connection->raw_execute_query("ROLLBACK TRANSACTION");
   }
 }
 
 void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification");
 
-  const auto sqlite_result = _sqlite_wrapper->execute_query(pipeline.get_sql());
+  const auto sqlite_result = _sqlite_connection->execute_query(pipeline.get_sql());
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
-  DebugAssert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
+  Assert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
 
   // Modifications (INSERT, UPDATE, DELETE) do not return a table. We do not know what changed - we donot even know
   // which table has been modified. Extracting that info from the plan and verifying the entire table would take way
