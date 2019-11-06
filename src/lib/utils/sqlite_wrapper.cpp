@@ -127,8 +127,11 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
 
 namespace opossum {
 
+// We include the address of this wrapper in the URI for the sqlite db so that two wrappers don't interfere
+// See also https://www.sqlite.org/inmemorydb.html, starting at "If two or more distinct but shareable
+// in-memory databases"
 SQLiteWrapper::SQLiteWrapper()
-    : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(getpid()) + "?mode=memory&cache=shared"},
+    : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(this) + "?mode=memory&cache=shared"},
       main_connection{_uri} {}
 
 SQLiteWrapper::Connection::Connection(const std::string& uri) {
