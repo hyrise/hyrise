@@ -45,7 +45,7 @@ try {
   }
 
   node('linux') {
-    def oppossumCI = docker.image('hyrise/opossum-ci:19.04');
+    def oppossumCI = docker.image('hyrise/opossum-ci:19.10');
     oppossumCI.pull()
     // create ccache volume on host using:
     // mkdir /mnt/ccache; mount -t tmpfs -o size=50G none /mnt/ccache
@@ -194,9 +194,9 @@ try {
           stage("clang-release:thread-sanitizer") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
-              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
-              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-thread-sanitizer"
-              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 1 --scheduler"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-thread-sanitizer"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 1 --scheduler"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
             }
@@ -205,8 +205,8 @@ try {
           stage("clang-release:thread-sanitizer w/o NUMA") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest hyriseSystemTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
-              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
-              sh "TSAN_OPTIONS=suppressions=resources/.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-thread-sanitizer-no-numa"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer-no-numa/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-thread-sanitizer-no-numa"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
             }
@@ -248,22 +248,22 @@ try {
               Utils.markStageSkippedForConditional("memcheckReleaseTest")
             }
           }
-        }, tpchQueryPlans: {
-          stage("tpchQueryPlans") {
+        }, tpchQueryPlansAndVerification: {
+          stage("tpchQueryPlansAndVerification") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir -p query_plans/tpch; cd query_plans/tpch; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCH -r 1 --visualize --verify"
               archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
             } else {
-              Utils.markStageSkippedForConditional("tpchQueryPlans")
+              Utils.markStageSkippedForConditional("tpchQueryPlansAndVerification")
             }
           }
-        }, tpcdsQueryPlans: {
-          stage("tpcdsQueryPlans") {
+        }, tpcdsQueryPlansAndVerification: {
+          stage("tpcdsQueryPlansAndVerification") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds; ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize --verify"
               archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
             } else {
-              Utils.markStageSkippedForConditional("tpcdsQueryPlans")
+              Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
             }
           }
         }
@@ -284,11 +284,10 @@ try {
           // We do not use install.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4"
 
-          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/8.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/8.0.0/bin/clang++ .."
+          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro CCACHE_BASEDIR=`pwd` make -j8"
           sh "./clang-debug/hyriseTest"
-          sh "./clang-debug/hyriseSystemTest"
           sh "./scripts/test/hyriseConsole_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
         } finally {

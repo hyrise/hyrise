@@ -135,6 +135,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
   }
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
@@ -362,13 +363,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
     // Always resolve the aggregate to a column, even if it is a Value. The Aggregate operator only takes columns as
     // arguments
-    if (aggregate_expression->argument()) {
-      const auto argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
-      aggregate_column_definitions.emplace_back(argument_column_id, aggregate_expression->aggregate_function);
-
+    const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*aggregate_expression->argument());
+    auto argument_column_id = ColumnID{};
+    if (column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID) {
+      // Handle COUNT(*)
+      argument_column_id = INVALID_COLUMN_ID;
     } else {
-      aggregate_column_definitions.emplace_back(std::nullopt, aggregate_expression->aggregate_function);
+      argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
     }
+    aggregate_column_definitions.emplace_back(argument_column_id, aggregate_expression->aggregate_function);
   }
 
   // Create GroupByColumns from the GroupBy expressions
@@ -441,6 +444,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
   return std::make_shared<Validate>(input_operator);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
@@ -448,12 +452,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
                                       create_view_node->if_not_exists);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
   return std::make_shared<DropView>(drop_view_node->view_name, drop_view_node->if_exists);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_table_node = std::dynamic_pointer_cast<CreateTableNode>(node);
@@ -462,18 +468,21 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_table_node(
                                        translate_node(input_node));
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_static_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto static_table_node = std::dynamic_pointer_cast<StaticTableNode>(node);
   return std::make_shared<TableWrapper>(static_table_node->table);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto drop_table_node = std::dynamic_pointer_cast<DropTableNode>(node);
   return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(
     const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
   const auto create_prepared_plan_node = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
@@ -481,6 +490,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan
                                               create_prepared_plan_node->prepared_plan);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());

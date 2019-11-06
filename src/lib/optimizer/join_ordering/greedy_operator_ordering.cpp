@@ -124,7 +124,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
 
 GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_for_edge(
     const JoinGraphEdge& edge, const std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>& vertex_clusters,
-    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) const {
+    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
   auto joined_clusters = std::vector<JoinGraphVertexSet>{};
 
   for (auto& vertex_cluster : vertex_clusters) {

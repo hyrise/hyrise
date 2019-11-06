@@ -38,6 +38,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   expected_table->append({13.0f});
   expected_table->append({16.2f});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::map<EncodingType, std::string> reference_filenames{
@@ -58,6 +59,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   expected_table->append({13.0f});
   expected_table->append({16.2f});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::map<EncodingType, std::string> reference_filenames{
@@ -80,6 +82,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, StringSegment) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   Hyrise::get().storage_manager.add_table("table_a", expected_table);
@@ -108,6 +111,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesSegment) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   Hyrise::get().storage_manager.add_table("expected_table", expected_table);
@@ -136,7 +140,8 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesMixColumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  ChunkEncoder::encode_chunks(expected_table, {ChunkID{0}});
+  expected_table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(expected_table);
 
   Hyrise::get().storage_manager.add_table("expected_table", expected_table);
 
@@ -162,6 +167,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, EmptyStringsSegment) {
   expected_table->append({""});
   expected_table->append({""});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::map<EncodingType, std::string> reference_filenames{
@@ -190,6 +196,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesNullValues) {
   expected_table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
   expected_table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::map<EncodingType, std::string> reference_filenames{
@@ -212,6 +219,7 @@ TEST_F(OperatorsImportBinaryTest, FixedStringDictionarySegment) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, EncodingType::FixedStringDictionary);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/FixedStringDictionarySegment.bin");
@@ -251,6 +259,7 @@ TEST_F(OperatorsImportBinaryTest, RepeatedIntRunLengthSegment) {
   expected_table->append({2});
   expected_table->append({1});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, EncodingType::RunLength);
 
   auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/RepeatedIntRunLengthSegment.bin");

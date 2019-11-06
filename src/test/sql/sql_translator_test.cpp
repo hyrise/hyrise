@@ -1,13 +1,8 @@
 #include "base_test.hpp"
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
-#include "expression/arithmetic_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -28,7 +23,6 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "sql/create_sql_parser_error_message.hpp"
@@ -404,13 +398,14 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregates) {
   const auto actual_lqp = compile_query("SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
-  const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
+  const auto aggregate = count_star_(stored_table_node_int_float);
+  const auto aggregates = expression_vector(aggregate, aggregate, aggregate);
 
   // clang-format off
   const auto expected_lqp =
   AliasNode::make(aggregates, aliases,
     ProjectionNode::make(aggregates,
-      AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+      AggregateNode::make(expression_vector(), expression_vector(aggregate),
         stored_table_node_int_float)));
   // clang-format on
 
@@ -444,7 +439,8 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
       compile_query("SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM int_float) AS R");
 
   const auto aliases = std::vector<std::string>({"cnt1", "cnt2", "cnt3"});
-  const auto aggregates = expression_vector(count_star_(), count_star_(), count_star_());
+  const auto aggregate = count_star_(stored_table_node_int_float);
+  const auto aggregates = expression_vector(aggregate, aggregate, aggregate);
 
   // clang-format off
   // #1186: Redundant AliasNode due to the SQLTranslator architecture.
@@ -452,8 +448,67 @@ TEST_F(SQLTranslatorTest, SelectListAliasesDifferentForSimilarAggregatesInSubque
   AliasNode::make(aggregates, aliases,
     AliasNode::make(aggregates, aliases,
       ProjectionNode::make(aggregates,
-        AggregateNode::make(expression_vector(), expression_vector(count_star_()),
+        AggregateNode::make(expression_vector(), expression_vector(aggregate),
           stored_table_node_int_float))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectAggregate) {
+  const auto actual_lqp = compile_query("SELECT COUNT(*) FROM int_float");
+
+  const auto aggregate = count_star_(stored_table_node_int_float);
+
+  // clang-format off
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(aggregate),
+    stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectAggregates) {
+  const auto actual_lqp = compile_query("SELECT COUNT(*), SUM(a + b) FROM int_float");
+
+  const auto aggregate0 = count_star_(stored_table_node_int_float);
+  const auto aggregate1 = sum_(add_(int_float_a, int_float_b));
+
+  // clang-format off
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(aggregate0, aggregate1),
+    ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b)),
+      stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectAggregatesFromSubqueries) {
+  const auto actual_lqp = compile_query(
+      "SELECT * FROM ("
+      "  SELECT COUNT(*) AS cnt1"
+      "  FROM int_float"
+      ") AS s1, ("
+      "  SELECT COUNT(*) AS cnt2"
+      "  FROM int_float2"
+      ") AS s2");
+
+  const auto aliases = std::vector<std::string>({"cnt1", "cnt2"});
+  const auto aggregate0 = count_star_(stored_table_node_int_float);
+  const auto aggregate1 = count_star_(stored_table_node_int_float2);
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(aggregate0, aggregate1), aliases,
+    JoinNode::make(JoinMode::Cross,
+      AliasNode::make(expression_vector(aggregate0), std::vector<std::string>({"cnt1"}),
+        AggregateNode::make(expression_vector(), expression_vector(aggregate0),
+          stored_table_node_int_float)),
+      AliasNode::make(expression_vector(aggregate1), std::vector<std::string>({"cnt2"}),
+        AggregateNode::make(expression_vector(), expression_vector(aggregate1),
+          stored_table_node_int_float2))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -947,7 +1002,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   const auto actual_lqp_count_star = compile_query("SELECT b, COUNT(*) FROM int_float GROUP BY b");
   // clang-format off
   const auto expected_lqp_star =
-  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star_()),
+  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star_(stored_table_node_int_float)),
     stored_table_node_int_float);
   // clang-format on
   EXPECT_LQP_EQ(actual_lqp_count_star, expected_lqp_star);
@@ -2402,7 +2457,7 @@ TEST_F(SQLTranslatorTest, WithClauseSingleQueryAggregateGroupByAlias) {
       AggregateNode::make(expression_vector(int_int_int_a), expression_vector(sum_b),
         stored_table_node_int_int_int));
 
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   const auto expected_lqp =
     AliasNode::make(select_list_expressions, aliases,
       PredicateNode::make(greater_than_(sum_b, value_(10)),
@@ -2483,7 +2538,8 @@ TEST_F(SQLTranslatorTest, WithClauseConsecutiveQueriesWhereAlias) {
         PredicateNode::make(greater_than_equals_(int_int_int_b, value_(10)),
           wq1_lqp)));
 
-  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+
+  // #1186: Redundant AliasNode due to the SQLTranslator architecture.
   const auto expected_lqp =
     AliasNode::make(expression_vector(int_int_int_b), alias_z,
       wq2_lqp);

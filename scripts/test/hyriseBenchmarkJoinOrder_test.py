@@ -75,10 +75,9 @@ def main():
 
   arguments = {}
   arguments["--table_path"] = "'resources/test_data/imdb_sample/'"
-  arguments["--queries"] = "'3b'"
   arguments["--time"] = "10"
-  arguments["--runs"] = "100"
-  arguments["--warmup"] = "10"
+  arguments["--runs"] = "2"
+  arguments["--warmup"] = "2"
   arguments["--encoding"] = "'LZ4'"
   arguments["--compression"] = "'Fixed-size byte-aligned'"
   arguments["--scheduler"] = "true"
@@ -94,14 +93,13 @@ def main():
   benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'LZ4'")
   benchmark.expect("Chunk size is 100000")
-  benchmark.expect("Max runs per item is 100")
+  benchmark.expect("Max runs per item is 2")
   benchmark.expect("Max duration per item is 10 seconds")
-  benchmark.expect("Warmup duration per item is 10 seconds")
+  benchmark.expect("Warmup duration per item is 2 seconds")
   benchmark.expect("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
   benchmark.expect("Not caching tables as binary files")
   benchmark.expect("Benchmarking queries from third_party/join-order-benchmark")
   benchmark.expect("Running on tables from resources/test_data/imdb_sample/")
-  benchmark.expect("Running subset of queries: 3b")
   benchmark.expect("Multi-threaded Topology:")
 
   close_benchmark(benchmark)

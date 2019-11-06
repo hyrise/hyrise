@@ -43,12 +43,12 @@
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/lqp_view.hpp"
@@ -303,7 +303,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const auto table_name = std::string{insert.tableName};
-  AssertInput(!Hyrise::get().meta_table_manager.is_meta_table_name(table_name), "Cannot modify meta tables");
+  AssertInput(!MetaTableManager::is_meta_table_name(table_name), "Cannot modify meta tables");
   AssertInput(Hyrise::get().storage_manager.has_table(table_name),
               std::string{"Did not find a table with name "} + table_name);
 
@@ -410,8 +410,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
-  AssertInput(!Hyrise::get().meta_table_manager.is_meta_table_name(delete_statement.tableName),
-              "Cannot modify meta tables");
+  AssertInput(!MetaTableManager::is_meta_table_name(delete_statement.tableName), "Cannot modify meta tables");
   Assert(lqp_is_validated(data_to_delete_node), "DELETE expects rows to be deleted to have been validated");
 
   if (delete_statement.expr) {
@@ -426,7 +425,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   AssertInput(update.table->type == hsql::kTableName, "UPDATE can only reference table by name");
 
   const auto table_name = std::string{update.table->name};
-  AssertInput(!Hyrise::get().meta_table_manager.is_meta_table_name(table_name), "Cannot modify meta tables");
+  AssertInput(!MetaTableManager::is_meta_table_name(table_name), "Cannot modify meta tables");
 
   auto translation_state = _translate_table_ref(*update.table);
 
@@ -884,7 +883,11 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
       aggregate_expressions.emplace_back(aggregate_expression);
       for (const auto& argument : aggregate_expression->arguments) {
         if (pre_aggregate_expression_set.emplace(argument).second) {
-          pre_aggregate_expressions.emplace_back(argument);
+          // Handle COUNT(*)
+          const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument);
+          if (!column_expression || column_expression->column_reference.original_column_id() != INVALID_COLUMN_ID) {
+            pre_aggregate_expressions.emplace_back(argument);
+          }
         }
       }
     }
@@ -1056,6 +1059,7 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
   _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
@@ -1154,6 +1158,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView:
@@ -1214,12 +1219,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
   switch (expression->type) {
     case ExpressionType::Predicate: {
       const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
-
-      if (predicate_expression->predicate_condition == PredicateCondition::In) {
-        return PredicateNode::make(expression, current_node);
-      } else {
-        return PredicateNode::make(expression, current_node);
-      }
+      return PredicateNode::make(expression, current_node);
     }
 
     case ExpressionType::Logical: {
@@ -1246,15 +1246,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
+    const std::shared_ptr<AbstractLQPNode>& node, const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   if (expressions_equal(node->column_expressions(), expressions)) return node;
   return ProjectionNode::make(expressions, node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
+    const std::shared_ptr<AbstractLQPNode>& node, const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> projection_expressions;
 
   for (const auto& expression : expressions) {
@@ -1366,7 +1364,21 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::CountDistinct:
             if (expr.exprList->front()->type == hsql::kExprStar) {
               AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
-              return std::make_shared<AggregateExpression>(aggregate_function);
+
+              // Find any leaf node below COUNT(*)
+              std::shared_ptr<AbstractLQPNode> leaf_node = nullptr;
+              visit_lqp(_current_lqp, [&](const auto& node) {
+                if (!node->left_input() && !node->right_input()) {
+                  leaf_node = node;
+                  return LQPVisitation::DoNotVisitInputs;
+                }
+                return LQPVisitation::VisitInputs;
+              });
+              Assert(leaf_node, "No leaf node found below COUNT(*)");
+
+              const auto column_expression =
+                  std::make_shared<LQPColumnExpression>(LQPColumnReference{leaf_node, INVALID_COLUMN_ID});
+              return std::make_shared<AggregateExpression>(aggregate_function, column_expression);
             } else {
               return std::make_shared<AggregateExpression>(
                   aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_resolver));
@@ -1609,7 +1621,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements(
-    const std::vector<SelectListElement>& select_list_elements) const {
+    const std::vector<SelectListElement>& select_list_elements) {
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
   expressions.reserve(select_list_elements.size());
   for (const auto& element : select_list_elements) {
