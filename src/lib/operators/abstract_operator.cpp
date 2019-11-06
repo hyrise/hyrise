@@ -61,8 +61,6 @@ void AbstractOperator::execute() {
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
-  DebugAssert(_output || !dynamic_cast<const AbstractReadOnlyOperator*>(this),
-              "Read-Only Operator should have already produced a result before calling get_output");
   DebugAssert(
       [&]() {
         // Check that operators do not return empty chunks

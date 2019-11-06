@@ -19,14 +19,15 @@ namespace opossum {
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
     : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
-  Assert(!_segments.empty(),
-         "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
+  DebugAssert(!_segments.empty(),
+              "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
 #if HYRISE_DEBUG
   const auto is_reference_chunk =
       !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
 
   for (const auto& segment : _segments) {
+    DebugAssert(segment, "Segment must not be nullptr");
     DebugAssert(
         !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
         "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
@@ -75,7 +76,8 @@ uint16_t Chunk::column_count() const { return static_cast<uint16_t>(_segments.si
 
 uint32_t Chunk::size() const {
   if (_segments.empty()) return 0;
-  auto first_segment = get_segment(ColumnID{0});
+  const auto first_segment = get_segment(ColumnID{0});
+  DebugAssert(first_segment, "Segment pointer found to be nullptr");
   return static_cast<uint32_t>(first_segment->size());
 }
 

@@ -92,12 +92,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Check whether the Chunk is pruned
     if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
-      excluded_chunk_ids.emplace_back(stored_chunk_id);
       ++pruned_chunk_ids_iter;
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
       continue;
     }
 
-    const auto& chunk = stored_table->get_chunk(stored_chunk_id);
+    const auto chunk = stored_table->get_chunk(stored_chunk_id);
 
     // Skip chunks that were physically deleted
     if (!chunk) {
@@ -111,13 +111,11 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       continue;
     }
 
-    // Check whether the Chunk is entirely invisible to the current transaction
-    if (transaction_context_is_set()) {
-      if (chunk->get_cleanup_commit_id() &&
-          *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id()) {
-        excluded_chunk_ids.emplace_back(stored_chunk_id);
-        continue;
-      }
+    // Check whether the Chunk is deleted
+    if (transaction_context_is_set() && chunk->get_cleanup_commit_id() &&
+        *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id()) {
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
+      continue;
     }
   }
 
