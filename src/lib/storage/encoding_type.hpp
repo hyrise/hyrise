@@ -62,7 +62,7 @@ bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type)
 
 struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
-  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
+  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}  // NOLINT
   constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
       : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
 
