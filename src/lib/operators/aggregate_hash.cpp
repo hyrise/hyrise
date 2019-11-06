@@ -1,6 +1,5 @@
 #include "aggregate_hash.hpp"
 
-#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <optional>
@@ -19,7 +18,6 @@
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

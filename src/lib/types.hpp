@@ -1,10 +1,6 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
-#include <boost/bimap.hpp>
-#include <boost/circular_buffer.hpp>
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/operators.hpp>
 
 #include <cstdint>
 #include <iostream>
@@ -13,6 +9,11 @@
 #include <string>
 #include <tuple>
 #include <vector>
+
+#include <boost/bimap.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/operators.hpp>
 
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
