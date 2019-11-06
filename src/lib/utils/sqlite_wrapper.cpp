@@ -149,7 +149,7 @@ SQLiteWrapper::Connection::Connection(const std::string& uri) {
   raw_execute_query("PRAGMA case_sensitive_like = true;");
 }
 
-SQLiteWrapper::Connection::Connection(Connection&& other) : db(other.db) { other.db = nullptr; }
+SQLiteWrapper::Connection::Connection(Connection&& other) noexcept : db(other.db) { other.db = nullptr; }
 
 SQLiteWrapper::Connection::~Connection() {
   if (db) {
