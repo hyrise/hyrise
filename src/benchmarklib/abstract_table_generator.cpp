@@ -71,7 +71,7 @@ void AbstractTableGenerator::generate_and_store() {
 
       // resetting soft unique constraints
       for (const auto& soft_unique_constraint : soft_unique_constraints) {
-        table->add_soft_unique_constraint(soft_unique_constraint.columns, soft_unique_constraint.is_primary_key);
+        table->add_soft_unique_constraint(soft_unique_constraint.columns, soft_unique_constraint.is_primary_key ? IsPrimaryKey::Yes : IsPrimaryKey::No);
       }
     }
     metrics.sort_duration = timer.lap();
