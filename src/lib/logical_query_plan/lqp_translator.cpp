@@ -1,12 +1,11 @@
 #include "lqp_translator.hpp"
 
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/tuple.hpp>
-
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/tuple.hpp>
 
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
@@ -17,14 +16,9 @@
 #include "delete_node.hpp"
 #include "drop_table_node.hpp"
 #include "drop_view_node.hpp"
-#include "dummy_table_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
-#include "expression/between_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/is_null_expression.hpp"
-#include "expression/list_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -67,7 +61,6 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
-#include "validate_node.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

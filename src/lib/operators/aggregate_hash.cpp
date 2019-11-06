@@ -1,7 +1,5 @@
 #include "aggregate_hash.hpp"
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -10,6 +8,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"

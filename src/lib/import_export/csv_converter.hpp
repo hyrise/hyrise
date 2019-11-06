@@ -1,13 +1,13 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
-
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
+
+#include <boost/algorithm/string.hpp>
 
 #include "csv_meta.hpp"
 #include "storage/base_segment.hpp"

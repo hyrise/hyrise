@@ -1,6 +1,5 @@
 #include "lqp_visualizer.hpp"
 
-#include <boost/algorithm/string.hpp>
 #include <iomanip>
 #include <memory>
 #include <string>
@@ -10,7 +9,6 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "statistics/cardinality_estimator.hpp"
 
 namespace opossum {
 
