@@ -188,7 +188,7 @@ class Table : private Noncopyable {
    * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    * We call them "soft" constraints to draw attention to that.
    */
-  void add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const bool primary);
+  void add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key);
   const std::vector<TableConstraintDefinition>& get_soft_unique_constraints() const;
 
   /**

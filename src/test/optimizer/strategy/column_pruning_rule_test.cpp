@@ -311,7 +311,7 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_unique_constraint({ColumnID{0}}, false);
+    table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -354,7 +354,7 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoinTwoPredicates) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_unique_constraint({ColumnID{0}}, false);
+    table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -396,7 +396,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithNonEqui) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_unique_constraint({ColumnID{0}}, false);
+    table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
   }
 
   const auto stored_table_node = StoredTableNode::make("table");
@@ -479,7 +479,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchNonInnerJoin) {
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
 
-    table->add_soft_unique_constraint({ColumnID{0}}, true);
+    table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::Yes);
   }
 
   const auto stored_table_node = StoredTableNode::make("table");

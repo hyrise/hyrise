@@ -88,6 +88,7 @@ DataType AggregateExpression::data_type() const {
 }
 
 bool AggregateExpression::is_count_star(const AbstractExpression& expression) {
+  // COUNT(*) is represented by an AggregateExpression with the COUNT function and an INVALID_COLUMN_ID.
   if (expression.type != ExpressionType::Aggregate) return false;
   const auto& aggregate_expression = static_cast<const AggregateExpression&>(expression);
 

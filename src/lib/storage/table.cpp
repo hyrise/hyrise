@@ -287,15 +287,16 @@ const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints
   return _constraint_definitions;
 }
 
-void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const bool primary) {
+void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
   for (const auto& column_id : column_ids) {
     Assert(column_id < column_count(), "ColumnID out of range");
-    Assert(!primary || !column_is_nullable(column_id), "Column must be not nullable for primary key constraint");
+    Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
+           "Column must be not nullable for primary key constraint");
   }
 
   {
     auto scoped_lock = acquire_append_mutex();
-    if (primary) {
+    if (is_primary_key == IsPrimaryKey::Yes) {
       Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
                           [](const auto& constraint) { return constraint.is_primary_key; }) ==
                  _constraint_definitions.end(),
@@ -304,7 +305,7 @@ void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, 
 
     auto sorted_columns_ids = column_ids;
     std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
-    TableConstraintDefinition new_constraint{sorted_columns_ids, primary};
+    TableConstraintDefinition new_constraint{sorted_columns_ids, is_primary_key};
 
     Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
                         [&new_constraint](const auto& existing_constraint) {
