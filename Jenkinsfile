@@ -101,7 +101,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
-              sh "./scripts/test/hyriseBenchmarkBenchmarkTPCC_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkTPCC_test.py clang-release"
               sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
@@ -120,7 +120,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
-              sh "./scripts/test/hyriseBenchmarkBenchmarkTPCC_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkTPCC_test.py gcc-debug"
               sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
@@ -166,7 +166,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
-              sh "./scripts/test/hyriseBenchmarkBenchmarkTPCC_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkTPCC_test.py gcc-release"
               sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
             }
           } else {
