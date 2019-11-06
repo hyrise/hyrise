@@ -1,27 +1,15 @@
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
-
 #include <chrono>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <string>
 
-#include "SQLParser.h"
-#include "SQLParserResult.h"
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "file_based_benchmark_item_runner.hpp"
-#include "file_based_table_generator.hpp"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
-#include "visualization/lqp_visualizer.hpp"
-#include "visualization/pqp_visualizer.hpp"
 
 using namespace opossum;  // NOLINT
 

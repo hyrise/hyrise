@@ -1,22 +1,16 @@
-#include <boost/algorithm/string.hpp>
-#include <cxxopts.hpp>
 #include <filesystem>
 
-#include <fstream>
+#include <boost/algorithm/string.hpp>
+#include <cxxopts.hpp>
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
-#include "import_export/csv_parser.hpp"
-#include "storage/table.hpp"
 #include "types.hpp"
-#include "utils/load_table.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/sqlite_add_indices.hpp"
-#include "utils/sqlite_wrapper.hpp"
-#include "utils/timer.hpp"
 
 /**
  * The Join Order Benchmark was introduced by Leis et al. "How good are query optimizers, really?".
