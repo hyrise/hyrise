@@ -16,8 +16,9 @@ namespace opossum {
 
 AbstractDereferencedColumnTableScanImpl::AbstractDereferencedColumnTableScanImpl(
     const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-    const PredicateCondition predicate_condition)
-    : predicate_condition(predicate_condition), _in_table(in_table), _column_id(column_id) {}
+    const PredicateCondition predicate_condition,
+    std::unique_ptr<OperatorPerformanceData> performance_data)
+    : predicate_condition(predicate_condition), performance_data(std::move(performance_data)), _in_table(in_table), _column_id(column_id) {}
 
 std::shared_ptr<PosList> AbstractDereferencedColumnTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
   const auto chunk = _in_table->get_chunk(chunk_id);

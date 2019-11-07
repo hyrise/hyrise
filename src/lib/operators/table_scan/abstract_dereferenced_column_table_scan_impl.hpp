@@ -7,6 +7,7 @@
 #include "abstract_table_scan_impl.hpp"
 
 #include "storage/abstract_segment_visitor.hpp"
+#include "operators/abstract_operator.hpp"
 
 #include "types.hpp"
 
@@ -25,11 +26,14 @@ class AttributeVectorIterable;
 class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
  public:
   AbstractDereferencedColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                          const PredicateCondition predicate_condition);
+                                          const PredicateCondition predicate_condition,
+                                          std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   std::shared_ptr<PosList> scan_chunk(const ChunkID chunk_id) const override;
 
   const PredicateCondition predicate_condition;
+
+  const std::unique_ptr<OperatorPerformanceData> performance_data;
 
  protected:
   void _scan_reference_segment(const ReferenceSegment& segment, const ChunkID chunk_id, PosList& matches) const;

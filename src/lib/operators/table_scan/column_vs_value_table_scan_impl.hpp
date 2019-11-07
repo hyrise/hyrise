@@ -31,6 +31,12 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
 
   const AllTypeVariant value;
 
+  struct PerformanceData : public OperatorPerformanceData {
+    bool used_sorted_scan_path = true;
+    size_t chunks_scanned_sorted = 0;
+    size_t chunks_scanned_unsorted = 0;
+  };
+
  protected:
   void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                    const std::shared_ptr<const PosList>& position_filter) const override;

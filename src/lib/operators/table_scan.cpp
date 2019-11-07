@@ -58,6 +58,7 @@ std::string TableScan::description(DescriptionMode description_mode) const {
 
   stream << name() << separator;
   stream << "Impl: " << _impl_description;
+
   stream << separator << _predicate->as_column_name();
 
   return stream.str();
@@ -167,6 +168,20 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   }
 
   Hyrise::get().scheduler()->wait_for_tasks(jobs);
+
+  try {
+    auto& c_vs_v_scan = dynamic_cast<ColumnVsValueTableScanImpl&>(*_impl);
+    auto& sorted_scan_performance_data = dynamic_cast<ColumnVsValueTableScanImpl::PerformanceData&>(*c_vs_v_scan.performance_data);
+
+    std::stringstream ss;
+    if (sorted_scan_performance_data.chunks_scanned_sorted > 0) {
+      ss << std::boolalpha << " [" << sorted_scan_performance_data.chunks_scanned_sorted << " of ";
+      ss << (sorted_scan_performance_data.chunks_scanned_sorted + sorted_scan_performance_data.chunks_scanned_unsorted) << " chunks scanned with binary search] ";
+    }
+    _impl_description += ss.str();
+  }
+    catch(const std::bad_cast&) {
+  }
 
   return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
