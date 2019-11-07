@@ -11,8 +11,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/container/pmr/memory_resource.hpp>
-
 #include "all_type_variant.hpp"
 #include "index/segment_index_type.hpp"
 #include "mvcc_data.hpp"
