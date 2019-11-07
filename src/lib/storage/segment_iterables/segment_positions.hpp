@@ -1,8 +1,8 @@
 #pragma once
 
-#include <boost/blank.hpp>
-
 #include <cstddef>
+
+#include <boost/blank.hpp>
 
 #include "types.hpp"
 

@@ -1,6 +1,3 @@
 # Used by clang_tidy_wrapper.sh, no wildcards etc. supported
 
-src/lib/server/client_connection.cpp            # clang-tidy doesn't like the htons function
-src/lib/server/postgres_wire_handler.cpp        # dto.
-src/lib/server/server_session.cpp               # will be replaced by #1868
 src/benchmarklib/tpcc/tpcc_table_generator.cpp  # suggested fixes make compile time worse

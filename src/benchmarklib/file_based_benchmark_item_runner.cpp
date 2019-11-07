@@ -1,8 +1,9 @@
 #include "file_based_benchmark_item_runner.hpp"
 
-#include <boost/algorithm/string.hpp>
 #include <filesystem>
 #include <fstream>
+
+#include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
 #include "sql/create_sql_parser_error_message.hpp"
