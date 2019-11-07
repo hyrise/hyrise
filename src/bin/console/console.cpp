@@ -441,7 +441,7 @@ int Console::_help(const std::string&) {
 int Console::_generate_tpcc(const std::string& args) {
   const auto arguments = tokenize(args);
 
-  if (arguments.size() < 1 || arguments.size() > 2) {
+  if (arguments.empty() || arguments.size() > 2) {
     // clang-format off
     out("Usage: ");
     out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT
@@ -466,7 +466,7 @@ int Console::_generate_tpcc(const std::string& args) {
 int Console::_generate_tpch(const std::string& args) {
   const auto arguments = tokenize(args);
 
-  if (arguments.size() < 1 || arguments.size() > 2) {
+  if (arguments.empty() || arguments.size() > 2) {
     // clang-format off
     out("Usage: ");
     out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
@@ -491,7 +491,7 @@ int Console::_generate_tpch(const std::string& args) {
 int Console::_generate_tpcds(const std::string& args) {
   const auto arguments = tokenize(args);
 
-  if (arguments.size() < 1 || arguments.size() > 2) {
+  if (arguments.empty() || arguments.size() > 2) {
     out("Usage: ");
     out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
     out("                                             Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
