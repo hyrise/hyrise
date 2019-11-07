@@ -22,20 +22,19 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
   DebugAssert(!_segments.empty(),
               "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
-#if HYRISE_DEBUG
-  const auto is_reference_chunk =
-      !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
+  if constexpr (HYRISE_DEBUG) {
+    const auto is_reference_chunk =
+        !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
 
-  for (const auto& segment : _segments) {
-    DebugAssert(segment, "Segment must not be nullptr");
-    DebugAssert(
-        !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
-        "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
-        "referenced Table");
-    DebugAssert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
-                "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments");
+    for (const auto& segment : _segments) {
+      Assert(segment, "Segment must not be nullptr");
+      Assert(!mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
+             "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
+             "referenced Table");
+      Assert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
+             "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments");
+    }
   }
-#endif
 
   if (alloc) _alloc = *alloc;
 }
@@ -70,14 +69,13 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
-const Segments& Chunk::segments() const { return _segments; }
+const Segments& Chunk::segments() const { return _segments; }  // TODO get rid of this
 
 uint16_t Chunk::column_count() const { return static_cast<uint16_t>(_segments.size()); }
 
 uint32_t Chunk::size() const {
   if (_segments.empty()) return 0;
   const auto first_segment = get_segment(ColumnID{0});
-  DebugAssert(first_segment, "Segment pointer found to be nullptr");
   return static_cast<uint32_t>(first_segment->size());
 }
 

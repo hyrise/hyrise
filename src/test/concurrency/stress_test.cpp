@@ -34,18 +34,22 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
   std::atomic_int successful_increments{0};
   std::atomic_int conflicted_increments{0};
-  const auto iterations_per_thread = 10;
+  const auto iterations_per_thread = 20;
 
   const auto run = [&]() {
+    int my_successful_increments{0};
+    int my_conflicted_increments{0};
     for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
       auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
       const auto [status, _] = pipeline.get_result_table();
       if (status == SQLPipelineStatus::Success) {
-        ++successful_increments;
+        ++my_successful_increments;
       } else {
-        ++conflicted_increments;
+        ++my_conflicted_increments;
       }
     }
+    successful_increments += my_successful_increments;
+    conflicted_increments += my_conflicted_increments;
   };
 
   const auto num_threads = 100u;
@@ -78,6 +82,65 @@ TEST_F(StressTest, TestTransactionConflicts) {
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
   EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
+}
+
+TEST_F(StressTest, TestTransactionInserts) {
+  // An insert-heavy load on a table with a ridiculously low max chunk size, creating many new chunks
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
+  Hyrise::get().storage_manager.add_table("table_b", table);
+
+  std::atomic_int successful_increments{0};
+  std::atomic_int conflicted_increments{0};
+  const auto iterations_per_thread = 20;
+
+  std::atomic_int job_id{0};
+  const auto run = [&]() {
+    const auto my_job_id = job_id++;
+    for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+      auto pipeline =
+          SQLPipelineBuilder{
+              iteration == 0 ? std::string{"INSERT INTO table_b (a, b) VALUES ("} + std::to_string(my_job_id) + ", 1)"
+                             : std::string{"UPDATE table_b SET b = b + 1 WHERE a = "} + std::to_string(my_job_id)}
+              .create_pipeline();
+      const auto [status, _] = pipeline.get_result_table();
+      if (status == SQLPipelineStatus::Success) {
+        ++successful_increments;
+      } else {
+        ++conflicted_increments;
+      }
+    }
+  };
+
+  const auto num_threads = 100u;
+  std::vector<std::future<void>> thread_futures;
+  thread_futures.reserve(num_threads);
+
+  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
+    thread_futures.emplace_back(std::async(std::launch::async, run));
+  }
+
+  for (auto& thread_future : thread_futures) {
+    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
+    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
+      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      thread_future.get();
+    }
+  }
+
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT MIN(b) FROM table_b"}}.create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    EXPECT_FLOAT_EQ(table->get_value<int32_t>(ColumnID{0}, 0), iterations_per_thread);
+  }
+
+  // Really pessimistic, but at least 2 statements should have made it
+  EXPECT_EQ(successful_increments, num_threads * iterations_per_thread);
+  EXPECT_EQ(conflicted_increments, 0);
 }
 
 }  // namespace opossum
