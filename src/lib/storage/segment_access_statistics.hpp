@@ -12,6 +12,7 @@ enum SegmentAccessType {
   IteratorAccess,
   AccessorCreate,
   AccessorAccess,
+  DictionaryAccess,
   // number of elements in enum
     Count
 };
@@ -68,6 +69,10 @@ class BulkCountingStrategy {
     _data_access_strategy.increase(AccessorAccess, count);
   }
 
+  void on_dictionary_access(uint64_t count) {
+    _data_access_strategy.increase(DictionaryAccess, count);
+  }
+
   void on_other_access(uint64_t count) {
     _data_access_strategy.increase(Other, count);
   }
@@ -106,6 +111,10 @@ class SingleAccessCountingStrategy {
     _data_access_strategy.increase(AccessorAccess, count);
   }
 
+  void on_dictionary_access(uint64_t count) {
+    _data_access_strategy.increase(DictionaryAccess, count);
+  }
+
   void on_other_access(uint64_t count) {
     _data_access_strategy.increase(Other, count);
   }
@@ -141,6 +150,10 @@ class SegmentAccessStatistics {
 
   void on_accessor_access(uint64_t count) {
     _counting_strategy.on_accessor_access(count);
+  }
+
+  void on_dictionary_access(uint64_t count) {
+    _counting_strategy.on_dictionary_access(count);
   }
 
   void on_other_access(uint64_t count) {

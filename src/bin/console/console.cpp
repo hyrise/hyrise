@@ -139,6 +139,7 @@ Console::Console()
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
   register_command("ssac", std::bind(&Console::_save_segment_access_counter, this, std::placeholders::_1));
+  register_command("csac", std::bind(&Console::_clear_segment_access_counter, this, std::placeholders::_1));
 }
 
 int Console::read() {
@@ -484,6 +485,17 @@ int Console::_save_segment_access_counter(const std::string& args) {
   const auto path = arguments[0];
 
   SegmentAccessCounter::save_to_csv(Hyrise::get().storage_manager.tables(), path);
+
+  return ReturnCode::Ok;
+}
+
+int Console::_clear_segment_access_counter(const std::string& args) {
+  auto input = args;
+  boost::algorithm::trim<std::string>(input);
+  auto arguments = std::vector<std::string>{};
+  boost::algorithm::split(arguments, input, boost::is_space());
+
+  SegmentAccessCounter::reset(Hyrise::get().storage_manager.tables());
 
   return ReturnCode::Ok;
 }
