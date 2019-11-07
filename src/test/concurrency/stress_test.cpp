@@ -22,6 +22,8 @@ class StressTest : public BaseTest {
 };
 
 TEST_F(StressTest, TestTransactionConflicts) {
+  // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
+  // and many chunks being created
   auto initial_sum = int64_t{};
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
@@ -29,7 +31,6 @@ TEST_F(StressTest, TestTransactionConflicts) {
     initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  // Similar to TestParallelConnections, but this time we modify the table
   const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
 
   std::atomic_int successful_increments{0};
