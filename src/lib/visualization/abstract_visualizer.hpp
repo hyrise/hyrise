@@ -119,9 +119,13 @@ class AbstractVisualizer {
       const auto max_normalized_width = 8.0;
       const auto log_base = std::log(1.5);
       double max_unnormalized_width = 0.0;
+// False positive with gcc and tsan
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
         max_unnormalized_width = std::max(max_unnormalized_width, std::log(_graph[*iter].pen_width) / log_base);
       }
+#pragma GCC diagnostic pop
       if (max_unnormalized_width == 0.0) {
         // All widths are the same, don't do anything
         return;
