@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/lexical_cast.hpp>
-
 #include <optional>
 #include <type_traits>
+
+#include <boost/lexical_cast.hpp>
 
 #include "all_type_variant.hpp"
 #include "null_value.hpp"

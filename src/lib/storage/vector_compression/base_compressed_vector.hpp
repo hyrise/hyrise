@@ -1,8 +1,8 @@
 #pragma once
 
-#include <boost/iterator/iterator_facade.hpp>
-
 #include <memory>
+
+#include <boost/iterator/iterator_facade.hpp>
 
 #include "base_vector_decompressor.hpp"
 #include "compressed_vector_type.hpp"
