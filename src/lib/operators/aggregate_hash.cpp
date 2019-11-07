@@ -1,8 +1,5 @@
 #include "aggregate_hash.hpp"
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-
-#include <algorithm>
 #include <cmath>
 #include <memory>
 #include <optional>
@@ -10,6 +7,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
 
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
@@ -19,7 +18,6 @@
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "type_comparison.hpp"
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

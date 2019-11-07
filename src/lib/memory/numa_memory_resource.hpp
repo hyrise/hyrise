@@ -1,8 +1,9 @@
 #pragma once
 
+#include <string>
+
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/integer/common_factor_rt.hpp>
-#include <string>
 
 #if HYRISE_NUMA_SUPPORT
 #include <PGASUS/msource/msource.hpp>

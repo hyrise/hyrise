@@ -1,21 +1,19 @@
-#include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
+#include "benchmark_runner.hpp"
+
 #include <fstream>
 #include <random>
 
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptors.hpp>
 #include "cxxopts.hpp"
 
 #include "benchmark_config.hpp"
-#include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
-#include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "tpch/tpch_table_generator.hpp"
-#include "utils/check_table_equal.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"

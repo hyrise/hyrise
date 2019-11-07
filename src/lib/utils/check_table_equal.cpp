@@ -1,10 +1,10 @@
 #include "check_table_equal.hpp"
 
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
-
 #include <iomanip>
 #include <iostream>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "lossless_cast.hpp"
 

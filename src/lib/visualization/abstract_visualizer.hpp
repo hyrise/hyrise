@@ -1,11 +1,12 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/graphviz.hpp>
 #include <string>
 #include <unordered_map>
 #include <utility>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/graphviz.hpp>
 
 #include "operators/print.hpp"
 

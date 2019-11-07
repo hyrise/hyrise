@@ -1,8 +1,5 @@
 #pragma once
 
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/container/scoped_allocator.hpp>
-#include <boost/functional/hash.hpp>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -12,6 +9,10 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/scoped_allocator.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "abstract_aggregate_operator.hpp"
 #include "abstract_read_only_operator.hpp"
