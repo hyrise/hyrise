@@ -61,15 +61,21 @@ void ResultSerializer::send_query_response(
 
   // Iterate over each chunk in result table
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; chunk_id++) {
-    const auto& current_chunk = table->get_chunk(chunk_id);
-    const auto chunk_size = current_chunk->size();
-    const auto& segments = current_chunk->segments();
+    const auto& chunk = table->get_chunk(chunk_id);
+    const auto chunk_size = chunk->size();
+
+    const auto column_count = table->column_count();
+    auto segments = Segments(column_count);
+    for (auto column_id = ColumnID{0}; column_id < column_count; column_id++) {
+      segments[column_id] = chunk->get_segment(column_id);
+    }
+
     // Iterate over each row in chunk
-    for (ChunkOffset current_chunk_offset{0}; current_chunk_offset < chunk_size; ++current_chunk_offset) {
+    for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       auto string_length_sum = 0;
       // Iterate over each attribute in row
-      for (size_t segment_id = 0; segment_id < segments.size(); segment_id++) {
-        const auto attribute_value = (*segments[segment_id])[current_chunk_offset];
+      for (size_t segment_id = 0; segment_id < column_count; segment_id++) {
+        const auto attribute_value = (*segments[segment_id])[chunk_offset];
         // The PostgreSQL protocol requires the conversion of values to strings
         const auto string_value = lossy_variant_cast<pmr_string>(attribute_value);
         if (string_value.has_value()) {

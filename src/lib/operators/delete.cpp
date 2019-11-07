@@ -37,15 +37,15 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
     const auto first_segment = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0}));
     const auto pos_list = first_segment->pos_list();
 
-    DebugAssert(std::all_of(chunk->segments().begin(), chunk->segments().end(),
-                            [&](const auto& segment) {
-                              const auto segment_pos_list =
-                                  std::dynamic_pointer_cast<const ReferenceSegment>(segment)->pos_list();
-                              // We could additionally check for `*segment_pos_list == *pos_list`, but atm comparing
-                              // pointers is sufficient
-                              return segment_pos_list == pos_list;
-                            }),
-                "All segments of a Chunk in _referencing_table must have the same PosList");
+    if constexpr (HYRISE_DEBUG) {
+      for (auto column_id = ColumnID{0}; column_id < _referencing_table->column_count(); ++column_id) {
+        const auto segment = chunk->get_segment(column_id);
+        const auto segment_pos_list = std::dynamic_pointer_cast<const ReferenceSegment>(segment)->pos_list();
+        // We could additionally check for `*segment_pos_list == *pos_list`, but for now, comparing pointers is enough
+        Assert(segment_pos_list == pos_list,
+               "All segments of a Chunk in _referencing_table must have the same PosList");
+      }
+    }
 
     for (auto row_id : *pos_list) {
       const auto referenced_chunk = first_segment->referenced_table()->get_chunk(row_id.chunk_id);

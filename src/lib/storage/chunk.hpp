@@ -79,8 +79,6 @@ class Chunk : private Noncopyable {
    */
   std::shared_ptr<BaseSegment> get_segment(ColumnID column_id) const;
 
-  const Segments& segments() const;
-
   bool has_mvcc_data() const;
 
   /**

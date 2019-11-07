@@ -69,8 +69,6 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
-const Segments& Chunk::segments() const { return _segments; }  // TODO get rid of this
-
 uint16_t Chunk::column_count() const { return static_cast<uint16_t>(_segments.size()); }
 
 uint32_t Chunk::size() const {

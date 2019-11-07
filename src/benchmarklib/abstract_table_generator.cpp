@@ -61,8 +61,13 @@ void AbstractTableGenerator::generate_and_store() {
       table = std::make_shared<Table>(immutable_sorted_table->column_definitions(), TableType::Data,
                                       Chunk::DEFAULT_SIZE, UseMvcc::Yes);
       for (auto chunk_id = ChunkID{0}; chunk_id < immutable_sorted_table->chunk_count(); ++chunk_id) {
-        auto mvcc_data = std::make_shared<MvccData>(immutable_sorted_table->get_chunk(chunk_id)->size(), CommitID{0});
-        table->append_chunk(immutable_sorted_table->get_chunk(chunk_id)->segments(), mvcc_data);
+        const auto chunk = immutable_sorted_table->get_chunk(chunk_id);
+        auto mvcc_data = std::make_shared<MvccData>(chunk->size(), CommitID{0});
+        Segments segments{};
+        for (auto column_id = ColumnID{0}; column_id < immutable_sorted_table->column_count(); ++column_id) {
+          segments.emplace_back(chunk->get_segment(column_id));
+        }
+        table->append_chunk(segments, mvcc_data);
         table->get_chunk(chunk_id)->set_ordered_by({table->column_id_by_name(column_name), order_by_mode});
       }
 
