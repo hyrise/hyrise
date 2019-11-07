@@ -160,12 +160,12 @@ class Chunk : private Noncopyable {
    * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for
    * the current transaction.
    */
-  uint32_t invalid_row_count() const { return _invalid_row_count.load(); }
+  uint32_t invalid_row_count() const { return uint32_t{_invalid_row_count}; }
 
   /**
-     * Atomically increases the counter of deleted/invalidated rows within this chunk.
-     * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
-     */
+   * Atomically increases the counter of deleted/invalidated rows within this chunk.
+   * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
+   */
   void increase_invalid_row_count(uint32_t count) const;
 
   /**
@@ -180,9 +180,9 @@ class Chunk : private Noncopyable {
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
   /**
-     * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
-     * the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
-     */
+   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
+   * the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
+   */
   void finalize();
 
  private:
