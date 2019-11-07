@@ -1,10 +1,12 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
+
 #include <boost/version.hpp>
 #if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
 #include "utils/boost_curry_override.hpp"  // NOLINT
 #endif
-
 #include <boost/hana/at_key.hpp>
 #include <boost/hana/contains.hpp>
 #include <boost/hana/equal.hpp>
@@ -12,9 +14,6 @@
 #include <boost/hana/pair.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
-
-#include <array>
-#include <cstdint>
 
 #include "all_type_variant.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -63,7 +62,7 @@ bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type)
 
 struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
-  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
+  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}  // NOLINT
   constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
       : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
 

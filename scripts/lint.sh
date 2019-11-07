@@ -2,7 +2,7 @@
 
 exitcode=0
 
-find src \( -iname "*.cpp" -o -iname "*.hpp" \) -a -not -path "src/lib/server/use_boost_future*.hpp" -a -not -path "src/lib/utils/boost_curry_override.hpp" -print0 | parallel --null --no-notice -j 100% --nice 17 python2.7 ./scripts/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11,-build/include_what_you_use,-readability/nolint,-whitespace/braces --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
+find src \( -iname "*.cpp" -o -iname "*.hpp" \) -a -not -path "src/lib/utils/boost_curry_override.hpp" -print0 | parallel --null --no-notice -j 100% --nice 17 python2.7 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11,-build/include_what_you_use,-readability/nolint,-whitespace/braces --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
 let "exitcode |= $?"
 #                             /------------------ runs in parallel -------------------\
 # Conceptual: find | parallel python cpplint \| grep -v \| test \${PIPESTATUS[0]} -eq 0
