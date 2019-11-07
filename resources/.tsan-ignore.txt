@@ -1,6 +1,7 @@
-# There are multiple data races in libtbb (probably false positives)
-# However, we do not add the entire tbb lib, as tsan might still help us spotting issues like accessing uninitialized values in tbb::concurrent_vector
-race:^tbb::strict_ppl::concurrent_queue
+# There are multiple data races identified in the uninstrumented libtbb (probably false positives)
+# However, be aware of concurrent_vector entries being potentially uninitialized:
+#   https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly
+race:^tbb::*
 
 # "libstdc++ is not instrumented, so tsan misses atomic operations related to shared_ptr"
 # https://groups.google.com/forum/#!topic/thread-sanitizer/vz_s-t226Vg
@@ -12,8 +13,6 @@ race:^std::__unique_ptr
 race:^std::__1::unique_ptr
 race:^std::__1::__unique_if
 race:shared_count
-
-race:^std::atomic
 
 # Boost is not built with tsan support, either
 race:boost::detail::thread_data_base
