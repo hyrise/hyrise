@@ -18,6 +18,13 @@ struct MvccData {
   // The last commit id is reserved for uncommitted changes
   static constexpr CommitID MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 
+
+  // Entries that have just been appended might be uninitialized (i.e., have a random value):
+  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
+  // However, they are not be accessed by any other transaction as long as only the MvccData but not the Chunk's size
+  // has been incremented. This is because Chunk::size looks at the size of the first segment. The Insert operator
+  // makes sure that the first segment is elongated only once the MvccData has been completely written.
+
   pmr_concurrent_vector<copyable_atomic<TransactionID>> tids;  ///< 0 unless locked by a transaction
   pmr_concurrent_vector<CommitID> begin_cids;                  ///< commit id when record was added
   pmr_concurrent_vector<CommitID> end_cids;                    ///< commit id when record was deleted
@@ -37,7 +44,7 @@ struct MvccData {
   void shrink();
 
   /**
-   * Grows mvcc data by the given delta
+   * Grows mvcc data by the given delta, guarded by the table's append_mutex.
    */
   void grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id);
 
@@ -60,6 +67,9 @@ struct MvccData {
    */
   std::shared_mutex _mutex;
 
+  /**
+   * This does not need to be atomic, as appends to a chunk's MvccData are guarded by the table's append_mutex.
+   */
   size_t _size{0};
 };
 
