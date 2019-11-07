@@ -82,7 +82,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    */
   static void _write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id);
 
-  static void _write_segment(const BaseEncodedSegment& base_segment, std::ofstream& ofstream);
+  [[noreturn]] static void _write_segment(const BaseEncodedSegment& base_segment, std::ofstream& ofstream);
 
   /**
    * Value Segments are dumped with the following layout:

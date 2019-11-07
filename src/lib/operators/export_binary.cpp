@@ -163,7 +163,7 @@ void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, con
   }
 }
 
-[[noreturn]] void ExportBinary::_write_segment(const BaseEncodedSegment& base_segment, std::ofstream& ofstream) {
+void ExportBinary::_write_segment(const BaseEncodedSegment& base_segment, std::ofstream& ofstream) {
   Fail("Binary export for segment type is not supported yet.");
 }
 
