@@ -1,5 +1,6 @@
 # There are multiple data races in libtbb (probably false positives)
-race:^tbb*
+# However, we do not add the entire tbb lib, as tsan might still help us spotting issues like accessing uninitialized values in tbb::concurrent_vector
+race:^tbb::strict_ppl::concurrent_queue
 
 # "libstdc++ is not instrumented, so tsan misses atomic operations related to shared_ptr"
 # https://groups.google.com/forum/#!topic/thread-sanitizer/vz_s-t226Vg
