@@ -3,10 +3,12 @@
 #include "benchmark_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
+#include "operators/index_scan.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 
 #include "utils/load_table.hpp"
 #include "operators/print.hpp"
@@ -19,7 +21,7 @@ using namespace opossum;
 
 // benchmark seetings
 constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
-//constexpr auto TBL_FILE = "../../data/100_pings.tbl";
+// constexpr auto TBL_FILE = "../../data/100k_pings.tbl";
 constexpr auto TABLE_NAME_PREFIX = "ping";
 const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "timestamp", "captain_status"};
@@ -35,10 +37,10 @@ const auto BM_VAL_TIMESTAMP = std::vector{"2018-12-06 23:57:34", "2018-12-22 23:
 const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
 
 // test values
-// const auto BM_VAL_CAPTAIN_ID = std::vector{59547};
-// const auto BM_VAL_CAPTAIN_STATUS = std::vector{1};
-// const auto BM_VAL_LATITUDE = std::vector{24.9154559};
-// const auto BM_VAL_TIMESTAMP = std::vector{"2018-12-22 23:22:11"};
+// const auto BM_VAL_CAPTAIN_ID = std::vector{298186};
+// const auto BM_VAL_CAPTAIN_STATUS = std::vector{2};
+// const auto BM_VAL_LATITUDE = std::vector{25.1388267};
+// const auto BM_VAL_TIMESTAMP = std::vector{"2018-12-06 23:57:34"};
 // const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
 
 std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
@@ -117,6 +119,15 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
             auto sorted_table = sort_table_chunk_wise(loaded_table, order_by_column, chunk_size, chunk_encoding_spec);
             storage_manager.add_table(sorted_table_name, sorted_table);
             std::cout << "Created table: " << sorted_table_name << std::endl;
+
+            if (order_by_column == ORDER_COLUMNS[0] && encoding == EncodingType::Dictionary) {
+              const auto column_count = sorted_table->column_count();
+              std::cout << "Creating indexes: ";
+              for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+                sorted_table->create_index<GroupKeyIndex>({column_id});
+              }
+              std::cout << " done." << std::endl;
+            }
           }
         }
       }
@@ -325,6 +336,50 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerform
   }
 }
 
+BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark::State& state) {
+  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length.");
+  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length.");
+  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length.");
+  Assert(BM_VAL_TIMESTAMP.size() == BM_SCAN_VALUES, "Sample search values for columns should have the same length.");
+
+  auto& storage_manager = Hyrise::get().storage_manager;
+
+  const auto chunk_size = CHUNK_SIZES[state.range(0)];
+  const auto order_by_column = ORDER_COLUMNS[state.range(1)];
+  const auto encoding = CHUNK_ENCODINGS[state.range(2)];
+  const auto scan_column_index = state.range(3);
+  const auto scan_column = ORDER_COLUMNS[scan_column_index];
+  const auto search_value_index = state.range(4);
+
+  if (order_by_column != ORDER_COLUMNS[0]) state.SkipWithError("Running only for a single random sorted column (should not matter for index scans). Skipping others.");
+  if (encoding != EncodingType::Dictionary) state.SkipWithError("Running only for dictionary encoding (others unsupported by the GroupKey index). Skipping others.");
+
+  const auto encoding_type = encoding_type_to_string.left.at(encoding);
+  const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
+  
+  auto table = storage_manager.get_table(table_name);
+
+  const auto scan_column_id = table->column_id_by_name(scan_column);
+  auto operand = pqp_column_(scan_column_id, table->column_data_type(scan_column_id), false, scan_column);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  // setting up right value (i.e., the search value)
+  std::vector<AllTypeVariant> right_values;
+  // should by nicer dicer
+  if (scan_column_index == 0) { right_values = {BM_VAL_CAPTAIN_ID[search_value_index]}; }
+  if (scan_column_index == 1) { right_values = {BM_VAL_LATITUDE[search_value_index]}; }
+  if (scan_column_index == 2) { right_values = {BM_VAL_TIMESTAMP[search_value_index]}; }
+  if (scan_column_index == 3) { right_values = {BM_VAL_CAPTAIN_STATUS[search_value_index]}; }
+
+  const std::vector<ColumnID> scan_column_ids = {scan_column_id};
+  for (auto _ : state) {
+    const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::GroupKey, scan_column_ids, PredicateCondition::GreaterThanEquals, right_values);
+    index_scan->execute();
+  }
+}
+
 static void CustomArguments(benchmark::internal::Benchmark* b) {
   for (size_t chunk_size_id = 0; chunk_size_id < CHUNK_SIZES.size(); ++chunk_size_id) {
     for (size_t order_by_column_id = 0; order_by_column_id < ORDER_COLUMNS.size(); ++order_by_column_id) {
@@ -341,6 +396,8 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
 }
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEqualsPerformance)->Apply(CustomArguments);
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
+
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
 
 
