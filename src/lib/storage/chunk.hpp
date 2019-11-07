@@ -162,13 +162,13 @@ class Chunk : private Noncopyable {
    * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for
    * the current transaction.
    */
-  uint32_t invalid_row_count() const { return _invalid_row_count.load(); }
+  ChunkOffset invalid_row_count() const { return _invalid_row_count.load(); }
 
   /**
      * Atomically increases the counter of deleted/invalidated rows within this chunk.
      * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
      */
-  void increase_invalid_row_count(uint32_t count) const;
+  void increase_invalid_row_count(ChunkOffset count) const;
 
   /**
       * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
@@ -198,7 +198,7 @@ class Chunk : private Noncopyable {
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
-  mutable std::atomic_uint32_t _invalid_row_count = 0;
+  mutable std::atomic<ChunkOffset> _invalid_row_count = 0;
   std::optional<CommitID> _cleanup_commit_id;
 };
 
