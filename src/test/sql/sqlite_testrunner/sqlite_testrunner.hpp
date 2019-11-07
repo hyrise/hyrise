@@ -1,15 +1,15 @@
 #pragma once
 
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
-
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "SQLParser.h"
 #include "base_test.hpp"

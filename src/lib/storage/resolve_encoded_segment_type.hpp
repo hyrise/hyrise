@@ -1,11 +1,11 @@
 #pragma once
 
+#include <memory>
+
 #include <boost/hana/fold.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/value.hpp>
-
-#include <memory>
 
 // Include your encoded segment file here!
 #include "storage/dictionary_segment.hpp"

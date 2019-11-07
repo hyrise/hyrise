@@ -1,8 +1,9 @@
 #pragma once
 
-#include <boost/asio.hpp>
 #include <filesystem>
 #include <fstream>
+
+#include <boost/asio.hpp>
 
 namespace opossum {
 

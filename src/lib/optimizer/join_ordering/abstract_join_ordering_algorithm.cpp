@@ -1,13 +1,9 @@
-#include "greedy_operator_ordering.hpp"
+#include "abstract_join_ordering_algorithm.hpp"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
-#include "enumerate_ccp.hpp"
 #include "join_graph.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "utils/format_duration.hpp"
-#include "utils/timer.hpp"
 
 namespace opossum {
 
