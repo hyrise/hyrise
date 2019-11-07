@@ -167,8 +167,10 @@ TEST_F(OperatorsInsertTest, Rollback) {
 TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
   auto t_name = "test1";
 
+  // 3 Rows, chunk_size = 10
   auto t = load_table("resources/test_data/tbl/int.tbl", 10u);
   Hyrise::get().storage_manager.add_table(t_name, t);
+  auto row_count = t->row_count();
 
   auto gt1 = std::make_shared<GetTable>(t_name);
   gt1->execute();
@@ -176,10 +178,12 @@ TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
   auto context1 = Hyrise::get().transaction_manager.new_transaction_context();
   ins->set_transaction_context(context1);
   ins->execute();
-
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->row_count(), row_count * 2);
   EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), 0);
+
   context1->rollback();
-  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), 3);
+
+  EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->get_chunk(ChunkID{0})->invalid_row_count(), row_count);
 }
 
 TEST_F(OperatorsInsertTest, InsertStringNullValue) {
