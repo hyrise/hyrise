@@ -5,11 +5,11 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/value_segment.hpp"
 #include "storage/dictionary_segment.hpp"
-#include "storage/run_length_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/run_length_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -203,6 +203,6 @@ class ExportBinary : public AbstractReadOnlyOperator {
  private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.
   static void _export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
-                                        const BaseCompressedVector& attribute_vector);
+                                       const BaseCompressedVector& attribute_vector);
 };
 }  // namespace opossum

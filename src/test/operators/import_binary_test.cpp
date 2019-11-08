@@ -262,7 +262,8 @@ TEST_F(OperatorsImportBinaryTest, MultipeChunksFrameOfReferenceSegment) {
   expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, EncodingType::FrameOfReference);
 
-  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/MultipleChunksFrameOfReferenceSegment.bin");
+  auto importer =
+      std::make_shared<opossum::ImportBinary>("resources/test_data/bin/MultipleChunksFrameOfReferenceSegment.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);

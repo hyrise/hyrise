@@ -165,8 +165,9 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
     case EncodingType::FrameOfReference:
-      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<ColumnDataType>)){
-        return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);  
+      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FrameOfReference>,
+                                                hana::type_c<ColumnDataType>)) {
+        return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);
       }
     default:
       // This case happens if the read column type is not a valid EncodingType.
@@ -189,7 +190,7 @@ std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
 }
 
 std::unique_ptr<const BaseCompressedVector> ImportBinary::_import_offset_value_vector(
-  std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
+    std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
   switch (attribute_vector_width) {
     case 1:
       return std::make_unique<FixedSizeByteAlignedVector<uint8_t>>(_read_values<uint8_t>(file, row_count));
@@ -244,7 +245,7 @@ std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(st
 
 template <typename T>
 std::shared_ptr<FrameOfReferenceSegment<T>> ImportBinary::_import_frame_of_reference_segment(std::ifstream& file,
-                                                                                                   ChunkOffset row_count) {
+                                                                                             ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto block_count = _read_value<uint32_t>(file);
   const auto block_minima = pmr_vector<T>(_read_values<T>(file, block_count));

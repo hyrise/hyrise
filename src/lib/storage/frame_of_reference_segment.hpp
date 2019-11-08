@@ -26,7 +26,7 @@ class BaseCompressedVector;
  * compressed using vector compression (null suppression).
  * FOR encoding on its own without vector compression does not
  * add any benefit.
- */ 
+ */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
 class FrameOfReferenceSegment : public BaseEncodedSegment {

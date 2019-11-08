@@ -8,9 +8,9 @@
 
 #include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
+#include "storage/frame_of_reference_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
-#include "storage/frame_of_reference_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
@@ -157,10 +157,9 @@ void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, con
 
   // Iterating over all segments of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    resolve_data_and_segment_type(*chunk->get_segment(column_id),
-                                  [&](const auto data_type_t, const auto& resolved_segment) {
-                                    _write_segment(resolved_segment, ofstream);
-                                  });
+    resolve_data_and_segment_type(
+        *chunk->get_segment(column_id),
+        [&](const auto data_type_t, const auto& resolved_segment) { _write_segment(resolved_segment, ofstream); });
   }
 }
 
@@ -168,8 +167,7 @@ void ExportBinary::_write_segment(const BaseEncodedSegment& base_segment, std::o
   Fail("Binary export for segment type is not supported yet.");
 }
 
-
-template<typename T>
+template <typename T>
 void ExportBinary::_write_segment(const ValueSegment<T>& segment, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Unencoded);
 
@@ -277,12 +275,12 @@ void ExportBinary::_write_segment(const RunLengthSegment<T>& base_segment, std::
 }
 
 template <typename T>
-void ExportBinary::_write_segment(const FrameOfReferenceSegment<T>& base_segment, std::ofstream& ofstream){
+void ExportBinary::_write_segment(const FrameOfReferenceSegment<T>& base_segment, std::ofstream& ofstream) {
   Fail("Frame of Reference Segments not implemented for data type");
 }
 
 template <>
-void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& base_segment, std::ofstream& ofstream){
+void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& base_segment, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
   const auto offset_value_vector_width = [&]() {
@@ -309,7 +307,7 @@ void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& base_s
 
   // Write NULL value and offset value size
   export_value(ofstream, static_cast<uint32_t>(base_segment.null_values().size()));
-  
+
   // Write NULL values
   export_values(ofstream, base_segment.null_values());
 
@@ -319,8 +317,7 @@ void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& base_s
   _export_attribute_vector(ofstream, *base_segment.compressed_vector_type(), base_segment.offset_values());
 }
 
-void ExportBinary::_export_attribute_vector(std::ofstream& ofstream,
-                                            const CompressedVectorType type,
+void ExportBinary::_export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                             const BaseCompressedVector& attribute_vector) {
   switch (type) {
     case CompressedVectorType::FixedSize4ByteAligned:
