@@ -4,6 +4,8 @@ int_int|0|0|a|int|null
 int_int|0|1|b|int|null
 int_int|1|0|a|int|null
 int_int|1|1|b|int|null
+int_int|2|0|a|int|null
+int_int|2|1|b|int|null
 int_int_int_null|0|0|a|int|RunLength
 int_int_int_null|0|1|b|int|Dictionary
 int_int_int_null|0|2|c|int|null

@@ -113,19 +113,19 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
     }
   }
 
-  const auto& unoptimized_lqp = get_unoptimized_logical_plan();
+  auto unoptimized_lqp = get_unoptimized_logical_plan();
 
   const auto started = std::chrono::high_resolution_clock::now();
-
-  _optimized_logical_plan = _optimizer->optimize(unoptimized_lqp);
-
-  const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
   // As the unoptimized LQP is only used for visualization, we can afford to recreate it if necessary.
   _unoptimized_logical_plan = nullptr;
+
+  _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp));
+
+  const auto done = std::chrono::high_resolution_clock::now();
+  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Cache newly created plan for the according sql statement
   if (lqp_cache) {
@@ -261,7 +261,7 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 
 const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
 
-void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) const {
+void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) {
   const auto& storage_manager = Hyrise::get().storage_manager;
 
   /**

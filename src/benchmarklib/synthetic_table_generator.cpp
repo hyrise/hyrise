@@ -171,7 +171,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             segments[column_index] = value_segment;
           } else {
             segments[column_index] = ChunkEncoder::encode_segment(value_segment, column_data_types[column_index],
-                                         segment_encoding_specs->at(column_index));
+                                                                  segment_encoding_specs->at(column_index));
           }
         });
       }));
@@ -187,8 +187,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
     }
 
     // get added chunk, mark it as immutable and add statistics
-    const auto& added_chunk = table->get_chunk(ChunkID{table->chunk_count() - 1});
-    added_chunk->mark_immutable();
+    const auto& added_chunk = table->last_chunk();
+    added_chunk->finalize();
     if (!added_chunk->pruning_statistics()) {
       generate_chunk_pruning_statistics(added_chunk);
     }

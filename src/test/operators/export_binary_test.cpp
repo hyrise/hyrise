@@ -95,6 +95,7 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   table->append({"a"});
   table->append({"test"});
 
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -149,6 +150,7 @@ TEST_F(OperatorsExportBinaryTest, RepeatedIntRunLengthSegment) {
   table->append({2});
   table->append({1});
 
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::RunLength);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -169,6 +171,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   table->append({13.0f});
   table->append({16.2f});
 
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -193,6 +196,9 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   table->append({13.0f});
   table->append({16.2f});
 
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, GetParam());
+
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
@@ -216,6 +222,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
   table->append({"a"});
   table->append({"test"});
 
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -246,6 +253,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegment) {
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -303,6 +311,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
   table->append({""});
   table->append({""});
 
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -335,6 +344,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
   table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
   table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
 
+  table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
