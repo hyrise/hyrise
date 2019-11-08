@@ -107,6 +107,52 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   EXPECT_TRUE(compare_files("resources/test_data/bin/FixedStringDictionarySegment.bin", filename));
 }
 
+TEST_F(OperatorsExportBinaryTest, FrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({1});
+  table->append({2});
+  table->append({3});
+  table->append({4});
+  table->append({5});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/FrameOfReferenceSegment.bin", filename));
+}
+
+TEST_F(OperatorsExportBinaryTest, MultipeChunksFrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  table->append({1});
+  table->append({1});
+  table->append({2});
+  table->append({4});
+  table->append({5});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+  
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("resources/test_data/bin/MultipleChunksFrameOfReferenceSegment.bin", filename));
+}
+
 // A table with reference segments is materialized while exporting. The content of the export file should not be
 // different from a exported table with ValueSegments and the same content.
 // It assumes that the TableScan produces one output segment per input segment.

@@ -227,6 +227,46 @@ TEST_F(OperatorsImportBinaryTest, FixedStringDictionarySegment) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_F(OperatorsImportBinaryTest, FrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  expected_table->append({1});
+  expected_table->append({2});
+  expected_table->append({3});
+  expected_table->append({4});
+  expected_table->append({5});
+
+  expected_table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::FrameOfReference);
+
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/FrameOfReferenceSegment.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, MultipeChunksFrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  expected_table->append({1});
+  expected_table->append({1});
+  expected_table->append({2});
+  expected_table->append({4});
+  expected_table->append({5});
+
+  expected_table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::FrameOfReference);
+
+  auto importer = std::make_shared<opossum::ImportBinary>("resources/test_data/bin/MultipleChunksFrameOfReferenceSegment.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 TEST_F(OperatorsImportBinaryTest, FileDoesNotExist) {
   auto importer = std::make_shared<opossum::ImportBinary>("not_existing_file");
   EXPECT_THROW(importer->execute(), std::exception);
