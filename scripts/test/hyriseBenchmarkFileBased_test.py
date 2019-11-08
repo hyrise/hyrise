@@ -77,7 +77,7 @@ def main():
   arguments["--queries"] = "'select_statement'"
   arguments["--time"] = "10"
   arguments["--runs"] = "100"
-  arguments["--warmup"] = "10"
+  arguments["--warmup"] = "5"
   arguments["--encoding"] = "'LZ4'"
   arguments["--compression"] = "'SIMD-BP128'"
   arguments["--scheduler"] = "true"
@@ -95,7 +95,7 @@ def main():
   benchmark.expect("Chunk size is 100000")
   benchmark.expect("Max runs per item is 100")
   benchmark.expect("Max duration per item is 10 seconds")
-  benchmark.expect("Warmup duration per item is 10 seconds")
+  benchmark.expect("Warmup duration per item is 5 seconds")
   benchmark.expect("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
   benchmark.expect("Not caching tables as binary files")
   benchmark.expect("Benchmarking queries from resources/test_data/queries/file_based/")

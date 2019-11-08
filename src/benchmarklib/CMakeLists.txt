@@ -61,3 +61,5 @@ target_link_libraries(
     tpch_dbgen
     tpcds_dbgen
 )
+
+target_link_libraries_system(hyriseBenchmarkLib nlohmann_json::nlohmann_json)

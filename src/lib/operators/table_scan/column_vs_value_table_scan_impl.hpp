@@ -56,7 +56,7 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
   bool _value_matches_none(const BaseDictionarySegment& segment, const ValueID search_value_id) const;
 
   template <typename Functor>
-  void _with_operator_for_dict_segment_scan(const PredicateCondition predicate_condition, const Functor& func) const {
+  void _with_operator_for_dict_segment_scan(const Functor& func) const {
     switch (predicate_condition) {
       case PredicateCondition::Equals:
         func(std::equal_to<void>{});

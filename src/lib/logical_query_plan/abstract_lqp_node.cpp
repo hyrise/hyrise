@@ -272,7 +272,8 @@ bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
 bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const { return !operator==(rhs); }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
-  std::shared_ptr<AbstractLQPNode> copied_left_input, copied_right_input;
+  std::shared_ptr<AbstractLQPNode> copied_left_input;
+  std::shared_ptr<AbstractLQPNode> copied_right_input;
 
   if (left_input()) copied_left_input = left_input()->_deep_copy_impl(node_mapping);
   if (right_input()) copied_right_input = right_input()->_deep_copy_impl(node_mapping);

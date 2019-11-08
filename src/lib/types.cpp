@@ -66,7 +66,7 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
     case PredicateCondition::IsNotNull:
       Fail("Can't flip specified PredicateCondition");
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition) {

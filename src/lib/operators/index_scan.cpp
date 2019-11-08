@@ -26,7 +26,10 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const Se
       _right_values{right_values},
       _right_values2{right_values2} {}
 
-const std::string IndexScan::name() const { return "IndexScan"; }
+const std::string& IndexScan::name() const {
+  static const auto name = std::string{"IndexScan"};
+  return name;
+}
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
   _in_table = input_table_left();

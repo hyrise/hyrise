@@ -39,7 +39,7 @@ Cost CostEstimatorLogical::estimate_node_cost(const std::shared_ptr<AbstractLQPN
           return left_input_row_count * std::log(left_input_row_count) +
                  right_input_row_count * std::log(right_input_row_count);
         default:
-          Fail("GCC thinks this is reachable");
+          Fail("Invalid enum value");
       }
     }
 

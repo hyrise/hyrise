@@ -46,9 +46,12 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 
-const std::string TableScan::name() const { return "TableScan"; }
+const std::string& TableScan::name() const {
+  static const auto name = std::string{"TableScan"};
+  return name;
+}
 
-const std::string TableScan::description(DescriptionMode description_mode) const {
+std::string TableScan::description(DescriptionMode description_mode) const {
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 
   std::stringstream stream;

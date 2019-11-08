@@ -31,9 +31,9 @@ class DictionarySegment : public BaseDictionarySegment {
    * @{
    */
 
-  const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+  AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
+  std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     const auto value_id = _decompressor->get(chunk_offset);
     if (value_id == _null_value_id) {
@@ -42,7 +42,7 @@ class DictionarySegment : public BaseDictionarySegment {
     return (*_dictionary)[value_id];
   }
 
-  size_t size() const final;
+  ChunkOffset size() const final;
 
   std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
@@ -81,7 +81,7 @@ class DictionarySegment : public BaseDictionarySegment {
 
   std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
 
-  const ValueID null_value_id() const final;
+  ValueID null_value_id() const final;
 
   /**@}*/
 

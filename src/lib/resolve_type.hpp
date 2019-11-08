@@ -1,13 +1,14 @@
 #pragma once
 
-#include <boost/hana/contains.hpp>
-#include <boost/hana/equal.hpp>
-#include <boost/hana/for_each.hpp>
-#include <boost/hana/size.hpp>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
+
+#include <boost/hana/contains.hpp>
+#include <boost/hana/equal.hpp>
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/size.hpp>
 
 #include "all_type_variant.hpp"
 #include "storage/reference_segment.hpp"

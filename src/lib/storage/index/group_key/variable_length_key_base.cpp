@@ -51,8 +51,7 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
     if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
       // perform shifting
       for (int16_t i = _size - 1; i > static_cast<int16_t>(byte_shift) - 1; --i) {
-        VariableLengthKeyWord value, borrow;
-        std::tie(value, borrow) = shift_left_with_borrow(_data[i - byte_shift], bit_shift);
+        const auto [value, borrow] = shift_left_with_borrow(_data[i - byte_shift], bit_shift);
         _data[i] = value;
         if (i + 1 < _size) _data[i + 1] |= borrow;
       }
@@ -62,8 +61,7 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
     } else {
       // perform shifting
       for (int16_t i = 0; i < _size - static_cast<int16_t>(byte_shift); ++i) {
-        VariableLengthKeyWord value, borrow;
-        std::tie(value, borrow) = shift_left_with_borrow(_data[i + byte_shift], bit_shift);
+        const auto [value, borrow] = shift_left_with_borrow(_data[i + byte_shift], bit_shift);
         _data[i] = value;
         if (i > 0) _data[i - 1] |= borrow;
       }

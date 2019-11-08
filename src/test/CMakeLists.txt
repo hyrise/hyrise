@@ -124,7 +124,6 @@ set(
     optimizer/strategy/expression_reduction_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp
     optimizer/strategy/in_expression_rewrite_rule_test.cpp
-    optimizer/strategy/insert_limit_in_exists_rule_test.cpp
     optimizer/strategy/join_ordering_rule_test.cpp
     optimizer/strategy/join_predicate_ordering_rule_test.cpp
     optimizer/strategy/predicate_merge_rule_test.cpp
@@ -135,10 +134,12 @@ set(
     optimizer/strategy/strategy_base_test.hpp
     optimizer/strategy/subquery_to_join_rule_test.cpp
     scheduler/scheduler_test.cpp
-    server/mock_connection.hpp
-    server/mock_task_runner.hpp
-    server/postgres_wire_handler_test.cpp
-    server/server_session_test.cpp
+    server/mock_socket.hpp
+    server/postgres_protocol_handler_test.cpp
+    server/query_handler_test.cpp
+    server/read_buffer_test.cpp
+    server/result_serializer_test.cpp
+    server/write_buffer_test.cpp
     sql/sql_identifier_resolver_test.cpp
     sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp
@@ -189,7 +190,6 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     tasks/chunk_compression_task_test.cpp
-    tasks/load_server_file_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
@@ -212,11 +212,11 @@ set (
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
     synthetic_table_generator_test.cpp
     tpc/tpcds_db_generator_test.cpp
-    tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
 )
 
+<<<<<<< HEAD
 if (${ENABLE_JIT_SUPPORT})
     # Some of the JIT test cases require pre-compiled LLVM bitcode.
     # To ensure this bitcode is always up-to-date and works across operating systems, the bitcode is automatically
@@ -307,13 +307,14 @@ cost_model_calibration/query/calibration_query_generator_projection_test.cpp
 gtest_main.cpp
 )
 
+=======
+>>>>>>> master
 # Both hyriseTest and hyriseSystemTest link against these
 set(
     LIBRARIES
     gtest
     gmock
     sqlite3
-    ${FILESYSTEM_LIBRARY}
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -331,6 +332,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
 add_dependencies(hyriseTest hyriseTestPlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
 
 # Configure hyriseCalibratinCostModelTest
 add_executable(hyriseCostModelCalibrationTest ${HYRISE_COST_MODEL_CALIBRATION_TEST_SOURCES})
@@ -340,5 +342,5 @@ target_link_libraries(hyriseCostModelCalibrationTest hyrise hyriseCostModelCalib
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest pqxx_static)
+target_link_libraries_system(hyriseSystemTest nlohmann_json::nlohmann_json pqxx_static)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

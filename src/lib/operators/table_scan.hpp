@@ -24,8 +24,8 @@ class TableScan : public AbstractReadOnlyOperator {
 
   const std::shared_ptr<AbstractExpression>& predicate() const;
 
-  const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
+  const std::string& name() const override;
+  std::string description(DescriptionMode description_mode) const override;
 
   /**
    * Create the TableScanImpl based on the predicate type. Public for testing purposes.

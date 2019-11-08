@@ -81,7 +81,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_stati
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }
 
-inline bool IndexScanRule::_is_single_segment_index(const IndexStatistics& index_statistics) const {
+bool IndexScanRule::_is_single_segment_index(const IndexStatistics& index_statistics) {
   return index_statistics.column_ids.size() == 1;
 }
 

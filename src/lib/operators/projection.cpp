@@ -20,7 +20,10 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, in), expressions(expressions) {}
 
-const std::string Projection::name() const { return "Projection"; }
+const std::string& Projection::name() const {
+  static const auto name = std::string{"Projection"};
+  return name;
+}
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -78,7 +81,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         output_segments[column_id] = input_chunk->get_segment(pqp_column_expression->column_id);
         column_is_nullable[column_id] =
             column_is_nullable[column_id] || input_table.column_is_nullable(pqp_column_expression->column_id);
-
       } else {
         auto output_segment = evaluator.evaluate_expression_to_segment(*expression);
         column_is_nullable[column_id] = column_is_nullable[column_id] || output_segment->is_nullable();
@@ -104,8 +106,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     const auto input_chunk = input_table.get_chunk(chunk_id);
     Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
 
+    // The output chunk contains all rows that are in the stored chunk, including invalid rows. We forward this
+    // information so that following operators (currently, the Validate operator) can use it for optimizations.
     output_chunks[chunk_id] =
         std::make_shared<Chunk>(std::move(output_chunk_segments[chunk_id]), input_chunk->mvcc_data());
+    output_chunks[chunk_id]->increase_invalid_row_count(input_chunk->invalid_row_count());
   }
 
   return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
