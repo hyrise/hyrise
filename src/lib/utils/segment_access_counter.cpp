@@ -11,7 +11,7 @@ void SegmentAccessCounter::save_to_csv(const std::map<std::string, std::shared_p
                                        const std::string& path) {
   std::ofstream output_file{path};
   output_file << "table_name,column_name,chunk_id,row_count,Other,IteratorCreate,IteratorAccess,AccessorCreate,"
-                 "AccessorAccess,DictionaryAccess\n";
+                 "AccessorAccess,DictionaryAccess,EstimatedMemoryUsage\n";
   // iterate over all tables, chunks and segments
   for (const auto&[table_name, table_ptr] : tables) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
@@ -22,7 +22,7 @@ void SegmentAccessCounter::save_to_csv(const std::map<std::string, std::shared_p
         const auto& segment_ptr = chunk_ptr->get_segment(column_id);
         const auto& access_statistics = segment_ptr->access_statistics();
         output_file << table_name << ',' << column_name << ',' << chunk_id << ',' << segment_ptr->size() << ','
-                    << access_statistics.to_string() << '\n';
+                    << access_statistics.to_string() << ',' << segment_ptr->estimate_memory_usage() << '\n';
       }
     }
   }
