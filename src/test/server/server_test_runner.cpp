@@ -74,7 +74,7 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
   const auto result = transaction.exec("SELECT * FROM all_types_table;");
 
   EXPECT_EQ(result.size(), all_types_table->row_count());
-  EXPECT_EQ(result[0].size(), all_types_table->column_count());
+  EXPECT_EQ(static_cast<ColumnCount>(result[0].size()), all_types_table->column_count());
 
   for (uint64_t row_id = 0; row_id < all_types_table->row_count(); row_id++) {
     const auto current_row = all_types_table->get_row(row_id);

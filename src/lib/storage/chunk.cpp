@@ -200,7 +200,7 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 for (auto column_id : column_ids)
-                  if (static_cast<ColumnCount>(column_id) >= column_count()) return false;
+                  if (column_id >= static_cast<ColumnID>(column_count())) return false;
                 return true;
               }()),
               "column ids not within range [0, column_count()).");
