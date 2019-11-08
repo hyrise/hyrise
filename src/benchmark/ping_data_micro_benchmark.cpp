@@ -101,7 +101,7 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
       // Sort table and add sorted tables to the storage manager
       for (const auto chunk_size : CHUNK_SIZES) {
         // Load origninal table from tbl file with specified chunk size
-        std::cout << "Load initial table form tbl file with chunk size: " << chunk_size << "." << std::endl;
+        std::cout << "Load initial table form tbl file '" << TBL_FILE << "' with chunk size: " << chunk_size << "." << std::endl;
         auto loaded_table = load_table(TBL_FILE, chunk_size);
 
         //schould be removed 
