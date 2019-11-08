@@ -558,7 +558,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         }
         case AggregateFunction::Any: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Any>::AggregateType;
-          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Sum>(group_boundaries, aggregate_index,
+          _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Any>(group_boundaries, aggregate_index,
                                                                                    sorted_table);
           break;
         }
