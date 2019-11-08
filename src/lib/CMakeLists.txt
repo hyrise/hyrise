@@ -395,7 +395,6 @@ set(
     statistics/table_statistics.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
-    storage/abstract_segment_visitor.hpp
     storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
