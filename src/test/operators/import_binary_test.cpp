@@ -76,7 +76,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
 TEST_P(OperatorsImportBinaryMultiEncodingTest, StringSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10, UseMvcc::Yes);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});

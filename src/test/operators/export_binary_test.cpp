@@ -213,7 +213,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -318,9 +318,9 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
   ex->execute();
 
   std::map<EncodingType, std::string> reference_filenames{
-      {EncodingType::Unencoded, "resources/test_data/bin/EmptyStringsValueSegment.bin"},
-      {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
-      {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}};
+    {EncodingType::Unencoded, "resources/test_data/bin/EmptyStringsValueSegment.bin"},
+    {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
+    {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}};
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
 }
