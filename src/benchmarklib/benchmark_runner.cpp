@@ -125,6 +125,7 @@ void BenchmarkRunner::run() {
 
     for (const auto& item_id : items) {
       const auto& result = _results[item_id];
+      if (result.successful_runs.empty()) continue;
       Assert(result.verification_passed.load(), "Verification result should have been set");
       any_verification_failed |= !(*result.verification_passed.load());
     }
