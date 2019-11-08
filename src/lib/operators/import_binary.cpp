@@ -168,7 +168,9 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
     case EncodingType::RunLength:
       return _import_run_length_segment<ColumnDataType>(file, row_count);
     case EncodingType::FrameOfReference:
-      return _import_frame_of_reference_segment<int32_t>(file, row_count);
+      if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<ColumnDataType>)){
+        return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);  
+      }
     default:
       // This case happens if the read column type is not a valid EncodingType.
       Fail("Cannot import column: invalid column type");
@@ -245,21 +247,15 @@ std::shared_ptr<RunLengthSegment<T>> ImportBinary::_import_run_length_segment(st
 
 template <typename T>
 std::shared_ptr<FrameOfReferenceSegment<T>> ImportBinary::_import_frame_of_reference_segment(std::ifstream& file,
-                                                                                             ChunkOffset row_count) {
-  Fail("Frame of Reference Segments not implemented for data type");
-}
-
-template <>
-std::shared_ptr<FrameOfReferenceSegment<int32_t>> ImportBinary::_import_frame_of_reference_segment(std::ifstream& file,
                                                                                                    ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto block_count = _read_value<uint32_t>(file);
-  const auto block_minima = pmr_vector<int32_t>(_read_values<int32_t>(file, block_count));
+  const auto block_minima = pmr_vector<T>(_read_values<T>(file, block_count));
   const auto size = _read_value<uint32_t>(file);
   const auto null_values = pmr_vector<bool>(_read_values<bool>(file, size));
   auto offset_values = _import_offset_value_vector(file, row_count, attribute_vector_width);
 
-  return std::make_shared<FrameOfReferenceSegment<int32_t>>(block_minima, null_values, std::move(offset_values));
+  return std::make_shared<FrameOfReferenceSegment<T>>(block_minima, null_values, std::move(offset_values));
 }
 
 }  // namespace opossum
