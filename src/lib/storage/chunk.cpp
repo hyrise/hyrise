@@ -74,7 +74,7 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
 
 const Segments& Chunk::segments() const { return _segments; }
 
-uint16_t Chunk::column_count() const { return static_cast<uint16_t>(_segments.size()); }
+ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
 
 uint32_t Chunk::size() const {
   if (_segments.empty()) return 0;
@@ -200,7 +200,7 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 for (auto column_id : column_ids)
-                  if (column_id >= column_count()) return false;
+                  if (column_id >= static_cast<ColumnID>(column_count())) return false;
                 return true;
               }()),
               "column ids not within range [0, column_count()).");
@@ -216,7 +216,7 @@ const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const {
 
 void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
-  Assert(!pruning_statistics || pruning_statistics->size() == column_count(),
+  Assert(!pruning_statistics || pruning_statistics->size() == static_cast<size_t>(column_count()),
          "Pruning statistics must have same number of segments as Chunk");
 
   _pruning_statistics = pruning_statistics;

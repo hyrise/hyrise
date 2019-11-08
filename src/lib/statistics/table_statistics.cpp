@@ -32,7 +32,7 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
     threads.emplace_back([&] {
       while (true) {
         auto my_column_id = ColumnID{static_cast<ColumnID::base_type>(next_column_id++)};
-        if (static_cast<size_t>(my_column_id) >= table.column_count()) return;
+        if (static_cast<ColumnCount>(my_column_id) >= table.column_count()) return;
 
         const auto column_data_type = table.column_data_type(my_column_id);
 
