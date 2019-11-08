@@ -53,7 +53,8 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
     storage_manager.add_table("string_compressed", string_compressed_table);
 
     auto fixed_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
-    ChunkEncoder::encode_all_chunks(fixed_string_compressed_table, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
+    ChunkEncoder::encode_all_chunks(fixed_string_compressed_table,
+                                    SegmentEncodingSpec{EncodingType::FixedStringDictionary});
     storage_manager.add_table("fixed_string_compressed", fixed_string_compressed_table);
 
     for (const auto& [name, table] : storage_manager.tables()) {
