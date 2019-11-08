@@ -1,7 +1,5 @@
 #include "import_binary.hpp"
 
-#include <boost/hana/for_each.hpp>
-
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -9,7 +7,6 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"

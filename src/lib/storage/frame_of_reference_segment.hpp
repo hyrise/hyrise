@@ -1,15 +1,14 @@
 #pragma once
 
+#include <array>
+#include <memory>
+#include <type_traits>
+
 #include <boost/hana/contains.hpp>
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
-#include <type_traits>
-
-#include <array>
-#include <memory>
-
-#include "base_frame_of_reference_segment.hpp"
+#include "base_encoded_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
@@ -30,7 +29,7 @@ class BaseCompressedVector;
  */ 
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
-class FrameOfReferenceSegment : public BaseFrameOfReferenceSegment {
+class FrameOfReferenceSegment : public BaseEncodedSegment {
  public:
   /**
    * The segment is divided into fixed-size blocks.

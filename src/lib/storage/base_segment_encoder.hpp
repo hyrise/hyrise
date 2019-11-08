@@ -1,9 +1,9 @@
 #pragma once
 
-#include <boost/hana/type.hpp>
-
 #include <memory>
 #include <type_traits>
+
+#include <boost/hana/type.hpp>
 
 #include "all_type_variant.hpp"
 #include "resolve_type.hpp"

@@ -1,5 +1,3 @@
-#include <boost/hana/at_key.hpp>
-
 #include <algorithm>
 #include <cctype>
 #include <memory>
@@ -10,7 +8,6 @@
 #include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
@@ -18,7 +15,6 @@
 #include "storage/value_segment.hpp"
 
 #include "types.hpp"
-#include "utils/enum_constant.hpp"
 
 namespace opossum {
 

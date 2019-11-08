@@ -140,6 +140,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesMixColumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_chunks(expected_table, {ChunkID{0}}, GetParam());
 
   Hyrise::get().storage_manager.add_table("expected_table", expected_table);
