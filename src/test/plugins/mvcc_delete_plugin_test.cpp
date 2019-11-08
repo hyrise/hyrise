@@ -87,53 +87,66 @@ TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
  * visible anymore for transactions.
  */
 TEST_F(MvccDeletePluginTest, LogicalDelete) {
-  const size_t chunk_size = 5;
+  const size_t chunk_size = 4;
 
   // Prepare test
   const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
   Hyrise::get().storage_manager.add_table(_table_name, table);
   // --- Check table structure
-  // --- Expected: 1, 2, 3
+  // --- Expected: 1, 2, 3 |
+  // --- Chunk 0 is already immutable due to load_table()
   EXPECT_EQ(table->chunk_count(), 1);
   EXPECT_EQ(table->row_count(), 3);
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{0}), 1);
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{1}), 2);
   EXPECT_EQ(_get_int_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{2}), 3);
-  // --- Invalidate records
-  _increment_all_values_by_one();
 
-  // Check pre-conditions
+  // --- Invalidate records – so that chunk 0 is completely invalidated
+  _increment_all_values_by_one();
   // --- Check table structure (underscores represent invalidated records)
-  // --- Expected: _, _, _, 2, 3 | 4
+  // --- Expected: _, _, _ | 2, 3, 4
   EXPECT_EQ(table->chunk_count(), 2);
   EXPECT_EQ(table->row_count(), 6);
-  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{3}), 2);
-  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{0}, ColumnID{0}, ChunkOffset{4}), 3);
-  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{0}), 4);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{0}), 2);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{1}), 3);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{2}), 4);
+
+  // --- Invalidate records - so that chunk 1 is completely invalidated except for one record
+  _increment_all_values_by_one();
+  // --- Expected: _, _, _ | _, _, _, 3 | 4, 5
+  EXPECT_EQ(table->chunk_count(), 3);
+  EXPECT_EQ(table->row_count(), 9);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{3}), 3);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{2}, ColumnID{0}, ChunkOffset{0}), 4);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{2}, ColumnID{0}, ChunkOffset{1}), 5);
+
+  // There should be no cleanup-commit-id set yet
   EXPECT_FALSE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
+  EXPECT_FALSE(table->get_chunk(ChunkID{1})->get_cleanup_commit_id());
+  EXPECT_FALSE(table->get_chunk(ChunkID{2})->get_cleanup_commit_id());
 
-  // Delete chunk logically
+  // Delete chunk 0 logically
   EXPECT_TRUE(_try_logical_delete(_table_name, ChunkID{0}));
-
-  // Check Post-Conditions
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->get_cleanup_commit_id());
-  // --- Check table structure
-  // --- Expected: _, _, _, _, _ | 4, 2, 3
-  EXPECT_EQ(table->chunk_count(), 2);
-  EXPECT_EQ(table->row_count(), 8);
-  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{0}), 4);
-  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{1}), 2);
-  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{1}, ColumnID{0}, ChunkOffset{2}), 3);
-  // --- Check count of invalidations
+
+  // Delete chunk 1 logically
+  EXPECT_TRUE(_try_logical_delete(_table_name, ChunkID{1}));
+  EXPECT_TRUE(table->get_chunk(ChunkID{1})->get_cleanup_commit_id());
+  // The logical delete of chunk 1 should have changed the table structure
+  // --- Expected: _, _, _ | _, _, _, _ | 4, 5, 3
+  EXPECT_EQ(table->chunk_count(), 3);
+  EXPECT_EQ(table->row_count(), 10);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{2}, ColumnID{0}, ChunkOffset{0}), 4);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{2}, ColumnID{0}, ChunkOffset{1}), 5);
+  EXPECT_EQ(_get_int_value_from_table(table, ChunkID{2}, ColumnID{0}, ChunkOffset{2}), 3);
+
+  // --- Check whether GetTable filters out logically deleted chunks
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
   auto get_table = std::make_shared<GetTable>(_table_name);
   get_table->set_transaction_context(transaction_context);
   get_table->execute();
-  auto validate_table = std::make_shared<Validate>(get_table);
-  validate_table->set_transaction_context(transaction_context);
-  validate_table->execute();
-  EXPECT_EQ(validate_table->get_output()->row_count(), 3);
-  EXPECT_EQ(validate_table->get_output()->chunk_count(), 1);
+  EXPECT_EQ(get_table->get_output()->chunk_count(), 1);
+  EXPECT_EQ(get_table->get_output()->row_count(), 3);
 }
 
 /**
