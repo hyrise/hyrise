@@ -146,16 +146,14 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   update_table->execute();
 
   // Check for success
-  if (update_table->execute_failed()) {
-    transaction_context->rollback();
-    return false;
-  } else {
-    // TODO(all): Check for success of commit, currently (2019-01-11) not yet possible (#1393).
+  if (!transaction_context->aborted()) {
     transaction_context->commit();
 
     // Mark chunk as logically deleted
     chunk->set_cleanup_commit_id(transaction_context->commit_id());
     return true;
+  } else {
+    return false;
   }
 }
 
