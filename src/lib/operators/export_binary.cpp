@@ -6,10 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/run_length_segment.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
