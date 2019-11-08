@@ -177,6 +177,31 @@ TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
+// The ANY aggregation is a special case which is used to obtain "any value" of a group of which we now that each value
+// in this group is the same. This can be the case, when the aggragated column is functionally dependent on the
+// group-by columns. In debug mode, we DebugAssert that each value is the same within the group.
+TYPED_TEST(OperatorsAggregateTest, CannotUseAnyOnNonDependentColumn) {
+  auto filtered = std::make_shared<TableScan>(
+      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+  filtered->execute();
+
+  {
+    auto aggregate = std::make_shared<TypeParam>(
+      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}},
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+    aggregate->execute();
+
+    EXPECT_EQ(aggregate->get_output()->template get_value<int>(ColumnID{2}, 0u), 20);
+  }
+
+  if (HYRISE_DEBUG) {
+    auto aggregate = std::make_shared<TypeParam>(
+      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}},
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+    EXPECT_THROW(aggregate->execute(), std::logic_error);
+  }
+}
+
 TYPED_TEST(OperatorsAggregateTest, CanCountStringColumns) {
   this->test_output(this->_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/count_str.tbl", 1);
@@ -696,6 +721,16 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
+}
+
+TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) {
+  auto filtered = std::make_shared<TableScan>(
+      this->_table_wrapper_1_1_dict,
+      less_than_(this->get_column_expression(this->_table_wrapper_1_1_dict, ColumnID{0}), "100"));
+  filtered->execute();
+
+  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Any}}, {ColumnID{0}},
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/any_filtered.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateStandardDeviationSampleOnRef) {
