@@ -71,10 +71,10 @@ void ResultSerializer::send_query_response(
     }
 
     // Iterate over each row in chunk
-    for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       auto string_length_sum = 0;
       // Iterate over each attribute in row
-      for (size_t segment_id = ColumnID{0}; segment_id < column_count; segment_id++) {
+      for (auto segment_id = ColumnID{0}; segment_id < column_count; segment_id++) {
         const auto attribute_value = (*segments[segment_id])[chunk_offset];
         // The PostgreSQL protocol requires the conversion of values to strings
         const auto string_value = lossy_variant_cast<pmr_string>(attribute_value);
