@@ -13,6 +13,8 @@ race:^std::__unique_ptr
 race:^std::__1::unique_ptr
 race:^std::__1::__unique_if
 race:shared_count
+race:^std::atomic
+race:^std::__1::atomic
 
 # Boost is not built with tsan support, either
 race:boost::detail::thread_data_base

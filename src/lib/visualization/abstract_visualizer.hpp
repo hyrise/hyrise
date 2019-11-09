@@ -120,7 +120,7 @@ class AbstractVisualizer {
       const auto max_normalized_width = 8.0;
       const auto log_base = std::log(1.5);
       double max_unnormalized_width = 0.0;
-// False positive with gcc and tsan
+// False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
       for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
