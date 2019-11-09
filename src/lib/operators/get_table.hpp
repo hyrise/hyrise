@@ -13,7 +13,7 @@ namespace opossum {
 // Operator to retrieve a table from the StorageManager by specifying its name. Depending on how the operator was
 // constructed, chunks and columns may be pruned if they are irrelevant for the final result. The returned table is NOT
 // the same table as stored in the StorageManager. If that stored table is changed (most importantly: if a chunk is
-// added), this is not reflected in GetTable's result. This is by design to make sure than following operators do not
+// added), this is not reflected in GetTable's result. This is by design to make sure that following operators do not
 // have to deal with tables that change their chunk count while they are being looked at. However, rows added to a chunk
 // within that stored table that was already present when GetTable was executed will be visible when calling
 // get_output().

@@ -111,7 +111,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       continue;
     }
 
-    // Check whether the Chunk is deleted
+    // Check whether the Chunk is logically deleted
     if (transaction_context_is_set() && chunk->get_cleanup_commit_id() &&
         *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id()) {
       excluded_chunk_ids.emplace_back(stored_chunk_id);
