@@ -1,3 +1,5 @@
+#pragma once
+
 #include "abstract_tpcc_procedure.hpp"
 
 namespace opossum {

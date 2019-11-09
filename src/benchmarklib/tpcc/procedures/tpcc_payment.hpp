@@ -1,3 +1,5 @@
+#pragma once
+
 #include <variant>
 
 #include "abstract_tpcc_procedure.hpp"
