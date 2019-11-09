@@ -1,10 +1,6 @@
 #pragma once
 
 #include <tbb/concurrent_vector.h>
-#include <boost/bimap.hpp>
-#include <boost/circular_buffer.hpp>
-#include <boost/container/pmr/polymorphic_allocator.hpp>
-#include <boost/operators.hpp>
 
 #include <cstdint>
 #include <iostream>
@@ -13,6 +9,11 @@
 #include <string>
 #include <tuple>
 #include <vector>
+
+#include <boost/bimap.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/operators.hpp>
 
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
@@ -38,6 +39,7 @@
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
 STRONG_TYPEDEF(uint16_t, ColumnID);
+STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);

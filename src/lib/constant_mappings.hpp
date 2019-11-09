@@ -1,6 +1,9 @@
-#include <boost/bimap.hpp>
+#pragma once
+
 #include <string>
 #include <unordered_map>
+
+#include <boost/bimap.hpp>
 
 #include "sql/Expr.h"
 #include "sql/SelectStatement.h"

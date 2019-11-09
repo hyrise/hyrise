@@ -3,8 +3,6 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
-#include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
 
 #include <chrono>
 #include <csetjmp>
@@ -18,6 +16,9 @@
 #include <regex>
 #include <string>
 #include <vector>
+
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptors.hpp>
 
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
