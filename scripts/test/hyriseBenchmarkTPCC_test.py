@@ -43,7 +43,7 @@ def main():
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
   benchmark.expect_exact("10 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
-  benchmark.expect_exact("TPC-C scale factor (number of warehouses) is 2")
+  benchmark.expect_exact("TPC-C scale factor (number of warehouses) is 1")
   benchmark.expect_exact("Consistency checks passed")
 
   close_benchmark(benchmark)
