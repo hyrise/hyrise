@@ -36,11 +36,26 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
-    storage_manager.add_table("compressed", load_table("resources/test_data/tbl/int_float2.tbl", 2u));
-    storage_manager.add_table("long_compressed", load_table("resources/test_data/tbl/25_ints_sorted.tbl", 25u));
-    storage_manager.add_table("run_length_compressed", load_table("resources/test_data/tbl/10_ints.tbl", 5u));
-    storage_manager.add_table("string_compressed", load_table("resources/test_data/tbl/string.tbl", 3u));
-    storage_manager.add_table("fixed_string_compressed", load_table("resources/test_data/tbl/string.tbl", 3u));
+    auto compressed_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
+    ChunkEncoder::encode_all_chunks(compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
+    storage_manager.add_table("compressed", compressed_table);
+
+    auto long_compressed_table = load_table("resources/test_data/tbl/25_ints_sorted.tbl", 25u);
+    ChunkEncoder::encode_all_chunks(long_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
+    storage_manager.add_table("long_compressed", long_compressed_table);
+
+    auto run_length_compressed_table = load_table("resources/test_data/tbl/10_ints.tbl", 5u);
+    ChunkEncoder::encode_all_chunks(run_length_compressed_table, SegmentEncodingSpec{EncodingType::RunLength});
+    storage_manager.add_table("run_length_compressed", run_length_compressed_table);
+
+    auto string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
+    ChunkEncoder::encode_all_chunks(string_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
+    storage_manager.add_table("string_compressed", string_compressed_table);
+
+    auto fixed_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
+    ChunkEncoder::encode_all_chunks(fixed_string_compressed_table,
+                                    SegmentEncodingSpec{EncodingType::FixedStringDictionary});
+    storage_manager.add_table("fixed_string_compressed", fixed_string_compressed_table);
 
     for (const auto& [name, table] : storage_manager.tables()) {
       generate_chunk_pruning_statistics(table);
@@ -84,7 +99,7 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
   EXPECT_EQ(actual_histogram, expected_histogram);
 }
 
-TEST_F(ChunkPruningRuleTest, SimpleChinkPruningTestWithColumnPruning) {
+TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
   auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
   stored_table_node->set_pruned_column_ids({ColumnID{0}});
 

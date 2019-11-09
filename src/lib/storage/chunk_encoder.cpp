@@ -95,8 +95,9 @@ std::shared_ptr<BaseSegment> ChunkEncoder::encode_segment(const std::shared_ptr<
 void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& column_data_types,
                                 const ChunkEncodingSpec& chunk_encoding_spec) {
   const auto column_count = chunk->column_count();
-  Assert((column_data_types.size() == column_count), "Number of column types must match the chunk’s column count.");
-  Assert((chunk_encoding_spec.size() == column_count),
+  Assert(column_data_types.size() == static_cast<size_t>(column_count),
+         "Number of column types must match the chunk’s column count.");
+  Assert(chunk_encoding_spec.size() == static_cast<size_t>(column_count),
          "Number of column encoding specs must match the chunk’s column count.");
   Assert(!chunk->is_mutable(), "Only immutable chunks can be encoded.");
 
@@ -172,7 +173,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const ChunkEncodingSpec& chunk_encoding_spec) {
-  Assert(chunk_encoding_spec.size() == table->column_count(),
+  Assert(chunk_encoding_spec.size() == static_cast<size_t>(table->column_count()),
          "Number of encoding specs must match table’s column count.");
   const auto column_types = table->column_data_types();
 
