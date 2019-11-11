@@ -26,6 +26,7 @@
 
 namespace opossum {
 
+// empty base class for AggregateResultContext
 class SegmentVisitorContext {};
 
 template <typename AggregateKey>
