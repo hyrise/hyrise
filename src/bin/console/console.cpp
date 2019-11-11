@@ -571,9 +571,8 @@ int Console::_load_table(const std::string& args) {
 
   if (supported) {
     out("Encoding \"" + tablename + "\" using " + encoding + "\n");
-    auto table = Hyrise::get().storage_manager.get_table(tablename);
     std::vector<ChunkID> immutable_chunks;
-    for(ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id){
+    for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id){
       if (!table->get_chunk(chunk_id)->is_mutable()){
         immutable_chunks.push_back(chunk_id);
       }
