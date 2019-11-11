@@ -94,7 +94,8 @@ using DistinctAggregateType = int8_t;
 class AggregateHash : public AbstractAggregateOperator {
  public:
   AggregateHash(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
-                const std::vector<ColumnID>& groupby_column_ids);
+                const std::vector<ColumnID>& groupby_column_ids,
+                const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr);
 
   const std::string& name() const override;
 

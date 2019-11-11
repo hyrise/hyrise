@@ -41,8 +41,9 @@
 namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
-                     const std::shared_ptr<AbstractExpression>& predicate)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, in}, _predicate(predicate) {}
+                     const std::shared_ptr<AbstractExpression>& predicate,
+                     const std::shared_ptr<const AbstractLQPNode>& lqp_node)
+    : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, lqp_node}, _predicate(predicate) {}
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
 

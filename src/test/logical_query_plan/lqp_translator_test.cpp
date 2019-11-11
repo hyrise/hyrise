@@ -399,6 +399,18 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
   EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(a, 42, 1337));
 }
 
+TEST_F(LQPTranslatorTest, LqpNodeAccess) {
+  // Tests the accessability of the origin LQP node after translation
+  auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  const auto lqp_node = op->lqp_node();
+  const auto recovered_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
+
+  EXPECT_TRUE(recovered_node);
+  EXPECT_EQ(recovered_node->predicate()->hash(), predicate_node->predicate()->hash());
+}
+
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   /**
    * Build LQP and translate to PQP

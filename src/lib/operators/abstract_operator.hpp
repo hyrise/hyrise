@@ -71,6 +71,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   AbstractOperator(
       const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
       const std::shared_ptr<const AbstractOperator>& right = nullptr,
+      const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr,
       std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   virtual ~AbstractOperator() = default;
@@ -118,6 +119,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;
 
+  std::shared_ptr<const AbstractLQPNode> lqp_node() const;
+
   // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
   const OperatorPerformanceData& performance_data() const;
 
@@ -157,6 +160,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Shared pointers to input operators, can be nullptr.
   std::shared_ptr<const AbstractOperator> _input_left;
   std::shared_ptr<const AbstractOperator> _input_right;
+
+  std::shared_ptr<const AbstractLQPNode> _lqp_node;
 
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;

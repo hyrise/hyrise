@@ -23,7 +23,8 @@ class IndexScan : public AbstractReadOnlyOperator {
  public:
   IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
             const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
-            const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
+            const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {},
+            const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr);
 
   const std::string& name() const final;
 

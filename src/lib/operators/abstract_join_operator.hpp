@@ -38,6 +38,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
       const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
       const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
       const OperatorJoinPredicate& primary_predicate, const std::vector<OperatorJoinPredicate>& secondary_predicates,
+      const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr,
       std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   JoinMode mode() const;

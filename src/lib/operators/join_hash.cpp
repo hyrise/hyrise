@@ -41,8 +41,9 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const OperatorJoinPredicate& primary_predicate,
                    const std::vector<OperatorJoinPredicate>& secondary_predicates,
-                   const std::optional<size_t>& radix_bits)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates),
+                   const std::optional<size_t>& radix_bits, const std::shared_ptr<const AbstractLQPNode>& lqp_node)
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, primary_predicate, secondary_predicates,
+                           lqp_node),
       _radix_bits(radix_bits) {}
 
 const std::string& JoinHash::name() const {

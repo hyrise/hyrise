@@ -19,8 +19,13 @@ namespace opossum {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
+                                   const std::shared_ptr<const AbstractLQPNode>& lqp_node,
                                    std::unique_ptr<OperatorPerformanceData> performance_data)
-    : _type(type), _input_left(left), _input_right(right), _performance_data(std::move(performance_data)) {}
+    : _type(type),
+      _input_left(left),
+      _input_right(right),
+      _lqp_node(lqp_node),
+      _performance_data(std::move(performance_data)) {}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
@@ -118,6 +123,8 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_left() const {
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const {
   return std::const_pointer_cast<AbstractOperator>(_input_right);
 }
+
+std::shared_ptr<const AbstractLQPNode> AbstractOperator::lqp_node() const { return _lqp_node; }
 
 const OperatorPerformanceData& AbstractOperator::performance_data() const { return *_performance_data; }
 

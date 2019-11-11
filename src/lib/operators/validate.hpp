@@ -20,7 +20,8 @@ class Validate : public AbstractReadOnlyOperator {
   friend class OperatorsValidateTest;
 
  public:
-  explicit Validate(const std::shared_ptr<AbstractOperator>& in);
+  explicit Validate(const std::shared_ptr<AbstractOperator>& in,
+                    const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr);
 
   const std::string& name() const override;
 

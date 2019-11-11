@@ -204,8 +204,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
-                                                predicate->predicate_condition, right_values, right_values2);
+  auto index_scan =
+      std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, column_ids,
+                                  predicate->predicate_condition, right_values, right_values2, node->deep_copy());
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
@@ -217,7 +218,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
     const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
-  return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate(), node->left_input()));
+  return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate(), node->left_input()),
+                                     node->deep_copy());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
@@ -242,8 +244,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
   const auto input_operator = translate_node(input_node);
 
-  return std::make_shared<Projection>(input_operator,
-                                      _translate_expressions(projection_node->node_expressions, input_node));
+  return std::make_shared<Projection>(
+      input_operator, _translate_expressions(projection_node->node_expressions, input_node), node->deep_copy());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
@@ -380,7 +382,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     group_by_column_ids.emplace_back(*column_id);
   }
 
-  return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids);
+  return std::make_shared<AggregateHash>(input_operator, aggregate_column_definitions, group_by_column_ids,
+                                         node->deep_copy());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(

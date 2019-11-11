@@ -21,7 +21,8 @@ namespace opossum {
 class Projection : public AbstractReadOnlyOperator {
  public:
   Projection(const std::shared_ptr<const AbstractOperator>& in,
-             const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
+             const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+             const std::shared_ptr<const AbstractLQPNode>& lqp_node = nullptr);
 
   const std::string& name() const override;
 

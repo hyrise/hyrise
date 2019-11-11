@@ -47,9 +47,10 @@ bool JoinIndex::supports(const JoinConfiguration config) {
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
-                     const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side)
+                     const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side,
+                     const std::shared_ptr<const AbstractLQPNode>& lqp_node)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<JoinIndex::PerformanceData>()),
+                           lqp_node, std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
       _adjusted_primary_predicate(primary_predicate) {
   if (_index_side == IndexSide::Left) {
@@ -379,7 +380,9 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
         range_end = index->cend();
         break;
       }
-      default: { Fail("Unsupported comparison type encountered"); }
+      default: {
+        Fail("Unsupported comparison type encountered");
+      }
     }
     index_ranges.emplace_back(IndexRange{range_begin, range_end});
   }

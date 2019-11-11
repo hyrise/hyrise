@@ -52,8 +52,8 @@ bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chun
   return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
 
-Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
-    : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
+Validate::Validate(const std::shared_ptr<AbstractOperator>& in, const std::shared_ptr<const AbstractLQPNode>& lqp_node)
+    : AbstractReadOnlyOperator(OperatorType::Validate, in, nullptr, lqp_node) {}
 
 const std::string& Validate::name() const {
   static const auto name = std::string{"Validate"};
