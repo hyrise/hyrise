@@ -36,7 +36,7 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   metrics.emplace_back(std::move(pipeline.metrics()));
 
   if (expected_result_table) {
-    _compare_tables(expected_result_table, result_table, "Using dedicated expected result table");
+    _compare_tables(result_table, expected_result_table, "Using dedicated expected result table");
   } else if (_sqlite_connection) {
     _verify_with_sqlite(pipeline);
   }
@@ -82,11 +82,12 @@ void BenchmarkSQLExecutor::rollback() {
   }
 }
 
-void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
+void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {  // TODO actual/expected seem swapped in output
   Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification");
 
+  std::cout << pipeline.get_sql() << std::endl;
   const auto sqlite_result = _sqlite_connection->execute_query(pipeline.get_sql());
-  const auto [pipeline_status, result_table] = pipeline.get_result_table();
+  const auto [pipeline_status, result_table] = pipeline.get_result_table();  // TODO do not re-execute
   Assert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
 
   // Modifications (INSERT, UPDATE, DELETE) do not return a table. We do not know what changed - we donot even know
@@ -95,11 +96,13 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   // next time.
   if (!result_table) return;
 
-  _compare_tables(sqlite_result, result_table, "Using SQLite's result table as expected result table");
+  Assert(sqlite_result, "Verifying SQL statement on sqlite failed: No SQLite result");
+
+  _compare_tables(result_table, sqlite_result, "Using SQLite's result table as expected result table");
 }
 
-void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& expected_result_table,
-                                           const std::shared_ptr<const Table>& actual_result_table,
+void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& actual_result_table,
+                                           const std::shared_ptr<const Table>& expected_result_table,
                                            const std::optional<const std::string>& description) {
   Timer timer;
 
