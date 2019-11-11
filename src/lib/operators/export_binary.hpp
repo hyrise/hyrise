@@ -160,10 +160,10 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Column Type            | ColumnType                            |   1
-   * Size                   | uint32_t                              |   4
-   * Values                 | T (int, float, double, long)          |   size * sizeof(T)
-   * NULL values            | vector<bool> (BoolAsByteType)         |   size * 1
-   * End Positions          | ChunkOffset                           |   size * 4
+   * Run count              | uint32_t                              |   4
+   * Values                 | T (int, float, double, long)          |   Run count * sizeof(T)
+   * NULL values            | vector<bool> (BoolAsByteType)         |   Run count * 1
+   * End Positions          | ChunkOffset                           |   Run count * 4
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
