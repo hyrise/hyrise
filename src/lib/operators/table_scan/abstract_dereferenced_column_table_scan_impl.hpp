@@ -6,14 +6,14 @@
 
 #include "abstract_table_scan_impl.hpp"
 
-#include "storage/abstract_segment_visitor.hpp"
-
 #include "types.hpp"
 
 namespace opossum {
 
 class Table;
 class ReferenceSegment;
+class BaseSegment;
+class BaseDictionarySegment;
 class AttributeVectorIterable;
 
 /**

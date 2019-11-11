@@ -50,6 +50,7 @@ class OperatorsExportBinaryTest : public BaseTest {
 
   std::shared_ptr<Table> table;
   const std::string filename = test_data_path + "export_test.bin";
+  const std::string reference_filepath = "resources/test_data/bin/";
 };
 
 class OperatorsExportBinaryMultiEncodingTest : public OperatorsExportBinaryTest,
@@ -82,7 +83,8 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("resources/test_data/bin/TwoColumnsNoValues.bin", filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
@@ -104,7 +106,8 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("resources/test_data/bin/FixedStringDictionarySegment.bin", filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, FrameOfReferenceSegment) {
@@ -127,10 +130,11 @@ TEST_F(OperatorsExportBinaryTest, FrameOfReferenceSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("resources/test_data/bin/FrameOfReferenceSegment.bin", filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, MultipeChunksFrameOfReferenceSegment) {
+TEST_F(OperatorsExportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
@@ -150,7 +154,8 @@ TEST_F(OperatorsExportBinaryTest, MultipeChunksFrameOfReferenceSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("resources/test_data/bin/MultipleChunksFrameOfReferenceSegment.bin", filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
 // A table with reference segments is materialized while exporting. The content of the export file should not be
@@ -181,7 +186,8 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("resources/test_data/bin/AllTypesValueSegmentMaxChunkSize.bin", filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, RepeatedIntRunLengthSegment) {
@@ -205,7 +211,8 @@ TEST_F(OperatorsExportBinaryTest, RepeatedIntRunLengthSegment) {
   ex->execute();
 
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files("resources/test_data/bin/RepeatedIntRunLengthSegment.bin", filename));
+  EXPECT_TRUE(compare_files(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
@@ -225,12 +232,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames{
-      {EncodingType::Unencoded, "resources/test_data/bin/SingleChunkSingleFloatColumnValueSegment.bin"},
-      {EncodingType::Dictionary, "resources/test_data/bin/SingleChunkSingleFloatColumnDictionarySegment.bin"},
-      {EncodingType::RunLength, "resources/test_data/bin/SingleChunkSingleFloatColumnRunLengthSegment.bin"}};
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
@@ -250,19 +255,17 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames{
-      {EncodingType::Unencoded, "resources/test_data/bin/MultipleChunkSingleFloatColumnValueSegment.bin"},
-      {EncodingType::Dictionary, "resources/test_data/bin/MultipleChunkSingleFloatColumnDictionarySegment.bin"},
-      {EncodingType::RunLength, "resources/test_data/bin/MultipleChunkSingleFloatColumnRunLengthSegment.bin"}};
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -276,12 +279,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames{
-      {EncodingType::Unencoded, "resources/test_data/bin/StringValueSegment.bin"},
-      {EncodingType::Dictionary, "resources/test_data/bin/StringDictionarySegment.bin"},
-      {EncodingType::RunLength, "resources/test_data/bin/StringRunLengthSegment.bin"}};
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegment) {
@@ -308,12 +309,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegment) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames{
-      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesValueSegment.bin"},
-      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesDictionarySegment.bin"},
-      {EncodingType::RunLength, "resources/test_data/bin/AllTypesRunLengthSegment.bin"}};
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesMixColumn) {
@@ -338,12 +337,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesMixColumn) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames{
-      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesMixColumnValueSegment.bin"},
-      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesMixColumnDictionarySegment.bin"},
-      {EncodingType::RunLength, "resources/test_data/bin/AllTypesMixColumnRunLengthSegment.bin"}};
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
@@ -366,12 +363,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames{
-      {EncodingType::Unencoded, "resources/test_data/bin/EmptyStringsValueSegment.bin"},
-      {EncodingType::Dictionary, "resources/test_data/bin/EmptyStringsDictionarySegment.bin"},
-      {EncodingType::RunLength, "resources/test_data/bin/EmptyStringsRunLengthSegment.bin"}};
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
@@ -399,12 +394,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
-  std::map<EncodingType, std::string> reference_filenames{
-      {EncodingType::Unencoded, "resources/test_data/bin/AllTypesNullValuesValueSegment.bin"},
-      {EncodingType::Dictionary, "resources/test_data/bin/AllTypesNullValuesDictionarySegment.bin"},
-      {EncodingType::RunLength, "resources/test_data/bin/AllTypesNullValuesRunLengthSegment.bin"}};
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(reference_filenames.at(GetParam()), filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 }  // namespace opossum

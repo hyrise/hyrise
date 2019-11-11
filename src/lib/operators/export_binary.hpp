@@ -74,7 +74,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Row count             | ChunkOffset                           |  4
    *
    * Next, it dumps the contents of the segments in the respective format (depending on the type
-   * of the segment, such as ReferenceSegment, DictionarySegment, ValueSegment, RunLengthSegment).
+   * of the segment, such as ValueSegment, ReferenceSegment, DictionarySegment, FixedStringDictionarySegment, RunLengthSegment).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -103,12 +103,12 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    *
-   * @param base_segment The segment to export
-   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   * @param value_segment The segment to export
+   * @param ofstream The output stream for exporting
    *
    */
   template <typename T>
-  static void _write_segment(const ValueSegment<T>& base_segment, std::ofstream& ofstream);
+  static void _write_segment(const ValueSegment<T>& value_segment, std::ofstream& ofstream);
 
   /**
    * Reference Segments are dumped with the following layout, which is similar to value segments:
@@ -126,10 +126,10 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is writen if the type of the column is NOT a string
    *
-   * @param base_segment The segment to export
+   * @param reference_segment The segment to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  static void _write_segment(const ReferenceSegment& ref_segment, std::ofstream& ofstream);
+  static void _write_segment(const ReferenceSegment& reference_segment, std::ofstream& ofstream);
 
   /**
    * Dictionary Segments are dumped with the following layout:
@@ -150,11 +150,10 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * ^: These fields are only written if the type of the column IS a string.
    * °: This field is written if the type of the column is NOT a string
    *
-   * @param base_segment The segment to export
-   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   * @param base_dictionary_segment The segment to export
+   * @param ofstream The output stream for exporting
    */
-
-  static void _write_segment(const BaseDictionarySegment& base_segment, std::ofstream& ofstream);
+  static void _write_segment(const BaseDictionarySegment& base_dictionary_segment, std::ofstream& ofstream);
 
   /**
    * RunLength Segments are dumped with the following layout:
@@ -162,20 +161,20 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
    * Column Type            | ColumnType                            |   1
-   * Size                   | uint32_t                              |   4
-   * Values                 | T (int, float, double, long)          |   size * sizeof(T)
-   * NULL values            | vector<bool> (BoolAsByteType)         |   size * 1
-   * End Positions          | ChunkOffset                           |   size * 4
+   * Run count              | uint32_t                              |   4
+   * Values                 | T (int, float, double, long)          |   Run count * sizeof(T)
+   * NULL values            | vector<bool> (BoolAsByteType)         |   Run count * 1
+   * End Positions          | ChunkOffset                           |   Run count * 4
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
    *
    *
-   * @param base_segment The segment to export
-   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   * @param run_length_segment The segment to export
+   * @param ofstream The output stream for exporting
    */
   template <typename T>
-  static void _write_segment(const RunLengthSegment<T>& base_segment, std::ofstream& ofstream);
+  static void _write_segment(const RunLengthSegment<T>& run_length_segment, std::ofstream& ofstream);
 
   /**
    * FrameOfReference Segments are dumped with the following layout:
@@ -193,12 +192,12 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * The type of the column can be found in the global header of the file.
    *
    *
-   * @param base_segment The segment to export
-   * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
+   * @param frame_of_reference_segment The segment to export
+   * @param ofstream The output stream for exporting
    */
 
   template <typename T>
-  static void _write_segment(const FrameOfReferenceSegment<T>& base_segment, std::ofstream& ofstream);
+  static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, std::ofstream& ofstream);
 
  private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.

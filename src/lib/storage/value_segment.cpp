@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_segment_visitor.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
