@@ -3,9 +3,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 
-namespace opossum {
-
-namespace detail {
+namespace opossum::detail {
 template <typename T>
 AnySegmentIterable<T> CreateAnySegmentIterable<T>::create(const BaseSegment& base_segment) {
   auto any_segment_iterable = std::optional<AnySegmentIterable<T>>{};
@@ -24,6 +22,4 @@ AnySegmentIterable<T> CreateAnySegmentIterable<T>::create(const BaseSegment& bas
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(CreateAnySegmentIterable);
-}  // namespace detail
-
-}  // namespace opossum
+}  // namespace opossum::detail

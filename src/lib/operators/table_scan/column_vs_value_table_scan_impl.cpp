@@ -118,7 +118,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  _with_operator_for_dict_segment_scan(predicate_condition, [&](auto predicate_comparator) {
+  _with_operator_for_dict_segment_scan([&](auto predicate_comparator) {
     auto comparator = [predicate_comparator, search_value_id](const auto& position) {
       return predicate_comparator(position.value(), search_value_id);
     };

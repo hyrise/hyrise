@@ -232,7 +232,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
     const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node) {
   // Create a list of all sums, counts, and averages in the aggregate node.
-  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums, counts, avgs;
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> sums;
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
+  std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
   for (auto& input_expression : input_expressions) {
     if (input_expression->type != ExpressionType::Aggregate) continue;
     auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
@@ -265,15 +267,16 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     const auto& avg_expression = static_cast<AggregateExpression&>(*avg_expression_ptr.get());
 
     const auto& avg_argument = avg_expression.argument();
-    const auto avg_argument_is_nullable = avg_argument.get()->is_nullable_on_lqp(*aggregate_input_node);
+    const auto avg_argument_is_nullable = avg_argument->is_nullable_on_lqp(*aggregate_input_node);
 
     // A helper function that checks whether SUMs and COUNTs match the AVG
     const auto finder = [&](const auto& other_expression) {
-      const auto other_argument = static_cast<const AggregateExpression&>(*other_expression.get().get()).argument();
+      const auto other_argument = static_cast<const AggregateExpression&>(*other_expression.get()).argument();
+      const auto column_expression = std::dynamic_pointer_cast<const LQPColumnExpression>(other_argument);
 
-      if (!other_argument) {
-        // other_argument might be nullptr if we are looking at COUNT(*) - that is acceptable if the argument a in
-        // AVG(a) is not nullable. In that case, COUNT(*) == COUNT(a).
+      if (column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID) {
+        // COUNT(*) holds an INVALID_COLUMN_ID - that is acceptable if the argument a in AVG(a) is not nullable.
+        // In that case, COUNT(*) == COUNT(a).
         return !avg_argument_is_nullable;
       }
 
@@ -322,7 +325,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
 
     if (node->type == LQPNodeType::Alias) updated_an_alias = true;
 
-    return LQPVisitation::VisitInputs;
+    return LQPUpwardVisitation::VisitOutputs;
   });
 
   // If there is no upward AliasNode, we need to add one that renames "SUM/COUNT" to "AVG"

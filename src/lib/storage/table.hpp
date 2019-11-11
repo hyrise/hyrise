@@ -44,7 +44,7 @@ class Table : private Noncopyable {
 
   const TableColumnDefinitions& column_definitions() const;
 
-  size_t column_count() const;
+  uint16_t column_count() const;
 
   const std::string& column_name(const ColumnID column_id) const;
   std::vector<std::string> column_names() const;
@@ -69,7 +69,6 @@ class Table : private Noncopyable {
 
   // Returns the number of rows.
   // This number includes invalidated (deleted) rows.
-  // Use approx_valid_row_count() for an approximate count of valid rows instead.
   uint64_t row_count() const;
 
   /**
@@ -87,6 +86,8 @@ class Table : private Noncopyable {
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
+
+  std::shared_ptr<Chunk> last_chunk();
 
   /**
    * Removes the chunk with the given id.

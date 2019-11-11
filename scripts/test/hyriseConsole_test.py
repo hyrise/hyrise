@@ -44,7 +44,7 @@ def main():
 	console.expect("Execution info:")
 
 	# Test TPCH generation
-	console.sendline("generate_tpch 0.001")
+	console.sendline("generate_tpch 0.01")
 	console.expect("Generating tables done")
 
 	# Test TPCH tables

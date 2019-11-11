@@ -33,7 +33,7 @@ class ImportCsv : public AbstractReadOnlyOperator {
                      const std::optional<std::string>& tablename = std::nullopt,
                      const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   // Returns the table that was created from the csv file.

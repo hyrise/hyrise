@@ -201,10 +201,7 @@ function(Main)
         # If so, run the change action.
         CheckGit("${GIT_WORKING_DIR}" changed)
         if(changed)
-            message(STATUS "Checking git... changed!")
             GitStateChangedAction()
-        else()
-            message(STATUS "Checking git... no change.")
         endif()
     else()
         # Start monitoring git.

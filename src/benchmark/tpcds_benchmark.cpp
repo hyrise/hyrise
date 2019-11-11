@@ -1,30 +1,17 @@
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
-
 #include <chrono>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <string>
 
 #include "benchmark_runner.hpp"
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "file_based_benchmark_item_runner.hpp"
-#include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
-#include "json.hpp"
-#include "SQLParser.h"
-#include "SQLParserResult.h"
-#include "sql/sql_pipeline.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "storage/chunk_encoder.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/assert.hpp"
-#include "utils/sqlite_add_indices.hpp"
 #include "utils/segment_access_counter.hpp"
-#include "visualization/lqp_visualizer.hpp"
-#include "visualization/pqp_visualizer.hpp"
+#include "utils/sqlite_add_indices.hpp"
 
 using namespace opossum;  // NOLINT
 
@@ -99,7 +86,7 @@ int main(int argc, char* argv[]) {
   auto table_generator = std::make_unique<TpcdsTableGenerator>(scale_factor, config);
   auto benchmark_runner = BenchmarkRunner{*config, std::move(query_generator), std::move(table_generator),
                                           opossum::BenchmarkRunner::create_context(*config)};
-  if (config->verify && benchmark_runner.sqlite_wrapper) {
+  if (config->verify) {
     add_indices_to_sqlite("resources/benchmark/tpcds/schema.sql", "resources/benchmark/tpcds/create_indices.sql",
                           benchmark_runner.sqlite_wrapper);
   }

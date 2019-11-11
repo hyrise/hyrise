@@ -16,7 +16,7 @@ std::string create_sql_parser_error_message(const std::string& sql, const hsql::
 
   error_msg << "SQL query:\n==========\n";
   const uint32_t error_line = result.errorLine();
-  for (auto line_number = 0u; line_number < sql_lines.size(); ++line_number) {
+  for (auto line_number = size_t{0}; line_number < sql_lines.size(); ++line_number) {
     error_msg << sql_lines[line_number] << '\n';
 
     // Add indicator to where the error is

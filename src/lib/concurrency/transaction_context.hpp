@@ -104,7 +104,16 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   /**
    * Add an operator to the list of read-write operators.
    */
-  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
+  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) {
+    _read_write_operators.push_back(op);
+  }
+
+  /**
+   * Returns the read-write operators.
+   */
+  const std::vector<std::shared_ptr<AbstractReadWriteOperator>>& read_write_operators() {
+    return _read_write_operators;
+  }
 
   /**
    * @defgroup Update the counter of active operators
@@ -149,7 +158,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    *
    * @param callback called when transaction is committed
    */
-  void _mark_as_pending_and_try_commit(std::function<void(TransactionID)> callback);
+  void _mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback);
 
   /**@}*/
 
@@ -164,7 +173,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
 
-  std::vector<std::shared_ptr<AbstractReadWriteOperator>> _rw_operators;
+  std::vector<std::shared_ptr<AbstractReadWriteOperator>> _read_write_operators;
 
   std::atomic<TransactionPhase> _phase;
   std::shared_ptr<CommitContext> _commit_context;

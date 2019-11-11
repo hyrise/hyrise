@@ -56,7 +56,7 @@ void SQLiteTestRunner::SetUp() {
   /**
    * Encode Tables if no encoded variant of a Table is in the cache
    */
-  const auto encoding_type = std::get<2>(param);
+  const auto encoding_type = std::get<1>(param);
   auto table_cache_iter = _table_cache_per_encoding.find(encoding_type);
 
   if (table_cache_iter == _table_cache_per_encoding.end()) {
@@ -146,19 +146,11 @@ std::vector<std::string> SQLiteTestRunner::queries() {
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  const auto [sql, use_jit, encoding_type] = GetParam();
+  const auto [sql, encoding_type] = GetParam();
 
-  SCOPED_TRACE("Query '" + sql + "'" + (use_jit ? " with JIT" : " without JIT") + " and encoding " +
-               encoding_type_to_string.left.at(encoding_type));
+  SCOPED_TRACE("Query '" + sql + "' with encoding " + encoding_type_to_string.left.at(encoding_type));
 
-  std::shared_ptr<LQPTranslator> lqp_translator;
-  if (use_jit) {
-    lqp_translator = std::make_shared<JitAwareLQPTranslator>();
-  } else {
-    lqp_translator = std::make_shared<LQPTranslator>();
-  }
-
-  auto sql_pipeline = SQLPipelineBuilder{sql}.with_lqp_translator(lqp_translator).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
   // Execute query in Hyrise and SQLite
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();

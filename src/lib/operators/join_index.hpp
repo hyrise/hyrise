@@ -37,7 +37,7 @@ class JoinIndex : public AbstractJoinOperator {
             const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
             const IndexSide index_side = IndexSide::Right);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   struct PerformanceData : public OperatorPerformanceData {
     size_t chunks_scanned_with_index{0};
@@ -70,8 +70,8 @@ class JoinIndex : public AbstractJoinOperator {
                                                 const std::shared_ptr<const PosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
-  const std::vector<IndexRange> _index_ranges_for_value(SegmentPosition probe_side_position,
-                                                        const std::shared_ptr<AbstractIndex>& index) const;
+  std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
+                                                  const std::shared_ptr<AbstractIndex>& index) const;
 
   void _append_matches(const AbstractIndex::Iterator& range_begin, const AbstractIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
@@ -83,7 +83,7 @@ class JoinIndex : public AbstractJoinOperator {
   void _append_matches_non_inner(const bool is_semi_or_anti_join);
 
   void _write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                              std::shared_ptr<PosList> pos_list);
+                              const std::shared_ptr<PosList>& pos_list);
 
   void _on_cleanup() override;
 

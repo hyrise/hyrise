@@ -1,11 +1,11 @@
 #pragma once
 
-#include <boost/preprocessor/stringize.hpp>
-
 #include <exception>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+
+#include <boost/preprocessor/stringize.hpp>
 
 #include "invalid_input_exception.hpp"
 #include "string_utils.hpp"

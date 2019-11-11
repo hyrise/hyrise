@@ -49,7 +49,7 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
   return matching_expressions[0];
 }
 
-const std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
+std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
     const std::shared_ptr<AbstractExpression>& expression) const {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
