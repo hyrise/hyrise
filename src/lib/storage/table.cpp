@@ -64,7 +64,9 @@ TableType Table::type() const { return _type; }
 
 UseMvcc Table::has_mvcc() const { return _use_mvcc; }
 
-uint16_t Table::column_count() const { return static_cast<uint16_t>(_column_definitions.size()); }
+ColumnCount Table::column_count() const {
+  return ColumnCount{static_cast<ColumnCount::base_type>(_column_definitions.size())};
+}
 
 const std::string& Table::column_name(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
@@ -101,8 +103,8 @@ bool Table::column_is_nullable(const ColumnID column_id) const {
 
 std::vector<bool> Table::columns_are_nullable() const {
   std::vector<bool> nullable(column_count());
-  for (size_t column_idx = 0; column_idx < column_count(); ++column_idx) {
-    nullable[column_idx] = _column_definitions[column_idx].nullable;
+  for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+    nullable[column_id] = _column_definitions[column_id].nullable;
   }
   return nullable;
 }

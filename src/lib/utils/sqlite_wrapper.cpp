@@ -79,7 +79,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   insert_into_stream << "INSERT INTO " << table_name << " VALUES (";
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
     insert_into_stream << "?";
-    if (column_id + 1u < table.column_count()) {
+    if (static_cast<ColumnCount>(column_id + 1u) < table.column_count()) {
       insert_into_stream << ", ";
     }
   }

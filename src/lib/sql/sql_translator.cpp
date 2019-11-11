@@ -396,7 +396,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     insert_data_node = ProjectionNode::make(column_expressions, insert_data_node);
   }
 
-  AssertInput(insert_data_node->column_expressions().size() == target_table->column_count(),
+  AssertInput(insert_data_node->column_expressions().size() == static_cast<size_t>(target_table->column_count()),
               "INSERT: Column count mismatch");
 
   /**
