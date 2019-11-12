@@ -297,7 +297,8 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   // Really pessimistic, but at least 2 statements should have made it
   EXPECT_GT(successful_increments, 2);
 
-  // We also want to see at least one conflict so that we can be sure that conflict handling in the server works
+  // We also want to see at least one conflict so that we can be sure that conflict handling in the server works.
+  // In case this fails, start playing with num_threads to provoke more conflicts.
   EXPECT_GE(conflicted_increments, 1);
 
   EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
