@@ -90,9 +90,9 @@ TEST_F(StressTest, TestTransactionConflicts) {
 }
 
 TEST_F(StressTest, TestTransactionInserts) {
-  // An insert-heavy load on a table with a ridiculously low max chunk size, creating many new chunks. This is
-  // different from TestTransactionConflicts, which uses updates, in that each iteration is guaranteed to
-  // create a row. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
+  // An update-heavy load on a table with a ridiculously low max chunk size, creating many new chunks. This is
+  // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction
+  // conflicts occur In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
   // no row being appended.
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
