@@ -18,7 +18,6 @@ struct MvccData {
   // The last commit id is reserved for uncommitted changes
   static constexpr CommitID MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
 
-
   // Entries that have just been appended might be uninitialized (i.e., have a random value):
   // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
   // However, they are not accessed by any other transaction as long as only the MvccData but not the Chunk's size
@@ -49,7 +48,7 @@ struct MvccData {
   void grow_by(size_t delta, TransactionID transaction_id, CommitID begin_commit_id);
 
   /**
-   * The thread sanitzer (tsan) complains about concurrent writes and reads to begin/end_cids. That is because it is
+   * The thread sanitizer (tsan) complains about concurrent writes and reads to begin/end_cids. That is because it is
    * unaware of their thread-safety being guaranteed by the update of the global last_cid. Furthermore, we exploit that
    * writes up to eight bytes are atomic on x64, which C++ and tsan do not know about. These helper methods were added
    * to .tsan-ignore.txt and can be used (carefully) to avoid those false positives.

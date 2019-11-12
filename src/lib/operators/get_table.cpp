@@ -71,8 +71,11 @@ void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
-  // The chunk count might change while we are in this method as other threads insert new data. Thanks to MVCC, we need
-  // (read: must) not be interested in these chunks
+  // The chunk count might change while we are in this method as other threads insert new data. MVCC guarantees that
+  // rows that are inserted after this transactions was started (and thus after GetTable started to execute) are not
+  // visible. Thus, we do not have to care about chunks added after this point. By retrieving chunk_count only once,
+  // we avoid concurrency issues, for example when more chunks are added to output_chunks than entries were originally
+  // allocated.
   const auto chunk_count = stored_table->chunk_count();
 
   /**

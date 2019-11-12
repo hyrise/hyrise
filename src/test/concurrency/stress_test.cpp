@@ -31,16 +31,16 @@ TEST_F(StressTest, TestTransactionConflicts) {
     initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
   }
 
-  const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
-
   std::atomic_int successful_increments{0};
   std::atomic_int conflicted_increments{0};
   const auto iterations_per_thread = 20;
 
+  // Define the work package
   const auto run = [&]() {
     int my_successful_increments{0};
     int my_conflicted_increments{0};
     for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+      const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
       auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
       const auto [status, _] = pipeline.get_result_table();
       if (status == SQLPipelineStatus::Success) {
@@ -53,6 +53,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     conflicted_increments += my_conflicted_increments;
   };
 
+  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
   const auto num_threads = 100u;
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
@@ -62,15 +63,18 @@ TEST_F(StressTest, TestTransactionConflicts) {
     thread_futures.emplace_back(std::async(std::launch::async, run));
   }
 
+  // Wait for completion or timeout (should not occur)
   for (auto& thread_future : thread_futures) {
     // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
     // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
     if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      // Retrieve the future so that exceptions stored in its state are thrown
       thread_future.get();
     }
   }
 
+  // Verify results
   auto final_sum = int64_t{};
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
@@ -86,7 +90,10 @@ TEST_F(StressTest, TestTransactionConflicts) {
 }
 
 TEST_F(StressTest, TestTransactionInserts) {
-  // An insert-heavy load on a table with a ridiculously low max chunk size, creating many new chunks
+  // An insert-heavy load on a table with a ridiculously low max chunk size, creating many new chunks. This is
+  // different from TestTransactionConflicts, which uses updates, in that each iteration is guaranteed to
+  // create a row. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
+  // no row being appended.
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -97,6 +104,7 @@ TEST_F(StressTest, TestTransactionInserts) {
   std::atomic_int conflicted_increments{0};
   const auto iterations_per_thread = 20;
 
+  // Define the work package - the job id is used so that each thread has its own logical row to work on
   std::atomic_int job_id{0};
   const auto run = [&]() {
     const auto my_job_id = job_id++;
@@ -115,6 +123,7 @@ TEST_F(StressTest, TestTransactionInserts) {
     }
   };
 
+  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
   const auto num_threads = 100u;
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
@@ -124,15 +133,18 @@ TEST_F(StressTest, TestTransactionInserts) {
     thread_futures.emplace_back(std::async(std::launch::async, run));
   }
 
+  // Wait for completion or timeout (should not occur)
   for (auto& thread_future : thread_futures) {
     // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
     // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
     if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      // Retrieve the future so that exceptions stored in its state are thrown
       thread_future.get();
     }
   }
 
+  // Verify results
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT MIN(b) FROM table_b"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
