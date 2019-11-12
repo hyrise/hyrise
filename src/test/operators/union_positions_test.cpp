@@ -39,12 +39,11 @@ TEST_F(UnionPositionsTest, SelfUnionSimple) {
    * Scan '10_ints' so that some values get excluded. UnionPositions the result with itself, and it should not change
    */
 
-  auto get_table_a_op = std::make_shared<GetTable>("10_ints");
-  auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, greater_than_(_int_column_0_non_nullable, 24));
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, greater_than_(_int_column_0_non_nullable, 24));
+  auto get_table_op = std::make_shared<GetTable>("10_ints");
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 24));
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 24));
 
-  _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op});
+  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op});
 
   /**
    * Just an early check we're actually getting some results here
@@ -64,13 +63,12 @@ TEST_F(UnionPositionsTest, SelfUnionExlusiveRanges) {
    * should be discarded
    */
 
-  auto get_table_a_op = std::make_shared<GetTable>("10_ints");
-  auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, less_than_(_int_column_0_non_nullable, 10));
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, greater_than_(_int_column_0_non_nullable, 200));
+  auto get_table_op = std::make_shared<GetTable>("10_ints");
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 10));
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 200));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
                             load_table("resources/test_data/tbl/10_ints_exclusive_ranges.tbl"));
@@ -83,13 +81,12 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRanges) {
    * This tests the actual functionality UnionPositions is intended for.
    */
 
-  auto get_table_a_op = std::make_shared<GetTable>("10_ints");
-  auto get_table_b_op = std::make_shared<GetTable>("10_ints");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, greater_than_(_int_column_0_non_nullable, 20));
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, less_than_(_int_column_0_non_nullable, 100));
+  auto get_table_op = std::make_shared<GetTable>("10_ints");
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 20));
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 100));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), _table_10_ints);
 }
@@ -99,13 +96,12 @@ TEST_F(UnionPositionsTest, EarlyResultLeft) {
    * If one of the input tables is empty, an early result should be produced
    */
 
-  auto get_table_a_op = std::make_shared<GetTable>("int_float4");
-  auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, less_than_(_int_column_0_non_nullable, 12346));
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, less_than_(_int_column_0_non_nullable, 0));
+  auto get_table_op = std::make_shared<GetTable>("int_float4");
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 12346));
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("resources/test_data/tbl/int_float2.tbl"));
   EXPECT_EQ(table_scan_a_op->get_output(), union_unique_op->get_output());
@@ -116,13 +112,12 @@ TEST_F(UnionPositionsTest, EarlyResultRight) {
    * If one of the input tables is empty, an early result should be produced
    */
 
-  auto get_table_a_op = std::make_shared<GetTable>("int_float4");
-  auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, less_than_(_int_column_0_non_nullable, 0));
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, less_than_(_int_column_0_non_nullable, 12346));
+  auto get_table_op = std::make_shared<GetTable>("int_float4");
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 0));
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_int_column_0_non_nullable, 12346));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(), load_table("resources/test_data/tbl/int_float2.tbl"));
   EXPECT_EQ(table_scan_b_op->get_output(), union_unique_op->get_output());
@@ -135,13 +130,12 @@ TEST_F(UnionPositionsTest, SelfUnionOverlappingRangesMultipleSegments) {
    * This tests the actual functionality UnionPositions is intended for.
    */
 
-  auto get_table_a_op = std::make_shared<GetTable>("int_float4");
-  auto get_table_b_op = std::make_shared<GetTable>("int_float4");
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_a_op, greater_than_(_int_column_0_non_nullable, 12345));
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_b_op, less_than_(_float_column_1_non_nullable, 400));
+  auto get_table_op = std::make_shared<GetTable>("int_float4");
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op, greater_than_(_int_column_0_non_nullable, 12345));
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op, less_than_(_float_column_1_non_nullable, 400));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_a_op, get_table_b_op, table_scan_a_op, table_scan_b_op, union_unique_op});
+  _execute_all({get_table_op, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
                             load_table("resources/test_data/tbl/int_float4_overlapping_ranges.tbl"));
@@ -181,22 +175,16 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
 
   auto get_table_a_op = std::make_shared<GetTable>("int_float4");
   auto get_table_b_op = std::make_shared<GetTable>("int_int");
-  auto get_table_c_op = std::make_shared<GetTable>("int_float4");
-  auto get_table_d_op = std::make_shared<GetTable>("int_int");
-  auto join_a =
+  auto join =
       std::make_shared<JoinNestedLoop>(get_table_a_op, get_table_b_op, JoinMode::Inner,
-                                       OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-  auto join_b =
-      std::make_shared<JoinNestedLoop>(get_table_c_op, get_table_d_op, JoinMode::Inner,
                                        OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
 
   auto table_scan_a_op =
-      std::make_shared<TableScan>(join_a, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Int, false, ""), 2));
-  auto table_scan_b_op = std::make_shared<TableScan>(join_b, less_than_(_float_column_1_non_nullable, 457.0));
+      std::make_shared<TableScan>(join, greater_than_equals_(pqp_column_(ColumnID{3}, DataType::Int, false, ""), 2));
+  auto table_scan_b_op = std::make_shared<TableScan>(join, less_than_(_float_column_1_non_nullable, 457.0));
   auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
 
-  _execute_all({get_table_a_op, get_table_b_op, get_table_c_op, get_table_d_op, join_a, join_b, table_scan_a_op,
-                table_scan_b_op, union_unique_op});
+  _execute_all({get_table_a_op, get_table_b_op, join, table_scan_a_op, table_scan_b_op, union_unique_op});
 
   EXPECT_TABLE_EQ_UNORDERED(union_unique_op->get_output(),
                             load_table("resources/test_data/tbl/int_float4_int_int_union_positions.tbl"));
