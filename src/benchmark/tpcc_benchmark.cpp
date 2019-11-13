@@ -40,16 +40,19 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     // We use -s instead of -w for consistency with the options of our other TPC-x binaries.
-    ("s,scale", "Scale factor (warehouses)", cxxopts::value<int>()->default_value("1")); // NOLINT
+    ("s,scale", "Scale factor (warehouses)", cxxopts::value<int>()->default_value("1")) // NOLINT
+    ("consistency_checks", "Run consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;
   int num_warehouses;
+  bool consistency_checks;
 
   if (CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
     const auto json_config = CLIConfigParser::parse_json_config_file(argv[1]);
     num_warehouses = json_config.value("scale", 1);
+    consistency_checks = json_config.value("consistency_checks", false);
 
     config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_options_json_config(json_config));
   } else {
@@ -59,6 +62,7 @@ int main(int argc, char* argv[]) {
     if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
 
     num_warehouses = cli_parse_result["scale"].as<int>();
+    consistency_checks = cli_parse_result["consistency_checks"].as<bool>();
 
     config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
@@ -80,7 +84,7 @@ int main(int argc, char* argv[]) {
                   context)
       .run();
 
-  if (config->verify) {
+  if (consistency_checks || config->verify) {
     std::cout << "- Running consistency checks at the end of the benchmark" << std::endl;
     check_consistency(num_warehouses);
     std::cout << "- Consistency checks passed" << std::endl;

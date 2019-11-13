@@ -95,8 +95,6 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   // next time.
   if (!result_table) return;
 
-  Assert(sqlite_result, "Verifying SQL statement on sqlite failed: No SQLite result");
-
   _compare_tables(result_table, sqlite_result, "Using SQLite's result table as expected result table");
 }
 
@@ -106,6 +104,7 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
   Timer timer;
 
   if (actual_result_table->row_count() > 0) {
+    Assert(expected_result_table, "Verifying SQL statement on sqlite failed: No SQLite result");
     if (expected_result_table->row_count() == 0) {
       any_verification_failed = true;
       if (description) {
