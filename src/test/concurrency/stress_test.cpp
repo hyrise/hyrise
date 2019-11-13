@@ -13,9 +13,6 @@ class StressTest : public BaseTest {
   void SetUp() override {
     Hyrise::reset();
 
-    auto table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    Hyrise::get().storage_manager.add_table("table_a", table_a);
-
     // Set scheduler so that we can execute multiple SQL statements on separate threads.
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   }
@@ -24,7 +21,10 @@ class StressTest : public BaseTest {
 TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
   // and many chunks being created
+  auto table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
+  Hyrise::get().storage_manager.add_table("table_a", table_a);
   auto initial_sum = int64_t{};
+
   {
     auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
     const auto [_, table] = pipeline.get_result_table();
@@ -92,7 +92,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
 TEST_F(StressTest, TestTransactionInserts) {
   // An update-heavy load on a table with a ridiculously low max chunk size, creating many new chunks. This is
   // different from TestTransactionConflicts, in that each thread has its own logical row and no transaction
-  // conflicts occur In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
+  // conflicts occur. In the other test, a failed "mark for deletion" (i.e., swap of the row's tid) would lead to
   // no row being appended.
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);

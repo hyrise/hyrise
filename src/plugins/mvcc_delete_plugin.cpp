@@ -146,15 +146,14 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   update_table->execute();
 
   // Check for success
-  if (!transaction_context->aborted()) {
-    transaction_context->commit();
-
-    // Mark chunk as logically deleted
-    chunk->set_cleanup_commit_id(transaction_context->commit_id());
-    return true;
-  } else {
+  if (transaction_context->aborted()) {
     return false;
   }
+
+  transaction_context->commit();
+  // Mark chunk as logically deleted
+  chunk->set_cleanup_commit_id(transaction_context->commit_id());
+  return true;
 }
 
 void MvccDeletePlugin::_delete_chunk_physically(const std::shared_ptr<Table>& table, const ChunkID chunk_id) {

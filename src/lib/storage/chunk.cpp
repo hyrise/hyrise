@@ -72,10 +72,10 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
 
 ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
 
-uint32_t Chunk::size() const {
+ChunkOffset Chunk::size() const {
   if (_segments.empty()) return 0;
   const auto first_segment = get_segment(ColumnID{0});
-  return static_cast<uint32_t>(first_segment->size());
+  return static_cast<ChunkOffset>(first_segment->size());
 }
 
 bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
@@ -228,12 +228,12 @@ std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
     // Cleanup-Commit-ID is not yet set
     return std::nullopt;
   }
-  return std::optional<CommitID>{_cleanup_commit_id};
+  return std::optional<CommitID>{_cleanup_commit_id.load()};
 }
 
 void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   Assert(!get_cleanup_commit_id(), "Cleanup-commit-ID can only be set once.");
-  _cleanup_commit_id = cleanup_commit_id;
+  _cleanup_commit_id.store(cleanup_commit_id);
 }
 
 }  // namespace opossum

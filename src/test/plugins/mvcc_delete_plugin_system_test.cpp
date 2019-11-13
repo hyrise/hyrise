@@ -7,13 +7,11 @@
 
 #include "../../plugins/mvcc_delete_plugin.hpp"
 #include "expression/expression_functional.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
@@ -37,8 +35,9 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     _table = std::make_shared<Table>(column_definitions, TableType::Data, CHUNK_SIZE, UseMvcc::Yes);
 
+    // Add three chunks and fill them with values from 0-599
     auto begin_value = 0;
-    for (auto chunk_id = size_t{0}; chunk_id < INITIAL_CHUNK_COUNT; ++chunk_id) {
+    for (auto chunk_id = ChunkID{0}; chunk_id < INITIAL_CHUNK_COUNT; ++chunk_id) {
       std::vector<int> values(CHUNK_SIZE);
       std::iota(values.begin(), values.end(), begin_value);
 
@@ -51,7 +50,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
       begin_value += CHUNK_SIZE;
     }
 
-    Hyrise::get().storage_manager.add_table("mvcc_test", _table);
+    Hyrise::get().storage_manager.add_table(_table_name, _table);
   }
 
  protected:
@@ -68,7 +67,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
-    const auto gt = std::make_shared<GetTable>("mvcc_test");
+    const auto gt = std::make_shared<GetTable>(_table_name);
     gt->set_transaction_context(transaction_context);
 
     const auto validate = std::make_shared<Validate>(gt);
@@ -78,7 +77,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     const auto where = std::make_shared<TableScan>(validate, expr);
     where->set_transaction_context(transaction_context);
 
-    const auto update = std::make_shared<Update>("mvcc_test", where, where);
+    const auto update = std::make_shared<Update>(_table_name, where, where);
     update->set_transaction_context(transaction_context);
 
     gt->execute();
@@ -101,7 +100,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
   void validate_table() {
     const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
-    const auto gt = std::make_shared<GetTable>("mvcc_test");
+    const auto gt = std::make_shared<GetTable>(_table_name);
     gt->set_transaction_context(transaction_context);
 
     const auto validate = std::make_shared<Validate>(gt);
@@ -119,12 +118,12 @@ class MvccDeletePluginSystemTest : public BaseTest {
     EXPECT_EQ(aggregate->get_output()->get_value<int64_t>(ColumnID{0}, 0), 179'700);
   }
 
-  constexpr static size_t INITIAL_CHUNK_COUNT = 3;
-  constexpr static size_t CHUNK_SIZE = 200;
-  constexpr static size_t INITIAL_UPDATE_OFFSET = 220;
-  constexpr static double DELETE_THRESHOLD = MvccDeletePlugin::DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS;
+  constexpr static ChunkID INITIAL_CHUNK_COUNT{3};
+  constexpr static ChunkOffset CHUNK_SIZE{200};
+  constexpr static uint32_t INITIAL_UPDATE_OFFSET{220};
+  const std::string _table_name{"mvcc_test"};
 
-  std::atomic<size_t> _counter = INITIAL_UPDATE_OFFSET;
+  std::atomic_uint32_t _counter = INITIAL_UPDATE_OFFSET;
   std::shared_ptr<Table> _table;
 };
 

@@ -67,7 +67,7 @@ class MvccDeletePluginTest : public BaseTest {
     return boost::lexical_cast<int>(value_alltype);
   }
 
-  std::string _table_name{"mvccTestTable"};
+  const std::string _table_name{"mvccTestTable"};
   inline static std::shared_ptr<AbstractExpression> _column_a;
 };
 

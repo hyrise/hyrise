@@ -60,7 +60,7 @@ class Chunk : private Noncopyable {
   ColumnCount column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
-  uint32_t size() const;
+  ChunkOffset size() const;
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
