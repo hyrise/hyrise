@@ -125,13 +125,33 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 					const auto node_to_replace = lqp_column_({stored_table_node, group_by_column});
 
     			const auto aggregate_any_expression = any_(node_to_replace);
-    			aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
+    			bool node_is_later_referenced = false;
+
+    			visit_lqp_upwards(node, [&, stored_table_node = stored_table_node](const auto& upwards_node) {
+			      for (auto& expression : upwards_node->node_expressions) {
+			      	visit_expression(expression, [&](auto& sub_expression) {
+			      		if (sub_expression->type == ExpressionType::LQPColumn && node_to_replace == sub_expression) {
+			      			const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(sub_expression);
+			      			node_is_later_referenced = true;
+			      			return ExpressionVisitation::DoNotVisitArguments;
+			      		}
+						    return ExpressionVisitation::VisitArguments;
+						  });
+						  if (node_is_later_referenced) {
+						  	return LQPUpwardVisitation::DoNotVisitOutputs;
+						  }
+			      }
+			      return LQPUpwardVisitation::VisitOutputs;
+			    });
+
+    			// TODO: emplace only if expression is aactually required
+    			if (node_is_later_referenced) {
+    				aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
+    			}
 
     			// modified_aggregates.insert(std::dynamic_pointer_cast<AggregateNode>(node));
 
-    			// TODO: store aggregates and cleanupwards after we have rewritten all nodes?
-    			// not using expression_deep_replace here, since we do not want to wrap ANYs inside of ANYs
-    			
+    			// not using expression_deep_replace here, since we do not want to wrap ANYs inside of ANYs    			
     			visit_lqp_upwards(node, [&, stored_table_node = stored_table_node](const auto& upwards_node) {
     				// std::cout << "upward search reaaching " << *upwards_node << std::endl;
 			      for (auto& expression : upwards_node->node_expressions) {
