@@ -234,12 +234,14 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
+  auto null_values =
+    {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE};
 
-  expected_table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
+  expected_table->append(null_values);
+  expected_table->append(null_values);
+  expected_table->append(null_values);
+  expected_table->append(null_values);
+  expected_table->append(null_values);
 
   expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table, GetParam());

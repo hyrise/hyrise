@@ -178,5 +178,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.
   static void _export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                        const BaseCompressedVector& attribute_vector);
+
+  template <typename T>
+  static size_t _get_size(T object);
 };
 }  // namespace opossum

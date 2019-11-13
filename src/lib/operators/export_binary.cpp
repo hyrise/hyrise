@@ -179,32 +179,31 @@ void ExportBinary::_write_segment(const ReferenceSegment& reference_segment, std
   export_value(ofstream, EncodingType::Unencoded);
 
   if (reference_segment.size() == 0) return;
+  resolve_data_type(reference_segment.data_type(), [&](auto type) {
+    using SegmentDataType = typename decltype(type)::type;
+    auto iterable = ReferenceSegmentIterable<SegmentDataType, EraseReferencedSegmentType::No>{reference_segment};
 
-  if (reference_segment.data_type() == DataType::String) {
-    std::stringstream values;
-    pmr_string value;
-    pmr_vector<size_t> string_lengths(reference_segment.size());
+    if (reference_segment.data_type() == DataType::String) {
+      std::stringstream values;
+      pmr_vector<size_t> string_lengths(reference_segment.size());
 
-    // We export the values materialized
-    for (ChunkOffset row = 0; row < reference_segment.size(); ++row) {
-      value = boost::get<pmr_string>(reference_segment[row]);
-      string_lengths[row] = value.length();
-      values << value;
-    }
+      // We export the values materialized
+      iterable.for_each([&](const auto& value) {
+        string_lengths.push_back(_get_size(value.value()));
+        values << value.value();
+      });
 
-    export_values(ofstream, string_lengths);
-    ofstream << values.rdbuf();
+      export_values(ofstream, string_lengths);
+      ofstream << values.rdbuf();
 
-  } else {
-    resolve_data_type(reference_segment.data_type(), [&](auto type) {
-      using SegmentDataType = typename decltype(type)::type;
+    } else {
       // Unfortunately, we have to iterate over all values of the reference segment
       // to materialize its contents. Then we can write them to the file
-      for (ChunkOffset row = 0; row < reference_segment.size(); ++row) {
-        export_value(ofstream, boost::get<SegmentDataType>(reference_segment[row]));
-      }
-    });
-  }
+      iterable.for_each([&](const auto& value) {
+        export_value(ofstream, value.value());
+      });
+    }
+  });
 }
 
 void ExportBinary::_write_segment(const BaseDictionarySegment& base_dictionary_segment, std::ofstream& ofstream) {
@@ -286,5 +285,15 @@ void ExportBinary::_export_attribute_vector(std::ofstream& ofstream, const Compr
     default:
       Fail("Any other type should have been caught before.");
   }
+}
+
+template <typename T>
+size_t ExportBinary::_get_size(T object) {
+  return sizeof(object);
+}
+
+template <>
+size_t ExportBinary::_get_size(pmr_string object) {
+  return object.length();
 }
 }  // namespace opossum
