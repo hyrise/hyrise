@@ -74,7 +74,7 @@ TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
   const auto result = transaction.exec("SELECT * FROM all_types_table;");
 
   EXPECT_EQ(result.size(), all_types_table->row_count());
-  EXPECT_EQ(result[0].size(), all_types_table->column_count());
+  EXPECT_EQ(result[0].size(), static_cast<size_t>(all_types_table->column_count()));
 
   for (uint64_t row_id = 0; row_id < all_types_table->row_count(); row_id++) {
     const auto current_row = all_types_table->get_row(row_id);
@@ -205,6 +205,7 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
   const std::string sql = "SELECT * FROM table_a;";
   const auto expected_num_rows = _table_a->row_count();
 
+  // Define the work package
   const auto connection_run = [&]() {
     pqxx::connection connection{_connection_string};
     pqxx::nontransaction transaction{connection};
@@ -212,6 +213,7 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
     EXPECT_EQ(result.size(), expected_num_rows);
   };
 
+  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
   const auto num_threads = 100u;
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
@@ -221,13 +223,86 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
     thread_futures.emplace_back(std::async(std::launch::async, connection_run));
   }
 
-  for (auto& thread_fut : thread_futures) {
+  // Wait for completion or timeout (should not occur)
+  for (auto& thread_future : thread_futures) {
     // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
     // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-    if (thread_fut.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
+    if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      // Retrieve the future so that exceptions stored in its state are thrown
+      thread_future.get();
     }
   }
+}
+
+TEST_F(ServerTestRunner, TestTransactionConflicts) {
+  // Similar to TestParallelConnections, but this time we modify the table, expecting some conflicts on the way
+  // Also similar to StressTest.TestTransactionConflicts, only that we go through the server
+  auto initial_sum = int64_t{};
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    initial_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+  }
+
+  std::atomic_int successful_increments{0};
+  std::atomic_int conflicted_increments{0};
+  const auto iterations_per_thread = 10;
+
+  // Define the work package
+  const auto connection_run = [&]() {
+    for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+      pqxx::connection connection{_connection_string};
+      pqxx::nontransaction transaction{connection};
+      try {
+        const std::string sql = "UPDATE table_a SET a = a + 1 WHERE a = (SELECT MIN(a) FROM table_a);";
+        transaction.exec(sql);
+        ++successful_increments;
+      } catch (const pqxx::serialization_failure&) {
+        // As expected, some of these updates fail
+        ++conflicted_increments;
+      }
+    }
+  };
+
+  // Create the async objects and spawn them asynchronously (i.e., as their own threads)
+  const auto num_threads = 100u;
+  std::vector<std::future<void>> thread_futures;
+  thread_futures.reserve(num_threads);
+
+  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
+    thread_futures.emplace_back(std::async(std::launch::async, connection_run));
+  }
+
+  // Wait for completion or timeout (should not occur)
+  for (auto& thread_future : thread_futures) {
+    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
+    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    if (thread_future.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
+      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      // Retrieve the future so that exceptions stored in its state are thrown
+      thread_future.get();
+    }
+  }
+
+  // Verify results
+  auto final_sum = int64_t{};
+  {
+    auto pipeline = SQLPipelineBuilder{std::string{"SELECT SUM(a) FROM table_a"}}.create_pipeline();
+    const auto [_, table] = pipeline.get_result_table();
+    final_sum = table->get_value<int64_t>(ColumnID{0}, 0);
+  }
+
+  // Really pessimistic, but at least 2 statements should have made it
+  EXPECT_GT(successful_increments, 2);
+
+  // We also want to see at least one conflict so that we can be sure that conflict handling in the server works.
+  // In case this fails, start playing with num_threads to provoke more conflicts.
+  EXPECT_GE(conflicted_increments, 1);
+
+  EXPECT_EQ(successful_increments + conflicted_increments, num_threads * iterations_per_thread);
+  EXPECT_FLOAT_EQ(final_sum - initial_sum, successful_increments);
 }
 
 }  // namespace opossum

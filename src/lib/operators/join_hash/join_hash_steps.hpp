@@ -814,7 +814,7 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
       const auto chunk = input_table->get_chunk(chunk_id);
       Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
 
-      const auto& ref_segment_uncasted = chunk->segments()[column_id];
+      const auto& ref_segment_uncasted = chunk->get_segment(column_id);
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
       *pos_lists_iter = ref_segment->pos_list();
       ++pos_lists_iter;

@@ -64,7 +64,9 @@ TableType Table::type() const { return _type; }
 
 UseMvcc Table::uses_mvcc() const { return _use_mvcc; }
 
-uint16_t Table::column_count() const { return static_cast<uint16_t>(_column_definitions.size()); }
+ColumnCount Table::column_count() const {
+  return ColumnCount{static_cast<ColumnCount::base_type>(_column_definitions.size())};
+}
 
 const std::string& Table::column_name(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
@@ -101,8 +103,8 @@ bool Table::column_is_nullable(const ColumnID column_id) const {
 
 std::vector<bool> Table::columns_are_nullable() const {
   std::vector<bool> nullable(column_count());
-  for (size_t column_idx = 0; column_idx < column_count(); ++column_idx) {
-    nullable[column_idx] = _column_definitions[column_idx].nullable;
+  for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+    nullable[column_id] = _column_definitions[column_id].nullable;
   }
   return nullable;
 }
@@ -209,14 +211,20 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
          "Supply MvccData to data Tables, if MVCC is enabled.");
   AssertInput(segments.size() == column_count(), "Input does not have the same number of columns.");
 
-#if HYRISE_DEBUG
-  for (const auto& segment : segments) {
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
-    DebugAssert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& segment : segments) {
+      const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
+      Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+    }
   }
-#endif
 
-  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
+  // tbb::concurrent_vector does not guarantee that elements reported by size() are fully initialized yet:
+  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
+  // To avoid someone reading an incomplete shared_ptr<Chunk>, we (1) use the zero_allocator for the concurrent_vector,
+  // making sure that an uninitialized entry compares equal to nullptr and (2) insert the desired chunk atomically.
+
+  auto new_chunk_iter = _chunks.push_back(nullptr);
+  std::atomic_store(&*new_chunk_iter, std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {

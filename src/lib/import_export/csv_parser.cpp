@@ -146,7 +146,8 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _meta.config.delimiter && !in_quotes) {
-      DebugAssert(field_count == table.column_count(), "Number of CSV fields does not match number of columns.");
+      DebugAssert(field_count == static_cast<size_t>(table.column_count()),
+                  "Number of CSV fields does not match number of columns.");
       ++rows;
       field_count = 0;
     }

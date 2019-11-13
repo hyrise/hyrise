@@ -215,7 +215,7 @@ void Insert::_on_commit_records(const CommitID cid) {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->begin_cids[chunk_offset] = cid;
+      mvcc_data->set_begin_cid(chunk_offset, cid);
       mvcc_data->tids[chunk_offset] = 0u;
     }
   }
