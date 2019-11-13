@@ -217,6 +217,7 @@ set(
     gtest
     gmock
     sqlite3
+    hyriseBenchmarkLib
 )
 
 # This warning does not play well with SCOPED_TRACE
