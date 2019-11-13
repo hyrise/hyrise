@@ -238,25 +238,18 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
 
   // (11) Prepare clean-up of chunk 3
   {
-    auto last_commit_id_before = Hyrise::get().transaction_manager.last_commit_id();
     // Kill a couple of commit IDs so that criterion 2 is fulfilled and chunk 3 is eligible for clean-up, too.
     for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
          ++transaction_idx) {
-      // To increase the global _last_commit_id, we need a transaction performing actual changes
-      // Therefore, we make some dummy inserts.
-      auto gt1 = std::make_shared<GetTable>(_t_name_ints);
-      gt1->execute();
-      auto ins = std::make_shared<Insert>(_t_name_test, gt1);
-      auto context = Hyrise::get().transaction_manager.new_transaction_context();
-      ins->set_transaction_context(context);
-      ins->execute();
+      // To increase the global _last_commit_id, we need to execute a transaction with read-write operators
+      // We perform some dummy updates to ensure our validation routine stays intact
+      auto pipeline =
+          SQLPipelineBuilder{std::string{"UPDATE " + _t_name_test + " SET number = number WHERE number = 0"}}
+              .create_pipeline();
 
-      context->commit();
+      // Execute and verify update transaction
+      EXPECT_EQ(pipeline.get_result_table().first, SQLPipelineStatus::Success);
     }
-
-    // Verify result of inserts
-    auto last_commit_id = Hyrise::get().transaction_manager.last_commit_id();
-    EXPECT_EQ(last_commit_id, last_commit_id_before + MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT);
   }
 
   // (12) Wait for the MvccDeletePlugin to delete chunk 3 logically
