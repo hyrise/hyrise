@@ -180,6 +180,6 @@ class ExportBinary : public AbstractReadOnlyOperator {
                                        const BaseCompressedVector& attribute_vector);
 
   template <typename T>
-  static size_t _get_size(T object);
+  static size_t _get_size(const T object);
 };
 }  // namespace opossum

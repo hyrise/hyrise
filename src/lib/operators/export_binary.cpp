@@ -288,12 +288,12 @@ void ExportBinary::_export_attribute_vector(std::ofstream& ofstream, const Compr
 }
 
 template <typename T>
-size_t ExportBinary::_get_size(T object) {
+size_t ExportBinary::_get_size(const T object) {
   return sizeof(object);
 }
 
 template <>
-size_t ExportBinary::_get_size(pmr_string object) {
+size_t ExportBinary::_get_size(const pmr_string object) {
   return object.length();
 }
 }  // namespace opossum
