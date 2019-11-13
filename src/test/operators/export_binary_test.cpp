@@ -413,14 +413,12 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
-  auto null_values =
-    {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE};
 
-  table->append(null_values);
-  table->append(null_values);
-  table->append(null_values);
-  table->append(null_values);
-  table->append(null_values);
+  table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
+  table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
+  table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
+  table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
+  table->append({opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
