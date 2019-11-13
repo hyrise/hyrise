@@ -4,6 +4,8 @@
 #include "postgres_message_type.hpp"
 #include "query_handler.hpp"
 #include "result_serializer.hpp"
+#include "benchmark_config.hpp"
+#include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
 
@@ -100,10 +102,34 @@ void Session::_handle_request() {
 }
 
 void Session::_handle_simple_query() {
-  const auto& query = _postgres_protocol_handler->read_query_packet();
+  auto query = _postgres_protocol_handler->read_query_packet();
 
   // A simple query command invalidates unnamed portals
   _portals.erase("");
+
+  if (query.starts_with("TPCH")) {
+    auto bc = BenchmarkConfig::get_default_config();
+    EncodingConfig ec;
+
+    TableSegmentEncodingMapping custom_encoding_mapping;
+    custom_encoding_mapping.emplace("lineitem", std::unordered_map<std::string, SegmentEncodingSpec>());
+    custom_encoding_mapping.emplace("part", std::unordered_map<std::string, SegmentEncodingSpec>());
+    custom_encoding_mapping.emplace("region", std::unordered_map<std::string, SegmentEncodingSpec>());
+    custom_encoding_mapping.emplace("supplier", std::unordered_map<std::string, SegmentEncodingSpec>());
+    custom_encoding_mapping.emplace("nation", std::unordered_map<std::string, SegmentEncodingSpec>());
+    custom_encoding_mapping["lineitem"]["l_comment"] = SegmentEncodingSpec{EncodingType::LZ4};
+    custom_encoding_mapping["part"]["p_comment"] = SegmentEncodingSpec{EncodingType::Unencoded};
+    custom_encoding_mapping["region"]["r_regionkey"] = SegmentEncodingSpec{EncodingType::FrameOfReference};
+    custom_encoding_mapping["supplier"]["s_comment"] = SegmentEncodingSpec{EncodingType::RunLength};
+    custom_encoding_mapping["nation"]["n_comment"] = SegmentEncodingSpec{EncodingType::FixedStringDictionary};
+
+    ec.custom_encoding_mapping = custom_encoding_mapping;
+    bc.encoding_config = ec;
+
+    TPCHTableGenerator{0.5f, std::make_shared<BenchmarkConfig>(bc)}.generate_and_store();
+
+    query = "SELECT 1";
+  }
 
   const auto execution_information = QueryHandler::execute_pipeline(query, _send_execution_info);
 
