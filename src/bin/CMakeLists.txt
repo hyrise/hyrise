@@ -34,6 +34,7 @@ add_executable(
 target_link_libraries(
     hyriseClient
     hyrise
+    hyriseBenchmarkLib
 )
 
 # Configure Console
