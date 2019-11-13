@@ -86,7 +86,7 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification");
 
   const auto sqlite_result = _sqlite_connection->execute_query(pipeline.get_sql());
-  const auto [pipeline_status, result_table] = pipeline.get_result_table();  // TODO do not re-execute
+  const auto [pipeline_status, result_table] = pipeline.get_result_table();
   Assert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
 
   // Modifications (INSERT, UPDATE, DELETE) do not return a table. We do not know what changed - we do not even know
