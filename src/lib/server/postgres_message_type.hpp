@@ -2,11 +2,13 @@
 
 namespace opossum {
 
-enum class NetworkMessageType : unsigned char {
-  // Important: The character '0' is treated as a null message
-  // That means we cannot have an invalid type
-  NullCommand = '0',
+// Each message contains a field (4 bytes) indicating the packet's size including itself. Using extra variable here to
+// avoid magic numbers.
+static constexpr auto LENGTH_FIELD_SIZE = 4u;
 
+// Documentation of the message types can be found here:
+// https://www.postgresql.org/docs/12/protocol-message-formats.html
+enum class PostgresMessageType : unsigned char {
   // Responses
   ParseComplete = '1',
   BindComplete = '2',
@@ -21,7 +23,8 @@ enum class NetworkMessageType : unsigned char {
   RowDescription = 'T',
   DataRow = 'D',
 
-  // Errors
+  // Selection of error and notice message fields. All possible fields are documented at:
+  // https://www.postgresql.org/docs/12/protocol-error-fields.html
   HumanReadableError = 'M',
   SqlstateCodeError = 'C',
 
@@ -47,5 +50,8 @@ enum class TransactionStatusIndicator : unsigned char {
   InTransactionBlock = 'T',
   InFailedTransactionBlock = 'e'
 };
+
+// SQL error codes
+constexpr char TRANSACTION_CONFLICT[] = "40001";
 
 }  // namespace opossum

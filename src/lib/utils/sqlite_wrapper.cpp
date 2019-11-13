@@ -1,13 +1,13 @@
 #include "sqlite_wrapper.hpp"
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
-
 #include <fstream>
 #include <iomanip>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "constant_mappings.hpp"
 #include "sql/sql_pipeline.hpp"
@@ -78,7 +78,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   insert_into_stream << "INSERT INTO " << table_name << " VALUES (";
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
     insert_into_stream << "?";
-    if (column_id + 1u < table.column_count()) {
+    if (static_cast<ColumnCount>(column_id + 1u) < table.column_count()) {
       insert_into_stream << ", ";
     }
   }

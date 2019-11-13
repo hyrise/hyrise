@@ -1,9 +1,9 @@
 #include "sql_pipeline_statement.hpp"
 
-#include <boost/algorithm/string.hpp>
-
 #include <iomanip>
 #include <utility>
+
+#include <boost/algorithm/string.hpp>
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"

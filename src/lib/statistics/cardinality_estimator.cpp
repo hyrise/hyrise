@@ -166,7 +166,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
       if (stored_table_node->table_statistics) {
         // TableStatistics have changed from the original table's statistics
-        Assert(stored_table_node->table_statistics->column_statistics.size() == stored_table->column_count(),
+        Assert(stored_table_node->table_statistics->column_statistics.size() ==
+                   static_cast<size_t>(stored_table->column_count()),
                "Statistics in StoredTableNode should have same number of columns as original table");
         output_table_statistics =
             prune_column_statistics(stored_table_node->table_statistics, stored_table_node->pruned_column_ids());

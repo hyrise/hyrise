@@ -129,10 +129,12 @@ set(
     optimizer/strategy/strategy_base_test.hpp
     optimizer/strategy/subquery_to_join_rule_test.cpp
     scheduler/scheduler_test.cpp
-    server/mock_connection.hpp
-    server/mock_task_runner.hpp
-    server/postgres_wire_handler_test.cpp
-    server/server_session_test.cpp
+    server/mock_socket.hpp
+    server/postgres_protocol_handler_test.cpp
+    server/query_handler_test.cpp
+    server/read_buffer_test.cpp
+    server/result_serializer_test.cpp
+    server/write_buffer_test.cpp
     sql/sql_identifier_resolver_test.cpp
     sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp
@@ -184,7 +186,6 @@ set(
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
     tasks/chunk_compression_task_test.cpp
-    tasks/load_server_file_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp
     testing_assert.hpp
@@ -203,6 +204,7 @@ set(
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
+    concurrency/stress_test.cpp
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
     synthetic_table_generator_test.cpp

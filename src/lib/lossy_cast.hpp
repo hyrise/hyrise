@@ -1,11 +1,11 @@
 #pragma once
 
-#include <boost/lexical_cast.hpp>
-#include <boost/variant.hpp>
-
 #include <optional>
 #include <string>
 #include <type_traits>
+
+#include <boost/lexical_cast.hpp>
+#include <boost/variant.hpp>
 
 #include "resolve_type.hpp"
 

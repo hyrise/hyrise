@@ -67,7 +67,7 @@ TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
   pr->execute();
 
   // check if table is correctly passed
-  EXPECT_EQ(pr->get_output(), _t);
+  EXPECT_EQ(pr->get_output(), _gt->get_output());
 
   auto output_string = output.str();
 
@@ -86,11 +86,14 @@ TEST_F(OperatorsPrintTest, FilledTable) {
     tab->append({static_cast<int>(i % _chunk_size), pmr_string(1, 97 + static_cast<int>(i / _chunk_size) % 26)});
   }
 
-  auto pr = std::make_shared<Print>(_gt, output);
+  auto gt = std::make_shared<GetTable>(_table_name);
+  gt->execute();
+
+  auto pr = std::make_shared<Print>(gt, output);
   pr->execute();
 
   // check if table is correctly passed
-  EXPECT_EQ(pr->get_output(), tab);
+  EXPECT_EQ(pr->get_output(), gt->get_output());
 
   auto output_string = output.str();
 
@@ -116,22 +119,29 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 
   auto tab = Hyrise::get().storage_manager.get_table(_table_name);
 
-  auto pr_wrap = std::make_shared<PrintWrapper>(_gt);
-  auto print_lengths = pr_wrap->test_column_string_widths(min, max);
+  {
+    auto pr_wrap = std::make_shared<PrintWrapper>(_gt);
+    auto print_lengths = pr_wrap->test_column_string_widths(min, max);
 
-  // we have two columns, thus two 'lengths'
-  ASSERT_EQ(print_lengths.size(), static_cast<size_t>(2));
-  // with empty columns and short column names, we should see the minimal lengths
-  EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(min));
-  EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(min));
+    // we have two columns, thus two 'lengths'
+    ASSERT_EQ(print_lengths.size(), static_cast<size_t>(2));
+    // with empty columns and short column names, we should see the minimal lengths
+    EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(min));
+    EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(min));
+  }
 
   int ten_digits_ints = 1234567890;
-
   tab->append({ten_digits_ints, "quite a long string with more than $max chars"});
 
-  print_lengths = pr_wrap->test_column_string_widths(min, max);
-  EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
-  EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
+  {
+    auto gt_post_append = std::make_shared<GetTable>(_table_name);
+    gt_post_append->execute();
+
+    auto pr_wrap = std::make_shared<PrintWrapper>(gt_post_append);
+    auto print_lengths = pr_wrap->test_column_string_widths(min, max);
+    EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
+    EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
+  }
 }
 
 TEST_F(OperatorsPrintTest, OperatorName) {
