@@ -93,7 +93,9 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
                                               {"column_id", DataType::Int, false},
                                               {"column_name", DataType::String, false},
                                               {"column_data_type", DataType::String, false},
-                                              {"encoding", DataType::String, true}};
+                                              {"encoding", DataType::String, true},
+                                              {"vector_compression", DataType::String, true},
+                                              {"estimated_size_in_bytes", DataType::Int, false}};
   // Vector compression is not yet included because #1286 makes it a pain to map it to a string.
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
@@ -104,13 +106,39 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
         const auto& segment = chunk->get_segment(column_id);
 
         const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+        const auto estimated_size = segment->estimate_memory_usage();
         AllTypeVariant encoding = NULL_VALUE;
+        AllTypeVariant vector_compression = NULL_VALUE;
         if (const auto& encoded_segment = std::dynamic_pointer_cast<BaseEncodedSegment>(segment)) {
           encoding = pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())};
+
+          if (encoded_segment->compressed_vector_type()) {
+            switch (*encoded_segment->compressed_vector_type()) {
+              case CompressedVectorType::FixedSize4ByteAligned: {
+                vector_compression = pmr_string{"FixedSize4ByteAligned"};
+                break;
+              }
+              case CompressedVectorType::FixedSize2ByteAligned: {
+                vector_compression = pmr_string{"FixedSize2ByteAligned"};
+                break;
+              }
+              case CompressedVectorType::FixedSize1ByteAligned: {
+                vector_compression = pmr_string{"FixedSize1ByteAligned"};
+                break;
+              }
+              case CompressedVectorType::SimdBp128: {
+                vector_compression = pmr_string{"SimdBp128"};
+                break;
+              }
+              default:
+                break;
+            }
+          }
         }
 
         output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type, encoding});
+                              pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
+                              static_cast<int32_t>(estimated_size)});
       }
     }
   }

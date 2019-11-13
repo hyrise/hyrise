@@ -1,10 +1,10 @@
 #include "session.hpp"
 
+#include "benchmark_config.hpp"
 #include "client_disconnect_exception.hpp"
 #include "postgres_message_type.hpp"
 #include "query_handler.hpp"
 #include "result_serializer.hpp"
-#include "benchmark_config.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
 namespace opossum {
