@@ -65,13 +65,7 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
     }
     no_result = false;
 
-    // In the first row, some values might be NULL. As sqlite only gives us types for non-NULL values, we might have
-    // to look at the next line(s), too.
-    auto all_column_types_identified = true;
-    for (const auto& column_type : column_types) {
-      if (column_type.empty()) all_column_types_identified = false;
-    }
-    if (all_column_types_identified) break;
+    // We cannot break here, as we still need to check whether the columns contain NULL values or not
   }
 
   // If this fails, this is likely because of a transaction conflict within sqlite. This means that the Hyrise
