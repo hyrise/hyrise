@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
   cli_options.add_options()
     // We use -s instead of -w for consistency with the options of our other TPC-x binaries.
     ("s,scale", "Scale factor (warehouses)", cxxopts::value<int>()->default_value("1")) // NOLINT
-    ("consistency_checks", "Run consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false")); // NOLINT
+    ("consistency_checks", "Run TPC-C consistency checks after benchmark (included with --verify)", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> config;

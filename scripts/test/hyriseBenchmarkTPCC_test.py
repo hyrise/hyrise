@@ -29,23 +29,28 @@ def main():
 
   arguments = {}
   arguments["--scale"] = "1"
-  arguments["--time"] = "30"
+  arguments["--time"] = "60"
   arguments["--runs"] = "100"
   arguments["--consistency_checks"] = "true"
   arguments["--scheduler"] = "true"
-  arguments["--clients"] = "10"
+  arguments["--clients"] = "5"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCC", True)
 
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
-  benchmark.expect_exact("10 simulated clients are scheduling items in parallel")
+  benchmark.expect_exact("5 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("TPC-C scale factor (number of warehouses) is 1")
   benchmark.expect_exact("Results for Delivery")
+  benchmark.expect_exact("-> Executed")
   benchmark.expect_exact("Results for New-Order")
+  benchmark.expect_exact("-> Executed")
   benchmark.expect_exact("Results for Order-Status")
+  benchmark.expect_exact("-> Executed")
   benchmark.expect_exact("Results for Payment")
+  benchmark.expect_exact("-> Executed")
   benchmark.expect_exact("Results for Stock-Level")
+  benchmark.expect_exact("-> Executed")
   benchmark.expect_exact("Consistency checks passed")
 
   close_benchmark(benchmark)
