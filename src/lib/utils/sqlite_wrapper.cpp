@@ -22,60 +22,73 @@ using namespace opossum;  // NOLINT
 /*
  * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
  */
-std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* result_row, int column_count) {
+std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_statement, int column_count) {
   std::vector<bool> column_nullable(column_count, false);
   std::vector<std::string> column_types(column_count, "");
   std::vector<std::string> column_names(column_count, "");
 
   bool no_result = true;
   int rc;
-  while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
-    for (int i = 0; i < column_count; ++i) {
+  while ((rc = sqlite3_step(sqlite_statement)) == SQLITE_ROW) {
+    for (int column_id = 0; column_id < column_count; ++column_id) {
       if (no_result) {
-        column_names[i] = sqlite3_column_name(result_row, i);
+        column_names[column_id] = sqlite3_column_name(sqlite_statement, column_id);
       }
 
-      switch (sqlite3_column_type(result_row, i)) {
+      switch (sqlite3_column_type(sqlite_statement, column_id)) {
         case SQLITE_INTEGER: {
-          column_types[i] = "int";
+          column_types[column_id] = "int";
           break;
         }
 
         case SQLITE_FLOAT: {
-          column_types[i] = "double";
+          column_types[column_id] = "double";
           break;
         }
 
         case SQLITE_TEXT: {
-          column_types[i] = "string";
+          column_types[column_id] = "string";
           break;
         }
 
         case SQLITE_NULL: {
-          column_nullable[i] = true;
+          column_nullable[column_id] = true;
           break;
         }
 
         case SQLITE_BLOB:
         default: {
-          sqlite3_finalize(result_row);
+          sqlite3_finalize(sqlite_statement);
           Fail("Column type not supported.");
         }
       }
     }
     no_result = false;
+
+    // In the first row, some values might be NULL. As sqlite only gives us types for non-NULL values, we might have
+    // to look at the next line(s), too.
+    auto all_column_types_identified = true;
+    for (const auto& column_type : column_types) {
+      if (column_type.empty()) all_column_types_identified = false;
+    }
+    if (all_column_types_identified) break;
   }
+
+  // If this fails, this is likely because of a transaction conflict within sqlite. This means that the Hyrise
+  // and the sqlite states have diverged. When using the SQLite wrapper, the caller must ensure that parallel
+  // operations do not conflict.
+  Assert(rc == SQLITE_ROW || rc == SQLITE_DONE, "Unexpected sqlite state");
 
   if (!no_result) {
     TableColumnDefinitions column_definitions;
-    for (int i = 0; i < column_count; ++i) {
-      if (column_types[i].empty()) {
+    for (int column_id = 0; column_id < column_count; ++column_id) {
+      if (column_types[column_id].empty()) {
         // Hyrise does not have explicit NULL columns
-        column_types[i] = "int";
+        column_types[column_id] = "int";
       }
 
-      const auto data_type = data_type_to_string.right.at(column_types[i]);
-      column_definitions.emplace_back(column_names[i], data_type, column_nullable[i]);
+      const auto data_type = data_type_to_string.right.at(column_types[column_id]);
+      column_definitions.emplace_back(column_names[column_id], data_type, column_nullable[column_id]);
     }
 
     return std::make_shared<Table>(column_definitions, TableType::Data);
@@ -87,23 +100,25 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* result_row,
 /*
  * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
  */
-void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* result_row, int column_count) {
+void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* sqlite_statement,
+                                    int column_count) {
   std::vector<AllTypeVariant> row;
 
-  for (int i = 0; i < column_count; ++i) {
-    switch (sqlite3_column_type(result_row, i)) {
+  for (int column_id = 0; column_id < column_count; ++column_id) {
+    switch (sqlite3_column_type(sqlite_statement, column_id)) {
       case SQLITE_INTEGER: {
-        row.emplace_back(AllTypeVariant{sqlite3_column_int(result_row, i)});
+        row.emplace_back(AllTypeVariant{sqlite3_column_int(sqlite_statement, column_id)});
         break;
       }
 
       case SQLITE_FLOAT: {
-        row.emplace_back(AllTypeVariant{sqlite3_column_double(result_row, i)});
+        row.emplace_back(AllTypeVariant{sqlite3_column_double(sqlite_statement, column_id)});
         break;
       }
 
       case SQLITE_TEXT: {
-        row.emplace_back(AllTypeVariant{pmr_string(reinterpret_cast<const char*>(sqlite3_column_text(result_row, i)))});
+        row.emplace_back(AllTypeVariant{
+            pmr_string(reinterpret_cast<const char*>(sqlite3_column_text(sqlite_statement, column_id)))});
         break;
       }
 
@@ -114,7 +129,7 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
 
       case SQLITE_BLOB:
       default: {
-        sqlite3_finalize(result_row);
+        sqlite3_finalize(sqlite_statement);
         Fail("Column type not supported.");
       }
     }
@@ -133,7 +148,9 @@ namespace opossum {
 SQLiteWrapper::SQLiteWrapper()
     : _uri{std::string{"file:sqlitewrapper_"} + std::to_string(reinterpret_cast<uintptr_t>(this)) +  // NOLINT
            "?mode=memory&cache=shared"},
-      main_connection{_uri} {}
+      main_connection{_uri} {
+  Assert(sqlite3_threadsafe(), "Expected sqlite to be compiled with thread-safety");
+}
 
 SQLiteWrapper::Connection::Connection(const std::string& uri) {
   // Explicity set parallel mode. On Linux it seems to be the default, on Mac, it seems to make a difference.
@@ -160,7 +177,7 @@ SQLiteWrapper::Connection::~Connection() {
 SQLiteWrapper::Connection SQLiteWrapper::new_connection() const { return Connection{_uri}; }
 
 std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::string& sql) const {
-  sqlite3_stmt* result_row;
+  sqlite3_stmt* sqlite_statement;
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto& queries = sql_pipeline.get_sql_per_statement();
@@ -171,34 +188,44 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
   int rc;
   for (const auto& query : queries_before_select) {
-    rc = sqlite3_prepare_v2(db, query.c_str(), -1, &result_row, nullptr);
+    rc = sqlite3_prepare_v2(db, query.c_str(), -1, &sqlite_statement, nullptr);
 
     if (rc != SQLITE_OK) {
-      sqlite3_finalize(result_row);
+      sqlite3_finalize(sqlite_statement);
       Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + "\n");
     }
 
-    while ((rc = sqlite3_step(result_row)) != SQLITE_DONE) {
+    while ((rc = sqlite3_step(sqlite_statement)) != SQLITE_DONE) {
     }
   }
 
-  rc = sqlite3_prepare_v2(db, select_query.c_str(), -1, &result_row, nullptr);
+  rc = sqlite3_prepare_v2(db, select_query.c_str(), -1, &sqlite_statement, nullptr);
 
   if (rc != SQLITE_OK) {
     auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(db));
-    sqlite3_finalize(result_row);
+    sqlite3_finalize(sqlite_statement);
     Fail(error_message);
   }
 
-  auto result_table = create_hyrise_table_from_result(result_row, sqlite3_column_count(result_row));
+  auto result_table = create_hyrise_table_from_result(sqlite_statement, sqlite3_column_count(sqlite_statement));
 
-  sqlite3_reset(result_row);
-
-  while ((rc = sqlite3_step(result_row)) == SQLITE_ROW) {
-    copy_row_from_sqlite_to_hyrise(result_table, result_row, sqlite3_column_count(result_row));
+  if (!sqlite3_stmt_readonly(sqlite_statement)) {
+    // We need to make sure that we do not call sqlite3_reset below on a modifying statement - otherwise, we would
+    // re-execute the modification
+    Assert(!result_table, "Modifying statement was expected to return empty table");
+    sqlite3_finalize(sqlite_statement);
+    return nullptr;
   }
 
-  sqlite3_finalize(result_row);
+  sqlite3_reset(sqlite_statement);
+
+  while ((rc = sqlite3_step(sqlite_statement)) == SQLITE_ROW) {
+    copy_row_from_sqlite_to_hyrise(result_table, sqlite_statement, sqlite3_column_count(sqlite_statement));
+  }
+
+  Assert(rc == SQLITE_DONE, "Unexpected sqlite state");
+
+  sqlite3_finalize(sqlite_statement);
   return result_table;
 }
 

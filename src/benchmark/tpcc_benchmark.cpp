@@ -63,6 +63,10 @@ int main(int argc, char* argv[]) {
     config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
+  // As TPC-C procedures may run into conflicts on both the Hyrise and the SQLite side, we cannot guarantee that the
+  // two databases stay in sync.
+  Assert(!config->verify || config->clients == 1, "Cannot run verification with more than one client");
+
   auto context = BenchmarkRunner::create_context(*config);
 
   std::cout << "- TPC-C scale factor (number of warehouses) is " << num_warehouses << std::endl;

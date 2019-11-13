@@ -82,15 +82,14 @@ void BenchmarkSQLExecutor::rollback() {
   }
 }
 
-void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {  // TODO actual/expected seem swapped in output
+void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification");
 
-  std::cout << pipeline.get_sql() << std::endl;
   const auto sqlite_result = _sqlite_connection->execute_query(pipeline.get_sql());
   const auto [pipeline_status, result_table] = pipeline.get_result_table();  // TODO do not re-execute
   Assert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
 
-  // Modifications (INSERT, UPDATE, DELETE) do not return a table. We do not know what changed - we donot even know
+  // Modifications (INSERT, UPDATE, DELETE) do not return a table. We do not know what changed - we do not even know
   // which table has been modified. Extracting that info from the plan and verifying the entire table would take way
   // too long. As such, we rely on any errors here to be found when the potentially corrupted data is SELECTed the
   // next time.

@@ -59,7 +59,8 @@ class SQLiteWrapper final {
   };
 
   /**
-   * Creates an additional connection to the same database
+   * Creates an additional connection to the same database. Connections can generally be used in parallel, but callers
+   * must ensure that no transaction conflicts occur.
    */
   Connection new_connection() const;
 

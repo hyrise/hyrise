@@ -66,4 +66,16 @@ TEST_F(SQLiteWrapperTest, ReloadTable) {
                   FloatComparisonMode::AbsoluteDifference);
 }
 
+TEST_F(SQLiteWrapperTest, Update) {
+  const auto table = load_table("resources/test_data/tbl/int_float.tbl");
+  sqlite_wrapper->create_sqlite_table(*table, "update_table");
+
+  sqlite_wrapper->main_connection.execute_query("UPDATE update_table SET a = a + 1 WHERE b > 457");
+
+  const auto actual_table = sqlite_wrapper->main_connection.execute_query("SELECT * FROM update_table");
+  const auto expected_table = load_table("resources/test_data/tbl/int_float_updated.tbl");
+  EXPECT_TABLE_EQ(actual_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Lenient,
+                  FloatComparisonMode::AbsoluteDifference);
+}
+
 }  // namespace opossum
