@@ -47,24 +47,48 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
         {VectorCompressionType::SimdBp128, "SIMD-BP128"},
     });
 
-std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function) {
+std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
   return stream << aggregate_function_to_string.left.at(aggregate_function);
 }
 
-std::ostream& operator<<(std::ostream& stream, FunctionType function_type) {
+std::ostream& operator<<(std::ostream& stream, const FunctionType function_type) {
   return stream << function_type_to_string.left.at(function_type);
 }
 
-std::ostream& operator<<(std::ostream& stream, DataType data_type) {
+std::ostream& operator<<(std::ostream& stream, const DataType data_type) {
   return stream << data_type_to_string.left.at(data_type);
 }
 
-std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type) {
+std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type) {
   return stream << encoding_type_to_string.left.at(encoding_type);
 }
 
-std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type) {
+std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type) {
   return stream << vector_compression_type_to_string.left.at(vector_compression_type);
+}
+
+std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type) {
+  switch (compressed_vector_type) {
+    case CompressedVectorType::FixedSize4ByteAligned: {
+      stream << pmr_string{"FixedSize4ByteAligned"};
+      break;
+    }
+    case CompressedVectorType::FixedSize2ByteAligned: {
+      stream << pmr_string{"FixedSize2ByteAligned"};
+      break;
+    }
+    case CompressedVectorType::FixedSize1ByteAligned: {
+      stream << pmr_string{"FixedSize1ByteAligned"};
+      break;
+    }
+    case CompressedVectorType::SimdBp128: {
+      stream << pmr_string{"SimdBp128"};
+      break;
+    }
+    default:
+      break;
+  }
+  return stream;
 }
 
 std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) {

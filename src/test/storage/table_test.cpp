@@ -236,12 +236,12 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
 
   auto mvcc_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
-  const auto empty_memory_usage = mvcc_table->estimate_memory_usage();
+  const auto empty_memory_usage = mvcc_table->memory_usage();
 
   mvcc_table->append({4, "Hello"});
   mvcc_table->append({5, "Hello"});
 
-  EXPECT_GT(mvcc_table->estimate_memory_usage(),
+  EXPECT_GT(mvcc_table->memory_usage(),
             empty_memory_usage + 2 * (sizeof(int) + sizeof(pmr_string)) + sizeof(TransactionID) + 2 * sizeof(CommitID));
 }
 

@@ -251,6 +251,8 @@ enum class HasNullTerminator : bool { Yes = true, No = false };
 
 enum class SendExecutionInfo : bool { Yes = true, No = false };
 
+enum class MemoryUsageCalculationMode { Sampled, Full };
+
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
 // AnySegmentIterators that use virtual method calls.

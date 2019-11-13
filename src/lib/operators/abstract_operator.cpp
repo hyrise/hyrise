@@ -171,7 +171,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
       fn_stream << " (" << output->row_count() << " row(s)/" << output->chunk_count() << " chunk(s)/"
                 << output->column_count() << " column(s)/";
 
-      fn_stream << format_bytes(output->estimate_memory_usage());
+      fn_stream << format_bytes(output->memory_usage(MemoryUsageCalculationMode::Sampled));
       fn_stream << "/";
       fn_stream << abstract_operator.performance_data() << ")";
     }

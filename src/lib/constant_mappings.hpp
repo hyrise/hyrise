@@ -26,11 +26,12 @@ extern const boost::bimap<DataType, std::string> data_type_to_string;
 extern const boost::bimap<EncodingType, std::string> encoding_type_to_string;
 extern const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string;
 
-std::ostream& operator<<(std::ostream& stream, AggregateFunction aggregate_function);
-std::ostream& operator<<(std::ostream& stream, FunctionType function_type);
-std::ostream& operator<<(std::ostream& stream, DataType data_type);
-std::ostream& operator<<(std::ostream& stream, EncodingType encoding_type);
-std::ostream& operator<<(std::ostream& stream, VectorCompressionType vector_compression_type);
+std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function);
+std::ostream& operator<<(std::ostream& stream, const FunctionType function_type);
+std::ostream& operator<<(std::ostream& stream, const DataType data_type);
+std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type);
+std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type);
+std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type);
 std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 }  // namespace opossum

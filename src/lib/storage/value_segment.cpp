@@ -11,6 +11,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/size_estimation_utils.hpp"
 
 namespace opossum {
 
@@ -158,15 +159,27 @@ std::shared_ptr<BaseSegment> ValueSegment<T>::copy_using_allocator(const Polymor
 }
 
 template <typename T>
-size_t ValueSegment<T>::estimate_memory_usage() const {
-  size_t bool_size = 0u;
+size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
+  auto bool_size = size_t{0};
   if (_null_values) {
     bool_size = _null_values->size() * sizeof(bool);
     // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
-    bool_size = _null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT;
+    bool_size = sizeof(_null_values) + (_null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT);
   }
 
   return sizeof(*this) + _values.size() * sizeof(T) + bool_size;
+}
+
+template <>
+size_t ValueSegment<pmr_string>::memory_usage(const MemoryUsageCalculationMode mode) const {
+  auto bool_size = size_t{0};
+  if (_null_values) {
+    bool_size = _null_values->size() * sizeof(bool);
+    // Integer ceiling, since sizeof(bool) equals 1, but boolean vectors are optimized.
+    bool_size = sizeof(_null_values) + (_null_values->size() % CHAR_BIT ? bool_size / CHAR_BIT + 1 : bool_size / CHAR_BIT);
+  }
+
+  return sizeof(*this) + estimate_string_vector_memory_usage(_values, mode) + bool_size;
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
