@@ -204,8 +204,8 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
-  auto null_values =
-    {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE};
+  auto null_values = {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE,
+                      opossum::NULL_VALUE};
 
   expected_table->append(null_values);
   expected_table->append(null_values);
@@ -262,7 +262,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RunNullValues) {
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
-
 
 TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { /* #1367 */
   TableColumnDefinitions column_definitions;

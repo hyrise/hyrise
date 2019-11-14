@@ -199,9 +199,7 @@ void ExportBinary::_write_segment(const ReferenceSegment& reference_segment, std
     } else {
       // Unfortunately, we have to iterate over all values of the reference segment
       // to materialize its contents. Then we can write them to the file
-      iterable.for_each([&](const auto& value) {
-        export_value(ofstream, value.value());
-      });
+      iterable.for_each([&](const auto& value) { export_value(ofstream, value.value()); });
     }
   });
 }
@@ -228,7 +226,6 @@ void ExportBinary::_write_segment(const DictionarySegment<T>& dictionary_segment
         return 0u;
     }
   }();
-
 
   // Write attribute vector width
   export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));

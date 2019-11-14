@@ -415,8 +415,8 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
-  auto null_values =
-    {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE};
+  auto null_values = {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE,
+                      opossum::NULL_VALUE};
 
   table->append(null_values);
   table->append(null_values);
@@ -452,10 +452,10 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, RunNullValues) {
 
   value_segment->values() = {1, 1, 1, 1, 2, 2, 2, 3};
   value_segment->null_values() = {true, false, true, true, true, false, false, true};
-  
+
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
-  
+
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 

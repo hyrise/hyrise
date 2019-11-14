@@ -379,9 +379,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
         range_end = index->cend();
         break;
       }
-      default: {
-        Fail("Unsupported comparison type encountered");
-      }
+      default: { Fail("Unsupported comparison type encountered"); }
     }
     index_ranges.emplace_back(IndexRange{range_begin, range_end});
   }

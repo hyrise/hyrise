@@ -572,8 +572,8 @@ int Console::_load_table(const std::string& args) {
   if (supported) {
     out("Encoding \"" + tablename + "\" using " + encoding + "\n");
     std::vector<ChunkID> immutable_chunks;
-    for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id){
-      if (!table->get_chunk(chunk_id)->is_mutable()){
+    for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id) {
+      if (!table->get_chunk(chunk_id)->is_mutable()) {
         immutable_chunks.push_back(chunk_id);
       }
     }
