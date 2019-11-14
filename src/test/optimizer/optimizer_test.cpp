@@ -20,20 +20,20 @@ namespace opossum {
 class OptimizerTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");
     a = node_a->get_column("a");
     b = node_a->get_column("b");
 
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "node_b");
     x = node_b->get_column("x");
     y = node_b->get_column("y");
 
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}});
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}}, "node_c");
     u = node_c->get_column("u");
 
     subquery_lqp_a = LimitNode::make(to_expression(1), node_b);
     subquery_a = lqp_subquery_(subquery_lqp_a);
-    subquery_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(x, y), node_b));
+    subquery_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(u, 3), node_c));
     subquery_b = lqp_subquery_(subquery_lqp_b);
   }
 
@@ -42,6 +42,89 @@ class OptimizerTest : public ::testing::Test {
   std::shared_ptr<AbstractLQPNode> subquery_lqp_a, subquery_lqp_b;
   std::shared_ptr<LQPSubqueryExpression> subquery_a, subquery_b;
 };
+
+TEST_F(OptimizerTest, RequiresOwnership) {
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b),
+      node_a));
+  // clang-format on
+
+  auto optimizer = Optimizer::create_default_optimizer();
+  // Does not move the LQP into the optimizer
+  EXPECT_THROW(optimizer->optimize(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AssertsValidOutputs) {
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b),
+      node_a));
+  // clang-format on
+
+  auto out_of_plan_node = LimitNode::make(value_(10), lqp->left_input());
+
+  EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AssertsCorrectNumberOfInputs) {
+  // clang-format off
+  auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(b, 1),
+    ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+      PredicateNode::make(greater_than_(a, subquery_b),
+        node_a)));
+  // clang-format on
+
+  EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AssertsInPlanReferences) {
+  // clang-format off
+  auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(x, 1),
+    ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+      PredicateNode::make(greater_than_(a, subquery_b),
+        node_a)));
+  // clang-format on
+
+  EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, VerifiesResults) {
+  if (!HYRISE_DEBUG) GTEST_SKIP();
+  // While the Asserts* tests checked the different features of validate_lqp, this test checks that a rule that breaks
+  // an LQP throws an assertion.
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(b, subquery_a)),
+    PredicateNode::make(greater_than_(a, subquery_b),
+      node_a));
+  // clang-format on
+
+  Optimizer optimizer{};
+
+  class LQPBreakingRule : public AbstractRule {
+   public:
+    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& out_of_plan_expression)
+        : out_of_plan_expression(out_of_plan_expression) {}
+
+    void apply_to(const std::shared_ptr<AbstractLQPNode>& root) const override {
+      // Change the `b` expression in the projection to `x`, which is not part of the input LQP
+      const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(root->left_input());
+      if (!projection_node) return;
+      projection_node->node_expressions[0] = out_of_plan_expression;
+    }
+
+    std::shared_ptr<AbstractExpression> out_of_plan_expression;
+  };
+
+  optimizer.add_rule(std::make_unique<LQPBreakingRule>(lqp_column_(x)));
+
+  EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
+}
 
 TEST_F(OptimizerTest, OptimizesSubqueries) {
   /**
@@ -64,7 +147,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   };
 
   // clang-format off
-  const auto lqp =
+  auto lqp =
   ProjectionNode::make(expression_vector(add_(b, subquery_a)),
     PredicateNode::make(greater_than_(a, subquery_b),
       node_a));
@@ -75,11 +158,11 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   Optimizer optimizer{};
   optimizer.add_rule(std::move(rule));
 
-  optimizer.optimize(lqp);
+  optimizer.optimize(std::move(lqp));
 
   // Test that the optimizer has reached all nodes (the number includes all nodes created above and the root nodes
   // created by the optimizer for the lqp and each subquery)
-  EXPECT_EQ(nodes.size(), 10u);
+  EXPECT_EQ(nodes.size(), 11u);
 }
 
 TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
@@ -107,18 +190,20 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    *    (The optimizer should incidentally make them point to the same LQP again)
    */
   lqp = lqp->deep_copy();
-  auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
-  ASSERT_TRUE(predicate_node_a);
-  auto subquery_a_a =
-      std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
-  ASSERT_TRUE(subquery_a_a);
-  auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
-  ASSERT_TRUE(projection_node);
-  auto subquery_a_b =
-      std::dynamic_pointer_cast<LQPSubqueryExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
-  ASSERT_TRUE(subquery_a_b);
+  {
+    auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
+    ASSERT_TRUE(predicate_node_a);
+    auto subquery_a_a = std::dynamic_pointer_cast<LQPSubqueryExpression>(
+        predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
+    ASSERT_TRUE(subquery_a_a);
+    auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
+    ASSERT_TRUE(projection_node);
+    auto subquery_a_b =
+        std::dynamic_pointer_cast<LQPSubqueryExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
+    ASSERT_TRUE(subquery_a_b);
 
-  EXPECT_NE(subquery_a_a->lqp, subquery_a_b->lqp);
+    EXPECT_NE(subquery_a_a->lqp, subquery_a_b->lqp);
+  }
 
   /**q
    * 2. Optimize the LQP with a telemetric Rule
@@ -142,7 +227,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   Optimizer optimizer{};
   optimizer.add_rule(std::move(rule));
 
-  optimizer.optimize(lqp);
+  const auto optimized_lqp = optimizer.optimize(std::move(lqp));
+  lqp = nullptr;
 
   /**
    * 3. Check that the rule was invoked 3 times. Once for the main LQP, once for subquery_a and once for subquery_b
@@ -153,23 +239,26 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    * 4. Check that now - after optimizing - both SubqueryExpressions using subquery_lqp_a point to the same LQP object
    * again
    */
-  predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
-  ASSERT_TRUE(predicate_node_a);
-  subquery_a_a =
-      std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
-  ASSERT_TRUE(subquery_a_a);
-  projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
-  ASSERT_TRUE(projection_node);
-  subquery_a_b =
-      std::dynamic_pointer_cast<LQPSubqueryExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
-  ASSERT_TRUE(subquery_a_b);
-  auto predicate_node_b = std::dynamic_pointer_cast<PredicateNode>(lqp->left_input()->left_input());
-  ASSERT_TRUE(predicate_node_b);
-  auto subquery_b_a = std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_b->predicate()->arguments.at(1));
-  ASSERT_TRUE(subquery_b_a);
+  {
+    auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(optimized_lqp);
+    ASSERT_TRUE(predicate_node_a);
+    auto subquery_a_a = std::dynamic_pointer_cast<LQPSubqueryExpression>(
+        predicate_node_a->predicate()->arguments.at(0)->arguments.at(1));
+    ASSERT_TRUE(subquery_a_a);
+    auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(optimized_lqp->left_input());
+    ASSERT_TRUE(projection_node);
+    auto subquery_a_b =
+        std::dynamic_pointer_cast<LQPSubqueryExpression>(projection_node->node_expressions.at(0)->arguments.at(1));
+    ASSERT_TRUE(subquery_a_b);
+    auto predicate_node_b = std::dynamic_pointer_cast<PredicateNode>(optimized_lqp->left_input()->left_input());
+    ASSERT_TRUE(predicate_node_b);
+    auto subquery_b_a =
+        std::dynamic_pointer_cast<LQPSubqueryExpression>(predicate_node_b->predicate()->arguments.at(1));
+    ASSERT_TRUE(subquery_b_a);
 
-  EXPECT_EQ(subquery_a_a->lqp, subquery_a_b->lqp);
-  EXPECT_LQP_EQ(subquery_b_a->lqp, subquery_lqp_b);
+    EXPECT_EQ(subquery_a_a->lqp, subquery_a_b->lqp);
+    EXPECT_LQP_EQ(subquery_b_a->lqp, subquery_lqp_b);
+  }
 }
 
 }  // namespace opossum

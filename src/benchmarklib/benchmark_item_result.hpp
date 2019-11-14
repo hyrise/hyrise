@@ -21,7 +21,7 @@ struct BenchmarkItemResult {
   Duration duration{0};
 
   // The *optional* is set if the verification was executed; the *bool* is true if the verification succeeded.
-  std::optional<bool> verification_passed;
+  std::atomic<std::optional<bool>> verification_passed{std::nullopt};
 };
 
 }  // namespace opossum

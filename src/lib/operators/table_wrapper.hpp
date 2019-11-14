@@ -16,7 +16,7 @@ class TableWrapper : public AbstractReadOnlyOperator {
  public:
   explicit TableWrapper(const std::shared_ptr<const Table>& table);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   // Table to retrieve
   const std::shared_ptr<const Table> table;

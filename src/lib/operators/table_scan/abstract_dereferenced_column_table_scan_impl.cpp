@@ -16,8 +16,9 @@ namespace opossum {
 
 AbstractDereferencedColumnTableScanImpl::AbstractDereferencedColumnTableScanImpl(
     const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-    const PredicateCondition predicate_condition)
-    : predicate_condition(predicate_condition), _in_table(in_table), _column_id(column_id) {}
+    const PredicateCondition predicate_condition,
+    std::unique_ptr<OperatorPerformanceData> performance_data)
+    : predicate_condition(predicate_condition), performance_data(std::move(performance_data)), _in_table(in_table), _column_id(column_id) {}
 
 std::shared_ptr<PosList> AbstractDereferencedColumnTableScanImpl::scan_chunk(const ChunkID chunk_id) const {
   const auto chunk = _in_table->get_chunk(chunk_id);
@@ -68,7 +69,8 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
 
     // The scan has filled `matches` assuming that `position_filter` was the entire ReferenceSegment, so we need to fix
     // that:
-    for (auto match_idx = static_cast<ChunkOffset>(num_previous_matches); match_idx < matches.size(); ++match_idx) {
+    for (auto match_idx = static_cast<ChunkOffset>(num_previous_matches);
+         match_idx < static_cast<ChunkOffset>(matches.size()); ++match_idx) {
       matches[match_idx].chunk_offset = sub_pos_list.original_positions[matches[match_idx].chunk_offset];
     }
   }

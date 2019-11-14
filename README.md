@@ -142,6 +142,7 @@ Contact: firstname.lastname@hpi.de
 -   David     Schumann
 -   Simon     Siegert
 -   Arthur    Silber
+-   Toni      Stachewicz
 -   Daniel    Stolpe
 -   Jonathan  Striebel
 -   Nils      Thamm

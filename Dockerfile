@@ -1,25 +1,28 @@
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
-FROM ubuntu:19.04
+FROM ubuntu:19.10
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
+    && apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:mhier/libboost-latest \
+    && apt-get update \
     && apt-get install -y \
         autoconf \
         bash-completion \
         bc \
         ccache \
-        clang-7 \
-        clang-format-7 \
-        clang-tidy-7 \
+        clang-9 \
+        clang-format-9 \
+        clang-tidy-9 \
         cmake \
         curl \
-        g++-8 \
-        gcc-8 \
+        g++-9 \
+        gcc-9 \
         gcovr \
         git \
         graphviz \
-        $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
-        libclang-7-dev \
+        libboost1.70-dev \
+        libhwloc-dev \
         libncurses5-dev \
         libnuma-dev \
         libnuma1 \
@@ -27,13 +30,10 @@ RUN apt-get update \
         libreadline-dev \
         libsqlite3-dev \
         libtbb-dev \
-        llvm \
-        llvm-7-tools \
         man \
         parallel \
         postgresql-server-dev-all \
         python2.7 \
-        python-glob2 \
         python-pexpect \
         python-pip \
         sudo \

@@ -20,7 +20,7 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
                                                        const ColumnID column_id,
                                                        const PredicateCondition& predicate_condition,
                                                        const AllTypeVariant& value)
-    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition}, value{value} {
+    : AbstractDereferencedColumnTableScanImpl{in_table, column_id, predicate_condition, std::make_unique<PerformanceData>()}, value{value} {
   Assert(in_table->column_data_type(column_id) == data_type_from_all_type_variant(value),
          "Cannot use ColumnVsValueTableScanImpl for scan where column and value data type do not match. Use "
          "ExpressionEvaluatorTableScanImpl.");
@@ -31,10 +31,17 @@ std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsVa
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
     const std::shared_ptr<const PosList>& position_filter) const {
+
+  auto& scan_performance_data = static_cast<PerformanceData&>(*performance_data);
+
   const auto ordered_by = _in_table->get_chunk(chunk_id)->ordered_by();
   if (ordered_by && ordered_by->first == _column_id) {
+    scan_performance_data.chunks_scanned_sorted++;
+    scan_performance_data.used_sorted_scan_path &= true;
     _scan_sorted_segment(segment, chunk_id, matches, position_filter, ordered_by->second);
   } else {
+    scan_performance_data.chunks_scanned_unsorted++;
+    scan_performance_data.used_sorted_scan_path &= false;
     // Select optimized or generic scanning implementation based on segment type
     if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
       _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
@@ -118,7 +125,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(const BaseDictionarySe
     return;
   }
 
-  _with_operator_for_dict_segment_scan(predicate_condition, [&](auto predicate_comparator) {
+  _with_operator_for_dict_segment_scan([&](auto predicate_comparator) {
     auto comparator = [predicate_comparator, search_value_id](const auto& position) {
       return predicate_comparator(position.value(), search_value_id);
     };

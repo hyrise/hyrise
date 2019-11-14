@@ -64,7 +64,7 @@ TableType Table::type() const { return _type; }
 
 UseMvcc Table::has_mvcc() const { return _use_mvcc; }
 
-size_t Table::column_count() const { return _column_definitions.size(); }
+uint16_t Table::column_count() const { return static_cast<uint16_t>(_column_definitions.size()); }
 
 const std::string& Table::column_name(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
@@ -116,7 +116,12 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
 
 void Table::append(const std::vector<AllTypeVariant>& values) {
   auto last_chunk = !_chunks.empty() ? get_chunk(ChunkID{chunk_count() - 1}) : nullptr;
-  if (!last_chunk || last_chunk->size() >= _max_chunk_size) {
+  if (!last_chunk || last_chunk->size() >= _max_chunk_size || !last_chunk->is_mutable()) {
+    // One chunk reached its capacity and was not finalized before.
+    if (last_chunk && last_chunk->is_mutable()) {
+      last_chunk->finalize();
+    }
+
     append_mutable_chunk();
     last_chunk = get_chunk(ChunkID{chunk_count() - 1});
   }
@@ -177,9 +182,19 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   }
 }
 
+std::shared_ptr<Chunk> Table::last_chunk() {
+  DebugAssert(!_chunks.empty(), "last_chunk() called on Table without chunks");
+  if (_type == TableType::References) {
+    // Not written concurrently, since reference tables are not modified anymore once they are written.
+    return _chunks.back();
+  } else {
+    return std::atomic_load(&_chunks.back());
+  }
+}
+
 void Table::remove_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
-  DebugAssert(([this, chunk_id]() {
+  DebugAssert(([this, chunk_id]() {  // NOLINT
                 const auto chunk = get_chunk(chunk_id);
                 return (chunk->invalid_row_count() == chunk->size());
               }()),
@@ -188,7 +203,7 @@ void Table::remove_chunk(ChunkID chunk_id) {
   std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
 }
 
-void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,
+void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables iff MVCC is enabled");

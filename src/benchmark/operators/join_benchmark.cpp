@@ -4,7 +4,6 @@
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
@@ -113,9 +112,5 @@ BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinHash);
 BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinSortMerge);
-
-BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinMPSM);
-BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinMPSM);
-BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinMPSM);
 
 }  // namespace opossum

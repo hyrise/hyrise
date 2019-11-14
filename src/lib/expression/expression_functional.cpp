@@ -1,8 +1,6 @@
 #include "expression_functional.hpp"
 
-namespace opossum {
-
-namespace expression_functional {
+namespace opossum::expression_functional {
 
 std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression) {
   return expression;
@@ -39,8 +37,9 @@ std::shared_ptr<PQPColumnExpression> pqp_column_(const ColumnID column_id, const
   return std::make_shared<PQPColumnExpression>(column_id, data_type, nullable, column_name);
 }
 
-std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doesn't like the suffix
-  return std::make_shared<AggregateExpression>(AggregateFunction::Count);
+std::shared_ptr<AggregateExpression> count_star_(const std::shared_ptr<AbstractLQPNode> lqp_node) {  // NOLINT - clang-tidy doesn't like the suffix
+  const auto column_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{lqp_node, INVALID_COLUMN_ID});
+  return std::make_shared<AggregateExpression>(AggregateFunction::Count, column_expression);
 }
 
 std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& subquery_expression) {  // NOLINT - clang-tidy doesn't like the suffix
@@ -52,6 +51,4 @@ std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpr
 }
 // clang-format on
 
-}  // namespace expression_functional
-
-}  // namespace opossum
+}  // namespace opossum::expression_functional

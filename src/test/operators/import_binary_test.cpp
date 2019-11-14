@@ -65,6 +65,7 @@ TEST_F(OperatorsImportBinaryTest, StringDictionarySegment) {
   expected_table->append({"a"});
   expected_table->append({"test"});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table);
 
   Hyrise::get().storage_manager.add_table("table_a", expected_table);
@@ -109,6 +110,7 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionarySegment) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
+  expected_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(expected_table);
 
   Hyrise::get().storage_manager.add_table("expected_table", expected_table);

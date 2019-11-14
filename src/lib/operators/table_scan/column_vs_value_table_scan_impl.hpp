@@ -31,6 +31,12 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
 
   const AllTypeVariant value;
 
+  struct PerformanceData : public OperatorPerformanceData {
+    bool used_sorted_scan_path = true;
+    size_t chunks_scanned_sorted = 0;
+    size_t chunks_scanned_unsorted = 0;
+  };
+
  protected:
   void _scan_non_reference_segment(const BaseSegment& segment, const ChunkID chunk_id, PosList& matches,
                                    const std::shared_ptr<const PosList>& position_filter) const override;
@@ -56,7 +62,7 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
   bool _value_matches_none(const BaseDictionarySegment& segment, const ValueID search_value_id) const;
 
   template <typename Functor>
-  void _with_operator_for_dict_segment_scan(const PredicateCondition predicate_condition, const Functor& func) const {
+  void _with_operator_for_dict_segment_scan(const Functor& func) const {
     switch (predicate_condition) {
       case PredicateCondition::Equals:
         func(std::equal_to<void>{});

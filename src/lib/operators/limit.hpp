@@ -14,7 +14,7 @@ class Limit : public AbstractReadOnlyOperator {
   Limit(const std::shared_ptr<const AbstractOperator>& in,
         const std::shared_ptr<AbstractExpression>& row_count_expression);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   std::shared_ptr<AbstractExpression> row_count_expression() const;
 
