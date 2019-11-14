@@ -13,6 +13,7 @@ extern "C" {
 #include <random>
 #include <sstream>
 
+#include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
@@ -69,27 +70,36 @@ bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 }
 
 void TPCHBenchmarkItemRunner::on_tables_loaded() {
-  if (!_use_prepared_statements) return;
+  // Make sure that sort order, indexes, and constraints have made it all the way up to here
+  const auto orders_table = Hyrise::get().storage_manager.get_table("orders");
+  const auto first_chunk = orders_table->get_chunk(ChunkID{0});
+  Assert(first_chunk->ordered_by(), "Ordering information was lost");
+  if (_config->indexes) {
+    Assert(!first_chunk->get_indexes({ColumnID{0}}).empty(), "Index was lost");
+  }
+  Assert(!orders_table->get_soft_unique_constraints().empty(), "Constraints were lost");
 
-  std::cout << " - Preparing queries" << std::endl;
+  if (_use_prepared_statements) {
+    std::cout << " - Preparing queries" << std::endl;
 
-  std::stringstream sql;
-  for (auto item_id = BenchmarkItemID{0}; item_id < 22; ++item_id) {
-    if (item_id + 1 == 15) {
-      // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll have
-      // to manually build this query once we start randomizing the parameters.
-      continue;
+    std::stringstream sql;
+    for (auto item_id = BenchmarkItemID{0}; item_id < 22; ++item_id) {
+      if (item_id + 1 == 15) {
+        // We cannot prepare query 15, because the SELECT relies on a view that is generated in the first step. We'll have
+        // to manually build this query once we start randomizing the parameters.
+        continue;
+      }
+
+      auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
+
+      // Escape single quotes
+      boost::replace_all(query_template, "'", "''");
+
+      sql << "PREPARE TPCH" << (item_id + 1) << " FROM '" << query_template << "';\n";
     }
 
-    auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
-
-    // Escape single quotes
-    boost::replace_all(query_template, "'", "''");
-
-    sql << "PREPARE TPCH" << (item_id + 1) << " FROM '" << query_template << "';\n";
+    SQLPipelineBuilder{sql.str()}.create_pipeline().get_result_table();
   }
-
-  SQLPipelineBuilder{sql.str()}.create_pipeline().get_result_table();
 }
 
 std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id) {
