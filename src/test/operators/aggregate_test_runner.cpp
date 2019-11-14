@@ -138,9 +138,7 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
         configuration.group_by_column_ids = {
             ColumnID{group_by_column_ids.at(data_type) + (nullable ? 1 : 0)},
         };
-        configuration.aggregate_column_definitions = {
-            {aggregate_column_ids.at(DataType::Int), AggregateFunction::Min},
-        };
+        configuration.aggregate_column_definitions = {};
 
         add_configuration_if_supported(configuration);
       }
@@ -174,7 +172,6 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
           aggregate_hashsort_config.max_partitioning_counter = 2;
           aggregate_hashsort_config.buffer_flush_threshold = 2;
           aggregate_hashsort_config.group_prefetch_threshold = 4;
-          aggregate_hashsort_config.initial_run_size = 3;
           configuration.aggregate_hashsort_config = aggregate_hashsort_config;
         }
 
@@ -267,7 +264,7 @@ TEST_P(AggregateTestRunner, TestAggregate) {
     std::cout << *table_difference_message << std::endl;
     std::cout << "============================================================" << std::endl;
   };
-
+  print_configuration_info();
   try {
     // Cache reference table to avoid redundant computation of the same
     if (expected_output_table_iter == expected_output_tables.end()) {

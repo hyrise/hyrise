@@ -18,7 +18,7 @@
 #include "types.hpp"
 #include "utils/timer.hpp"
 
-#define VERBOSE 0
+#define VERBOSE 1
 
 // #define USE_UNORDERED_MAP
 #define USE_DENSE_HASH_MAP
@@ -148,48 +148,48 @@ struct AggregateHashSortEnvironment {
 
   static std::shared_ptr<AggregateHashSortEnvironment> create(const AggregateHashSortConfig& config, const std::shared_ptr<const Table>& table,
                                        const std::vector<AggregateColumnDefinition>& aggregate_column_definitions,
-                                       const std::vector<ColumnID>& group_by_column_ids, const TableColumnDefinitions& table_column_definitions) {
+                                       const std::vector<ColumnID>& group_by_column_ids, const TableColumnDefinitions& output_column_definitions) {
     Assert(!group_by_column_ids.empty(),
            "AggregateHashSort cannot operate without group by columns, use a different aggregate operator");
 
-    auto setup = std::make_shared<AggregateHashSortEnvironment>();
+    auto environment = std::make_shared<AggregateHashSortEnvironment>();
 
-    setup->config = config;
-    setup->offsets.resize(group_by_column_ids.size());
-    setup->table_column_definitions = table_column_definitions;
+    environment->config = config;
+    environment->offsets.resize(group_by_column_ids.size());
+    environment->output_column_definitions = output_column_definitions;
 
     for (auto column_id = ColumnID{0}; column_id < group_by_column_ids.size(); ++column_id) {
       const auto group_by_column_id = group_by_column_ids[column_id];
       const auto data_type = table->column_data_type(group_by_column_id);
 
       if (data_type == DataType::String) {
-        setup->offsets[column_id] = setup->variably_sized_column_ids.size();
-        setup->variably_sized_column_ids.emplace_back(group_by_column_id);
+        environment->offsets[column_id] = environment->variably_sized_column_ids.size();
+        environment->variably_sized_column_ids.emplace_back(group_by_column_id);
       } else {
-        setup->offsets[column_id] = setup->variably_sized_values_begin_offset;
-        setup->fixed_size_column_ids.emplace_back(group_by_column_id);
-        setup->fixed_size_value_offsets.emplace_back(setup->variably_sized_values_begin_offset);
+        environment->offsets[column_id] = environment->variably_sized_values_begin_offset;
+        environment->fixed_size_column_ids.emplace_back(group_by_column_id);
+        environment->fixed_size_value_offsets.emplace_back(environment->variably_sized_values_begin_offset);
 
         if (table->column_is_nullable(group_by_column_id)) {
-          ++setup->variably_sized_values_begin_offset;  // one extra byte for the is_null flag
+          ++environment->variably_sized_values_begin_offset;  // one extra byte for the is_null flag
         }
-        setup->variably_sized_values_begin_offset += data_type_sizes.at(data_type);
+        environment->variably_sized_values_begin_offset += data_type_sizes.at(data_type);
       }
     }
 
-    setup->fixed_group_size = divide_and_ceil(setup->variably_sized_values_begin_offset, GROUP_RUN_ELEMENT_SIZE);
+    environment->fixed_group_size = divide_and_ceil(environment->variably_sized_values_begin_offset, GROUP_RUN_ELEMENT_SIZE);
 
     for (auto& aggregate_column_definition : aggregate_column_definitions) {
       if (aggregate_column_definition.column) {
-        setup->aggregate_definitions.emplace_back(aggregate_column_definition.function,
+        environment->aggregate_definitions.emplace_back(aggregate_column_definition.function,
                                                  table->column_data_type(*aggregate_column_definition.column),
                                                  *aggregate_column_definition.column);
       } else {
-        setup->aggregate_definitions.emplace_back(aggregate_column_definition.function);
+        environment->aggregate_definitions.emplace_back(aggregate_column_definition.function);
       }
     }
 
-    return setup;
+    return environment;
   }
 };
 
@@ -217,7 +217,7 @@ struct BasicRun : public GroupSizePolicy {
   BasicRun() = default;
 
   BasicRun(const GroupSizePolicy& group_size_policy, std::vector<std::unique_ptr<BaseAggregateRun>>&& aggregates)
-      : BasicRun(group_size_policy, std::move(aggregates)) {}
+      : BasicRun(group_size_policy, std::move(aggregates), {}, {}) {}
 
   BasicRun(const GroupSizePolicy& group_size_policy, std::vector<std::unique_ptr<BaseAggregateRun>>&& aggregates,
            const size_t group_capacity, const size_t group_data_capacity)
@@ -340,11 +340,11 @@ struct BasicRun : public GroupSizePolicy {
   /**
    * @return     Begin byte and length in bytes of the variably sized value `value_idx` in group `group_idx`
    */
-  std::pair<size_t, size_t> get_variably_sized_value_range(const AggregateHashSortEnvironment& setup, const size_t group_idx,
+  std::pair<size_t, size_t> get_variably_sized_value_range(const AggregateHashSortEnvironment& environment, const size_t group_idx,
                                                            const size_t value_idx) const {
     const auto [group_begin_offset, group_length] = GroupSizePolicy::get_group_range(group_idx);
 
-    const auto variably_sized_column_count = setup.variably_sized_column_ids.size();
+    const auto variably_sized_column_count = environment.variably_sized_column_ids.size();
     DebugAssert(value_idx < variably_sized_column_count, "value_idx out of range");
 
     const auto* group_end = reinterpret_cast<const char*>(&group_data[group_begin_offset] + group_length);
@@ -355,7 +355,7 @@ struct BasicRun : public GroupSizePolicy {
 
     auto value_begin_offset = size_t{};
     if (value_idx == 0) {
-      value_begin_offset = setup.variably_sized_values_begin_offset;
+      value_begin_offset = environment.variably_sized_values_begin_offset;
     } else {
       memcpy(&value_begin_offset, group_value_end_offsets + sizeof(size_t) * (value_idx - 1), sizeof(size_t));
     }
@@ -368,7 +368,7 @@ struct BasicRun : public GroupSizePolicy {
    * Materialize a Segment from this run
    */
   template <typename T>
-  std::shared_ptr<BaseSegment> materialize_group_column(const AggregateHashSortEnvironment& setup, const ColumnID column_id,
+  std::shared_ptr<BaseSegment> materialize_group_column(const AggregateHashSortEnvironment& environment, const ColumnID column_id,
                                                         const bool column_is_nullable) const {
     auto output_values = std::vector<T>(size);
 
@@ -381,11 +381,11 @@ struct BasicRun : public GroupSizePolicy {
     auto output_null_values_iter = output_null_values.begin();
 
     if constexpr (std::is_same_v<T, pmr_string>) {
-      const auto variably_sized_value_idx = setup.offsets[column_id];
+      const auto variably_sized_value_idx = environment.offsets[column_id];
 
       for (auto group_idx = size_t{0}; group_idx < size; ++group_idx) {
         const auto [value_begin_offset, value_length] =
-            get_variably_sized_value_range(setup, group_idx, variably_sized_value_idx);
+            get_variably_sized_value_range(environment, group_idx, variably_sized_value_idx);
 
         auto* source = &reinterpret_cast<const char*>(group_data.data())[value_begin_offset];
 
@@ -403,7 +403,7 @@ struct BasicRun : public GroupSizePolicy {
         ++output_values_iter;
       }
     } else if constexpr (std::is_arithmetic_v<T>) {
-      const auto offset_in_group = setup.offsets[column_id];
+      const auto offset_in_group = environment.offsets[column_id];
 
       for (auto group_idx = size_t{0}; group_idx < size; ++group_idx) {
         const auto [group_begin_offset, group_length] = GroupSizePolicy::get_group_range(group_idx);
@@ -436,14 +436,14 @@ struct BasicRun : public GroupSizePolicy {
 };
 
 template <typename Run>
-Run create_run(const AggregateHashSortEnvironment& setup, const size_t group_capacity = {},
+Run create_run(const AggregateHashSortEnvironment& environment, const size_t group_capacity = {},
                const size_t group_data_capacity = {}) {
-  auto group_size_policy = typename Run::GroupSizePolicyType{setup, group_capacity};
+  auto group_size_policy = typename Run::GroupSizePolicyType{environment, group_capacity};
 
-  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(setup.aggregate_definitions.size());
+  auto aggregates = std::vector<std::unique_ptr<BaseAggregateRun>>(environment.aggregate_definitions.size());
 
   for (auto aggregate_idx = size_t{0}; aggregate_idx < aggregates.size(); ++aggregate_idx) {
-    const auto& aggregate_definition = setup.aggregate_definitions[aggregate_idx];
+    const auto& aggregate_definition = environment.aggregate_definitions[aggregate_idx];
 
     if (aggregate_definition.aggregate_function == AggregateFunction::CountRows) {
       aggregates[aggregate_idx] = std::make_unique<CountRowsAggregateRun>(group_capacity);
@@ -518,7 +518,7 @@ struct FixedSizeInPlaceCompare {
 #if VERBOSE
   mutable size_t counter{};
 #endif
-  explicit FixedSizeInPlaceCompare(const AggregateHashSortEnvironment& setup) {}
+  explicit FixedSizeInPlaceCompare(const AggregateHashSortEnvironment& environment) {}
 
   template <size_t group_size>
   bool operator()(const FixedSizeInPlaceKey<group_size>& lhs, const FixedSizeInPlaceKey<group_size>& rhs) const {
@@ -540,7 +540,7 @@ struct StaticFixedGroupSizePolicy {
   using HashTableKey = FixedSizeInPlaceKey<group_size>;
   using HashTableCompare = FixedSizeInPlaceCompare;
 
-  StaticFixedGroupSizePolicy(const AggregateHashSortEnvironment& setup, const size_t group_capacity) {}
+  StaticFixedGroupSizePolicy(const AggregateHashSortEnvironment& environment, const size_t group_capacity) {}
 
   template <typename Run>
   auto get_append_iterator(Run& run) const {
@@ -598,7 +598,7 @@ struct FixedSizeRemoteCompare {
   mutable size_t counter{};
 #endif
 
-  explicit FixedSizeRemoteCompare(const AggregateHashSortEnvironment& setup) : group_size(setup.fixed_group_size) {}
+  explicit FixedSizeRemoteCompare(const AggregateHashSortEnvironment& environment) : group_size(environment.fixed_group_size) {}
 
   bool operator()(const FixedSizeRemoteKey& lhs, const FixedSizeRemoteKey& rhs) const {
 #if VERBOSE
@@ -620,8 +620,8 @@ struct DynamicFixedGroupSizePolicy {
 
   size_t group_size{};
 
-  DynamicFixedGroupSizePolicy(const AggregateHashSortEnvironment& setup, const size_t group_capacity)
-      : group_size(setup.fixed_group_size) {}
+  DynamicFixedGroupSizePolicy(const AggregateHashSortEnvironment& environment, const size_t group_capacity)
+      : group_size(environment.fixed_group_size) {}
 
   template <typename Run>
   size_t get_required_group_data_size(const Run& run) {
@@ -673,7 +673,7 @@ struct VariablySizedCompare {
 #if VERBOSE
   mutable size_t counter{};
 #endif
-  explicit VariablySizedCompare(const AggregateHashSortEnvironment& setup) {}
+  explicit VariablySizedCompare(const AggregateHashSortEnvironment& environment) {}
 
   bool operator()(const VariablySizedKey& lhs, const VariablySizedKey& rhs) const {
 #if VERBOSE
@@ -695,7 +695,7 @@ struct VariableGroupSizePolicy {
   // Number of `data` elements occupied after `append_buffer` is flushed into `data`
   size_t data_watermark{0};
 
-  VariableGroupSizePolicy(const AggregateHashSortEnvironment& setup, const size_t group_capacity)
+  VariableGroupSizePolicy(const AggregateHashSortEnvironment& environment, const size_t group_capacity)
       : group_end_offsets(group_capacity) {}
 
   template <typename Run>
@@ -794,10 +794,10 @@ inline bool operator==(const RadixFanOut& lhs, const RadixFanOut& rhs) {
 /**
  * @return hash table size
  */
-inline size_t configure_hash_table(const AggregateHashSortEnvironment& setup, const size_t row_count) {
+inline size_t configure_hash_table(const AggregateHashSortEnvironment& environment, const size_t row_count) {
 #ifdef USE_DENSE_HASH_MAP
-  return std::min(setup.config.hash_table_size,
-                  static_cast<size_t>(std::ceil(row_count / setup.config.hash_table_max_load_factor) / 2));
+  return std::min(environment.config.hash_table_size,
+                  static_cast<size_t>(std::ceil(row_count / environment.config.hash_table_max_load_factor) / 2));
 #endif
 
 #ifdef USE_UNORDERED_MAP
@@ -808,8 +808,8 @@ inline size_t configure_hash_table(const AggregateHashSortEnvironment& setup, co
 
 #ifdef USE_STATIC_HASH_MAP
   return static_cast<size_t>(
-      std::ceil(std::min(static_cast<float>(setup.config.hash_table_size), static_cast<float>(row_count)) /
-                setup.config.hash_table_max_load_factor));
+      std::ceil(std::min(static_cast<float>(environment.config.hash_table_size), static_cast<float>(row_count)) /
+                environment.config.hash_table_max_load_factor));
 #endif
 }
 
@@ -834,35 +834,24 @@ struct RunReader {
   size_t run_idx{};
   size_t run_offset{};
 
-  // Number of groups, fetched and unfetched, remaining from the read cursor onward
-  size_t total_remaining_group_count{};
-
-  // Amount of data not yet processed (i.e., partitioned/hashed) by the reader. Provides hint for run sizes
-  // during partitioning
-  size_t remaining_fetched_group_count{};
-  size_t remaining_fetched_group_data_size{};
+  // Number of groups remaining from the read cursor onward
+  size_t remaining_group_count{};
+  size_t remaining_group_data_size{};
 
   explicit RunReader(std::vector<Run>&& runs) : runs(std::move(runs)) {
     for (const auto& run : this->runs) {
-      total_remaining_group_count += run.size;
-      remaining_fetched_group_count += run.size;
-      remaining_fetched_group_data_size += run.group_data.size();
+      remaining_group_count += run.size;
+      remaining_group_data_size += run.group_data.size();
     }
   }
 
-  bool end_of_reader() const { return end_of_run() && run_idx + 1 == this->runs.size(); }
+  bool end_of_reader() const { return run_idx >= this->runs.size(); }
 
-  void next_run(const AggregateHashSortEnvironment& setup) {
+  void next_run() {
     DebugAssert(end_of_run(), "Current run wasn't fully processed");
-    DebugAssert(!end_of_reader(), "There is no next run");
 
     ++run_idx;
     run_offset = 0;
-  }
-
-  size_t size() const {
-    return std::accumulate(runs.begin(), runs.end(), size_t{0},
-                           [](const size_t count, const auto& run) { return count + run.size; });
   }
 
   /**
@@ -883,13 +872,11 @@ struct RunReader {
    *          groups are available)
    */
   void next_group_in_run() {
-    DebugAssert(this->total_remaining_group_count > 0, "No next group");
-    DebugAssert(this->remaining_fetched_group_count > 0, "No next group");
-    DebugAssert(this->remaining_fetched_group_data_size >= current_run().get_group_size(run_offset), "Bug detected");
+    DebugAssert(remaining_group_count > 0, "No next group");
+    DebugAssert(remaining_group_data_size >= current_run().get_group_size(run_offset), "Bug detected");
 
-    --this->total_remaining_group_count;
-    --this->remaining_fetched_group_count;
-    this->remaining_fetched_group_data_size -= current_run().get_group_size(run_offset);
+    --remaining_group_count;
+    remaining_group_data_size -= current_run().get_group_size(run_offset);
     ++run_offset;
   }
 
@@ -912,10 +899,10 @@ struct AbstractRunSource {
  * @return {group_count, group_data_size}
  */
 template <typename Run>
-std::pair<size_t, size_t> next_run_size(const AbstractRunSource<Run>& run_source, const size_t group_count,
+std::pair<size_t, size_t> next_run_size(const RunReader<Run>& run_reader, const size_t group_count,
                                         const RadixFanOut& radix_fan_out) {
   const auto estimated_group_size =
-      static_cast<float>(run_source.remaining_fetched_group_data_size) / run_source.remaining_fetched_group_count;
+      static_cast<float>(run_reader.remaining_group_data_size) / run_reader.remaining_group_count;
 
   auto group_count_per_partition =
       std::ceil(static_cast<float>(group_count) / std::min(radix_fan_out.partition_count, group_count));
@@ -947,8 +934,8 @@ struct Partition {
 
 // Just forwards a number of runs
 template <typename Run>
-struct RunSource : public AbstractRunSource<Run> {
-  explicit RunSource(std::vector<Run>&& runs):
+struct ForwardingRunSource : public AbstractRunSource<Run> {
+  explicit ForwardingRunSource(std::vector<Run>&& runs):
       runs{std::move(runs)} {}
 
   std::vector<Run> fetch_runs() override { return std::move(runs); }
@@ -959,73 +946,38 @@ struct RunSource : public AbstractRunSource<Run> {
 // Wraps a Table from which the runs are materialized
 template <typename Run>
 struct ChunkRunSource : public AbstractRunSource<Run> {
-  std::shared_ptr<const Chunk> chunk;
+  const std::shared_ptr<AggregateHashSortEnvironment> environment;
+  const std::shared_ptr<const Table> table;
+  const ChunkID chunk_id;
 
-  ChunkRunSource(const AggregateHashSortEnvironment& setup, const std::shared_ptr<const Chunk>& chunk)
-      : AbstractRunSource<Run>({}), chunk(chunk), unfetched_row_count(chunk->size()) {
-    this->total_remaining_group_count = chunk->size();
+  ChunkRunSource(const std::shared_ptr<AggregateHashSortEnvironment>& environment,
+      const std::shared_ptr<const Table>& table, const ChunkID chunk_id)
+      : environment(environment), table(table), chunk_id(chunk_id) {
   }
 
-  std::vector<Run> fetch_runs() override { return std::move(runs); }
+  std::vector<Run> fetch_runs() override
+  {
+    auto run = from_table_range(*environment, table, RowID{chunk_id, 0}, table->get_chunk(chunk_id)->size());
+    auto runs = std::vector<Run>{};
+    runs.emplace_back(std::move(run));
 
-  bool end_of_source() const override {
-    return this->run_idx + 1 >= this->runs.size() && this->end_of_run() && unfetched_row_count == 0;
+    return runs;
   }
-
-  void prefetch(const AggregateHashSortEnvironment& setup) override {
-    while (this->remaining_fetched_group_count < setup.config.group_prefetch_threshold && unfetched_row_count > 0) {
-      fetch_run(setup);
-    }
-  }
-
-  void next_run(const AggregateHashSortEnvironment& setup) override {
-    DebugAssert(this->end_of_run(), "Current run wasn't fully processed");
-    DebugAssert(!this->end_of_source(), "There is no next run");
-
-    if (this->run_idx + 1 >= this->runs.size()) {
-      fetch_run(setup);
-    }
-
-    ++this->run_idx;
-    this->run_offset = 0;
-  }
-
-  void fetch_run(const AggregateHashSortEnvironment& setup) {
-    DebugAssert(!end_of_source(), "fetch_run() should not have been called");
-
-    const auto row_count = std::min(unfetched_row_count, setup.config.initial_run_size);
-#if VERBOSE
-    std::cout << "fetch_run(): " << row_count << " of " << unfetched_row_count << " remaining" << std::endl;
-#endif
-
-    auto [run, end_row_id] = from_table_range(setup, table, begin_row_id, row_count);
-
-    unfetched_row_count -= row_count;
-
-    begin_row_id = end_row_id;
-
-    this->remaining_fetched_group_count += run.size;
-    this->remaining_fetched_group_data_size += run.group_data.size();
-
-    this->runs.emplace_back(std::move(run));
-  }
-
-  size_t size() const override { return table->row_count(); }
 
   /**
-   * Build a `VariablySizedGroupRun` from a range of `row_count` rows starting at `begin_row_id` of a Table.
+   * Build a Run from a Chunk
    *
    * @returns   The VariablySizedGroupRun and the end RowID, i.e., the RowID the next run starts at
    */
-  static std::pair<Run, RowID> from_table_range(const AggregateHashSortEnvironment& setup,
+  static Run from_table_range(const AggregateHashSortEnvironment& environment,
                                                 const std::shared_ptr<const Table>& table, const RowID& begin_row_id,
                                                 const size_t row_count) {
     using GroupSizePolicy = typename Run::GroupSizePolicyType;
 
     Assert(row_count > 0, "Cannot materialize zero rows");
 
-    const auto variably_sized_column_count = setup.variably_sized_column_ids.size();
-    const auto fixed_size_column_count = setup.fixed_size_column_ids.size();
+    const auto variably_sized_column_count = environment.variably_sized_column_ids.size();
+    const auto fixed_size_column_count = environment.fixed_size_column_ids.size();
 
     const auto meta_data_size = sizeof(size_t) * variably_sized_column_count;
 
@@ -1033,13 +985,13 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
      * Materialize the variably sized values separately first, then compute the size of the opaque `group_data` blob
      */
     const auto [data_per_column, value_end_offsets, variably_sized_end_row_id] =
-        materialize_variably_sized_columns(setup, table, begin_row_id, row_count);
+        materialize_variably_sized_columns(environment, table, begin_row_id, row_count);
 
-    auto run = create_run<Run>(setup, row_count, 0);
+    auto run = create_run<Run>(environment, row_count, 0);
 
     if constexpr (std::is_same_v<GroupSizePolicy, VariableGroupSizePolicy>) {
       run.group_end_offsets =
-          determine_group_end_offsets(setup.variably_sized_column_ids.size(), row_count, value_end_offsets);
+          determine_group_end_offsets(environment.variably_sized_column_ids.size(), row_count, value_end_offsets);
       run.group_data.resize(run.group_end_offsets.back());
     } else {
       run.group_data.resize(row_count * run.get_group_size());
@@ -1048,7 +1000,7 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
     run.size = row_count;
 
     /**
-     * Initialize the gaps between group data and meta data in the groups with zero
+     * Initialize the gaps between group data and meta data/end of group in the groups with zero
      */
     if constexpr (std::is_same_v<GroupSizePolicy, VariableGroupSizePolicy>) {
       auto value_end_offsets_iter = value_end_offsets.begin() + variably_sized_column_count - 1;
@@ -1077,15 +1029,15 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
      */
     auto fixed_size_end_row_id = RowID{};
     for (auto column_id = ColumnID{0}; column_id < fixed_size_column_count; ++column_id) {
-      const auto group_by_column_id = setup.fixed_size_column_ids[column_id];
-      const auto base_offset = setup.fixed_size_value_offsets[column_id];
+      const auto group_by_column_id = environment.fixed_size_column_ids[column_id];
+      const auto base_offset = environment.fixed_size_value_offsets[column_id];
 
       fixed_size_end_row_id =
           materialize_fixed_size_column(run, table, base_offset, group_by_column_id, begin_row_id, row_count);
     }
 
     /**
-     * Copy the value end offsets into the interleaved blob
+     * Copy the value end offsets into the interleaved blob, aligned to the end of each group
      */
     if constexpr (std::is_same_v<GroupSizePolicy, VariableGroupSizePolicy>) {
       auto* source = value_end_offsets.data();
@@ -1109,7 +1061,7 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
       auto* source = reinterpret_cast<const char*>(data_per_column[column_id].data());
 
       for (auto row_idx = size_t{0}; row_idx < row_count; ++row_idx) {
-        const auto [target_offset, value_size] = run.get_variably_sized_value_range(setup, row_idx, column_id);
+        const auto [target_offset, value_size] = run.get_variably_sized_value_range(environment, row_idx, column_id);
 
         auto* target = &reinterpret_cast<char*>(run.group_data.data())[target_offset];
 
@@ -1131,17 +1083,16 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
      * Materialize the aggregates
      */
     for (auto aggregate_idx = size_t{0}; aggregate_idx < run.aggregates.size(); ++aggregate_idx) {
-      if (!setup.aggregate_definitions[aggregate_idx].column_id) {
+      if (!environment.aggregate_definitions[aggregate_idx].column_id) {
         continue;
       }
 
-      auto column_iterable = ColumnIterable{table, *setup.aggregate_definitions[aggregate_idx].column_id};
+      auto column_iterable = ColumnIterable{table, *environment.aggregate_definitions[aggregate_idx].column_id};
 
       run.aggregates[aggregate_idx]->initialize(column_iterable, begin_row_id, row_count);
     }
 
-    const auto end_row_id = variably_sized_column_count > 0 ? variably_sized_end_row_id : fixed_size_end_row_id;
-    return {std::move(run), end_row_id};
+    return run;
   }
 
   /**
@@ -1156,9 +1107,9 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
    * @return {data_per_column, value_end_offsets, end_row_id}
    */
   static std::tuple<std::vector<uninitialized_vector<char>>, uninitialized_vector<size_t>, RowID>
-  materialize_variably_sized_columns(const AggregateHashSortEnvironment& setup, const std::shared_ptr<const Table>& table,
+  materialize_variably_sized_columns(const AggregateHashSortEnvironment& environment, const std::shared_ptr<const Table>& table,
                                      const RowID& begin_row_id, const size_t row_count) {
-    const auto variably_sized_column_count = setup.variably_sized_column_ids.size();
+    const auto variably_sized_column_count = environment.variably_sized_column_ids.size();
 
     // Return values
     auto end_row_id = RowID{};
@@ -1170,7 +1121,7 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
       auto& column_data = data_per_column[column_id];
       column_data.resize(row_count);
 
-      const auto group_by_column_id = setup.variably_sized_column_ids[column_id];
+      const auto group_by_column_id = environment.variably_sized_column_ids[column_id];
       const auto column_is_nullable = table->column_is_nullable(group_by_column_id);
 
       // Number of values from this column already materialized
@@ -1212,7 +1163,7 @@ struct ChunkRunSource : public AbstractRunSource<Run> {
 
             // Set `value_end_offsets`
             const auto previous_value_end =
-                column_id == 0 ? setup.variably_sized_values_begin_offset : *(value_end_offsets_iter - 1);
+                column_id == 0 ? environment.variably_sized_values_begin_offset : *(value_end_offsets_iter - 1);
             *value_end_offsets_iter = previous_value_end + value_size;
             value_end_offsets_iter += variably_sized_column_count;
 

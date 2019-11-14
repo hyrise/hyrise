@@ -13,56 +13,45 @@ namespace aggregate_hashsort {
  * @param remaining_row_count   Number of groups to partition
  */
 template <typename Run>
-void partition(const AggregateHashSortEnvironment& environment, size_t remaining_row_count,
-               const std::shared_ptr<AbstractRunSource<Run>>& run_source,
-               const RadixFanOut& radix_fan_out,
-               std::vector<Partition<Run>>& partitions,
+void partition(const AggregateHashSortEnvironment& environment, size_t partition_group_count,
+               RunReader<Run>& run_reader, const RadixFanOut& radix_fan_out, std::vector<Partition<Run>>& partitions,
                const size_t level) {
   DebugAssert(radix_fan_out.partition_count == partitions.size(), "Partition count mismatch");
-  DebugAssert(remaining_row_count > 0, "partition() shouldn't have been called");
+  DebugAssert(partition_group_count > 0, "partition() shouldn't have been called");
 
   // Pre-allocate target runs
   auto run_per_partition = std::vector<Run>{};
   for (auto partition_idx = size_t{0}; partition_idx < partitions.size(); ++partition_idx) {
-    const auto [group_capacity, group_data_capacity] = next_run_size(*run_source,remaining_row_count, radix_fan_out);
+    const auto [group_capacity, group_data_capacity] = next_run_size(run_reader, partition_group_count, radix_fan_out);
     auto run = create_run<Run>(environment, group_capacity, group_data_capacity);
     run_per_partition.emplace_back(std::move(run));
   }
 
 #if VERBOSE
-  std::cout << indent(level) << "partition() processing " << remaining_row_count << " elements"
+  std::cout << indent(level) << "partition() processing " << partition_group_count << " elements"
             << "\n";
   Timer t;
 #endif
 
-  while (!run_source->end_of_source() && remaining_row_count > 0) {
-    if (run_source->end_of_run()) {
-#if VERBOSE
-      Timer t2;
-#endif
-      run_source->next_run(environment);
-#if VERBOSE
-      std::cout << indent(level) << "partition(): next_run() of " << run_source->runs.back().size << " rows took "
-                << t2.lap_formatted() << "\n";
-#endif
-    }
+  while (!run_reader.end_of_reader() && partition_group_count > 0) {
+    const auto& source_run = run_reader.current_run();
 
-    const auto& source_run = run_source->current_run();
-
-    while (!run_source->end_of_run() && remaining_row_count > 0) {
-      const auto partition_idx = radix_fan_out.get_partition_for_hash(source_run.hashes[run_source->run_offset]);
+    while (!run_reader.end_of_run() && partition_group_count > 0) {
+      const auto partition_idx = radix_fan_out.get_partition_for_hash(source_run.hashes[run_reader.run_offset]);
 
       auto& target_run = run_per_partition[partition_idx];
 
-      target_run.append(source_run, run_source->run_offset, environment.config.buffer_flush_threshold);
+      target_run.append(source_run, run_reader.run_offset, environment.config.buffer_flush_threshold);
 
-      --remaining_row_count;
-      run_source->next_group_in_run();
+      --partition_group_count;
+      run_reader.next_group_in_run();
     }
 
     for (auto& run : run_per_partition) {
       run.flush_buffers(source_run);
     }
+
+    run_reader.next_run();
   }
 
   // Add non-empty Runs to the output partitions
@@ -81,7 +70,7 @@ void partition(const AggregateHashSortEnvironment& environment, size_t remaining
   std::cout << indent(level) << "partition(): took " << t.lap_formatted() << "\n";
 #endif
 
-  DebugAssert(remaining_row_count == 0, "Invalid `remaining_row_count` parameter passed");
+  DebugAssert(partition_group_count == 0, "Invalid `remaining_row_count` parameter passed");
 }
 
 /**
@@ -89,16 +78,13 @@ void partition(const AggregateHashSortEnvironment& environment, size_t remaining
  */
 template <typename Run>
 std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment, const size_t hash_table_size,
-                                const std::shared_ptr<AbstractRunSource<Run>>& run_source,
-                                const RadixFanOut& radix_fan_out,
-                                std::vector<Partition<Run>>& partitions,
-                                const size_t level) {
-  run_source->prefetch(environment);
-
+                                RunReader<Run>& run_reader, const RadixFanOut& radix_fan_out,
+                                std::vector<Partition<Run>>& partitions, const size_t level) {
   auto run_per_partition = std::vector<Run>{};
   for (auto partition_idx = size_t{0}; partition_idx < partitions.size(); ++partition_idx) {
-    const auto estimated_group_count = static_cast<size_t>(std::ceil(hash_table_size * environment.config.hash_table_max_load_factor));
-    const auto[group_capacity, group_data_capacity] = next_run_size(*run_source, estimated_group_count, radix_fan_out);
+    const auto estimated_group_count =
+        static_cast<size_t>(std::ceil(hash_table_size * environment.config.hash_table_max_load_factor));
+    const auto [group_capacity, group_data_capacity] = next_run_size(run_reader, estimated_group_count, radix_fan_out);
     auto run = create_run<Run>(environment, group_capacity, std::max(group_data_capacity, group_data_capacity));
     run.is_aggregated = true;
     run_per_partition.emplace_back(std::move(run));
@@ -165,8 +151,8 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
 #endif
 
 #if VERBOSE
-  std::cout << indent(level) << "hashing(): requested hash_table_size: " << hash_table_size <<
-  "; actual hash table size: " << hash_table.bucket_count() << "\n";
+  std::cout << indent(level) << "hashing(): requested hash_table_size: " << hash_table_size
+            << "; actual hash table size: " << hash_table.bucket_count() << "\n";
 #endif
 
 #ifdef USE_DENSE_HASH_MAP
@@ -179,19 +165,15 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
   auto hash_table_full = false;
   auto group_counter = size_t{0};
 
-  while(!run_source->end_of_source() && !hash_table_full) {
-    if (run_source->end_of_run()) {
-      run_source->next_run(environment);
-    }
+  while (!run_reader.end_of_reader() && !hash_table_full) {
+    const auto& source_run = run_reader.current_run();
 
-    const auto &source_run = run_source->current_run();
+    while (!run_reader.end_of_run() && !hash_table_full) {
+      const auto partition_idx = radix_fan_out.get_partition_for_hash(source_run.hashes[run_reader.run_offset]);
 
-    while (!run_source->end_of_run() && !hash_table_full) {
-      const auto partition_idx = radix_fan_out.get_partition_for_hash(source_run.hashes[run_source->run_offset]);
+      auto& target_run = run_per_partition[partition_idx];
 
-      auto &target_run = run_per_partition[partition_idx];
-
-      const auto key = source_run.make_key(run_source->run_offset);
+      const auto key = source_run.make_key(run_reader.run_offset);
 #if VERBOSE >= 2
       std::cout << indent(level) << "hashing() Key: " << key << ": " << std::flush;
 #endif
@@ -199,13 +181,12 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
       auto hash_table_iter = hash_table.find(key);
 
       if (hash_table_iter == hash_table.end()) {
-
-        auto &group_key_counter = group_key_counter_per_partition[partition_idx];
+        auto& group_key_counter = group_key_counter_per_partition[partition_idx];
 #if VERBOSE >= 2
         std::cout << indent(level) << "hashing() Append " << group_key_counter << std::endl;
 #endif
         hash_table.insert({key, group_key_counter});
-        target_run.append(source_run, run_source->run_offset, environment.config.buffer_flush_threshold);
+        target_run.append(source_run, run_reader.run_offset, environment.config.buffer_flush_threshold);
         ++group_key_counter;
         ++group_counter;
 
@@ -214,17 +195,22 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
         }
       } else {
 #if VERBOSE >= 2
-       std::cout << indent(level) << "hashing() Aggregate " <<hash_table_iter->second << std::endl;
+        std::cout << indent(level) << "hashing() Aggregate " << hash_table_iter->second << std::endl;
 #endif
-        target_run.aggregate(hash_table_iter->second, source_run, run_source->run_offset, environment.config.buffer_flush_threshold);
+        target_run.aggregate(hash_table_iter->second, source_run, run_reader.run_offset,
+                             environment.config.buffer_flush_threshold);
         ++group_counter;
       }
 
-      run_source->next_group_in_run();
+      run_reader.next_group_in_run();
     }
 
     for (auto& run : run_per_partition) {
       run.flush_buffers(source_run);
+    }
+
+    if (run_reader.end_of_run()) {
+      run_reader.next_run();
     }
   }
 
@@ -240,29 +226,27 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
     partitions[partition_idx].runs.emplace_back(std::move(run));
   }
 
-  const auto continue_hashing = static_cast<float>(group_counter) / hash_table.size() >= environment.config.continue_hashing_density_threshold;
+  const auto continue_hashing =
+      static_cast<float>(group_counter) / hash_table.size() >= environment.config.continue_hashing_density_threshold;
 #if VERBOSE
-  std::cout << indent(level) << "hashing(): processed " << group_counter << " elements into " << hash_table.size() <<
-  " groups in " << t.lap_formatted() << "; hash_counter: "<<hash_table.hash_function().hash_counter << "; compare_counter: " << hash_table.key_eq().counter <<
-  "; load_factor: " << hash_table.load_factor() << "; continue_hashing: " << continue_hashing << "\n";
+  std::cout << indent(level) << "hashing(): processed " << group_counter << " elements into " << hash_table.size()
+            << " groups in " << t.lap_formatted() << "; hash_counter: " << hash_table.hash_function().hash_counter
+            << "; compare_counter: " << hash_table.key_eq().counter << "; load_factor: " << hash_table.load_factor()
+            << "; continue_hashing: " << continue_hashing << "\n";
 #endif
-  
+
   return {continue_hashing, group_counter};
 }
 
 template <typename Run>
 std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSortEnvironment& environment,
-                                                           const std::vector<Run>& runs,
-                                                           const RadixFanOut& radix_fan_out,
+                                                           std::vector<Run> runs, const RadixFanOut& radix_fan_out,
                                                            const size_t level) {
+  auto run_reader = RunReader{std::move(runs)};
 
 #if VERBOSE
   Timer t;
 #endif
-
-  auto remaining_row_count = std::accumulate(runs.begin(), runs.end(), size_t{0}, [](const auto& run, const auto count) {
-    return run.size + count;
-  });
 
   // Start with a single partition and expand to `radix_fan_out.partition_count` partitions if `hashing()` detects a too
   // low density of groups and determines the switch to HashSortMode::RadixFanOut
@@ -274,23 +258,22 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
    */
   {
 #if VERBOSE
-    std::cout << indent(level) << "adaptive_hashing_and_partition() Rows: " << run.size <<  << "\n";
+    std::cout << indent(level) << "adaptive_hashing_and_partition() Rows: " << run_reader.remaining_group_count << "\n";
 #endif
-    const auto hash_table_size = configure_hash_table(environment, remaining_row_count);
-    const auto[continue_hashing, hashing_row_count] =
-    hashing(environment, hash_table_size, runs, RadixFanOut{1, 0, 0}, partitions, level);
+    const auto hash_table_size = configure_hash_table(environment, run_reader.remaining_group_count);
+    const auto [continue_hashing, hashing_row_count] =
+        hashing(environment, hash_table_size, run_reader, RadixFanOut{1, 0, 0}, partitions, level);
     if (!continue_hashing) {
       mode = HashSortMode::Partition;
     }
 
-    remaining_row_count -= hashing_row_count;
-
     // The initial hashing() pass didn't process all data, so in order to progress with the main loop below we need to
     // partition its output
-    if (remaining_row_count > 0) {
+    if (run_reader.remaining_group_count > 0) {
       const auto initial_fan_out_row_count = partitions.front().size();
+      auto partitioning_run_reader = RunReader{std::move(partitions.front().runs)};
       partitions = std::vector<Partition<Run>>{radix_fan_out.partition_count};
-      partition(environment, initial_fan_out_row_count, partitions.front().si, radix_fan_out, partitions, level);
+      partition(environment, initial_fan_out_row_count, partitioning_run_reader, radix_fan_out, partitions, level);
     }
   }
 
@@ -301,25 +284,24 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
   /**
    * Main loop of alternating hashing (with simultaneous partitioning) and partitioning steps
    */
-  while (!run_source->end_of_source()) {
+  while (!run_reader.end_of_reader()) {
 #if VERBOSE
-    std::cout << indent(level) << "adaptive_hashing_and_partition() Rows: " << run_source->total_remaining_group_count << ", Fetched: " << run_source->remaining_fetched_group_count << " rows, " << run_source->remaining_fetched_group_data_size << " elements" << "\n";
+    std::cout << indent(level) << "adaptive_hashing_and_partition() Rows: " << run_reader.remaining_group_count
+              << ", Bytes: " << run_reader.remaining_group_data_size << "\n";
 #endif
 
-    DebugAssert(run_source->total_remaining_group_count >= run_source->remaining_fetched_group_count, "Bug detected");
-
-
     if (mode == HashSortMode::Hashing) {
-      const auto hash_table_size = configure_hash_table(environment, run_source->total_remaining_group_count);
+      const auto hash_table_size = configure_hash_table(environment, run_reader.remaining_group_count);
       const auto [continue_hashing, hashing_row_count] =
-      hashing(environment, hash_table_size, run_source, radix_fan_out, partitions, level);
+          hashing(environment, hash_table_size, run_reader, radix_fan_out, partitions, level);
       if (!continue_hashing) {
         mode = HashSortMode::Partition;
       }
 
     } else {
-      const auto partition_row_count = std::min(environment.config.max_partitioning_counter, run_source->total_remaining_group_count);
-      partition(environment, partition_row_count, run_source, radix_fan_out, partitions, level);
+      const auto partition_row_count =
+          std::min(environment.config.max_partitioning_counter, run_reader.remaining_group_count);
+      partition(environment, partition_row_count, run_reader, radix_fan_out, partitions, level);
       mode = HashSortMode::Hashing;
     }
   }
@@ -330,63 +312,6 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
 
   return partitions;
 }
-
-//template <typename Run>
-//std::vector<Run> aggregate(const AggregateHashSortEnvironment& environment,
-//                           const std::shared_ptr<AbstractRunSource<Run>>& run_source, const size_t level) {
-//  if (run_source->end_of_source()) {
-//    return {};
-//  }
-//
-//#if VERBOSE
-//  std::cout << indent(level) << "aggregate() at level " << level << " - ";
-//
-//  if (const auto* table_run_source = dynamic_cast<TableRunSource<Run>*>(run_source.get())) {
-//    std::cout << "Table: " << table_run_source->table->row_count() << " rows";
-//  } else if (const auto* partition_run_source = dynamic_cast<PartitionRunSource<Run>*>(run_source.get())) {
-//    auto rows = size_t{0};
-//    for (const auto& run : partition_run_source->runs) {
-//      rows += run.size;
-//    }
-//
-//    std::cout << partition_run_source->runs.size() << " runs; " << rows << " rows";
-//  } else {
-//    Fail("");
-//  }
-//
-//  std::cout << "\n";
-//#endif
-//
-//  auto output_runs = std::vector<Run>{};
-//
-//  if (run_source->runs.size() == 1 && run_source->runs.front().is_aggregated) {
-//#if VERBOSE
-//    std::cout << indent(level) << " Single run in partition is aggregated, our job here is done"
-//              << "\n";
-//#endif
-//    output_runs.emplace_back(std::move(run_source->runs.front()));
-//    return output_runs;
-//  }
-//
-//  const auto radix_fan_out = RadixFanOut::for_level(level);
-//
-//  auto partitions = adaptive_hashing_and_partition(environment, run_source, radix_fan_out, level);
-//
-//  for (auto& partition : partitions) {
-//    if (partition.size() == 0) {
-//      continue;
-//    }
-//
-//    const auto partition_run_source = std::static_pointer_cast<AbstractRunSource<Run>>(std::make_shared<PartitionRunSource<Run>>(std::move(partition.runs)));
-//
-//    auto aggregated_partition = aggregate(environment, partition_run_source, level + 1);
-//
-//    output_runs.insert(output_runs.end(), std::make_move_iterator(aggregated_partition.begin()),
-//                       std::make_move_iterator(aggregated_partition.end()));
-//  }
-//
-//  return output_runs;
-//}
 
 }  // namespace aggregate_hashsort
 

@@ -81,26 +81,27 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     using Run = BasicRun<GroupSizePolicy>;
 
     /**
-     * Create an AggregateHashSortTask for each Chunk in the input table
+     * Create an AggregateHashSortTask for each Chunk in the input table and schedule it
      */
-    const auto task_set = std::make_shared<AggregateHashSortTaskSet<Run>>(environment);
+    const auto task_set = std::make_shared<AggregateHashSortTaskSet<Run>>(environment, 0);
     auto tasks = std::vector<std::shared_ptr<AggregateHashSortTask<Run>>>{};
     for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      const auto input_chunk = input_table->get_chunk(chunk_id);
-      const auto run_source = std::make_shared<ChunkRunSource<Run>>(environment, input_chunk);
-      task_set->add_task(std::make_shared<AggregateHashSortTask<Run>>(task_set, environment, run_source));
+      const auto run_source = std::make_shared<ChunkRunSource<Run>>(environment, input_table, chunk_id);
+      const auto task = std::make_shared<AggregateHashSortTask<Run>>(environment, task_set, run_source);
+      task_set->add_task(task);
+      tasks.emplace_back(task);
     }
 
-    task_set->schedule();
-
-    /**
-     * Wait for all Tasks to finish
-     */
-    {
-      auto lock = std::unique_lock{environment->output_chunks_mutex};
-      environment->done_condition.wait(lock, [&]() { return environment->global_task_counter == 0; });
-    }
+    CurrentScheduler::schedule_tasks(tasks);
   });
+
+  /**
+   * Wait for all Tasks to finish
+   */
+  {
+    auto lock = std::unique_lock{environment->output_chunks_mutex};
+    environment->done_condition.wait(lock, [&]() { return environment->global_task_counter == 0; });
+  }
 
   const auto output_table =
       std::make_shared<Table>(environment->output_column_definitions, TableType::Data, std::move(environment->output_chunks));

@@ -35,7 +35,7 @@ class AggregateHashSortOutputTask : public AbstractTask {
       const auto& output_column_definition = environment->output_column_definitions[column_id];
       resolve_data_type(output_column_definition.data_type, [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
-        output_segments[column_id] = run.template materialize_group_column<ColumnDataType>(environment,
+        output_segments[column_id] = run.template materialize_group_column<ColumnDataType>(*environment,
                                                                                            column_id, output_column_definition.nullable);
       });
     }
@@ -70,14 +70,10 @@ class AggregateHashSortTaskSet {
     environment->increment_global_task_counter();
   }
 
-  void schedule() {
-    CurrentScheduler::schedule_tasks(_tasks);
-  }
-
   std::shared_ptr<AggregateHashSortEnvironment> environment;
 
   // Number of tasks in this task set that are still active
-  std::atomic_size_t local_task_counter;
+  std::atomic_size_t local_task_counter{0};
 
   size_t level;
 
@@ -110,8 +106,9 @@ class AggregateHashSortTask : public AbstractTask {
  protected:
   void _on_execute() override {
     auto fan_out = RadixFanOut::for_level(task_set->level);
+    auto input_runs = run_source->fetch_runs();
 
-    partitions = adaptive_hashing_and_partition(environment, run_source, fan_out, task_set->level);
+    partitions = adaptive_hashing_and_partition(*environment, std::move(input_runs), fan_out, task_set->level);
 
     if (task_set->local_task_counter.fetch_sub(1) == 1) {
       /**
@@ -123,14 +120,14 @@ class AggregateHashSortTask : public AbstractTask {
       for (auto partition_idx = size_t{0}; partition_idx < partition_count; ++partition_idx) {
         auto runs = std::vector<Run>{};
 
-        for (auto& task : task_set->tasks()) {
-          auto& partition = task->partitions[partition_idx];
+        for (auto& task : task_set->_tasks) {
+          auto& partition = task.lock()->partitions[partition_idx];
           runs.insert(runs.end(), std::move_iterator(partition.runs.begin()), std::move_iterator(partition.runs.end()));
         }
 
         if (!runs.empty()) {
           if (runs.size() == 1 && runs.front().is_aggregated) {
-            const auto output_task = std::make_shared<AggregateHashSortOutputTask>(environment, std::move(runs.front()));
+            const auto output_task = std::make_shared<AggregateHashSortOutputTask<Run>>(environment, std::move(runs.front()));
             output_task->schedule();
           } else {
             auto sub_task_set = std::make_shared<AggregateHashSortTaskSet<Run>>(environment, task_set->level + 1);
@@ -141,12 +138,13 @@ class AggregateHashSortTask : public AbstractTask {
 
               for (; run_idx < runs.size(); ++run_idx) {
                 sub_task_group_count += runs[run_idx].size;
+                sub_task_runs.emplace_back(std::move(runs[run_idx]));
                 if (sub_task_group_count > environment->config.task_group_count_target) {
                   break;
                 }
               }
 
-              const auto sub_task_run_source = std::make_shared<RunSource<Run>>(std::move(runs));
+              const auto sub_task_run_source = std::make_shared<ForwardingRunSource<Run>>(std::move(sub_task_runs));
               const auto sub_task = std::make_shared<AggregateHashSortTask<Run>>(environment, sub_task_set, sub_task_run_source);
               sub_task_set->add_task(sub_task);
 
