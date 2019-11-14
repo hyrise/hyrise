@@ -43,9 +43,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   expected_table->append({13.0f});
   expected_table->append({16.2f});
 
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
-
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
@@ -61,9 +58,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
-
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -82,11 +76,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, StringSegment) {
   expected_table->append({"is"});
   expected_table->append({"a"});
   expected_table->append({"test"});
-
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
-
-  Hyrise::get().storage_manager.add_table("table_a", expected_table);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -110,11 +99,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesSegmentSorted) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
-
-  Hyrise::get().storage_manager.add_table("expected_table", expected_table);
-
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
@@ -136,11 +120,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesSegmentUnsorted) {
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
-
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
-
-  Hyrise::get().storage_manager.add_table("expected_table", expected_table);
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -164,11 +143,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesMixColumn) {
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table);
-
-  Hyrise::get().storage_manager.add_table("expected_table", expected_table);
-
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
@@ -188,9 +162,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, EmptyStringsSegment) {
   expected_table->append({""});
   expected_table->append({""});
   expected_table->append({""});
-
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -215,9 +186,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesNullValues) {
   expected_table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
   expected_table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
   expected_table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
-
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -245,9 +213,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   expected_table->append(null_values);
   expected_table->append(null_values);
 
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
-
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
@@ -268,9 +233,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RepeatedInt) {
   expected_table->append({2});
   expected_table->append({2});
   expected_table->append({1});
-
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   auto importer = std::make_shared<opossum::ImportBinary>(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
@@ -312,9 +274,6 @@ TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { /
   expected_table->append({"a"});
   expected_table->append({"test"});
 
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::FixedStringDictionary);
-
   auto importer = std::make_shared<opossum::ImportBinary>(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
   importer->execute();
@@ -331,9 +290,6 @@ TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionaryMultipleChunks) 
   expected_table->append({"is"});
   expected_table->append({"a"});
   expected_table->append({"test"});
-
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, EncodingType::FixedStringDictionary);
 
   auto importer = std::make_shared<opossum::ImportBinary>(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
