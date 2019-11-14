@@ -25,25 +25,4 @@ TEST_F(SingletonTest, SingleInstance) {
   EXPECT_EQ(&a, &b);
 }
 
-// ASAN cannot handle the not yet defined (because it's a dynamic library) typeinfo for TestPlugin.
-// Therefore, this test is only built if ASAN is not activated.
-#if defined(__has_feature)
-#if !__has_feature(address_sanitizer)
-// This test case should validate that there is only a single instance of a singleton when it is accessed from two
-// different translation units, i.e., a plugin and the test itself in this case.
-TEST_F(SingletonTest, SingleInstanceAcrossTranslationUnits) {
-  auto& sm = Hyrise::get().storage_manager;
-  auto& pm = Hyrise::get().plugin_manager;
-
-  // The TestPlugin also holds a reference to the StorageManager.
-  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
-  auto& plugins = get_plugins();
-
-  auto test_plugin = static_cast<TestPlugin*>(plugins["hyriseTestPlugin"].plugin);
-
-  EXPECT_EQ(&sm, &test_plugin->sm);
-}
-#endif
-#endif
-
 }  // namespace opossum
