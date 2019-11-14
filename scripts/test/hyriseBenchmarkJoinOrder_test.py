@@ -22,6 +22,7 @@ def main():
   arguments["--clients"] = "1"
   arguments["--cache_binary_tables"] = "true"
   arguments["--scheduler"] = "false"
+  arguments["--visualize"] = "true"
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
 
@@ -31,6 +32,7 @@ def main():
   benchmark.expect("Running in single-threaded mode")
   benchmark.expect("1 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Shuffled' mode")
+  benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'Unencoded'")
   benchmark.expect("Chunk size is 100000")
   benchmark.expect("Max runs per item is 100")
@@ -82,7 +84,6 @@ def main():
   arguments["--compression"] = "'Fixed-size byte-aligned'"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
-  arguments["--visualize"] = "true"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
@@ -90,7 +91,6 @@ def main():
   benchmark.expect("Running in multi-threaded mode using all available cores")
   benchmark.expect("4 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Ordered' mode")
-  benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'LZ4'")
   benchmark.expect("Chunk size is 100000")
   benchmark.expect("Max runs per item is 2")
