@@ -161,7 +161,8 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   }
 
   // (5) Wait for the MvccDeletePlugin to delete chunk 2 logically
-  const auto max_attempts = 100;
+  // High number of attempts chosen so that even slow builds (especially sanitizers) can finish
+  const auto max_attempts = 1000;
   {
     auto attempts_remaining = max_attempts;
     while (attempts_remaining--) {
