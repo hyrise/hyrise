@@ -159,7 +159,7 @@ void ExportBinary::_write_chunk(const Table& table, std::ofstream& ofstream, con
   }
 }
 
-void ExportBinary::_write_segment(const BaseEncodedSegment& base_segment, std::ofstream& ofstream) {
+void ExportBinary::_write_segment(const BaseSegment& base_segment, std::ofstream& ofstream) {
   Fail("Binary export for segment type is not supported yet.");
 }
 
@@ -189,7 +189,7 @@ void ExportBinary::_write_segment(const ReferenceSegment& reference_segment, std
 
       // We export the values materialized
       iterable.for_each([&](const auto& value) {
-        string_lengths.push_back(_get_size(value.value()));
+        string_lengths.push_back(_size(value.value()));
         values << value.value();
       });
 
@@ -206,17 +206,18 @@ void ExportBinary::_write_segment(const ReferenceSegment& reference_segment, std
   });
 }
 
-void ExportBinary::_write_segment(const BaseDictionarySegment& base_dictionary_segment, std::ofstream& ofstream) {
-  Assert(base_dictionary_segment.compressed_vector_type(),
+template <typename T>
+void ExportBinary::_write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream) {
+  Assert(dictionary_segment.compressed_vector_type(),
          "Expected DictionarySegment to use vector compression for attribute vector");
-  Assert(is_fixed_size_byte_aligned(*base_dictionary_segment.compressed_vector_type()),
+  Assert(is_fixed_size_byte_aligned(*dictionary_segment.compressed_vector_type()),
          "Does only support fixed-size byte-aligned compressed attribute vectors.");
   export_value(ofstream, EncodingType::Dictionary);
 
   const auto attribute_vector_width = [&]() {
-    Assert(base_dictionary_segment.compressed_vector_type(),
+    Assert(dictionary_segment.compressed_vector_type(),
            "Expected DictionarySegment to use vector compression for attribute vector");
-    switch (*base_dictionary_segment.compressed_vector_type()) {
+    switch (*dictionary_segment.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:
         return 4u;
       case CompressedVectorType::FixedSize2ByteAligned:
@@ -228,31 +229,18 @@ void ExportBinary::_write_segment(const BaseDictionarySegment& base_dictionary_s
     }
   }();
 
-  resolve_data_type(base_dictionary_segment.data_type(), [&](auto type) {
-    using SegmentDataType = typename decltype(type)::type;
 
-    // Write attribute vector width
-    export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
+  // Write attribute vector width
+  export_value(ofstream, static_cast<AttributeVectorWidth>(attribute_vector_width));
+  // Write the dictionary size and dictionary
+  export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
+  export_values(ofstream, *dictionary_segment.dictionary());
 
-    if (base_dictionary_segment.encoding_type() == EncodingType::FixedStringDictionary) {
-      const auto& segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(base_dictionary_segment);
-
-      // Write the dictionary size and dictionary
-      export_value(ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
-      export_values(ofstream, *segment.dictionary());
-    } else {
-      const auto& segment = static_cast<const DictionarySegment<SegmentDataType>&>(base_dictionary_segment);
-
-      // Write the dictionary size and dictionary
-      export_value(ofstream, static_cast<ValueID::base_type>(segment.dictionary()->size()));
-      export_values(ofstream, *segment.dictionary());
-    }
-  });
   // Write attribute vector
-  Assert(base_dictionary_segment.compressed_vector_type(),
+  Assert(dictionary_segment.compressed_vector_type(),
          "Expected DictionarySegment to use vector compression for attribute vector");
-  _export_attribute_vector(ofstream, *base_dictionary_segment.compressed_vector_type(),
-                           *base_dictionary_segment.attribute_vector());
+  _export_attribute_vector(ofstream, *dictionary_segment.compressed_vector_type(),
+                           *dictionary_segment.attribute_vector());
 }
 
 template <typename T>
@@ -288,12 +276,12 @@ void ExportBinary::_export_attribute_vector(std::ofstream& ofstream, const Compr
 }
 
 template <typename T>
-size_t ExportBinary::_get_size(const T& object) {
+size_t ExportBinary::_size(const T& object) {
   return sizeof(object);
 }
 
 template <>
-size_t ExportBinary::_get_size(const pmr_string& object) {
+size_t ExportBinary::_size(const pmr_string& object) {
   return object.length();
 }
 }  // namespace opossum

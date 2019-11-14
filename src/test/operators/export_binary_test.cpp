@@ -53,6 +53,8 @@ class OperatorsExportBinaryTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
+class DISABLED_OperatorsExportBinaryTest : public OperatorsExportBinaryTest {};
+
 class OperatorsExportBinaryMultiEncodingTest : public OperatorsExportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};
 
@@ -87,7 +89,7 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) {
+TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -110,7 +112,7 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, FixedStringDictionaryMultipleChunks) {
+TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 

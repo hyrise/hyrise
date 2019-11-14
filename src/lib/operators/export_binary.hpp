@@ -73,7 +73,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Row count             | ChunkOffset                           |  4
    *
    * Next, it dumps the contents of the segments in the respective format (depending on the type
-   * of the segment, such as ValueSegment, ReferenceSegment, DictionarySegment, FixedStringDictionarySegment, RunLengthSegment).
+   * of the segment, such as ValueSegment, ReferenceSegment, DictionarySegment, RunLengthSegment).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -82,7 +82,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    */
   static void _write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id);
 
-  [[noreturn]] static void _write_segment(const BaseEncodedSegment& base_segment, std::ofstream& ofstream);
+  [[noreturn]] static void _write_segment(const BaseSegment& base_segment, std::ofstream& ofstream);
 
   /**
    * Value Segments are dumped with the following layout:
@@ -152,7 +152,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param base_dictionary_segment The segment to export
    * @param ofstream The output stream for exporting
    */
-  static void _write_segment(const BaseDictionarySegment& base_dictionary_segment, std::ofstream& ofstream);
+  template <typename T>
+  static void _write_segment(const DictionarySegment<T>& dictionary_segment, std::ofstream& ofstream);
 
   /**
    * RunLength Segments are dumped with the following layout:
@@ -180,6 +181,6 @@ class ExportBinary : public AbstractReadOnlyOperator {
                                        const BaseCompressedVector& attribute_vector);
 
   template <typename T>
-  static size_t _get_size(const T& object);
+  static size_t _size(const T& object);
 };
 }  // namespace opossum
