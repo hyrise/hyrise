@@ -210,14 +210,20 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables iff MVCC is enabled");
 
-#if HYRISE_DEBUG
-  for (const auto& segment : segments) {
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
-    DebugAssert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& segment : segments) {
+      const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
+      Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+    }
   }
-#endif
 
-  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
+  // tbb::concurrent_vector does not guarantee that elements reported by size() are fully initialized yet:
+  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
+  // To avoid someone reading an incomplete shared_ptr<Chunk>, we (1) use the zero_allocator for the concurrent_vector,
+  // making sure that an uninitialized entry compares equal to nullptr and (2) insert the desired chunk atomically.
+
+  auto new_chunk_iter = _chunks.push_back(nullptr);
+  std::atomic_store(&*new_chunk_iter, std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {

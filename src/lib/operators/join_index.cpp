@@ -148,7 +148,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       }
 
       const auto& reference_segment =
-          std::dynamic_pointer_cast<ReferenceSegment>(index_chunk->segments()[_primary_predicate.column_ids.second]);
+          std::dynamic_pointer_cast<ReferenceSegment>(index_chunk->get_segment(_primary_predicate.column_ids.second));
       Assert(reference_segment != nullptr,
              "Non-empty index input table (reference table) has to have only reference segments.");
       auto index_data_table = reference_segment->referenced_table();
@@ -379,7 +379,9 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
         range_end = index->cend();
         break;
       }
-      default: { Fail("Unsupported comparison type encountered"); }
+      default: {
+        Fail("Unsupported comparison type encountered");
+      }
     }
     index_ranges.emplace_back(IndexRange{range_begin, range_end});
   }

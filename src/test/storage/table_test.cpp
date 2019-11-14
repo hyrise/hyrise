@@ -21,7 +21,8 @@ class StorageTableTest : public BaseTest {
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
-  static tbb::concurrent_vector<std::shared_ptr<Chunk>>& get_chunks(std::shared_ptr<Table>& table) {
+  static tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>>& get_chunks(
+      std::shared_ptr<Table>& table) {
     return table->_chunks;
   }
 
