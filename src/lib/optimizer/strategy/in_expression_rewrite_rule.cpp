@@ -10,6 +10,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 
 namespace {
@@ -42,6 +43,10 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
     const auto value_segment = std::make_shared<ValueSegment<ColumnDataType>>(std::move(right_values));
     list_as_table->append_chunk({value_segment});
   });
+
+  // All regular tables have statistics. Even if the JoinOrderingRule already ran, add statistics to the dummy table so
+  // that following rules, which expect statistics to be present, do not run into problems.
+  list_as_table->set_table_statistics(TableStatistics::from_table(*list_as_table));
 
   // Create a join node
   const auto static_table_node = std::make_shared<StaticTableNode>(list_as_table);
