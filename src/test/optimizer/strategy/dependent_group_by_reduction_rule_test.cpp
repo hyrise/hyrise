@@ -36,7 +36,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_a_2 = stored_table_node_a->get_column("column2");
 
     table_b = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
-    table_b->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::No);
+    table_b->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
     storage_manager.add_table("table_b", table_b);
     stored_table_node_b = StoredTableNode::make("table_b");
     column_b_0 = stored_table_node_b->get_column("column0");
@@ -63,12 +63,6 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
   LQPColumnReference column_c_0, column_c_1, column_c_2;
 };
 
-// same columns from two sides, once it will be ANY'd, once not
-// single key does work
-// two of two does not
-// one of two does not work
-// any expressions on a column do no longer work even though is would theoretically be possible (at least +1)
-
 TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   // clang-format off
   auto lqp =
@@ -81,8 +75,8 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(column_a_0),
-                      expression_vector(any_(column_a_0), any_(column_a_1),
-                                        any_(column_a_2)),
+                      expression_vector(sum_(column_a_0), sum_(column_a_1),
+                                        sum_(column_a_2)),
                       stored_table_node_a);
   // clang-format on
 
@@ -92,7 +86,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
 TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   // clang-format off
   auto lqp =
-  AggregateNode::make(expression_vector(column_b_0),
+  AggregateNode::make(expression_vector(column_b_0, column_b_2),
                       expression_vector(sum_(column_b_0), sum_(column_b_1),
                                         sum_(column_b_2)),
                       stored_table_node_b);
@@ -100,7 +94,27 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
-  AggregateNode::make(expression_vector(column_b_0),
+  AggregateNode::make(expression_vector(column_b_0, column_b_2),
+                      expression_vector(sum_(column_b_0), sum_(column_b_1),
+                                        sum_(column_b_2)),
+                      stored_table_node_b);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
+  // clang-format off
+  auto lqp =
+  AggregateNode::make(expression_vector(column_b_0, column_b_1),
+                      expression_vector(sum_(column_b_0), sum_(column_b_1),
+                                        sum_(column_b_2)),
+                      stored_table_node_b);
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(column_b_0, column_b_1),
                       expression_vector(sum_(column_b_0), sum_(column_b_1),
                                         sum_(column_b_2)),
                       stored_table_node_b);
@@ -120,8 +134,55 @@ TEST_F(DependentGroupByReductionRuleTest, UnnecessaryGroupByColumn) {
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(column_a_0),
-                      expression_vector(any_(column_a_0)),
+                      expression_vector(sum_(column_a_0)),
                       stored_table_node_a);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(DependentGroupByReductionRuleTest, RemovedAndLaterAccessedGroupByColumn) {
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(column_a_0, column_a_1),
+    AggregateNode::make(expression_vector(column_a_0, column_a_1),
+                        expression_vector(sum_(column_a_0)),
+                        stored_table_node_a));
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(column_a_0, any_(column_a_1)),
+    AggregateNode::make(expression_vector(column_a_0),
+                        expression_vector(sum_(column_a_0), any_(column_a_1)),
+                        stored_table_node_a));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(DependentGroupByReductionRuleTest, Join) {
+  const auto stored_table_node_a2 = StoredTableNode::make("table_a");
+  const auto column_a2_0 = stored_table_node_a->get_column("column0");
+  const auto column_a2_1 = stored_table_node_a->get_column("column1");
+  const auto column_a2_2 = stored_table_node_a->get_column("column2");
+
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(column_a_0, column_a_1),
+    AggregateNode::make(expression_vector(column_a_0, column_a_1),
+                        expression_vector(sum_(column_a_0)),
+    JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_a2_0),
+      stored_table_node_a,
+      stored_table_node_a2)));
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(column_a_0, any_(column_a_1)),
+    AggregateNode::make(expression_vector(column_a_0),
+                        expression_vector(sum_(column_a_0), any_(column_a_1)),
+    stored_table_node_a));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

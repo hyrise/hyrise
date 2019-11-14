@@ -57,7 +57,6 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       }
     }
 
-    std::set<ColumnID> removable_columns;
     for (const auto& [stored_table_node, group_by_columns] : group_by_columns_per_table) {
       // Obtain column IDs of the primary key
       auto unique_columns = std::set<ColumnID>();
@@ -82,10 +81,22 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 	                          group_by_columns.begin(), group_by_columns.end(),
 	                          std::back_inserter(intersection));
 
+	    // for (const auto& el : unique_columns) {
+	    // 	std::cout << "UNIQUE  " << el << std::endl;
+	    // }
+	    // for (const auto& el : group_by_columns) {
+	    // 	std::cout << "GROUPBY " << el << std::endl;
+	    // }
+
 	    // Skip the current table as not the full primary key is present.
 	    if (intersection.size() != unique_columns.size()) {
+	    	// std::cout << "skip" << std::endl;
 	    	continue;
 	    }
+	    // std::cout << "did not skip" << std::endl;
+	    // for (const auto& el : intersection) {
+	    // 	std::cout << "INTRSCT " << el << std::endl;
+	    // }
 
 			// std::vector<ColumnID> difference;
 	  //   std::set_intersection(unique_columns.begin(), unique_columns.end(),
@@ -122,21 +133,31 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     				return false;
     			}),aggregate_node.node_expressions.end());
 
-					const auto node_to_replace = lqp_column_({stored_table_node, group_by_column});
+    			// Adjust the number of group by expressions.
+    			--aggregate_node.aggregate_expressions_begin_idx;
 
-    			const auto aggregate_any_expression = any_(node_to_replace);
+					const auto node_to_replace = lqp_column_({stored_table_node, group_by_column});
     			bool node_is_later_referenced = false;
 
-    			visit_lqp_upwards(node, [&, stored_table_node = stored_table_node](const auto& upwards_node) {
+    			visit_lqp_upwards(node, [&](const auto& upwards_node) {
+    				if (*node == *upwards_node) {
+    					// std::cout << "Skipping " << *node << " as it is the same as input " << std::endl;
+    					return LQPUpwardVisitation::VisitOutputs;	
+    				}
+
 			      for (auto& expression : upwards_node->node_expressions) {
 			      	visit_expression(expression, [&](auto& sub_expression) {
-			      		if (sub_expression->type == ExpressionType::LQPColumn && node_to_replace == sub_expression) {
+			      		if (sub_expression->type == ExpressionType::LQPColumn && *node_to_replace == *sub_expression) {
 			      			const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(sub_expression);
 			      			node_is_later_referenced = true;
+			      			// std::cout << *node_to_replace << " found in " << *sub_expression << std::endl;
 			      			return ExpressionVisitation::DoNotVisitArguments;
+			      		} else {
+			      			// std::cout << *node_to_replace << " was not found in " << *sub_expression << std::endl;
 			      		}
 						    return ExpressionVisitation::VisitArguments;
 						  });
+
 						  if (node_is_later_referenced) {
 						  	return LQPUpwardVisitation::DoNotVisitOutputs;
 						  }
@@ -144,10 +165,20 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 			      return LQPUpwardVisitation::VisitOutputs;
 			    });
 
-    			// TODO: emplace only if expression is aactually required
-    			if (node_is_later_referenced) {
-    				aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
+			    // std::cout << std::boolalpha << "Did I find the node somewhere? " << node_is_later_referenced << std::endl;
+
+			    // We need to check for the scenario in which a removed group-by column is used. This can be in form of an
+			    // aggregate in the same aggregation node, in which case we do not need to do anything. Or it can be in form
+			    // of a later operator accessing it. For such cases, attributes are usually put into the group by just to be
+			    // able to access them. In this case, we need to add them in form of an ANY() to the aggregation list.
+    			if (!node_is_later_referenced) {
+    				// in case the removed group by column is not reference at a later point is time, there is not need to
+    				// to add it to the aggregate list within an ANY().
+    				continue;
     			}
+
+    			const auto aggregate_any_expression = any_(node_to_replace);
+    			aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
 
     			// modified_aggregates.insert(std::dynamic_pointer_cast<AggregateNode>(node));
 
@@ -179,8 +210,6 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 			      }
 			      return LQPUpwardVisitation::VisitOutputs;
 			    });
-
-    			--aggregate_node.aggregate_expressions_begin_idx;
       	}
       }
 
