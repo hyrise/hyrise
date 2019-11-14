@@ -8,8 +8,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "tbb/concurrent_vector.h"
-
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
 #include "encoding_config.hpp"
@@ -110,7 +108,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
     auto loop_count =
         std::accumulate(std::begin(*cardinalities), std::end(*cardinalities), 1u, std::multiplies<size_t>());
 
-    tbb::concurrent_vector<T> data;
+    pmr_concurrent_vector<T> data;
     data.reserve(chunk_size);
 
     /**

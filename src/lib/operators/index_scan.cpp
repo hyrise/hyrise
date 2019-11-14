@@ -80,6 +80,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     if (!chunk) return;
 
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
+    if (matches_out->empty()) return;
 
     Segments segments;
 

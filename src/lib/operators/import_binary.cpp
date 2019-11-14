@@ -1,7 +1,5 @@
 #include "import_binary.hpp"
 
-#include <boost/hana/for_each.hpp>
-
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -9,7 +7,6 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
@@ -188,16 +185,16 @@ std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
 template <typename T>
 std::shared_ptr<ValueSegment<T>> ImportBinary::_import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                      bool is_nullable) {
-  // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
+  // TODO(unknown): Ideally _read_values would directly write into a pmr_concurrent_vector so that no conversion is
   // needed
   if (is_nullable) {
     const auto nullables = _read_values<bool>(file, row_count);
     const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()},
-                                             tbb::concurrent_vector<bool>{nullables.begin(), nullables.end()});
+    return std::make_shared<ValueSegment<T>>(pmr_concurrent_vector<T>{values.begin(), values.end()},
+                                             pmr_concurrent_vector<bool>{nullables.begin(), nullables.end()});
   } else {
     const auto values = _read_values<T>(file, row_count);
-    return std::make_shared<ValueSegment<T>>(tbb::concurrent_vector<T>{values.begin(), values.end()});
+    return std::make_shared<ValueSegment<T>>(pmr_concurrent_vector<T>{values.begin(), values.end()});
   }
 }
 

@@ -30,7 +30,7 @@ class copyable_atomic {
 
   copyable_atomic(const copyable_atomic<T>& other) { _atomic.store(other._atomic.load()); }
 
-  constexpr copyable_atomic(T desired) noexcept : _atomic{desired} {}
+  explicit constexpr copyable_atomic(T desired) noexcept : _atomic{desired} {}
 
   T operator=(T desired) noexcept { return _atomic.operator=(desired); }
 

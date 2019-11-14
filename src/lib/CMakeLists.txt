@@ -324,21 +324,23 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    server/client_connection.cpp
-    server/client_connection.hpp
-    server/postgres_wire_handler.cpp
-    server/postgres_wire_handler.hpp
-    server/query_response_builder.cpp
-    server/query_response_builder.hpp
+    server/client_disconnect_exception.hpp
+    server/postgres_message_type.hpp
+    server/postgres_protocol_handler.cpp
+    server/postgres_protocol_handler.hpp
+    server/query_handler.cpp
+    server/query_handler.hpp
+    server/read_buffer.cpp
+    server/read_buffer.hpp
+    server/result_serializer.cpp
+    server/result_serializer.hpp
+    server/ring_buffer_iterator.hpp
     server/server.cpp
     server/server.hpp
-    server/server_session.cpp
-    server/server_session.hpp
-    server/task_runner.hpp
-    server/then_operator.hpp
-    server/types.hpp
-    server/use_boost_future.hpp
-    server/use_boost_future_impl.hpp
+    server/session.cpp
+    server/session.hpp
+    server/write_buffer.cpp
+    server/write_buffer.hpp
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp
     sql/parameter_id_allocator.cpp
@@ -523,19 +525,6 @@ set(
     strong_typedef.hpp
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
-    tasks/server/abstract_server_task.hpp
-    tasks/server/bind_server_prepared_statement_task.cpp
-    tasks/server/bind_server_prepared_statement_task.hpp
-    tasks/server/create_pipeline_task.cpp
-    tasks/server/create_pipeline_task.hpp
-    tasks/server/execute_server_prepared_statement_task.cpp
-    tasks/server/execute_server_prepared_statement_task.hpp
-    tasks/server/execute_server_query_task.cpp
-    tasks/server/execute_server_query_task.hpp
-    tasks/server/load_server_file_task.cpp
-    tasks/server/load_server_file_task.hpp
-    tasks/server/parse_server_prepared_statement_task.cpp
-    tasks/server/parse_server_prepared_statement_task.hpp
     type_comparison.hpp
     types.cpp
     types.hpp
