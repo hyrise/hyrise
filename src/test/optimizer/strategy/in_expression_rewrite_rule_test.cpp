@@ -271,7 +271,9 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     EXPECT_EQ(result_lqp, input_lqp);
 
-    // No cardinality check here, as unmodified IN expressions are currently not estimated by the CardinalityEstimator.
+    // No cardinality check here, as an IN expression with 5 elements will not be touched (see
+    // MAX_ELEMENTS_FOR_DISJUNCTION and MIN_ELEMENTS_FOR_JOIN). These InExpressions are currently not supported by the
+    // CardinalityEstimator.
   }
 
   {
