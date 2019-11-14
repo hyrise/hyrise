@@ -14,7 +14,7 @@ def main():
   arguments = {}
   arguments["--scale"] = ".01"
   arguments["--use_prepared_statements"] = "true"
-  arguments["--queries"] = "'1,6,13,19'"
+  arguments["--queries"] = "'1,13,19'"
   arguments["--time"] = "10"
   arguments["--runs"] = "100"
   arguments["--output"] = "'json_output.txt'"
@@ -25,14 +25,12 @@ def main():
   arguments["--scheduler"] = "false"
   arguments["--clients"] = "1"
   arguments["--cache_binary_tables"] = "false"
-  arguments["--visualize"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
   benchmark.expect("Writing benchmark results to 'json_output.txt'")
   benchmark.expect("Running in single-threaded mode")
   benchmark.expect("1 simulated clients are scheduling items in parallel")
-  benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Running benchmark in 'Shuffled' mode")
   benchmark.expect("Encoding is 'Dictionary'")
   benchmark.expect("Chunk size is 100000")
@@ -40,7 +38,7 @@ def main():
   benchmark.expect("Max duration per item is 10 seconds")
   benchmark.expect("No warmup runs are performed")
   benchmark.expect("Not caching tables as binary files")
-  benchmark.expect("Benchmarking Queries: \[ 1, 6, 13, 19 \]")
+  benchmark.expect("Benchmarking Queries: \[ 1, 13, 19 \]")
   benchmark.expect("TPCH scale factor is 0.01")
   benchmark.expect("Using prepared statements: yes")
   benchmark.expect("Creating index on customer \[ c_custkey \]")
@@ -48,16 +46,6 @@ def main():
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
-
-  visualization_file = 'TPC-H_06-PQP.svg'
-  if not os.path.isfile(visualization_file):
-    print ("ERROR: Cannot find visualization file " + visualization_file)
-    sys.exit(1)
-  with open(visualization_file) as f:
-    # Check whether the (a) the GetTable node exists and (b) the chunk count is correct for the given scale factor
-    if not '/7 chunk(s)' in f.read():
-      print ("ERROR: Did not find expected pruning information in the visualization file")
-      sys.exit(1)
 
   if benchmark.before.count('Verification failed'):
     return_error = True
@@ -113,6 +101,34 @@ def main():
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
+
+  # Finally test that pruning works end-to-end, that is from the command line parameter all the way to the visualizer
+  arguments = {}
+  arguments["--scale"] = ".01"
+  arguments["--chunk_size"] = "10000"
+  arguments["--queries"] = "'6'"
+  arguments["--runs"] = "1"
+  arguments["--visualize"] = "true"
+
+  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+
+  benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
+  benchmark.expect("Chunk size is 10000")
+  benchmark.expect("Benchmarking Queries: \[ 6 \]")
+
+  close_benchmark(benchmark)
+  check_exit_status(benchmark)
+
+  visualization_file = 'TPC-H_06-PQP.svg'
+  if not os.path.isfile(visualization_file):
+    print ("ERROR: Cannot find visualization file " + visualization_file)
+    sys.exit(1)
+  with open(visualization_file) as f:
+    # Check whether the (a) the GetTable node exists and (b) the chunk count is correct for the given scale factor
+    if not '/7 chunk(s)' in f.read():
+      print ("ERROR: Did not find expected pruning information in the visualization file")
+      sys.exit(1)
+
 
   if return_error:
     sys.exit(1)

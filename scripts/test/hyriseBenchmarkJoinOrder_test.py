@@ -22,7 +22,6 @@ def main():
   arguments["--clients"] = "1"
   arguments["--cache_binary_tables"] = "true"
   arguments["--scheduler"] = "false"
-  arguments["--visualize"] = "true"
 
   os.system("rm -rf " + arguments["--table_path"] + "/*.bin")
 
@@ -32,7 +31,6 @@ def main():
   benchmark.expect("Running in single-threaded mode")
   benchmark.expect("1 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Shuffled' mode")
-  benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'Unencoded'")
   benchmark.expect("Chunk size is 100000")
   benchmark.expect("Max runs per item is 100")
@@ -101,6 +99,8 @@ def main():
   benchmark.expect("Benchmarking queries from third_party/join-order-benchmark")
   benchmark.expect("Running on tables from resources/test_data/imdb_sample/")
   benchmark.expect("Multi-threaded Topology:")
+  benchmark.expect("- Warming up for 10a")
+  benchmark.expect("- Benchmarking 10a")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
