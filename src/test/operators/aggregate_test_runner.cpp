@@ -5,6 +5,8 @@
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/verification/aggregate_verification.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "utils/load_table.hpp"
 #include "utils/make_bimap.hpp"
 
@@ -26,12 +28,15 @@ struct AggregateTestConfiguration {
   InputTableConfiguration input;
   std::vector<AggregateColumnDefinition> aggregate_column_definitions;
   std::vector<ColumnID> group_by_column_ids;
+
+  std::shared_ptr<AbstractScheduler> scheduler;
+
   std::shared_ptr<BaseAggregateOperatorFactory> aggregate_operator_factory;
 
   // Only relevant for AggregateHashSort
   std::optional<AggregateHashSortConfig> aggregate_hashsort_config;
 
-  auto to_tuple() const { return std::tie(input, aggregate_column_definitions, group_by_column_ids); }
+  auto to_tuple() const { return std::tie(input, aggregate_column_definitions, group_by_column_ids, scheduler, aggregate_hashsort_config); }
 };
 
 bool operator<(const AggregateTestConfiguration& l, const AggregateTestConfiguration& r) {
@@ -113,6 +118,7 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
         AggregateTestConfiguration{{InputSide::Left, 3, 10, all_input_table_types.front(), all_encoding_types.front()},
                                    {},
                                    {},
+                                   {},
                                    std::make_shared<AggregateOperatorFactory<AggregateOperator>>(), {}};
 
     const auto add_configuration_if_supported = [&](const auto& configuration) {
@@ -165,16 +171,6 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
           configuration.group_by_column_ids.emplace_back(group_by_column_ids.at(data_type) + (nullable ? 1 : 0));
         }
 
-        if constexpr (std::is_same_v<AggregateOperator, AggregateHashSort>) {
-          auto aggregate_hashsort_config = AggregateHashSortConfig{};
-          aggregate_hashsort_config.hash_table_size = 4;
-          aggregate_hashsort_config.hash_table_max_load_factor = 0.25f;
-          aggregate_hashsort_config.max_partitioning_counter = 2;
-          aggregate_hashsort_config.buffer_flush_threshold = 2;
-          aggregate_hashsort_config.group_prefetch_threshold = 4;
-          configuration.aggregate_hashsort_config = aggregate_hashsort_config;
-        }
-
         if (with_aggregate_column) {
           configuration.aggregate_column_definitions = {
               {aggregate_column_ids.at(DataType::Int), AggregateFunction::Min},
@@ -209,10 +205,32 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
       }
     }
 
+    // Extra configuration manipulation for AggregateHashSort
+    if constexpr (std::is_same_v<AggregateOperator, AggregateHashSort>) {
+      auto aggregate_hashsort_config = AggregateHashSortConfig{};
+      aggregate_hashsort_config.hash_table_size = 4;
+      aggregate_hashsort_config.hash_table_max_load_factor = 0.25f;
+      aggregate_hashsort_config.max_partitioning_counter = 2;
+      aggregate_hashsort_config.buffer_flush_threshold = 2;
+      aggregate_hashsort_config.group_prefetch_threshold = 4;
+
+      auto scheduler = std::make_shared<NodeQueueScheduler>();
+
+      for (auto& configuration : configurations) {
+        configuration.aggregate_hashsort_config = aggregate_hashsort_config;
+        configuration.scheduler = scheduler;
+      }
+    }
+
+    // Remove duplicate test cases
     std::sort(configurations.begin(), configurations.end());
     configurations.erase(std::unique(configurations.begin(), configurations.end()), configurations.end());
 
     return configurations;
+  }
+
+  void TearDown() override {
+    CurrentScheduler::set(nullptr);
   }
 
 };  // namespace opossum
@@ -264,7 +282,9 @@ TEST_P(AggregateTestRunner, TestAggregate) {
     std::cout << *table_difference_message << std::endl;
     std::cout << "============================================================" << std::endl;
   };
-  print_configuration_info();
+
+  CurrentScheduler::set(configuration.scheduler);
+
   try {
     // Cache reference table to avoid redundant computation of the same
     if (expected_output_table_iter == expected_output_tables.end()) {

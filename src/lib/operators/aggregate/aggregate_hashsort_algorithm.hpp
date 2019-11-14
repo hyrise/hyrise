@@ -51,7 +51,9 @@ void partition(const AggregateHashSortEnvironment& environment, size_t partition
       run.flush_buffers(source_run);
     }
 
-    run_reader.next_run();
+    if (run_reader.end_of_run()) {
+      run_reader.next_run();
+    }
   }
 
   // Add non-empty Runs to the output partitions

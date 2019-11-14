@@ -18,7 +18,7 @@
 #include "types.hpp"
 #include "utils/timer.hpp"
 
-#define VERBOSE 1
+#define VERBOSE 0
 
 // #define USE_UNORDERED_MAP
 #define USE_DENSE_HASH_MAP
