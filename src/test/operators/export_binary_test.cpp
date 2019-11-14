@@ -89,8 +89,7 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-/* #1367 */
-TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) {
+TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) { /* #1367 */
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -113,8 +112,7 @@ TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-/* #1367 */
-TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionaryMultipleChunks) {
+TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
