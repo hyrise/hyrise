@@ -16,7 +16,7 @@
 namespace opossum {
 
 /*
- * One disadvantage of insert only databases like Hyrise is the accumulation of invalidated
+ * One disadvantage of insert-only databases like Hyrise is the accumulation of invalidated
  * rows, which have to be removed from the final result for every transaction.
  * This plugin deletes chunks with large numbers of invalidated rows and reinserts them at
  * the end of the table. These rows are either visible at their original position (for old

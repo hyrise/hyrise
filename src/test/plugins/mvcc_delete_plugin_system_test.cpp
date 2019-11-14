@@ -133,7 +133,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
 };
 
 /**
- * Tests the logical and physical delete operations of the MvccDeletePlugin in practise.
+ * Tests the logical and physical delete operations of the MvccDeletePlugin in practice.
  */
 TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   // (1) Load the MvccDeletePlugin
@@ -242,7 +242,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     for (auto transaction_idx = CommitID{0}; transaction_idx < MvccDeletePlugin::DELETE_THRESHOLD_LAST_COMMIT;
          ++transaction_idx) {
       // To increase the global _last_commit_id, we need to execute a transaction with read-write operators
-      // We perform some dummy updates to ensure our validation routine stays intact
+      // We perform some dummy updates so that the table is unmodified and the validation routine does not complain
       auto pipeline =
           SQLPipelineBuilder{std::string{"UPDATE " + _t_name_test + " SET number = number WHERE number = 0"}}
               .create_pipeline();

@@ -75,9 +75,6 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
           std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
           _physical_delete_queue.emplace(table, chunk_id);
-        } else {
-          std::cout << "Logical delete of chunk " << chunk_id << " failed because of MVCC conflict. Retrying..."
-                    << std::endl;
         }
       }
     }
@@ -130,20 +127,20 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
 
   auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
-  auto gt = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
-  gt->set_transaction_context(transaction_context);
-  gt->execute();
+  auto get_table = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
+  get_table->set_transaction_context(transaction_context);
+  get_table->execute();
 
   // Validate temporary table
-  auto validate_table = std::make_shared<Validate>(gt);
-  validate_table->set_transaction_context(transaction_context);
-  validate_table->execute();
+  auto validate = std::make_shared<Validate>(get_table);
+  validate->set_transaction_context(transaction_context);
+  validate->execute();
 
   // Use Update operator to delete and re-insert valid records in chunk
-  // Pass validate_table into Update operator twice since data will not be changed.
-  auto update_table = std::make_shared<Update>(table_name, validate_table, validate_table);
-  update_table->set_transaction_context(transaction_context);
-  update_table->execute();
+  // Pass validate into Update operator twice since data will not be changed.
+  auto update = std::make_shared<Update>(table_name, validate, validate);
+  update->set_transaction_context(transaction_context);
+  update->execute();
 
   // Check for success
   if (update->execute_failed()) {
@@ -163,8 +160,7 @@ void MvccDeletePlugin::_delete_chunk_physically(const std::shared_ptr<Table>& ta
   const auto& chunk = table->get_chunk(chunk_id);
 
   Assert(chunk->get_cleanup_commit_id().has_value(),
-         "The cleanup commit id of the chunk is not set. "
-         "This should have been done by the logical delete.");
+         "The cleanup commit id of the chunk is not set. This should have been done by the logical delete.");
 
   // Usage checks have been passed. Apply physical delete now.
   table->remove_chunk(chunk_id);
