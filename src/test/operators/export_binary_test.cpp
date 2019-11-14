@@ -439,4 +439,33 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
+TEST_P(OperatorsExportBinaryMultiEncodingTest, RunNullValues) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+
+  table->append_mutable_chunk();
+
+  auto base_segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  auto value_segment = std::dynamic_pointer_cast<ValueSegment<int>>(base_segment);
+
+  value_segment->values() = {1, 1, 1, 1, 2, 2, 2, 3};
+  value_segment->null_values() = {true, false, true, true, true, false, false, true};
+  
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, GetParam());
+  
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
 }  // namespace opossum

@@ -279,6 +279,28 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RepeatedInt) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+TEST_P(OperatorsImportBinaryMultiEncodingTest, RunNullValues) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({1});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({2});
+  expected_table->append({2});
+  expected_table->append({opossum::NULL_VALUE});
+
+  auto importer = std::make_shared<opossum::ImportBinary>(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
 
 TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { /* #1367 */
   TableColumnDefinitions column_definitions;
