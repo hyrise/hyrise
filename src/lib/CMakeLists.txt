@@ -580,6 +580,16 @@ set(
     visualization/pqp_visualizer.hpp
     visualization/viz_record_layout.cpp
     visualization/viz_record_layout.hpp
+    ../benchmarklib/tpch/tpch_table_generator.hpp
+    ../benchmarklib/tpch/tpch_table_generator.cpp
+    ../benchmarklib/benchmark_config.hpp
+    ../benchmarklib/benchmark_config.cpp
+    ../benchmarklib/encoding_config.hpp
+    ../benchmarklib/encoding_config.cpp
+    ../benchmarklib/abstract_table_generator.hpp
+    ../benchmarklib/abstract_table_generator.cpp
+    ../benchmarklib/benchmark_table_encoder.hpp
+    ../benchmarklib/benchmark_table_encoder.cpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -592,6 +602,8 @@ set(
     lz4
     zstd
     custom_jemalloc
+    tpch_dbgen
+    tpcds_dbgen
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
@@ -599,6 +611,8 @@ set(
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
 )
+
+set_target_properties(tpch_dbgen PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if (NOT APPLE)
     set(LIBRARIES ${LIBRARIES} atomic)
