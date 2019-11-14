@@ -27,7 +27,7 @@ namespace opossum {
  * The physical delete checks if chunks are not visible anymore for other transactions and
  * removes the chunk from the table completely.
  */
-class MvccDeletePlugin : public AbstractPlugin, public Singleton<MvccDeletePlugin> {
+class MvccDeletePlugin : public AbstractPlugin {
   friend class MvccDeletePluginTest;
   friend class MvccDeletePluginSystemTest;
 

@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-class TestPlugin : public AbstractPlugin, public Singleton<TestPlugin> {
+class TestPlugin : public AbstractPlugin {
  public:
   TestPlugin() : sm(Hyrise::get().storage_manager) {}
 
