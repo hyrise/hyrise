@@ -17,7 +17,7 @@ class OperatorsImportBinaryTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_OperatorsImportBinaryTest : public OperatorsImportBinaryTest {};
+class DISABLED_OperatorsImportBinaryTest : public OperatorsImportBinaryTest {}; /* #1367 */
 
 class OperatorsImportBinaryMultiEncodingTest : public OperatorsImportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};
@@ -279,8 +279,8 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RepeatedInt) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-/* #1367 */
-TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) {
+
+TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { /* #1367 */
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -300,8 +300,7 @@ TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-/* #1367 */
-TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionaryMultipleChunks) {
+TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
