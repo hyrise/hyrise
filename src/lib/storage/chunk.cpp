@@ -19,25 +19,22 @@ namespace opossum {
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
     : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
-  Assert(!_segments.empty(),
-         "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
+  DebugAssert(!_segments.empty(),
+              "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
-#if HYRISE_DEBUG
-  const auto chunk_size = _segments.empty() ? 0u : _segments[0]->size();
-  const auto is_reference_chunk =
-      !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
+  if constexpr (HYRISE_DEBUG) {
+    const auto is_reference_chunk =
+        !_segments.empty() ? std::dynamic_pointer_cast<ReferenceSegment>(_segments.front()) != nullptr : false;
 
-  DebugAssert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
-  for (const auto& segment : _segments) {
-    DebugAssert(
-        !mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
-        "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
-        "referenced Table");
-    DebugAssert(segment->size() == chunk_size, "Segments don't have the same length");
-    DebugAssert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
-                "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments");
+    for (const auto& segment : _segments) {
+      Assert(segment, "Segment must not be nullptr");
+      Assert(!mvcc_data || !std::dynamic_pointer_cast<ReferenceSegment>(segment),
+             "Chunks containing ReferenceSegments should not contain MvccData. They implicitly use the MvccData of the "
+             "referenced Table");
+      Assert((std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr) == is_reference_chunk,
+             "Chunk can either contain only ReferenceSegments or only non-ReferenceSegments");
+    }
   }
-#endif
 
   if (alloc) _alloc = *alloc;
 }
@@ -72,13 +69,11 @@ std::shared_ptr<BaseSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
-const Segments& Chunk::segments() const { return _segments; }
-
 ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
 
 uint32_t Chunk::size() const {
   if (_segments.empty()) return 0;
-  auto first_segment = get_segment(ColumnID{0});
+  const auto first_segment = get_segment(ColumnID{0});
   return static_cast<uint32_t>(first_segment->size());
 }
 
