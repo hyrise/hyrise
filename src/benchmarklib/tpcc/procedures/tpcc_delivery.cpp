@@ -52,8 +52,12 @@ bool TPCCDelivery::_on_execute() {
         _sql_executor.execute(std::string{"UPDATE \"ORDER\" SET O_CARRIER_ID = "} + std::to_string(o_carrier_id) +
                               " WHERE O_W_ID = " + std::to_string(w_id) + " AND O_D_ID = " + std::to_string(d_id) +
                               " AND O_ID = " + std::to_string(no_o_id));
-    Assert(order_update_pair.first == SQLPipelineStatus::Success,
-           "We have already 'locked' the order ID when we deleted it from NEW_ORDER. No conflict should be possible.");
+    // We have already 'locked' the order ID when we deleted it from NEW_ORDER. Logically, conflict should be possible.
+    // However, parallel operations, such as the MVCCDeletePlugin can lead to physical conflicts even if they do not
+    // logically change the row.
+    if (order_update_pair.first != SQLPipelineStatus::Success) {
+      return false;
+    }
 
     // Retrieve amount from ORDER_LINE
     const auto order_line_select_pair = _sql_executor.execute(
