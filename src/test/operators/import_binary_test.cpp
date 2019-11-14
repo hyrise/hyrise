@@ -279,6 +279,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RepeatedInt) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+/* #1367 */
 TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
@@ -299,6 +300,7 @@ TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
+/* #1367 */
 TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
