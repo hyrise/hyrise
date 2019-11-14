@@ -146,7 +146,10 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   update_table->execute();
 
   // Check for success
-  if (transaction_context->aborted()) {
+  if (update->execute_failed()) {
+    // Transaction conflict. Usually, the OperatorTask would call rollback, but as we executed Update directly, that is
+    // our job.
+    transaction_context->rollback();
     return false;
   }
 
