@@ -52,10 +52,10 @@ void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin_iter = _plugins.find(name);
   Assert(plugin_iter != _plugins.cend(), "Unloading plugin failed: A plugin with name " + name + " does not exist.");
 
-  _unload_erase_plugin(plugin_iter);
+  _unload_and_erase_plugin(plugin_iter);
 }
 
-std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_erase_plugin(
+std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_and_erase_plugin(
     const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter) {
   const PluginName name = plugin_iter->first;
   const auto& plugin_handle_wrapper = plugin_iter->second;
@@ -72,7 +72,7 @@ std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_un
 
 void PluginManager::_clean_up() {
   for (auto plugin_iter = _plugins.begin(); plugin_iter != _plugins.end();) {
-    plugin_iter = _unload_erase_plugin(plugin_iter);
+    plugin_iter = _unload_and_erase_plugin(plugin_iter);
   }
 }
 

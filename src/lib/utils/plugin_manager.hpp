@@ -40,7 +40,7 @@ class PluginManager : public Noncopyable {
   // This method is called during destruction and stops and unloads all currently loaded plugions.
   void _clean_up();
   bool _is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const;
-  std::unordered_map<PluginName, PluginHandleWrapper>::iterator _unload_erase_plugin(
-      const std::unordered_map<PluginName, PluginHandleWrapper>::iterator it);
+  std::unordered_map<PluginName, PluginHandleWrapper>::iterator _unload_and_erase_plugin(
+      const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter);
 };
 }  // namespace opossum
