@@ -110,7 +110,7 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
   auto prefix = *_visualize_prefix;
 
   if (_num_visualized_plans == 1) {
-    // We have multiple SQL pipelines in this benchmark item - rename the existing file
+    // We have already visualized a prior SQL pipeline in this benchmark item - rename the existing file
     std::filesystem::rename(prefix + "-LQP.svg", prefix + "-0-LQP.svg");
     std::filesystem::rename(prefix + "-PQP.svg", prefix + "-0-PQP.svg");
   }

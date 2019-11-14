@@ -44,7 +44,7 @@ class BenchmarkSQLExecutor {
 
   const std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
   const std::optional<std::string> _visualize_prefix;
-  int _num_visualized_plans{0};
+  uint64_t _num_visualized_plans{0};
 };
 
 }  // namespace opossum

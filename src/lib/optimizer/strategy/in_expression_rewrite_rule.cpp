@@ -44,8 +44,8 @@ void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
     list_as_table->append_chunk({value_segment});
   });
 
-  // All regular tables have statistics. Even if the JoinOrderingRule already ran, add statistics to the dummy table so
-  // that following rules, which expect statistics to be present, do not run into problems.
+  // Add statistics to the dummy table so that following rules or other steps (such as the LQPVisualizer), which
+  // expect statistics to be present, do not run into problems.
   list_as_table->set_table_statistics(TableStatistics::from_table(*list_as_table));
 
   // Create a join node
