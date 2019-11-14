@@ -17,7 +17,7 @@ class OperatorsImportBinaryTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_OperatorsImportBinaryTest : public OperatorsImportBinaryTest {};
+class DISABLED_OperatorsImportBinaryTest : public OperatorsImportBinaryTest {}; /* #1367 */
 
 class OperatorsImportBinaryMultiEncodingTest : public OperatorsImportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};

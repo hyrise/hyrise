@@ -53,7 +53,7 @@ class OperatorsExportBinaryTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
-class DISABLED_OperatorsExportBinaryTest : public OperatorsExportBinaryTest {};
+class DISABLED_OperatorsExportBinaryTest : public OperatorsExportBinaryTest {}; /* #1367 */
 
 class OperatorsExportBinaryMultiEncodingTest : public OperatorsExportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};
