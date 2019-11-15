@@ -25,7 +25,8 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
-    TableColumnDefinitions column_definitions{{"column0", DataType::Int, false}, {"column1", DataType::Int, false}, {"column2", DataType::Int, false}};
+    TableColumnDefinitions column_definitions{
+        {"column0", DataType::Int, false}, {"column1", DataType::Int, false}, {"column2", DataType::Int, false}};
 
     table_a = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
     table_a->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::Yes);
@@ -51,7 +52,8 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_c_1 = stored_table_node_c->get_column("column1");
     column_c_2 = stored_table_node_c->get_column("column2");
 
-    table_d = std::make_shared<Table>(TableColumnDefinitions{{"column0", DataType::Int, false}}, TableType::Data, 2, UseMvcc::Yes);
+    table_d = std::make_shared<Table>(TableColumnDefinitions{{"column0", DataType::Int, false}}, TableType::Data, 2,
+                                      UseMvcc::Yes);
     storage_manager.add_table("table_d", table_d);
 
     rule = std::make_shared<DependentGroupByReductionRule>();

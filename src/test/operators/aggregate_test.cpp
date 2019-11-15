@@ -183,33 +183,42 @@ TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
 // the aggragated column is functionally dependent on the group-by columns. In debug mode, we DebugAssert that each
 // value is the same within the group.
 TYPED_TEST(OperatorsAggregateTest, CannotUseAnyOnNonDependentColumn) {
-  auto filtered = std::make_shared<TableScan>(this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+  auto filtered = std::make_shared<TableScan>(
+      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
   filtered->execute();
 
   {
-    auto aggregate = std::make_shared<TypeParam>(filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}}, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+    auto aggregate = std::make_shared<TypeParam>(
+        filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}},
+        std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
     aggregate->execute();
 
     EXPECT_EQ(aggregate->get_output()->template get_value<int>(ColumnID{2}, 0u), 20);
   }
 
   if (HYRISE_DEBUG) {
-    auto aggregate = std::make_shared<TypeParam>(filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}}, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+    auto aggregate = std::make_shared<TypeParam>(
+        filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}},
+        std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
     EXPECT_THROW(aggregate->execute(), std::logic_error);
   }
 }
 
 TYPED_TEST(OperatorsAggregateTest, ExpressionOnAny) {
-  auto filtered = std::make_shared<TableScan>(this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
+  auto filtered = std::make_shared<TableScan>(
+      this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
   filtered->execute();
 
-  auto aggregate = std::make_shared<TypeParam>(filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}}, std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
+  auto aggregate = std::make_shared<TypeParam>(
+      filtered, std::vector<AggregateColumnDefinition>{{ColumnID{2}, AggregateFunction::Any}},
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}});
   aggregate->execute();
 
   auto first_column = PQPColumnExpression::from_table(*aggregate->get_output(), "a");
   auto second_column = PQPColumnExpression::from_table(*aggregate->get_output(), "b");
   auto third_column = PQPColumnExpression::from_table(*aggregate->get_output(), "ANY(c)");
-  auto projection = std::make_shared<opossum::Projection>(aggregate, expression_vector(first_column, second_column, add_(third_column, 17)));
+  auto projection = std::make_shared<opossum::Projection>(
+      aggregate, expression_vector(first_column, second_column, add_(third_column, 17)));
   projection->execute();
 
   EXPECT_EQ(projection->get_output()->template get_value<int>(ColumnID{2}, 0u), 37);

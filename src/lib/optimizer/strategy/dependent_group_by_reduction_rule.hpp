@@ -16,7 +16,7 @@ class AbstractLQPNode;
 //
 // This rule implements choke point 1.4 of "TPC-H Analyzed: Hidden Messages and Lessons Learned from an Influential
 // Benchmark" (Boncz et al.). Due to the current lack of foreign key suppport, not all queries can be optimized.
-// 
+//
 // When only a single table is aggregated and the full primary key is grouped, one could theoretically replace
 // aggregate functions such as `SUM(dependent_column)` with `ANY(dependent_column)` as the group will only include a
 // single tuple. We do not do that as aggregate functions for single tuples should only be neglectably more expensive

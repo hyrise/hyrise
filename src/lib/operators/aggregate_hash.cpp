@@ -500,7 +500,8 @@ They are separate and templated to avoid compiler errors for invalid type/functi
 */
 // MIN, MAX, SUM write the current aggregated value
 template <typename ColumnDataType, typename AggregateType, AggregateFunction func>
-std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum || func == AggregateFunction::Any,
+std::enable_if_t<func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum ||
+                     func == AggregateFunction::Any,
                  void>
 write_aggregate_values(std::shared_ptr<ValueSegment<AggregateType>> segment,
                        const AggregateResults<ColumnDataType, AggregateType>& results) {
