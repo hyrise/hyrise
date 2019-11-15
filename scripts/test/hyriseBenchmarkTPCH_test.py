@@ -16,7 +16,7 @@ def main():
   arguments["--use_prepared_statements"] = "true"
   arguments["--queries"] = "'1,13,19'"
   arguments["--time"] = "10"
-  arguments["--runs"] = "100"
+  arguments["--runs"] = "-1"
   arguments["--output"] = "'json_output.txt'"
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Dictionary'"
@@ -34,7 +34,6 @@ def main():
   benchmark.expect("Running benchmark in 'Shuffled' mode")
   benchmark.expect("Encoding is 'Dictionary'")
   benchmark.expect("Chunk size is 100000")
-  benchmark.expect("Max runs per item is 100")
   benchmark.expect("Max duration per item is 10 seconds")
   benchmark.expect("No warmup runs are performed")
   benchmark.expect("Not caching tables as binary files")
