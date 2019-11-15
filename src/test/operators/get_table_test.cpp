@@ -35,6 +35,19 @@ TEST_F(OperatorsGetTableTest, GetOutput) {
   EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
 }
 
+TEST_F(OperatorsGetTableTest, OutputDoesNotChangeChunkSize) {
+  auto get_table = std::make_shared<GetTable>("int_int_float");
+  get_table->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+
+  const auto table = Hyrise::get().storage_manager.get_table("int_int_float");
+  table->append({1, 2, 10.0f});
+  EXPECT_GT(table->chunk_count(), get_table->get_output()->chunk_count());
+
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+}
+
 TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
   auto get_table = std::make_shared<GetTable>("anUglyTestTable");
 

@@ -88,8 +88,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<ExpressionReductionRule>());
 
-  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
-
   optimizer->add_rule(std::make_unique<ChunkPruningRule>());
 
   // Run before the JoinOrderingRule so that the latter has simple (non-conjunctive) predicates. However, as the
@@ -102,6 +100,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<JoinOrderingRule>());
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
+
+  // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
+  // can be treated as predicates and pushed further down. For the same reason, run it after the JoinOrderingRule,
+  // which does not like semi joins (see above).
+  optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions

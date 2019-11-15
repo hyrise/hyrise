@@ -166,8 +166,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         size_t start_index = (cluster == start.cluster) ? start.index : 0;
         size_t end_index = (cluster == end.cluster) ? end.index : (*table)[cluster]->size();
+// False positive with gcc and tsan (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92194)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
         for (size_t index = start_index; index < end_index; ++index) {
           action((*(*table)[cluster])[index].row_id);
+#pragma GCC diagnostic pop
         }
       }
     }
