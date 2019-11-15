@@ -411,7 +411,7 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
 
     const auto lqp_node = op->get_lqp_node();
     const auto recovered_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
-    // TODO: is this test to compare the input and recovered nodes sufficient?
+    // TODO(anyone): is this test to compare the input and recovered nodes sufficient?
     EXPECT_EQ(recovered_node, predicate_node);
   }
 

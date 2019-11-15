@@ -218,7 +218,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
     const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
-  auto table_scan = std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate(), node->left_input()));
+  auto table_scan =
+      std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate(), node->left_input()));
   table_scan->set_lqp_node(node);
   return table_scan;
 }
@@ -245,7 +246,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
   const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(node);
   const auto input_operator = translate_node(input_node);
 
-  auto projection = std::make_shared<Projection>(input_operator, _translate_expressions(projection_node->node_expressions, input_node));
+  auto projection = std::make_shared<Projection>(input_operator,
+                                                 _translate_expressions(projection_node->node_expressions, input_node));
   projection->set_lqp_node(node);
   return projection;
 }
