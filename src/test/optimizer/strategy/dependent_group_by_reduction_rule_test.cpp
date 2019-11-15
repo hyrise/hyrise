@@ -51,17 +51,46 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
     column_c_1 = stored_table_node_c->get_column("column1");
     column_c_2 = stored_table_node_c->get_column("column2");
 
+    table_d = std::make_shared<Table>(TableColumnDefinitions{{"column0", DataType::Int, false}}, TableType::Data, 2, UseMvcc::Yes);
+    storage_manager.add_table("table_d", table_d);
+
     rule = std::make_shared<DependentGroupByReductionRule>();
   }
 
   std::shared_ptr<DependentGroupByReductionRule> rule;
 
-  std::shared_ptr<Table> table_a, table_b, table_c;
+  std::shared_ptr<Table> table_a, table_b, table_c, table_d;
   std::shared_ptr<StoredTableNode> stored_table_node_a, stored_table_node_b, stored_table_node_c;
   LQPColumnReference column_a_0, column_a_1, column_a_2;
   LQPColumnReference column_b_0, column_b_1, column_b_2;
   LQPColumnReference column_c_0, column_c_1, column_c_2;
 };
+
+// Test simple cases
+TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
+  // Early out for LQP without any aggregates
+  // clang-format off
+  {
+    auto lqp =
+    PredicateNode::make(equals_(column_a_0, 17), stored_table_node_a);
+
+    const auto unmodified_lqp = apply_rule(rule, lqp);
+    EXPECT_EQ(lqp, unmodified_lqp);
+  }
+
+  // Early out for LQP where table does not have a primary key
+  {
+    auto stored_table_node_d = StoredTableNode::make("table_d");
+    auto column_d_0 = stored_table_node_d->get_column("column0");
+
+    auto lqp =
+    PredicateNode::make(equals_(column_d_0, 17), stored_table_node_d);
+
+    const auto unmodified_lqp = apply_rule(rule, lqp);
+    EXPECT_EQ(lqp, unmodified_lqp);
+  }
+  // clang-format on
+}
 
 // Test that a removable column is removed when the single primary key column is present.
 TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {

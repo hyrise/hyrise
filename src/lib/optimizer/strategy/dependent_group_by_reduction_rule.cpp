@@ -24,7 +24,6 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
-	// std::cout << "Before _apply: " << *lqp << std::endl;	
   visit_lqp(lqp, [&](const auto& node) {
     if (node->type != LQPNodeType::Aggregate) {
       return LQPVisitation::VisitInputs;
@@ -38,6 +37,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
 	  std::unordered_map<std::shared_ptr<const StoredTableNode>, std::set<ColumnID>> group_by_columns_per_table;
 
+	  // Collect the group-by columns for each table in the aggregate node
 	  for (auto expression_idx = size_t{0}; expression_idx < aggregate_node.aggregate_expressions_begin_idx;
 	       ++expression_idx) {
 	    const auto& expression = aggregate_node.node_expressions[expression_idx];
@@ -57,6 +57,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       }
     }
 
+    // Main loop. Iterate over the tables and its group-by columns, gather primary keys and see if we can reduce.
     for (const auto& [stored_table_node, group_by_columns] : group_by_columns_per_table) {
       // Obtain column IDs of the primary key
       auto unique_columns = std::set<ColumnID>();
@@ -68,7 +69,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       }
 
       for (const auto& table_constraint : table->get_soft_unique_constraints()) {
-      	if (table_constraint.is_primary_key) {
+      	if (table_constraint.is_primary_key == IsPrimaryKey::Yes) {
       		unique_columns.insert(table_constraint.columns.begin(), table_constraint.columns.end());
       		break;
       	}
@@ -81,43 +82,16 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 	                          group_by_columns.begin(), group_by_columns.end(),
 	                          std::back_inserter(intersection));
 
-	    // for (const auto& el : unique_columns) {
-	    // 	std::cout << "UNIQUE  " << el << std::endl;
-	    // }
-	    // for (const auto& el : group_by_columns) {
-	    // 	std::cout << "GROUPBY " << el << std::endl;
-	    // }
-
-	    // Skip the current table as not the full primary key is present.
+	    // Skip the current table as the primary key is not completely present.
 	    if (intersection.size() != unique_columns.size()) {
-	    	// std::cout << "skip" << std::endl;
 	    	continue;
 	    }
-	    // std::cout << "did not skip" << std::endl;
-	    // for (const auto& el : intersection) {
-	    // 	std::cout << "INTRSCT " << el << std::endl;
-	    // }
-
-			// std::vector<ColumnID> difference;
-	  //   std::set_intersection(unique_columns.begin(), unique_columns.end(),
-	  //                         group_by_columns.begin(), group_by_columns.end(),
-	  //                         std::back_inserter(difference));
-
-	  //   for (const auto& el : difference) {
-	  //   	std::cout << "% " << el << std::endl;
-	  //   }
-
-	    // std::cout << "Before: " << aggregate_node.node_expressions.size() << " and first non-groupby-index is " << aggregate_node.aggregate_expressions_begin_idx << "." << std::endl;
 
       for (const auto& group_by_column : group_by_columns) {
       	// Every column that is not part of the primary key is going to be removed.
-      	// Not taking the pair<ColumnID, PositionInAgg> approach since it destroys some set-usage nicecities
       	if (unique_columns.find(group_by_column) == unique_columns.end()) {
-      		// std::cout << "ColumnID " << group_by_column << " of table " << stored_table_node->table_name << " is dependent." << std::endl;
-
-    			// const auto expression_to_delete = std::make_shared<LQPColumnExpression>(LQPColumnReference{std::make_shared<StoredTableNode>(table_name), group_by_column});
-    			// aggregate_node.node_expressions.erase(std::remove(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(), expression_to_delete), aggregate_node.node_expressions.end());
-
+      		// Remove nodes if they are column references and reference the correct stored table node. Further, decrement
+      		// the aggregate's index signaling the end of group-by expressions.
     			aggregate_node.node_expressions.erase(std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(), [&, stored_table_node = stored_table_node](const auto expression){
 						const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
 						if (!column_expression) return false;
@@ -128,20 +102,21 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
 			      const auto column_id = column_expression->column_reference.original_column_id();
 			      if (stored_table_node == expression_stored_table_node && group_by_column == column_id) {
-    					return true;
+				      	// Adjust the number of group by expressions.
+	    				--aggregate_node.aggregate_expressions_begin_idx;
+	    				return true;
 			      }
     				return false;
-    			}),aggregate_node.node_expressions.end());
-
-    			// Adjust the number of group by expressions.
-    			--aggregate_node.aggregate_expressions_begin_idx;
+    			}), aggregate_node.node_expressions.end());
 
 					const auto node_to_replace = lqp_column_({stored_table_node, group_by_column});
     			bool node_is_later_referenced = false;
 
+    			// Check if the removed column is later referenced somewhere upwards in the plan. If so, we need to add it
+    			// back via the ANY() aggregate function.
     			visit_lqp_upwards(node, [&](const auto& upwards_node) {
     				if (*node == *upwards_node) {
-    					// std::cout << "Skipping " << *node << " as it is the same as input " << std::endl;
+    					// We are only interested in nodes upwards from node, not node itself.
     					return LQPUpwardVisitation::VisitOutputs;	
     				}
 
@@ -150,10 +125,8 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 			      		if (sub_expression->type == ExpressionType::LQPColumn && *node_to_replace == *sub_expression) {
 			      			const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(sub_expression);
 			      			node_is_later_referenced = true;
-			      			// std::cout << *node_to_replace << " found in " << *sub_expression << std::endl;
 			      			return ExpressionVisitation::DoNotVisitArguments;
 			      		} else {
-			      			// std::cout << *node_to_replace << " was not found in " << *sub_expression << std::endl;
 			      		}
 						    return ExpressionVisitation::VisitArguments;
 						  });
@@ -165,45 +138,35 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 			      return LQPUpwardVisitation::VisitOutputs;
 			    });
 
-			    // std::cout << std::boolalpha << "Did I find the node somewhere? " << node_is_later_referenced << std::endl;
-
-			    // We need to check for the scenario in which a removed group-by column is used. This can be in form of an
+			    // Check for the scenario in which a removed group-by column is later used. This can be in form of an
 			    // aggregate in the same aggregation node, in which case we do not need to do anything. Or it can be in form
-			    // of a later operator accessing it. For such cases, attributes are usually put into the group by just to be
+			    // of a later operator accessing it. For such cases, attributes are usually put into the grouping just to be
 			    // able to access them. In this case, we need to add them in form of an ANY() to the aggregation list.
     			if (!node_is_later_referenced) {
-    				// in case the removed group by column is not reference at a later point is time, there is not need to
-    				// to add it to the aggregate list within an ANY().
     				continue;
     			}
 
+    			// Before adapting upwards node, add the ANY() aggregate to the list of aggregates.
     			const auto aggregate_any_expression = any_(node_to_replace);
     			aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
 
-    			// modified_aggregates.insert(std::dynamic_pointer_cast<AggregateNode>(node));
-
-    			// not using expression_deep_replace here, since we do not want to wrap ANYs inside of ANYs    			
+    			// Adapt upwards to no longer reference the original column, but the column wrapped in ANY().
+    			// Not using `expression_deep_replace` here, to avoid wrapping multiple ANY()s within each other.
     			visit_lqp_upwards(node, [&, stored_table_node = stored_table_node](const auto& upwards_node) {
-    				// std::cout << "upward search reaaching " << *upwards_node << std::endl;
 			      for (auto& expression : upwards_node->node_expressions) {
 			      	visit_expression(expression, [&](auto& sub_expression) {
 			      		// Do not get into ANY()
 			      		if (sub_expression->type == ExpressionType::Aggregate) {
 			      			const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(sub_expression);
 			      			if (aggregate_expression->aggregate_function == AggregateFunction::Any) {
-			      				// std::cout << "skipped " << *aggregate_expression << std::endl;
 			      				return ExpressionVisitation::DoNotVisitArguments;
 			      			}
 			      		}
-			      		// std::cout << "continue with " << *sub_expression << std::endl;
-
+			      		// Replace with ANY() wrap.
 						    if (*sub_expression == *node_to_replace) {
 						      sub_expression = aggregate_any_expression;
-						      // std::cout << "replaced " << *sub_expression << std::endl;
 						      return ExpressionVisitation::DoNotVisitArguments;
 						    } else {
-						    	// std::cout << *sub_expression << " does not match " << *node_to_replace << std::endl;
-						    	// std::cout << sub_expression->hash() << " does not match " << node_to_replace->hash() << std::endl;
 						      return ExpressionVisitation::VisitArguments;
 						    }
 						  });
@@ -212,12 +175,9 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 			    });
       	}
       }
-
-      // std::cout << "After: " << aggregate_node.node_expressions.size() << " and first non-groupby-index is " << aggregate_node.aggregate_expressions_begin_idx << std::endl;
     }
     return LQPVisitation::VisitInputs;
   });
-	// std::cout << "After _apply: " << *lqp << std::endl;	
 }
 
 }  // namespace opossum
