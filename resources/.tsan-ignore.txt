@@ -1,5 +1,7 @@
-# There are multiple data races in libtbb (probably false positives)
-race:^tbb*
+# There are multiple data races identified in the uninstrumented libtbb (probably false positives)
+# However, be aware of concurrent_vector entries being potentially uninitialized:
+#   https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly
+race:^tbb::*
 
 # "libstdc++ is not instrumented, so tsan misses atomic operations related to shared_ptr"
 # https://groups.google.com/forum/#!topic/thread-sanitizer/vz_s-t226Vg
@@ -11,6 +13,8 @@ race:^std::__unique_ptr
 race:^std::__1::unique_ptr
 race:^std::__1::__unique_if
 race:shared_count
+race:^std::atomic
+race:^std::__1::atomic
 
 # Boost is not built with tsan support, either
 race:boost::detail::thread_data_base
@@ -18,6 +22,10 @@ race:thread_data
 
 # A DebugAssert makes sure that predecessors are not added to scheduled tasks, but it is missing in release builds
 race:^opossum::AbstractTask::set_as_predecessor_of
+
+# tsan does not understand parts of our MVCC concept - see mvcc_data.hpp for documentation
+race:^opossum::MvccData::set_begin_cid
+race:^opossum::MvccData::set_end_cid
 
 # This is likely false positive seen only on Mac, as even the strictest locking does not "fix" the warning
 race:^opossum::TableStatistics::from_table

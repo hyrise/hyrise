@@ -53,6 +53,8 @@ class OperatorsExportBinaryTest : public BaseTest {
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
+class DISABLED_OperatorsExportBinaryTest : public OperatorsExportBinaryTest {}; /* #1367 */
+
 class OperatorsExportBinaryMultiEncodingTest : public OperatorsExportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};
 
@@ -82,35 +84,13 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, FixedStringDictionarySegment) {
-  TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String, false);
-
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
-  table->append({"This"});
-  table->append({"is"});
-  table->append({"a"});
-  table->append({"test"});
-
-  table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  ex->execute();
-
-  EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
-}
-
-TEST_F(OperatorsExportBinaryTest, FrameOfReferenceSegment) {
+TEST_F(OperatorsExportBinaryTest, SingleChunkFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
@@ -129,9 +109,10 @@ TEST_F(OperatorsExportBinaryTest, FrameOfReferenceSegment) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 TEST_F(OperatorsExportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
@@ -153,9 +134,108 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_F(OperatorsExportBinaryTest, NullValuesFrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  table->append({1});
+  table->append({opossum::NULL_VALUE});
+  table->append({2});
+  table->append({opossum::NULL_VALUE});
+  table->append({5});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_F(OperatorsExportBinaryTest, AllNullFrameOfReferenceSegment) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  table->append({opossum::NULL_VALUE});
+  table->append({opossum::NULL_VALUE});
+  table->append({opossum::NULL_VALUE});
+  table->append({opossum::NULL_VALUE});
+  table->append({opossum::NULL_VALUE});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) { /* #1367 */
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 // A table with reference segments is materialized while exporting. The content of the export file should not be
@@ -185,12 +265,15 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   auto ex = std::make_shared<opossum::ExportBinary>(scan, filename);
   ex->execute();
 
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_F(OperatorsExportBinaryTest, RepeatedIntRunLengthSegment) {
+// TEST_P for all supported encoding types
+
+TEST_P(OperatorsExportBinaryMultiEncodingTest, RepeatedInt) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
@@ -203,16 +286,17 @@ TEST_F(OperatorsExportBinaryTest, RepeatedIntRunLengthSegment) {
   table->append({1});
 
   table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(table, EncodingType::RunLength);
+  ChunkEncoder::encode_all_chunks(table, GetParam());
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(compare_files(
-      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
@@ -285,7 +369,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegment) {
+TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentSorted) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
   column_definitions.emplace_back("b", DataType::Int, false);
@@ -299,6 +383,36 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegment) {
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, GetParam());
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentUnsorted) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
@@ -384,6 +498,68 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
   table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
   table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
   table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, GetParam());
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesAllNullValues) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
+  auto null_values = {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE,
+                      opossum::NULL_VALUE};
+
+  table->append(null_values);
+  table->append(null_values);
+  table->append(null_values);
+  table->append(null_values);
+  table->append(null_values);
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, GetParam());
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_P(OperatorsExportBinaryMultiEncodingTest, RunNullValues) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+
+  table->append_mutable_chunk();
+
+  auto base_segment = table->get_chunk(ChunkID{0})->get_segment(ColumnID{0});
+  auto value_segment = std::dynamic_pointer_cast<ValueSegment<int>>(base_segment);
+
+  value_segment->values() = {1, 1, 1, 1, 2, 2, 2, 3};
+  value_segment->null_values() = {true, false, true, true, true, false, false, true};
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, GetParam());
