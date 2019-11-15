@@ -31,7 +31,7 @@ std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_tables_table() {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"column_count", DataType::Int, false},
                                               {"row_count", DataType::Long, false},
                                               {"chunk_count", DataType::Int, false},
@@ -48,7 +48,7 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_columns_table() {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"name", DataType::String, false},
                                               {"data_type", DataType::String, false},
                                               {"nullable", DataType::Int, false}};
@@ -66,7 +66,7 @@ std::shared_ptr<Table> MetaTableManager::generate_columns_table() {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"rows", DataType::Long, false},
                                               {"invalid_rows", DataType::Long, false},
@@ -88,7 +88,7 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
 }
 
 std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"column_id", DataType::Int, false},
                                               {"column_name", DataType::String, false},
