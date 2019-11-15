@@ -79,6 +79,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   const auto enable_visualization = json_config.value("visualize", default_config.enable_visualization);
   if (enable_visualization) {
+    Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten");
     std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid." << std::endl;
   }
 

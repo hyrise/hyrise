@@ -82,7 +82,6 @@ def main():
   arguments["--compression"] = "'SIMD-BP128'"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
-  arguments["--visualize"] = "true"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkFileBased", True)
@@ -90,7 +89,6 @@ def main():
   benchmark.expect("Running in multi-threaded mode using all available cores")
   benchmark.expect("4 simulated clients are scheduling items in parallel")
   benchmark.expect("Running benchmark in 'Ordered' mode")
-  benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect("Encoding is 'LZ4'")
   benchmark.expect("Chunk size is 100000")
   benchmark.expect("Max runs per item is 100")

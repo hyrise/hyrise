@@ -100,15 +100,28 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& e
   }
 }
 
-void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) const {
+void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
   GraphvizConfig graphviz_config;
   graphviz_config.format = "svg";
 
   const auto& lqps = pipeline.get_optimized_logical_plans();
   const auto& pqps = pipeline.get_physical_plans();
 
-  LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, *_visualize_prefix + "-LQP.svg");
-  PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, *_visualize_prefix + "-PQP.svg");
+  auto prefix = *_visualize_prefix;
+
+  if (_num_visualized_plans == 1) {
+    // We have already visualized a prior SQL pipeline in this benchmark item - rename the existing file
+    std::filesystem::rename(prefix + "-LQP.svg", prefix + "-0-LQP.svg");
+    std::filesystem::rename(prefix + "-PQP.svg", prefix + "-0-PQP.svg");
+  }
+  if (_num_visualized_plans > 0) {
+    prefix += "-" + std::to_string(_num_visualized_plans);
+  }
+
+  LQPVisualizer{graphviz_config, {}, {}, {}}.visualize(lqps, prefix + "-LQP.svg");
+  PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, prefix + "-PQP.svg");
+
+  ++_num_visualized_plans;
 }
 
 }  // namespace opossum
