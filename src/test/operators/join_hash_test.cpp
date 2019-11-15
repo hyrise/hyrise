@@ -117,4 +117,19 @@ TEST(OperatorsJoinHashTestStatic, RadixBitCalculation) {
                                                   std::numeric_limits<size_t>::max()) > 0ul);
 }
 
+TEST_F(OperatorsJoinHashTest, OperatorStageRuntimes) {
+  auto join = std::make_shared<JoinHash>(
+      _table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
+      OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+  join->execute();
+
+  auto& staged_performance_data = static_cast<const StagedOperatorPerformanceData&>(join->performance_data());
+
+  EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(static_cast<int>(JoinHash::OperatorStages::Materialization)).count()) > 0);
+
+  // for (auto phase : std::initializer_list<uint8_t>{JoinHash::OperatorStages::Materialization, JoinHash::OperatorStages::Clustering, JoinHash::OperatorStages::Building, JoinHash::OperatorStages::Probing, JoinHash::OperatorStages::OutputWriting}) {
+  //   EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(phase).count()) > 0);
+  // }
+}
+
 }  // namespace opossum

@@ -71,7 +71,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   AbstractOperator(
       const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
       const std::shared_ptr<const AbstractOperator>& right = nullptr,
-      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
+      const std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   virtual ~AbstractOperator() = default;
 
@@ -123,6 +123,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+
+  enum class OperatorStages : uint8_t {};
+
+  std::chrono::nanoseconds get_stage_runtime(OperatorStages stage) const;
 
  protected:
   // abstract method to actually execute the operator
