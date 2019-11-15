@@ -159,7 +159,8 @@ void BenchmarkRunner::_benchmark_shuffled() {
 
   _state = BenchmarkState{_config.max_duration};
 
-  while (_state.keep_running() && _total_finished_runs.load(std::memory_order_relaxed) < _config.max_runs) {
+  while (_state.keep_running() && (_config.max_runs < 0 || _total_finished_runs.load(std::memory_order_relaxed) <
+                                                               static_cast<size_t>(_config.max_runs))) {
     // We want to only schedule as many items simultaneously as we have simulated clients
     if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
       if (item_ids_shuffled.empty()) {
@@ -201,7 +202,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     _state = BenchmarkState{_config.max_duration};
 
     while (_state.keep_running() &&
-           (result.successful_runs.size() + result.unsuccessful_runs.size()) < _config.max_runs) {
+           (_config.max_runs < 0 || (result.successful_runs.size() + result.unsuccessful_runs.size()) <
+                                        static_cast<size_t>(_config.max_runs))) {
       // We want to only schedule as many items simultaneously as we have simulated clients
       if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
         _schedule_item_run(item_id);
@@ -395,7 +397,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   cli_options.add_options()
     ("help", "print a summary of CLI options")
     ("full_help", "print more detailed information about configuration options")
-    ("r,runs", "Maximum number of runs per item", cxxopts::value<size_t>()->default_value("10000")) // NOLINT
+    ("r,runs", "Maximum number of runs per item, negative values mean infinity", cxxopts::value<int64_t>()->default_value("-1")) // NOLINT
     ("c,chunk_size", "ChunkSize, default is 100,000", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::DEFAULT_SIZE))) // NOLINT
     ("t,time", "Runtime - per item for Ordered, total for Shuffled", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("w,warmup", "Number of seconds that each item is run for warm up", cxxopts::value<size_t>()->default_value("0")) // NOLINT

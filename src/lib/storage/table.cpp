@@ -306,7 +306,7 @@ void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, 
     auto scoped_lock = acquire_append_mutex();
     if (is_primary_key == IsPrimaryKey::Yes) {
       Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
-                          [](const auto& constraint) { return constraint.is_primary_key; }) ==
+                          [](const auto& constraint) { return constraint.is_primary_key == IsPrimaryKey::Yes; }) ==
                  _constraint_definitions.end(),
              "Another primary key already exists for this table.");
     }
