@@ -63,6 +63,7 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
   LQPColumnReference column_c_0, column_c_1, column_c_2;
 };
 
+// Test that a removable column is removed when the single primary key column is present.
 TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   // clang-format off
   auto lqp =
@@ -83,6 +84,7 @@ TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+// Test that a non-primary-key column is not removed if the full primary key is not present in the group by list.
 TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   // clang-format off
   auto lqp =
@@ -103,6 +105,7 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+// Test that a group by with the full (multi-column) primary key is not altered.
 TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   // clang-format off
   auto lqp =
@@ -123,6 +126,28 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+// Test adaption of multi-column and but inconsecutive column order primary key columns (table_c with {0,2})
+TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(column_c_0, column_c_1, column_c_2),
+    AggregateNode::make(expression_vector(column_c_0, column_c_1, column_c_2),
+                        expression_vector(sum_(column_c_0), sum_(column_c_2)),
+                        stored_table_node_c));
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(column_c_0, any_(column_c_1), column_c_2),
+    AggregateNode::make(expression_vector(column_c_0, column_c_2),
+                        expression_vector(sum_(column_c_0), sum_(column_c_2), any_(column_c_1)),
+                        stored_table_node_c));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// Test that a column that can be removed from the group by list and is not accessed later is removed completely.
 TEST_F(DependentGroupByReductionRuleTest, UnnecessaryGroupByColumn) {
   // clang-format off
   auto lqp =
@@ -141,6 +166,7 @@ TEST_F(DependentGroupByReductionRuleTest, UnnecessaryGroupByColumn) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+// Test that a column can be removed from the group by list, but is later accessed and thus needs to be ANY()'d.
 TEST_F(DependentGroupByReductionRuleTest, RemovedAndLaterAccessedGroupByColumn) {
   // clang-format off
   auto lqp =
@@ -161,7 +187,8 @@ TEST_F(DependentGroupByReductionRuleTest, RemovedAndLaterAccessedGroupByColumn) 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(DependentGroupByReductionRuleTest, Join) {
+// Test whether we remove the correct columns when a table is present multiple times (e.g., after self join).
+TEST_F(DependentGroupByReductionRuleTest, SelfJoinSingleKeyPrimaryKey) {
   const auto stored_table_node_a2 = StoredTableNode::make("table_a");
   const auto column_a2_0 = stored_table_node_a->get_column("column0");
   const auto column_a2_1 = stored_table_node_a->get_column("column1");
@@ -169,20 +196,52 @@ TEST_F(DependentGroupByReductionRuleTest, Join) {
 
   // clang-format off
   auto lqp =
-  ProjectionNode::make(expression_vector(column_a_0, column_a_1),
-    AggregateNode::make(expression_vector(column_a_0, column_a_1),
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5)),
+    AggregateNode::make(expression_vector(column_a_0, column_a_1, column_a2_0, column_a2_1),
                         expression_vector(sum_(column_a_0)),
-    JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_a2_0),
-      stored_table_node_a,
-      stored_table_node_a2)));
+      JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_a2_0),
+                     stored_table_node_a,
+                     stored_table_node_a2)));
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(column_a_0, any_(column_a_1)),
-    AggregateNode::make(expression_vector(column_a_0),
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(any_(column_a_1), 5)),
+    AggregateNode::make(expression_vector(column_a_0, column_a2_0),
                         expression_vector(sum_(column_a_0), any_(column_a_1)),
-    stored_table_node_a));
+      JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_a2_0),
+                     stored_table_node_a,
+                     stored_table_node_a2)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// Test similar to previous test, but one join side has full grouping of primary key, the other not.
+TEST_F(DependentGroupByReductionRuleTest, SelfJoinMultiKeyPrimaryKey) {
+  const auto stored_table_node_b2 = StoredTableNode::make("table_b");
+  const auto column_b2_0 = stored_table_node_b->get_column("column0");
+  const auto column_b2_1 = stored_table_node_b->get_column("column1");
+  const auto column_b2_2 = stored_table_node_b->get_column("column2");
+
+  // clang-format off
+  auto lqp =
+  ProjectionNode::make(expression_vector(add_(column_b_0, 5), add_(any_(column_b_2), 5)),
+    AggregateNode::make(expression_vector(column_b_0, column_b_2, column_b2_0, column_b2_1),
+                        expression_vector(sum_(column_b_0)),
+      JoinNode::make(JoinMode::Inner, equals_(column_b_0, column_b2_0),
+                     stored_table_node_b,
+                     stored_table_node_b2)));
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(column_b_0, 5), add_(any_(column_b_2), 5)),
+    AggregateNode::make(expression_vector(column_b_0, column_b2_0, column_b2_1),
+                        expression_vector(sum_(column_b_0), any_(column_b_2)),
+      JoinNode::make(JoinMode::Inner, equals_(column_b_0, column_b2_0),
+                     stored_table_node_b,
+                     stored_table_node_b2)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
