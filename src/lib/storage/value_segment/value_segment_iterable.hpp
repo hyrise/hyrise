@@ -33,7 +33,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    _segment.access_statistics().on_iterator_create_with_pos_list(position_filter->size());
+    _segment.access_statistics().on_iterator_create(position_filter);
     if (_segment.is_nullable()) {
       auto begin = PointAccessIterator{_segment.values().cbegin(), _segment.null_values().cbegin(),
                                        position_filter->cbegin(), position_filter->cbegin(), &_segment};
@@ -177,7 +177,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
+      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk), false,
                                 chunk_offsets.offset_in_poslist};
     }
@@ -209,7 +209,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
+      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{*(_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 *(_null_values_begin_it + chunk_offsets.offset_in_referenced_chunk),
                                 chunk_offsets.offset_in_poslist};

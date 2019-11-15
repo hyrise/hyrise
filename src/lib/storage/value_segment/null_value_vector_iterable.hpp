@@ -31,7 +31,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
     const auto& null_values = _segment.null_values();
-    _segment.access_statistics().on_iterator_create_with_pos_list(position_filter->size());
+    _segment.access_statistics().on_iterator_create(position_filter);
     auto begin = PointAccessIterator{null_values, position_filter->cbegin(), position_filter->cbegin(), &_segment};
     auto end = PointAccessIterator{null_values, position_filter->begin(), position_filter->cend(), &_segment};
     functor(begin, end);
@@ -94,7 +94,7 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
 
     IsNullSegmentPosition dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
+      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return IsNullSegmentPosition{_null_values[chunk_offsets.offset_in_referenced_chunk],
                                    chunk_offsets.offset_in_poslist};
     }

@@ -8,7 +8,6 @@
 #include "storage/segment_access_statistics.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
-#include "utils/segment_access_counter.hpp"
 
 
 namespace opossum {
@@ -54,7 +53,7 @@ TEST(SegmentAccessCounter, ExportStatistics) {
 
   tables["addresses"] = std::move(table_ptr);
 
-  SegmentAccessCounter::save_to_csv(tables, "segment_access_statistics_test.csv");
+  SegmentAccessStatistics_T::save_to_csv(tables, "segment_access_statistics_test.csv");
 }
 
 TEST(SegmentAccessCounter, Reset) {
@@ -63,7 +62,7 @@ TEST(SegmentAccessCounter, Reset) {
   vs.append(66);
   vs.append(666);
   EXPECT_EQ(3, vs.access_statistics().count(SegmentAccessType::Other));
-  vs.access_statistics().reset_all();
+  vs.access_statistics().reset();
   EXPECT_EQ(0, vs.access_statistics().count(SegmentAccessType::Other));
 }
 

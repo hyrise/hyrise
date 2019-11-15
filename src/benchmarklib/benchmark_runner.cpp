@@ -13,9 +13,9 @@
 #include "scheduler/job_task.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
+#include "storage/segment_access_statistics.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/segment_access_counter.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
@@ -200,7 +200,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     _results[item_id].duration = {};
     auto& result = _results[item_id];
 
-    SegmentAccessCounter::reset(Hyrise::get().storage_manager.tables());
+    SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
 
     Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
 
@@ -217,7 +217,7 @@ void BenchmarkRunner::_benchmark_ordered() {
     }
     _state.set_done();
 
-    SegmentAccessCounter::save_to_csv(Hyrise::get().storage_manager.tables(),
+    SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(),
       "access_statistics_" + name + ".csv");
 
     result.duration = _state.benchmark_duration;

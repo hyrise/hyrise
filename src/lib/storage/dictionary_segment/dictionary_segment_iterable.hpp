@@ -40,7 +40,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    _segment.access_statistics().on_iterator_create_with_pos_list(position_filter->size());
+    _segment.access_statistics().on_iterator_create(position_filter);
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using ZsDecompressorType = std::decay_t<decltype(*decompressor)>;
@@ -133,7 +133,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
           _dictionary_begin_it{dictionary_begin_it},
           _null_value_id{null_value_id},
           _attribute_decompressor{attribute_decompressor},
-          _segment{segment}{}
+          _segment{segment} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -146,7 +146,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
       if (is_null) return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
 
-      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
+      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }
 

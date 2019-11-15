@@ -43,7 +43,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     using ValueIterator = typename std::vector<T>::const_iterator;
 
     const auto position_filter_size = position_filter->size();
-    _segment.access_statistics().on_iterator_create_with_pos_list(position_filter_size);
+    _segment.access_statistics().on_iterator_create(position_filter_size);
 
     // vector storing the uncompressed values
     auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
@@ -165,7 +165,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
       const auto& chunk_offsets = this->chunk_offsets();
       const auto& value = *(_data_it + chunk_offsets.offset_in_poslist);
       const auto is_null = _null_value_it && *(*_null_value_it + chunk_offsets.offset_in_referenced_chunk);
-      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
+      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 

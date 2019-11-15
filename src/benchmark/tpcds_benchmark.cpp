@@ -10,7 +10,6 @@
 #include "hyrise.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/assert.hpp"
-#include "utils/segment_access_counter.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
 using namespace opossum;  // NOLINT

@@ -41,11 +41,11 @@
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/segment_access_statistics.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
-#include "utils/segment_access_counter.hpp"
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -478,7 +478,7 @@ int Console::_save_segment_access_counter(const std::string& args) {
 
   const auto path = arguments[0];
 
-  SegmentAccessCounter::save_to_csv(Hyrise::get().storage_manager.tables(), path);
+  SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(), path);
 
   return ReturnCode::Ok;
 }
@@ -489,7 +489,7 @@ int Console::_clear_segment_access_counter(const std::string& args) {
   auto arguments = std::vector<std::string>{};
   boost::algorithm::split(arguments, input, boost::is_space());
 
-  SegmentAccessCounter::reset(Hyrise::get().storage_manager.tables());
+  SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
 
   return ReturnCode::Ok;
 }

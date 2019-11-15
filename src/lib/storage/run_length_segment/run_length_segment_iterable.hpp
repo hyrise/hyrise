@@ -184,7 +184,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
       _prev_chunk_offset = current_chunk_offset;
       _prev_index = current_index;
 
-      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
+      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 

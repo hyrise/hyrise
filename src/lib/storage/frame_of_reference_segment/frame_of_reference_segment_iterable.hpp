@@ -33,7 +33,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
 
   template <typename Functor>
   void _on_with_iterators(const std::shared_ptr<const PosList>& position_filter, const Functor& functor) const {
-    _segment.access_statistics().on_iterator_create_with_pos_list(position_filter->size());
+    _segment.access_statistics().on_iterator_create(position_filter);
     resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decompressor = vector.create_decompressor();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decompressor)>;
@@ -179,7 +179,7 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
       const auto offset_value = _offset_value_decompressor->get(chunk_offsets.offset_in_referenced_chunk);
       const auto value = static_cast<T>(offset_value) + block_minimum;
 
-      _segment->access_statistics().on_iterator_dereference_using_pos_list(1);
+      _segment->access_statistics().on_iterator_dereference(1, chunk_offsets.offset_in_referenced_chunk);
       return SegmentPosition<T>{value, is_null, chunk_offsets.offset_in_poslist};
     }
 

@@ -562,8 +562,6 @@ set(
     utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
-    utils/segment_access_counter.cpp
-    utils/segment_access_counter.hpp
     utils/singleton.hpp
     utils/sqlite_add_indices.cpp
     utils/sqlite_add_indices.hpp

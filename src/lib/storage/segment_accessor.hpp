@@ -8,7 +8,6 @@
 #include "storage/base_segment_accessor.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "utils/performance_warning.hpp"
-#include "utils/segment_access_counter.hpp"
 
 namespace opossum {
 
@@ -49,7 +48,7 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
   }
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    _segment.access_statistics().on_accessor_access(1);
+    _segment.access_statistics().on_accessor_access(1, offset);
     return _segment.get_typed_value(offset);
   }
 
@@ -107,7 +106,7 @@ class SingleChunkReferenceSegmentAccessor final : public AbstractSegmentAccessor
   }
 
   const std::optional<T> access(ChunkOffset offset) const final {
-    _segment.access_statistics().on_accessor_access(1);
+    _segment.access_statistics().on_accessor_access(1, offset);
     const auto referenced_chunk_offset = _pos_list[offset].chunk_offset;
     return _segment.get_typed_value(referenced_chunk_offset);
   }

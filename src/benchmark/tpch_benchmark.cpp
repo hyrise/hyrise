@@ -10,12 +10,10 @@
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "hyrise.hpp"
-#include "storage/segment_access_statistics.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/assert.hpp"
-#include "utils/segment_access_counter.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
 using namespace opossum;  // NOLINT

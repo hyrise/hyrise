@@ -7,7 +7,7 @@ uint64_t AtomicAccessStrategy::count(SegmentAccessType type) const {
   return _count[type];
 }
 
-void AtomicAccessStrategy::reset_all() {
+void AtomicAccessStrategy::reset() {
   for (auto type = 0u, end = static_cast<uint32_t>(Count); type < end; ++type) {
     _count[type] = 0;
   }
@@ -22,7 +22,7 @@ uint64_t NonLockingStrategy::count(SegmentAccessType type) const {
   return _count[type];
 }
 
-void NonLockingStrategy::reset_all() {
+void NonLockingStrategy::reset() {
   _count.fill(0);
 }
 
@@ -30,12 +30,5 @@ void NonLockingStrategy::increase(SegmentAccessType type, uint64_t count) {
   _count[type] += count;
 }
 // -------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
 
 }  // namespace opossum

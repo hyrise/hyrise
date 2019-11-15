@@ -12,7 +12,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
-#include "utils/segment_access_counter.hpp"
+#include "segment_access_statistics.hpp"
 
 namespace opossum {
 

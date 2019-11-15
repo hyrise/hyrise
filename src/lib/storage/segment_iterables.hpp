@@ -5,7 +5,6 @@
 #include "types.hpp"
 #include "storage/segment_iterables/base_segment_iterators.hpp"
 #include "utils/assert.hpp"
-#include "utils/segment_access_counter.hpp"
 
 
 namespace opossum {
