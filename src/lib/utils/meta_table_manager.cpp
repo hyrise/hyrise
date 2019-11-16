@@ -69,7 +69,7 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
   const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"row_count", DataType::Long, false},
-                                              {"invalid_rows", DataType::Long, false},
+                                              {"invalid_row_count", DataType::Long, false},
                                               {"cleanup_commit_id", DataType::Long, true}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
