@@ -1863,7 +1863,7 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
 
   // clang-format off
   const auto stored_table_node = StoredTableNode::make(MetaTableManager::META_PREFIX + "columns");
-  const auto table_name_column = stored_table_node->get_column("table");
+  const auto table_name_column = stored_table_node->get_column("table_name");
   const auto expected_lqp =
       PredicateNode::make(equals_(table_name_column, "int_float"),
         stored_table_node);
