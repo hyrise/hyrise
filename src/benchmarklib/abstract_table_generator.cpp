@@ -52,7 +52,6 @@ void AbstractTableGenerator::generate_and_store() {
       // migrate the sorted chunks to that table.
 
       auto& table = table_info_by_name[table_name].table;
-      const auto soft_unique_constraints = table->get_soft_unique_constraints();  // store constraints
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
       auto sort = std::make_shared<Sort>(table_wrapper, table->column_id_by_name(column_name), order_by_mode,
@@ -75,12 +74,6 @@ void AbstractTableGenerator::generate_and_store() {
       }
 
       std::cout << "(" << per_table_timer.lap_formatted() << ")" << std::endl;
-
-      // resetting soft unique constraints
-      for (const auto& soft_unique_constraint : soft_unique_constraints) {
-        table->add_soft_unique_constraint(soft_unique_constraint.columns,
-                                          soft_unique_constraint.is_primary_key);
-      }
     }
     metrics.sort_duration = timer.lap();
     std::cout << "- Sorting tables done (" << format_duration(metrics.sort_duration) << ")" << std::endl;
