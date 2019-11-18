@@ -27,7 +27,10 @@ class MvccDeletePluginTest : public BaseTest {
  public:
   static void SetUpTestCase() { _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a"); }
 
-  void SetUp() override {}  // managed by each test individually
+  void SetUp() override {
+    const auto& table = load_table("resources/test_data/tbl/int3.tbl", _chunk_size);
+    Hyrise::get().storage_manager.add_table(_table_name, table);
+  }
 
   void TearDown() override { Hyrise::reset(); }
 
@@ -74,6 +77,7 @@ class MvccDeletePluginTest : public BaseTest {
   }
 
   const std::string _table_name{"mvccTestTable"};
+  static constexpr auto _chunk_size = size_t{4};
   inline static std::shared_ptr<AbstractExpression> _column_a;
 };
 
@@ -93,11 +97,9 @@ TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
  * visible anymore for transactions.
  */
 TEST_F(MvccDeletePluginTest, LogicalDelete) {
-  const size_t chunk_size = 4;
+  const auto table = Hyrise::get().storage_manager.get_table(_table_name);
 
   // Prepare test
-  const auto table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
-  Hyrise::get().storage_manager.add_table(_table_name, table);
   // --- Check table structure
   // --- Expected: 1, 2, 3 |
   // --- Chunk 0 is already immutable due to load_table()
@@ -162,13 +164,11 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
  * the physical delete, the table returns a nullptr when getting the chunk.
  */
 TEST_F(MvccDeletePluginTest, PhysicalDelete) {
-  const size_t chunk_size = 5;
-  ChunkID chunk_to_delete_id{0};
+  const auto table = Hyrise::get().storage_manager.get_table(_table_name);
 
   // Prepare the test
-  const auto& table = load_table("resources/test_data/tbl/int3.tbl", chunk_size);
+  ChunkID chunk_to_delete_id{0};
   const auto& chunk = table->get_chunk(chunk_to_delete_id);
-  Hyrise::get().storage_manager.add_table(_table_name, table);
   // --- invalidate records
   _increment_all_values_by_one();
   // --- delete chunk logically
