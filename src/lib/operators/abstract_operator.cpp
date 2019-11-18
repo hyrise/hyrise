@@ -126,10 +126,6 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { r
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
 
-void AbstractOperator::set_lqp_node(std::shared_ptr<const AbstractLQPNode> lqp_node) { _lqp_node = lqp_node; }
-
-std::shared_ptr<const AbstractLQPNode> AbstractOperator::get_lqp_node() const { return _lqp_node; }
-
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   _on_set_parameters(parameters);
   if (input_left()) mutable_input_left()->set_parameters(parameters);

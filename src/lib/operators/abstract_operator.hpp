@@ -118,15 +118,14 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;
 
-  void set_lqp_node(std::shared_ptr<const AbstractLQPNode> lqp_node);
-
-  std::shared_ptr<const AbstractLQPNode> get_lqp_node() const;
-
   // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
   const OperatorPerformanceData& performance_data() const;
 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+
+  // LQP node with which this operator has been created. Might be uninitialized.
+  std::shared_ptr<const AbstractLQPNode> lqp_node;
 
  protected:
   // abstract method to actually execute the operator
@@ -164,9 +163,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Is nullptr until the operator is executed
   std::shared_ptr<const Table> _output;
-
-  // LQP node with which this operator has been created. Can be uninitialized.
-  std::shared_ptr<const AbstractLQPNode> _lqp_node;
 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;

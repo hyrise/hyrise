@@ -400,7 +400,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
   EXPECT_EQ(*table_scan_op->predicate(), *between_inclusive_(a, 42, 1337));
 }
 
-// Tests accessing the origin LQP node after translation
+// Tests accessing the original LQP node after translation.
 TEST_F(LQPTranslatorTest, LqpNodeAccess) {
   // clang-format off
 
@@ -409,7 +409,7 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
     auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
     const auto op = LQPTranslator{}.translate_node(predicate_node);
 
-    const auto lqp_node = op->get_lqp_node();
+    const auto lqp_node = op->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
     EXPECT_EQ(recovered_node, predicate_node);
   }
@@ -421,7 +421,7 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
                               int_float2_node);
     const auto op = LQPTranslator{}.translate_node(join_node);
 
-    const auto lqp_node = op->get_lqp_node();
+    const auto lqp_node = op->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
     EXPECT_EQ(recovered_node, join_node);
   }
@@ -433,7 +433,7 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
                                               int_float_node);
     const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
-    const auto lqp_node = op->get_lqp_node();
+    const auto lqp_node = op->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const AggregateNode>(lqp_node);
     EXPECT_EQ(recovered_node, aggregate_node);
   }
@@ -443,7 +443,7 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
     auto validate_node = ValidateNode::make(int_float_node);
     const auto op = LQPTranslator{}.translate_node(validate_node);
 
-    const auto lqp_node = op->get_lqp_node();
+    const auto lqp_node = op->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const ValidateNode>(lqp_node);
     EXPECT_EQ(recovered_node, validate_node);
   }
