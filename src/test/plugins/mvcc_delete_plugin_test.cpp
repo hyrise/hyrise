@@ -29,7 +29,7 @@ class MvccDeletePluginTest : public BaseTest {
 
   void SetUp() override {}  // managed by each test individually
 
-  void TearDown() override { Hyrise::get().reset(); }
+  void TearDown() override { Hyrise::reset(); }
 
  protected:
   void _increment_all_values_by_one() {
@@ -55,11 +55,17 @@ class MvccDeletePluginTest : public BaseTest {
     transaction_context->commit();
   }
   static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id) {
-    return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id);
+    auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+    return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id, transaction_context);
+  }
+  static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id,
+                                  std::shared_ptr<TransactionContext> transaction_context) {
+    return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id, transaction_context);
   }
   static void _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
     MvccDeletePlugin::_delete_chunk_physically(Hyrise::get().storage_manager.get_table(table_name), chunk_id);
   }
+
   static int _get_int_value_from_table(const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
                                        const ColumnID column_id, const ChunkOffset chunk_offset) {
     const auto& segment = table->get_chunk(chunk_id)->get_segment(column_id);

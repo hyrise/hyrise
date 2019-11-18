@@ -67,7 +67,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
           continue;
         }
 
-        const bool success = _try_logical_delete(table_name, chunk_id);
+        auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+        const bool success = _try_logical_delete(table_name, chunk_id, transaction_context);
 
         if (success) {
           DebugAssert(table->get_chunk(chunk_id)->get_cleanup_commit_id(),
@@ -111,7 +112,8 @@ void MvccDeletePlugin::_physical_delete_loop() {
   }
 }
 
-bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const ChunkID chunk_id) {
+bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const ChunkID chunk_id,
+                                           std::shared_ptr<TransactionContext> transaction_context) {
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& chunk = table->get_chunk(chunk_id);
 
@@ -124,8 +126,6 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
   std::vector<ChunkID> excluded_chunk_ids(table->chunk_count() - 1);
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
-
-  auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
 
   auto get_table = std::make_shared<GetTable>(table_name, excluded_chunk_ids, std::vector<ColumnID>());
   get_table->set_transaction_context(transaction_context);
