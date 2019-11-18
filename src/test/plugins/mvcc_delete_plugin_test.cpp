@@ -157,6 +157,29 @@ TEST_F(MvccDeletePluginTest, LogicalDelete) {
   EXPECT_EQ(get_table->get_output()->row_count(), 3);
 }
 
+TEST_F(MvccDeletePluginTest, LogicalDeleteConflicts) {
+  const auto table = Hyrise::get().storage_manager.get_table(_table_name);
+
+  // Prepare test
+  _increment_all_values_by_one();
+  _increment_all_values_by_one();
+  EXPECT_EQ(table->chunk_count(), 3);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 4);
+  EXPECT_EQ(table->get_chunk(ChunkID{1})->invalid_row_count(), 3);
+
+  // Force rollback of logical delete transaction
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  {
+    const auto conflicting_sql = "DELETE FROM " + _table_name + " WHERE a < 4";
+    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline_statement();
+    (void)conflicting_sql_pipeline.get_result_table();
+  }
+
+  EXPECT_FALSE(_try_logical_delete(_table_name, ChunkID{1}, transaction_context));
+  EXPECT_EQ(transaction_context->phase(), TransactionPhase::RolledBack);
+}
+
 /**
  * This test checks the physical delete of the MvccDeletePlugin. At first,
  * the logical delete is performed as described in the former test. Afterwards,
