@@ -298,6 +298,55 @@ void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
   _export_attribute_vector(ofstream, *frame_of_reference_segment.compressed_vector_type(), frame_of_reference_segment.offset_values());
 }
 
+template <typename T>
+void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream) {
+  export_value(ofstream, EncodingType::LZ4);
+
+  // Write row count
+  export_value(ofstream, static_cast<uint32_t>(lz4_segment.size()));
+
+  // Write number of blocks
+  export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().size()));
+  
+  if(lz4_segment.lz4_blocks().size() > 1) {
+    // Write block size
+    export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().front().size()));
+  }
+  // Write last block size
+  export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().back().size()));
+
+  // Write LZ4 Blocks
+  for (auto& lz4_block : lz4_segment.lz4_blocks()){
+    export_values(ofstream, lz4_block);
+  }
+
+  if (lz4_segment.null_values()){
+    // Write NULL value size
+    export_value(ofstream, static_cast<uint32_t>(lz4_segment.null_values()->size()));
+    // Write NULL values
+    export_values(ofstream, *lz4_segment.null_values());
+  } else {
+    export_value(ofstream, 0u);
+  }
+
+  // Write dictionary size
+  export_value(ofstream, static_cast<uint32_t>(lz4_segment.dictionary().size()));
+
+  // Write dictionary
+  export_values(ofstream, lz4_segment.dictionary());
+
+  Assert(frame_of_reference_segment.compressed_vector_type() == CompressedVectorType::SimdBp128, "Exprected LZ4 Encoding to use SimdBp128");
+
+  if (lz4_segment.string_offsets()){
+    // Write string_offset size
+    export_value(ofstream, (*lz4_segment.string_offsets()).size());    
+    // Write string offsets
+    _export_attribute_vector(ofstream, *lz4_segment.compressed_vector_type(), *(lz4_segment.string_offsets().value()));
+  } else {
+    export_value(ofstream, 0u);    
+  }
+}
+
 void ExportBinary::_export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                             const BaseCompressedVector& attribute_vector) {
   switch (type) {
@@ -309,6 +358,9 @@ void ExportBinary::_export_attribute_vector(std::ofstream& ofstream, const Compr
       return;
     case CompressedVectorType::FixedSize1ByteAligned:
       export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(attribute_vector).data());
+      return;
+    case CompressedVectorType::SimdBp128:
+      export_values(ofstream, dynamic_cast<const SimdBp128Vector&>(attribute_vector).data());
       return;
     default:
       Fail("Any other type should have been caught before.");

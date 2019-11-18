@@ -9,11 +9,12 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "storage/base_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/frame_of_reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
-#include "storage/value_segment.hpp"
+#include "storage/frame_of_reference_segment.hpp"
+#include "storage/lz4_segment.hpp"
 
 namespace opossum {
 
@@ -154,6 +155,9 @@ class ImportBinary : public AbstractReadOnlyOperator {
   template <typename T>
   static std::shared_ptr<FrameOfReferenceSegment<T>> _import_frame_of_reference_segment(std::ifstream& file,
                                                                                         ChunkOffset row_count);
+
+  template <typename T>
+  static std::shared_ptr<LZ4Segment<T>> _import_lz4_segment(std::ifstream& file, ChunkOffset row_count);
 
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>

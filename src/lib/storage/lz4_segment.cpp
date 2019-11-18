@@ -90,6 +90,16 @@ ChunkOffset LZ4Segment<T>::size() const {
 }
 
 template <typename T>
+const pmr_vector<pmr_vector<char>>& LZ4Segment<T>::lz4_blocks() const {
+  return _lz4_blocks;
+}
+
+template <typename T>
+const std::optional<std::unique_ptr<const BaseCompressedVector>>& LZ4Segment<T>::string_offsets() const{
+  return _string_offsets;
+}
+
+template <typename T>
 std::vector<T> LZ4Segment<T>::decompress() const {
   auto decompressed_data = std::vector<T>(size());
 

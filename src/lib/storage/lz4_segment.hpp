@@ -98,6 +98,8 @@ class LZ4Segment : public BaseEncodedSegment {
   const std::optional<pmr_vector<bool>>& null_values() const;
   std::optional<std::unique_ptr<BaseVectorDecompressor>> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
+  const pmr_vector<pmr_vector<char>>& lz4_blocks() const;
+  const std::optional<std::unique_ptr<const BaseCompressedVector>>& string_offsets() const;
 
   /**
    * @defgroup BaseSegment interface
