@@ -118,7 +118,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;
 
-  void set_lqp_node(const std::shared_ptr<const AbstractLQPNode> lqp_node);
+  void set_lqp_node(std::shared_ptr<const AbstractLQPNode> lqp_node);
 
   std::shared_ptr<const AbstractLQPNode> get_lqp_node() const;
 
