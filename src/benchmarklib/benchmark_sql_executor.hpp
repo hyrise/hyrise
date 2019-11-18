@@ -40,10 +40,11 @@ class BenchmarkSQLExecutor {
                        const std::shared_ptr<const Table>& actual_result_table,
                        const std::optional<const std::string>& description = std::nullopt);
   void _verify_with_sqlite(SQLPipeline& pipeline);
-  void _visualize(SQLPipeline& pipeline) const;
+  void _visualize(SQLPipeline& pipeline);
 
   const std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
   const std::optional<std::string> _visualize_prefix;
+  uint64_t _num_visualized_plans{0};
 };
 
 }  // namespace opossum

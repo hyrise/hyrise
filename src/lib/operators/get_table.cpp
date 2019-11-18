@@ -71,13 +71,20 @@ void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeV
 std::shared_ptr<const Table> GetTable::_on_execute() {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
 
+  // The chunk count might change while we are in this method as other threads concurrently insert new data. MVCC
+  // guarantees that rows that are inserted after this transaction was started (and thus after GetTable started to
+  // execute) are not visible. Thus, we do not have to care about chunks added after this point. By retrieving
+  // chunk_count only once, we avoid concurrency issues, for example when more chunks are added to output_chunks than
+  // entries were originally allocated.
+  const auto chunk_count = stored_table->chunk_count();
+
   /**
    * Build a sorted vector (`excluded_chunk_ids`) of physically/logically deleted and pruned ChunkIDs
    */
   DebugAssert(!transaction_context_is_set() || transaction_context()->phase() == TransactionPhase::Active,
               "Transaction is not active anymore.");
   if (HYRISE_DEBUG && !transaction_context_is_set()) {
-    for (ChunkID chunk_id{0}; chunk_id < stored_table->chunk_count(); ++chunk_id) {
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       DebugAssert(stored_table->get_chunk(chunk_id) && !stored_table->get_chunk(chunk_id)->get_cleanup_commit_id(),
                   "For tables with physically deleted chunks, the transaction context must be set.");
     }
@@ -85,34 +92,39 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   auto excluded_chunk_ids = std::vector<ChunkID>{};
   auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
-  for (ChunkID stored_chunk_id{0}; stored_chunk_id < stored_table->chunk_count(); ++stored_chunk_id) {
+  for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Check whether the Chunk is pruned
     if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
-      excluded_chunk_ids.emplace_back(stored_chunk_id);
       ++pruned_chunk_ids_iter;
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
       continue;
     }
 
-    // Check whether the Chunk is deleted
-    if (transaction_context_is_set()) {
-      const auto chunk = stored_table->get_chunk(stored_chunk_id);
+    const auto chunk = stored_table->get_chunk(stored_chunk_id);
 
-      if (!chunk || (chunk->get_cleanup_commit_id() &&
-                     *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id())) {
-        excluded_chunk_ids.emplace_back(stored_chunk_id);
-      }
+    // Skip chunks that were physically deleted
+    if (!chunk) {
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
+      continue;
+    }
+
+    // Skip chunks that were just inserted by a different transaction and that do not have any content yet
+    if (chunk->size() == 0) {
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
+      continue;
+    }
+
+    // Check whether the Chunk is logically deleted
+    if (transaction_context_is_set() && chunk->get_cleanup_commit_id() &&
+        *chunk->get_cleanup_commit_id() <= transaction_context()->snapshot_commit_id()) {
+      excluded_chunk_ids.emplace_back(stored_chunk_id);
+      continue;
     }
   }
 
-  /**
-   * Early out if no exclusion of Chunks or Columns is necessary
-   */
-  if (excluded_chunk_ids.empty() && _pruned_column_ids.empty()) {
-    return stored_table;
-  }
-
   // We cannot create a Table without columns - since Chunks rely on their first column to determine their row count
-  Assert(_pruned_column_ids.size() < stored_table->column_count(), "Cannot prune all columns from Table");
+  Assert(_pruned_column_ids.size() < static_cast<size_t>(stored_table->column_count()),
+         "Cannot prune all columns from Table");
   DebugAssert(std::all_of(_pruned_column_ids.begin(), _pruned_column_ids.end(),
                           [&](const auto column_id) { return column_id < stored_table->column_count(); }),
               "ColumnID out of range");
@@ -143,12 +155,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   /**
    * Build the output Table, omitting pruned Chunks and Columns as well as deleted Chunks
    */
-  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{stored_table->chunk_count() - excluded_chunk_ids.size()};
+  auto output_chunks = std::vector<std::shared_ptr<Chunk>>{chunk_count - excluded_chunk_ids.size()};
   auto output_chunks_iter = output_chunks.begin();
 
   auto excluded_chunk_ids_iter = excluded_chunk_ids.begin();
 
-  for (ChunkID stored_chunk_id{0}; stored_chunk_id < stored_table->chunk_count(); ++stored_chunk_id) {
+  for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Skip `stored_chunk_id` if it is in the sorted vector `excluded_chunk_ids`
     if (excluded_chunk_ids_iter != excluded_chunk_ids.end() && *excluded_chunk_ids_iter == stored_chunk_id) {
       ++excluded_chunk_ids_iter;

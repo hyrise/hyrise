@@ -159,6 +159,7 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/compressed_vector_test.cpp
+    storage/constraints_test.cpp
     storage/dictionary_segment_test.cpp
     storage/encoded_segment_test.cpp
     storage/encoded_string_segment_test.cpp
@@ -202,6 +203,7 @@ set(
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
+    concurrency/stress_test.cpp
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
     synthetic_table_generator_test.cpp

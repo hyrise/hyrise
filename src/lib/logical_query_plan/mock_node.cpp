@@ -111,12 +111,14 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
   const auto mock_node = MockNode::make(_column_definitions);
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
+  mock_node->name = name;
   return mock_node;
 }
 
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
-  return _column_definitions == mock_node._column_definitions;
+  return _column_definitions == mock_node._column_definitions && _pruned_column_ids == mock_node._pruned_column_ids &&
+         mock_node.name == name;
 }
 
 }  // namespace opossum

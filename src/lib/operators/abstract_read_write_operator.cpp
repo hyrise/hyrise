@@ -63,4 +63,25 @@ void AbstractReadWriteOperator::_mark_as_failed() {
   _state = ReadWriteOperatorState::Failed;
 }
 
+std::ostream& operator<<(std::ostream& stream, const ReadWriteOperatorState& phase) {
+  switch (phase) {
+    case ReadWriteOperatorState::Pending:
+      stream << "Pending";
+      break;
+    case ReadWriteOperatorState::Executed:
+      stream << "Executed";
+      break;
+    case ReadWriteOperatorState::Failed:
+      stream << "Failed";
+      break;
+    case ReadWriteOperatorState::RolledBack:
+      stream << "RolledBack";
+      break;
+    case ReadWriteOperatorState::Committed:
+      stream << "Committed";
+      break;
+  }
+  return stream;
+}
+
 }  // namespace opossum

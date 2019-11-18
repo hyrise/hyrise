@@ -1,4 +1,4 @@
-table|chunk_id|rows|invalid_rows|cleanup_commit_id
+table_name|chunk_id|row_count|invalid_row_count|cleanup_commit_id
 string|int|long|long|long_null
 int_int|0|2|1|null
 int_int|1|1|0|null
