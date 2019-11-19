@@ -17,6 +17,10 @@ struct OperatorPerformanceData : public Noncopyable {
 
   std::chrono::nanoseconds walltime{0};
 
+  std::optional<size_t> input_row_count_left;
+  std::optional<size_t> input_row_count_right;
+  size_t output_row_count{0};
+
   virtual void output_to_stream(std::ostream& stream,
                                 DescriptionMode description_mode = DescriptionMode::SingleLine) const;
 };
