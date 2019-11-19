@@ -132,6 +132,13 @@ class GDFSCache : public AbstractCacheImpl<Key, Value> {
 
   ErasedIterator end() { return ErasedIterator{std::make_unique<Iterator>(_map.end())}; }
 
+  size_t frequency(const Key& key) {
+    const auto it = _map.find(key);
+    Handle handle = it->second;
+    GDFSCacheEntry& entry = (*handle);
+    return entry.frequency;
+  }
+
  protected:
   // Priority queue to hold all elements. Implemented as max-heap.
   boost::heap::fibonacci_heap<GDFSCacheEntry> _queue;

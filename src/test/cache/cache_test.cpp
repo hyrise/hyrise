@@ -47,6 +47,8 @@ TEST(CachePolicyTest, LRUCacheTest) {
   ASSERT_FALSE(cache.has(3));
   ASSERT_EQ(5, cache.get(1));  // Hit.
   ASSERT_EQ(4, cache.get(2));  // Hit.
+
+  ASSERT_THROW(cache.frequency(2), std::logic_error);  // key exists, but no frequency() for LRU
 }
 
 // LRU-K (K = 2)
@@ -83,6 +85,8 @@ TEST(CachePolicyTest, LRU2CacheTest) {
 
   ASSERT_EQ(5, cache.get(1));  // Hit.
   ASSERT_EQ(6, cache.get(3));  // Hit.
+
+  ASSERT_THROW(cache.frequency(2), std::logic_error);  // key exists, but no frequency() for LRU2
 }
 
 // GDS Strategy
@@ -134,6 +138,8 @@ TEST(CachePolicyTest, GDSCacheTest) {
   ASSERT_FALSE(cache.has(1));
   ASSERT_TRUE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
+
+  ASSERT_THROW(cache.frequency(3), std::logic_error);  // key exists, but no frequency() for GDS
 }
 
 // GDFS Strategy
@@ -185,6 +191,8 @@ TEST(CachePolicyTest, GDFSCacheTest) {
   ASSERT_FALSE(cache.has(1));
   ASSERT_TRUE(cache.has(2));
   ASSERT_TRUE(cache.has(3));
+
+  ASSERT_EQ(cache.frequency(3), 3);
 }
 
 // Random Replacement Strategy
@@ -229,6 +237,8 @@ TEST(CachePolicyTest, RandomCacheTest) {
   // We can only expect the most recent insertion to be in the cache.
   ASSERT_TRUE(cache.has(6));
   ASSERT_EQ(53, cache.get(6));  // Hit.
+
+  ASSERT_THROW(cache.frequency(6), std::logic_error);  // key exists, but no frequency() for Random
 }
 
 // Test the default cache (uses GDFS).

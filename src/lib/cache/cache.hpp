@@ -78,6 +78,8 @@ class Cache {
 
   Iterator end() { return _impl->end(); }
 
+  size_t frequency(const Key& key) { return _impl->frequency(key); }
+
  protected:
   // Underlying cache eviction strategy.
   std::unique_ptr<AbstractCacheImpl<Key, Value>> _impl;
