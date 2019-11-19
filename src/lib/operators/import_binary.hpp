@@ -144,6 +144,21 @@ class ImportBinary : public AbstractReadOnlyOperator {
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
                                                                         AttributeVectorWidth attribute_vector_width);
 
+  /*
+   * Imports a serialized RunLengthSegment from the given file.
+   * The file must contain data in the following format:
+   *
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Run count              | uint32_t                              |   4
+   * Values                 | T (int, float, double, long)          |   Run count * sizeof(T)
+   * NULL values            | vector<bool> (BoolAsByteType)         |   Run count * 1
+   * End Positions          | ChunkOffset                           |   Run count * 4
+   *
+   * Please note that the number of rows are written in the header of the chunk.
+   * The type of the column can be found in the global header of the file.
+   *
+   */
   template <typename T>
   static std::shared_ptr<RunLengthSegment<T>> _import_run_length_segment(std::ifstream& file, ChunkOffset row_count);
 
