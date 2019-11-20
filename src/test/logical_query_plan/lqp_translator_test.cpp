@@ -441,18 +441,17 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
   }
 }
 
-// Check if the referenced LQP in the PQP is really cleaned up. This test is intended to check whether we might
-// introduce cyclic references at a later point in time.
+// Check if the LQP that is referenced in the PQP is really cleaned up. This test is intended to check that no cyclic
+// references are accidentally introduced a later point in time.
 TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
   std::weak_ptr<const AbstractLQPNode> lqp_node;
-
   {
-    auto lqp = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
-    const auto op = LQPTranslator{}.translate_node(lqp);
-    lqp_node = op->lqp_node;
+    auto pipeline_statement = SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline_statement();
+    const auto pqp = pipeline_statement.get_physical_plan();
+    lqp_node = pqp->lqp_node;
+    EXPECT_FALSE(lqp_node.expired());
   }
-
-  EXPECT_TRUE(lqp_node.expired());
+  EXPECT_TRUE(lqp_node.expired()); 
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
