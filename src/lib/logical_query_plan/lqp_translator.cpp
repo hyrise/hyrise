@@ -90,6 +90,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
   }
 
   auto pqp = _translate_by_node_type(node->type, node);
+
+  // Adding the actual LQP node that led to the creation of the PQP node.  Note, the LQP needs to be set in
+  // _translate_predicate_node_to_index_scan() as well, because the function creates two scans operators and returns
+  // only the merging union node (all three PQP nodes share the same originating LQP node).
   pqp->lqp_node = node;
   _operator_by_lqp_node.emplace(node, pqp);
 
@@ -212,6 +216,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   index_scan->included_chunk_ids = indexed_chunks;
   table_scan->excluded_chunk_ids = indexed_chunks;
+
+  // set lqp node
+  index_scan->lqp_node = node;
+  table_scan->lqp_node = node;
 
   return std::make_shared<UnionAll>(index_scan, table_scan);
 }

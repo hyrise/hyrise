@@ -485,6 +485,11 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
+
+  // Check the setting of LQP nodes for index scans
+  EXPECT_EQ(union_op->lqp_node, predicate_node);
+  EXPECT_EQ(index_scan_op->lqp_node, predicate_node);
+  EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
