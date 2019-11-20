@@ -193,6 +193,7 @@ TEST(CachePolicyTest, GDFSCacheTest) {
   ASSERT_TRUE(cache.has(3));
 
   ASSERT_EQ(cache.frequency(3), 3);
+  ASSERT_EQ(cache.frequency(100), 0);
 }
 
 // Random Replacement Strategy
