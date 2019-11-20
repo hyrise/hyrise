@@ -1,4 +1,4 @@
-table|chunk_id|column_id|column_name|column_data_type|encoding
+table_name|chunk_id|column_id|column_name|column_data_type|encoding_name
 string|int|int|string|string|string_null
 int_int|0|0|a|int|null
 int_int|0|1|b|int|null

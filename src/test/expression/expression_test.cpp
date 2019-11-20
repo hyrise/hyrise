@@ -444,4 +444,12 @@ TEST_F(ExpressionTest, EqualsAndHash) {
   }
 }
 
+TEST_F(ExpressionTest, IsCountStar) {
+  EXPECT_TRUE(AggregateExpression::is_count_star(*count_star_(int_float_node)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*count_(a)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*sum_(a)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*add_(a, 1)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*lqp_column_(a)));
+}
+
 }  // namespace opossum

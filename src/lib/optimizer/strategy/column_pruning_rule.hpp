@@ -9,26 +9,18 @@ namespace opossum {
 
 class AbstractLQPNode;
 
-/**
- * Removes never-referenced base relation columns from the LQP by inserting ProjectionNodes that select only those
- * expressions needed "further up" in the plan.
- *
- * Does NOT eliminate columns added as temporary columns later in the plan or columns that become useless after a
- * certain point in the LQP. *
- * E.g. `SELECT * FROM t WHERE a + 5 > b AND a + 6 > c`: Here `a + 5` and `a + 6` introduce temporary columns that will
- * NOT be removed by this Rule. But it `t` contains a column "d", which is obviously never used in this query, this
- * column "d" will be pruned.
- */
+// Removes expressions (i.e., columns) that are never or no longer used from the plan
+// - In StoredTableNodes, we can get rid of all columns that are not used anywhere in the LQP
+// - In ProjectionNodes, we can get rid of columns that are not part of the result or not used anymore. Example:
+//     SELECT SUM(a + 2) FROM (SELECT a, a + 1 FROM t1) t2
+//   Here, `a + 1` is never actually used and should be pruned
+// - Joins that emit columns that are never used can be rewritten to semi joins if (a) the unused side has a unique
+//     constraint and (b) the join is an inner join. This is done in the ColumnPruningRule because it requires
+//     information about which columns are needed and which ones are not. That information is gathered here and not
+//     exported.
 class ColumnPruningRule : public AbstractRule {
  public:
   void apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const override;
-
- private:
-  static ExpressionUnorderedSet _collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp);
-  static void _prune_columns_from_leaves(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                         const ExpressionUnorderedSet& referenced_columns);
-  static void _prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                            const ExpressionUnorderedSet& referenced_columns);
 };
 
 }  // namespace opossum

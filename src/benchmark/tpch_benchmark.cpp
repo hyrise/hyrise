@@ -92,14 +92,10 @@ int main(int argc, char* argv[]) {
   }
 
   std::cout << "- Benchmarking Queries: [ ";
-  for (const auto& item_id : item_ids) {
-    std::cout << (item_id + 1);
-    if (item_id != item_ids.back()) {
-      std::cout << ",";
-    }
-    std::cout << " ";
-  }
-  std::cout << "]" << std::endl;
+  auto printable_item_ids = std::vector<std::string>();
+  std::for_each(item_ids.begin(), item_ids.end(),
+                [&printable_item_ids](auto& id) { printable_item_ids.push_back(std::to_string(id + 1)); });
+  std::cout << boost::algorithm::join(printable_item_ids, ", ") << " ]" << std::endl;
 
   auto context = BenchmarkRunner::create_context(*config);
 
