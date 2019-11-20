@@ -1,4 +1,4 @@
-table|name|data_type|nullable
+table_name|column_name|data_type|nullable
 string|string|string|int
 int_int|a|int|0
 int_int|b|int|0

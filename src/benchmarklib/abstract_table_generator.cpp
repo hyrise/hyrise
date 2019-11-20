@@ -80,6 +80,11 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
+   * Add constraints if defined by the benchmark
+   */
+  _add_constraints(table_info_by_name);
+
+  /**
    * Finalizing all chunks of all tables that are still mutable.
    */
   // TODO(any): Finalization might trigger encoding in the future.
@@ -213,5 +218,8 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; }
 
 AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_table() const { return {}; }
+
+void AbstractTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
 
 }  // namespace opossum

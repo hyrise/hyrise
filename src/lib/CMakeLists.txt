@@ -88,7 +88,6 @@ set(
     expression/value_expression.hpp
     hyrise.cpp
     hyrise.hpp
-    import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
     import_export/csv_meta.cpp
@@ -396,7 +395,6 @@ set(
     statistics/table_statistics.hpp
     statistics/attribute_statistics.cpp
     statistics/attribute_statistics.hpp
-    storage/abstract_segment_visitor.hpp
     storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
@@ -406,9 +404,10 @@ set(
     storage/base_segment.hpp
     storage/base_value_segment.hpp
     storage/chunk.cpp
+    storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
-    storage/chunk.hpp
+    storage/constraints/table_constraint_definition.hpp
     storage/create_iterable_from_segment.hpp
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment.cpp
@@ -635,7 +634,7 @@ else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
     # Also, the sanitizer builds on Mac require static linkage
     add_library(hyrise STATIC ${SOURCES})
-endif() 
+endif()
 
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(

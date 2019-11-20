@@ -9,6 +9,7 @@
 #include "base_segment.hpp"
 #include "boost/variant.hpp"
 #include "chunk.hpp"
+#include "storage/constraints/table_constraint_definition.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "types.hpp"
@@ -182,6 +183,15 @@ class Table : private Noncopyable {
   }
 
   /**
+   * Add a unique constraint. The column IDs can be passed in an arbitrary order, they will be sorted
+   * by this method. Constraint column IDs will always be sorted from here on.
+   * NOTE: Constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" constraints to draw attention to that.
+   */
+  void add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key);
+  const std::vector<TableConstraintDefinition>& get_soft_unique_constraints() const;
+
+  /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
    */
   size_t estimate_memory_usage() const;
@@ -201,8 +211,9 @@ class Table : private Noncopyable {
    *
    * For the zero_allocator, see the implementation of Table::append_chunk.
    */
-
   tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
+
+  std::vector<TableConstraintDefinition> _constraint_definitions;
 
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;

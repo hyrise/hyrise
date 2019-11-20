@@ -2,6 +2,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/in_expression_rewrite_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
+#include "statistics/cardinality_estimator.hpp"
 #include "storage/table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
@@ -10,7 +11,11 @@ namespace opossum {
 
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
-    node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "col_a"}, {DataType::Float, "col_b"}});
+    // col_a has 1000 entries across 200 values linearly distributed between 1 and 200
+    node = create_mock_node_with_statistics(
+        MockNode::ColumnDefinitions{{DataType::Int, "col_a"}, {DataType::Float, "col_b"}}, 1000,
+        {{GenericHistogram<int32_t>::with_single_bin(1, 200, 1000, 200),
+          GenericHistogram<float>::with_single_bin(1.0f, 50.0f, 100, 10)}});
     col_a = lqp_column_(node->get_column("col_a"));
     col_b = lqp_column_(node->get_column("col_b"));
 
@@ -248,12 +253,16 @@ TEST_F(InExpressionRewriteRuleTest, JoinStrategy) {
 TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   auto rule = std::make_shared<InExpressionRewriteRule>();
 
+  const auto cardinality_estimator = CardinalityEstimator{};
+
   {
     // Disjunction for single element
     const auto input_lqp = PredicateNode::make(single_element_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     const auto expected_lqp = PredicateNode::make(equals_(col_a, 1), node);
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
+
+    EXPECT_FLOAT_EQ(cardinality_estimator.estimate_cardinality(result_lqp), 1000.f / 200 * 1);
   }
 
   {
@@ -261,6 +270,10 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
     const auto input_lqp = PredicateNode::make(five_element_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     EXPECT_EQ(result_lqp, input_lqp);
+
+    // No cardinality check here, as an IN expression with 5 elements will not be touched (see
+    // MAX_ELEMENTS_FOR_DISJUNCTION and MIN_ELEMENTS_FOR_JOIN). These InExpressions are currently not supported by the
+    // CardinalityEstimator.
   }
 
   {
@@ -284,6 +297,8 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
     EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
+
+    EXPECT_NEAR(cardinality_estimator.estimate_cardinality(result_lqp), 1000.f / 200 * 100, 10);
   }
 
   {
