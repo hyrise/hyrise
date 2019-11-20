@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_manager.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -64,7 +65,9 @@ TableType Table::type() const { return _type; }
 
 UseMvcc Table::has_mvcc() const { return _use_mvcc; }
 
-uint16_t Table::column_count() const { return static_cast<uint16_t>(_column_definitions.size()); }
+ColumnCount Table::column_count() const {
+  return ColumnCount{static_cast<ColumnCount::base_type>(_column_definitions.size())};
+}
 
 const std::string& Table::column_name(const ColumnID column_id) const {
   DebugAssert(column_id < _column_definitions.size(), "ColumnID out of range");
@@ -101,8 +104,8 @@ bool Table::column_is_nullable(const ColumnID column_id) const {
 
 std::vector<bool> Table::columns_are_nullable() const {
   std::vector<bool> nullable(column_count());
-  for (size_t column_idx = 0; column_idx < column_count(); ++column_idx) {
-    nullable[column_idx] = _column_definitions[column_idx].nullable;
+  for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+    nullable[column_id] = _column_definitions[column_id].nullable;
   }
   return nullable;
 }
@@ -208,14 +211,20 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
          "Supply MvccData to data Tables iff MVCC is enabled");
 
-#if HYRISE_DEBUG
-  for (const auto& segment : segments) {
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
-    DebugAssert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto& segment : segments) {
+      const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
+      Assert(is_reference_segment == (_type == TableType::References), "Invalid Segment type");
+    }
   }
-#endif
 
-  _chunks.push_back(std::make_shared<Chunk>(segments, mvcc_data, alloc));
+  // tbb::concurrent_vector does not guarantee that elements reported by size() are fully initialized yet:
+  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
+  // To avoid someone reading an incomplete shared_ptr<Chunk>, we (1) use the zero_allocator for the concurrent_vector,
+  // making sure that an uninitialized entry compares equal to nullptr and (2) insert the desired chunk atomically.
+
+  auto new_chunk_iter = _chunks.push_back(nullptr);
+  std::atomic_store(&*new_chunk_iter, std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
@@ -281,6 +290,40 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 }
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
+
+const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints() const {
+  return _constraint_definitions;
+}
+
+void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
+  for (const auto& column_id : column_ids) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+    Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
+           "Column must be not nullable for primary key constraint");
+  }
+
+  {
+    auto scoped_lock = acquire_append_mutex();
+    if (is_primary_key == IsPrimaryKey::Yes) {
+      Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                          [](const auto& constraint) { return constraint.is_primary_key == IsPrimaryKey::Yes; }) ==
+                 _constraint_definitions.end(),
+             "Another primary key already exists for this table.");
+    }
+
+    auto sorted_columns_ids = column_ids;
+    std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
+    TableConstraintDefinition new_constraint{sorted_columns_ids, is_primary_key};
+
+    Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                        [&new_constraint](const auto& existing_constraint) {
+                          return new_constraint.columns == existing_constraint.columns;
+                        }) == _constraint_definitions.end(),
+           "Another constraint on the same columns already exists.");
+
+    _constraint_definitions.push_back(new_constraint);
+  }
+}
 
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};

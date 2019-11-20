@@ -149,7 +149,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       }
 
       const auto& reference_segment =
-          std::dynamic_pointer_cast<ReferenceSegment>(index_chunk->segments()[_primary_predicate.column_ids.second]);
+          std::dynamic_pointer_cast<ReferenceSegment>(index_chunk->get_segment(_primary_predicate.column_ids.second));
       Assert(reference_segment != nullptr,
              "Non-empty index input table (reference table) has to have only reference segments.");
       auto index_data_table = reference_segment->referenced_table();

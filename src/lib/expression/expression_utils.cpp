@@ -157,7 +157,29 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
 
   visit_expression(expression, [&](const auto& sub_expression) {
     if (lqp.find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
+
+    if (AggregateExpression::is_count_star(*sub_expression)) {
+      // COUNT(*) needs special treatment. Because its argument is the invalid column id, it is not part of any node's
+      // column_expressions. Check if sub_expression is COUNT(*) - if yes, ignore the INVALID_COLUMN_ID and verify that
+      // its original_node is part of lqp.
+      const auto& aggregate_expression = static_cast<const AggregateExpression&>(*sub_expression);
+      const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*aggregate_expression.argument());
+      const auto& original_node = lqp_column_expression.column_reference.original_node();
+
+      // Now check if lqp contains that original_node
+      evaluable = false;
+      visit_lqp(lqp.shared_from_this(), [&](const auto& sub_lqp) {
+        if (sub_lqp == original_node) {
+          evaluable = true;
+        }
+        return LQPVisitation::VisitInputs;
+      });
+
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
     if (sub_expression->type == ExpressionType::LQPColumn) evaluable = false;
+
     return ExpressionVisitation::VisitArguments;
   });
 

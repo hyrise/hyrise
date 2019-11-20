@@ -113,8 +113,9 @@ void visit_expression(Expression& expression, Visitor visitor) {
 DataType expression_common_type(const DataType lhs, const DataType rhs);
 
 /**
- * @return Checks whether the expression can be evaluated by the ExpressionEvaluator on top of a specified LQP (i.e.,
- *         all required LQPColumnExpressions are available from this LQP).
+ * @return Checks whether the expression can be evaluated on top of a specified LQP (i.e., all required
+ *         LQPColumnExpressions are available from this LQP). This does not mean that all expressions are already
+ *         readily available as a column. It might be necessary to add a Projection or an Aggregate.
  *         To check if an expression is available in a form ready to be used by a scan/join,
  *         use `Operator*Predicate::from_expression(...)`.
  */

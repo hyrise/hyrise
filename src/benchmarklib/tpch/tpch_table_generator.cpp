@@ -275,14 +275,29 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    */
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-  table_info_by_name["customer"].table = customer_builder.finish_table();
-  table_info_by_name["orders"].table = order_builder.finish_table();
-  table_info_by_name["lineitem"].table = lineitem_builder.finish_table();
-  table_info_by_name["part"].table = part_builder.finish_table();
-  table_info_by_name["partsupp"].table = partsupp_builder.finish_table();
-  table_info_by_name["supplier"].table = supplier_builder.finish_table();
-  table_info_by_name["nation"].table = nation_builder.finish_table();
-  table_info_by_name["region"].table = region_builder.finish_table();
+  auto customer_table = customer_builder.finish_table();
+  table_info_by_name["customer"].table = customer_table;
+
+  auto orders_table = order_builder.finish_table();
+  table_info_by_name["orders"].table = orders_table;
+
+  auto lineitem_table = lineitem_builder.finish_table();
+  table_info_by_name["lineitem"].table = lineitem_table;
+
+  auto part_table = part_builder.finish_table();
+  table_info_by_name["part"].table = part_table;
+
+  auto partsupp_table = partsupp_builder.finish_table();
+  table_info_by_name["partsupp"].table = partsupp_table;
+
+  auto supplier_table = supplier_builder.finish_table();
+  table_info_by_name["supplier"].table = supplier_table;
+
+  auto nation_table = nation_builder.finish_table();
+  table_info_by_name["nation"].table = nation_table;
+
+  auto region_table = region_builder.finish_table();
+  table_info_by_name["region"].table = region_table;
 
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
@@ -311,6 +326,37 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
   // Allowed as per TPC-H Specification, paragraph 1.5.2
   return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
+}
+
+void TPCHTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  const auto& customer_table = table_info_by_name.at("customer").table;
+  customer_table->add_soft_unique_constraint({customer_table->column_id_by_name("c_custkey")}, IsPrimaryKey::Yes);
+
+  const auto& orders_table = table_info_by_name.at("orders").table;
+  orders_table->add_soft_unique_constraint({orders_table->column_id_by_name("o_orderkey")}, IsPrimaryKey::Yes);
+
+  const auto& lineitem_table = table_info_by_name.at("lineitem").table;
+  lineitem_table->add_soft_unique_constraint(
+      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
+      IsPrimaryKey::Yes);
+
+  const auto& part_table = table_info_by_name.at("part").table;
+  part_table->add_soft_unique_constraint({part_table->column_id_by_name("p_partkey")}, IsPrimaryKey::Yes);
+
+  const auto& partsupp_table = table_info_by_name.at("partsupp").table;
+  partsupp_table->add_soft_unique_constraint(
+      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
+      IsPrimaryKey::Yes);
+
+  const auto& supplier_table = table_info_by_name.at("supplier").table;
+  supplier_table->add_soft_unique_constraint({supplier_table->column_id_by_name("s_suppkey")}, IsPrimaryKey::Yes);
+
+  const auto& nation_table = table_info_by_name.at("nation").table;
+  nation_table->add_soft_unique_constraint({nation_table->column_id_by_name("n_nationkey")}, IsPrimaryKey::Yes);
+
+  const auto& region_table = table_info_by_name.at("region").table;
+  region_table->add_soft_unique_constraint({region_table->column_id_by_name("r_regionkey")}, IsPrimaryKey::Yes);
 }
 
 }  // namespace opossum

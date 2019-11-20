@@ -19,6 +19,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/static_table_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
@@ -158,6 +159,12 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
       output_table_statistics = left_input_table_statistics;
     } break;
 
+    case LQPNodeType::StaticTable: {
+      const auto static_table_node = std::dynamic_pointer_cast<StaticTableNode>(lqp);
+      output_table_statistics = static_table_node->table->table_statistics();
+      Assert(output_table_statistics, "This StaticTableNode has no statistics");
+    } break;
+
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(lqp);
 
@@ -166,7 +173,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
 
       if (stored_table_node->table_statistics) {
         // TableStatistics have changed from the original table's statistics
-        Assert(stored_table_node->table_statistics->column_statistics.size() == stored_table->column_count(),
+        Assert(stored_table_node->table_statistics->column_statistics.size() ==
+                   static_cast<size_t>(stored_table->column_count()),
                "Statistics in StoredTableNode should have same number of columns as original table");
         output_table_statistics =
             prune_column_statistics(stored_table_node->table_statistics, stored_table_node->pruned_column_ids());
@@ -197,7 +205,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_statistics(
     case LQPNodeType::Delete:
     case LQPNodeType::DropView:
     case LQPNodeType::DropTable:
-    case LQPNodeType::StaticTable:
     case LQPNodeType::DummyTable: {
       auto empty_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>();
       output_table_statistics = std::make_shared<TableStatistics>(std::move(empty_column_statistics), Cardinality{0});

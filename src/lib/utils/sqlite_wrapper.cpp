@@ -27,7 +27,8 @@ namespace opossum {
 SQLiteWrapper::SQLiteWrapper() {
   // Explicity set parallel mode. On Linux it seems to be the default, on Mac, it seems to make a difference.
   const auto ret =
-      sqlite3_open_v2(":memory:", &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr);  // NOLINT
+      sqlite3_open_v2(":memory:", &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX,  // NOLINT
+                      nullptr);
   if (ret != SQLITE_OK) {
     sqlite3_close(_db);
     Fail("Cannot open database: " + std::string(sqlite3_errmsg(_db)));
@@ -78,7 +79,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   insert_into_stream << "INSERT INTO " << table_name << " VALUES (";
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
     insert_into_stream << "?";
-    if (column_id + 1u < table.column_count()) {
+    if (static_cast<ColumnCount>(column_id + 1u) < table.column_count()) {
       insert_into_stream << ", ";
     }
   }

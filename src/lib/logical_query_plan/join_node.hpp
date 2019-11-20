@@ -38,7 +38,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
-  const JoinMode join_mode;
+  JoinMode join_mode;
   // JoinAlgorithmRule needs to manipulate join_type.. instead we could copy the JoinNode replacing the join_type
   std::optional<JoinType> join_type;
 

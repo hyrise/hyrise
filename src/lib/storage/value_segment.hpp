@@ -80,6 +80,10 @@ class ValueSegment : public BaseValueSegment {
   size_t estimate_memory_usage() const override;
 
  protected:
+  // We do not run into the problem of uninitialized tbb::concurrent_vector values as described here:
+  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
+  // This is because the visibility of newly inserted values is guarded by MVCC.
+
   pmr_concurrent_vector<T> _values;
 
   // While a ValueSegment knows if it is nullable or not by looking at this optional, most other segment types
