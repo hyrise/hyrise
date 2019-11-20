@@ -402,53 +402,45 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
 
 // Tests accessing the original LQP node after translation.
 TEST_F(LQPTranslatorTest, LqpNodeAccess) {
-  // clang-format off
-
-  // Predicates
   {
     auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
-    const auto op = LQPTranslator{}.translate_node(predicate_node);
-
-    const auto lqp_node = op->lqp_node;
-    const auto recovered_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
-    EXPECT_EQ(recovered_node, predicate_node);
-  }
-
-  // Joins
-  {
+    auto validate_node = ValidateNode::make(predicate_node);
     auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
-                              int_float_node,
-                              int_float2_node);
-    const auto op = LQPTranslator{}.translate_node(join_node);
-
-    const auto lqp_node = op->lqp_node;
-    const auto recovered_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
-    EXPECT_EQ(recovered_node, join_node);
-  }
-
-  // Joins
-  {
+                                    validate_node, int_float2_node);
     auto aggregate_node = AggregateNode::make(expression_vector(int_float_a, int_float_b),
                                               expression_vector(sum_(int_float_a), sum_(int_float_b)),
-                                              int_float_node);
+                                              join_node);
     const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
-    const auto lqp_node = op->lqp_node;
-    const auto recovered_node = std::dynamic_pointer_cast<const AggregateNode>(lqp_node);
-    EXPECT_EQ(recovered_node, aggregate_node);
+    {
+      const auto lqp_node = op->lqp_node;
+      const auto recovered_node = std::dynamic_pointer_cast<const AggregateNode>(lqp_node);
+      EXPECT_EQ(recovered_node, aggregate_node);
+    }
+    {
+      const auto lqp_node = op->input_left()->lqp_node;
+      const auto recovered_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
+      EXPECT_EQ(recovered_node, join_node);
+    }
+    {
+      const auto lqp_node_left = op->input_left()->input_left()->lqp_node;
+      const auto recovered_node_left = std::dynamic_pointer_cast<const ValidateNode>(lqp_node_left);
+      EXPECT_EQ(recovered_node_left, validate_node);
+      const auto lqp_node_right = op->input_left()->input_right()->lqp_node;
+      const auto recovered_node_right = std::dynamic_pointer_cast<const StoredTableNode>(lqp_node_right);
+      EXPECT_EQ(recovered_node_right, int_float2_node);
+    }
+    {
+      const auto lqp_node = op->input_left()->input_left()->input_left()->lqp_node;
+      const auto recovered_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
+      EXPECT_EQ(recovered_node, predicate_node);
+    }
+    {
+      const auto lqp_node = op->input_left()->input_left()->input_left()->input_left()->lqp_node;
+      const auto recovered_node = std::dynamic_pointer_cast<const StoredTableNode>(lqp_node);
+      EXPECT_EQ(recovered_node, int_float_node);
+    }
   }
-
-  // Validates
-  {
-    auto validate_node = ValidateNode::make(int_float_node);
-    const auto op = LQPTranslator{}.translate_node(validate_node);
-
-    const auto lqp_node = op->lqp_node;
-    const auto recovered_node = std::dynamic_pointer_cast<const ValidateNode>(lqp_node);
-    EXPECT_EQ(recovered_node, validate_node);
-  }
-
-  // clang-format off
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
