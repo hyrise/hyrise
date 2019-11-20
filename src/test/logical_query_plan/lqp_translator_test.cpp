@@ -440,6 +440,19 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
     EXPECT_EQ(recovered_node, int_float_node);
   }
 }
+
+// Check if the referenced LQP in the PQP is really cleaned up. This test is intended to check whether we might
+// introduce cyclic references at a later point in time.
+TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
+  std::weak_ptr<const AbstractLQPNode> lqp_node;
+
+  {
+    auto lqp = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
+    const auto op = LQPTranslator{}.translate_node(lqp);
+    lqp_node = op->lqp_node;
+  }
+
+  EXPECT_TRUE(lqp_node.expired());
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
