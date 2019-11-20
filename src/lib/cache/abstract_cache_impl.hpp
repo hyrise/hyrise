@@ -66,8 +66,6 @@ class AbstractCacheImpl {
   virtual ErasedIterator begin() = 0;
   virtual ErasedIterator end() = 0;
 
-  size_t frequency(const Key& key) { Fail("Cache implementation does not suppport frequency()."); }
-
   // Return the capacity of the cache.
   size_t capacity() const { return _capacity; }
 

@@ -61,6 +61,8 @@ class Cache {
 
   void resize(size_t capacity) { _impl->resize(capacity); }
 
+  // Returns the access frequency of a cached item (=1 for set(), +1 for each get()).
+  // Returns 0 for keys not being cache-resident.
   size_t size() const { return _impl->size(); }
 
   // Returns a reference to the underlying cache.
