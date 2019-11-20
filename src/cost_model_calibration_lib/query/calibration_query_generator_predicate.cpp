@@ -477,7 +477,6 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
       return value_(float_value);
     case DataType::Double:
       return value_(double_value);
-    case DataType::Bool:
     case DataType::Null:
     default:
       Fail("Unsupported data type in CalibrationQueryGeneratorPredicates: " + data_type_to_string.left.at(data_type));
@@ -520,7 +519,6 @@ const std::shared_ptr<ValueExpression> CalibrationQueryGeneratorPredicate::_gene
       return value_(float_value);
     case DataType::Double:
       return value_(double_value);
-    case DataType::Bool:
     case DataType::Null:
     default:
       Fail("Unsupported data type in CalibrationQueryGeneratorPredicates: " +

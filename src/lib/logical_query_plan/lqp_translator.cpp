@@ -36,7 +36,6 @@
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_proxy.hpp"
 #include "operators/join_sort_merge.hpp"
@@ -318,9 +317,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
       case JoinType::Index:
         return std::make_shared<JoinIndex>(input_left_operator, input_right_operator, join_node->join_mode,
                                            primary_join_predicate, std::move(secondary_join_predicates));
-      case JoinType::MPSM:
-        return std::make_shared<JoinMPSM>(input_left_operator, input_right_operator, join_node->join_mode,
-                                          primary_join_predicate, std::move(secondary_join_predicates));
       case JoinType::NestedLoop:
         return std::make_shared<JoinNestedLoop>(input_left_operator, input_right_operator, join_node->join_mode,
                                                 primary_join_predicate, std::move(secondary_join_predicates));

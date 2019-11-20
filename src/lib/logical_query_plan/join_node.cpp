@@ -58,8 +58,6 @@ OperatorType JoinNode::operator_type() const {
       return OperatorType::JoinSortMerge;
     case JoinType::NestedLoop:
       return OperatorType::JoinNestedLoop;
-    case JoinType::MPSM:
-      return OperatorType::JoinMPSM;
     case JoinType::Index:
       return OperatorType::JoinIndex;
   }

@@ -49,8 +49,7 @@ const std::vector<CalibrationQueryGeneratorJoinConfiguration> CalibrationQueryGe
 
 const std::vector<std::shared_ptr<AbstractLQPNode>> CalibrationQueryGeneratorJoin::generate_join(
     const std::shared_ptr<StoredTableNode>& left_table, const std::shared_ptr<StoredTableNode>& right_table) const {
-  std::vector<JoinType> join_types = {JoinType::Hash, JoinType::Index, JoinType::NestedLoop, JoinType::MPSM,
-                                      JoinType::SortMerge};
+  std::vector<JoinType> join_types = {JoinType::Hash, JoinType::Index, JoinType::NestedLoop, JoinType::SortMerge};
 
   const auto join_predicate = _generate_join_predicate(left_table, right_table);
 

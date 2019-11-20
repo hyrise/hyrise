@@ -154,11 +154,7 @@ class AbstractTableScanImpl {
         const auto first_offset = left_it_for_offsets->chunk_offset();
 
         // NOLINTNEXTLINE
-<<<<<<< HEAD
-        // clang-format off
-=======
         {}  // clang-format off
->>>>>>> master
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
         for (size_t i = 0; i < BLOCK_SIZE; ++i) {
@@ -170,11 +166,7 @@ class AbstractTableScanImpl {
         // Slow path - the chunk offsets are not guaranteed to be linear
 
         // NOLINTNEXTLINE
-<<<<<<< HEAD
-        // clang-format off
-=======
         {}  // clang-format off
->>>>>>> master
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
         for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {

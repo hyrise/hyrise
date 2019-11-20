@@ -8,7 +8,7 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace opossum {
 
 const std::shared_ptr<AggregateNode> CalibrationQueryGeneratorAggregate::generate_aggregates() {
-  return AggregateNode::make(expression_vector(), expression_vector(count_star_()));
+  return AggregateNode::make(expression_vector(), expression_vector());
 }
 
 }  // namespace opossum

@@ -20,7 +20,7 @@ class JoinProxy : public AbstractJoinOperator {
             const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
             const std::vector<OperatorJoinPredicate>& secondary_predicates = {});
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
   struct PerformanceData : public OperatorPerformanceData {
     void output_to_stream(std::ostream& stream,

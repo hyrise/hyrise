@@ -16,7 +16,6 @@
 #include "cost_estimation/feature/join_features.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "resolve_type.hpp"
@@ -52,11 +51,9 @@ JoinProxy::JoinProxy(const std::shared_ptr<const AbstractOperator>& left,
   cost_estimator_adaptive->initialize(CostEstimatorCoefficientReader::default_coefficients());
 }
 
-const std::string JoinProxy::name() const {
-  if (_operator_type) {
-    return "JoinProxy[ " + operator_type_to_string.at(*_operator_type) + "]";
-  }
-  return "JoinProxy";
+const std::string& JoinProxy::name() const {
+  static const auto name = std::string{"JoinHash"};
+  return name;
 }
 
 std::shared_ptr<AbstractOperator> JoinProxy::_on_deep_copy(
@@ -210,8 +207,6 @@ const std::shared_ptr<AbstractJoinOperator> JoinProxy::_instantiate_join(const O
       return std::make_shared<JoinHash>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinIndex:
       return std::make_shared<JoinIndex>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
-    case OperatorType::JoinMPSM:
-      return std::make_shared<JoinMPSM>(_input_left, _input_right, _mode, _primary_predicate, _secondary_predicates);
     case OperatorType::JoinNestedLoop:
       return std::make_shared<JoinNestedLoop>(_input_left, _input_right, _mode, _primary_predicate,
                                               _secondary_predicates);
@@ -231,10 +226,10 @@ const std::vector<OperatorType> JoinProxy::_valid_join_types() const {
   // TODO(Sven): Add IndexJoin
   // TODO(anyone): use supports() method of join implementations.
   if (_primary_predicate.predicate_condition == PredicateCondition::Equals && _mode != JoinMode::FullOuter) {
-    return {OperatorType::JoinHash, OperatorType::JoinNestedLoop, OperatorType::JoinMPSM, OperatorType::JoinSortMerge};
+    return {OperatorType::JoinHash, OperatorType::JoinNestedLoop, OperatorType::JoinSortMerge};
   }
 
-  return {OperatorType::JoinNestedLoop, OperatorType::JoinMPSM, OperatorType::JoinSortMerge};
+  return {OperatorType::JoinNestedLoop, OperatorType::JoinSortMerge};
 }
 
 }  // namespace opossum

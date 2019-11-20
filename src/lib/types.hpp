@@ -29,7 +29,7 @@
  *
  * WorkerID, TaskID, CommitID, and TransactionID are used in std::atomics and
  * therefore need to be trivially copyable. That's currently not possible with
- * the strong typedef (as far as I know).
+  * the strong typedef (as far as I know).
  *
  * TODO(anyone): Also, strongly typing ChunkOffset causes a lot of errors in
  * the group key and adaptive radix tree implementations. Unfortunately, I
@@ -235,7 +235,7 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
-enum class JoinType { Hash, Index, MPSM, NestedLoop, SortMerge };
+enum class JoinType { Hash, Index, NestedLoop, SortMerge };
 
 enum class UnionMode { Positions, All };
 

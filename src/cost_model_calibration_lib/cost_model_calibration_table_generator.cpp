@@ -105,7 +105,7 @@ void CostModelCalibrationTableGenerator::load_tpch_tables(const float scale_fact
 
     ChunkEncodingSpec chunk_spec;
     const auto column_count = table->column_count();
-    for (size_t i = 0; i < column_count; ++i) {
+    for (auto column_id = ColumnCount{0}; column_id < column_count; ++column_id) {
       chunk_spec.push_back(encoding);
     }
 

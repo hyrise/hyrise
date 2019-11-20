@@ -118,9 +118,6 @@ TEST_F(JoinNodeTest, JoinType) {
   join_node =
       JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), JoinType::Hash, _mock_node_a, _mock_node_b)->join_type;
   EXPECT_EQ(join_node, JoinType::Hash);
-  join_node =
-      JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), JoinType::MPSM, _mock_node_a, _mock_node_b)->join_type;
-  EXPECT_EQ(join_node, JoinType::MPSM);
 }
 
 TEST_F(JoinNodeTest, NodeExpressions) {

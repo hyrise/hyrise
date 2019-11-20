@@ -67,10 +67,10 @@ const std::vector<JoinType> JoinAlgorithmRule::_valid_join_types(const std::shar
   const auto predicate_condition = operator_join_predicate->predicate_condition;
 
   if (predicate_condition == PredicateCondition::Equals && node->join_mode != JoinMode::FullOuter) {
-    return {JoinType::Hash, JoinType::NestedLoop, JoinType::MPSM, JoinType::SortMerge};
+    return {JoinType::Hash, JoinType::NestedLoop, JoinType::SortMerge};
   }
 
-  return {JoinType::NestedLoop, JoinType::MPSM, JoinType::SortMerge};
+  return {JoinType::NestedLoop, JoinType::SortMerge};
 }
 
 }  // namespace opossum
