@@ -404,11 +404,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetweenScan) {
 TEST_F(LQPTranslatorTest, LqpNodeAccess) {
   auto predicate_node = PredicateNode::make(between_inclusive_(int_float_a, 42, 1337), int_float_node);
   auto validate_node = ValidateNode::make(predicate_node);
-  auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a),
-                                  validate_node, int_float2_node);
+  auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a), validate_node, int_float2_node);
   auto aggregate_node = AggregateNode::make(expression_vector(int_float_a, int_float_b),
-                                            expression_vector(sum_(int_float_a), sum_(int_float_b)),
-                                            join_node);
+                                            expression_vector(sum_(int_float_a), sum_(int_float_b)), join_node);
   const auto op = LQPTranslator{}.translate_node(aggregate_node);
 
   {
@@ -446,12 +444,13 @@ TEST_F(LQPTranslatorTest, LqpNodeAccess) {
 TEST_F(LQPTranslatorTest, PqpReferencedLqpNodeCleanUp) {
   std::weak_ptr<const AbstractLQPNode> lqp_node;
   {
-    auto pipeline_statement = SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline_statement();
+    auto pipeline_statement =
+        SQLPipelineBuilder{"SELECT a FROM table_int_float WHERE a < 42"}.create_pipeline_statement();
     const auto pqp = pipeline_statement.get_physical_plan();
     lqp_node = pqp->lqp_node;
     EXPECT_FALSE(lqp_node.expired());
   }
-  EXPECT_TRUE(lqp_node.expired()); 
+  EXPECT_TRUE(lqp_node.expired());
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
