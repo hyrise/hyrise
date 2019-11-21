@@ -34,7 +34,8 @@
 - cxxopts (https://github.com/jarro2783/cxxopts.git)
 - flash_hash_map (https://github.com/skarupke/flat_hash_map)
 - googletest (https://github.com/google/googletest)
-- jemalloc (https://github.com/jemalloc/jemalloc)
+- jemalloc (https://github.com/hyrise/jemalloc)
+    jemalloc was forked so that we can change OVERSIZE_THRESHOLD_DEFAULT. See arena_types.h for details.
 - join-order-benchmark (https://github.com/gregrahn/join-order-benchmark)
 - libpqxx (https://github.com/jtv/libpqxx)
 - lz4 (https://github.com/lz4/lz4)
