@@ -8,8 +8,9 @@ Hyrise::Hyrise() {
   // Work around for a performance regression in jemalloc:
   // https://github.com/jemalloc/jemalloc/issues/1677
   // Other jemalloc tuning options can be added here as found necessary.
-  auto huge_threshold = 0;
-  mallctl("huge_threshold", nullptr, nullptr, &huge_threshold, sizeof(huge_threshold));
+  auto oversize_threshold = 0;
+  const auto ret = mallctl("oversize_threshold", nullptr, nullptr, &oversize_threshold, sizeof(oversize_threshold));
+  Assert(ret == 0, "Failed to call mallctl");
 
   // The default_memory_resource must be initialized before Hyrise's members so that
   // it is destructed after them and remains accessible during their deconstruction.
