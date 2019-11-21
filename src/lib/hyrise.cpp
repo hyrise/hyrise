@@ -1,8 +1,16 @@
 #include "hyrise.hpp"
 
+#include <jemalloc/jemalloc.h>
+
 namespace opossum {
 
 Hyrise::Hyrise() {
+  // Work around for a performance regression in jemalloc:
+  // https://github.com/jemalloc/jemalloc/issues/1677
+  // Other jemalloc tuning options can be added here as found necessary.
+  auto huge_threshold = 0;
+  mallctl("huge_threshold", nullptr, nullptr, &huge_threshold, sizeof(huge_threshold));
+
   // The default_memory_resource must be initialized before Hyrise's members so that
   // it is destructed after them and remains accessible during their deconstruction.
   // For example, when the StorageManager is destructed, it causes its stored tables
