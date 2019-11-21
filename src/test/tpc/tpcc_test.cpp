@@ -291,8 +291,8 @@ TEST_F(TPCCTest, NewOrder) {
     EXPECT_EQ(order_line_row[6], AllTypeVariant{-1});                                 // OL_DELIVERY_D
     EXPECT_EQ(order_line_row[7], AllTypeVariant{order_lines[line_idx].ol_quantity});  // OL_QUANTITY
 
-    // verify OL_AMOUNT
     if (ol_i_id != TPCCNewOrder::UNUSED_ITEM_ID) {
+      // verify OL_AMOUNT
       auto pipeline =
           SQLPipelineBuilder{std::string{"SELECT I_PRICE FROM ITEM WHERE I_ID = "} + std::to_string(ol_i_id)}
               .create_pipeline();
@@ -303,10 +303,8 @@ TEST_F(TPCCTest, NewOrder) {
 
       const auto expected_ol_amount = i_price * order_lines[line_idx].ol_quantity;
       EXPECT_EQ(order_line_row[8], AllTypeVariant{expected_ol_amount});  // OL_AMOUNT
-    }
 
-    // verify OL_DIST_INFO
-    if (ol_i_id != TPCCNewOrder::UNUSED_ITEM_ID) {
+      // verify that the relevant S_DIST_xx value (random string) has been copied over to OL_DIST_INFO
       auto pipeline = SQLPipelineBuilder{std::string{"SELECT S_DIST_"} + (new_order.d_id < 10 ? "0" : "") +
                                          std::to_string(new_order.d_id) + " FROM STOCK WHERE S_W_ID = " +
                                          std::to_string(ol_supply_w_id) + " AND S_I_ID = " + std::to_string(ol_i_id)}

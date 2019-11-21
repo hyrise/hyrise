@@ -493,7 +493,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
 
-TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
+TEST_F(SQLPipelineStatementTest, GetResultTableNoOutputNoReexecution) {
   const auto sql = "UPDATE table_a SET a = a + 1 WHERE b < 457";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
 

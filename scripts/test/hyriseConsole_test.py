@@ -47,13 +47,13 @@ def main():
 	console.sendline("generate_tpch     0.01   7")
 	console.expect("Generating tables done")
 
-	# Test correct chunk size
-	console.sendline("print nation")
-	console.expect("=== Chunk 3 ===")
-
 	# Test TPCH tables
 	console.sendline("select * from nation")
 	console.expect("25 rows total")
+
+	# Test correct chunk size (25 nations, independent of scale factor, with a maximum chunk size of 7 result in 4 chunks)
+	console.sendline("print nation")
+	console.expect("=== Chunk 3 ===")
 
 	# Test exit command
 	console.sendline("exit")

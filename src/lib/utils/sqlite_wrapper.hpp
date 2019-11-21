@@ -45,15 +45,18 @@ class SQLiteWrapper final {
     sqlite3* db{nullptr};
 
     /*
-     * Executes a sql query in the sqlite database context and returns a Hyrise table.
+     * Executes a SQL string with potentially multiple statements in the sqlite database context and returns a Hyrise
+     * table.
      *
-     * @param sql_query Query to be executed
-     * @returns An opossum Table containing the results of the executed query
+     * @param sql SQL string to be executed
+     * @returns A Hyrise Table containing the results of the executed query (more specifically, of the last statement
+     *          within the passed SQL string)
      */
     std::shared_ptr<Table> execute_query(const std::string& sql) const;
 
     /**
-     * Execute an SQL statement on the wrapped sqlite db without invoking any Hyrise parts
+     * Execute a SQL string on the wrapped sqlite db and ignores the result (i.e., does not convert the last
+     * statement's result into a Hyrise table)
      */
     void raw_execute_query(const std::string& sql, const bool allow_failure = false) const;
   };

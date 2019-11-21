@@ -52,7 +52,7 @@ BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
   if (transaction_context) {
     Assert(transaction_context->phase() == TransactionPhase::Committed ||
                transaction_context->phase() == TransactionPhase::RolledBack,
-           "Explicitly created transaction context should have been explicity committed or rolled back");
+           "Explicitly created transaction context should have been explicitly committed or rolled back");
   }
 
   // If the benchmark item does not explicitly manage the transaction life time by calling commit or rollback,
