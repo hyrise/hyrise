@@ -3,7 +3,6 @@
 #include <memory>
 #include <unordered_set>
 
-#include "cost_estimation/cost_estimator_adaptive.hpp"
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -14,7 +13,6 @@
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
-#include "strategy/join_algorithm_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
@@ -110,7 +108,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Position the predicates after the JoinOrderingRule ran. The JOR manipulates predicate placement as well, but
   // for now we want the PredicateReorderingRule to have the final say on predicate positions
-  // TODO(Sven): Naming in comments seems to be wrong. This should be PredicatePlacementRule, right?
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
