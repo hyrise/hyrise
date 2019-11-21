@@ -4,8 +4,6 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "utils/assert.hpp"
-
 namespace opossum {
 
 // Generic template for a cache implementation.
