@@ -34,3 +34,5 @@ add_library(hyriseCostModelCalibrationLib STATIC ${SOURCES})
 add_dependencies(hyriseCostModelCalibrationLib AlwaysCheckGit)
 
 target_link_libraries(hyriseCostModelCalibrationLib hyrise hyriseBenchmarkLib ${FILESYSTEM_LIBRARY})
+
+target_link_libraries_system(hyriseCostModelCalibrationLib nlohmann_json::nlohmann_json)
