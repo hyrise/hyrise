@@ -78,15 +78,13 @@ def main():
   arguments["--indexes"] = "false"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
-<<<<<<< HEAD
-  arguments["--visualize"] = "true"
+  arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
   benchmark.expect_exact("4 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Ordered' mode")
-  benchmark.expect_exact("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect_exact("Encoding is 'LZ4'")
   benchmark.expect_exact("Chunk size is 10000")
   benchmark.expect_exact("Max runs per item is 100")
@@ -96,24 +94,6 @@ def main():
   benchmark.expect_exact("TPCH scale factor is 0.01")
   benchmark.expect_exact("Using prepared statements: no")
   benchmark.expect_exact("Multi-threaded Topology:")
-=======
-  arguments["--verify"] = "true"
-
-  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
-
-  benchmark.expect("Running in multi-threaded mode using all available cores")
-  benchmark.expect("4 simulated clients are scheduling items in parallel")
-  benchmark.expect("Running benchmark in 'Ordered' mode")
-  benchmark.expect("Encoding is 'LZ4'")
-  benchmark.expect("Chunk size is 10000")
-  benchmark.expect("Max runs per item is 100")
-  benchmark.expect("Max duration per item is 10 seconds")
-  benchmark.expect("Warmup duration per item is 10 seconds")
-  benchmark.expect("Benchmarking Queries: \[ 2, 4, 6 \]")
-  benchmark.expect("TPCH scale factor is 0.01")
-  benchmark.expect("Using prepared statements: no")
-  benchmark.expect("Multi-threaded Topology:")
->>>>>>> origin/master
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
@@ -128,9 +108,9 @@ def main():
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
 
-  benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
-  benchmark.expect("Chunk size is 10000")
-  benchmark.expect("Benchmarking Queries: \[ 6 \]")
+  benchmark.expect_exact("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
+  benchmark.expect_exact("Chunk size is 10000")
+  benchmark.expect_exact("Benchmarking Queries: [ 6 ]")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
