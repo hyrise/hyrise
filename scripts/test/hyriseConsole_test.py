@@ -38,6 +38,10 @@ def main():
 	console.expect('Loading .*tbl/10_ints.tbl into table "test"')
 	console.expect('Encoding "test" using Unencoded')
 
+	console.sendline("load resources/test_data/bin/float.bin test_bin")
+	console.expect('Loading .*bin/float.bin into table "test_bin"')
+	console.expect('Encoding "test_bin" using Unencoded')	
+
 	# Test SQL statement
 	console.sendline("select sum(a) from test")
 	console.expect("786")

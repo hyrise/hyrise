@@ -34,7 +34,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
-  const JoinMode join_mode;
+  JoinMode join_mode;
 
  protected:
   size_t _shallow_hash() const override;

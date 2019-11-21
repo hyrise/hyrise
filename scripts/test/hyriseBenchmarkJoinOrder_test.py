@@ -79,7 +79,6 @@ def main():
   arguments["--compression"] = "'Fixed-size byte-aligned'"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
-  arguments["--visualize"] = "true"
   arguments["--verify"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkJoinOrder", True)
@@ -87,7 +86,6 @@ def main():
   benchmark.expect_exact("Running in multi-threaded mode using all available cores")
   benchmark.expect_exact("4 simulated clients are scheduling items in parallel")
   benchmark.expect_exact("Running benchmark in 'Ordered' mode")
-  benchmark.expect_exact("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
   benchmark.expect_exact("Encoding is 'LZ4'")
   benchmark.expect_exact("Chunk size is 100000")
   benchmark.expect_exact("Max runs per item is 2")
@@ -98,6 +96,8 @@ def main():
   benchmark.expect_exact("Benchmarking queries from third_party/join-order-benchmark")
   benchmark.expect_exact("Running on tables from resources/test_data/imdb_sample/")
   benchmark.expect_exact("Multi-threaded Topology:")
+  benchmark.expect_exact("- Warming up for 10a")
+  benchmark.expect_exact("- Benchmarking 10a")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)

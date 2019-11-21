@@ -93,7 +93,7 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
 
   EXPECT_EQ(input_chunk->get_segment(ColumnID{1}), output_chunk->get_segment(ColumnID{0}));
   EXPECT_EQ(input_chunk->get_segment(ColumnID{0}), output_chunk->get_segment(ColumnID{1}));
-  EXPECT_TRUE(projection->get_output()->has_mvcc() == UseMvcc::Yes);
+  EXPECT_TRUE(projection->get_output()->uses_mvcc() == UseMvcc::Yes);
   EXPECT_TRUE(projection->get_output()->get_chunk(ChunkID{0})->mvcc_data());
 }
 

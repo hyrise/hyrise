@@ -73,7 +73,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   }
 
   return std::make_shared<Table>(output_column_definitions, input_table.type(), std::move(output_chunks),
-                                 input_table.has_mvcc());
+                                 input_table.uses_mvcc());
 }
 
 }  // namespace opossum

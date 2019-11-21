@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_manager.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -62,7 +63,7 @@ const TableColumnDefinitions& Table::column_definitions() const { return _column
 
 TableType Table::type() const { return _type; }
 
-UseMvcc Table::has_mvcc() const { return _use_mvcc; }
+UseMvcc Table::uses_mvcc() const { return _use_mvcc; }
 
 ColumnCount Table::column_count() const {
   return ColumnCount{static_cast<ColumnCount::base_type>(_column_definitions.size())};
@@ -208,7 +209,9 @@ void Table::remove_chunk(ChunkID chunk_id) {
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),
-         "Supply MvccData to data Tables iff MVCC is enabled");
+         "Supply MvccData to data Tables, if MVCC is enabled.");
+  AssertInput(static_cast<ColumnCount::base_type>(segments.size()) == column_count(),
+              "Input does not have the same number of columns.");
 
   if constexpr (HYRISE_DEBUG) {
     for (const auto& segment : segments) {
@@ -289,6 +292,40 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 }
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
+
+const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints() const {
+  return _constraint_definitions;
+}
+
+void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key) {
+  for (const auto& column_id : column_ids) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+    Assert(is_primary_key == IsPrimaryKey::No || !column_is_nullable(column_id),
+           "Column must be not nullable for primary key constraint");
+  }
+
+  {
+    auto scoped_lock = acquire_append_mutex();
+    if (is_primary_key == IsPrimaryKey::Yes) {
+      Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                          [](const auto& constraint) { return constraint.is_primary_key == IsPrimaryKey::Yes; }) ==
+                 _constraint_definitions.end(),
+             "Another primary key already exists for this table.");
+    }
+
+    auto sorted_columns_ids = column_ids;
+    std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
+    TableConstraintDefinition new_constraint{sorted_columns_ids, is_primary_key};
+
+    Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
+                        [&new_constraint](const auto& existing_constraint) {
+                          return new_constraint.columns == existing_constraint.columns;
+                        }) == _constraint_definitions.end(),
+           "Another constraint on the same columns already exists.");
+
+    _constraint_definitions.push_back(new_constraint);
+  }
+}
 
 size_t Table::estimate_memory_usage() const {
   auto bytes = size_t{sizeof(*this)};

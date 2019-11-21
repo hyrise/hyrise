@@ -16,7 +16,7 @@ def main():
   arguments["--use_prepared_statements"] = "true"
   arguments["--queries"] = "'1,13,19'"
   arguments["--time"] = "10"
-  arguments["--runs"] = "100"
+  arguments["--runs"] = "-1"
   arguments["--output"] = "'json_output.txt'"
   arguments["--mode"] = "'Shuffled'"
   arguments["--encoding"] = "'Dictionary'"
@@ -34,7 +34,6 @@ def main():
   benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
   benchmark.expect_exact("Encoding is 'Dictionary'")
   benchmark.expect_exact("Chunk size is 100000")
-  benchmark.expect_exact("Max runs per item is 100")
   benchmark.expect_exact("Max duration per item is 10 seconds")
   benchmark.expect_exact("No warmup runs are performed")
   benchmark.expect_exact("Not caching tables as binary files")
@@ -79,6 +78,7 @@ def main():
   arguments["--indexes"] = "false"
   arguments["--scheduler"] = "true"
   arguments["--clients"] = "4"
+<<<<<<< HEAD
   arguments["--visualize"] = "true"
 
   benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
@@ -96,6 +96,41 @@ def main():
   benchmark.expect_exact("TPCH scale factor is 0.01")
   benchmark.expect_exact("Using prepared statements: no")
   benchmark.expect_exact("Multi-threaded Topology:")
+=======
+  arguments["--verify"] = "true"
+
+  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+
+  benchmark.expect("Running in multi-threaded mode using all available cores")
+  benchmark.expect("4 simulated clients are scheduling items in parallel")
+  benchmark.expect("Running benchmark in 'Ordered' mode")
+  benchmark.expect("Encoding is 'LZ4'")
+  benchmark.expect("Chunk size is 10000")
+  benchmark.expect("Max runs per item is 100")
+  benchmark.expect("Max duration per item is 10 seconds")
+  benchmark.expect("Warmup duration per item is 10 seconds")
+  benchmark.expect("Benchmarking Queries: \[ 2, 4, 6 \]")
+  benchmark.expect("TPCH scale factor is 0.01")
+  benchmark.expect("Using prepared statements: no")
+  benchmark.expect("Multi-threaded Topology:")
+>>>>>>> origin/master
+
+  close_benchmark(benchmark)
+  check_exit_status(benchmark)
+
+  # Finally test that pruning works end-to-end, that is from the command line parameter all the way to the visualizer
+  arguments = {}
+  arguments["--scale"] = ".01"
+  arguments["--chunk_size"] = "10000"
+  arguments["--queries"] = "'6'"
+  arguments["--runs"] = "1"
+  arguments["--visualize"] = "true"
+
+  benchmark = initialize(arguments, "hyriseBenchmarkTPCH", True)
+
+  benchmark.expect("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
+  benchmark.expect("Chunk size is 10000")
+  benchmark.expect("Benchmarking Queries: \[ 6 \]")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
