@@ -36,11 +36,13 @@ int main(int argc, char* argv[]) {
   // Store the config file with a timestamp
   auto now_iso_date = opossum::get_time_as_iso_string(std::chrono::system_clock::now());
   auto host_name = boost::asio::ip::host_name();
-  std::ifstream src(argv[1], std::ios::binary);
+  std::ifstream calibration_file(argv[1], std::ios::binary);
   std::ofstream dst(std::string("configuration") + "_" + host_name + "_" + now_iso_date + ".json", std::ios::binary);
 
-  dst << "StartTime: " << now_iso_date << std::endl;
-  dst << src.rdbuf();
+  nlohmann::json calibration_meta_data;
+  calibration_meta_data["configuration_file"] = json_config;
+  calibration_meta_data["meta_data"] = {{"start_time", now_iso_date}};
+  calibration_meta_data["meta_data"]["host_name"] = host_name;
 
   opossum::CalibrationConfiguration calibration_config = json_config;
 
@@ -54,7 +56,8 @@ int main(int argc, char* argv[]) {
   //  cost_model_calibration.run_tpch6_costing();
 
   now_iso_date = opossum::get_time_as_iso_string(std::chrono::system_clock::now());
-
-  dst << "EndTime: " << now_iso_date << std::endl;
+  calibration_meta_data["meta_data"]["end_time"] = now_iso_date;
+  
+  dst << calibration_meta_data.dump(2);
   dst.close();
 }
