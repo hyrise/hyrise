@@ -129,26 +129,31 @@ void SQLiteTestRunner::SetUp() {
   }
 }
 
-std::vector<std::string> SQLiteTestRunner::queries() {
-  static std::vector<std::string> queries;
+std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
+  static std::vector<std::pair<size_t, std::string>> queries;
 
   if (!queries.empty()) return queries;
 
   std::ifstream file("resources/test_data/sqlite_testrunner_queries.sql");
   std::string query;
 
+  auto next_line = size_t{0};
   while (std::getline(file, query)) {
+    ++next_line;
     if (query.empty() || query.substr(0, 2) == "--") continue;
-    queries.emplace_back(std::move(query));
+
+    queries.emplace_back(next_line - 1, std::move(query));
   }
 
   return queries;
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  const auto [sql, encoding_type] = GetParam();
+  const auto [query_pair, encoding_type] = GetParam();
+  const auto& [line, sql] = query_pair;
 
-  SCOPED_TRACE("Query '" + sql + "' with encoding " + encoding_type_to_string.left.at(encoding_type));
+  SCOPED_TRACE("Query '" + sql + "' from line " + std::to_string(line) + " with encoding " +
+               encoding_type_to_string.left.at(encoding_type));
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
