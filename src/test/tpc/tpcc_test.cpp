@@ -435,6 +435,10 @@ TEST_F(TPCCTest, OrderStatusCustomerById) {
 
   BenchmarkSQLExecutor new_order_sql_executor{nullptr, std::nullopt};
   auto new_order = TPCCNewOrder{NUM_WAREHOUSES, new_order_sql_executor};
+  while (new_order.order_lines.back().ol_i_id == TPCCNewOrder::UNUSED_ITEM_ID) {
+    // Make sure that we do not have a TPCCNewOrder with an invalid ITEM_ID which will be rolled back
+    new_order = TPCCNewOrder{NUM_WAREHOUSES, new_order_sql_executor};
+  }
   EXPECT_TRUE(new_order.execute());
 
   BenchmarkSQLExecutor order_status_sql_executor{nullptr, std::nullopt};
