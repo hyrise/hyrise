@@ -63,7 +63,7 @@ class Table : private Noncopyable {
 
   TableType type() const;
 
-  UseMvcc has_mvcc() const;
+  UseMvcc uses_mvcc() const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
   ChunkOffset max_chunk_size() const;
