@@ -61,6 +61,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
                                 return a < b;
                               });
         std::cout << "Chunk " << chunk_id << " - highest_end_commit_id: " << highest_end_commit_id << std::endl;
+        std::cout << "\twaiting nutil <= " << (Hyrise::get().transaction_manager.last_commit_id() - DELETE_THRESHOLD_LAST_COMMIT) << std::endl;
 
         const bool criterion2 =
             highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= Hyrise::get().transaction_manager.last_commit_id();
