@@ -493,18 +493,60 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
 
-TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
-  const auto sql = "UPDATE table_a SET a = 1 WHERE a < 5";
+TEST_F(SQLPipelineStatementTest, GetResultTableNoOutputNoReexecution) {
+  const auto sql = "UPDATE table_a SET a = a + 1 WHERE b < 457";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
 
   const auto [pipeline_status, table] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   EXPECT_EQ(table, nullptr);
 
-  // Check that this doesn't crash. This should return the previous table, otherwise the auto-commit will fail.
+  const auto verify_table_contents = []() {
+    const auto verification_sql = "SELECT a FROM table_a WHERE b < 457";
+    auto verification_pipeline = SQLPipelineBuilder{verification_sql}.create_pipeline_statement();
+    const auto [verification_pipeline_status, verification_table] = verification_pipeline.get_result_table();
+    EXPECT_EQ(verification_pipeline_status, SQLPipelineStatus::Success);
+    EXPECT_EQ(verification_table->get_value<int32_t>("a", 0), 124);
+  };
+  verify_table_contents();
+
+  // Check that this doesn't crash. This should not modify the table a second time.
   const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
   EXPECT_EQ(pipeline_status2, SQLPipelineStatus::Success);
   EXPECT_EQ(table2, nullptr);
+  verify_table_contents();
+}
+
+TEST_F(SQLPipelineStatementTest, GetResultTableNoReexecuteOnConflict) {
+  const auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
+
+  {
+    const auto conflicting_sql = "UPDATE table_a SET a = 100 WHERE b < 457";
+    auto conflicting_sql_pipeline = SQLPipelineBuilder{conflicting_sql}.create_pipeline_statement();
+    (void)conflicting_sql_pipeline.get_result_table();
+  }
+
+  const auto sql = "UPDATE table_a SET a = a + 1 WHERE b < 457";
+  auto sql_pipeline = SQLPipelineBuilder{sql}.with_transaction_context(transaction_context).create_pipeline_statement();
+
+  const auto [pipeline_status, table] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table, nullptr);
+
+  const auto verify_table_contents = []() {
+    const auto verification_sql = "SELECT a FROM table_a WHERE b < 457";
+    auto verification_pipeline = SQLPipelineBuilder{verification_sql}.create_pipeline_statement();
+    const auto [verification_pipeline_status, verification_table] = verification_pipeline.get_result_table();
+    EXPECT_EQ(verification_pipeline_status, SQLPipelineStatus::Success);
+    EXPECT_EQ(verification_table->get_value<int32_t>("a", 0), 100);
+  };
+  verify_table_contents();
+
+  // Check that this doesn't crash. This should not modify the table a second time.
+  const auto [pipeline_status2, table2] = sql_pipeline.get_result_table();
+  EXPECT_EQ(pipeline_status2, SQLPipelineStatus::RolledBack);
+  EXPECT_EQ(table2, nullptr);
+  verify_table_contents();
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {

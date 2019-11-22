@@ -28,26 +28,23 @@ def main():
 
   benchmark = initialize(arguments, "hyriseBenchmarkFileBased", True)
 
-  benchmark.expect("Writing benchmark results to 'json_output.txt'")
-  benchmark.expect("Running in single-threaded mode")
-  benchmark.expect("1 simulated clients are scheduling items in parallel")
-  benchmark.expect("Running benchmark in 'Shuffled' mode")
-  benchmark.expect("Encoding is 'Unencoded'")
-  benchmark.expect("Chunk size is 100000")
-  benchmark.expect("Max runs per item is 100")
-  benchmark.expect("Max duration per item is 10 seconds")
-  benchmark.expect("No warmup runs are performed")
-  benchmark.expect("Caching tables as binary files")
-  benchmark.expect("Benchmarking queries from resources/test_data/queries/file_based/")
-  benchmark.expect("Running on tables from resources/test_data/tbl/file_based/")
-  benchmark.expect("Running subset of queries: select_statement")
-  benchmark.expect("-> Executed")
+  benchmark.expect_exact("Writing benchmark results to 'json_output.txt'")
+  benchmark.expect_exact("Running in single-threaded mode")
+  benchmark.expect_exact("1 simulated clients are scheduling items in parallel")
+  benchmark.expect_exact("Running benchmark in 'Shuffled' mode")
+  benchmark.expect_exact("Encoding is 'Unencoded'")
+  benchmark.expect_exact("Chunk size is 100000")
+  benchmark.expect_exact("Max runs per item is 100")
+  benchmark.expect_exact("Max duration per item is 10 seconds")
+  benchmark.expect_exact("No warmup runs are performed")
+  benchmark.expect_exact("Caching tables as binary files")
+  benchmark.expect_exact("Benchmarking queries from resources/test_data/queries/file_based/")
+  benchmark.expect_exact("Running on tables from resources/test_data/tbl/file_based/")
+  benchmark.expect_exact("Running subset of queries: select_statement")
+  benchmark.expect_exact("-> Executed")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
-
-  if benchmark.before.count('Verification failed'):
-    return_error = True
 
   if not glob.glob(arguments["--table_path"].replace("'", '') + "*.bin"):
     print ("ERROR: Cannot find binary tables in " + arguments["--table_path"])
@@ -86,23 +83,26 @@ def main():
 
   benchmark = initialize(arguments, "hyriseBenchmarkFileBased", True)
 
-  benchmark.expect("Running in multi-threaded mode using all available cores")
-  benchmark.expect("4 simulated clients are scheduling items in parallel")
-  benchmark.expect("Running benchmark in 'Ordered' mode")
-  benchmark.expect("Encoding is 'LZ4'")
-  benchmark.expect("Chunk size is 100000")
-  benchmark.expect("Max runs per item is 100")
-  benchmark.expect("Max duration per item is 10 seconds")
-  benchmark.expect("Warmup duration per item is 5 seconds")
-  benchmark.expect("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
-  benchmark.expect("Not caching tables as binary files")
-  benchmark.expect("Benchmarking queries from resources/test_data/queries/file_based/")
-  benchmark.expect("Running on tables from resources/test_data/tbl/file_based/")
-  benchmark.expect("Running subset of queries: select_statement")
-  benchmark.expect("Multi-threaded Topology:")
+  benchmark.expect_exact("Running in multi-threaded mode using all available cores")
+  benchmark.expect_exact("4 simulated clients are scheduling items in parallel")
+  benchmark.expect_exact("Running benchmark in 'Ordered' mode")
+  benchmark.expect_exact("Encoding is 'LZ4'")
+  benchmark.expect_exact("Chunk size is 100000")
+  benchmark.expect_exact("Max runs per item is 100")
+  benchmark.expect_exact("Max duration per item is 10 seconds")
+  benchmark.expect_exact("Warmup duration per item is 5 seconds")
+  benchmark.expect_exact("Automatically verifying results with SQLite. This will make the performance numbers invalid.")
+  benchmark.expect_exact("Not caching tables as binary files")
+  benchmark.expect_exact("Benchmarking queries from resources/test_data/queries/file_based/")
+  benchmark.expect_exact("Running on tables from resources/test_data/tbl/file_based/")
+  benchmark.expect_exact("Running subset of queries: select_statement")
+  benchmark.expect_exact("Multi-threaded Topology:")
 
   close_benchmark(benchmark)
   check_exit_status(benchmark)
+
+  if benchmark.before.count('Verification failed'):
+    return_error = True
 
   if return_error:
     sys.exit(1)
