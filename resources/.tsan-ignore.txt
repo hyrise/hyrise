@@ -24,7 +24,9 @@ race:thread_data
 race:^opossum::AbstractTask::set_as_predecessor_of
 
 # tsan does not understand parts of our MVCC concept - see mvcc_data.hpp for documentation
+race:^opossum::MvccData::get_begin_cid
 race:^opossum::MvccData::set_begin_cid
+race:^opossum::MvccData::get_end_cid
 race:^opossum::MvccData::set_end_cid
 
 # This is likely false positive seen only on Mac, as even the strictest locking does not "fix" the warning

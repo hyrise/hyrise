@@ -78,6 +78,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
           std::unique_lock<std::mutex> lock(_mutex_physical_delete_queue);
           _physical_delete_queue.emplace(table, chunk_id);
+        } else {
+          std::cout << "!!! CONFLICT !!!" << std::endl;
         }
       }
     }
