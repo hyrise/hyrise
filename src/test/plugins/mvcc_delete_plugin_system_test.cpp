@@ -257,6 +257,7 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
   {
     auto attempts_remaining = max_attempts;
     while (attempts_remaining--) {
+      std::cout << "attempts_remaining: << attempts_remaining << std::endl;
       // Chunk 3 should have been logically deleted by now
       const auto chunk3 = _table->get_chunk(ChunkID{2});
       EXPECT_TRUE(chunk3);
