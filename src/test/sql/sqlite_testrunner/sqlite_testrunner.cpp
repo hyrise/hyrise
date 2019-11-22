@@ -142,7 +142,7 @@ std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
     ++next_line;
     if (query.empty() || query.substr(0, 2) == "--") continue;
 
-    queries.emplace_back(next_line - 1, std::move(query));
+    queries.emplace_back(next_line, std::move(query));
   }
 
   return queries;
