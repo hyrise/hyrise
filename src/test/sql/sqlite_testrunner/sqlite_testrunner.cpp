@@ -46,8 +46,8 @@ void SQLiteTestRunner::SetUpTestCase() {
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
 
-  opossum::Hyrise::get().topology.use_numa_topology();
-  opossum::Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().topology.use_numa_topology();
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 }
 
 void SQLiteTestRunner::SetUp() {
@@ -137,7 +137,7 @@ std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
   std::ifstream file("resources/test_data/sqlite_testrunner_queries.sql");
   std::string query;
 
-  auto next_line = size_t{0};
+  auto next_line = size_t{0};  // Incremented before first use
   while (std::getline(file, query)) {
     ++next_line;
     if (query.empty() || query.substr(0, 2) == "--") continue;
