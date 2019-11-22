@@ -207,6 +207,7 @@ set (
     concurrency/stress_test.cpp
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    tpc/tpcc_test.cpp
     synthetic_table_generator_test.cpp
     tpc/tpcds_db_generator_test.cpp
     tpc/tpch_db_generator_test.cpp

@@ -101,6 +101,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py clang-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+              sh "./scripts/test/hyriseBenchmarkTPCC_test.py clang-release"
               sh "cd clang-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
@@ -119,6 +120,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-debug"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-debug"
+              sh "./scripts/test/hyriseBenchmarkTPCC_test.py gcc-debug"
               sh "cd gcc-debug && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
 
             } else {
@@ -164,6 +166,7 @@ try {
               sh "./scripts/test/hyriseConsole_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkJoinOrder_test.py gcc-release"
               sh "./scripts/test/hyriseBenchmarkFileBased_test.py gcc-release"
+              sh "./scripts/test/hyriseBenchmarkTPCC_test.py gcc-release"
               sh "cd gcc-release && ../scripts/test/hyriseBenchmarkTPCH_test.py ." // Own folder to isolate visualization
             }
           } else {
@@ -175,7 +178,7 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
               sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-addr-ub-sanitizers"
-              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 1 --scheduler"
+              sh "LSAN_OPTIONS=suppressions=resources/.lsan-ignore.txt ASAN_OPTIONS=suppressions=resources/.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
             }
@@ -196,7 +199,7 @@ try {
               sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
               sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseSystemTest ${exclude_in_sanitizer_builds} clang-release-thread-sanitizer"
-              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 1 --scheduler"
+              sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-release-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
             } else {
               Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
             }

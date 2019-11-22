@@ -40,14 +40,14 @@ void SQLiteTestRunner::SetUpTestCase() {
     unencoded_table_cache.emplace(table_name, TableCacheEntry{table, table_file});
 
     // Create test table and also table copy which is later used as the master to copy from.
-    _sqlite->create_table(*table, table_name);
-    _sqlite->create_table(*table, table_name + _master_table_suffix);
+    _sqlite->create_sqlite_table(*table, table_name);
+    _sqlite->create_sqlite_table(*table, table_name + _master_table_suffix);
   }
 
   _table_cache_per_encoding.emplace(EncodingType::Unencoded, unencoded_table_cache);
 
-  opossum::Hyrise::get().topology.use_numa_topology();
-  opossum::Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  Hyrise::get().topology.use_numa_topology();
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 }
 
 void SQLiteTestRunner::SetUp() {
@@ -129,33 +129,38 @@ void SQLiteTestRunner::SetUp() {
   }
 }
 
-std::vector<std::string> SQLiteTestRunner::queries() {
-  static std::vector<std::string> queries;
+std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
+  static std::vector<std::pair<size_t, std::string>> queries;
 
   if (!queries.empty()) return queries;
 
   std::ifstream file("resources/test_data/sqlite_testrunner_queries.sql");
   std::string query;
 
+  auto next_line = size_t{0};  // Incremented before first use
   while (std::getline(file, query)) {
+    ++next_line;
     if (query.empty() || query.substr(0, 2) == "--") continue;
-    queries.emplace_back(std::move(query));
+
+    queries.emplace_back(next_line, std::move(query));
   }
 
   return queries;
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  const auto [sql, encoding_type] = GetParam();
+  const auto [query_pair, encoding_type] = GetParam();
+  const auto& [line, sql] = query_pair;
 
-  SCOPED_TRACE("Query '" + sql + "' with encoding " + encoding_type_to_string.left.at(encoding_type));
+  SCOPED_TRACE("Query '" + sql + "' from line " + std::to_string(line) + " with encoding " +
+               encoding_type_to_string.left.at(encoding_type));
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
   // Execute query in Hyrise and SQLite
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
   ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
-  const auto sqlite_result_table = _sqlite->execute_query(sql);
+  const auto sqlite_result_table = _sqlite->main_connection.execute_query(sql);
 
   ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
               sqlite_result_table->row_count() > 0)
@@ -190,7 +195,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   // Delete newly created views in sqlite
   for (const auto& plan : sql_pipeline.get_optimized_logical_plans()) {
     if (const auto create_view = std::dynamic_pointer_cast<CreateViewNode>(plan)) {
-      _sqlite->execute_query("DROP VIEW IF EXISTS " + create_view->view_name + ";");
+      _sqlite->main_connection.execute_query("DROP VIEW IF EXISTS " + create_view->view_name + ";");
     }
   }
 }

@@ -146,6 +146,11 @@ class Table : private Noncopyable {
     Fail("Row does not exist.");
   }
 
+  template <typename T>
+  T get_value(const std::string& column_name, const size_t row_number) const {
+    return get_value<T>(column_id_by_name(column_name), row_number);
+  }
+
   // Materialize a single Tuple
   std::vector<AllTypeVariant> get_row(size_t row_idx) const;
 

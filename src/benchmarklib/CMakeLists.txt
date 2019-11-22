@@ -8,9 +8,23 @@ set(
 
     tpcc/constants.hpp
     tpcc/defines.hpp
+    tpcc/tpcc_benchmark_item_runner.cpp
+    tpcc/tpcc_benchmark_item_runner.hpp
     tpcc/tpcc_random_generator.hpp
     tpcc/tpcc_table_generator.cpp
     tpcc/tpcc_table_generator.hpp
+    tpcc/procedures/abstract_tpcc_procedure.cpp
+    tpcc/procedures/abstract_tpcc_procedure.hpp
+    tpcc/procedures/tpcc_delivery.cpp
+    tpcc/procedures/tpcc_delivery.hpp
+    tpcc/procedures/tpcc_new_order.cpp
+    tpcc/procedures/tpcc_new_order.hpp
+    tpcc/procedures/tpcc_order_status.cpp
+    tpcc/procedures/tpcc_order_status.hpp
+    tpcc/procedures/tpcc_payment.cpp
+    tpcc/procedures/tpcc_payment.hpp
+    tpcc/procedures/tpcc_stock_level.cpp
+    tpcc/procedures/tpcc_stock_level.hpp
 
     tpch/tpch_queries.cpp
     tpch/tpch_queries.hpp
