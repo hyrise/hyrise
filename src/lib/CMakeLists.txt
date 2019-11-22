@@ -624,7 +624,10 @@ add_custom_command (
     DEPENDS utils/tracing/provider.d
     COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
-
+add_custom_target (
+    generate-provider-hpp
+    DEPENDS ${PROVIDER_FILE}
+)
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
@@ -635,6 +638,8 @@ else()
     # Also, the sanitizer builds on Mac require static linkage
     add_library(hyrise_impl STATIC ${SOURCES})
 endif()
+
+add_dependencies(hyrise_impl generate-provider-hpp)
 
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(
