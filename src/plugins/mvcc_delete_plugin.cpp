@@ -45,6 +45,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
         // Calculate metric 1 – Chunk invalidation level
         const double invalidated_rows_ratio = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
         const bool criterion1 = (DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio);
+        std::cout << "Chunk " << chunk_id << " - invalidated_rows_ratio: " << invalidated_rows_ratio << std::endl;
 
         if (!criterion1) {
           continue;
@@ -59,6 +60,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
                                 if (b == MvccData::MAX_COMMIT_ID) return false;
                                 return a < b;
                               });
+        std::cout << "Chunk " << chunk_id << " - highest_end_commit_id: " << highest_end_commit_id << std::endl;
 
         const bool criterion2 =
             highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= Hyrise::get().transaction_manager.last_commit_id();
