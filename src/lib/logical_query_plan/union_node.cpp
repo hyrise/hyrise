@@ -29,7 +29,7 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-size_t UnionNode::_shallow_hash() const { return boost::hash_value(union_mode); }
+size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(union_mode); }
 
 std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return UnionNode::make(union_mode);

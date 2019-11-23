@@ -33,7 +33,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expres
   return node_expressions;
 }
 
-size_t AliasNode::_shallow_hash() const {
+size_t AliasNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& alias : aliases) {
     boost::hash_combine(hash, alias);

@@ -33,7 +33,7 @@ std::string SortNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-size_t SortNode::_shallow_hash() const {
+size_t SortNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& order_by_mode : order_by_modes) {
     boost::hash_combine(hash, order_by_mode);

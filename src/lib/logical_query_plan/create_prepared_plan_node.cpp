@@ -19,7 +19,7 @@ std::string CreatePreparedPlanNode::description(const DescriptionMode mode) cons
   return stream.str();
 }
 
-size_t CreatePreparedPlanNode::_shallow_hash() const {
+size_t CreatePreparedPlanNode::_on_shallow_hash() const {
   auto hash = prepared_plan->hash();
   boost::hash_combine(hash, name);
   return hash;

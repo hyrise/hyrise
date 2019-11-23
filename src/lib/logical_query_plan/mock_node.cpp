@@ -95,7 +95,7 @@ void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& tabl
   _table_statistics = table_statistics;
 }
 
-size_t MockNode::_shallow_hash() const {
+size_t MockNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(_table_statistics);
   for (const auto& pruned_column_id : _pruned_column_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));

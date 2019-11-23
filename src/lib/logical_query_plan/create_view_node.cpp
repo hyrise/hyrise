@@ -25,7 +25,7 @@ std::string CreateViewNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-size_t CreateViewNode::_shallow_hash() const {
+size_t CreateViewNode::_on_shallow_hash() const {
   auto hash = boost::hash_value(view_name);
   boost::hash_combine(hash, view);
   boost::hash_combine(hash, if_not_exists);
