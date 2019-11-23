@@ -43,9 +43,7 @@ size_t AbstractExpression::hash() const {
   return hash;
 }
 
-std::string AbstractExpression::as_column_name() const {
-  return description(DescriptionMode::ColumnName);
-}
+std::string AbstractExpression::as_column_name() const { return description(DescriptionMode::ColumnName); }
 
 size_t AbstractExpression::_shallow_hash() const { return 0; }
 
