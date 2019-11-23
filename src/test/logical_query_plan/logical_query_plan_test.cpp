@@ -351,7 +351,6 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubquery) {
   stream << *lqp;
 
   auto cleaned_str = replace_addresses(stream.str());
-  std::cout << "=====\n\n" << cleaned_str << "\n\n=====" << std::endl;
 
   EXPECT_EQ(cleaned_str, R"([0] [Predicate] 0x00000000.a > 5 @ 0x00000000
  \_[1] [Join] Mode: Inner [0x00000000.a = 0x00000000.a] @ 0x00000000
@@ -392,8 +391,6 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
   // 0x4e2bda0:
   // [0] [Predicate] a = SUBQUERY (LQP, 0x4e2d160, Parameters: )
   //  \_[1] [StoredTable] Name: 'int_int_int'
-
-  std::cout << *lqp << std::endl;
 
   EXPECT_TRUE(std::regex_search(
       stream.str().c_str(),
