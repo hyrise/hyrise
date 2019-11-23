@@ -14,7 +14,7 @@ class DeleteNode : public EnableMakeForLQPNode<DeleteNode>, public AbstractLQPNo
  public:
   DeleteNode();
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   bool is_column_nullable(const ColumnID column_id) const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 

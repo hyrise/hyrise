@@ -70,10 +70,12 @@ TEST_F(MockNodeTest, HashingAndEqualityCheck) {
 }
 
 TEST_F(MockNodeTest, Copy) {
-  EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy());
+  const auto copy = _mock_node_b->deep_copy();
+  EXPECT_EQ(*_mock_node_b, *copy);
 
   _mock_node_b->set_pruned_column_ids({ColumnID{1}});
-  EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy());
+  EXPECT_NE(*_mock_node_b, *copy);                       // TODO why didn't this fail?
+  EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy());  // TODO why didn't this fail?
 }
 
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }

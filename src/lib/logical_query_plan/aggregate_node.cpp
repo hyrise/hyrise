@@ -32,14 +32,15 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
             node_expressions.begin() + group_by_expressions.size());
 }
 
-std::string AggregateNode::description() const {
+std::string AggregateNode::description(const DescriptionMode mode) const {
+  const auto expression_mode = _expression_description_mode(mode);
   std::stringstream stream;
 
   stream << "[Aggregate] ";
 
   stream << "GroupBy: [";
   for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
-    stream << node_expressions[expression_idx]->as_column_name();
+    stream << node_expressions[expression_idx]->description(expression_mode);
     if (expression_idx + 1 < aggregate_expressions_begin_idx) stream << ", ";
   }
   stream << "] ";
@@ -47,7 +48,7 @@ std::string AggregateNode::description() const {
   stream << "Aggregates: [";
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < node_expressions.size();
        ++expression_idx) {
-    stream << node_expressions[expression_idx]->as_column_name();
+    stream << node_expressions[expression_idx]->description(expression_mode);
     if (expression_idx + 1 < node_expressions.size()) stream << ", ";
   }
   stream << "]";

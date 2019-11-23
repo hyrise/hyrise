@@ -15,7 +15,7 @@ class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public Bas
  public:
   CreateTableNode(const std::string& table_name, bool if_not_exists);
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string table_name;
   const bool if_not_exists;

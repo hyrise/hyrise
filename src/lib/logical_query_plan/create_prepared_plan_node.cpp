@@ -10,7 +10,7 @@ CreatePreparedPlanNode::CreatePreparedPlanNode(const std::string& name,
                                                const std::shared_ptr<PreparedPlan>& prepared_plan)
     : BaseNonQueryNode(LQPNodeType::CreatePreparedPlan), name(name), prepared_plan(prepared_plan) {}
 
-std::string CreatePreparedPlanNode::description() const {
+std::string CreatePreparedPlanNode::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "[CreatePreparedPlan] '" << name << "' {\n";
   stream << *prepared_plan;

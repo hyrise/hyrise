@@ -5,11 +5,10 @@
 #include <vector>
 
 #include "enable_make_for_lqp_node.hpp"
+#include "expression/abstract_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
-
-class AbstractExpression;
 
 enum class LQPNodeType {
   Aggregate,
@@ -55,7 +54,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return a string describing this node, but nothing about its inputs.
    */
-  virtual std::string description() const = 0;
+  enum class DescriptionMode { Short, Detailed };
+  virtual std::string description(const DescriptionMode mode = DescriptionMode::Short) const = 0;
 
   /**
    * @defgroup Access the outputs/inputs
@@ -169,6 +169,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * automatically added to the description.
    */
   std::string comment;
+
+  /*
+   * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
+   */
+  AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode) const;
 
  protected:
   /**

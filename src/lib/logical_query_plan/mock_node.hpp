@@ -42,7 +42,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const std::vector<ColumnID>& pruned_column_ids() const;
   /** @} */
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::shared_ptr<TableStatistics>& table_statistics() const;
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);

@@ -32,19 +32,21 @@ JoinNode::JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<A
   Assert(!join_predicates.empty(), "Non-Cross Joins require predicates");
 }
 
-std::string JoinNode::description() const {
+std::string JoinNode::description(const DescriptionMode mode) const {
+  const auto expression_mode = _expression_description_mode(mode);
+
   std::stringstream stream;
   stream << "[Join] Mode: " << join_mode;
 
   for (const auto& predicate : join_predicates()) {
-    stream << " [" << predicate->as_column_name() << "]";
+    stream << " [" << predicate->description(expression_mode) << "]";
   }
 
   return stream.str();
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_expressions() const {
-  Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoiNode's output expressions");
+  Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoinNode's output expressions");
 
   /**
    * Update the JoinNode's output expressions every time they are requested. An overhead, but keeps the LQP code simple.

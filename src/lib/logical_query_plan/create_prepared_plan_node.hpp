@@ -13,7 +13,7 @@ class CreatePreparedPlanNode : public EnableMakeForLQPNode<CreatePreparedPlanNod
  public:
   CreatePreparedPlanNode(const std::string& name, const std::shared_ptr<PreparedPlan>& prepared_plan);
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   std::string name;
   std::shared_ptr<PreparedPlan> prepared_plan;

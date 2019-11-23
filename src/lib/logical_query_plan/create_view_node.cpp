@@ -11,7 +11,7 @@ CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_p
                                const bool if_not_exists)
     : BaseNonQueryNode(LQPNodeType::CreateView), view_name(view_name), view(view), if_not_exists(if_not_exists) {}
 
-std::string CreateViewNode::description() const {
+std::string CreateViewNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
   stream << "[CreateView] " << (if_not_exists ? "IfNotExists " : "");
   stream << "Name: " << view_name << ", Columns: ";

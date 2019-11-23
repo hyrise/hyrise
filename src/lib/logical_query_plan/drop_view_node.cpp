@@ -14,7 +14,7 @@ namespace opossum {
 DropViewNode::DropViewNode(const std::string& view_name, const bool if_exists)
     : BaseNonQueryNode(LQPNodeType::DropView), view_name(view_name), if_exists(if_exists) {}
 
-std::string DropViewNode::description() const { return "[Drop] View: '"s + view_name + "'"; }
+std::string DropViewNode::description(const DescriptionMode mode) const { return "[Drop] View: '"s + view_name + "'"; }
 
 size_t DropViewNode::_shallow_hash() const {
   auto hash = boost::hash_value(view_name);

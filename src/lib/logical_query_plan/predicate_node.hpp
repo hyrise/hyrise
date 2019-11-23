@@ -27,7 +27,7 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
  public:
   explicit PredicateNode(const std::shared_ptr<AbstractExpression>& predicate);
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   std::shared_ptr<AbstractExpression> predicate() const;
 

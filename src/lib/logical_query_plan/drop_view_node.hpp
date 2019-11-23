@@ -14,7 +14,7 @@ class DropViewNode : public EnableMakeForLQPNode<DropViewNode>, public BaseNonQu
  public:
   DropViewNode(const std::string& view_name, bool if_exists);
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
   const std::string view_name;
   const bool if_exists;

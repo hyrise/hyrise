@@ -28,7 +28,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   // Constructor for multi predicated joins
   JoinNode(const JoinMode join_mode, const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates);
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 

@@ -25,17 +25,22 @@ std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
   return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
 }
 
-std::string AggregateExpression::as_column_name() const {
+std::string AggregateExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
 
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
-    stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
+    stream << "COUNT(DISTINCT " << argument()->description(mode) << ")";
   } else if (is_count_star(*this)) {
-    stream << "COUNT(*)";
+    if (mode == DescriptionMode::ColumnName) {
+      stream << "COUNT(*)";
+    } else {
+      stream << "COUNT(" << dynamic_cast<const LQPColumnExpression*>(&*argument())->column_reference.original_node()
+             << ".*)";
+    }
   } else {
     stream << aggregate_function << "(";
-    if (argument()) stream << argument()->as_column_name();
+    if (argument()) stream << argument()->description(mode);
     stream << ")";
   }
 

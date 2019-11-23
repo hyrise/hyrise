@@ -15,7 +15,7 @@ class InsertNode : public EnableMakeForLQPNode<InsertNode>, public AbstractLQPNo
  public:
   explicit InsertNode(const std::string& table_name);
 
-  std::string description() const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   bool is_column_nullable(const ColumnID column_id) const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 
