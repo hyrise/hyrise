@@ -1,5 +1,3 @@
-#include <regex>
-
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -380,26 +378,17 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
   std::stringstream stream;
   stream << *lqp;
 
-  // Result is undeterministic, but should look something like (order and addresses may vary)
-  // [0] [Predicate] a > SUBQUERY (LQP, 0x4e2bda0, Parameters: )
-  //  \_[1] [StoredTable] Name: 'int_int'
-  // -------- Sub Queries ---------
-  // 0x4e2d160:
-  // [0] [Predicate] a = 5
-  //  \_[1] [StoredTable] Name: 'int_int_int'
+  EXPECT_EQ(replace_addresses(stream.str()),
+            R"(=========[0] [Predicate] 0x00000000.a > SUBQUERY (LQP, 0x00000000) @ 0x00000000
+ \_[1] [StoredTable] Name: 'int_int' pruned: 0/1 chunk(s), 0/2 column(s) @ 0x00000000
+-------- Subqueries ---------
+0x00000000:
+[0] [Predicate] 0x00000000.a = 5 @ 0x00000000
+ \_[1] [StoredTable] Name: 'int_int_int' pruned: 0/1 chunk(s), 0/3 column(s) @ 0x00000000
 
-  // 0x4e2bda0:
-  // [0] [Predicate] a = SUBQUERY (LQP, 0x4e2d160, Parameters: )
-  //  \_[1] [StoredTable] Name: 'int_int_int'
-
-  EXPECT_TRUE(std::regex_search(
-      stream.str().c_str(),
-      std::regex{R"(\[0\] \[Predicate\] 0x[a-z0-9]+\.a \> SUBQUERY \(LQP, 0x[a-z0-9]+\) @ 0x[a-z0-9]+)"}));
-  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subqueries"}));
-  EXPECT_TRUE(std::regex_search(
-      stream.str().c_str(),
-      std::regex{R"(\[0\] \[Predicate\] 0x[a-z0-9]+\.a = SUBQUERY \(LQP, 0x[a-z0-9]+\) @ 0x[a-z0-9]+)"}));
-  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] 0x[a-z0-9]+\.a = 5)"}));
+0x00000000:
+[0] [Predicate] 0x00000000.a = SUBQUERY (LQP, 0x00000000) @ 0x00000000
+ \_[1] [StoredTable] Name: 'int_int_int' pruned: 0/1 chunk(s), 0/3 column(s) @ 0x00000000)");
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopySubqueries) {

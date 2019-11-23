@@ -35,8 +35,9 @@ std::string AggregateExpression::description(const DescriptionMode mode) const {
     if (mode == DescriptionMode::ColumnName) {
       stream << "COUNT(*)";
     } else {
-      stream << "COUNT(" << dynamic_cast<const LQPColumnExpression*>(&*argument())->column_reference.original_node()
-             << ".*)";
+      const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*argument());
+      DebugAssert(column_expression, "Expected aggregate argument to be column expression");
+      stream << "COUNT(" << column_expression->column_reference.original_node() << ".*)";
     }
   } else {
     stream << aggregate_function << "(";

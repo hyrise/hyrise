@@ -111,7 +111,6 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
   const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
-  mock_node->name = name;
   return mock_node;
 }
 
