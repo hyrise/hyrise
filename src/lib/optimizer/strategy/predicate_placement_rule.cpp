@@ -57,7 +57,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     return;
   }
 
-  const auto untie_and_recurse = [&](const std::shared_ptr<AbstractLQPNode> node) {
+  const auto untie_and_recurse = [&](const std::shared_ptr<AbstractLQPNode>& node) {
     push_down_nodes.emplace_back(node);
 
     // As node might be the input to multiple nodes, remember those nodes before we untie node
