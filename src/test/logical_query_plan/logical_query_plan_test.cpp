@@ -379,7 +379,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
   stream << *lqp;
 
   EXPECT_EQ(replace_addresses(stream.str()),
-            R"(=========[0] [Predicate] 0x00000000.a > SUBQUERY (LQP, 0x00000000) @ 0x00000000
+            R"([0] [Predicate] 0x00000000.a > SUBQUERY (LQP, 0x00000000) @ 0x00000000
  \_[1] [StoredTable] Name: 'int_int' pruned: 0/1 chunk(s), 0/2 column(s) @ 0x00000000
 -------- Subqueries ---------
 0x00000000:
