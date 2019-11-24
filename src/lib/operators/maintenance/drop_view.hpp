@@ -14,7 +14,7 @@ class DropView : public AbstractReadOnlyOperator {
  public:
   DropView(const std::string& view_name, bool if_exists);
 
-  const std::string name() const override;
+  const std::string& name() const override;
   const std::string view_name;
   const bool if_exists;
 

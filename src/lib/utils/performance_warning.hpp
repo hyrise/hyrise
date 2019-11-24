@@ -1,8 +1,9 @@
 #pragma once
 
-#include <boost/preprocessor/stringize.hpp>
 #include <iostream>
 #include <string>
+
+#include <boost/preprocessor/stringize.hpp>
 
 #include "utils/string_utils.hpp"
 
@@ -63,6 +64,7 @@ class PerformanceWarningDisabler {
   {                                                                                                    \
     static PerformanceWarningClass warn(std::string(text) + " at " + trim_source_file_path(__FILE__) + \
                                         ":" BOOST_PP_STRINGIZE(__LINE__));                             \
-  }  // NOLINT
+  }                                                                                                    \
+  static_assert(true, "End call of macro with a semicolon")
 
 }  // namespace opossum

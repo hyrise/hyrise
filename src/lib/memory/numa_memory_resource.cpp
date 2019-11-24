@@ -3,7 +3,7 @@
 #include <string>
 
 #if HYRISE_NUMA_SUPPORT
-#define NUMA_MEMORY_RESOURCE_ARENA_SIZE 1llu << 30u
+constexpr auto NUMA_MEMORY_RESOURCE_ARENA_SIZE = 1024llu * 1024 * 1024;
 #else
 #include <boost/container/pmr/global_resource.hpp>
 #endif

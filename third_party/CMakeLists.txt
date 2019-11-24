@@ -1,7 +1,7 @@
 # Disable some warnings for the third-party subfolder
 add_compile_options(-Wno-unused-function -Wno-deprecated-declarations)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    add_compile_options(-Wno-format-overflow)
+    add_compile_options(-Wno-format-overflow -Wno-stringop-truncation -Wno-stringop-overflow)
 endif()
 
 # Build google benchmark
@@ -12,7 +12,10 @@ add_library(
 
     benchmark_fix/dummy.cc
     benchmark/src/benchmark.cc
+    benchmark/src/benchmark_api_internal.cc
+    benchmark/src/benchmark_name.cc
     benchmark/src/benchmark_register.cc
+    benchmark/src/benchmark_runner.cc
     benchmark/src/colorprint.cc
     benchmark/src/commandlineflags.cc
     benchmark/src/complexity.cc
@@ -40,7 +43,6 @@ target_include_directories(
     benchmark/include
 )
 
-
 # Build sql-parser
 add_library(
     sqlparser
@@ -61,6 +63,7 @@ target_compile_options(
     PRIVATE
     -std=c++1z
     -O3 -Wno-sign-compare
+    -fPIC
 )
 
 add_library(
@@ -73,7 +76,7 @@ add_library(
     cqf/src/cqf32.cpp
 )
 
-target_compile_options(cqf PRIVATE -Wno-format)
+target_compile_options(cqf PRIVATE -Wno-format -fPIC)
 
 target_include_directories(
     cqf
@@ -90,7 +93,7 @@ endif()
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
 add_subdirectory(tpch-dbgen)
-
+add_subdirectory(nlohmann_json)
 
 # Add PGASUS
 if(${NUMA_FOUND})
@@ -119,6 +122,8 @@ target_include_directories(
     ${LZ4_LIBRARY_DIR}
 )
 
+target_compile_options(lz4 PRIVATE -fPIC)
+
 ## Build zstd
 set(ZSTD_LIBRARY_DIR zstd/lib)
 
@@ -131,6 +136,8 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_compress.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_literals.c
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_compress_sequences.c
     ${ZSTD_LIBRARY_DIR}/compress/huf_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.c
     ${ZSTD_LIBRARY_DIR}/common/xxhash.c
@@ -157,6 +164,8 @@ target_include_directories(
     ${ZSTD_LIBRARY_DIR}/dictBuilder
 )
 
+target_compile_options(zstd PRIVATE -fPIC)
+
 add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
 target_sources(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/uninitialized_vector.hpp)
@@ -169,7 +178,7 @@ endif()
 
 include(ExternalProject)
 if(APPLE)
-    set(MAC_INCLUDES "SDKROOT=\"/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk\" CPATH=\"/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include\"")
+    set(MAC_INCLUDES "SDKROOT=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk\" CPATH=\"/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include\"")
 else()
     set(MAC_INCLUDES "")
 endif()
@@ -297,3 +306,22 @@ target_compile_definitions(
   tpcds_dbgen
   PUBLIC
   -DLINUX)
+
+target_compile_options(
+  tpcds_dbgen
+  PRIVATE
+
+  -Wno-format
+  -Wno-implicit-int
+  -Wno-incompatible-pointer-types
+  -Wno-unused-result
+)
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(
+  tpcds_dbgen
+  PRIVATE
+
+  -Wno-parentheses-equality
+)
+endif()

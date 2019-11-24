@@ -1,14 +1,14 @@
 #pragma once
 
+#include <functional>
+#include <iostream>
+#include <limits>
+
 #include <boost/config.hpp>
 #include <boost/operators.hpp>
 #include <boost/type_traits/has_nothrow_assign.hpp>
 #include <boost/type_traits/has_nothrow_constructor.hpp>
 #include <boost/type_traits/has_nothrow_copy.hpp>
-
-#include <functional>
-#include <iostream>
-#include <limits>
 
 /*
  * This is an extension of boost's BOOST_STRONG_TYPEDEF.

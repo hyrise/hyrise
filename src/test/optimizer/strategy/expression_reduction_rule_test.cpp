@@ -42,11 +42,14 @@ class ExpressionReductionRuleTest : public StrategyBaseTest {
     e2 = equals_(mock_node->get_column("e"), 0);
     s = mock_node->get_column("s");
 
+    mock_node_for_join = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
+    a_join = equals_(mock_node_for_join->get_column("a"), 0);
+
     rule = std::make_shared<ExpressionReductionRule>();
   }
 
-  std::shared_ptr<MockNode> mock_node;
-  std::shared_ptr<AbstractExpression> a, b, c, d, e;
+  std::shared_ptr<MockNode> mock_node, mock_node_for_join;
+  std::shared_ptr<AbstractExpression> a, b, c, d, e, a_join;
   LQPColumnReference s;
   std::shared_ptr<AbstractExpression> a2, b2, c2, d2, e2;
   std::shared_ptr<ExpressionReductionRule> rule;
@@ -172,14 +175,14 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   {
     // SELECT SUM(a), COUNT(*), AVG(a) -> SUM(a), COUNT(*), SUM(a) / COUNT(*) AS AVG(a) as a is not NULLable
     // clang-format off
-    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(), avg_(col_a)),                                            // NOLINT
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node), avg_(col_a)),                                            // NOLINT
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(*)", "AVG(a)"};
     // The cast will become unnecessary once #1799 is fixed
-    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(), div_(cast_(sum_(col_a), DataType::Double), count_star_())), expected_aliases,  // NOLINT
-                                ProjectionNode::make(expression_vector(sum_(col_a), count_star_(), div_(cast_(sum_(col_a), DataType::Double), count_star_())),             // NOLINT
-                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_()),                                                  // NOLINT
+    const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(stored_table_node), div_(cast_(sum_(col_a), DataType::Double), count_star_(stored_table_node))), expected_aliases,  // NOLINT
+                                ProjectionNode::make(expression_vector(sum_(col_a), count_star_(stored_table_node), div_(cast_(sum_(col_a), DataType::Double), count_star_(stored_table_node))),             // NOLINT
+                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node)),                                                  // NOLINT
                                     stored_table_node)));
     // clang-format on
 
@@ -206,8 +209,23 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   {
     // SELECT SUM(b), COUNT(*), AVG(b) stays unmodified as b is NULLable
     // clang-format off
-    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_b), count_star_(), avg_(col_b)),  // NOLINT
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_b), count_star_(stored_table_node), avg_(col_b)),  // NOLINT
                              stored_table_node);
+    // clang-format on
+
+    const auto expected_lqp = input_lqp->deep_copy();
+    const auto actual_lqp = apply_rule(rule, input_lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  {
+    // SELECT COUNT(*) stays unmodified as it cannot be further reduced
+    // clang-format off
+    const auto join_node = JoinNode::make(JoinMode::Inner, equals_(col_a, col_b),
+                             stored_table_node,
+                             stored_table_node);
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(count_star_(join_node)),  // NOLINT
+                             join_node);
     // clang-format on
 
     const auto expected_lqp = input_lqp->deep_copy();

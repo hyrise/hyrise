@@ -27,10 +27,8 @@ enum class OperatorType {
   ImportCsv,
   IndexScan,
   Insert,
-  JitOperatorWrapper,
   JoinHash,
   JoinIndex,
-  JoinMPSM,
   JoinNestedLoop,
   JoinSortMerge,
   JoinVerification,
@@ -90,8 +88,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // clears the output of this operator to free up space
   void clear_output();
 
-  virtual const std::string name() const = 0;
-  virtual const std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
+  virtual const std::string& name() const = 0;
+  virtual std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
 
   // This only checks if the operator has/had a transaction context without having to convert the weak_ptr
   bool transaction_context_is_set() const;
@@ -125,6 +123,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+
+  // LQP node with which this operator has been created. Might be uninitialized.
+  std::shared_ptr<const AbstractLQPNode> lqp_node;
 
  protected:
   // abstract method to actually execute the operator

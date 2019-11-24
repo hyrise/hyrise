@@ -98,6 +98,18 @@ TEST_F(ChunkEncoderTest, UnencodeEncodedSegments) {
   assert_chunk_encoding(chunk, chunk_unencoding_spec);
 }
 
+TEST_F(ChunkEncoderTest, ThrowOnEncodingAMutableChunk) {
+  const auto chunk_encoding_spec =
+      ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
+  const auto types = _table->column_data_types();
+
+  // Appending a row should add a fourth, mutable chunk.
+  _table->append({1, 2, 3});
+  const auto& chunk = _table->get_chunk(ChunkID{3});
+
+  EXPECT_THROW(ChunkEncoder::encode_chunk(chunk, types, chunk_encoding_spec), std::logic_error);
+}
+
 TEST_F(ChunkEncoderTest, ThrowOnEncodingReferenceSegments) {
   auto table_wrapper = std::make_shared<TableWrapper>(_table);
   table_wrapper->execute();
@@ -121,6 +133,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTable) {
       {{EncodingType::RunLength}, {EncodingType::RunLength}, {EncodingType::Dictionary}},
       {{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}}};
 
+  _table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(_table, chunk_encoding_specs);
 
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
@@ -134,6 +147,7 @@ TEST_F(ChunkEncoderTest, EncodeWholeTableUsingSameEncoding) {
   const auto segment_encoding_spec = SegmentEncodingSpec{EncodingType::Dictionary};
   const auto chunk_encoding_spec = ChunkEncodingSpec{3u, segment_encoding_spec};
 
+  _table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(_table, segment_encoding_spec);
 
   for (auto chunk_id = ChunkID{0u}; chunk_id < _table->chunk_count(); ++chunk_id) {
@@ -149,6 +163,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunks) {
       {ChunkID{0u}, {{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Unencoded}}},
       {ChunkID{2u}, {{EncodingType::Dictionary}, {EncodingType::Dictionary}, {EncodingType::RunLength}}}};
 
+  _table->get_chunk(static_cast<ChunkID>(ChunkID{2u}))->finalize();
   ChunkEncoder::encode_chunks(_table, chunk_ids, chunk_encoding_specs);
 
   for (auto chunk_id : chunk_ids) {
@@ -169,6 +184,7 @@ TEST_F(ChunkEncoderTest, EncodeMultipleChunksUsingSameEncoding) {
   const auto segment_encoding_spec = SegmentEncodingSpec{EncodingType::Dictionary};
   const auto chunk_encoding_spec = ChunkEncodingSpec{3u, segment_encoding_spec};
 
+  _table->get_chunk(static_cast<ChunkID>(ChunkID{2u}))->finalize();
   ChunkEncoder::encode_chunks(_table, chunk_ids, segment_encoding_spec);
 
   for (auto chunk_id : chunk_ids) {
@@ -195,6 +211,8 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
                                       {EncodingType::Dictionary, VectorCompressionType::SimdBp128}},
                                      {{EncodingType::Unencoded}, {EncodingType::Unencoded}, {EncodingType::Unencoded}}};
   const auto types = _table->column_data_types();
+
+  _table->last_chunk()->finalize();
 
   for (auto const& chunk_encoding_spec : chunk_encoding_specs) {
     ChunkEncoder::encode_all_chunks(_table, chunk_encoding_spec);

@@ -147,7 +147,7 @@ TYPED_TEST(OperatorsAggregateTest, OperatorName) {
       std::vector<ColumnID>{ColumnID{0}});
 
   if constexpr (std::is_same_v<TypeParam, AggregateHash>) {
-    EXPECT_EQ(aggregate->name(), "Aggregate");
+    EXPECT_EQ(aggregate->name(), "AggregateHash");
   } else if constexpr (std::is_same_v<TypeParam, AggregateSort>) {
     EXPECT_EQ(aggregate->name(), "AggregateSort");
   } else {
@@ -562,18 +562,18 @@ TYPED_TEST(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
 }
 
 TYPED_TEST(OperatorsAggregateTest, OneGroupbyCountStar) {
-  this->test_output(this->_table_wrapper_1_1_null, {{std::nullopt, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(this->_table_wrapper_1_1_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, TwoGroupbyCountStar) {
-  this->test_output(this->_table_wrapper_2_0_null, {{std::nullopt, AggregateFunction::Count}},
+  this->test_output(this->_table_wrapper_2_0_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}},
                     {ColumnID{0}, ColumnID{2}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, ThreeGroupbyCountStar) {
-  this->test_output(this->_table_wrapper_3_0_null, {{std::nullopt, AggregateFunction::Count}},
+  this->test_output(this->_table_wrapper_3_0_null, {{INVALID_COLUMN_ID, AggregateFunction::Count}},
                     {ColumnID{0}, ColumnID{2}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_3gb_0agg/count_star.tbl", 1, false);
 }
@@ -620,7 +620,7 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTable) {
   this->test_output(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
                      {ColumnID{2}, AggregateFunction::Count},
-                     {std::nullopt, AggregateFunction::Count}},
+                     {INVALID_COLUMN_ID, AggregateFunction::Count}},
                     {}, "resources/test_data/tbl/aggregateoperator/0gb_3agg/max_count_count_empty.tbl", 1);
 }
 
@@ -631,7 +631,7 @@ TYPED_TEST(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
   this->test_output(filtered,
                     {{ColumnID{1}, AggregateFunction::Max},
                      {ColumnID{2}, AggregateFunction::Count},
-                     {std::nullopt, AggregateFunction::Count}},
+                     {INVALID_COLUMN_ID, AggregateFunction::Count}},
                     {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_3agg/max_count_count_empty.tbl", 1);
 }

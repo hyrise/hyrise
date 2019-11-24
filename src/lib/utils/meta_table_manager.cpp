@@ -10,10 +10,10 @@
 namespace opossum {
 
 MetaTableManager::MetaTableManager() {
-  _methods["tables"] = std::bind(&MetaTableManager::generate_tables_table, this);
-  _methods["columns"] = std::bind(&MetaTableManager::generate_columns_table, this);
-  _methods["chunks"] = std::bind(&MetaTableManager::generate_chunks_table, this);
-  _methods["segments"] = std::bind(&MetaTableManager::generate_segments_table, this);
+  _methods["tables"] = &MetaTableManager::generate_tables_table;
+  _methods["columns"] = &MetaTableManager::generate_columns_table;
+  _methods["chunks"] = &MetaTableManager::generate_chunks_table;
+  _methods["segments"] = &MetaTableManager::generate_segments_table;
 
   _table_names.reserve(_methods.size());
   for (const auto& [table_name, _] : _methods) {
@@ -30,8 +30,8 @@ std::shared_ptr<Table> MetaTableManager::generate_table(const std::string& table
   return table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+std::shared_ptr<Table> MetaTableManager::generate_tables_table() {
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"column_count", DataType::Int, false},
                                               {"row_count", DataType::Long, false},
                                               {"chunk_count", DataType::Int, false},
@@ -47,9 +47,9 @@ std::shared_ptr<Table> MetaTableManager::generate_tables_table() const {
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_columns_table() const {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
-                                              {"name", DataType::String, false},
+std::shared_ptr<Table> MetaTableManager::generate_columns_table() {
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
+                                              {"column_name", DataType::String, false},
                                               {"data_type", DataType::String, false},
                                               {"nullable", DataType::Int, false}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
@@ -65,11 +65,11 @@ std::shared_ptr<Table> MetaTableManager::generate_columns_table() const {
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_chunks_table() const {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+std::shared_ptr<Table> MetaTableManager::generate_chunks_table() {
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
-                                              {"rows", DataType::Long, false},
-                                              {"invalid_rows", DataType::Long, false},
+                                              {"row_count", DataType::Long, false},
+                                              {"invalid_row_count", DataType::Long, false},
                                               {"cleanup_commit_id", DataType::Long, true}};
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
@@ -87,13 +87,13 @@ std::shared_ptr<Table> MetaTableManager::generate_chunks_table() const {
   return output_table;
 }
 
-std::shared_ptr<Table> MetaTableManager::generate_segments_table() const {
-  const auto columns = TableColumnDefinitions{{"table", DataType::String, false},
+std::shared_ptr<Table> MetaTableManager::generate_segments_table() {
+  const auto columns = TableColumnDefinitions{{"table_name", DataType::String, false},
                                               {"chunk_id", DataType::Int, false},
                                               {"column_id", DataType::Int, false},
                                               {"column_name", DataType::String, false},
                                               {"column_data_type", DataType::String, false},
-                                              {"encoding", DataType::String, true}};
+                                              {"encoding_name", DataType::String, true}};
   // Vector compression is not yet included because #1286 makes it a pain to map it to a string.
   auto output_table = std::make_shared<Table>(columns, TableType::Data, std::nullopt, UseMvcc::Yes);
 
@@ -118,7 +118,7 @@ std::shared_ptr<Table> MetaTableManager::generate_segments_table() const {
   return output_table;
 }
 
-bool MetaTableManager::is_meta_table_name(const std::string& name) const {
+bool MetaTableManager::is_meta_table_name(const std::string& name) {
   const auto prefix_len = META_PREFIX.size();
   return name.size() > prefix_len && std::string_view{&name[0], prefix_len} == MetaTableManager::META_PREFIX;
 }

@@ -7,11 +7,12 @@ namespace opossum {
 DropTable::DropTable(const std::string& table_name, const bool if_exists)
     : AbstractReadOnlyOperator(OperatorType::DropTable), table_name(table_name), if_exists(if_exists) {}
 
-const std::string DropTable::name() const { return "Drop Table"; }
-
-const std::string DropTable::description(DescriptionMode description_mode) const {
-  return name() + " '" + table_name + "'";
+const std::string& DropTable::name() const {
+  static const auto name = std::string{"DropTable"};
+  return name;
 }
+
+std::string DropTable::description(DescriptionMode description_mode) const { return name() + " '" + table_name + "'"; }
 
 std::shared_ptr<const Table> DropTable::_on_execute() {
   // If IF EXISTS is not set and the table is not found, StorageManager throws an exception

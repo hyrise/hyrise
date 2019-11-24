@@ -1,12 +1,10 @@
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include <memory>
-#include <vector>
 
 #include "benchmark/benchmark.h"
 #include "hyrise.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/chunk.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 
