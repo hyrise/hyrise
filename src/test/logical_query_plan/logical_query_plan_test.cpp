@@ -388,7 +388,9 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubqueries) {
 
 0x00000000: 
 [0] [Predicate] 0x00000000.a = SUBQUERY (LQP, 0x00000000) @ 0x00000000
- \_[1] [StoredTable] Name: 'int_int_int' pruned: 0/1 chunk(s), 0/3 column(s) @ 0x00000000)");
+ \_[1] [StoredTable] Name: 'int_int_int' pruned: 0/1 chunk(s), 0/3 column(s) @ 0x00000000
+
+)");
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopySubqueries) {
