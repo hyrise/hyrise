@@ -315,6 +315,7 @@ AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mod
     case DescriptionMode::Detailed:
       return AbstractExpression::DescriptionMode::Detailed;
   }
+  Fail("Unhandled DescriptionMode");
 }
 
 std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
