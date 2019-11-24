@@ -45,7 +45,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
         // Calculate metric 1 – Chunk invalidation level
         const double invalidated_rows_ratio = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
         const bool criterion1 = (DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio);
-        std::cout << "Chunk " << chunk_id << " - invalidated_rows_ratio: " << invalidated_rows_ratio << std::endl;
+        std::cout << ".Chunk " << chunk_id << " - invalidated_rows_ratio: " << invalidated_rows_ratio << std::endl;
 
         if (!criterion1) {
           continue;
