@@ -91,8 +91,8 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
           }
         }
 
-        // Make sure that the largest offset fits into uint32_t (required for vector compression.)
-        Assert(static_cast<std::make_unsigned_t<T>>(max_value - min_value) <= std::numeric_limits<uint32_t>::max(),
+        // Make sure that the largest offset fits into uint32_t (required for vector compression).
+        Assert(static_cast<std::make_unsigned_t<T>>(std::abs(max_value - min_value)) <= std::numeric_limits<uint32_t>::max(),
                "Value range in block must fit into uint32_t.");
 
         block_minima.push_back(min_value);
