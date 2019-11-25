@@ -385,7 +385,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
   auto values = pmr_concurrent_vector<int32_t>(row_count);
   auto null_values = pmr_concurrent_vector<bool>(row_count);
 
-  // the next 8 values are repeated 10 times each (i.e., 80 values)
+  // the next 9 values are repeated 10 times each (i.e., 90 values)
   auto row_id = 0;
   for (auto value = int32_t{0}; value < 9; ++value) {
     for (auto repetition = 0; repetition < 10; ++repetition) {
@@ -405,6 +405,8 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
     values[row_id] = row_id;
     ++row_id;
   }
+  null_values[95] = true;
+  null_values[96] = true;
 
   const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
   const auto encoded_segment =
@@ -414,9 +416,9 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
   ASSERT_TRUE(run_length_segment);
 
   // The handling of NULL values is something unintuitive. When two runs of values are both NULL, they are merged into
-  // a single run, only keeping the first value of both runs in values() as a placeholder for the merge NULL run.
-  // That means the runs of values 3/4 and the single-value runs of 95/96 are stored as two values 3 and 95 in the
-  // values() vector, hence we substract two from the number of value runs.
+  // a single run, only keeping the first value of both runs in values() as a placeholder for the merged NULL run.
+  // That means the runs of values 3/4 and the single-value runs of 95/96 are stored as two value runs 3 and 95 in the
+  // values() vector (thus, we substract two from the number of expected runs).
   EXPECT_EQ(run_length_segment->values()->size(), 9 + 10 - 2);
   EXPECT_EQ(run_length_segment->null_values()->size(), 9 + 10 - 2);
   EXPECT_EQ(run_length_segment->end_positions()->size(), 9 + 10 - 2);
@@ -426,12 +428,12 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
   // Values runs for values 4 and 96 have been basically removed.
   EXPECT_EQ(run_length_segment->values()->at(3), 3);
   EXPECT_EQ(run_length_segment->values()->at(4), 5);
-  EXPECT_EQ(run_length_segment->values()->at(13), 95);  // 9 - 1 + 5
-  EXPECT_EQ(run_length_segment->values()->at(14), 97);
+  EXPECT_EQ(run_length_segment->values()->at(13), 95);  // 9 + 5 - 1 (succeeding run of 4 removed from values())
+  EXPECT_EQ(run_length_segment->values()->at(14), 97);  // no value 96 in values()
 
   // Check that successive NULL runs are merged to single position
   EXPECT_EQ(run_length_segment->null_values()->at(2), false);
-  EXPECT_EQ(run_length_segment->null_values()->at(3), true);
+  EXPECT_EQ(run_length_segment->null_values()->at(3), true);  // NULLs of values 3/4 are merged into single run
   EXPECT_EQ(run_length_segment->null_values()->at(4), false);
   EXPECT_EQ(run_length_segment->null_values()->at(12), false);
   EXPECT_EQ(run_length_segment->null_values()->at(13), true);
@@ -461,8 +463,8 @@ TEST_F(EncodedSegmentTest, FrameOfReference) {
 
   const auto for_segment = std::dynamic_pointer_cast<const FrameOfReferenceSegment<int32_t>>(encoded_segment);
   ASSERT_TRUE(for_segment);
-  EXPECT_EQ(for_segment->block_minima().size(), 1);           // single block
-  EXPECT_EQ(for_segment->offset_values().size(), row_count);  // single block
+  EXPECT_EQ(for_segment->block_minima().size(), 1);  // single block
+  EXPECT_EQ(for_segment->offset_values().size(), row_count);
   EXPECT_EQ(for_segment->null_values().size(), row_count);
 
   EXPECT_EQ(for_segment->null_values()[0], false);
