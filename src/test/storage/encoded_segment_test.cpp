@@ -392,7 +392,7 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
       values[row_id] = value;
 
       // We set two values (i.e., two runs of 10 each) as being NULL
-      if (value == 3 | value == 4) {
+      if (value == 3 || value == 4) {
         null_values[row_id] = true;
       }
 
