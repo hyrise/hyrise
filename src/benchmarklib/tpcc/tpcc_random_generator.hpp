@@ -5,6 +5,7 @@
 #include <random>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "random_generator.hpp"
@@ -27,8 +28,12 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
    * Generates a non-uniform random number based on a formula defined by TPCC
    */
   size_t nurand(size_t a, size_t x, size_t y) {
-    Assert(_nurand_constant_c <= a, "Invalid param: a=" + std::to_string(a));
-    return (((random_number(0, a) | random_number(x, y)) + _nurand_constant_c) % (y - x + 1)) + x;
+    auto c_iter = _nurand_constants_c.find(a);
+    if (c_iter == _nurand_constants_c.end()) {
+      c_iter = _nurand_constants_c.insert({a, random_number(0, a)}).first;
+    }
+    const auto c = c_iter->second;
+    return (((random_number(0, a) | random_number(x, y)) + c) % (y - x + 1)) + x;
   }
 
   /**
@@ -82,7 +87,20 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
     return v;
   }
 
+  // Reset nurand's C according to 2.1.6.1
+  void reset_c_for_c_last() {
+    const auto old_c = _nurand_constants_c.at(255);
+    while (true) {
+      _nurand_constants_c[255] = random_number(0, 255);
+      const auto current_c = _nurand_constants_c.at(255);
+      const auto diff = std::abs(static_cast<long>(current_c - old_c));  // NOLINT
+
+      if (current_c != old_c && diff >= 64 && diff <= 120 && diff != 96 && diff != 112) break;
+    }
+  }
+
  protected:
-  const size_t _nurand_constant_c = random_number(0, 255);
+  // Holds the constant C (see 2.1.6) for a given A
+  std::unordered_map<size_t, size_t> _nurand_constants_c;
 };
 }  // namespace opossum

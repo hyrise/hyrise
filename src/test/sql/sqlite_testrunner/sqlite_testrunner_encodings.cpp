@@ -5,7 +5,8 @@
 namespace opossum {
 
 INSTANTIATE_TEST_SUITE_P(SQLiteTestRunnerEncodings, SQLiteTestRunner,
-                         testing::Combine(testing::ValuesIn(SQLiteTestRunner::queries()),
-                                          testing::ValuesIn(all_encoding_types)));
+                         testing::Combine(::testing::ValuesIn(SQLiteTestRunner::queries()),
+                                          ::testing::ValuesIn(all_encoding_types)),
+                         sqlite_testrunner_formatter);
 
 }  // namespace opossum

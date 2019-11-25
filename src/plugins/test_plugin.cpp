@@ -11,7 +11,7 @@ void TestPlugin::start() {
   column_definitions.emplace_back("col_1", DataType::Int, false);
   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
-  sm.add_table("DummyTable", table);
+  storage_manager.add_table("DummyTable", table);
 }
 
 void TestPlugin::stop() { Hyrise::get().storage_manager.drop_table("DummyTable"); }

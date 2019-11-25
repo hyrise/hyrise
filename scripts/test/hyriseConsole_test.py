@@ -38,18 +38,26 @@ def main():
 	console.expect('Loading .*tbl/10_ints.tbl into table "test"')
 	console.expect('Encoding "test" using Unencoded')
 
+	console.sendline("load resources/test_data/bin/float.bin test_bin")
+	console.expect('Loading .*bin/float.bin into table "test_bin"')
+	console.expect('Encoding "test_bin" using Unencoded')	
+
 	# Test SQL statement
 	console.sendline("select sum(a) from test")
 	console.expect("786")
 	console.expect("Execution info:")
 
 	# Test TPCH generation
-	console.sendline("generate_tpch 0.01")
+	console.sendline("generate_tpch     0.01   7")
 	console.expect("Generating tables done")
 
 	# Test TPCH tables
 	console.sendline("select * from nation")
 	console.expect("25 rows total")
+
+	# Test correct chunk size (25 nations, independent of scale factor, with a maximum chunk size of 7 result in 4 chunks)
+	console.sendline("print nation")
+	console.expect("=== Chunk 3 ===")
 
 	# Test exit command
 	console.sendline("exit")
