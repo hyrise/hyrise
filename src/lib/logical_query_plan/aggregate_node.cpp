@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "expression/expression_utils.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
@@ -56,7 +57,23 @@ std::string AggregateNode::description() const {
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {
-  return node_expressions;
+  static auto node_expressions_copy = node_expressions;
+  for (auto& node_expression : node_expressions_copy) {
+    if (node_expression->type == ExpressionType::Aggregate) {
+      const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(node_expression);
+      if (aggregate_expression->aggregate_function == AggregateFunction::Any) {
+        node_expression = node_expression->arguments[0];
+      }
+    }
+  }
+
+  std::cout << "Returning ";
+  for (auto el : node_expressions_copy) {
+    std::cout << *el << " \t ";
+  }
+  std::cout << std::endl;
+
+  return node_expressions_copy;
 }
 
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {

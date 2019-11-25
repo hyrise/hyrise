@@ -53,7 +53,7 @@ DataType AggregateExpression::data_type() const {
     return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::AGGREGATE_DATA_TYPE;
   }
 
-  const auto argument_data_type = arguments[0]->data_type();
+  const auto argument_data_type = argument()->data_type();
   auto aggregate_data_type = DataType::Null;
 
   resolve_data_type(argument_data_type, [&](const auto data_type_t) {
