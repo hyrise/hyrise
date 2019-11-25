@@ -52,7 +52,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
       // a temporary storage to hold the values of one block
       auto current_value_block = std::array<T, block_size>{};
 
-      // store begin pointer iterator of null values written within this block
+      // store iterator to the null values written within this block
       auto current_block_null_values_it = null_values.end();
 
       while (segment_it != segment_end) {
