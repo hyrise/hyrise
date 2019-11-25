@@ -59,6 +59,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
         auto min_value = std::numeric_limits<T>::max();
         auto max_value = std::numeric_limits<T>::lowest();
         auto block_contains_null = false;
+        auto block_contains_values = false;
 
         auto value_block_it = current_value_block.begin();
         for (; value_block_it != current_value_block.end() && segment_it != segment_end;
@@ -74,6 +75,7 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
             min_value = std::min(min_value, value);
             max_value = std::max(max_value, value);
           }
+          block_contains_values |= !value_is_null;
           block_contains_null |= value_is_null;
         }
 
@@ -91,10 +93,11 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
           }
         }
 
-        // Make sure that the largest offset fits into uint32_t (required for vector compression).
-        Assert(static_cast<std::make_unsigned_t<T>>(std::abs(max_value - min_value)) <=
-                   std::numeric_limits<uint32_t>::max(),
-               "Value range in block must fit into uint32_t.");
+        if (block_contains_values) {
+          // Make sure that the largest offset fits into uint32_t (required for vector compression).
+          Assert(static_cast<std::make_unsigned_t<T>>(max_value - min_value) <= std::numeric_limits<uint32_t>::max(),
+                 "Value range in block must fit into uint32_t.");
+        }
 
         block_minima.push_back(min_value);
 
