@@ -170,11 +170,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::string comment;
 
-  /*
-   * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
-   */
-  static AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode);
-
  protected:
   /**
    * Override to hash data fields in derived types. No override needed if derived expression has no
@@ -183,6 +178,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual size_t _on_shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
+
+  /*
+   * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
+   */
+  static AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode);
 
  private:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;
