@@ -57,23 +57,19 @@ std::string AggregateNode::description() const {
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {
-  static auto node_expressions_copy = node_expressions;
-  for (auto& node_expression : node_expressions_copy) {
-    if (node_expression->type == ExpressionType::Aggregate) {
-      const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(node_expression);
+  _column_expressions.resize(node_expressions.size());
+  std::copy(node_expressions.begin(), node_expressions.end(), _column_expressions.begin());
+
+  for (auto& column_expression : _column_expressions) {
+    if (column_expression->type == ExpressionType::Aggregate) {
+      const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(column_expression);
       if (aggregate_expression->aggregate_function == AggregateFunction::Any) {
-        node_expression = node_expression->arguments[0];
+        column_expression = column_expression->arguments[0];
       }
     }
   }
 
-  std::cout << "Returning ";
-  for (auto el : node_expressions_copy) {
-    std::cout << *el << " \t ";
-  }
-  std::cout << std::endl;
-
-  return node_expressions_copy;
+  return _column_expressions;
 }
 
 bool AggregateNode::is_column_nullable(const ColumnID column_id) const {

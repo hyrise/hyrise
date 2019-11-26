@@ -68,11 +68,6 @@ class DependentGroupByReductionRuleTest : public StrategyBaseTest {
   LQPColumnReference column_c_0, column_c_1, column_c_2;
 };
 
-// directly following alias
-// following projection (+3) and an alias
-// check following projection
-// check if projection added, when another aggregate follows
-
 // Test simple cases
 TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
   // Early out for LQP without any aggregates
@@ -184,67 +179,27 @@ TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Test whether we remove the correct columns when a table is present multiple times (e.g., after self join).
-TEST_F(DependentGroupByReductionRuleTest, SelfJoinSingleKeyPrimaryKey) {
-  const auto stored_table_node_a2 = StoredTableNode::make("table_a");
-  const auto column_a2_0 = stored_table_node_a->get_column("column0");
-  const auto column_a2_1 = stored_table_node_a->get_column("column1");
-  const auto column_a2_2 = stored_table_node_a->get_column("column2");
-
+// Test whether we remove the correct columns after joining (one column of a can be moved, none of b).
+// No projection added as root already is a projection.
+TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
   // clang-format off
   auto lqp =
-  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5)),
-    AggregateNode::make(expression_vector(column_a_0, column_a_1, column_a2_0, column_a2_1),
-                        expression_vector(sum_(column_a_0)),
-      JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_a2_0),
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
+    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_a_1, column_b_2),
+                        expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2)),
+      JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_b_0),
                      stored_table_node_a,
-                     stored_table_node_a2)));
-
-  std::cout << "LQP: \t" << *lqp << std::endl;
-
-  const auto actual_lqp = apply_rule(rule, lqp);
-
-  std::cout << "LQP: \t" << *actual_lqp << std::endl;
-
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5)),
-      AggregateNode::make(expression_vector(column_a_0, column_a2_0),
-                          expression_vector(sum_(column_a_0), any_(column_a_1), any_(column_a2_1)),
-        JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_a2_0),
-                       stored_table_node_a,
-                       stored_table_node_a2)));
-  // clang-format on
-
-  std::cout << "ExpLQP: \t" << *expected_lqp << std::endl;
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-// Test similar to previous test, but one join side has full grouping of primary key, the other not.
-TEST_F(DependentGroupByReductionRuleTest, SelfJoinMultiKeyPrimaryKey) {
-  const auto stored_table_node_b2 = StoredTableNode::make("table_b");
-  const auto column_b2_0 = stored_table_node_b->get_column("column0");
-  const auto column_b2_1 = stored_table_node_b->get_column("column1");
-  const auto column_b2_2 = stored_table_node_b->get_column("column2");
-
-  // clang-format off
-  auto lqp =
-  ProjectionNode::make(expression_vector(add_(column_b_0, 5), add_(any_(column_b_2), 5)),
-    AggregateNode::make(expression_vector(column_b_0, column_b_2, column_b2_0, column_b2_1),
-                        expression_vector(sum_(column_b_0)),
-      JoinNode::make(JoinMode::Inner, equals_(column_b_0, column_b2_0),
-                     stored_table_node_b,
-                     stored_table_node_b2)));
+                     stored_table_node_b)));
 
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(column_b_0, 5), add_(any_(column_b_2), 5)),
-    AggregateNode::make(expression_vector(column_b_0, column_b2_0, column_b2_1),
-                        expression_vector(sum_(column_b_0), any_(column_b_2)),
-      JoinNode::make(JoinMode::Inner, equals_(column_b_0, column_b2_0),
-                     stored_table_node_b,
-                     stored_table_node_b2)));
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
+    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_b_2),
+                        expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1)),
+      JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_b_0),
+                     stored_table_node_a,
+                     stored_table_node_b)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -264,6 +219,52 @@ TEST_F(DependentGroupByReductionRuleTest, AggregteButNoChanges) {
   AggregateNode::make(expression_vector(column_a_0),
                       expression_vector(sum_(column_a_0)),
                       stored_table_node_a);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// A simple aggregate follows an optimized aggregate, column order of root node should not change. Thus no projection.
+TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate) {
+  // clang-format off
+  auto lqp =
+  AggregateNode::make(expression_vector(column_a_0),
+                      expression_vector(sum_(column_a_1)),
+    AggregateNode::make(expression_vector(column_a_0, column_a_1),
+                        expression_vector(sum_(column_a_0)),
+                        stored_table_node_a));
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  AggregateNode::make(expression_vector(column_a_0),
+                      expression_vector(sum_(column_a_1)),
+    AggregateNode::make(expression_vector(column_a_0),
+                        expression_vector(sum_(column_a_0), any_(column_a_1)),
+                        stored_table_node_a));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// A sort follows an optimized aggregate. Operator following the aggregate does not change the column order itself, but
+// aggregate does. Hence, we need to add a projection.
+TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
+  // clang-format off
+  auto lqp =
+  SortNode::make(expression_vector(column_a_0), std::vector<OrderByMode>{OrderByMode::Ascending},
+    AggregateNode::make(expression_vector(column_a_0, column_a_1),
+                        expression_vector(sum_(column_a_0)),
+                        stored_table_node_a));
+
+  const auto actual_lqp = apply_rule(rule, lqp);
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0)),
+    SortNode::make(expression_vector(column_a_0), std::vector<OrderByMode>{OrderByMode::Ascending},
+      AggregateNode::make(expression_vector(column_a_0),
+                          expression_vector(sum_(column_a_0), any_(column_a_1)),
+                          stored_table_node_a)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
