@@ -308,7 +308,7 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
-AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) const {
+static AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {
   switch (mode) {
     case DescriptionMode::Short:
       return AbstractExpression::DescriptionMode::ColumnName;

@@ -173,7 +173,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode
    */
-  AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode) const;
+  static AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode);
 
  protected:
   /**
