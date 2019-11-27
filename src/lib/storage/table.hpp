@@ -63,7 +63,7 @@ class Table : private Noncopyable {
 
   TableType type() const;
 
-  UseMvcc has_mvcc() const;
+  UseMvcc uses_mvcc() const;
 
   // return the maximum chunk size (cannot exceed ChunkOffset (uint32_t))
   ChunkOffset max_chunk_size() const;
@@ -144,6 +144,11 @@ class Table : private Noncopyable {
       }
     }
     Fail("Row does not exist.");
+  }
+
+  template <typename T>
+  T get_value(const std::string& column_name, const size_t row_number) const {
+    return get_value<T>(column_id_by_name(column_name), row_number);
   }
 
   // Materialize a single Tuple

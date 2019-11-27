@@ -114,7 +114,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   return std::make_shared<Table>(column_definitions, output_table_type, std::move(output_chunks),
-                                 input_table.has_mvcc());
+                                 input_table.uses_mvcc());
 }
 
 // returns the singleton dummy table used for literal projections

@@ -60,7 +60,7 @@ class Chunk : private Noncopyable {
   ColumnCount column_count() const;
 
   // returns the number of rows (cannot exceed ChunkOffset (uint32_t))
-  uint32_t size() const;
+  ChunkOffset size() const;
 
   // adds a new row, given as a list of values, to the chunk
   // note this is slow and not thread-safe and should be used for testing purposes only
@@ -162,26 +162,26 @@ class Chunk : private Noncopyable {
   ChunkOffset invalid_row_count() const { return _invalid_row_count.load(); }
 
   /**
-     * Atomically increases the counter of deleted/invalidated rows within this chunk.
-     * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
-     */
+   * Atomically increases the counter of deleted/invalidated rows within this chunk.
+   * (The function is marked as const, as otherwise it could not be called by the Delete operator.)
+   */
   void increase_invalid_row_count(ChunkOffset count) const;
 
   /**
-      * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
-      * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
-      * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
-      * have to look at this chunk anymore.
-      * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
-      */
-  const std::optional<CommitID>& get_cleanup_commit_id() const { return _cleanup_commit_id; }
+   * Chunks with few visible entries can be cleaned up periodically by the MvccDeletePlugin in a two-step process.
+   * Within the first step (clean up transaction), the plugin deletes rows from this chunk and re-inserts them at the
+   * end of the table. Thus, future transactions will find the still valid rows at the end of the table and do not
+   * have to look at this chunk anymore.
+   * The cleanup commit id represents the snapshot commit id at which transactions can ignore this chunk.
+   */
+  std::optional<CommitID> get_cleanup_commit_id() const;
 
   void set_cleanup_commit_id(CommitID cleanup_commit_id);
 
   /**
-     * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
-     * the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
-     */
+   * Executes tasks that are connected with finalizing a chunk. Currently, chunks are made immutable and
+   * the MVCC max_begin_cid is set. Finalizing a chunk is the inserter's responsibility.
+   */
   void finalize();
 
  private:
@@ -195,8 +195,11 @@ class Chunk : private Noncopyable {
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::optional<std::pair<ColumnID, OrderByMode>> _ordered_by;
-  mutable std::atomic<ChunkOffset> _invalid_row_count = 0;
-  std::optional<CommitID> _cleanup_commit_id;
+  mutable std::atomic<ChunkOffset> _invalid_row_count{0};
+
+  // Default value of zero means "not set"
+  std::atomic<CommitID> _cleanup_commit_id{0};
+  static_assert(std::is_same<uint32_t, CommitID>::value, "Type of _cleanup_commit_id does not match type of CommitID.");
 };
 
 }  // namespace opossum

@@ -17,6 +17,8 @@ class BenchmarkSQLExecutor {
   BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                        const std::optional<std::string>& visualize_prefix);
 
+  ~BenchmarkSQLExecutor();
+
   // This executes the given SQL query, records its metrics and returns a single table (the same as
   // SQLPipeline::get_result_table() would).
   // If visualization and/or verification are enabled, these are transparently done as well.
@@ -36,13 +38,15 @@ class BenchmarkSQLExecutor {
   std::shared_ptr<TransactionContext> transaction_context = nullptr;
 
  private:
-  void _compare_tables(const std::shared_ptr<const Table>& expected_result_table,
-                       const std::shared_ptr<const Table>& actual_result_table,
+  void _compare_tables(const std::shared_ptr<const Table>& actual_result_table,
+                       const std::shared_ptr<const Table>& expected_result_table,
                        const std::optional<const std::string>& description = std::nullopt);
   void _verify_with_sqlite(SQLPipeline& pipeline);
   void _visualize(SQLPipeline& pipeline);
 
-  const std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
+  std::optional<SQLiteWrapper::Connection> _sqlite_connection;
+  bool _sqlite_transaction_open{false};
+
   const std::optional<std::string> _visualize_prefix;
   uint64_t _num_visualized_plans{0};
 };

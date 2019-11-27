@@ -281,6 +281,8 @@ std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);
 std::ostream& operator<<(std::ostream& stream, UnionMode union_mode);
 std::ostream& operator<<(std::ostream& stream, TableType table_type);
 
+using BoolAsByteType = uint8_t;
+
 }  // namespace opossum
 
 namespace std {

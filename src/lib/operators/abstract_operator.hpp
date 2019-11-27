@@ -124,9 +124,11 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Set parameters (AllParameterVariants or CorrelatedParameterExpressions) to their respective values
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
+  // Enum to denote stages of the operator which can be written to struct StagedOperatorPerformance
   enum class OperatorStages : uint8_t {};
 
-  std::chrono::nanoseconds get_stage_runtime(OperatorStages stage) const;
+  // LQP node with which this operator has been created. Might be uninitialized.
+  std::shared_ptr<const AbstractLQPNode> lqp_node;
 
  protected:
   // abstract method to actually execute the operator

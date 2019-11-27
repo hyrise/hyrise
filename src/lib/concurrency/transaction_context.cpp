@@ -183,4 +183,25 @@ void TransactionContext::_transition(TransactionPhase from_phase, TransactionPha
   Assert(success, "Illegal phase transition detected.");
 }
 
+std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase) {
+  switch (phase) {
+    case TransactionPhase::Active:
+      stream << "Active";
+      break;
+    case TransactionPhase::Aborted:
+      stream << "Aborted";
+      break;
+    case TransactionPhase::RolledBack:
+      stream << "RolledBack";
+      break;
+    case TransactionPhase::Committing:
+      stream << "Committing";
+      break;
+    case TransactionPhase::Committed:
+      stream << "Committed";
+      break;
+  }
+  return stream;
+}
+
 }  // namespace opossum
