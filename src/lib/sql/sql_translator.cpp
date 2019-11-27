@@ -40,6 +40,7 @@
 #include "logical_query_plan/drop_table_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/import_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
@@ -186,6 +187,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql:
       return _translate_prepare(static_cast<const hsql::PrepareStatement&>(statement));
     case hsql::kStmtExecute:
       return _translate_execute(static_cast<const hsql::ExecuteStatement&>(statement));
+    case hsql::kStmtImport:
+      return _translate_import(static_cast<const hsql::ImportStatement&>(statement));
 
     default:
       FailInput("SQL statement type not supported");
@@ -1202,6 +1205,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
               "Mismatch between validation of Prepared statement and query it is used in");
 
   return prepared_plan->instantiate(parameters);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
+  //Assert(import_statement.type, "Unsupported file type could not be loaded.");
+  std::cout << "path: " << import_statement.filePath << std::endl <<
+  "table: " << import_statement.tableName << std::endl << std::endl;
+
+  return ImportNode::make(import_statement.tableName, import_statement.filePath);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
