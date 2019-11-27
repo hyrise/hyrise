@@ -19,29 +19,46 @@ using namespace opossum::expression_functional;  // NOLINT
 namespace {
 using namespace opossum;
 
+///////////////////////////////
 // benchmark seetings
-constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
-// constexpr auto TBL_FILE = "../../data/100k_pings.tbl";
+///////////////////////////////
+
+//constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
+constexpr auto TBL_FILE = "../../data/100_pings.tbl";
 constexpr auto TABLE_NAME_PREFIX = "ping";
-const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
+//const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
+const auto CHUNK_SIZES = std::vector{size_t{10}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "timestamp", "captain_status"};
 // TODO: evaluate Frame of Reference as well, fall back to dictionary for unsupported data types
 const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4, EncodingType::RunLength};
 
 // single value benchmark values (median, min, max)
 // determined by column stats python script
-const auto BM_VAL_CAPTAIN_ID = std::vector{298186, 59547, 1211286};
-const auto BM_VAL_CAPTAIN_STATUS = std::vector{2, 1, 2};
-const auto BM_VAL_LATITUDE = std::vector{25.1388267, 24.9154559, 25.1916198};
-const auto BM_VAL_TIMESTAMP = std::vector{"2018-12-06 23:57:34", "2018-12-22 23:22:11", "2018-11-05 05:38:15"};
+//const auto BM_VAL_CAPTAIN_ID = std::vector{298186, 59547, 1211286};
+//const auto BM_VAL_CAPTAIN_STATUS = std::vector{2, 1, 2};
+//const auto BM_VAL_LATITUDE = std::vector{25.1388267, 24.9154559, 25.1916198};
+//const auto BM_VAL_TIMESTAMP = std::vector{"2018-12-06 23:57:34", "2018-12-22 23:22:11", "2018-11-05 05:38:15"};
+//const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
+
+// quantile benchmark values
+// determined by column stats python script calculated with pandas, settings nearest 
+const auto BM_VAL_CAPTAIN_ID = std::vector{4, 4115, 11787, 57069, 176022, 451746, 616628, 901080, 1156169, 1233112, 1414788};
+const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
+const auto BM_VAL_LATITUDE = std::vector{10.2191832, 25.0455204, 25.0699667, 25.0872227, 25.1030861, 25.1244186, 25.1724729, 25.1966912, 25.2164364, 25.2437205, 60.1671321};
+const auto BM_VAL_TIMESTAMP = std::vector{"2018-11-05 00:01:19", "2018-11-05 07:17:17", "2018-11-05 12:49:23", "2018-11-05 18:38:21", "2018-11-22 23:04:04", "2018-12-22 00:20:20", "2018-12-22 11:34:55", "2018-12-22 23:33:37", "2019-01-28 04:06:07", "2019-01-28 11:35:48", "2019-01-29 00:01:02"};
 const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
 
-// test values
-// const auto BM_VAL_CAPTAIN_ID = std::vector{298186};
-// const auto BM_VAL_CAPTAIN_STATUS = std::vector{2};
-// const auto BM_VAL_LATITUDE = std::vector{25.1388267};
-// const auto BM_VAL_TIMESTAMP = std::vector{"2018-12-06 23:57:34"};
-// const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
+///////////////////////////////
+// methods
+///////////////////////////////
+
+Segments get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id){
+  Segments segments{};
+  for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
+    segments.emplace_back(input_table->get_chunk(chunk_id)->get_segment(column_id));
+  }
+  return segments;
+} 
 
 std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>& input_table,
     const std::string order_by_column_name, const size_t chunk_size, const std::optional<ChunkEncodingSpec>& chunk_encoding_spec = std::nullopt,
@@ -52,7 +69,7 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
   const auto chunk_count = input_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // create new single chunk and create a new table with that chunk
-    auto new_chunk = std::make_shared<Chunk>(input_table->get_chunk(chunk_id)->segments());
+    auto new_chunk = std::make_shared<Chunk>(get_segments_of_chunk(input_table, chunk_id));
     std::vector<std::shared_ptr<Chunk>> single_chunk_to_sort_as_vector = {new_chunk};
     auto single_chunk_table = std::make_shared<Table>(input_table->column_definitions(), TableType::Data, std::move(single_chunk_to_sort_as_vector), UseMvcc::No);
 
@@ -65,7 +82,8 @@ std::shared_ptr<Table> sort_table_chunk_wise(const std::shared_ptr<const Table>&
 
     // add sorted chunk to output table
     // Note: we do not care about MVCC at all at the moment
-    sorted_table->append_chunk(immutable_sorted_table->get_chunk(ChunkID{0})->segments());
+    sorted_table->append_chunk(get_segments_of_chunk(immutable_sorted_table, ChunkID{0}));
+    //sorted_table->append_chunk(immutable_sorted_table->get_chunk(ChunkID{0})->segments());
     const auto& added_chunk = sorted_table->get_chunk(chunk_id);
     added_chunk->set_ordered_by(std::make_pair(sorted_table->column_id_by_name(order_by_column_name), order_by_mode));
     added_chunk->finalize();
@@ -84,6 +102,11 @@ std::string get_table_name(const std::string table_name, const std::size_t chunk
 } 
 
 }  // namespace
+
+
+///////////////////////////////
+// Fixtures
+///////////////////////////////
 
 namespace opossum {
 
@@ -143,10 +166,14 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
 };
 
+///////////////////////////////
+// benchmarks
+///////////////////////////////
+
 static void BM_Ping_Print_Sorted_Tables(benchmark::State& state) {
   // debug print of unsorted table
   constexpr auto chunk_size = size_t{10};
-  auto table = load_table("/Users/krichly/Desktop/100_pings.tbl", chunk_size);
+  auto table = load_table("../../data/100_pings.tbl", chunk_size);
   std::cout << "############ unsorted:" << std::endl;
   Print::print(table);
 
@@ -173,7 +200,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Penis_Test)(benchmark::Stat
 
 
   const auto encoding_type = encoding_type_to_string.left.at(encoding);
-  const auto table_name = get_table_name(TABLE_NAME, chunk_size, order_by_column, encoding_type);
+  const auto table_name = get_table_name(TABLE_NAME_PREFIX, chunk_size, order_by_column, encoding_type);
   
   auto table = storage_manager.get_table(table_name);
 
@@ -370,10 +397,10 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerform
 }
 
 BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)(benchmark::State& state) {
-  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length.");
-  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length.");
-  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length.");
-  Assert(BM_VAL_TIMESTAMP.size() == BM_SCAN_VALUES, "Sample search values for columns should have the same length.");
+  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length. 1");
+  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length. 2");
+  Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length. 3");
+  Assert(BM_VAL_TIMESTAMP.size() == BM_SCAN_VALUES, "Sample search values for columns should have the same length. 4");
 
   auto& storage_manager = Hyrise::get().storage_manager;
 
@@ -428,12 +455,10 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
   }
 }
 BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThanEqualsPerformance)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Penis_Test)->Apply(CustomArguments);
+//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingEqualsPerformance)->Apply(CustomArguments);
+//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Penis_Test)->Apply(CustomArguments);
 
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
-
-
+//BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
 }  // namespace opossum
 
