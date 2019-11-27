@@ -495,7 +495,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     /**
      * After the probe phase build_side_pos_lists and probe_side_pos_lists contain all pairs of joined rows grouped by
-     * partition. Let p be a partition index and r a row index. The value of build_side_pos_lists[p][r] will match probe_side_pos_lists[p][r].
+     * partition. Let p be a partition index and r a row index. The value of build_side_pos_lists[p][r] will match
+     * probe_side_pos_lists[p][r].
      */
 
     /**

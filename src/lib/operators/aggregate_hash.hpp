@@ -24,6 +24,7 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -101,6 +102,8 @@ class AggregateHash : public AbstractAggregateOperator {
   // write the aggregated output for a given aggregate column
   template <typename ColumnDataType, AggregateFunction function>
   void write_aggregate_output(ColumnID column_index);
+
+  enum class OperatorStages : uint8_t { GroupByColumns, AggregateColumns, OutputWriting };
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

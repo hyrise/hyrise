@@ -54,7 +54,7 @@ namespace opossum {
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<AggregateColumnDefinition>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids, std::make_unique<StagedOperatorPerformanceData>()) {}
 
 const std::string& AggregateHash::name() const {
   static const auto name = std::string{"AggregateHash"};
@@ -449,6 +449,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
 
   const auto& input_table = input_table_left();
 
+  auto& staged_performance_data = static_cast<StagedOperatorPerformanceData&>(*_performance_data);
+  Timer timer;
+
   /**
    * Write group-by columns.
    *
@@ -468,6 +471,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     _write_groupby_output(pos_list);
   }
 
+  staged_performance_data.stage_runtimes.push_back(timer.lap());
+
   /*
   Write the aggregated columns to the output
   */
@@ -484,9 +489,13 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     ++column_index;
   }
 
+  staged_performance_data.stage_runtimes.push_back(timer.lap());
+
   // Write the output
   auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
   output->append_chunk(_output_segments);
+
+  staged_performance_data.stage_runtimes.push_back(timer.lap());
 
   return output;
 }
