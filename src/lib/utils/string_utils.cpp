@@ -47,7 +47,7 @@ std::string trim_source_file_path(const std::string& path) {
 }
 
 std::string replace_addresses(const std::string& input) {
-  return std::regex_replace(input, std::regex{"0x[0-9A-Fa-f]{8,}"}, "0x00000000");
+  return std::regex_replace(input, std::regex{"0x[0-9A-Fa-f]{4,}"}, "0x00000000");
 }
 
 }  // namespace opossum
