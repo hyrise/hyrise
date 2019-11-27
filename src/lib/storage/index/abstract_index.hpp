@@ -30,7 +30,7 @@ class BaseSegment;
  * We might use the impl-pattern similar to the TableScan, but this will be in a future commit.
  *
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/AbstractIndex and
- *                                               https://github.com/hyrise/hyrise/wiki/Indexes
+ *                                               https://github.com/hyrise/hyrise/wiki/IndexesAndFilters
  **/
 
 class AbstractIndex : private Noncopyable {
@@ -78,8 +78,8 @@ class AbstractIndex : private Noncopyable {
 
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.
-   * The number of given values has to be less or equal to number of indexed segments. Additionally
-   * the order of values and segments has to match. If less values are provided the search is performed
+   * The number of given values has to be less or equal to the number of indexed segments. Additionally,
+   * the order of values and segments has to match. If less values are provided, the search is performed
    * as if all entries of the table are truncated to the segments that got reference values.
    *
    * Calls _lower_bound() of the most derived class.
@@ -91,8 +91,8 @@ class AbstractIndex : private Noncopyable {
 
   /**
    * Searches for the first entry within the chunk that is greater than the given values.
-   * The number of given values has to be less or equal to number of indexed segments. Additionally
-   * the order of values and segments has to match. If less values are provided the search is performed
+   * The number of given values has to be less or equal to number of indexed segments. Additionally,
+   * the order of values and segments has to match. If less values are provided, the search is performed
    * as if all entries of the table are truncated to the segments that got reference values.
    *
    * Calls _upper_bound() of the most derived class.

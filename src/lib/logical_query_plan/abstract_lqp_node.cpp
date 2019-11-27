@@ -220,7 +220,7 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_expressions() const {
   Assert(left_input() && !right_input(),
-         "Can only forward input expressions iff there is a left input and no right input");
+         "Can only forward input expressions if there is a left input and no right input");
   return left_input()->column_expressions();
 }
 
@@ -241,7 +241,7 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   // Default behaviour: Forward from input
   Assert(left_input() && !right_input(),
-         "Can forward nullability from input iff there is a left input and no right input");
+         "Can forward nullability from input if there is a left input and no right input");
   return left_input()->is_column_nullable(column_id);
 }
 

@@ -53,7 +53,7 @@ struct PosList final : private pmr_vector<RowID> {
 
   PosList& operator=(PosList&& other) = default;
 
-  // If all entries in the PosList shares a single ChunkID, it makes sense to explicitly give this guarantee in order
+  // If all PosList-entries share a single ChunkID, it makes sense to explicitly give this guarantee in order
   // to enable some optimizations.
   void guarantee_single_chunk() { _references_single_chunk = true; }
 

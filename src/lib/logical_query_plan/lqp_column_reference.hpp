@@ -10,7 +10,7 @@ class AbstractLQPNode;
 
 /**
  * Used for identifying a Column in an LQP by the Node and the ColumnID in that node in which it was created.
- * Currently this happens in StoredTableNode (which creates all of its columns), AggregateNode (which creates all
+ * Currently, this happens in StoredTableNode (which creates all of its columns), AggregateNode (which creates all
  * aggregate columns) and ProjectionNode (which creates all columns containing arithmetics)
  */
 class LQPColumnReference final {
