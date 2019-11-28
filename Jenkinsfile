@@ -52,7 +52,7 @@ try {
     // or add it to /etc/fstab:
     // tmpfs  /mnt/ccache tmpfs defaults,size=51201M  0 0
 
-    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro\" --privileged=true") {
+    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros\" --privileged=true") {
       try {
         stage("Setup") {
           checkout scm
