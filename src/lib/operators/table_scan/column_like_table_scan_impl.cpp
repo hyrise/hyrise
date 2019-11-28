@@ -16,7 +16,6 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
-#include "utils/ignore_unused_variable.hpp"
 
 namespace opossum {
 

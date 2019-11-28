@@ -1,13 +1,13 @@
 #pragma once
 
-#include <boost/algorithm/string.hpp>
-
 #include <algorithm>
 #include <cstdlib>
 #include <functional>
 #include <memory>
 #include <string>
 #include <utility>
+
+#include <boost/algorithm/string.hpp>
 
 #include "csv_meta.hpp"
 #include "storage/base_segment.hpp"
@@ -97,8 +97,8 @@ class CsvConverter : public BaseCsvConverter {
    * csv characters.
    */
   std::function<T(const std::string&)> _get_conversion_function();
-  tbb::concurrent_vector<T> _parsed_values;
-  tbb::concurrent_vector<bool> _null_values;
+  pmr_concurrent_vector<T> _parsed_values;
+  pmr_concurrent_vector<bool> _null_values;
   const bool _is_nullable;
   ParseConfig _config;
 };

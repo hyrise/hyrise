@@ -52,8 +52,10 @@ class OperatorsUpdateTest : public BaseTest {
 
     // Get validated table which should have the same row twice.
     const auto post_update_transaction_context = Hyrise::get().transaction_manager.new_transaction_context();
-    const auto validate = std::make_shared<Validate>(get_table);
+    const auto post_update_get_table = std::make_shared<GetTable>(table_to_update_name);
+    const auto validate = std::make_shared<Validate>(post_update_get_table);
     validate->set_transaction_context(post_update_transaction_context);
+    post_update_get_table->execute();
     validate->execute();
 
     EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), load_table(expected_result_path));

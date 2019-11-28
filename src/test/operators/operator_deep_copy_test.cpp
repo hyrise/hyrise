@@ -9,7 +9,6 @@
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -55,7 +54,7 @@ template <typename T>
 class DeepCopyTestJoin : public OperatorDeepCopyTest {};
 
 // here we define all Join types
-using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
+using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
 TYPED_TEST_SUITE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
@@ -184,7 +183,7 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
 
 TEST_F(OperatorDeepCopyTest, Subquery) {
   // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
-  // this suite. The test is very confusing and error-prone with explicit operators as above.
+  // this suite. The test would be very confusing and error-prone with explicit operators as above.
   const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
   Hyrise::get().storage_manager.add_table("table_3int", table);
 

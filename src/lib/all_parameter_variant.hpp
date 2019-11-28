@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <boost/lexical_cast.hpp>
+
 #include "all_type_variant.hpp"
 #include "expression/correlated_parameter_expression.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"

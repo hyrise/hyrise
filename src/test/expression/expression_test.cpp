@@ -266,7 +266,7 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_TRUE(sum_(null_())->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_TRUE(sum_(add_(1, 2))->is_nullable_on_lqp(*dummy_lqp));
-  EXPECT_FALSE(count_star_()->is_nullable_on_lqp(*dummy_lqp));
+  EXPECT_FALSE(count_star_(dummy_lqp)->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_FALSE(count_(5)->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_FALSE(count_(null_())->is_nullable_on_lqp(*dummy_lqp));
   EXPECT_FALSE(in_(1, list_(1, 2, 3))->is_nullable_on_lqp(*dummy_lqp));
@@ -442,6 +442,14 @@ TEST_F(ExpressionTest, EqualsAndHash) {
       }
     }
   }
+}
+
+TEST_F(ExpressionTest, IsCountStar) {
+  EXPECT_TRUE(AggregateExpression::is_count_star(*count_star_(int_float_node)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*count_(a)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*sum_(a)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*add_(a, 1)));
+  EXPECT_FALSE(AggregateExpression::is_count_star(*lqp_column_(a)));
 }
 
 }  // namespace opossum

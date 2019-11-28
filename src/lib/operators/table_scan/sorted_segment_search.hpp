@@ -1,8 +1,9 @@
 #pragma once
 
+#include <type_traits>
+
 #include <boost/range.hpp>
 #include <boost/range/join.hpp>
-#include <type_traits>
 
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"

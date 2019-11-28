@@ -1,4 +1,4 @@
-#include "benchmark_item_result.hpp"
+#include "benchmark_item_run_result.hpp"
 
 namespace opossum {
 

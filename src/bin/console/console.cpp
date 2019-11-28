@@ -3,8 +3,6 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
-#include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
 
 #include <chrono>
 #include <csetjmp>
@@ -19,11 +17,13 @@
 #include <string>
 #include <vector>
 
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptors.hpp>
+
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "operators/export_binary.hpp"
 #include "operators/export_csv.hpp"
@@ -41,6 +41,7 @@
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "tpcc/tpcc_table_generator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/invalid_input_exception.hpp"
@@ -50,13 +51,13 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"
-#define ANSI_COLOR_GREEN "\x1B[32m"
-#define ANSI_COLOR_RESET "\x1B[0m"
+#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT
+#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT
+#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT
 
-#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"
-#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"
-#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"
+#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT
+#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT
+#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"   // NOLINT
 
 namespace {
 
@@ -97,6 +98,20 @@ std::string remove_coloring(const std::string& input, bool remove_rl_codes_only 
   std::regex expression{"(" + sanitized_sequences + ")"};
   return std::regex_replace(input, expression, "");
 }
+
+std::vector<std::string> tokenize(std::string input) {
+  boost::algorithm::trim<std::string>(input);
+
+  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
+  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
+  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
+
+  std::vector<std::string> tokens;
+  boost::algorithm::split(tokens, input, boost::is_space());
+
+  return tokens;
+}
+
 }  // namespace
 
 namespace opossum {
@@ -110,7 +125,6 @@ Console::Console()
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
       _pagination_active(false),
-      _use_jit(false),
       _pqp_cache(std::make_shared<SQLPhysicalPlanCache>()),
       _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
@@ -121,6 +135,7 @@ Console::Console()
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
+  register_command("generate_tpcc", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
   register_command("generate_tpch", std::bind(&Console::_generate_tpch, this, std::placeholders::_1));
   register_command("generate_tpcds", std::bind(&Console::_generate_tpcds, this, std::placeholders::_1));
   register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
@@ -241,9 +256,6 @@ bool Console::_initialize_pipeline(const std::string& sql) {
     if (_explicitly_created_transaction_context) {
       builder.with_transaction_context(_explicitly_created_transaction_context);
     }
-    if (_use_jit) {
-      builder.with_lqp_translator(std::make_shared<JitAwareLQPTranslator>());
-    }
     _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + '\n');
@@ -342,7 +354,8 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  int size_y, size_x;
+  int size_y;
+  int size_x;
   rl_get_screen_size(&size_y, &size_x);
 
   const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
@@ -368,10 +381,11 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 
 // Command functions
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
 int Console::_help(const std::string&) {
-  auto encoding_options = std::string{"                                               Encoding options: "};
+  auto encoding_options = std::string{"                                                 Encoding options: "};
   encoding_options += boost::algorithm::join(
       encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
   // Split the encoding options in lines of 120 and add padding. For each input line, it takes up to 120 characters
@@ -379,13 +393,14 @@ int Console::_help(const std::string&) {
   // a non-zero number of spaces or the end of the line.
   auto line_wrap = std::regex{"(.{1,120})(?: +|$)"};
   encoding_options =
-      regex_replace(encoding_options, line_wrap, "$1\n                                                 ");
+      regex_replace(encoding_options, line_wrap, "$1\n                                                    ");
   // Remove the 49 spaces and the new line added at the end
   encoding_options.resize(encoding_options.size() - 50);
 
   // clang-format off
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
+  out("  generate tpcc NUM_WAREHOUSES [CHUNK_SIZE] - Generate all TPC-C tables\n");
   out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-H tables\n");
   out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE] - Generate all TPC-DS tables\n");
   out("  load FILEPATH [TABLENAME [ENCODING]]    - Load table from disk specified by filepath FILEPATH, store it with name TABLENAME\n");  // NOLINT
@@ -419,43 +434,53 @@ int Console::_help(const std::string&) {
   out("  help                                    - Show this message\n\n");
   out("  setting [property] [value]              - Change a runtime setting\n\n");
   out("           scheduler (on|off)             - Turn the scheduler on (default) or off\n\n");
-  if constexpr (HYRISE_JIT_SUPPORT) {
-    out("           jit       (on|off)             - Turn just-in-time query compilation on or off (default)\n\n");
-  }
   // clang-format on
 
   return Console::ReturnCode::Ok;
 }
 
-int Console::_generate_tpch(const std::string& args) {
-  auto input = args;
-  boost::algorithm::trim<std::string>(input);
-  auto arguments = std::vector<std::string>{};
-  boost::algorithm::split(arguments, input, boost::is_space());
+int Console::_generate_tpcc(const std::string& args) {
+  const auto arguments = tokenize(args);
 
-  // Check whether there are one or two arguments.
-  auto args_valid = !arguments.empty() && arguments.size() <= 2;
-
-  // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
-  // and that's not actually an argument.
-  auto scale_factor = 1.0f;
-  if (!arguments.empty() && !arguments[0].empty()) {
-    scale_factor = std::stof(arguments[0]);
-  } else {
-    args_valid = false;
+  if (arguments.empty() || arguments.size() > 2) {
+    // clang-format off
+    out("Usage: ");
+    out("  generate_tpcc NUM_WAREHOUSES [CHUNK_SIZE]   Generate TPC-C tables with the specified number of warehouses. \n");  // NOLINT
+    out("                                              Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT
+    // clang-format on
+    return ReturnCode::Error;
   }
+
+  auto num_warehouses = std::stoi(arguments[1]);
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
     chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
   }
 
-  if (!args_valid) {
+  out("Generating all TPCC tables (this might take a while) ...\n");
+  TPCCTableGenerator{num_warehouses, chunk_size}.generate_and_store();
+
+  return ReturnCode::Ok;
+}
+
+int Console::_generate_tpch(const std::string& args) {
+  const auto arguments = tokenize(args);
+
+  if (arguments.empty() || arguments.size() > 2) {
+    // clang-format off
     out("Usage: ");
     out("  generate_tpch SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-H tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
+    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) + " by default. \n");  // NOLINT
+    // clang-format on
     return ReturnCode::Error;
+  }
+
+  auto scale_factor = std::stof(arguments[0]);
+
+  auto chunk_size = Chunk::DEFAULT_SIZE;
+  if (arguments.size() > 1) {
+    chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -465,34 +490,21 @@ int Console::_generate_tpch(const std::string& args) {
 }
 
 int Console::_generate_tpcds(const std::string& args) {
-  auto input = args;
-  boost::algorithm::trim<std::string>(input);
-  auto arguments = std::vector<std::string>{};
-  boost::algorithm::split(arguments, input, boost::is_space());
+  const auto arguments = tokenize(args);
 
-  // Check whether there are one or two arguments.
-  auto args_valid = !arguments.empty() && arguments.size() <= 2;
-
-  // `arguments[0].empty()` is necessary since boost::algorithm::split() will create ["", ] for an empty input string
-  // and that's not actually an argument.
-  auto scale_factor = uint32_t{1};
-  if (!arguments.empty() && !arguments[0].empty()) {
-    scale_factor = static_cast<uint32_t>(std::stoul(arguments[0]));
-  } else {
-    args_valid = false;
+  if (arguments.empty() || arguments.size() > 2) {
+    out("Usage: ");
+    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
+    out("                                             Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
+        " by default. \n");
+    return ReturnCode::Error;
   }
+
+  auto scale_factor = static_cast<uint32_t>(std::stoul(arguments[0]));
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
     chunk_size = boost::lexical_cast<ChunkOffset>(arguments[1]);
-  }
-
-  if (!args_valid) {
-    out("Usage: ");
-    out("  generate_tpcds SCALE_FACTOR [CHUNK_SIZE]   Generate TPC-DS tables with the specified scale factor. \n");
-    out("                                            Chunk size is " + std::to_string(Chunk::DEFAULT_SIZE) +
-        " by default. \n");
-    return ReturnCode::Error;
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
@@ -576,7 +588,13 @@ int Console::_load_table(const std::string& args) {
 
   if (supported) {
     out("Encoding \"" + tablename + "\" using " + encoding + "\n");
-    ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table(tablename), encoding_type->second);
+    std::vector<ChunkID> immutable_chunks;
+    for (ChunkID chunk_id(0); chunk_id < table->chunk_count(); ++chunk_id) {
+      if (!table->get_chunk(chunk_id)->is_mutable()) {
+        immutable_chunks.push_back(chunk_id);
+      }
+    }
+    ChunkEncoder::encode_chunks(table, immutable_chunks, encoding_type->second);
   }
 
   return ReturnCode::Ok;
@@ -605,16 +623,16 @@ int Console::_export_table(const std::string& args) {
   const std::string& extension = file_parts.back();
 
   out("Exporting " + tablename + " into \"" + filepath + "\" ...\n");
-  auto gt = std::make_shared<GetTable>(tablename);
-  gt->execute();
+  auto get_table = std::make_shared<GetTable>(tablename);
+  get_table->execute();
 
   try {
     if (extension == "bin") {
-      auto ex = std::make_shared<ExportBinary>(gt, filepath);
-      ex->execute();
+      auto exporter = std::make_shared<ExportBinary>(get_table, filepath);
+      exporter->execute();
     } else if (extension == "csv") {
-      auto ex = std::make_shared<ExportCsv>(gt, filepath);
-      ex->execute();
+      auto exporter = std::make_shared<ExportCsv>(get_table, filepath);
+      exporter->execute();
     } else {
       out("Exporting to extension \"" + extension + "\" is not supported.\n");
       return ReturnCode::Error;
@@ -638,15 +656,15 @@ int Console::_print_table(const std::string& args) {
 
   const std::string& tablename = arguments.at(0);
 
-  auto gt = std::make_shared<GetTable>(tablename);
+  auto get_table = std::make_shared<GetTable>(tablename);
   try {
-    gt->execute();
+    get_table->execute();
   } catch (const std::exception& exception) {
     out("Error: Exception thrown while loading table:\n  " + std::string(exception.what()) + "\n");
     return ReturnCode::Error;
   }
 
-  out(gt->get_output(), PrintFlags::Mvcc);
+  out(get_table->get_output(), PrintFlags::Mvcc);
 
   return ReturnCode::Ok;
 }
@@ -662,12 +680,12 @@ int Console::_visualize(const std::string& input) {
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
-  constexpr char EXEC[] = "exec";
-  constexpr char NOEXEC[] = "noexec";
-  constexpr char PQP[] = "pqp";
-  constexpr char LQP[] = "lqp";
-  constexpr char UNOPTLQP[] = "unoptlqp";
-  constexpr char JOINS[] = "joins";
+  constexpr auto EXEC = "exec";
+  constexpr auto NOEXEC = "noexec";
+  constexpr auto PQP = "pqp";
+  constexpr auto LQP = "lqp";
+  constexpr auto UNOPTLQP = "unoptlqp";
+  constexpr auto JOINS = "joins";
 
   // Determine whether the specified query is to be executed before visualization
   auto no_execute = false;  // Default
@@ -813,21 +831,6 @@ int Console::_change_runtime_setting(const std::string& input) {
       return 1;
     }
     return 0;
-  } else if (property == "jit") {
-    if constexpr (HYRISE_JIT_SUPPORT) {
-      _pqp_cache->clear();
-      if (value == "on") {
-        _use_jit = true;
-        out("Just-in-time query compilation turned on\n");
-      } else if (value == "off") {
-        _use_jit = false;
-        out("Just-in-time query compilation turned off\n");
-      } else {
-        out("Usage: jit (on|off)\n");
-        return 1;
-      }
-      return 0;
-    }
   }
 
   out("Error: Unknown property\n");
@@ -1001,12 +1004,7 @@ char** Console::_command_completion(const char* text, int start, int end) {
 
   std::string input(rl_line_buffer);
 
-  // Remove whitespace duplicates to not get empty tokens after boost::algorithm::split
-  auto both_are_spaces = [](char left, char right) { return (left == right) && (left == ' '); };
-  input.erase(std::unique(input.begin(), input.end(), both_are_spaces), input.end());
-
-  std::vector<std::string> tokens;
-  boost::algorithm::split(tokens, input, boost::is_space());
+  const auto tokens = tokenize(input);
 
   // Choose completion function depending on the input.
   const std::string& first_word = tokens[0];
@@ -1025,6 +1023,8 @@ char** Console::_command_completion(const char* text, int start, int end) {
     }
     // Turn off filepath completion
     rl_attempted_completion_over = 1;
+
+    // NOLINTNEXTLINE(bugprone-branch-clone)
   } else if (first_word == "quit" || first_word == "exit" || first_word == "help") {
     // Turn off filepath completion
     rl_attempted_completion_over = 1;

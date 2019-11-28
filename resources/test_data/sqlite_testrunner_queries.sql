@@ -11,6 +11,7 @@ SELECT 22 / 5 AS col;
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
 SELECT * FROM mixed WHERE a > d AND b > 1;
+SELECT * FROM mixed WHERE a = d;
 SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
 SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
 SELECT * FROM mixed WHERE 40 >= b;
@@ -27,6 +28,7 @@ SELECT * FROM mixed WHERE b + c < c * b - 100;
 SELECT * FROM mixed WHERE id > b;
 SELECT * FROM mixed WHERE id = b;
 SELECT * FROM mixed WHERE id IN (SELECT 14) AND b > (SELECT 15) AND b < (SELECT 98);
+SELECT * FROM mixed WHERE id IN (SELECT 14 + 1) AND b > (SELECT 15 + 2) AND b < (SELECT 98 + 3)
 SELECT * FROM mixed WHERE id >= 5.5;
 SELECT * FROM mixed WHERE id BETWEEN 5.5 AND 8;
 SELECT * FROM mixed WHERE id < 5.5;
@@ -121,7 +123,11 @@ SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed;
 SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed GROUP BY a;
 SELECT a1, b2, a3 FROM (SELECT a AS a1, b AS b2, b AS b3, a AS a3, b AS b1, a AS a2 FROM mixed) AS R;
 SELECT * FROM (SELECT COUNT(*) AS cnt1, COUNT(*) AS cnt2, COUNT(*) AS cnt3 FROM mixed) AS R;
-SELECT b AS b1, b AS b2 FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > b1)
+SELECT b AS b1, b AS b2 FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > b1);
+SELECT * FROM (SELECT COUNT(*) AS cnt1 FROM id_int_int_int_50) AS s1, (SELECT COUNT(*) AS cnt2 FROM id_int_int_int_100) AS s2;
+SELECT * FROM (SELECT COUNT(a) AS cnt1 FROM id_int_int_int_50) AS s1, (SELECT COUNT(a) AS cnt2 FROM id_int_int_int_100) AS s2;
+SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.b = R.b) AS S2;
+SELECT * FROM (SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a) AS S1, (SELECT COUNT(*) FROM id_int_int_int_50 AS L, id_int_int_int_50 AS R WHERE L.a = R.a) AS S2;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
@@ -228,6 +234,7 @@ SELECT * FROM id_int_int_int_100 AS r WHERE a >= (SELECT MIN(s.a) FROM id_int_in
 SELECT * FROM id_int_int_int_100 AS r WHERE a < (SELECT SUM(min_a) FROM (SELECT MIN(s.a) AS min_a FROM id_int_int_int_50 AS s WHERE s.b = r.b GROUP BY s.c) min_a_per_c)
 
 -- GROUP BY
+SELECT SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
@@ -246,9 +253,21 @@ SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT id_int_int_i
 
 -- COUNT(*)
 SELECT COUNT(*) FROM mixed;
+SELECT COUNT(*) + 1 FROM mixed;
 SELECT COUNT(*) FROM mixed GROUP BY a;
 SELECT a, COUNT(*) FROM mixed GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
+SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a;
+SELECT COUNT(*) FROM id_int_int_int_50, id_int_int_int_100;
+SELECT COUNT(*) FROM (SELECT 1) t;
+SELECT COUNT(*) FROM mixed, id_int_int_int_100;
+
+-- COUNT(expr)
+SELECT COUNT(1) FROM mixed;
+SELECT COUNT(b + 1) FROM mixed;
+SELECT COUNT(1 + 2) FROM mixed;
+SELECT a, COUNT(1) FROM mixed GROUP BY a;
+SELECT b + 1, COUNT(c + 1) FROM mixed GROUP BY b+1;
 
 -- COUNT(DISTINCT)
 SELECT a, COUNT(DISTINCT b) as d FROM mixed GROUP BY a;
@@ -346,6 +365,8 @@ SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 14) AND b > (SELECT 15);
 SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 11) AND b > (SELECT 11);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT 9 + 2) AND b > (SELECT 9 + 2);
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT MAX(id) / 9 FROM mixed) AND b > (SELECT MAX(id) / 9 FROM mixed);
 
 -- Correlated parameter in WHERE statement
 SELECT * FROM id_int_int_int_100 WHERE a < (SELECT MAX(b) FROM mixed WHERE mixed.b > id_int_int_int_100.b)

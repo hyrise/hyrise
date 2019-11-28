@@ -18,10 +18,10 @@ namespace opossum {
  * Further, the aggregate operator is used to perform DISTINCT operations. This functionality is achieved by having no aggregates.
  */
 struct AggregateColumnDefinition final {
-  AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)
+  AggregateColumnDefinition(const ColumnID& column, const AggregateFunction function)
       : column(column), function(function) {}
 
-  const std::optional<ColumnID> column;
+  const ColumnID column;
   const AggregateFunction function;
 };
 
@@ -168,9 +168,9 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
 
   const std::vector<ColumnID>& groupby_column_ids() const;
 
-  const std::string name() const override = 0;
+  const std::string& name() const override = 0;
 
-  const std::string description(DescriptionMode description_mode) const override;
+  std::string description(DescriptionMode description_mode) const override;
 
  protected:
   void _validate_aggregates() const;

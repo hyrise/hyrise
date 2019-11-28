@@ -141,6 +141,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       table->append({i});
     }
 
+    table->get_chunk(static_cast<ChunkID>(ChunkID{0}))->finalize();
+
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, {_encoding_type});
 
     auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));

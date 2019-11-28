@@ -46,11 +46,10 @@ std::string FunctionExpression::as_column_name() const {
 DataType FunctionExpression::data_type() const {
   switch (function_type) {
     case FunctionType::Substring:
-      return DataType::String;
     case FunctionType::Concatenate:
       return DataType::String;
   }
-  Fail("GCC thinks this is reachable");
+  Fail("Invalid enum value");
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {

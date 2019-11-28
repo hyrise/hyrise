@@ -1,10 +1,10 @@
 #pragma once
 
-#include <boost/iterator/iterator_facade.hpp>
-
 #include <memory>
 #include <ostream>
 #include <vector>
+
+#include <boost/iterator/iterator_facade.hpp>
 
 #include "variable_length_key.hpp"
 

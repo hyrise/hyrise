@@ -16,7 +16,10 @@ CreateView::CreateView(const std::string& view_name, const std::shared_ptr<LQPVi
       _view(view),
       _if_not_exists(if_not_exists) {}
 
-const std::string CreateView::name() const { return "CreateView"; }
+const std::string& CreateView::name() const {
+  static const auto name = std::string{"CreateView"};
+  return name;
+}
 
 const std::string& CreateView::view_name() const { return _view_name; }
 bool CreateView::if_not_exists() const { return _if_not_exists; }

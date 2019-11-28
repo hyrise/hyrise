@@ -6,7 +6,6 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/csv_writer.hpp"
-#include "storage/abstract_segment_visitor.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -36,7 +35,7 @@ class ExportCsv : public AbstractReadOnlyOperator {
    */
   explicit ExportCsv(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename);
 
-  const std::string name() const override;
+  const std::string& name() const override;
 
  protected:
   /*

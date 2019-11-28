@@ -17,7 +17,10 @@ Limit::Limit(const std::shared_ptr<const AbstractOperator>& in,
              const std::shared_ptr<AbstractExpression>& row_count_expression)
     : AbstractReadOnlyOperator(OperatorType::Limit, in), _row_count_expression(row_count_expression) {}
 
-const std::string Limit::name() const { return "Limit"; }
+const std::string& Limit::name() const {
+  static const auto name = std::string{"Limit"};
+  return name;
+}
 
 std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
 
@@ -82,7 +85,8 @@ std::shared_ptr<const Table> Limit::_on_execute() {
         std::copy(begin, begin + output_chunk_row_count, output_pos_list->begin());
       } else {
         referenced_table = input_table;
-        for (ChunkOffset chunk_offset = 0; chunk_offset < output_chunk_row_count; chunk_offset++) {
+        for (ChunkOffset chunk_offset = 0; chunk_offset < static_cast<ChunkOffset>(output_chunk_row_count);
+             chunk_offset++) {
           (*output_pos_list)[chunk_offset] = RowID{chunk_id, chunk_offset};
         }
       }

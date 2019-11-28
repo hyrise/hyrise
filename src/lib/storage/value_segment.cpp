@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include "abstract_segment_visitor.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -66,7 +65,7 @@ ValueSegment<T>::ValueSegment(std::vector<T>&& values, std::vector<bool>&& null_
 }
 
 template <typename T>
-const AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
+AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
 
@@ -84,7 +83,7 @@ bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
 }
 
 template <typename T>
-const T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
+T ValueSegment<T>::get(const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   Assert(!is_nullable() || !(*_null_values).at(chunk_offset), "Can’t return value of segment type because it is null.");
@@ -142,8 +141,8 @@ pmr_concurrent_vector<bool>& ValueSegment<T>::null_values() {
 }
 
 template <typename T>
-size_t ValueSegment<T>::size() const {
-  return _values.size();
+ChunkOffset ValueSegment<T>::size() const {
+  return static_cast<ChunkOffset>(_values.size());
 }
 
 template <typename T>

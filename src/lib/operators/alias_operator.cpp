@@ -15,9 +15,12 @@ AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& inpu
   Assert(_column_ids.size() == _aliases.size(), "Expected as many aliases as columns");
 }
 
-const std::string AliasOperator::name() const { return "Alias"; }
+const std::string& AliasOperator::name() const {
+  static const auto name = std::string{"Alias"};
+  return name;
+}
 
-const std::string AliasOperator::description(DescriptionMode description_mode) const {
+std::string AliasOperator::description(DescriptionMode description_mode) const {
   std::stringstream stream;
   stream << "Alias [";
   stream << boost::algorithm::join(_aliases, description_mode == DescriptionMode::SingleLine ? ", " : "\n");
@@ -70,7 +73,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   }
 
   return std::make_shared<Table>(output_column_definitions, input_table.type(), std::move(output_chunks),
-                                 input_table.has_mvcc());
+                                 input_table.uses_mvcc());
 }
 
 }  // namespace opossum

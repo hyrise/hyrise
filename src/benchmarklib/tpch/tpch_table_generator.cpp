@@ -13,10 +13,11 @@ extern "C" {
 #include "operators/import_binary.hpp"
 #include "storage/chunk.hpp"
 #include "table_builder.hpp"
+#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 extern char** asc_date;
-extern seed_t seed[];
+extern seed_t seed[];  // NOLINT
 
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #pragma clang diagnostic ignored "-Wfloat-conversion"
@@ -127,13 +128,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
     std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-    for (const auto& table_file : std::filesystem::recursive_directory_iterator(cache_directory)) {
-      const auto table_name = table_file.path().stem();
+    for (const auto& table_file : list_directory(cache_directory)) {
+      const auto table_name = table_file.stem();
       Timer timer;
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.path().relative_path();
+      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
 
       BenchmarkTableInfo table_info;
-      table_info.table = ImportBinary::read_binary(table_file.path());
+      table_info.table = ImportBinary::read_binary(table_file);
       table_info.loaded_from_binary = true;
       table_info_by_name[table_name] = table_info;
 
@@ -210,7 +211,26 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
                             convert_money(part.retailprice), part.comment);
 
+    // Some scale factors (e.g., 0.05) are not supported by tpch-dbgen as they produce non-unique partkey/suppkey
+    // combinations. The reason is probably somewhere in the magic in PART_SUPP_BRIDGE. As the partkey is
+    // ascending, those are easy to identify:
+
+    DSS_HUGE last_partkey = {};
+    auto suppkeys = std::vector<DSS_HUGE>{};
+
     for (const auto& partsupp : part.s) {
+      {
+        // Make sure we do not generate non-unique combinations (see above)
+        if (partsupp.partkey != last_partkey) {
+          Assert(partsupp.partkey > last_partkey, "Expected partkey to be generated in ascending order");
+          last_partkey = partsupp.partkey;
+          suppkeys.clear();
+        }
+        Assert(std::find(suppkeys.begin(), suppkeys.end(), partsupp.suppkey) == suppkeys.end(),
+               "Scale factor unsupported by tpch-dbgen. Consider choosing a \"round\" number.");
+        suppkeys.emplace_back(partsupp.suppkey);
+      }
+
       partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, convert_money(partsupp.scost),
                                   partsupp.comment);
     }
@@ -255,14 +275,29 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
    */
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-  table_info_by_name["customer"].table = customer_builder.finish_table();
-  table_info_by_name["orders"].table = order_builder.finish_table();
-  table_info_by_name["lineitem"].table = lineitem_builder.finish_table();
-  table_info_by_name["part"].table = part_builder.finish_table();
-  table_info_by_name["partsupp"].table = partsupp_builder.finish_table();
-  table_info_by_name["supplier"].table = supplier_builder.finish_table();
-  table_info_by_name["nation"].table = nation_builder.finish_table();
-  table_info_by_name["region"].table = region_builder.finish_table();
+  auto customer_table = customer_builder.finish_table();
+  table_info_by_name["customer"].table = customer_table;
+
+  auto orders_table = order_builder.finish_table();
+  table_info_by_name["orders"].table = orders_table;
+
+  auto lineitem_table = lineitem_builder.finish_table();
+  table_info_by_name["lineitem"].table = lineitem_table;
+
+  auto part_table = part_builder.finish_table();
+  table_info_by_name["part"].table = part_table;
+
+  auto partsupp_table = partsupp_builder.finish_table();
+  table_info_by_name["partsupp"].table = partsupp_table;
+
+  auto supplier_table = supplier_builder.finish_table();
+  table_info_by_name["supplier"].table = supplier_table;
+
+  auto nation_table = nation_builder.finish_table();
+  table_info_by_name["nation"].table = nation_table;
+
+  auto region_table = region_builder.finish_table();
+  table_info_by_name["region"].table = region_table;
 
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
@@ -291,6 +326,37 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
   // Allowed as per TPC-H Specification, paragraph 1.5.2
   return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
+}
+
+void TPCHTableGenerator::_add_constraints(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  const auto& customer_table = table_info_by_name.at("customer").table;
+  customer_table->add_soft_unique_constraint({customer_table->column_id_by_name("c_custkey")}, IsPrimaryKey::Yes);
+
+  const auto& orders_table = table_info_by_name.at("orders").table;
+  orders_table->add_soft_unique_constraint({orders_table->column_id_by_name("o_orderkey")}, IsPrimaryKey::Yes);
+
+  const auto& lineitem_table = table_info_by_name.at("lineitem").table;
+  lineitem_table->add_soft_unique_constraint(
+      {lineitem_table->column_id_by_name("l_orderkey"), lineitem_table->column_id_by_name("l_linenumber")},
+      IsPrimaryKey::Yes);
+
+  const auto& part_table = table_info_by_name.at("part").table;
+  part_table->add_soft_unique_constraint({part_table->column_id_by_name("p_partkey")}, IsPrimaryKey::Yes);
+
+  const auto& partsupp_table = table_info_by_name.at("partsupp").table;
+  partsupp_table->add_soft_unique_constraint(
+      {partsupp_table->column_id_by_name("ps_partkey"), partsupp_table->column_id_by_name("ps_suppkey")},
+      IsPrimaryKey::Yes);
+
+  const auto& supplier_table = table_info_by_name.at("supplier").table;
+  supplier_table->add_soft_unique_constraint({supplier_table->column_id_by_name("s_suppkey")}, IsPrimaryKey::Yes);
+
+  const auto& nation_table = table_info_by_name.at("nation").table;
+  nation_table->add_soft_unique_constraint({nation_table->column_id_by_name("n_nationkey")}, IsPrimaryKey::Yes);
+
+  const auto& region_table = table_info_by_name.at("region").table;
+  region_table->add_soft_unique_constraint({region_table->column_id_by_name("r_regionkey")}, IsPrimaryKey::Yes);
 }
 
 }  // namespace opossum

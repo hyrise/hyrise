@@ -28,7 +28,6 @@ class Optimizer;
  * Defaults:
  *  - MVCC is enabled
  *  - The default Optimizer (Optimizer::create_default_optimizer()) is used.
- *  - No JIT operators
  *
  * Favour this interface over calling the SQLPipeline[Statement] constructors with their long parameter list.
  * See SQLPipeline[Statement] doc for these classes, in short SQLPipeline ist for queries with multiple statement,
@@ -39,14 +38,13 @@ class SQLPipelineBuilder final {
   // Plan caches used if `with_{l/p}qp_cache()` are not used in this builder. Both default caches can be nullptr
   // themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
   // These default caches stem from the extended discussion in #1615 and are mainly for Plugins, whose only
-  // way of communicating with Hyrise are global variables. TODO(anybody) remove them again with #1677?
+  // way of communicating with Hyrise are global variables.
   static std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
   static std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
 
   explicit SQLPipelineBuilder(const std::string& sql);
 
   SQLPipelineBuilder& with_mvcc(const UseMvcc use_mvcc);
-  SQLPipelineBuilder& with_lqp_translator(const std::shared_ptr<LQPTranslator>& lqp_translator);
   SQLPipelineBuilder& with_optimizer(const std::shared_ptr<Optimizer>& optimizer);
   SQLPipelineBuilder& with_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
   SQLPipelineBuilder& with_pqp_cache(const std::shared_ptr<SQLPhysicalPlanCache>& pqp_cache);
@@ -75,7 +73,6 @@ class SQLPipelineBuilder final {
 
   UseMvcc _use_mvcc{UseMvcc::Yes};
   std::shared_ptr<TransactionContext> _transaction_context;
-  std::shared_ptr<LQPTranslator> _lqp_translator;
   std::shared_ptr<Optimizer> _optimizer;
   std::shared_ptr<SQLPhysicalPlanCache> _pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;

@@ -21,6 +21,8 @@ enum class ReadWriteOperatorState {
   Committed    // Changes have been committed.
 };
 
+std::ostream& operator<<(std::ostream& stream, const ReadWriteOperatorState& phase);
+
 /**
  * AbstractReadWriteOperator is the superclass of all operators that need write access to tables.
  * It mainly provides the commit_records and rollback_records methods,

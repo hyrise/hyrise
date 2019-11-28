@@ -1,8 +1,6 @@
 #include "csv_parser.hpp"
 
-#include <boost/algorithm/string/trim.hpp>
 #include <fstream>
-#include <functional>
 #include <list>
 #include <memory>
 #include <optional>
@@ -17,8 +15,6 @@
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/chunk_encoder.hpp"
-#include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -124,12 +120,13 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
   std::string search_for{_meta.config.separator, _meta.config.delimiter, _meta.config.quote};
 
-  size_t pos, from = 0;
-  unsigned int rows = 0, field_count = 1;
+  size_t from = 0;
+  unsigned int rows = 0;
+  unsigned int field_count = 1;
   bool in_quotes = false;
   while (rows < table.max_chunk_size() || 0 == table.max_chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
-    pos = csv_content.find_first_of(search_for, from);
+    auto pos = csv_content.find_first_of(search_for, from);
     if (std::string::npos == pos) {
       break;
     }
@@ -149,7 +146,8 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == _meta.config.delimiter && !in_quotes) {
-      DebugAssert(field_count == table.column_count(), "Number of CSV fields does not match number of columns.");
+      DebugAssert(field_count == static_cast<size_t>(table.column_count()),
+                  "Number of CSV fields does not match number of columns.");
       ++rows;
       field_count = 0;
     }
@@ -209,8 +207,11 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
   }
 
   // Transform the field_offsets to segments and add segments to chunk.
-  for (auto& converter : converters) {
-    segments.push_back(converter->finish());
+  {
+    std::lock_guard<std::mutex> lock(_append_chunk_mutex);
+    for (auto& converter : converters) {
+      segments.push_back(converter->finish());
+    }
   }
 
   return row_count;
