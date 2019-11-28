@@ -640,7 +640,7 @@ endif()
 add_dependencies(hyrise_impl generate-provider-hpp)
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
-# of negatively affecting the build time
+# of negatively affecting the build time.
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
     target_precompile_headers(hyrise_impl PUBLIC
       all_parameter_variant.hpp
