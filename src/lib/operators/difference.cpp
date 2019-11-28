@@ -1,7 +1,5 @@
 #include "difference.hpp"
 
-#include <boost/lexical_cast.hpp>
-
 #include <algorithm>
 #include <iterator>
 #include <memory>
@@ -11,6 +9,8 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <boost/lexical_cast.hpp>
 
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"

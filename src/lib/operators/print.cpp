@@ -1,13 +1,13 @@
 #include "print.hpp"
 
-#include <boost/lexical_cast.hpp>
-
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <boost/lexical_cast.hpp>
 
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
