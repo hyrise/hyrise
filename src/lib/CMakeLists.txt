@@ -584,7 +584,6 @@ set(
 
 set(
     LIBRARIES
-    pthread
     sqlparser
     cqf
     uninitialized_vector
@@ -599,7 +598,7 @@ set(
 )
 
 if (NOT APPLE)
-    set(LIBRARIES ${LIBRARIES} atomic)
+    set(LIBRARIES ${LIBRARIES} atomic pthread)
 endif()
 
 if (${ENABLE_NUMA_SUPPORT})
@@ -630,7 +629,7 @@ add_custom_target (
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
-if(NOT ${ENABLE_COVERAGE} AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
+if(NOT ENABLE_COVERAGE AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
     add_library(hyrise_impl SHARED ${SOURCES})
 else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
@@ -639,7 +638,6 @@ else()
 endif()
 
 add_dependencies(hyrise_impl generate-provider-hpp)
-
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time
@@ -651,7 +649,7 @@ if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
       storage/table.hpp
       types.hpp
     )
-endif() 
+endif()
 
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(
@@ -662,8 +660,8 @@ set_source_files_properties(
 
 # Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
-target_link_libraries(hyrise PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
-target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
+target_link_libraries_system(hyrise_impl PUBLIC nlohmann_json::nlohmann_json)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.

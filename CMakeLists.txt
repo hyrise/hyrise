@@ -113,12 +113,14 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -O0")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0")
 
 # Dependencies
-find_package(Numa)
+if (UNIX)
+    find_package(Numa)
+endif()
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS container system thread)
+find_package(Boost REQUIRED COMPONENTS container system)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
 

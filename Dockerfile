@@ -44,7 +44,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer
 
-# Temporarily for cmake release candidate:
+# Temporarily while cmake 3.16 is not yet in the repositories:
 # TODO: Remove this once the default cmake version is >= 3.16, most likely not before Ubuntu 20.04. Then re-add cmake above.
 RUN apt-get update && apt-get install -y wget libssl-dev && apt-get clean \
     && wget https://github.com/Kitware/CMake/releases/download/v3.16.0/cmake-3.16.0.tar.gz \
