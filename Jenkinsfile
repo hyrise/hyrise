@@ -52,7 +52,7 @@ try {
     // or add it to /etc/fstab:
     // tmpfs  /mnt/ccache tmpfs defaults,size=51201M  0 0
 
-    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros\" -e\"CCACHE_DEPEND=yes\" --privileged=true") {
+    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros\" -e\"CCACHE_DEPEND=yes\" --privileged=true") {
       try {
         stage("Setup") {
           checkout scm
@@ -303,7 +303,7 @@ try {
 
           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH CCACHE_DEBUG=1 make -j libjemalloc-build && ../scripts/analyze_ccache_usage.py"
-          sh "cd clang-debug && CCACHE_CPP2=yes CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_DEPEND=yes CCACHE_BASEDIR=`pwd` make -j8"
+          sh "cd clang-debug && CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_BASEDIR=`pwd` make -j8"
           sh "./clang-debug/hyriseTest"
           sh "./scripts/test/hyriseConsole_test.py clang-debug"
           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"

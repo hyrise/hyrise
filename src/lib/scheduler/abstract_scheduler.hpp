@@ -5,7 +5,7 @@
 
 #include "types.hpp"
 #include "utils/assert.hpp"
-// #include "utils/tracing/probes.hpp"
+#include "utils/tracing/probes.hpp"
 #include "worker.hpp"
 
 namespace opossum {
@@ -67,9 +67,9 @@ class AbstractScheduler : public Noncopyable {
 
   template <typename TaskType>
   void schedule_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
-    // DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
+    DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
     for (auto& task : tasks) {
-      // DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(task.get()));
+      DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(task.get()));
       task->schedule();
     }
   }
@@ -77,7 +77,7 @@ class AbstractScheduler : public Noncopyable {
   template <typename TaskType>
   void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
     schedule_tasks(tasks);
-    // DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS_AND_WAIT, tasks.size());
+    DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS_AND_WAIT, tasks.size());
     wait_for_tasks(tasks);
   }
 };
