@@ -644,7 +644,6 @@ add_dependencies(hyrise_impl generate-provider-hpp)
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
     target_precompile_headers(hyrise_impl PUBLIC
       all_parameter_variant.hpp
-      all_type_variant.hpp
       storage/create_iterable_from_segment.hpp
       storage/table.hpp
       types.hpp
