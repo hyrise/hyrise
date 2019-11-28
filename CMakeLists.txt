@@ -125,7 +125,7 @@ find_package(Boost REQUIRED COMPONENTS container system)
 add_definitions(-DBOOST_THREAD_VERSION=5)
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
-if(DEFINED CI_BUILD)
+if(CI_BUILD)
     if(NOT ${NUMA_FOUND})
         message(FATAL_ERROR "-DCI_BUILD=ON was set, but libnuma was not found.")
     endif()
