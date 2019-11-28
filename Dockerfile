@@ -48,8 +48,8 @@ RUN apt-get update \
 # TODO: Remove this once the default cmake version is >= 3.16, most likely not before Ubuntu 20.04. Then re-add cmake above.
 RUN apt-get update && apt-get install -y wget libssl-dev && apt-get clean \
     && wget https://github.com/Kitware/CMake/releases/download/v3.16.0/cmake-3.16.0.tar.gz \
-    && cd cmake-3.16.0 \
     && tar xf cmake-3.16.0.tar.gz \
+    && cd cmake-3.16.0 \
     && ./configure && make -j && make install
 
 ENV OPOSSUM_HEADLESS_SETUP=true
