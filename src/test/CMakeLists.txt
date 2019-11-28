@@ -244,8 +244,12 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
 
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyriseTest PUBLIC
+    target_precompile_headers(hyriseTest PRIVATE
         <gtest/gtest.h>
+        [["all_parameter_variant.hpp"]]
+        [["storage/create_iterable_from_segment.hpp"]]
+        [["storage/table.hpp"]]
+        [["types.hpp"]]
     )
 
     # Exclude files that use gmock as these are incompatible with unity builds and pre-compiled headers
