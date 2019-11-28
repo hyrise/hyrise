@@ -639,17 +639,6 @@ endif()
 
 add_dependencies(hyrise_impl generate-provider-hpp)
 
-# Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
-# of negatively affecting the build time.
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyrise_impl PUBLIC
-      all_parameter_variant.hpp
-      storage/create_iterable_from_segment.hpp
-      storage/table.hpp
-      types.hpp
-    )
-endif()
-
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(
     utils/list_directory.cpp
@@ -662,6 +651,17 @@ set_source_files_properties(
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} INTERFACE custom_jemalloc -rdynamic)
 target_link_libraries_system_private(hyrise_impl nlohmann_json::nlohmann_json)
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
+
+# Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
+# of negatively affecting the build time.
+if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
+    target_precompile_headers(hyrise_impl PUBLIC
+      all_parameter_variant.hpp
+      storage/create_iterable_from_segment.hpp
+      storage/table.hpp
+      types.hpp
+    )
+endif()
 
 # -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise_impl PRIVATE -fPIC)
