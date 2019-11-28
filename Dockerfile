@@ -14,7 +14,6 @@ RUN apt-get update \
         clang-9 \
         clang-format-9 \
         clang-tidy-9 \
-        cmake \
         curl \
         g++-9 \
         gcc-9 \
@@ -46,9 +45,10 @@ RUN apt-get update \
     && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer
 
 # Temporarily for cmake release candidate:
-# TODO: Remove this once the default cmake version is >= 3.16, most likely not before Ubuntu 20.04.
-RUN apt-get update && apt-get install -y wget && apt-get clean \
-    && wget https://github.com/Kitware/CMake/releases/download/v3.16.0-rc1/cmake-3.16.0-rc1-Linux-x86_64.tar.gz \
-    && tar xf cmake-3.16.0-rc1-Linux-x86_64.tar.gz
+# TODO: Remove this once the default cmake version is >= 3.16, most likely not before Ubuntu 20.04. Then re-add cmake above.
+RUN apt-get update && apt-get install -y wget libssl-dev && apt-get clean \
+    && wget https://github.com/Kitware/CMake/releases/download/v3.16.0/cmake-3.16.0.tar.gz \
+    && tar xf cmake-3.16.0.tar.gz \
+    && ./configure && make -j && make install
 
 ENV OPOSSUM_HEADLESS_SETUP=true
