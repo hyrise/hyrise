@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# For a build folder that was compiled with ccache and the environment variable CCACHE_DEBUG=1, this prints the number
+# of compiled files and the ccache miss ratio. This helps 
+
 from pathlib import Path
 import re
 import os
@@ -30,5 +33,7 @@ for file in files:
   if files[file] == 'miss':
     misses += 1
     print("ccache miss: %s" % (shortened))
+  else:
+    print("ccache hit: %s" % (shortened))
 
 print("\n=== %i files, %i cache misses (%f %%)===\n" % (len(files), misses, float(misses) / len(files) * 100))
