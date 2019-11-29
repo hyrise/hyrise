@@ -48,11 +48,11 @@ try {
     def oppossumCI = docker.image('hyrise/opossum-ci:19.10');
     oppossumCI.pull()
     // create ccache volume on host using:
-    // mkdir /mnt/ccache; mount -t tmpfs -o size=50G none /mnt/ccache
+    // mkdir /mnt/ccache; mount -t tmpfs -o size=200G none /mnt/ccache
     // or add it to /etc/fstab:
-    // tmpfs  /mnt/ccache tmpfs defaults,size=51201M  0 0
+    // tmpfs  /mnt/ccache tmpfs defaults,size=200G  0 0
 
-    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_MAXSIZE=50GB\" -e \"CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros\" -e\"CCACHE_DEPEND=1\" -e\"CCACHE_NOHASHDIR=1\" -e\"CCACHE_DEBUG=1\" --privileged=true") {
+    oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_MAXSIZE=200GB\" -e \"CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros\" -e\"CCACHE_DEPEND=1\" -e\"CCACHE_NOHASHDIR=1\" -e\"CCACHE_DEBUG=1\" --privileged=true") {
       try {
         stage("Setup") {
           checkout scm

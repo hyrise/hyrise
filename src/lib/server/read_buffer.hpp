@@ -7,8 +7,6 @@
 
 namespace opossum {
 
-using Socket = boost::asio::ip::tcp::socket;
-
 // Dedicated buffer for read operations. In contrast to the WriteBuffer integer types are converted from network to
 // host byte order and data will only be read from the network device.
 template <typename SocketType>
