@@ -64,7 +64,7 @@ try {
 
           // GCC produces non-deterministics files when precompiled headers are built: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92717
           // Disable ASLR for the gcc build process (not for the resulting executable) to stop this from happening:
-          ccache_no_aslr = 'CCACHE_PREFIX="setarch \$(uname -m) -R"'
+          ccache_no_aslr = 'CCACHE_PREFIX="setarch x86_64 -R"'
           // TODO: verify this in cmake
           // TODO: reduce cmake verbosity
 
