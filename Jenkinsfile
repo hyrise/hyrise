@@ -64,7 +64,7 @@ try {
 
           // GCC produces non-deterministics files when precompiled headers are built: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92717
           // Disable ASLR for the gcc build process (not for the resulting executable) to stop this from happening:
-          ccache_no_aslr = 'CCACHE_PREFIX="setarch x86_64 -R"'
+          disable_aslr = 'setarch x86_64 -R'
           // TODO: verify this in cmake
           // TODO: reduce cmake verbosity
 
@@ -92,7 +92,7 @@ try {
           }
         }, gccDebug: {
           stage("gcc-debug") {
-            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && ${ccache_no_aslr} make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 4)) && ../scripts/analyze_ccache_usage.py"
+            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && ${disable_aslr} make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 4)) && ../scripts/analyze_ccache_usage.py"
             sh "cd gcc-debug && ./hyriseTest"
           }
         }, lint: {
@@ -180,7 +180,7 @@ try {
         }, gccRelease: {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             stage("gcc-release") {
-              sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && ${ccache_no_aslr} make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
+              sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && ${disable_aslr} make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
               sh "./gcc-release/hyriseTest gcc-release"
               sh "./gcc-release/hyriseSystemTest gcc-release"
               sh "./scripts/test/hyriseConsole_test.py gcc-release"
