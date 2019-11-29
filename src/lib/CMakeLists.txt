@@ -336,6 +336,7 @@ set(
     server/ring_buffer_iterator.hpp
     server/server.cpp
     server/server.hpp
+    server/server_types.hpp
     server/session.cpp
     server/session.hpp
     server/write_buffer.cpp

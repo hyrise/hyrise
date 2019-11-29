@@ -98,7 +98,7 @@ if(${CMAKE_VERSION} VERSION_LESS "3.16.0")
 endif()
 
 # On Linux, use the lld linker, which is twice as fast for incremental debug builds
-if (UNIX)
+if (NOT APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld")
     set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld")
 endif()
@@ -113,9 +113,7 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -O0")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0")
 
 # Dependencies
-if (UNIX)
-    find_package(Numa)
-endif()
+find_package(Numa QUIET)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
