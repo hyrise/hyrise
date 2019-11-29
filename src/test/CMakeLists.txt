@@ -244,7 +244,7 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 target_link_libraries_system(hyriseTest nlohmann_json::nlohmann_json)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-target_compile_options(hyriseTest PRIVATE -Xclang -fno-pch-timestamp)
+target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
 endif()
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
     target_precompile_headers(hyriseTest PRIVATE
