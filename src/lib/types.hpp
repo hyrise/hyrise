@@ -300,6 +300,7 @@ struct hash<std::basic_string<char, std::char_traits<char>, opossum::Polymorphic
 
 namespace boost::asio::ip {
 class tcp {
+public:
   class socket;
 };
 }
