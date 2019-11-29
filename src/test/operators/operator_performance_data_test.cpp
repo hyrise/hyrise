@@ -78,7 +78,6 @@ TEST_F(OperatorPerformanceDataTest, AggregateHashStageRuntimes) {
   EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(static_cast<int>(AggregateHash::OperatorStages::GroupByColumns)).count()) > 0);
   EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(static_cast<int>(AggregateHash::OperatorStages::AggregateColumns)).count()) > 0);
   EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(static_cast<int>(AggregateHash::OperatorStages::OutputWriting)).count()) > 0);
-  EXPECT_THROW(static_cast<size_t>(staged_performance_data.get_stage_runtime(17).count()), std::logic_error);
 }
 
 }  // namespace opossum
