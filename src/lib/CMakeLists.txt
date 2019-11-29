@@ -654,11 +654,14 @@ target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
 # of negatively affecting the build time.
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+target_compile_options(hyrise_impl PRIVATE -Xclang -fno-pch-timestamp)
+endif()
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
-    target_precompile_headers(hyrise_impl PRIVATE # TODO
-      all_parameter_variant.hpp
-      storage/create_iterable_from_segment.hpp
-      storage/table.hpp
+    target_precompile_headers(hyrise_impl PRIVATE
+      #all_parameter_variant.hpp
+      #storage/create_iterable_from_segment.hpp
+      #storage/table.hpp
       types.hpp
     )
 endif()

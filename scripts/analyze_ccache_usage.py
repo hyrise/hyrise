@@ -4,8 +4,9 @@
 # of compiled files and the ccache miss ratio. This helps 
 
 from pathlib import Path
-import re
 import os
+import re
+import sys
 
 files = {}
 for filename in Path('src').rglob('*.ccache-log'):
@@ -36,4 +37,4 @@ for file in files:
   else:
     print("ccache hit: %s" % (shortened))
 
-print("\n=== %i files, %i cache misses (%f %%)===\n" % (len(files), misses, float(misses) / len(files) * 100))
+print("\n=== %i files, %i cache misses (%f %%) ===\n" % (len(files), misses, float(misses) / len(files) * 100))
