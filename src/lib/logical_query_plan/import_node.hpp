@@ -6,6 +6,8 @@
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/table_column_definition.hpp"
 
+#include "SQLParser.h"
+
 namespace opossum {
 
 /**
@@ -13,12 +15,13 @@ namespace opossum {
  */
 class ImportNode : public EnableMakeForLQPNode<ImportNode>, public BaseNonQueryNode {
  public:
-  ImportNode(const std::string& table_name, const std::string& file_path);
+  ImportNode(const std::string& table_name, const std::string& file_path, const hsql::ImportType file_type);
 
   std::string description() const override;
 
   const std::string table_name;
   const std::string file_path;
+  const hsql::ImportType file_type;
 
  protected:
   size_t _shallow_hash() const override;

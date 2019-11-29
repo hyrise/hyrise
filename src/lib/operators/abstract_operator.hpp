@@ -23,6 +23,7 @@ enum class OperatorType {
   ExportBinary,
   ExportCsv,
   GetTable,
+  Import,
   ImportBinary,
   ImportCsv,
   IndexScan,

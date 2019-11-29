@@ -186,6 +186,8 @@ set(
     operators/export_csv.hpp
     operators/get_table.cpp
     operators/get_table.hpp
+    operators/import.hpp
+    operators/import.cpp
     operators/import_binary.cpp
     operators/import_binary.hpp
     operators/import_csv.cpp

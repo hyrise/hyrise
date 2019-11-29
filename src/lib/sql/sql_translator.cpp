@@ -1212,7 +1212,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
   std::cout << "path: " << import_statement.filePath << std::endl <<
   "table: " << import_statement.tableName << std::endl << std::endl;
 
-  return ImportNode::make(import_statement.tableName, import_statement.filePath);
+  return ImportNode::make(import_statement.tableName, import_statement.filePath, import_statement.type);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
