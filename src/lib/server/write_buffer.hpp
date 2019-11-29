@@ -5,6 +5,8 @@
 #include "ring_buffer_iterator.hpp"
 #include "types.hpp"
 
+using Socket = boost::asio::ip::tcp::socket;
+
 namespace opossum {
 
 // Dedicated buffer for write operations. It flushes itself automatically if a new value does not fit into the
