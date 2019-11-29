@@ -14,6 +14,7 @@
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/vector_compression/simd_bp128/simd_bp128_vector.hpp"
 #include "storage/vector_compression/simd_bp128/oversized_types.hpp"
 #include "utils/assert.hpp"
 
@@ -170,6 +171,8 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
                                                 hana::type_c<ColumnDataType>)) {
         return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);
       }
+    case EncodingType::LZ4:
+      return _import_lz4_segment<ColumnDataType>(file, row_count);
     default:
       // This case happens if the read column type is not a valid EncodingType.
       Fail("Cannot import column: invalid column type");
@@ -259,10 +262,14 @@ std::shared_ptr<FrameOfReferenceSegment<T>> ImportBinary::_import_frame_of_refer
 
 template <typename T>
 std::shared_ptr<LZ4Segment<T>> ImportBinary::_import_lz4_segment(std::ifstream& file, ChunkOffset row_count) {
+
   const auto num_elements = _read_value<uint32_t>(file);
+   std::cout << "num elements " << num_elements << std::endl;
   const auto block_count = _read_value<uint32_t>(file);
-  const uint32_t block_size;
-  const uint32_t last_block_size;
+  std::cout << "block count " << block_count << std::endl;
+
+  uint32_t block_size;
+  uint32_t last_block_size;
   if (block_count > 1) {
     block_size = _read_value<uint32_t>(file);
     last_block_size = _read_value<uint32_t>(file);
@@ -270,43 +277,64 @@ std::shared_ptr<LZ4Segment<T>> ImportBinary::_import_lz4_segment(std::ifstream& 
     last_block_size = _read_value<uint32_t>(file);
     block_size = last_block_size;
   }
+
+  std::cout << "block size " << block_size << std::endl;
+  std::cout << "last block size " << last_block_size << std::endl;
+
+  const size_t compressed_size = (block_count - 1) * block_size + last_block_size;
+  std::cout << "compressed size " << compressed_size << std::endl;
   
+  std::cout << "read blocks" << std::endl;
   pmr_vector<pmr_vector<char>> lz4_blocks;
   for (uint32_t block_index = 0; block_index < block_count; ++block_index){
-    int32_t size;
-    if(block_index == block_count - 1){
-      size = last_block_size;
-    } else {
-      size = block_size;
-    }
+    const auto size = _read_value<uint32_t>(file);
     lz4_blocks.push_back(pmr_vector<char>(_read_values<char>(file, size)));
+    for (auto x : lz4_blocks.back()){
+      std::cout << "block " << x << std::endl;
+    }
   }
 
+  
   const auto null_values_size = _read_value<uint32_t>(file);
-  pmr_vector<bool> null_values();
+  std::cout << "read null values size " << null_values_size << std::endl;
+  std::optional<pmr_vector<bool>> null_values;
   if (null_values_size != 0) {
     null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
+  } else {
+    null_values = std::nullopt;
   }
 
   const auto dictionary_size = _read_value<uint32_t>(file);
-  const auto dictionary = pmr_vector<char>(_read_values<char>(file, dictionary_size));
-
-  const auto string_offsets_size = _read_value<uint32_t>(file);
-  std::unique_ptr<const BaseCompressedVector> string_offsets;
-  if (string_offsets_size > 0){
-    string_offsets = make_unique<const SimdBp128Vector>(_read_values<uint128_t>(file, string_offsets_size));
+  auto dictionary = pmr_vector<char>(_read_values<char>(file, dictionary_size));
+  for (auto x : dictionary) {
+    std::cout << "dict " << x << std::endl;
   }
 
-  const size_t compressed_size = (block_count - 1) * block_size + last_block_size;
-
-  if (string_offsets_size > 0) {
-    return LZ4Segment(std::move(lz4_blocks), std::move(null_values), std::move(dictionary), std::move(string_offsets),
-                      block_size, last_block_size, compressed_size, num_elements);  
-  } else {
-    return LZ4Segment(std::move(lz4_blocks), std::move(null_values), std::move(dictionary), 
-                      block_size, last_block_size, compressed_size, num_elements);  
-  }
   
+  const auto string_offsets_size = _read_value<uint32_t>(file);
+  std::cout << "sting_offset_size " << string_offsets_size << std::endl;
+    
+  if (string_offsets_size > 0){
+    const auto string_offsets_data_size = _read_value<uint32_t>(file);
+    std::cout << "sting_offset_data_size " << string_offsets_data_size << std::endl;
+    // so far, only SimdBp129 compression is supported... TODO write and read Compression type
+    auto string_offsets = std::make_unique<SimdBp128Vector>(_read_values<uint128_t>(file, string_offsets_data_size), string_offsets_size);
+    std::cout << "read string offset size: " << string_offsets->size() << std::endl;
+    std::cout << "read string offset data size: " << string_offsets->data_size() << std::endl;
+    for (auto x : *string_offsets) {
+      std::cout << "string offset " << x << std::endl;
+    }
+    return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary), std::move(string_offsets), 
+                                           block_size, last_block_size, compressed_size, num_elements);
+  } else {
+    if (std::is_same<T, pmr_string>::value){
+      return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary), nullptr, 
+                                             block_size, last_block_size, compressed_size, num_elements);
+    } else {
+      return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
+                                           block_size, last_block_size, compressed_size, num_elements);
+    }
+  }
 }
 
 }  // namespace opossum

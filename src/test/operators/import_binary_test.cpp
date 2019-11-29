@@ -33,7 +33,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsImportBinaryMultiEncodingTest,
-                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength),
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength, EncodingType::LZ4),
                          formatter);
 
 TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
@@ -76,6 +76,9 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, StringSegment) {
   expected_table->append({"is"});
   expected_table->append({"a"});
   expected_table->append({"test"});
+
+  expected_table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -167,6 +170,14 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, EmptyStringsSegment) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
   importer->execute();
+
+  std::cout << "LZ4 imported" << std::endl;
+  auto output_table = importer->get_output();
+  std::cout << "LZ4 output" << std::endl;
+
+  std::cout << output_table->column_count() << std::endl;
+  std::cout << output_table->row_count() << std::endl; 
+  std::cout << output_table->chunk_count() << std::endl; 
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }

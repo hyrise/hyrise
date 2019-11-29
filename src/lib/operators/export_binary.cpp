@@ -302,48 +302,78 @@ template <typename T>
 void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::LZ4);
 
-  // Write row count
+  // Write num elements
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.size()));
+  std::cout << "num elements " << lz4_segment.size() << std::endl;
 
   // Write number of blocks
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().size()));
-  
-  if(lz4_segment.lz4_blocks().size() > 1) {
-    // Write block size
-    export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().front().size()));
+  std::cout << "num blocks: " << lz4_segment.lz4_blocks().size() << std::endl;
+
+  if(lz4_segment.lz4_blocks().size() == 0) {
+    // No blocks at all: write just last block size = 0
+    export_value(ofstream, static_cast<uint32_t>(0));
+    std::cout << "no blocks size 0" << std::endl;
+  } else {
+    // if more than one block, write block size
+    if (lz4_segment.lz4_blocks().size() > 1) {
+      // Write block size
+      export_value(ofstream, static_cast<uint32_t>(lz4_segment.block_size()));
+      std::cout << "block size: " << lz4_segment.block_size() << std::endl;
+    }
+    // Write last block size
+    export_value(ofstream, static_cast<uint32_t>(lz4_segment.last_block_size()));
+    std::cout << "last block size: " << lz4_segment.last_block_size() << std::endl;
   }
-  // Write last block size
-  export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().back().size()));
 
   // Write LZ4 Blocks
   for (auto& lz4_block : lz4_segment.lz4_blocks()){
+    export_value(ofstream, static_cast<uint32_t>(lz4_block.size()));
     export_values(ofstream, lz4_block);
+    for (auto x : lz4_block){
+      std::cout << "block " << x << std::endl;
+    }
+    std::cout << "next block" << std::endl;
   }
 
   if (lz4_segment.null_values()){
     // Write NULL value size
     export_value(ofstream, static_cast<uint32_t>(lz4_segment.null_values()->size()));
+    std::cout << "null value size " << lz4_segment.null_values()->size() << std::endl;
     // Write NULL values
     export_values(ofstream, *lz4_segment.null_values());
+    for (auto x : *lz4_segment.null_values()){
+      std::cout << "null value " << x << std::endl;
+    }
   } else {
-    export_value(ofstream, 0u);
+    export_value(ofstream, static_cast<uint32_t>(0));
   }
 
   // Write dictionary size
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.dictionary().size()));
+  std::cout << "dict size " << lz4_segment.dictionary().size() << std::endl;
 
   // Write dictionary
   export_values(ofstream, lz4_segment.dictionary());
+  for (auto x : lz4_segment.dictionary()) {
+    std::cout << "dict " << x << std::endl;
+  }
 
-  Assert(frame_of_reference_segment.compressed_vector_type() == CompressedVectorType::SimdBp128, "Exprected LZ4 Encoding to use SimdBp128");
-
-  if (lz4_segment.string_offsets()){
+  if (lz4_segment.string_offsets() && *lz4_segment.string_offsets()){
     // Write string_offset size
-    export_value(ofstream, (*lz4_segment.string_offsets()).size());    
+    export_value(ofstream, static_cast<uint32_t>((**lz4_segment.string_offsets()).size()));
+    std::cout << "string offset size " << (**lz4_segment.string_offsets()).size() << std::endl;
+     // Write string_offset data_size
+    export_value(ofstream, static_cast<uint32_t>(dynamic_cast<const SimdBp128Vector&>(**lz4_segment.string_offsets()).data().size()));
+    std::cout << "string offset data size " << dynamic_cast<const SimdBp128Vector&>(**lz4_segment.string_offsets()).data().size() << std::endl;
     // Write string offsets
-    _export_attribute_vector(ofstream, *lz4_segment.compressed_vector_type(), *(lz4_segment.string_offsets().value()));
+    _export_attribute_vector(ofstream, *lz4_segment.compressed_vector_type(), *lz4_segment.string_offsets().value());
+    for (auto x : dynamic_cast<const SimdBp128Vector&>(**lz4_segment.string_offsets())){
+      std::cout << "string offset " << x << std::endl;
+    }
   } else {
-    export_value(ofstream, 0u);    
+    // Write string_offset size = 0
+    export_value(ofstream, static_cast<uint32_t>(0));
   }
 }
 

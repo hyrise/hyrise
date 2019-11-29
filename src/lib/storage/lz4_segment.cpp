@@ -95,6 +95,16 @@ const pmr_vector<pmr_vector<char>>& LZ4Segment<T>::lz4_blocks() const {
 }
 
 template <typename T>
+size_t LZ4Segment<T>::block_size() const {
+	return _block_size;
+}
+
+template <typename T>
+size_t LZ4Segment<T>::last_block_size() const {
+	return _last_block_size;
+}
+
+template <typename T>
 const std::optional<std::unique_ptr<const BaseCompressedVector>>& LZ4Segment<T>::string_offsets() const{
   return _string_offsets;
 }
@@ -197,7 +207,7 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
 
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
-              "Decompressed LZ4 block has different size than the initial source data.");
+             "Decompressed LZ4 block has different size than the initial source data.");
 }
 
 template <typename T>
@@ -252,6 +262,11 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
         static_cast<int>(decompressed_block_size), _dictionary.data(), static_cast<int>(_dictionary.size()));
   }
 
+  std::cout << "decompressed_result: " << decompressed_result << " decompressed_block_size: " << decompressed_block_size << std::endl;
+  for (auto x : decompressed_data) {
+  	std::cout << x << "|";
+  }
+  std::cout << std::endl;
   Assert(decompressed_result > 0, "LZ4 stream decompression failed");
   DebugAssert(static_cast<size_t>(decompressed_result) == decompressed_block_size,
               "Decompressed LZ4 block has different size than the initial source data.");

@@ -23,11 +23,13 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     auto decompressed_segment = _segment.decompress();
     if (_segment.null_values()) {
       auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values()->cbegin()};
-      auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values()->cend()};
+      auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values()->cend(), static_cast<ChunkOffset>(decompressed_segment.size())};
+      //auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values()->cend()};
       functor(begin, end);
     } else {
       auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), std::nullopt};
-      auto end = Iterator<ValueIterator>{decompressed_segment.cend(), std::nullopt};
+      auto end = Iterator<ValueIterator>{decompressed_segment.cend(), std::nullopt, static_cast<ChunkOffset>(decompressed_segment.size())};
+      //auto end = Iterator<ValueIterator>{decompressed_segment.cend(), std::nullopt};
       functor(begin, end);
     }
   }
@@ -93,8 +95,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
    public:
     // Begin and End Iterator
-    explicit Iterator(ValueIterator data_it, std::optional<NullValueIterator> null_value_it)
-        : _chunk_offset{0u}, _data_it{std::move(data_it)}, _null_value_it{std::move(null_value_it)} {}
+    explicit Iterator(ValueIterator data_it, std::optional<NullValueIterator> null_value_it, ChunkOffset chunk_offset = 0u)
+        : _chunk_offset{chunk_offset}, _data_it{data_it}, _null_value_it{null_value_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
