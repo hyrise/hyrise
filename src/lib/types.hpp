@@ -298,8 +298,9 @@ struct hash<std::basic_string<char, std::char_traits<char>, opossum::Polymorphic
 };
 }  // namespace std
 
-namespace boost::asio::ip::tcp {
-class socket;
+namespace boost::asio::ip {
+class tcp;
+class tcp::socket;
 }
 
 namespace opossum {
