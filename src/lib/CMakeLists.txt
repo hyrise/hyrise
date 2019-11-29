@@ -660,9 +660,9 @@ target_compile_options(hyrise_impl PRIVATE -Xclang -fno-pch-timestamp)
 endif()
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
     target_precompile_headers(hyrise_impl PRIVATE
-      #all_parameter_variant.hpp
-      #storage/create_iterable_from_segment.hpp
-      #storage/table.hpp
+      all_parameter_variant.hpp
+      storage/create_iterable_from_segment.hpp
+      storage/table.hpp
       types.hpp
     )
 endif()
