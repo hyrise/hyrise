@@ -58,7 +58,7 @@ class DISABLED_OperatorsExportBinaryTest : public OperatorsExportBinaryTest {}; 
 class OperatorsExportBinaryMultiEncodingTest : public OperatorsExportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
 
@@ -70,7 +70,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsExportBinaryMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength),
-                         formatter);
+                         export_binary_formatter);
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;

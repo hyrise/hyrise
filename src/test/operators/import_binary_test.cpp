@@ -22,7 +22,7 @@ class DISABLED_OperatorsImportBinaryTest : public OperatorsImportBinaryTest {}; 
 class OperatorsImportBinaryMultiEncodingTest : public OperatorsImportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};
 
-auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
+auto import_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
 
@@ -34,7 +34,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsImportBinaryMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength),
-                         formatter);
+                         import_binary_formatter);
 
 TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   auto expected_table =
