@@ -27,7 +27,9 @@ namespace opossum {
  */
 class Import : public AbstractReadOnlyOperator {
  public:
-  explicit Import(const std::string& filename, const std::string& tablename, const hsql::ImportType);
+  explicit Import(const std::string& file_name,
+                  const std::optional<std::string>& table_name = std::nullopt,
+                  const std::optional<hsql::ImportType>& type = std::nullopt);
 
   std::shared_ptr<const Table> _on_execute() final;
 
@@ -41,10 +43,19 @@ class Import : public AbstractReadOnlyOperator {
 
  private:
   // Name of the import file
-  const std::string _filename;
+  const std::string _file_name;
   // Name for adding the table to the StorageManager
-  const std::string _tablename;
-  const hsql::ImportType _type;
+  const std::optional<std::string> _table_name;
+  const std::optional<hsql::ImportType> _type;
+
+  static std::shared_ptr<Table> _import(const std::string& file_name,
+                                        const std::optional<std::string>& table_name,
+                                        const std::optional<hsql::ImportType>& type);
+
+  static std::shared_ptr<Table> _import_csv(const std::string& file_name, const std::string& table_name);
+  static std::shared_ptr<Table> _import_tbl(const std::string& file_name, const std::string& table_name);
+  static std::shared_ptr<Table> _import_binary(const std::string& file_name, const std::string& table_name);
+  static std::shared_ptr<Table> _import_any_file(const std::string& file_name, const std::string& table_name);
 };
 
 }  // namespace opossum

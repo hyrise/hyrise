@@ -486,7 +486,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
   return std::make_shared<DropTable>(drop_table_node->table_name, drop_table_node->if_exists);
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node (
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
   return std::make_shared<Import>(import_node->file_path, import_node->table_name, import_node->file_type);

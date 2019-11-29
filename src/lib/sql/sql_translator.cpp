@@ -1208,10 +1208,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
-  //Assert(import_statement.type, "Unsupported file type could not be loaded.");
-  std::cout << "path: " << import_statement.filePath << std::endl <<
-  "table: " << import_statement.tableName << std::endl << std::endl;
-
   return ImportNode::make(import_statement.tableName, import_statement.filePath, import_statement.type);
 }
 
