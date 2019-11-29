@@ -644,6 +644,7 @@ set_source_files_properties(
     utils/list_directory.cpp
     PROPERTIES
     COMPILE_FLAGS -O0
+    SKIP_PRECOMPILE_HEADERS
 )
 
 # Add our jemalloc build as an interface library so that the build process of hyrise does not have to wait for it
