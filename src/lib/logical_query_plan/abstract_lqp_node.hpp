@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "storage/constraints/table_constraint_definition.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "types.hpp"
 
@@ -140,6 +142,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   virtual bool is_column_nullable(const ColumnID column_id) const;
 
+  std::vector<TableConstraintDefinition> get_unique_constraints(const std::vector<std::shared_ptr<AbstractExpression>>
+                                                                                        of_column_expressions = {}) const;
+
   /**
    * Perform a deep equality check
    */
@@ -178,7 +183,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual size_t _shallow_hash() const;
   virtual std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const = 0;
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
-
+  virtual std::vector<TableConstraintDefinition> _get_local_unique_constraints(const std::vector<LQPColumnExpression>) const;
  private:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;
   std::shared_ptr<AbstractLQPNode> _shallow_copy(LQPNodeMapping& node_mapping) const;

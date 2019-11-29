@@ -245,6 +245,41 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
+std::vector<TableConstraintDefinition> AbstractLQPNode::get_unique_constraints(const std::vector<std::shared_ptr<AbstractExpression>>
+                                                                               of_column_expressions) const {
+
+  const auto& column_expressions = !of_column_expressions.empty() ? of_column_expressions : this->column_expressions();
+
+
+  std::vector<LQPColumnExpression> column_expressions_own;
+  std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPColumnExpression>>> column_expressions_foreign;
+
+  for(auto expr : column_expressions) {
+    const auto& column_expr = dynamic_cast<LQPColumnExpression&>(*expr);
+    //Assert(column_expr == nullptr, "Unexpected type of AbstractExpression");
+
+    // Determine origin of column expressions. Only original nodes can provide the associated constraints information.
+    const auto original_node = column_expr.column_reference.original_node();
+    if (original_node.get() == this) {
+      column_expressions_own.push_back(column_expr);
+    } else {
+      auto& lqp_column_expressions = column_expressions_foreign.find(original_node);
+      if(lqp_column_expressions == column_expressions_foreign.end()) {
+        column_expressions_foreign.emplace(original_node, {column_expr});
+      }
+    }
+  }
+
+  // Get constraints for column expressions created in this node.
+  auto unique_constraints = _get_local_unique_constraints(column_expressions_own);
+
+  // Get constraint information from child nodes
+  for(auto child_node : column_expressions_foreign) {
+
+  }
+
+}
+
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
 }
