@@ -157,7 +157,7 @@ try {
           stage("clang-debug-unity-odr") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-unity-odr && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3)) && ../scripts/analyze_ccache_usage.py"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-unity-odr && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             } else {
               Utils.markStageSkippedForConditional("clangDebugUnity")
             }
@@ -166,7 +166,7 @@ try {
           stage("clang-debug:tidy") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6)) && ../scripts/analyze_ccache_usage.py"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 6))"
             } else {
               Utils.markStageSkippedForConditional("clangDebugTidy")
             }
