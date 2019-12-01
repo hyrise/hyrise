@@ -77,7 +77,7 @@ try {
 
           // Configure the rest in parallel
           // Most builds don't use unity builds as this would break the ccache use across different PRs. As clang-tidy cannot be ccached, use unity there.
-          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                             ${cmake}           ${debug}   ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                             ${cmake}           ${debug}   ${clang}  -DENABLE_CLANG_TIDY=ON .. &\
           mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                       ${cmake}           ${debug}   ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
           mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                     ${cmake} ${ccache} ${debug}   ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
           mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&                 ${cmake} ${ccache} ${release} ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
