@@ -134,8 +134,6 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               //  ^^     ^^                 inner_conjunction holds two (or more) elements from flattening the AND.
               //                            One of these elements is called expression_in_conjunction.
 
-              (void) malloc(1000);
-
               std::vector<std::shared_ptr<AbstractExpression>> left_disjunction{};
               std::vector<std::shared_ptr<AbstractExpression>> right_disjunction{};
 
