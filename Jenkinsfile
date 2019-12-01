@@ -59,8 +59,11 @@ try {
           sh "./install.sh"
 
           cmake = 'cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
+          unity = '-DCMAKE_UNITY_BUILD=ON'
           clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
           gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+          debug = '-DCMAKE_BUILD_TYPE=Debug'
+          release = '-DCMAKE_BUILD_TYPE=Release'
 
           // GCC produces non-deterministics files when precompiled headers are built: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92717
           // Disable ASLR for the gcc build process (not for the resulting executable) to stop this from happening:
@@ -69,19 +72,19 @@ try {
           // TODO: reduce cmake verbosity
 
           // Run cmake once in isolation and build jemalloc to avoid race conditions with autoconf (#1413)
-          sh "mkdir clang-debug && cd clang-debug && ${cmake} -DCMAKE_BUILD_TYPE=Debug ${clang} .. && make -j libjemalloc-build"
+          sh "mkdir clang-debug && cd clang-debug &&                                                       ${cmake} ${debug}   ${clang} .. && make -j libjemalloc-build"
 
           // Configure the rest in parallel
-          sh "mkdir clang-debug-tidy && cd clang-debug-tidy && ${cmake} -DCMAKE_BUILD_TYPE=Debug ${clang} -DENABLE_CLANG_TIDY=ON .. &\
-          mkdir clang-debug-unity && cd clang-debug-unity && ${cmake} -DCMAKE_BUILD_TYPE=Debug ${clang} -DCMAKE_UNITY_BUILD=On -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && ${cmake} -DCMAKE_BUILD_TYPE=Debug ${clang} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && ${cmake} -DCMAKE_BUILD_TYPE=Release ${clang} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release && cd clang-release && ${cmake} -DCMAKE_BUILD_TYPE=Release ${clang} .. &\
-          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && ${cmake} -DCMAKE_BUILD_TYPE=Release ${clang} -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
-          mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer && ${cmake} -DCMAKE_BUILD_TYPE=Release ${clang} -DENABLE_THREAD_SANITIZATION=ON .. &\
-          mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa && ${cmake} -DCMAKE_BUILD_TYPE=Release ${clang} -DENABLE_THREAD_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
-          mkdir gcc-debug && cd gcc-debug && ${cmake} -DCMAKE_BUILD_TYPE=Debug ${gcc} .. &\
-          mkdir gcc-release && cd gcc-release && ${cmake} -DCMAKE_BUILD_TYPE=Release ${gcc} .. &\
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                             ${cmake} ${debug}   ${clang}          -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-unity && cd clang-debug-unity &&                                               ${cmake} ${debug}   ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                     ${cmake} ${debug}   ${clang} ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&                 ${cmake} ${release} ${clang} ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release && cd clang-release &&                                                       ${cmake} ${release} ${clang} ${unity} .. &\
+          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && ${cmake} ${release} ${clang} ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer &&                     ${cmake} ${release} ${clang} ${unity} -DENABLE_THREAD_SANITIZATION=ON .. &\
+          mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa &&     ${cmake} ${release} ${clang} ${unity} -DENABLE_THREAD_SANITIZATION=ON  -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir gcc-debug && cd gcc-debug &&                                                               ${cmake} ${debug}   ${gcc}            .. &\
+          mkdir gcc-release && cd gcc-release &&                                                           ${cmake} ${release} ${gcc}   ${unity} .. &\
           wait"
         }
 
@@ -307,7 +310,7 @@ try {
           // We do not use install.sh here as there is no way to run OS X in a Docker container
           sh "git submodule update --init --recursive --jobs 4"
 
-          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
+          sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} -DCMAKE_C_COMPILER_LAUNCHER=/usr/local/bin/ccache -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/ccache ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
           sh "cd clang-debug && PATH=/usr/local/bin:$PATH make -j libjemalloc-build"
           sh "cd clang-debug && CCACHE_DEBUG=1 CCACHE_SLOPPINESS=file_macro,pch_defines,time_macros CCACHE_BASEDIR=`pwd` CCACHE_NOHASHDIR=1 make -j8 && ../scripts/analyze_ccache_usage.py"
           sh "./clang-debug/hyriseTest"
