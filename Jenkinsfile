@@ -58,7 +58,8 @@ try {
           checkout scm
           sh "./install.sh"
 
-          cmake = 'cmake -DCI_BUILD=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
+          cmake = 'cmake -DCI_BUILD=ON'
+          ccache = '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache'
           unity = '-DCMAKE_UNITY_BUILD=ON'
           clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
           gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
@@ -72,19 +73,20 @@ try {
           // TODO: reduce cmake verbosity
 
           // Run cmake once in isolation and build jemalloc to avoid race conditions with autoconf (#1413)
-          sh "mkdir clang-debug && cd clang-debug &&                                                       ${cmake} ${debug}   ${clang} .. && make -j libjemalloc-build"
+          sh "mkdir clang-debug && cd clang-debug &&                                                       ${cmake} ${ccache} ${debug}   ${clang}          .. && make -j libjemalloc-build"
 
           // Configure the rest in parallel
-          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                             ${cmake} ${debug}   ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
-          mkdir clang-debug-unity && cd clang-debug-unity &&                                               ${cmake} ${debug}   ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                     ${cmake} ${debug}   ${clang} ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&                 ${cmake} ${release} ${clang} ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-          mkdir clang-release && cd clang-release &&                                                       ${cmake} ${release} ${clang} ${unity} .. &\
-          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && ${cmake} ${release} ${clang} ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
-          mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer &&                     ${cmake} ${release} ${clang} ${unity} -DENABLE_THREAD_SANITIZATION=ON .. &\
-          mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa &&     ${cmake} ${release} ${clang} ${unity} -DENABLE_THREAD_SANITIZATION=ON  -DENABLE_NUMA_SUPPORT=OFF .. &\
-          mkdir gcc-debug && cd gcc-debug &&                                                               ${cmake} ${debug}   ${gcc}            .. &\
-          mkdir gcc-release && cd gcc-release &&                                                           ${cmake} ${release} ${gcc}   ${unity} .. &\
+          // Most builds don't use unity builds as this would break the ccache use across different PRs. As clang-tidy cannot be ccached, use unity there.
+          sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                             ${cmake}           ${debug}   ${clang} ${unity} -DENABLE_CLANG_TIDY=ON .. &\
+          mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                       ${cmake}           ${debug}   ${clang} ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
+          mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                     ${cmake} ${ccache} ${debug}   ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&                 ${cmake} ${ccache} ${release} ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+          mkdir clang-release && cd clang-release &&                                                       ${cmake} ${ccache} ${release} ${clang}          .. &\
+          mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && ${cmake} ${ccache} ${release} ${clang}          -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer &&                     ${cmake} ${ccache} ${release} ${clang}          -DENABLE_THREAD_SANITIZATION=ON .. &\
+          mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa &&     ${cmake} ${ccache} ${release} ${clang}          -DENABLE_THREAD_SANITIZATION=ON  -DENABLE_NUMA_SUPPORT=OFF .. &\
+          mkdir gcc-debug && cd gcc-debug &&                                                               ${cmake} ${ccache} ${debug}   ${gcc}            .. &\
+          mkdir gcc-release && cd gcc-release &&                                                           ${cmake} ${ccache} ${release} ${gcc}            .. &\
           wait"
         }
 
@@ -151,11 +153,11 @@ try {
               Utils.markStageSkippedForConditional("clangDebugRunShuffled")
             }
           }
-        }, clangDebugUnity: {
-          stage("clang-debug-unity") {
+        }, clangDebugUnityODR: {
+          stage("clang-debug-unity-odr") {
             if (env.BRANCH_NAME == 'master' || full_ci) {
               // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-unity && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3)) && ../scripts/analyze_ccache_usage.py"
+              sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-unity-odr && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3)) && ../scripts/analyze_ccache_usage.py"
             } else {
               Utils.markStageSkippedForConditional("clangDebugUnity")
             }
