@@ -33,7 +33,8 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsImportBinaryMultiEncodingTest,
-                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength, EncodingType::LZ4),
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
+                                           EncodingType::LZ4),
                          formatter);
 
 TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
@@ -76,9 +77,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, StringSegment) {
   expected_table->append({"is"});
   expected_table->append({"a"});
   expected_table->append({"test"});
-
-  expected_table->last_chunk()->finalize();
-  ChunkEncoder::encode_all_chunks(expected_table, GetParam());
 
   std::string reference_filename =
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -171,14 +169,6 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, EmptyStringsSegment) {
   auto importer = std::make_shared<opossum::ImportBinary>(reference_filename);
   importer->execute();
 
-  std::cout << "LZ4 imported" << std::endl;
-  auto output_table = importer->get_output();
-  std::cout << "LZ4 output" << std::endl;
-
-  std::cout << output_table->column_count() << std::endl;
-  std::cout << output_table->row_count() << std::endl; 
-  std::cout << output_table->chunk_count() << std::endl; 
-
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
@@ -266,6 +256,30 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RunNullValues) {
   expected_table->append({2});
   expected_table->append({2});
   expected_table->append({opossum::NULL_VALUE});
+
+  auto importer = std::make_shared<opossum::ImportBinary>(
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, LZ4MultipleBlocks) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
+
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20000);
+
+  for (int index = 0; index < 5000; ++index) {
+    expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+    expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+    expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+    expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+  }
 
   auto importer = std::make_shared<opossum::ImportBinary>(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");

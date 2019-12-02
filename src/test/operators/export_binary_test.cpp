@@ -69,7 +69,8 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsExportBinaryMultiEncodingTest,
-                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength, EncodingType::LZ4),
+                         ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
+                                           EncodingType::LZ4),
                          formatter);
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
@@ -81,7 +82,7 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -106,7 +107,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkFrameOfReferenceSegment) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -131,7 +132,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -156,7 +157,7 @@ TEST_F(OperatorsExportBinaryTest, NullValuesFrameOfReferenceSegment) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -181,7 +182,7 @@ TEST_F(OperatorsExportBinaryTest, AllNullFrameOfReferenceSegment) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -205,7 +206,7 @@ TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionarySingleChunk) { /
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -229,7 +230,7 @@ TEST_F(DISABLED_OperatorsExportBinaryTest, FixedStringDictionaryMultipleChunks) 
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -271,6 +272,38 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceSegment) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
+TEST_F(OperatorsExportBinaryTest, LZ4MultipleBlocks) {
+  // Export more rows than minimum block size of 16384
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("b", DataType::Int, false);
+  column_definitions.emplace_back("c", DataType::Long, false);
+  column_definitions.emplace_back("d", DataType::Float, false);
+  column_definitions.emplace_back("e", DataType::Double, false);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 20000);
+
+  for (int index = 0; index < 5000; ++index) {
+    table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+    table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+    table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+    table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+  }
+
+  table->last_chunk()->finalize();
+  ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  std::string reference_filename =
+      reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
 // TEST_P for all supported encoding types
 
 TEST_P(OperatorsExportBinaryMultiEncodingTest, RepeatedInt) {
@@ -290,7 +323,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, RepeatedInt) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -313,7 +346,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -336,7 +369,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, MultipleChunkSingleFloatColumn) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -360,7 +393,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, StringSegment) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -390,7 +423,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentSorted) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -420,7 +453,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesSegmentUnsorted) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -448,7 +481,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesMixColumn) {
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -474,7 +507,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, EmptyStringsSegment) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -505,7 +538,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesNullValues) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -538,7 +571,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, AllTypesAllNullValues) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
@@ -567,7 +600,7 @@ TEST_P(OperatorsExportBinaryMultiEncodingTest, RunNullValues) {
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
-  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
   ex->execute();
 
   std::string reference_filename =
