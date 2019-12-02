@@ -1,18 +1,13 @@
 #pragma once
 
-#include <fstream>
-#include <memory>
+//#include <fstream>
+//#include <memory>
 #include <optional>
 #include <string>
-#include <utility>
-#include <vector>
+//#include <utility>
 
 #include "abstract_read_only_operator.hpp"
-#include "storage/base_segment.hpp"
-#include "storage/dictionary_segment.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/run_length_segment.hpp"
-#include "storage/value_segment.hpp"
+#include "import_export/csv/csv_meta.hpp"
 
 #include "SQLParser.h"
 
@@ -29,17 +24,22 @@ class Import : public AbstractReadOnlyOperator {
  public:
   explicit Import(const std::string& file_name,
                   const std::optional<std::string>& table_name = std::nullopt,
-                  const std::optional<hsql::ImportType>& type = std::nullopt);
-
-  std::shared_ptr<const Table> _on_execute() final;
-
-  std::shared_ptr<AbstractOperator> _on_deep_copy(
-      const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
-  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+                  const std::optional<hsql::ImportType>& type = std::nullopt,
+                  const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
+                  const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
   // Returns the name of the operator
   const std::string& name() const final;
+
+
+ protected:
+  std::shared_ptr<const Table> _on_execute() final;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+
 
  private:
   // Name of the import file
@@ -47,15 +47,16 @@ class Import : public AbstractReadOnlyOperator {
   // Name for adding the table to the StorageManager
   const std::optional<std::string> _table_name;
   const std::optional<hsql::ImportType> _type;
+  const ChunkOffset _chunk_size;
+  const std::optional<CsvMeta> _csv_meta;
 
-  static std::shared_ptr<Table> _import(const std::string& file_name,
-                                        const std::optional<std::string>& table_name,
-                                        const std::optional<hsql::ImportType>& type);
+  std::shared_ptr<Table> _import();
+  std::shared_ptr<Table> _import_any_file();
 
-  static std::shared_ptr<Table> _import_csv(const std::string& file_name, const std::string& table_name);
-  static std::shared_ptr<Table> _import_tbl(const std::string& file_name, const std::string& table_name);
-  static std::shared_ptr<Table> _import_binary(const std::string& file_name, const std::string& table_name);
-  static std::shared_ptr<Table> _import_any_file(const std::string& file_name, const std::string& table_name);
+  static std::shared_ptr<Table> _import_csv(const std::string& file_name, const ChunkOffset& chunk_size,
+      const std::optional<CsvMeta>& csv_meta);
+  static std::shared_ptr<Table> _import_tbl(const std::string& file_name, const ChunkOffset& chunk_size);
+  static std::shared_ptr<Table> _import_binary(const std::string& file_name);
 };
 
 }  // namespace opossum

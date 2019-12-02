@@ -88,14 +88,14 @@ set(
     expression/value_expression.hpp
     hyrise.cpp
     hyrise.hpp
-    import_export/csv_converter.cpp
-    import_export/csv_converter.hpp
-    import_export/csv_meta.cpp
-    import_export/csv_meta.hpp
-    import_export/csv_parser.cpp
-    import_export/csv_parser.hpp
-    import_export/csv_writer.cpp
-    import_export/csv_writer.hpp
+    import_export/csv/csv_converter.cpp
+    import_export/csv/csv_converter.hpp
+    import_export/csv/csv_meta.cpp
+    import_export/csv/csv_meta.hpp
+    import_export/csv/csv_parser.cpp
+    import_export/csv/csv_parser.hpp
+    import_export/csv/csv_writer.cpp
+    import_export/csv/csv_writer.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp

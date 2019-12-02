@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "import_export/csv_meta.hpp"
+#include "import_export/csv/csv_meta.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

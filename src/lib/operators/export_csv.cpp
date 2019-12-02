@@ -5,8 +5,8 @@
 #include <utility>
 #include <vector>
 
-#include "import_export/csv_meta.hpp"
-#include "import_export/csv_writer.hpp"
+#include "import_export/csv/csv_meta.hpp"
+#include "import_export/csv/csv_writer.hpp"
 #include "storage/materialize.hpp"
 #include "storage/reference_segment.hpp"
 

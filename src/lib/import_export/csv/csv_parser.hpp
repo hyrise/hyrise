@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-#include "import_export/csv_meta.hpp"
+#include "import_export/csv/csv_meta.hpp"
 
 namespace opossum {
 
