@@ -3,6 +3,8 @@
 #include "aggregate_hashsort_utils.hpp"
 #include "static_hash_map.hpp"
 
+#define VERBOSE_ALGO VERBOSE && 0
+
 namespace opossum {
 
 namespace aggregate_hashsort {
@@ -27,7 +29,7 @@ void partition(const AggregateHashSortEnvironment& environment, size_t partition
     run_per_partition.emplace_back(std::move(run));
   }
 
-#if VERBOSE
+#if VERBOSE_ALGO
   std::cout << indent(level) << "partition() processing " << partition_group_count << " elements"
             << "\n";
   Timer t;
@@ -68,7 +70,7 @@ void partition(const AggregateHashSortEnvironment& environment, size_t partition
     partitions[partition_idx].runs.emplace_back(std::move(run));
   }
 
-#if VERBOSE
+#if VERBOSE_ALGO
   std::cout << indent(level) << "partition(): took " << t.lap_formatted() << "\n";
 #endif
 
@@ -94,7 +96,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
 
   auto group_key_counter_per_partition = std::vector<size_t>(radix_fan_out.partition_count);
 
-#if VERBOSE
+#if VERBOSE_ALGO
   Timer t;
 #endif
 
@@ -104,7 +106,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
     mutable size_t hash_counter{};
 
     size_t operator()(const HashTableKey& key) const {
-#if VERBOSE
+#if VERBOSE_ALGO
       ++hash_counter;
 #endif
       return key.hash;
@@ -115,7 +117,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
 
 #ifdef USE_UNORDERED_MAP
   auto compare_fn = [&](const auto& lhs, const auto& rhs) {
-#if VERBOSE
+#if VERBOSE_ALGO
     ++compare_counter;
 #endif
     return typename GroupRun::HashTableCompare{run_source.layout}(lhs, rhs);
@@ -133,7 +135,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
 
   auto hash_table = google::dense_hash_map<HashTableKey, size_t, Hasher, HashTableCompare>{
       static_cast<size_t>(hash_table_size), hasher, compare};
-#if VERBOSE
+#if VERBOSE_ALGO
   Timer timer_set_empty_key;
 #endif
   hash_table.set_empty_key(HashTableKey::EMPTY_KEY);
@@ -147,14 +149,14 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
 
   auto hash_table = StaticHashMap<HashTableKey, size_t, Hasher, HashTableCompare>{
       ceil_power_of_two(static_cast<size_t>(hash_table_size)), hasher, compare};
-#if VERBOSE
-  Timer timer_set_empty_key;
+#if VERBOSE_ALGO
+   Timer timer_set_empty_key;
 #endif
 #endif
 
-#if VERBOSE
+#if VERBOSE_ALGO
   std::cout << indent(level) << "hashing(): requested hash_table_size: " << hash_table_size
-            << "; actual hash table size: " << hash_table.bucket_count() << "\n";
+              << "; actual hash table size: " << hash_table.bucket_count() << "\n";
 #endif
 
 #ifdef USE_DENSE_HASH_MAP
@@ -176,7 +178,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
       auto& target_run = run_per_partition[partition_idx];
 
       const auto key = source_run.make_key(run_reader.run_offset);
-#if VERBOSE >= 2
+#if VERBOSE_ALGO >= 2
       std::cout << indent(level) << "hashing() Key: " << key << ": " << std::flush;
 #endif
 
@@ -184,7 +186,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
 
       if (hash_table_iter == hash_table.end()) {
         auto& group_key_counter = group_key_counter_per_partition[partition_idx];
-#if VERBOSE >= 2
+#if VERBOSE_ALGO >= 2
         std::cout << indent(level) << "hashing() Append " << group_key_counter << std::endl;
 #endif
         hash_table.insert({key, group_key_counter});
@@ -196,7 +198,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
           hash_table_full = true;
         }
       } else {
-#if VERBOSE >= 2
+#if VERBOSE_ALGO >= 2
         std::cout << indent(level) << "hashing() Aggregate " << hash_table_iter->second << std::endl;
 #endif
         target_run.aggregate(hash_table_iter->second, source_run, run_reader.run_offset,
@@ -230,7 +232,7 @@ std::pair<bool, size_t> hashing(const AggregateHashSortEnvironment& environment,
 
   const auto continue_hashing =
       static_cast<float>(group_counter) / hash_table.size() >= environment.config.continue_hashing_density_threshold;
-#if VERBOSE
+#if VERBOSE_ALGO
   std::cout << indent(level) << "hashing(): processed " << group_counter << " elements into " << hash_table.size()
             << " groups in " << t.lap_formatted() << "; hash_counter: " << hash_table.hash_function().hash_counter
             << "; compare_counter: " << hash_table.key_eq().counter << "; load_factor: " << hash_table.load_factor()
@@ -246,7 +248,7 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
                                                            const size_t level) {
   auto run_reader = RunReader{std::move(runs)};
 
-#if VERBOSE
+#if VERBOSE_ALGO
   Timer t;
 #endif
 
@@ -259,7 +261,7 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
    * Initial hashing pass without simultaneous partitioning
    */
   {
-#if VERBOSE
+#if VERBOSE_ALGO
     std::cout << indent(level) << "adaptive_hashing_and_partition() Rows: " << run_reader.remaining_group_count << "\n";
 #endif
     const auto hash_table_size = configure_hash_table(environment, run_reader.remaining_group_count);
@@ -279,7 +281,7 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
     }
   }
 
-#if VERBOSE
+#if VERBOSE_ALGO
   std::cout << indent(level) << "adaptive_hashing_and_partition() Main Loop\n";
 #endif
 
@@ -287,7 +289,7 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
    * Main loop of alternating hashing (with simultaneous partitioning) and partitioning steps
    */
   while (!run_reader.end_of_reader()) {
-#if VERBOSE
+#if VERBOSE_ALGO
     std::cout << indent(level) << "adaptive_hashing_and_partition() Rows: " << run_reader.remaining_group_count
               << ", Bytes: " << run_reader.remaining_group_data_size << "\n";
 #endif
@@ -308,7 +310,7 @@ std::vector<Partition<Run>> adaptive_hashing_and_partition(const AggregateHashSo
     }
   }
 
-#if VERBOSE
+#if VERBOSE_ALGO
   std::cout << indent(level) << "adaptive_hashing_and_partition() took " << t.lap_formatted() << "\n";
 #endif
 

@@ -48,15 +48,24 @@ void resolve_group_size_policy(const AggregateHashSortEnvironment& environment, 
 
 namespace opossum {
 
-AggregateHashSortConfig AggregateHashSort::create_config() { return {}; }
-
 AggregateHashSort::AggregateHashSort(const std::shared_ptr<AbstractOperator>& in,
                                      const std::vector<AggregateColumnDefinition>& aggregates,
                                      const std::vector<ColumnID>& groupby_column_ids,
                                      const std::optional<AggregateHashSortConfig>& config)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids), _config(config ? *config : create_config()) {}
+    : AbstractAggregateOperator(in, aggregates, groupby_column_ids), _config(config ? *config : AggregateHashSortConfig{}) {
+  Assert(_config.hash_table_size >= 4, "Hash table too small");
+  Assert(_config.hash_table_size * _config.hash_table_max_load_factor >= 1, "Hash table too small/Load factor too low");
+  Assert(_config.max_partitioning_counter > 0, "max_partitioning_counter too low");
+  Assert(_config.buffer_flush_threshold > 0, "buffer_flush_threshold too low");
+}
 
 const std::string AggregateHashSort::name() const { return "AggregateHashSort"; }
+
+const std::string AggregateHashSort::description(DescriptionMode description_mode) const {
+  std::ostringstream stream;
+  stream << AbstractAggregateOperator::description(description_mode) << " (Config: " << _config << ")";
+  return stream.str();
+}
 
 std::shared_ptr<AbstractOperator> AggregateHashSort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -87,7 +96,7 @@ std::shared_ptr<const Table> AggregateHashSort::_on_execute() {
     auto tasks = std::vector<std::shared_ptr<AggregateHashSortTask<Run>>>{};
     for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       const auto run_source = std::make_shared<ChunkRunSource<Run>>(environment, input_table, chunk_id);
-      const auto task = std::make_shared<AggregateHashSortTask<Run>>(environment, task_set, run_source);
+      const auto task = std::make_shared<AggregateHashSortTask<Run>>(environment, chunk_id, task_set, run_source);
       task_set->add_task(task);
       tasks.emplace_back(task);
     }

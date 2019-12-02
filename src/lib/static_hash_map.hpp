@@ -5,6 +5,7 @@
 
 #include "utils/assert.hpp"
 #include "utils/bit_utils.hpp"
+#include "uninitialized_vector.hpp"
 
 namespace opossum {
 
@@ -73,11 +74,12 @@ class StaticHashMap {
 
     for (auto slot_idx = _hash(value.first) & _mask; ; slot_idx = (slot_idx + 1) & _mask) {
       if (!_slot_occupied[slot_idx]) {
-        _table[slot_idx] = std::move(value);
+        auto* address = &_table[slot_idx];
+        new (address) value_type{std::move(value)};
         _slot_occupied[slot_idx] = true;
         ++_count;
 
-        return {&_table[slot_idx], true};
+        return {address, true};
       } else if (_key_compare(_table[slot_idx].first, value.first)) {
         Fail("Cannot insert into occupied slot");
       }
@@ -105,18 +107,8 @@ class StaticHashMap {
   }
 
  private:
-  size_t _get_slot_idx(const Key& key) const {
-    for (auto slot_idx = _hash(key) & _mask; ; slot_idx = (slot_idx + 1) & _mask) {
-      if (!_slot_occupied[slot_idx]) {
-        return slot_idx;
-      } else if (_key_compare(_table[slot_idx].first, key)) {
-        return slot_idx;
-      }
-    }
-  }
-
   std::vector<bool> _slot_occupied;
-  std::vector<value_type> _table;
+  uninitialized_vector<value_type> _table;
   size_t _count{0};
   size_t _mask{0};
   Hash _hash;

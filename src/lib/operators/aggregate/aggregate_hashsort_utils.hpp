@@ -18,11 +18,11 @@
 #include "types.hpp"
 #include "utils/timer.hpp"
 
-#define VERBOSE 0
+#define VERBOSE 1
 
 // #define USE_UNORDERED_MAP
-#define USE_DENSE_HASH_MAP
-//#define USE_STATIC_HASH_MAP
+// #define USE_DENSE_HASH_MAP
+#define USE_STATIC_HASH_MAP
 
 namespace opossum {
 
@@ -759,7 +759,7 @@ struct RadixFanOut {
    * At level 0, the `partition_bit_count` leftmost bits are used, for level 1, the `partition_bit_count` bits after
    * those, and so forth.
    */
-  static RadixFanOut for_level(const size_t level, const size_t partition_bit_count = 4) {
+  static RadixFanOut for_level(const size_t level, const size_t partition_bit_count = 8) {
     // E.g., 1 << 4 bits used for partitioning == 16
     const auto partition_count = 1u << partition_bit_count;
 

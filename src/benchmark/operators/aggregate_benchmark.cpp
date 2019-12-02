@@ -9,6 +9,8 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "types.hpp"
 
 using namespace opossum;
@@ -54,22 +56,9 @@ std::shared_ptr<ValueSegment<std::enable_if_t<std::is_floating_point_v<T>, T>>> 
 
 template <typename T>
 std::shared_ptr<ValueSegment<std::enable_if_t<std::is_same_v<T, pmr_string>, T>>> make_segment(
+    const std::vector<pmr_string>& pool,
     const size_t row_count, const size_t distinct_count, const size_t seed) {
-  std::uniform_int_distribution<int32_t> string_length_dist{1, 12};
-  std::uniform_int_distribution<char> char_dist{'A', 'z'};
   std::mt19937 gen(seed);
-
-  std::vector<T> pool;
-  for (auto i = size_t{0}; i < distinct_count; ++i) {
-    const auto string_length = string_length_dist(gen);
-
-    auto value = pmr_string(string_length, ' ');
-    for (auto& c : value) {
-      c = char_dist(gen);
-    }
-
-    pool.emplace_back(value);
-  }
 
   std::uniform_int_distribution<size_t> pool_dist{0u, pool.size() - 1u};
   std::bernoulli_distribution null_dist(0.2f);
@@ -104,28 +93,86 @@ struct AggregateBenchmarkConfig {
 
 void BM_Aggregate(benchmark::State& state, const AggregateBenchmarkConfig& config) {
   auto column_definitions = TableColumnDefinitions{};
-  auto column_id = ColumnID{0};
-  auto segments = Segments{};
   auto group_by_column_ids = std::vector<ColumnID>{};
 
-  for (const auto& group_by_column_desc : config.group_by_columns) {
-    column_definitions.emplace_back("column_" + std::to_string(column_id), group_by_column_desc.data_type, true);
-    resolve_data_type(group_by_column_desc.data_type, [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
-      segments.emplace_back(
-          make_segment<ColumnDataType>(config.row_count, group_by_column_desc.distinct_count, column_id));
-    });
-    group_by_column_ids.emplace_back(column_id);
-    ++column_id;
+  // Create pools of values for the string columns
+  std::unordered_map<ColumnID, std::vector<pmr_string>> string_pools;
+  {
+    for (ColumnID column_id{0}; column_id < config.group_by_columns.size(); ++column_id) {
+      std::uniform_int_distribution<int32_t> string_length_dist{1, 12};
+      std::uniform_int_distribution<char> char_dist{'A', 'z'};
+      std::mt19937 gen(static_cast<size_t>(column_id));
+
+      const auto& group_by_column_desc = config.group_by_columns[column_id];
+      if (group_by_column_desc.data_type != DataType::String) {
+        continue;
+      }
+
+      std::vector<pmr_string> pool;
+      for (auto i = size_t{0}; i < group_by_column_desc.distinct_count; ++i) {
+        const auto string_length = string_length_dist(gen);
+
+        auto value = pmr_string(string_length, ' ');
+        for (auto& c : value) {
+          c = char_dist(gen);
+        }
+
+        pool.emplace_back(value);
+      }
+
+      string_pools.emplace(column_id, std::move(pool));
+    }
+  }
+
+  // Generate the input table
+  group_by_column_ids.resize(config.group_by_columns.size());
+  std::iota(group_by_column_ids.begin(), group_by_column_ids.end(), ColumnID{0});
+
+  {
+    auto column_id = ColumnID{0};
+    for (const auto& group_by_column_desc : config.group_by_columns) {
+      column_definitions.emplace_back("column_" + std::to_string(column_id), group_by_column_desc.data_type, true);
+      ++column_id;
+    }
   }
 
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-  table->append_chunk(std::move(segments));
+
+  auto remaining_row_count = config.row_count;
+
+  // Generate the chunks
+  auto chunk_id = ChunkID{0};
+  while (remaining_row_count > 0) {
+    auto segments = Segments{};
+
+    const auto next_chunk_row_count = std::min<size_t>(remaining_row_count, Chunk::DEFAULT_SIZE);
+    remaining_row_count -= next_chunk_row_count;
+
+    for (ColumnID column_id{0}; column_id < config.group_by_columns.size(); ++column_id) {
+      const auto& group_by_column_desc = config.group_by_columns[column_id];
+      resolve_data_type(group_by_column_desc.data_type, [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        const auto seed = chunk_id * 10000 + column_id;
+        if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+          segments.emplace_back(
+              make_segment<pmr_string>(string_pools[column_id], next_chunk_row_count, group_by_column_desc.distinct_count, seed));
+        } else {
+          segments.emplace_back(
+              make_segment<ColumnDataType>(next_chunk_row_count, group_by_column_desc.distinct_count, seed));
+        }
+      });
+    }
+
+    ++chunk_id;
+    table->append_chunk(std::move(segments));
+  }
 
   const auto table_op = std::make_shared<TableWrapper>(table);
   table_op->execute();
 
   auto aggregates = std::vector<AggregateColumnDefinition>{};
+
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   auto row_count = size_t{0};
   auto chunk_count = size_t{0};
@@ -135,6 +182,9 @@ void BM_Aggregate(benchmark::State& state, const AggregateBenchmarkConfig& confi
     row_count = aggregate_op->get_output()->row_count();
     chunk_count = aggregate_op->get_output()->chunk_count();
   }
+
+  CurrentScheduler::set(nullptr);
+
   //
   std::cout << "Chunk count: " << chunk_count << std::endl;
   std::cout << "Row count: " << row_count << std::endl;

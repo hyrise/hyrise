@@ -21,13 +21,12 @@ namespace opossum {
 
 class AggregateHashSort : public AbstractAggregateOperator {
  public:
-  static AggregateHashSortConfig create_config();
-
   AggregateHashSort(const std::shared_ptr<AbstractOperator>& in,
                     const std::vector<AggregateColumnDefinition>& aggregates,
                     const std::vector<ColumnID>& groupby_column_ids, const std::optional<AggregateHashSortConfig>& config = {});
 
   const std::string name() const override;
+  const std::string description(DescriptionMode description_mode) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

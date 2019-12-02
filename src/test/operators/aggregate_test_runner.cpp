@@ -36,7 +36,9 @@ struct AggregateTestConfiguration {
   // Only relevant for AggregateHashSort
   std::optional<AggregateHashSortConfig> aggregate_hashsort_config;
 
-  auto to_tuple() const { return std::tie(input, aggregate_column_definitions, group_by_column_ids, scheduler, aggregate_hashsort_config); }
+  auto to_tuple() const {
+    return std::tie(input, aggregate_column_definitions, group_by_column_ids, scheduler, aggregate_hashsort_config);
+  }
 };
 
 bool operator<(const AggregateTestConfiguration& l, const AggregateTestConfiguration& r) {
@@ -68,7 +70,8 @@ class AggregateOperatorFactory<AggregateHashSort> : public BaseAggregateOperator
   std::shared_ptr<AbstractAggregateOperator> create_operator(const std::shared_ptr<AbstractOperator>& in,
                                                              const AggregateTestConfiguration& configuration) override {
     return std::make_shared<AggregateHashSort>(in, configuration.aggregate_column_definitions,
-                                               configuration.group_by_column_ids, configuration.aggregate_hashsort_config);
+                                               configuration.group_by_column_ids,
+                                               configuration.aggregate_hashsort_config);
   }
 };
 
@@ -107,19 +110,77 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
       all_data_types.emplace_back(d);
     });
 
+    const auto numeric_data_types = std::vector{DataType::Int, DataType::Long, DataType::Float, DataType::Double};
+
     const auto all_aggregate_functions =
         std::vector{AggregateFunction::Min,          AggregateFunction::Max,       AggregateFunction::Sum,
                     AggregateFunction::Avg,          AggregateFunction::CountRows, AggregateFunction::CountNonNull,
                     AggregateFunction::CountDistinct};
 
-    const auto all_table_sizes = std::vector<size_t>{0, 10};
+    const auto numeric_aggregate_functions =
+        std::vector{AggregateFunction::Min, AggregateFunction::Max,          AggregateFunction::Sum,
+                    AggregateFunction::Avg, AggregateFunction::CountNonNull, AggregateFunction::CountDistinct};
 
-    const auto default_configuration =
+    const auto string_aggregate_functions =
+        std::vector{AggregateFunction::Min, AggregateFunction::Max, AggregateFunction::CountNonNull,
+                    AggregateFunction::CountDistinct};
+
+    const auto all_table_sizes = std::vector<size_t>{0, 10, 100, 150};
+
+    // clang-format off
+    using GroupByColumnDefinition = std::pair<DataType, bool>;
+    using GroupByColumnDefinitions = std::vector<GroupByColumnDefinition>;
+
+    auto group_by_column_definitions_set = std::vector<GroupByColumnDefinitions>{
+        {{DataType::Int, false}, {DataType::Float, true}},
+        {{DataType::Long, false}, {DataType::Float, false}},
+        {{DataType::Long, true}, {DataType::Double, false}},
+        {{DataType::String, false}, {DataType::Int, true}, {DataType::String, true}},
+        {{DataType::String, false}, {DataType::Int, false}, {DataType::Long, false}},
+        {{DataType::String, true}, {DataType::Int, false}, {DataType::Long, false}},
+        {{DataType::Int, false}, {DataType::Int, false}, {DataType::Int, false}},
+        {{DataType::Int, false}, {DataType::Int, true}, {DataType::Int, false}},
+        {{DataType::Int, false}, {DataType::Int, true}, {DataType::Long, false}, {DataType::Long, true}, {DataType::Double, true}},
+    };
+    auto reduced_group_by_column_definitions_set = std::vector<GroupByColumnDefinitions>{
+        {{DataType::Int, false}},
+        {{DataType::Int, false}, {DataType::Float, true}},
+        {{DataType::String, false}},
+        {{DataType::String, false}, {DataType::Int, false}},
+        {{DataType::Int, false}, {DataType::Int, true}, {DataType::Long, false}, {DataType::Long, true}, {DataType::Double, true}},
+    };
+    // clang-format on
+
+    // Translates the "human-readable" GroupByColumnDefinitions into ColumnIDs in the input table
+    const auto group_by_column_definition_to_column_id = [&](const GroupByColumnDefinition& column_definition) {
+      const auto [data_type, nullable] = column_definition;
+      return static_cast<ColumnID>(group_by_column_ids.at(data_type) + (nullable ? 1 : 0));
+    };
+    const auto group_by_column_definitions_to_column_ids =
+        [&](const GroupByColumnDefinitions& group_by_column_definitions) {
+          auto group_by_column_ids = std::vector<ColumnID>(group_by_column_definitions.size());
+          std::transform(group_by_column_definitions.begin(), group_by_column_definitions.end(),
+                         group_by_column_ids.begin(), group_by_column_definition_to_column_id);
+          return group_by_column_ids;
+        };
+
+    auto default_configuration =
         AggregateTestConfiguration{{InputSide::Left, 3, 10, all_input_table_types.front(), all_encoding_types.front()},
                                    {},
                                    {},
                                    {},
-                                   std::make_shared<AggregateOperatorFactory<AggregateOperator>>(), {}};
+                                   std::make_shared<AggregateOperatorFactory<AggregateOperator>>(),
+                                   {}};
+
+    // By default, use a scheduler for AggregateHashSort
+    if constexpr (std::is_same_v<AggregateOperator, AggregateHashSort>) {
+      default_configuration.scheduler = std::make_shared<NodeQueueScheduler>();
+
+      default_configuration.aggregate_hashsort_config->hash_table_size = 10;
+      default_configuration.aggregate_hashsort_config->hash_table_max_load_factor = 0.4f;
+      default_configuration.aggregate_hashsort_config->max_partitioning_counter = 2;
+      default_configuration.aggregate_hashsort_config->buffer_flush_threshold = 2;
+    }
 
     const auto add_configuration_if_supported = [&](const auto& configuration) {
       const auto supported = std::all_of(
@@ -138,38 +199,25 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
     };
 
     // Test single-column group-by for all DataTypes and on nullable/non-nullable columns.
-    for (const auto data_type : all_data_types) {
-      for (const auto nullable : {false, true}) {
-        auto configuration = default_configuration;
-        configuration.group_by_column_ids = {
-            ColumnID{group_by_column_ids.at(data_type) + (nullable ? 1 : 0)},
-        };
-        configuration.aggregate_column_definitions = {};
+    for (const auto table_size : all_table_sizes) {
+      for (const auto data_type : all_data_types) {
+        for (const auto nullable : {false, true}) {
+          auto configuration = default_configuration;
+          configuration.group_by_column_ids = {group_by_column_definition_to_column_id({data_type, nullable})};
+          configuration.aggregate_column_definitions = {};
+          configuration.input.table_size = table_size;
 
-        add_configuration_if_supported(configuration);
+          add_configuration_if_supported(configuration);
+        }
       }
     }
 
     // Test multi-column group-by with a number of DataType/nullable combinations. With and without aggregate column.
-    auto group_by_column_sets = std::vector{
-        std::vector<std::pair<DataType, bool>>{{DataType::Int, false}, {DataType::Float, true}},
-        std::vector<std::pair<DataType, bool>>{{DataType::Long, false}, {DataType::Float, false}},
-        std::vector<std::pair<DataType, bool>>{{DataType::Long, true}, {DataType::Double, false}},
-        std::vector<std::pair<DataType, bool>>{
-            {DataType::String, false}, {DataType::Int, false}, {DataType::Long, false}},
-        std::vector<std::pair<DataType, bool>>{
-            {DataType::String, true}, {DataType::Int, false}, {DataType::Long, false}},
-        std::vector<std::pair<DataType, bool>>{{DataType::Int, false}, {DataType::Int, false}, {DataType::Int, false}},
-        std::vector<std::pair<DataType, bool>>{{DataType::Int, false}, {DataType::Int, true}, {DataType::Int, false}},
-    };
-
-    for (const auto& group_by_column_set : group_by_column_sets) {
+    for (const auto& group_by_column_definitions : group_by_column_definitions_set) {
       for (const auto with_aggregate_column : {false, true}) {
         auto configuration = default_configuration;
 
-        for (const auto& [data_type, nullable] : group_by_column_set) {
-          configuration.group_by_column_ids.emplace_back(group_by_column_ids.at(data_type) + (nullable ? 1 : 0));
-        }
+        configuration.group_by_column_ids = group_by_column_definitions_to_column_ids(group_by_column_definitions);
 
         if (with_aggregate_column) {
           configuration.aggregate_column_definitions = {
@@ -178,6 +226,28 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
         }
 
         add_configuration_if_supported(configuration);
+      }
+    }
+
+    // Test numeric AggregateFunctions
+    for (const auto aggregate_function : numeric_aggregate_functions) {
+      for (const auto data_type : numeric_data_types) {
+        for (const auto& group_by_column_definitions : reduced_group_by_column_definitions_set) {
+          auto configuration = default_configuration;
+
+          configuration.aggregate_column_definitions = {{aggregate_column_ids.at(data_type), aggregate_function}};
+          configuration.group_by_column_ids = group_by_column_definitions_to_column_ids(group_by_column_definitions);
+        }
+      }
+    }
+
+    // Test string AggregateFunctions
+    for (const auto aggregate_function : string_aggregate_functions) {
+      for (const auto& group_by_column_definitions : reduced_group_by_column_definitions_set) {
+        auto configuration = default_configuration;
+
+        configuration.aggregate_column_definitions = {{aggregate_column_ids.at(DataType::String), aggregate_function}};
+        configuration.group_by_column_ids = group_by_column_definitions_to_column_ids(group_by_column_definitions);
       }
     }
 
@@ -191,13 +261,10 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
         for (const auto nullable : {false, true}) {
           auto configuration = default_configuration;
 
-          const auto column_id = ColumnID{group_by_column_ids.at(data_type) + (nullable ? 1 : 0)};
-          configuration.group_by_column_ids = {
-              column_id,
-          };
-
+          const auto column_id = group_by_column_definition_to_column_id({data_type, nullable});
+          configuration.group_by_column_ids = {column_id};
           configuration.aggregate_column_definitions = {
-          {column_id, aggregate_function},
+              {column_id, aggregate_function},
           };
 
           add_configuration_if_supported(configuration);
@@ -205,20 +272,25 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
       }
     }
 
-    // Extra configuration manipulation for AggregateHashSort
+    // AggregateHashSort: Test different operator configurations
     if constexpr (std::is_same_v<AggregateOperator, AggregateHashSort>) {
-      auto aggregate_hashsort_config = AggregateHashSortConfig{};
-      aggregate_hashsort_config.hash_table_size = 4;
-      aggregate_hashsort_config.hash_table_max_load_factor = 0.25f;
-      aggregate_hashsort_config.max_partitioning_counter = 2;
-      aggregate_hashsort_config.buffer_flush_threshold = 2;
-      aggregate_hashsort_config.group_prefetch_threshold = 4;
+      for (const auto& group_by_column_definitions : group_by_column_definitions_set) {
+        // "Unlimited" hash table size - should allocate a hashtable sufficently large to fit all input rows
+        {
+          auto configuration = default_configuration;
+          configuration.group_by_column_ids = group_by_column_definitions_to_column_ids(group_by_column_definitions);
+          configuration.aggregate_hashsort_config->hash_table_size = std::numeric_limits<size_t>::max();
+          add_configuration_if_supported(configuration);
+        }
 
-      auto scheduler = std::make_shared<NodeQueueScheduler>();
-
-      for (auto& configuration : configurations) {
-        configuration.aggregate_hashsort_config = aggregate_hashsort_config;
-        configuration.scheduler = scheduler;
+        // Minimal hash table size - fits only a single entry
+        {
+          auto configuration = default_configuration;
+          configuration.group_by_column_ids = group_by_column_definitions_to_column_ids(group_by_column_definitions);
+          configuration.aggregate_hashsort_config->hash_table_size = 4;
+          configuration.aggregate_hashsort_config->hash_table_max_load_factor = 0.25f;
+          add_configuration_if_supported(configuration);
+        }
       }
     }
 
@@ -229,9 +301,7 @@ class AggregateTestRunner : public BaseOperatorTestRunner<AggregateTestConfigura
     return configurations;
   }
 
-  void TearDown() override {
-    CurrentScheduler::set(nullptr);
-  }
+  void TearDown() override { CurrentScheduler::set(nullptr); }
 
 };  // namespace opossum
 
@@ -254,7 +324,6 @@ TEST_P(AggregateTestRunner, TestAggregate) {
   auto table_difference_message = std::optional<std::string>{};
 
   auto expected_output_table_iter = expected_output_tables.find(configuration);
-
   const auto print_configuration_info = [&]() {
     std::cout << "==================== AggregateOperator ======================" << std::endl;
     std::cout << aggregate_operator->description(DescriptionMode::MultiLine) << std::endl;
