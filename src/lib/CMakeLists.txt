@@ -88,6 +88,10 @@ set(
     expression/value_expression.hpp
     hyrise.cpp
     hyrise.hpp
+    import_export/binary/binary_parser.cpp
+    import_export/binary/binary_parser.hpp
+    import_export/binary/binary_writer.cpp
+    import_export/binary/binary_writer.hpp
     import_export/csv/csv_converter.cpp
     import_export/csv/csv_converter.hpp
     import_export/csv/csv_meta.cpp

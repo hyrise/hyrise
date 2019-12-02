@@ -4,8 +4,6 @@
 #include <fstream>
 #include <memory>
 #include <numeric>
-#include <optional>
-#include <string>
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
@@ -13,6 +11,7 @@
 #include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv/csv_parser.hpp"
+#include "import_export/binary/binary_parser.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
@@ -91,7 +90,8 @@ std::shared_ptr<Table> Import::_import_tbl(const std::string& file_name, const C
 }
 
 std::shared_ptr<Table> Import::_import_binary(const std::string& file_name) {
-  return nullptr;
+  BinaryParser parser;
+  return parser.parse(file_name);
 }
 
 std::shared_ptr<Table> Import::_import_any_file() {
