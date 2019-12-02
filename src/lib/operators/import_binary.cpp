@@ -170,6 +170,8 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_segment(std::ifstream& file, 
       if constexpr (encoding_supports_data_type(enum_c<EncodingType, EncodingType::FrameOfReference>,
                                                 hana::type_c<ColumnDataType>)) {
         return _import_frame_of_reference_segment<ColumnDataType>(file, row_count);
+      } else {
+        Fail("Unsupported data type for FOR encoding");
       }
     case EncodingType::LZ4:
       return _import_lz4_segment<ColumnDataType>(file, row_count);
