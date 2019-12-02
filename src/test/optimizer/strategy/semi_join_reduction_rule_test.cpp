@@ -59,6 +59,41 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SemiJoinReductionRuleTest, CreateSimpleReductionRightSide) {
+  // Same as CreateSimpleReduction, but with reversed sides
+
+  // clang-format off
+  const auto input_lqp = JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+    _node_b,
+    _node_a);
+
+  const auto expected_lqp = JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+    _node_b,
+    JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
+      _node_a,
+      _node_b));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SemiJoinReductionRuleTest, NoReductionForOuter) {
+  // Same as CreateSimpleReduction, but as tupels without a join partner survive the left outer join, do not reduce
+  // the left side.
+
+  // clang-format off
+  const auto input_lqp = JoinNode::make(JoinMode::Left, less_than_(_a_a, _b_a),
+    _node_a,
+    _node_b);
+
+  const auto expected_lqp = input_lqp->deep_copy();
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SemiJoinReductionRuleTest, NoReductionForNonEquals) {
   // Same as CreateSimpleReduction, but as the join condition is not an equals condition, no reduction should be
   // created. Note: As non-equi joins are currently estimated with a selectivity of 100%, this test would also pass

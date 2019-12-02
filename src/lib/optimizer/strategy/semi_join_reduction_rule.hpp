@@ -26,13 +26,21 @@ class PredicateNode;
  * [ part p2 ] -> [ Aggregate AVG(p_size) GROUP BY p_container ]
  *
  * As we can see, part is first fully aggregated, even though 37 container types will become irrelevant later. This
- * rule adds a second semi join (the semi join reduction), which uses the p2 side as the left (filtered) input. While
+ * rule adds a second semi join (the semi join reduction), which uses the p2 side as the left (reduced) input. While
  * this rule adds the semi join reduction directly below the join, the PredicatePlacementRule will push in below the
  * aggregate. As a result, the LQP after this rule looks like this:
  *
  * [ part p1 ] -> [ Predicate p_container IN (...) ] -----------------------------------------------------------------> ...  // NOLINT
  *                                                   \                                                               /
  * [ part p2 ] --------------------------------------> [ Semi Join p1.p_container = p2.p_container ] -> [ Aggregate ]
+ *
+ * We call p2 the REDUCED NODE on the reduced side and p1 the REDUCER NODE on the reducing side.
+ *
+ * A different approach to this would be to propagate predicates across joins. However, our current LQP architecture
+ * makes it somewhat difficult to identify which predicates can be propagated, especially when multiple joins come
+ * into play. Also, predicates might be based on projections and/or joined columns, which makes propagation even more
+ * complex. The approach chosen here is more flexible in that it works independently of the predicate's complexity.
+ * However, different from a predicate propagation approach, it does not allow us to prune on the reduced side.
 **/
 
 class SemiJoinReductionRule : public AbstractRule {

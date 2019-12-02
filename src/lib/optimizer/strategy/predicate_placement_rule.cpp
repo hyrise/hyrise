@@ -57,6 +57,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     return;
   }
 
+  // Removes a node from the current LQP and continues to run _push_down_traversal on the node's inputs. It is the
+  // caller's responsibility to put the node back into the LQP at some new position.
   const auto untie_and_recurse = [&](const std::shared_ptr<AbstractLQPNode>& node) {
     push_down_nodes.emplace_back(node);
 
@@ -390,7 +392,7 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
       if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp)) return false;
 
       auto has_uncomputed_aggregate = false;
-      auto predicate = predicate_node.predicate();
+      const auto predicate = predicate_node.predicate();
       visit_expression(predicate, [&](const auto& expression) {
         if (expression->type == ExpressionType::Aggregate && !lqp->find_column_id(*expression)) {
           has_uncomputed_aggregate = true;
