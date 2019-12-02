@@ -12,6 +12,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
+#include "storage/lz4_segment/lz4_segment_iterable.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
