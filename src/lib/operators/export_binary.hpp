@@ -219,6 +219,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * string offset size      | uint32_t                              |   4
    * string offset data size³| uint32_t                              |   4
    * string offset³          | uint32_t                              |   size * 4
+
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.

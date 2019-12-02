@@ -253,6 +253,7 @@ SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT id_int_int_i
 
 -- COUNT(*)
 SELECT COUNT(*) FROM mixed;
+SELECT COUNT(*) + 1 FROM mixed;
 SELECT COUNT(*) FROM mixed GROUP BY a;
 SELECT a, COUNT(*) FROM mixed GROUP BY a;
 SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
@@ -260,6 +261,13 @@ SELECT COUNT(*) FROM mixed AS L, mixed AS R WHERE L.a = R.a;
 SELECT COUNT(*) FROM id_int_int_int_50, id_int_int_int_100;
 SELECT COUNT(*) FROM (SELECT 1) t;
 SELECT COUNT(*) FROM mixed, id_int_int_int_100;
+
+-- COUNT(expr)
+SELECT COUNT(1) FROM mixed;
+SELECT COUNT(b + 1) FROM mixed;
+SELECT COUNT(1 + 2) FROM mixed;
+SELECT a, COUNT(1) FROM mixed GROUP BY a;
+SELECT b + 1, COUNT(c + 1) FROM mixed GROUP BY b+1;
 
 -- COUNT(DISTINCT)
 SELECT a, COUNT(DISTINCT b) as d FROM mixed GROUP BY a;

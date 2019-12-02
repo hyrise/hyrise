@@ -27,8 +27,11 @@ bool LQPColumnReference::operator==(const LQPColumnReference& rhs) const {
 std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference) {
   const auto original_node = column_reference.original_node();
   Assert(original_node, "OriginalNode has expired");
-  Assert(column_reference.original_column_id() != INVALID_COLUMN_ID,
-         "Tried to print an uninitialized column or COUNT(*)");
+
+  if (column_reference.original_column_id() == INVALID_COLUMN_ID) {
+    os << "INVALID_COLUMN_ID";
+    return os;
+  }
 
   switch (original_node->type) {
     case LQPNodeType::StoredTable: {

@@ -127,6 +127,7 @@ set(
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     optimizer/strategy/subquery_to_join_rule_test.cpp
+    plugins/mvcc_delete_plugin_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_socket.hpp
     server/postgres_protocol_handler_test.cpp
@@ -159,6 +160,7 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/compressed_vector_test.cpp
+    storage/constraints_test.cpp
     storage/dictionary_segment_test.cpp
     storage/encoded_segment_test.cpp
     storage/encoded_string_segment_test.cpp
@@ -205,10 +207,14 @@ set (
     concurrency/stress_test.cpp
     server/server_test_runner.cpp
     sql/sqlite_testrunner/sqlite_testrunner_encodings.cpp
+    tpc/tpcc_test.cpp
     synthetic_table_generator_test.cpp
     tpc/tpcds_db_generator_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
+    utils/plugin_test_utils.cpp
+    utils/plugin_test_utils.hpp
+    plugins/mvcc_delete_plugin_system_test.cpp
 )
 
 # Both hyriseTest and hyriseSystemTest link against these
@@ -217,6 +223,7 @@ set(
     gtest
     gmock
     sqlite3
+    MvccDeletePlugin  # So that we can test member methods without going through dlsym
 )
 
 # This warning does not play well with SCOPED_TRACE

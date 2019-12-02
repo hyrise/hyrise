@@ -25,7 +25,7 @@ class SQLiteAddIndicesTest : public BaseTest {
     stored_table->append({37, "world"});
 
     sqlite_wrapper = std::make_shared<SQLiteWrapper>();
-    sqlite_wrapper->create_table(*stored_table, "table_1");
+    sqlite_wrapper->create_sqlite_table(*stored_table, "table_1");
   }
 
   std::shared_ptr<Table> stored_table;
@@ -34,15 +34,15 @@ class SQLiteAddIndicesTest : public BaseTest {
 
 TEST_F(SQLiteAddIndicesTest, AddIndexTest) {
   // DROP INDEX index_1 throws an exception if index_1 does not exist.
-  EXPECT_THROW(sqlite_wrapper->raw_execute_query("DROP INDEX index_1;", true), std::logic_error);
-  auto sqlite_table = sqlite_wrapper->execute_query("SELECT * FROM table_1");
+  EXPECT_THROW(sqlite_wrapper->main_connection.raw_execute_query("DROP INDEX index_1;", true), std::logic_error);
+  auto sqlite_table = sqlite_wrapper->main_connection.execute_query("SELECT * FROM table_1");
   EXPECT_TABLE_EQ_ORDERED(stored_table, sqlite_table);
   const auto schema_file_path = "resources/test_data/sqlite_add_index_schema.sql";
   const auto create_index_file_path = "resources/test_data/sqlite_add_index_create_index.sql";
   add_indices_to_sqlite(schema_file_path, create_index_file_path, sqlite_wrapper);
-  sqlite_table = sqlite_wrapper->execute_query("SELECT * FROM table_1");
+  sqlite_table = sqlite_wrapper->main_connection.execute_query("SELECT * FROM table_1");
   EXPECT_TABLE_EQ_ORDERED(stored_table, sqlite_table);
-  sqlite_wrapper->raw_execute_query("DROP INDEX index_1;");
+  sqlite_wrapper->main_connection.raw_execute_query("DROP INDEX index_1;");
 }
 
 }  // namespace opossum

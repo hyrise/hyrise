@@ -404,9 +404,10 @@ set(
     storage/base_segment.hpp
     storage/base_value_segment.hpp
     storage/chunk.cpp
+    storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
-    storage/chunk.hpp
+    storage/constraints/table_constraint_definition.hpp
     storage/create_iterable_from_segment.hpp
     storage/dictionary_segment/attribute_vector_iterable.hpp
     storage/dictionary_segment.cpp
@@ -624,17 +625,22 @@ add_custom_command (
     DEPENDS utils/tracing/provider.d
     COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
 )
-
+add_custom_target (
+    generate-provider-hpp
+    DEPENDS ${PROVIDER_FILE}
+)
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
 
-# Configure the regular hyrise library used for tests/server/playground...
+# hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
 if(NOT ${ENABLE_COVERAGE} AND NOT APPLE AND NOT ENABLE_ADDR_UB_SANITIZATION AND NOT ENABLE_THREAD_SANITIZATION)
-    add_library(hyrise SHARED ${SOURCES})
+    add_library(hyrise_impl SHARED ${SOURCES})
 else()
     # Use a static build for coverage information - otherwise .cpp files are missing from the report
     # Also, the sanitizer builds on Mac require static linkage
-    add_library(hyrise STATIC ${SOURCES})
+    add_library(hyrise_impl STATIC ${SOURCES})
 endif()
+
+add_dependencies(hyrise_impl generate-provider-hpp)
 
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(
@@ -643,27 +649,38 @@ set_source_files_properties(
     COMPILE_FLAGS -O0
 )
 
+# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
+target_link_libraries(hyrise_impl ${LIBRARIES} -rdynamic)
+target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
+target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
+
+# -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
+target_compile_options(hyrise_impl PRIVATE -fPIC)
+
+# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
+# isn't updated when HEAD changes
+
+add_dependencies(hyrise_impl AlwaysCheckGit)
+
+# This is a wrapper around hyrise_impl that forces the compiler to emit all symbols
+add_library(hyrise INTERFACE)
+# Forward all include directories from hyrise_impl
+target_include_directories(hyrise INTERFACE $<TARGET_PROPERTY:hyrise_impl,INCLUDE_DIRECTORIES>)
+
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)
-    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise>)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -force_load $<TARGET_FILE:hyrise_impl>)
 else()
-    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive hyrise -Wl,--no-whole-archive)
+    set_property(TARGET hyrise PROPERTY INTERFACE_LINK_LIBRARIES -Wl,--whole-archive,$<TARGET_FILE:hyrise_impl>,--no-whole-archive)
 endif()
+
+# Link against all libraries used by hyrise_impl - do this after INTERFACE_LINK_LIBRARIES is initially set so that it is not overwritten
+target_link_libraries(hyrise INTERFACE hyrise_impl)
 
 # For convenience, to be able to launch, e.g., hyriseTest, directly from the build directory,
 # add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
-    COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
-)
+        COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
+        )
 
-# -rdynamic tells the linker to export the library's symbols so that plugins can use them.
-target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
-target_link_libraries_system(hyrise nlohmann_json::nlohmann_json)
-target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
-
-# -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
-target_compile_options(hyrise PRIVATE -fPIC)
-
-# Dependency hyrise --> git_watcher needs to be added manually, apparently. Otherwise version.hpp, for reasons unknown
-# isn't updated when HEAD changes
-add_dependencies(hyrise AlwaysCheckGit resourceLink)
+add_dependencies(hyrise resourceLink)

@@ -9,10 +9,9 @@ namespace opossum {
 
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
 // ugly mangled names. Use EXPORT in the implementation file of your plugin.
-#define EXPORT_PLUGIN(PluginName)                                     \
-  extern "C" AbstractPlugin* factory() {                              \
-    auto plugin = static_cast<AbstractPlugin*>(&(PluginName::get())); \
-    return plugin;                                                    \
+#define EXPORT_PLUGIN(PluginName)         \
+  extern "C" AbstractPlugin* factory() {  \
+    return new PluginName();              \
   }
 
 // AbstractPlugin is the abstract super class for all plugins. An example implementation can be found
