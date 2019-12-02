@@ -236,8 +236,8 @@ void ExportBinary::_write_segment(const DictionarySegment<T>& dictionary_segment
   // Write attribute vector
   Assert(dictionary_segment.compressed_vector_type(),
          "Expected DictionarySegment to use vector compression for attribute vector");
-  _export_attribute_vector(ofstream, *dictionary_segment.compressed_vector_type(),
-                           *dictionary_segment.attribute_vector());
+  _export_compressed_vector(ofstream, *dictionary_segment.compressed_vector_type(),
+                            *dictionary_segment.attribute_vector());
 }
 
 template <typename T>
@@ -256,12 +256,14 @@ void ExportBinary::_write_segment(const RunLengthSegment<T>& run_length_segment,
 }
 
 template <typename T>
-void ExportBinary::_write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, std::ofstream& ofstream) {
+void ExportBinary::_write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment,
+                                  std::ofstream& ofstream) {
   Fail("Frame of Reference Segments not implemented for data type");
 }
 
 template <>
-void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment, std::ofstream& ofstream) {
+void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
   const auto offset_value_vector_width = [&]() {
@@ -295,7 +297,8 @@ void ExportBinary::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
   // Write offset values
   Assert(frame_of_reference_segment.compressed_vector_type(),
          "Expected FrameOfReference to use vector compression for offset values");
-  _export_attribute_vector(ofstream, *frame_of_reference_segment.compressed_vector_type(), frame_of_reference_segment.offset_values());
+  _export_compressed_vector(ofstream, *frame_of_reference_segment.compressed_vector_type(),
+                            frame_of_reference_segment.offset_values());
 }
 
 template <typename T>
@@ -304,93 +307,77 @@ void ExportBinary::_write_segment(const LZ4Segment<T>& lz4_segment, std::ofstrea
 
   // Write num elements
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.size()));
-  std::cout << "num elements " << lz4_segment.size() << std::endl;
 
   // Write number of blocks
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.lz4_blocks().size()));
-  std::cout << "num blocks: " << lz4_segment.lz4_blocks().size() << std::endl;
 
-  if(lz4_segment.lz4_blocks().size() == 0) {
+  if (lz4_segment.lz4_blocks().size() == 0) {
     // No blocks at all: write just last block size = 0
     export_value(ofstream, static_cast<uint32_t>(0));
-    std::cout << "no blocks size 0" << std::endl;
   } else {
     // if more than one block, write block size
     if (lz4_segment.lz4_blocks().size() > 1) {
       // Write block size
       export_value(ofstream, static_cast<uint32_t>(lz4_segment.block_size()));
-      std::cout << "block size: " << lz4_segment.block_size() << std::endl;
     }
     // Write last block size
     export_value(ofstream, static_cast<uint32_t>(lz4_segment.last_block_size()));
-    std::cout << "last block size: " << lz4_segment.last_block_size() << std::endl;
+  }
+
+  // Write size for each LZ4 Block
+  for (auto& lz4_block : lz4_segment.lz4_blocks()) {
+    export_value(ofstream, static_cast<uint32_t>(lz4_block.size()));
   }
 
   // Write LZ4 Blocks
-  for (auto& lz4_block : lz4_segment.lz4_blocks()){
-    export_value(ofstream, static_cast<uint32_t>(lz4_block.size()));
+  for (auto& lz4_block : lz4_segment.lz4_blocks()) {
     export_values(ofstream, lz4_block);
-    for (auto x : lz4_block){
-      std::cout << "block " << x << std::endl;
-    }
-    std::cout << "next block" << std::endl;
   }
 
-  if (lz4_segment.null_values()){
+  if (lz4_segment.null_values()) {
     // Write NULL value size
     export_value(ofstream, static_cast<uint32_t>(lz4_segment.null_values()->size()));
-    std::cout << "null value size " << lz4_segment.null_values()->size() << std::endl;
     // Write NULL values
     export_values(ofstream, *lz4_segment.null_values());
-    for (auto x : *lz4_segment.null_values()){
-      std::cout << "null value " << x << std::endl;
-    }
   } else {
+    // No NULL values
     export_value(ofstream, static_cast<uint32_t>(0));
   }
 
   // Write dictionary size
   export_value(ofstream, static_cast<uint32_t>(lz4_segment.dictionary().size()));
-  std::cout << "dict size " << lz4_segment.dictionary().size() << std::endl;
 
   // Write dictionary
   export_values(ofstream, lz4_segment.dictionary());
-  for (auto x : lz4_segment.dictionary()) {
-    std::cout << "dict " << x << std::endl;
-  }
 
-  if (lz4_segment.string_offsets() && *lz4_segment.string_offsets()){
+  if (lz4_segment.string_offsets() && *lz4_segment.string_offsets()) {
     // Write string_offset size
     export_value(ofstream, static_cast<uint32_t>((**lz4_segment.string_offsets()).size()));
-    std::cout << "string offset size " << (**lz4_segment.string_offsets()).size() << std::endl;
-     // Write string_offset data_size
-    export_value(ofstream, static_cast<uint32_t>(dynamic_cast<const SimdBp128Vector&>(**lz4_segment.string_offsets()).data().size()));
-    std::cout << "string offset data size " << dynamic_cast<const SimdBp128Vector&>(**lz4_segment.string_offsets()).data().size() << std::endl;
+    // Write string_offset data_size
+    export_value(ofstream, static_cast<uint32_t>(
+                               dynamic_cast<const SimdBp128Vector&>(**lz4_segment.string_offsets()).data().size()));
     // Write string offsets
-    _export_attribute_vector(ofstream, *lz4_segment.compressed_vector_type(), *lz4_segment.string_offsets().value());
-    for (auto x : dynamic_cast<const SimdBp128Vector&>(**lz4_segment.string_offsets())){
-      std::cout << "string offset " << x << std::endl;
-    }
+    _export_compressed_vector(ofstream, *lz4_segment.compressed_vector_type(), *lz4_segment.string_offsets().value());
   } else {
     // Write string_offset size = 0
     export_value(ofstream, static_cast<uint32_t>(0));
   }
 }
 
-void ExportBinary::_export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
-                                            const BaseCompressedVector& attribute_vector) {
+void ExportBinary::_export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
+                                             const BaseCompressedVector& compressed_vector) {
   switch (type) {
     case CompressedVectorType::FixedSize4ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(attribute_vector).data());
+      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(compressed_vector).data());
       return;
     case CompressedVectorType::FixedSize2ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
+      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(compressed_vector).data());
       return;
     case CompressedVectorType::FixedSize1ByteAligned:
-      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(attribute_vector).data());
+      export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(compressed_vector).data());
       return;
     case CompressedVectorType::SimdBp128:
-      export_values(ofstream, dynamic_cast<const SimdBp128Vector&>(attribute_vector).data());
+      export_values(ofstream, dynamic_cast<const SimdBp128Vector&>(compressed_vector).data());
       return;
     default:
       Fail("Any other type should have been caught before.");

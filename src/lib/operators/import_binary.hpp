@@ -9,12 +9,12 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "storage/base_segment.hpp"
-#include "storage/value_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/run_length_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/lz4_segment.hpp"
+#include "storage/run_length_segment.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 

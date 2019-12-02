@@ -5,12 +5,12 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "storage/value_segment.hpp"
-#include "storage/reference_segment.hpp"
-#include "storage/run_length_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/lz4_segment.hpp"
+#include "storage/reference_segment.hpp"
+#include "storage/run_length_segment.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -203,20 +203,22 @@ class ExportBinary : public AbstractReadOnlyOperator {
   /**
    * LZ4 Segments are dumped with the following layout:
    *
-   * Description            | Type                                  | Size in bytes
+   * Description             | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
-   * Column Type            | ColumnType                            |   1
-   * Number of Rows (in seg)| uint32_t                              |   4
-   * Number of Blocks       | uint32_t                              |   4
-   * Block size¹            | uint32_t                              |   4
-   * Last Block size        | uint32_t                              |   4
-   * lz4 Blocks             | vector<vector<char>>                  |   (number of blocks - 1) * block size + last block size
-   * NULL values size       | uint32_t                              |   4
-   * NULL values²           | vector<bool> (BoolAsByteType)         |   size * 1
-   * Dictionary size        | uint32_t                              |   4
-   * Dictionary             | vector<char>                          |   dictionary size * 1
-   * string offset size³    | uint32_t                              |   4
-   * string offset⁴         | uint32_t                              |   size * 4
+   * Column Type             | ColumnType                            |   1
+   * Number of Rows (in seg) | uint32_t                              |   4
+   * Number of Blocks        | uint32_t                              |   4
+   * Block size¹             | uint32_t                              |   4
+   * Last Block size         | uint32_t                              |   4
+   * lz4 Block sizes         | vector<uint32_t>                      |   number of blocks * 4
+   * lz4 Blocks              | vector<vector<char>>                  |   sum(lz4 block sizes)
+   * NULL values size        | uint32_t                              |   4
+   * NULL values²            | vector<bool> (BoolAsByteType)         |   size * 1
+   * Dictionary size         | uint32_t                              |   4
+   * Dictionary              | vector<char>                          |   dictionary size * 1
+   * string offset size      | uint32_t                              |   4
+   * string offset data size³| uint32_t                              |   4
+   * string offset³          | uint32_t                              |   size * 4
    *
    * Please note that the number of rows are written in the header of the chunk.
    * The type of the column can be found in the global header of the file.
@@ -224,8 +226,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * ¹: This field is written if the number of blocks is greater than 1. Otherwise "Last Block Size" contains the
    *    size of the single block or 0 if there are no blocks
    * ²: This field is only written if NULL value size is not 0
-   * ³: This field is only written the segment is a pmr_string segment
-   * ⁴: This field is only written if string offset size is not 0
+   * ³: These fields are only written if string offset size is not 0
    *
    * @param lz4_segment The segment to export
    * @param ofstream The output stream for exporting
@@ -234,9 +235,9 @@ class ExportBinary : public AbstractReadOnlyOperator {
   static void _write_segment(const LZ4Segment<T>& lz4_segment, std::ofstream& ofstream);
 
  private:
-  // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.
-  static void _export_attribute_vector(std::ofstream& ofstream, const CompressedVectorType type,
-                                       const BaseCompressedVector& attribute_vector);
+  // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
+  static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
+                                        const BaseCompressedVector& compressed_vector);
 
   template <typename T>
   static size_t _size(const T& object);
