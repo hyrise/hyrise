@@ -643,8 +643,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   EXPECT_EQ(aggregate_op->groupby_column_ids().at(0), ColumnID{1});
 
   const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(aggregate_definition.column, ColumnID{2});
-  EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
+  EXPECT_EQ(*aggregate_definition, *sum_(pqp_column_(ColumnID{2}, DataType::Float, false, "b + a")));
 }
 
 TEST_F(LQPTranslatorTest, JoinAndPredicates) {

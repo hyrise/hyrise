@@ -6,6 +6,7 @@
 #include "aggregate/aggregate_traits.hpp"
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/sort.hpp"
 #include "storage/segment_iterate.hpp"
 #include "table_wrapper.hpp"
@@ -14,7 +15,7 @@
 namespace opossum {
 
 AggregateSort::AggregateSort(const std::shared_ptr<AbstractOperator>& in,
-                             const std::vector<AggregateColumnDefinition>& aggregates,
+                             const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
 
@@ -41,6 +42,9 @@ const std::string& AggregateSort::name() const {
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, const uint64_t aggregate_index,
                                       const std::shared_ptr<const Table>& sorted_table) {
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*_aggregates[aggregate_index]->argument());
+  const auto input_column_id = pqp_column.column_id;
+
   auto aggregate_function = AggregateFunctionBuilder<ColumnType, AggregateType, function>().get_aggregate_function();
 
   // We already know beforehand how many aggregate values (=group-by-combinations) we have to calculate
@@ -67,7 +71,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   std::optional<AggregateType> current_primary_aggregate;
   std::vector<AggregateType> current_secondary_aggregates{};
   ChunkID current_chunk_id{0};
-  if (function == AggregateFunction::Count && _aggregates[aggregate_index].column == INVALID_COLUMN_ID) {
+  if (function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
     /*
      * Special COUNT(*) implementation.
      * We do not need to care about null values for COUNT(*).
@@ -122,10 +126,8 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
      *
      */
     auto group_boundary_iter = group_boundaries.cbegin();
-    const auto column_id = _aggregates[aggregate_index];
-    const auto column = column_id.column;
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto segment = sorted_table->get_chunk(chunk_id)->get_segment(column);
+      auto segment = sorted_table->get_chunk(chunk_id)->get_segment(input_column_id);
       segment_iterate<ColumnType>(*segment, [&](const auto& position) {
         const auto row_id = RowID{current_chunk_id, position.chunk_offset()};
         const auto is_new_group = group_boundary_iter != group_boundaries.cend() && row_id == *group_boundary_iter;
@@ -208,7 +210,10 @@ void AggregateSort::_set_and_write_aggregate_value(
     [[maybe_unused]] const uint64_t value_count, [[maybe_unused]] const uint64_t value_count_with_null,
     [[maybe_unused]] const uint64_t unique_value_count) const {
   if constexpr (function == AggregateFunction::Count) {  // NOLINT
-    if (this->_aggregates[aggregate_index].column != INVALID_COLUMN_ID) {
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*this->_aggregates[aggregate_index]->argument());
+    const auto input_column_id = pqp_column.column_id;
+
+    if (input_column_id != INVALID_COLUMN_ID) {
       // COUNT(<name>), so exclude null values
       current_primary_aggregate = value_count;
     } else {
@@ -296,9 +301,10 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   }
 
   // Create aggregate column definitions
-  ColumnID column_index{0};
+  ColumnID aggregate_idx{0};
   for (const auto& aggregate : _aggregates) {
-    const auto column = aggregate.column;
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto column_id = pqp_column.column_id;
 
     /*
      * Special case for COUNT(*), which is the only case where column equals INVALID_COLUMN_ID:
@@ -308,13 +314,13 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * As the input type does not matter and we do not even have an input column,
      * but the function call expects an input type, we choose Long to be consistent with the output type.
      */
-    const auto data_type = column == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(column);
+    const auto data_type = column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(column_id);
 
-    resolve_data_type(data_type, [&, column_index](auto type) {
-      _create_aggregate_column_definitions(type, column_index, aggregate.function);
+    resolve_data_type(data_type, [&, aggregate_idx](auto type) {
+      _create_aggregate_column_definitions(type, aggregate_idx, aggregate->aggregate_function);
     });
 
-    ++column_index;
+    ++aggregate_idx;
   }
 
   auto result_table = std::make_shared<Table>(_output_column_definitions, TableType::Data);
@@ -334,7 +340,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     if (_groupby_column_ids.empty()) {
       std::vector<AllTypeVariant> default_values;
       for (const auto& aggregate : _aggregates) {
-        if (aggregate.function == AggregateFunction::Count || aggregate.function == AggregateFunction::CountDistinct) {
+        if (aggregate->aggregate_function == AggregateFunction::Count ||
+            aggregate->aggregate_function == AggregateFunction::CountDistinct) {
           default_values.emplace_back(int64_t{0});
         } else {
           default_values.emplace_back(NULL_VALUE);
@@ -498,19 +505,22 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
      * but the function call expects an input type, we choose Int arbitrarily.
      * This is NOT the result type of COUNT(*), which is Long.
      */
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto input_column_id = pqp_column.column_id;
+
     const auto data_type =
-        aggregate.column == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(aggregate.column);
+        input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
       /*
        * We are aware that the switch looks very repetitive, but we could not find a dynamic solution.
-       * The problem we encountered: We cannot simply hand aggregate.function into the call of _aggregate_values.
+       * The problem we encountered: We cannot simply hand aggregate->aggregate_function into the call of _aggregate_values.
        * The reason: the compiler wants to know at compile time which of the templated versions need to be called.
-       * However, aggregate.function is something that is only available at runtime,
+       * However, aggregate->aggregate_function is something that is only available at runtime,
        * so the compiler cannot know its value and thus not deduce the correct method call.
        */
-      switch (aggregate.function) {
+      switch (aggregate->aggregate_function) {
         case AggregateFunction::Min: {
           using AggregateType = typename AggregateTraits<ColumnDataType, AggregateFunction::Min>::AggregateType;
           _aggregate_values<ColumnDataType, AggregateType, AggregateFunction::Min>(group_boundaries, aggregate_index,
@@ -624,29 +634,33 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
  */
 template <typename ColumnType, AggregateFunction function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
+  // TODO
   // retrieve type information from the aggregation traits
   auto aggregate_data_type = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+  const auto input_column_id = pqp_column.column_id;
 
   if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->column_data_type(aggregate.column);
+    aggregate_data_type = input_table_left()->column_data_type(input_column_id);
   }
 
   // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
   // doesn't use Expressions, yet
+  // TODO
   std::stringstream column_name_stream;
-  if (aggregate.function == AggregateFunction::CountDistinct) {
+  if (aggregate->aggregate_function == AggregateFunction::CountDistinct) {
     column_name_stream << "COUNT(DISTINCT ";
   } else {
-    column_name_stream << aggregate.function << "(";
+    column_name_stream << aggregate->aggregate_function << "(";
   }
 
-  if (aggregate.column != INVALID_COLUMN_ID) {
-    column_name_stream << input_table_left()->column_name(aggregate.column);
+  if (input_column_id != INVALID_COLUMN_ID) {
+    column_name_stream << input_table_left()->column_name(input_column_id);
   } else {
-    Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
+    Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
     column_name_stream << "*";
   }
   column_name_stream << ")";

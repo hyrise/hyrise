@@ -12,6 +12,7 @@
 
 #include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -52,7 +53,7 @@ typename Results::reference get_or_add_result(ResultIds& result_ids, Results& re
 namespace opossum {
 
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
-                             const std::vector<AggregateColumnDefinition>& aggregates,
+                             const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
 
@@ -212,8 +213,8 @@ void AggregateHash::_aggregate() {
 
   for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
     jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, this]() {
-      const auto column_id = _groupby_column_ids.at(group_column_index);
-      const auto data_type = input_table->column_data_type(column_id);
+      const auto groupby_column_id = _groupby_column_ids.at(group_column_index);
+      const auto data_type = input_table->column_data_type(groupby_column_id);
 
       resolve_data_type(data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
@@ -238,7 +239,7 @@ void AggregateHash::_aggregate() {
           const auto chunk_in = input_table->get_chunk(chunk_id);
           if (!chunk_in) continue;
 
-          const auto base_segment = chunk_in->get_segment(column_id);
+          const auto base_segment = chunk_in->get_segment(groupby_column_id);
 
           ChunkOffset chunk_offset{0};
           segment_iterate<ColumnDataType>(*base_segment, [&](const auto& position) {
@@ -293,17 +294,22 @@ void AggregateHash::_aggregate() {
    * created on. We do this here, and not in the per-chunk-loop below, because there might be no Chunks in the input
    * and _write_aggregate_output() needs these contexts anyway.
    */
-  for (ColumnID column_id{0}; column_id < _aggregates.size(); ++column_id) {
-    const auto& aggregate = _aggregates[column_id];
-    if (aggregate.column == INVALID_COLUMN_ID) {
-      Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
+  for (ColumnID aggregate_idx{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
+    const auto& aggregate = _aggregates[aggregate_idx];
+
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto input_column_id = pqp_column.column_id;
+
+    if (input_column_id == INVALID_COLUMN_ID) {
+      Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
       // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>();
-      _contexts_per_column[column_id] = context;
+      _contexts_per_column[aggregate_idx] = context;
       continue;
     }
-    auto data_type = input_table->column_data_type(aggregate.column);
-    _contexts_per_column[column_id] = _create_aggregate_context<AggregateKey>(data_type, aggregate.function);
+    auto data_type = input_table->column_data_type(input_column_id);
+    _contexts_per_column[aggregate_idx] =
+        _create_aggregate_context<AggregateKey>(data_type, aggregate->aggregate_function);
   }
 
   // Process Chunks and perform aggregations
@@ -351,7 +357,7 @@ void AggregateHash::_aggregate() {
         get_or_add_result(result_ids, results, hash_keys[chunk_offset], RowID{chunk_id, chunk_offset});
       }
     } else {
-      ColumnID column_index{0};
+      ColumnID aggregate_idx{0};
       for (const auto& aggregate : _aggregates) {
         /**
          * Special COUNT(*) implementation.
@@ -360,10 +366,14 @@ void AggregateHash::_aggregate() {
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
-        if (aggregate.column == INVALID_COLUMN_ID) {
-          Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
+
+        const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+        const auto input_column_id = pqp_column.column_id;
+
+        if (input_column_id == INVALID_COLUMN_ID) {
+          Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
           auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType, AggregateKey>>(
-              _contexts_per_column[column_index]);
+              _contexts_per_column[aggregate_idx]);
 
           auto& result_ids = *context->result_ids;
           auto& results = context->results;
@@ -375,12 +385,12 @@ void AggregateHash::_aggregate() {
             ++result.aggregate_count;
           }
 
-          ++column_index;
+          ++aggregate_idx;
           continue;
         }
 
-        auto base_segment = chunk_in->get_segment(aggregate.column);
-        auto data_type = input_table->column_data_type(aggregate.column);
+        auto base_segment = chunk_in->get_segment(input_column_id);
+        auto data_type = input_table->column_data_type(input_column_id);
 
         /*
         Invoke correct aggregator for each segment
@@ -389,39 +399,39 @@ void AggregateHash::_aggregate() {
         resolve_data_type(data_type, [&, aggregate](auto type) {
           using ColumnDataType = typename decltype(type)::type;
 
-          switch (aggregate.function) {
+          switch (aggregate->aggregate_function) {
             case AggregateFunction::Min:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Min, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<ColumnDataType, AggregateFunction::Min, AggregateKey>(chunk_id, aggregate_idx,
                                                                                        *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Max:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Max, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<ColumnDataType, AggregateFunction::Max, AggregateKey>(chunk_id, aggregate_idx,
                                                                                        *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Sum:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Sum, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<ColumnDataType, AggregateFunction::Sum, AggregateKey>(chunk_id, aggregate_idx,
                                                                                        *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Avg:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Avg, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<ColumnDataType, AggregateFunction::Avg, AggregateKey>(chunk_id, aggregate_idx,
                                                                                        *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::Count:
-              _aggregate_segment<ColumnDataType, AggregateFunction::Count, AggregateKey>(chunk_id, column_index,
+              _aggregate_segment<ColumnDataType, AggregateFunction::Count, AggregateKey>(chunk_id, aggregate_idx,
                                                                                          *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::CountDistinct:
               _aggregate_segment<ColumnDataType, AggregateFunction::CountDistinct, AggregateKey>(
-                  chunk_id, column_index, *base_segment, keys_per_chunk);
+                  chunk_id, aggregate_idx, *base_segment, keys_per_chunk);
               break;
             case AggregateFunction::StandardDeviationSample:
               _aggregate_segment<ColumnDataType, AggregateFunction::StandardDeviationSample, AggregateKey>(
-                  chunk_id, column_index, *base_segment, keys_per_chunk);
+                  chunk_id, aggregate_idx, *base_segment, keys_per_chunk);
               break;
           }
         });
 
-        ++column_index;
+        ++aggregate_idx;
       }
     }
   }
@@ -471,17 +481,20 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
   /*
   Write the aggregated columns to the output
   */
-  ColumnID column_index{0};
+  ColumnID aggregate_idx{0};
   for (const auto& aggregate : _aggregates) {
-    const auto column = aggregate.column;
+    const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+    const auto input_column_id = pqp_column.column_id;
 
     // Output column for COUNT(*).
-    const auto data_type = column == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(column);
+    const auto data_type =
+        input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
-    resolve_data_type(
-        data_type, [&, column_index](auto type) { _write_aggregate_output(type, column_index, aggregate.function); });
+    resolve_data_type(data_type, [&, aggregate_idx](auto type) {
+      _write_aggregate_output(type, aggregate_idx, aggregate->aggregate_function);
+    });
 
-    ++column_index;
+    ++aggregate_idx;
   }
 
   // Write the output
@@ -700,24 +713,28 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
 
   const auto& aggregate = _aggregates[column_index];
 
+  const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
+  const auto input_column_id = pqp_column.column_id;
+
   if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->column_data_type(aggregate.column);
+    aggregate_data_type = input_table_left()->column_data_type(input_column_id);
   }
 
   // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
   // doesn't use Expressions, yet
+  // TODO - also in aggregate_sort
   std::stringstream column_name_stream;
-  if (aggregate.function == AggregateFunction::CountDistinct) {
+  if (aggregate->aggregate_function == AggregateFunction::CountDistinct) {
     column_name_stream << "COUNT(DISTINCT ";
   } else {
-    column_name_stream << aggregate.function << "(";
+    column_name_stream << aggregate->aggregate_function << "(";
   }
 
-  if (aggregate.column != INVALID_COLUMN_ID) {
-    column_name_stream << input_table_left()->column_name(aggregate.column);
+  if (input_column_id != INVALID_COLUMN_ID) {
+    column_name_stream << input_table_left()->column_name(input_column_id);
   } else {
-    Assert(aggregate.function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
+    Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
     column_name_stream << "*";
   }
   column_name_stream << ")";
