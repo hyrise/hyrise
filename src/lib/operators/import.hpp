@@ -1,10 +1,7 @@
 #pragma once
 
-//#include <fstream>
-//#include <memory>
 #include <optional>
 #include <string>
-//#include <utility>
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/csv/csv_meta.hpp"
@@ -14,14 +11,21 @@
 namespace opossum {
 
 /*
- * This operator reads a Opossum binary file and creates a table from that input.
- * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
+ * This operator reads a file and creates a table from that input.
+ * Supportes file types are .tbl, .csv and Opossum .bin files.
+ * For .csv files, a CSV config is additionally required, which is commonly located in the <filename>.json file.
+ * If parameter table_name provided, the imported table is stored in the StorageManager. If a table with this name
  * already exists, it is returned and no import is performed.
- *
- * Note: ImportBinary does not support null values at the moment
  */
 class Import : public AbstractReadOnlyOperator {
  public:
+  /**
+   * @param file_name      Path to the input file.
+   * @param table_name     Optional. Name of the table to store/look up in the StorageManager.
+   * @param import_type    Optional. Type indicating the file format. If not present, it is guessed by the file_name.
+   * @param chunk_size     Optional. Chunk size. Does not effect binary import.
+   * @param csv_meta       Optional. A specific meta config, to override the given .json file.
+   */
   explicit Import(const std::string& file_name,
                   const std::optional<std::string>& table_name = std::nullopt,
                   const std::optional<hsql::ImportType>& type = std::nullopt,

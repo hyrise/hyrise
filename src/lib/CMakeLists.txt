@@ -184,6 +184,8 @@ set(
     operators/delete.hpp
     operators/difference.cpp
     operators/difference.hpp
+    operators/export.hpp
+    operators/export.cpp
     operators/export_binary.cpp
     operators/export_binary.hpp
     operators/export_csv.cpp
@@ -192,10 +194,6 @@ set(
     operators/get_table.hpp
     operators/import.hpp
     operators/import.cpp
-    operators/import_binary.cpp
-    operators/import_binary.hpp
-    operators/import_csv.cpp
-    operators/import_csv.hpp
     operators/index_scan.cpp
     operators/index_scan.hpp
     operators/insert.cpp
