@@ -174,7 +174,6 @@ class ImportBinary : public AbstractReadOnlyOperator {
   static std::unique_ptr<const BaseCompressedVector> _import_offset_value_vector(
       std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width);
 
-
   // Reads row_count many values from type T and returns them in a vector
   template <typename T>
   static pmr_vector<T> _read_values(std::ifstream& file, const size_t count);

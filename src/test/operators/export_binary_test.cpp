@@ -185,7 +185,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkFrameOfReferenceSegment) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
- 
+
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
@@ -211,7 +211,7 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunksFrameOfReferenceSegment) {
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, EncodingType::FrameOfReference);
-  
+
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
 
@@ -282,7 +282,6 @@ TEST_F(OperatorsExportBinaryTest, LZ4MultipleBlocks) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
-
 
 // TEST_P for all supported encoding types
 
