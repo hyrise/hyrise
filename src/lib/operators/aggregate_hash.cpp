@@ -721,24 +721,6 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
     aggregate_data_type = input_table_left()->column_data_type(input_column_id);
   }
 
-  // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
-  // doesn't use Expressions, yet
-  // TODO - also in aggregate_sort
-  std::stringstream column_name_stream;
-  if (aggregate->aggregate_function == AggregateFunction::CountDistinct) {
-    column_name_stream << "COUNT(DISTINCT ";
-  } else {
-    column_name_stream << aggregate->aggregate_function << "(";
-  }
-
-  if (input_column_id != INVALID_COLUMN_ID) {
-    column_name_stream << input_table_left()->column_name(input_column_id);
-  } else {
-    Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
-    column_name_stream << "*";
-  }
-  column_name_stream << ")";
-
   auto context = std::static_pointer_cast<AggregateResultContext<ColumnDataType, decltype(aggregate_type)>>(
       _contexts_per_column[column_index]);
 
@@ -757,7 +739,7 @@ void AggregateHash::write_aggregate_output(ColumnID column_index) {
 
   // write aggregated values into the segment
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
+  _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
 
   auto output_segment = std::make_shared<ValueSegment<decltype(aggregate_type)>>(NEEDS_NULL);
 

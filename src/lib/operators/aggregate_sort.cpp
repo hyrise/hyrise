@@ -634,7 +634,6 @@ void AggregateSort::_create_aggregate_column_definitions(boost::hana::basic_type
  */
 template <typename ColumnType, AggregateFunction function>
 void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
-  // TODO
   // retrieve type information from the aggregation traits
   auto aggregate_data_type = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
 
@@ -647,25 +646,7 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
     aggregate_data_type = input_table_left()->column_data_type(input_column_id);
   }
 
-  // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
-  // doesn't use Expressions, yet
-  // TODO
-  std::stringstream column_name_stream;
-  if (aggregate->aggregate_function == AggregateFunction::CountDistinct) {
-    column_name_stream << "COUNT(DISTINCT ";
-  } else {
-    column_name_stream << aggregate->aggregate_function << "(";
-  }
-
-  if (input_column_id != INVALID_COLUMN_ID) {
-    column_name_stream << input_table_left()->column_name(input_column_id);
-  } else {
-    Assert(aggregate->aggregate_function == AggregateFunction::Count, "Only COUNT may have an invalid ColumnID");
-    column_name_stream << "*";
-  }
-  column_name_stream << ")";
-
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
+  _output_column_definitions.emplace_back(aggregate->as_column_name(), aggregate_data_type, NEEDS_NULL);
 }
 }  // namespace opossum

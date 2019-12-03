@@ -627,7 +627,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
    */
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a))),
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),
     ProjectionNode::make(expression_vector(int_float_b, int_float_a, add_(int_float_b, int_float_a)),
       int_float_node));
   // clang-format on
@@ -642,8 +642,11 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
   ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
   EXPECT_EQ(aggregate_op->groupby_column_ids().at(0), ColumnID{1});
 
-  const auto aggregate_definition = aggregate_op->aggregates()[0];
-  EXPECT_EQ(*aggregate_definition, *sum_(pqp_column_(ColumnID{2}, DataType::Float, false, "b + a")));
+  const auto sum = aggregate_op->aggregates()[0];
+  EXPECT_EQ(*sum, *sum_(pqp_column_(ColumnID{2}, DataType::Float, false, "b + a")));
+
+  const auto count = aggregate_op->aggregates()[0];
+  EXPECT_EQ(*count, *count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, false, "*")));
 }
 
 TEST_F(LQPTranslatorTest, JoinAndPredicates) {

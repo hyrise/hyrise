@@ -349,7 +349,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   const auto input_operator = translate_node(node->left_input());
 
   std::vector<std::shared_ptr<AggregateExpression>> pqp_aggregate_expressions;
-  pqp_aggregate_expressions.reserve(aggregate_node->node_expressions.size() - aggregate_node->aggregate_expressions_begin_idx);
+  pqp_aggregate_expressions.reserve(aggregate_node->node_expressions.size() -
+                                    aggregate_node->aggregate_expressions_begin_idx);
   for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx;
        expression_idx < aggregate_node->node_expressions.size(); ++expression_idx) {
     const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
@@ -357,18 +358,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     Assert(lqp_expression->type == ExpressionType::Aggregate,
            "Expression '" + lqp_expression->as_column_name() +
                "' used as AggregateExpression is not an AggregateExpression");
-
-    // TODO
-    // // Always resolve the aggregate to a column, even if it is a Value. The Aggregate operator only takes columns as
-    // // arguments
-    // const auto column_expression = dynamic_cast<const LQPColumnExpression*>(&*aggregate_expression->argument());
-    // auto argument_column_id = ColumnID{};
-    // if (column_expression && column_expression->column_reference.original_column_id() == INVALID_COLUMN_ID) {
-    //   // Handle COUNT(*)
-    //   argument_column_id = INVALID_COLUMN_ID;
-    // } else {
-    //   argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
-    // }
 
     const auto pqp_expression = _translate_expression(lqp_expression, node->left_input());
     const auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(pqp_expression);
@@ -520,8 +509,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
 
     // Resolve COUNT(*)
     if (AggregateExpression::is_count_star(*expression)) {
-      const auto star =
-          std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, expression->as_column_name());
+      const auto star = std::make_shared<PQPColumnExpression>(INVALID_COLUMN_ID, DataType::Long, false, "*");
       expression = std::make_shared<AggregateExpression>(AggregateFunction::Count, star);
       return ExpressionVisitation::DoNotVisitArguments;
     }

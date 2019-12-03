@@ -65,8 +65,6 @@ void AbstractAggregateOperator::_validate_aggregates() const {
     } else {
       DebugAssert(column_id < input_table->column_count(), "Aggregate column index out of bounds");
       DebugAssert(pqp_column->data_type() == input_table->column_data_type(column_id), "Mismatching column_data_type");
-      // TODO check is NULLable
-// TODO      // DebugAssert(pqp_column->as_column_name() == input_table->column_name(column_id), "Mismatching column_name");
       Assert(input_table->column_data_type(column_id) != DataType::String ||
                  (aggregate->aggregate_function != AggregateFunction::Sum &&
                   aggregate->aggregate_function != AggregateFunction::Avg &&
