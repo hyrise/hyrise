@@ -291,6 +291,25 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
   EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
 }
 
+TEST_F(IterablesTest, LZ4SegmentIteratorWithIterators) {
+  ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
+
+  const auto chunk = table->get_chunk(ChunkID{0u});
+
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto lz4_segment = std::dynamic_pointer_cast<const LZ4Segment<int>>(segment);
+
+  auto iterable = LZ4SegmentIterable<int>{*lz4_segment};
+
+  auto sum = uint32_t{0};
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
+
+  EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+}
+
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
   const auto chunk = table->get_chunk(ChunkID{0u});
 
@@ -300,7 +319,6 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
-  auto accessed_offsets = std::vector<ChunkOffset>{};
   iterable.for_each(SumUp{sum});
 
   EXPECT_EQ(sum, 24'825u);
@@ -315,7 +333,6 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
   auto iterable = ValueSegmentIterable<int>{*int_segment};
 
   auto sum = uint32_t{0};
-  auto accessed_offsets = (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}});
   iterable.for_each(SumUp{sum});
 
   EXPECT_EQ(sum, 13'702u);
