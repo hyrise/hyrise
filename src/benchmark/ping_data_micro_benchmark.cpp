@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include "benchmark_config.hpp"
@@ -22,12 +24,11 @@ using namespace opossum;
 ///////////////////////////////
 // benchmark seetings
 ///////////////////////////////
-
-//constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
-constexpr auto TBL_FILE = "../../data/100_pings.tbl";
 constexpr auto TABLE_NAME_PREFIX = "ping";
-//const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
-const auto CHUNK_SIZES = std::vector{size_t{10}};
+constexpr auto TBL_FILE = "../../data/10mio_pings.tbl";
+//constexpr auto TBL_FILE = "../../data/100_pings.tbl";
+const auto CHUNK_SIZES = std::vector{size_t{1'000'000}};
+//const auto CHUNK_SIZES = std::vector{size_t{10}};
 const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "timestamp", "captain_status"};
 // TODO: evaluate Frame of Reference as well, fall back to dictionary for unsupported data types
 const auto CHUNK_ENCODINGS = std::vector{EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::LZ4, EncodingType::RunLength};
@@ -104,6 +105,8 @@ std::string get_table_name(const std::string table_name, const std::size_t chunk
 }  // namespace
 
 
+
+
 ///////////////////////////////
 // Fixtures
 ///////////////////////////////
@@ -120,6 +123,10 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     // Generate tables
     if (!_data_generated) {
+
+      // file for table stats
+      std::ofstream segment_meta_data_csv_file("../../out/segment_meta_data.csv");
+      segment_meta_data_csv_file << "TABLE_NAME,COLUMN_ID,ORDER_BY,ENCODING,CHUNK_ID,CHUNK_SIZE,ROW_COUNT,SIZE_IN_BYTES\n";
       
       // Sort table and add sorted tables to the storage manager
       for (const auto chunk_size : CHUNK_SIZES) {
@@ -127,8 +134,6 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
         std::cout << "Load initial table form tbl file '" << TBL_FILE << "' with chunk size: " << chunk_size << "." << std::endl;
         auto loaded_table = load_table(TBL_FILE, chunk_size);
 
-        //schould be removed 
-        //storage_manager.add_table("pings", loaded_table);
         for (const auto order_by_column : ORDER_COLUMNS) {
           for (const auto encoding : CHUNK_ENCODINGS) {
 
@@ -143,6 +148,17 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
             storage_manager.add_table(sorted_table_name, sorted_table);
             std::cout << "Created table: " << sorted_table_name << std::endl;
 
+            // table stats
+            for (auto column_id = ColumnID{0}; column_id < sorted_table->column_count(); ++column_id) {
+              for (auto chunk_id = ChunkID{0}, end = sorted_table->chunk_count(); chunk_id < end;  ++chunk_id) {
+                const auto& chunk = sorted_table->get_chunk(chunk_id);
+                const auto& segment = chunk->get_segment(column_id);
+
+                segment_meta_data_csv_file << sorted_table_name << "," << sorted_table->column_name(column_id) << ","<< order_by_column << ","<< encoding << ","<< chunk_id << "," << chunk_size << "," << segment->size() << "," << segment->estimate_memory_usage() << "\n";
+              }
+            }
+
+            // create index 
             if (order_by_column == ORDER_COLUMNS[0] && encoding == EncodingType::Dictionary) {
               const auto column_count = sorted_table->column_count();
               std::cout << "Creating indexes: ";
@@ -154,6 +170,9 @@ class PingDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
           }
         }
       }
+
+      segment_meta_data_csv_file.close();
+
     }
 
     _data_generated = true;
@@ -461,4 +480,3 @@ BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingGreaterThan
 //BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScans)->Apply(CustomArguments);
 
 }  // namespace opossum
-
