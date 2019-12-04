@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(Hyrise)
 
 if(APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS -Wl,-export_dynamic)
+    set(CMAKE_EXE_LINKER_FLAGS "-O0 -Wl,-export_dynamic")
 else()
     set(CMAKE_EXE_LINKER_FLAGS -Wl,--export-dynamic)
 endif()

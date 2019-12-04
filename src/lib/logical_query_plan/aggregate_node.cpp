@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
-#include "expression/expression_utils.hpp"
 #include "expression/aggregate_expression.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"

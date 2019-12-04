@@ -29,6 +29,10 @@ template <typename T>
 class OperatorsAggregateTest : public BaseTest {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
+    _table_wrapper_1_0_null = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 2));
+    _table_wrapper_1_0_null->execute();
+
     _table_wrapper_1_1 = std::make_shared<TableWrapper>(
         load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1->execute();
@@ -132,9 +136,9 @@ class OperatorsAggregateTest : public BaseTest {
     }
   }
 
-  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_1_1_large,
-      _table_wrapper_join_1, _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2,
-      _table_wrapper_2_0_null, _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null,
+  inline static std::shared_ptr<TableWrapper> _table_wrapper_1_0_null, _table_wrapper_1_1, _table_wrapper_1_1_null,
+      _table_wrapper_1_1_large, _table_wrapper_join_1, _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1,
+      _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null,
       _table_wrapper_1_1_string, _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict,
       _table_wrapper_2_0_a, _table_wrapper_2_o_b, _table_wrapper_int_int;
 };
@@ -180,8 +184,7 @@ TYPED_TEST(OperatorsAggregateTest, CannotStandardDeviationSampleStringColumns) {
 
 // The ANY aggregation is a special case which is used to obtain "any value" of a group of which we know that each
 // value in this group is the same (for most cases, the group will have a size of one). This can be the case, when
-// the aggragated column is functionally dependent on the group-by columns. In debug mode, we DebugAssert that each
-// value is the same within the group.
+// the aggragated column is functionally dependent on the group-by columns.
 TYPED_TEST(OperatorsAggregateTest, CannotUseAnyOnNonDependentColumn) {
   auto filtered = std::make_shared<TableScan>(
       this->_table_wrapper_2_2, equals_(this->get_column_expression(this->_table_wrapper_2_2, ColumnID{0}), 123));
@@ -196,6 +199,7 @@ TYPED_TEST(OperatorsAggregateTest, CannotUseAnyOnNonDependentColumn) {
     EXPECT_EQ(aggregate->get_output()->template get_value<int>(ColumnID{2}, 0u), 20);
   }
 
+  // For debug builds, we DebugAssert that all values are the same within their group.
   if (HYRISE_DEBUG) {
     auto aggregate = std::make_shared<TypeParam>(
         filtered, std::vector<AggregateColumnDefinition>{{ColumnID{3}, AggregateFunction::Any}},
@@ -222,6 +226,19 @@ TYPED_TEST(OperatorsAggregateTest, ExpressionOnAny) {
   projection->execute();
 
   EXPECT_EQ(projection->get_output()->template get_value<int>(ColumnID{2}, 0u), 37);
+}
+
+// Use ANY() on a column with NULL values.
+TYPED_TEST(OperatorsAggregateTest, AnyAndNulls) {
+  // auto aggregate = std::make_shared<TypeParam>(
+  //     this->_table_wrapper_1_0_null, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Any}},
+  //     std::vector<ColumnID>{ColumnID{1}});
+  // aggregate->execute();
+
+  // Print::print(aggregate->get_output());
+
+  this->test_output(this->_table_wrapper_1_0_null, {{ColumnID{0}, AggregateFunction::Any}}, {ColumnID{1}},
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_any_null.tbl", 1);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CanCountStringColumns) {
@@ -754,6 +771,8 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) {
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Any}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/any_filtered.tbl", 1);
 }
+
+// TODO: any on fully NULLed column.
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateStandardDeviationSampleOnRef) {
   auto filtered = std::make_shared<TableScan>(
