@@ -62,7 +62,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStageRuntimes) {
 
   auto& staged_performance_data = static_cast<const StagedOperatorPerformanceData&>(join->performance_data());
 
-  EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(static_cast<int>(JoinHash::OperatorStages::Materialization)).count()) > 0);
+  EXPECT_TRUE(staged_performance_data.get_stage_runtime(static_cast<int>(JoinHash::OperatorStages::Materialization)).count() > 0);
   EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(static_cast<int>(JoinHash::OperatorStages::Clustering)).count()) > 0);
   EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(static_cast<int>(JoinHash::OperatorStages::Building)).count()) > 0);
   EXPECT_TRUE(static_cast<size_t>(staged_performance_data.get_stage_runtime(static_cast<int>(JoinHash::OperatorStages::Probing)).count()) > 0);

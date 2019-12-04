@@ -27,8 +27,8 @@ struct OperatorPerformanceData : public Noncopyable {
 
 // Small vector with a size of 4 is chosen as the operator with the currently most stages has six stages.
 struct StagedOperatorPerformanceData : public OperatorPerformanceData {
-  StagedOperatorPerformanceData() : OperatorPerformanceData{} {}
-  boost::container::small_vector<std::chrono::nanoseconds, 6> stage_runtimes;
+  StagedOperatorPerformanceData() : OperatorPerformanceData{}, stage_runtimes{boost::container::small_vector<std::chrono::nanoseconds, 6>} {}
+  boost::container::small_vector_base<std::chrono::nanoseconds> stage_runtimes;
 
   std::chrono::nanoseconds get_stage_runtime(const uint8_t stage) const {
   	return stage_runtimes[stage];
