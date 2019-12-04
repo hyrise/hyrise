@@ -16,13 +16,7 @@ namespace opossum {
 
 class Export : public AbstractReadOnlyOperator {
  public:
-  explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename, const FileType& type);
-
-  /**
-   * Executes the export operator
-   * @return The table that was also the input
-   */
-  std::shared_ptr<const Table> _on_execute() final;
+  explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename, const FileType& type = FileType::Auto);
 
   /**
    * Name of the operator is Export
@@ -30,10 +24,18 @@ class Export : public AbstractReadOnlyOperator {
   const std::string& name() const final;
 
  protected:
+  /**
+   * Executes the export operator
+   * @return The table that was also the input
+   */
+  std::shared_ptr<const Table> _on_execute() final;
+
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+
+  void _write_any_type();
 
  private:
   // Path of the binary file
