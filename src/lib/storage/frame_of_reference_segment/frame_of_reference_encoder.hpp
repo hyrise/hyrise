@@ -58,7 +58,6 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
       while (segment_it != segment_end) {
         auto min_value = std::numeric_limits<T>::max();
         auto max_value = std::numeric_limits<T>::lowest();
-        auto block_contains_null = false;
         auto block_contains_values = false;
 
         auto value_block_it = current_value_block.begin();
@@ -76,22 +75,10 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
             max_value = std::max(max_value, value);
           }
           block_contains_values |= !value_is_null;
-          block_contains_null |= value_is_null;
         }
 
         // The last value block might not be filled completely
         const auto this_value_block_end = value_block_it;
-
-        // To ensure NULL values do not interfere with the min/max calculation (needed to calculate (i) the frame
-        // offset and (ii) the required width of the compressed vector), we set them to the minimum value.
-        if (block_contains_null) {
-          value_block_it = current_value_block.begin();
-          for (; value_block_it != this_value_block_end; ++value_block_it, ++current_block_null_values_it) {
-            if (*current_block_null_values_it) {
-              *value_block_it = min_value;
-            }
-          }
-        }
 
         if (block_contains_values) {
           // Make sure that the largest offset fits into uint32_t (required for vector compression).
@@ -102,8 +89,14 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
         block_minima.push_back(min_value);
 
         value_block_it = current_value_block.begin();
-        for (; value_block_it != this_value_block_end; ++value_block_it) {
-          const auto value = *value_block_it;
+        for (; value_block_it != this_value_block_end; ++value_block_it, ++current_block_null_values_it) {
+          auto value = *value_block_it;
+          if (*current_block_null_values_it) {
+            // To ensure NULL values do not interfere with the min/max calculation (needed to calculate (i) the frame
+            // offset and (ii) the required width of the compressed vector), we set them to the minimum value. As NULL
+            // values are stored as zeros, we might run in an overflow of the uint32_t when minimum > 0.
+            value = min_value;
+          }
           const auto offset = static_cast<uint32_t>(value - min_value);
           offset_values.push_back(offset);
           max_offset = std::max(max_offset, offset);
