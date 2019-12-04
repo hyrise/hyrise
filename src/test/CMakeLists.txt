@@ -27,7 +27,11 @@ set(
     expression/pqp_subquery_expression_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
-    import_export/csv_meta_test.cpp
+    import_export/binary/binary_parser_test.cpp
+    import_export/binary/binary_writer_test.cpp
+    import_export/csv/csv_meta_test.cpp
+    import_export/csv/csv_parser_test.cpp
+    import_export/csv/csv_writer_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/hyrise_test.cpp
@@ -67,9 +71,11 @@ set(
     operators/alias_operator_test.cpp
     operators/delete_test.cpp
     operators/difference_test.cpp
+    operators/export_test.cpp
     operators/export_binary_test.cpp
     operators/export_csv_test.cpp
     operators/get_table_test.cpp
+    operators/import_test.cpp
     operators/import_binary_test.cpp
     operators/import_csv_test.cpp
     operators/index_scan_test.cpp

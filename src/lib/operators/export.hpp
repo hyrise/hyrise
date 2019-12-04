@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "import_export/file_type.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
@@ -13,17 +14,9 @@
 
 namespace opossum {
 
-class BaseCompressedVector;
-enum class CompressedVectorType : uint8_t;
-
-/**
- * Note: ExportBinary does not support null values at the moment
- */
 class Export : public AbstractReadOnlyOperator {
  public:
-  explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename);
-
-  static void write(const Table& table, const std::string& filename);
+  explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename, const FileType& type);
 
   /**
    * Executes the export operator
@@ -45,5 +38,10 @@ class Export : public AbstractReadOnlyOperator {
  private:
   // Path of the binary file
   const std::string _filename;
+  const FileType _type;
+
+  static void _write_binary(const Table& table, const std::string& filename);
+  static void _write_csv(const Table& table, const std::string& filename);
 };
+
 }  // namespace opossum

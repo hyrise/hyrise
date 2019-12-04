@@ -1,43 +1,50 @@
 #include "export.hpp"
 
-#include <cstdint>
-#include <fstream>
-#include <memory>
-#include <numeric>
-#include <utility>
-
-#include <boost/algorithm/string.hpp>
-
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
-#include "import_export/csv/csv_parser.hpp"
-#include "import_export/binary/binary_parser.hpp"
-#include "resolve_type.hpp"
-#include "storage/chunk.hpp"
-#include "storage/encoding_type.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "import_export/binary/binary_writer.hpp"
+#include "import_export/csv/csv_writer.hpp"
 #include "utils/assert.hpp"
-#include "utils/load_table.hpp"
 
 namespace opossum {
 
-Export::Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& file_name)
-    : AbstractReadOnlyOperator(OperatorType::Export, in), _file_name(file_name) {}
-const std::string& Import::name() const {
+Export::Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename, const FileType& type)
+    : AbstractReadOnlyOperator(OperatorType::Export, in), _filename(filename), _type(type) {}
+
+const std::string& Export::name() const {
   static const auto name = std::string{"Export"};
   return name;
 }
 
 std::shared_ptr<const Table> Export::_on_execute() {
-  return nullptr:
+  switch (_type) {
+    case FileType::Csv:
+      _write_csv(*input_table_left(), _filename);
+      break;
+    case FileType::Binary:
+      _write_binary(*input_table_left(), _filename);
+      break;
+    default:
+      Fail("Exporting file type is not supported.");
+  }
+
+  return _input_left->get_output();
 }
 
 std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Export>(copied_input_left, _file_name);
+  return std::make_shared<Export>(copied_input_left, _filename, _type);
 }
 
-void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+
+void Export::_write_binary(const Table& table, const std::string& filename) {
+  BinaryWriter writer;
+  writer.write(table, filename);
+}
+void Export::_write_csv(const Table& table, const std::string& filename) {
+  CsvWriter writer;
+  writer.write(table, filename);
+}
 
 }  // namespace opossum

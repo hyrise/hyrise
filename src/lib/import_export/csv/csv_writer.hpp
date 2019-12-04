@@ -6,6 +6,7 @@
 
 #include "all_type_variant.hpp"
 #include "csv_meta.hpp"
+#include "storage/table.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -16,9 +17,7 @@ class CsvWriter {
    * Creates a new CsvWriter with the given file as output file.
    * @param file The file to output the csv to.
    */
-  explicit CsvWriter(const std::string& file, const ParseConfig& config = {});
-
-  void write(const AllTypeVariant& value);
+  static void write(const Table& table, const std::string& filename, const ParseConfig& config = {});
 
   /*
    * Ends a row of entries in the csv file.
@@ -26,14 +25,11 @@ class CsvWriter {
   void end_line();
 
  protected:
-  pmr_string _escape(const pmr_string& string);
-
-  void _write_value(const AllTypeVariant& value);
-  void _write_string_value(const pmr_string& value);
-
-  std::ofstream _stream;
-  ColumnID _current_column_count{0};
-  ParseConfig _config;
+  static void _generate_meta_info_file(const Table& table, const std::string& filename);
+  static void _generate_content_file(const Table& table, const std::string& filename, const ParseConfig& config);
+  static void _write(const AllTypeVariant& value, std::ofstream& ofstream, const ParseConfig& config);
+  static pmr_string _escape(const pmr_string& string, const ParseConfig& config);
+  static void _write_string_value(const pmr_string& value, std::ofstream& ofstream, const ParseConfig& config);
 };
 
 }  // namespace opossum

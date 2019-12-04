@@ -100,6 +100,7 @@ set(
     import_export/csv/csv_parser.hpp
     import_export/csv/csv_writer.cpp
     import_export/csv/csv_writer.hpp
+    import_export/file_type.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/aggregate_node.cpp
@@ -184,12 +185,8 @@ set(
     operators/delete.hpp
     operators/difference.cpp
     operators/difference.hpp
-    operators/export.hpp
     operators/export.cpp
-    operators/export_binary.cpp
-    operators/export_binary.hpp
-    operators/export_csv.cpp
-    operators/export_csv.hpp
+    operators/export.hpp
     operators/get_table.cpp
     operators/get_table.hpp
     operators/import.hpp

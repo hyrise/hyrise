@@ -17,8 +17,7 @@ enum class CompressedVectorType : uint8_t;
 
 class BinaryWriter {
  public:
-  static void write_binary(const Table& table, const std::string& filename);
-
+  static void write(const Table& table, const std::string& filename);
 
  private:
   /**

@@ -93,7 +93,7 @@ void export_value(std::ofstream& ofstream, const T& value) {
 
 namespace opossum {
 
-void BinaryWriter::write_binary(const Table& table, const std::string& filename) {
+void BinaryWriter::write(const Table& table, const std::string& filename) {
   std::ofstream ofstream;
   ofstream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   ofstream.open(filename, std::ios::binary);
@@ -103,6 +103,7 @@ void BinaryWriter::write_binary(const Table& table, const std::string& filename)
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); chunk_id++) {
     _write_chunk(table, ofstream, chunk_id);
   }
+  ofstream.close();
 }
 
 void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {

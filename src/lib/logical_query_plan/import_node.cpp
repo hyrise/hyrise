@@ -7,31 +7,34 @@
 
 namespace opossum {
 
-ImportNode::ImportNode(const std::string& table_name, const std::string& file_path, const hsql::ImportType file_type)
-    : BaseNonQueryNode(LQPNodeType::Import), table_name(table_name), file_path(file_path), file_type(file_type) {}
+ImportNode::ImportNode(const std::string& init_tablename,
+                        const std::string& init_filename,
+                        const hsql::ImportType init_filetype)
+    : BaseNonQueryNode(LQPNodeType::Import), tablename(init_tablename), filename(init_filename),
+                        filetype(init_filetype) {}
 
 std::string ImportNode::description() const {
   std::ostringstream stream;
-  stream << "[Import] Name: '" << table_name << "'";
+  stream << "[Import] Name: '" << tablename << "'";
   return stream.str();
 }
 
 size_t ImportNode::_shallow_hash() const {
-  auto hash = boost::hash_value(table_name);
-  boost::hash_combine(hash, file_path);
-  boost::hash_combine(hash, file_type);
+  auto hash = boost::hash_value(tablename);
+  boost::hash_combine(hash, filename);
+  boost::hash_combine(hash, filetype);
   return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> ImportNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  return ImportNode::make(table_name, file_path, file_type, left_input());
+  return ImportNode::make(tablename, filename, filetype, left_input());
 }
 
 bool ImportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& import_node = static_cast<const ImportNode&>(rhs);
-  return table_name == import_node.table_name
-          && file_path == import_node.file_path
-          && file_type == import_node.file_type;
+  return tablename == import_node.tablename
+          && filename == import_node.filename
+          && filetype == import_node.filetype;
 }
 
 }  // namespace opossum
