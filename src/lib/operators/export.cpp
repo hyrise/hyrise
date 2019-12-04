@@ -44,7 +44,7 @@ std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
 void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void Export::_write_any_type() {
-    std::vector<std::string> file_parts;
+  std::vector<std::string> file_parts;
   boost::algorithm::split(file_parts, _filename, boost::is_any_of("."));
   const std::string& extension = file_parts.back();
   if (extension == "csv") {

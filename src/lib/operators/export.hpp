@@ -16,7 +16,8 @@ namespace opossum {
 
 class Export : public AbstractReadOnlyOperator {
  public:
-  explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename, const FileType& type = FileType::Auto);
+  explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename,
+                  const FileType& type = FileType::Auto);
 
   /**
    * Name of the operator is Export
