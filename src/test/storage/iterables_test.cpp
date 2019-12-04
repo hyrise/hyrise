@@ -239,6 +239,43 @@ TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterator
   EXPECT_EQ(concatenate, "xxxyyyuuu");
 }
 
+TEST_F(IterablesTest, LZ4SegmentIteratorWithIterators) {
+  ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
+
+  const auto chunk = table->get_chunk(ChunkID{0u});
+
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto lz4_segment = std::dynamic_pointer_cast<const LZ4Segment<int>>(segment);
+
+  auto iterable = LZ4SegmentIterable<int>{*lz4_segment};
+
+  auto sum = uint32_t{0};
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
+
+  EXPECT_EQ(sum, 24'825u);
+  EXPECT_EQ(accessed_offsets,
+            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
+}
+
+TEST_F(IterablesTest, LZ4SegmentReferencedIteratorWithIterators) {
+  ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
+
+  const auto chunk = table->get_chunk(ChunkID{0u});
+
+  auto segment = chunk->get_segment(ColumnID{0u});
+  auto lz4_segment = std::dynamic_pointer_cast<const LZ4Segment<int>>(segment);
+
+  auto iterable = LZ4SegmentIterable<int>{*lz4_segment};
+
+  auto sum = uint32_t{0};
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(position_filter, SumUpWithIterator{sum, accessed_offsets});
+
+  EXPECT_EQ(sum, 12'480u);
+  EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}}));
+}
+
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
   auto pos_list = PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
                           RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
@@ -289,25 +326,6 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
 
   EXPECT_EQ(nulls_found, 2u);
   EXPECT_EQ(accessed_offsets, (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}}));
-}
-
-TEST_F(IterablesTest, LZ4SegmentIteratorWithIterators) {
-  ChunkEncoder::encode_all_chunks(table, EncodingType::LZ4);
-
-  const auto chunk = table->get_chunk(ChunkID{0u});
-
-  auto segment = chunk->get_segment(ColumnID{0u});
-  auto lz4_segment = std::dynamic_pointer_cast<const LZ4Segment<int>>(segment);
-
-  auto iterable = LZ4SegmentIterable<int>{*lz4_segment};
-
-  auto sum = uint32_t{0};
-  auto accessed_offsets = std::vector<ChunkOffset>{};
-  iterable.with_iterators(SumUpWithIterator{sum, accessed_offsets});
-
-  EXPECT_EQ(sum, 24'825u);
-  EXPECT_EQ(accessed_offsets,
-            (std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
