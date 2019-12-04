@@ -10,13 +10,15 @@
 
 namespace opossum {
 
-Import::Import(const std::string& filename,
-                const std::optional<std::string>& tablename,
-                const std::optional<FileType>& type,
-                const ChunkOffset chunk_size,
-                const std::optional<CsvMeta>& csv_meta)
-    : AbstractReadOnlyOperator(OperatorType::Import), _filename(filename), _tablename(tablename), _type(type),
-      _chunk_size(chunk_size), _csv_meta(csv_meta) {}
+Import::Import(const std::string& filename, const std::optional<std::string>& tablename,
+               const std::optional<FileType>& type, const ChunkOffset chunk_size,
+               const std::optional<CsvMeta>& csv_meta)
+    : AbstractReadOnlyOperator(OperatorType::Import),
+      _filename(filename),
+      _tablename(tablename),
+      _type(type),
+      _chunk_size(chunk_size),
+      _csv_meta(csv_meta) {}
 
 const std::string& Import::name() const {
   static const auto name = std::string{"Import"};
@@ -68,7 +70,7 @@ std::shared_ptr<Table> Import::_import() {
 }
 
 std::shared_ptr<Table> Import::_import_csv(const std::string& filename, const ChunkOffset& chunk_size,
-    const std::optional<CsvMeta>& csv_meta) {
+                                           const std::optional<CsvMeta>& csv_meta) {
   CsvParser parser;
   return parser.parse(filename, csv_meta, chunk_size);
 }

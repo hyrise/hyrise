@@ -83,7 +83,6 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
   ofstream.close();
 }
 
-
 void CsvWriter::_write(const AllTypeVariant& value, std::ofstream& ofstream, const ParseConfig& config) {
   if (variant_is_null(value)) return;
 

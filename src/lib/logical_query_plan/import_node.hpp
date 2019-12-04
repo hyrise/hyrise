@@ -15,9 +15,7 @@ namespace opossum {
  */
 class ImportNode : public EnableMakeForLQPNode<ImportNode>, public BaseNonQueryNode {
  public:
-  ImportNode(const std::string& init_tablename,
-  	          const std::string& init_filename,
-              const hsql::ImportType init_filetype);
+  ImportNode(const std::string& init_tablename, const std::string& init_filename, const hsql::ImportType init_filetype);
 
   std::string description() const override;
 

@@ -21,7 +21,7 @@ namespace opossum {
  */
 class BinaryParser {
  public:
-    /*
+  /*
    * Reads the given binary file. The file must be in the following form:
    *
    * --------------

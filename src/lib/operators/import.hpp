@@ -28,15 +28,13 @@ class Import : public AbstractReadOnlyOperator {
    * @param chunk_size     Optional. Chunk size. Does not effect binary import.
    * @param csv_meta       Optional. A specific meta config, to override the given .json file.
    */
-  explicit Import(const std::string& filename,
-                  const std::optional<std::string>& tablename = std::nullopt,
+  explicit Import(const std::string& filename, const std::optional<std::string>& tablename = std::nullopt,
                   const std::optional<FileType>& type = std::nullopt,
                   const ChunkOffset chunk_size = Chunk::DEFAULT_SIZE,
                   const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
   // Returns the name of the operator
   const std::string& name() const final;
-
 
  protected:
   std::shared_ptr<const Table> _on_execute() final;
@@ -45,7 +43,6 @@ class Import : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-
 
  private:
   // Name of the import file
@@ -60,7 +57,7 @@ class Import : public AbstractReadOnlyOperator {
   std::shared_ptr<Table> _import_any_file();
 
   static std::shared_ptr<Table> _import_csv(const std::string& filename, const ChunkOffset& chunk_size,
-      const std::optional<CsvMeta>& csv_meta);
+                                            const std::optional<CsvMeta>& csv_meta);
   static std::shared_ptr<Table> _import_tbl(const std::string& filename, const ChunkOffset& chunk_size);
   static std::shared_ptr<Table> _import_binary(const std::string& filename);
 };
