@@ -440,6 +440,57 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
   EXPECT_EQ(run_length_segment->null_values()->at(14), false);
 }
 
+// Testing the internal data structures of Run Length-encoded segments for runs and NULL values where NULL values are
+// either at the very first or last position, or a NULL value run spans two value runs.
+TEST_F(EncodedSegmentTest, RunLengthEncodingNullValuesInRun) {
+  constexpr auto row_count = int32_t{20};
+  auto values = pmr_concurrent_vector<int32_t>(row_count);
+  auto null_values = pmr_concurrent_vector<bool>(row_count);
+
+  // two value runs, 10 each
+  auto row_id = size_t{0};
+  for (auto value = int32_t{0u}; value < 2; ++value) {
+    for (auto index = int32_t{0u}; index < 10; ++index) {
+      values[row_id] = value;
+      ++row_id;
+    }
+  }
+
+  null_values[0] = true;  // very first position is NULL
+  null_values[7] = true;  // single value in run is NULL
+
+  // range of NULLs over position where values/run change
+  null_values[9] = true;
+  null_values[10] = true;
+
+  null_values[19] = true;  // last position is NULL
+
+  const auto value_segment = std::make_shared<ValueSegment<int32_t>>(std::move(values), std::move(null_values));
+  const auto encoded_segment =
+      this->encode_segment(value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::RunLength});
+
+  const auto run_length_segment = std::dynamic_pointer_cast<const RunLengthSegment<int32_t>>(encoded_segment);
+  ASSERT_TRUE(run_length_segment);
+
+  // NULL value runs are runs as well (=> 3 + 4)
+  EXPECT_EQ(run_length_segment->values()->size(), 7);
+  EXPECT_EQ(run_length_segment->null_values()->size(), 7);
+  EXPECT_EQ(run_length_segment->end_positions()->size(), 7);
+
+  EXPECT_EQ(run_length_segment->end_positions()->front(), 0);  // value run longer, but first position is NULL
+  EXPECT_EQ(run_length_segment->end_positions()->at(1), 6);
+  EXPECT_EQ(run_length_segment->end_positions()->at(2), 7);
+  EXPECT_EQ(run_length_segment->end_positions()->back(), 19ul);
+
+  // Run is split as NULL value occur, hence values can repeat
+  EXPECT_EQ(run_length_segment->values()->at(1), run_length_segment->values()->at(2));
+
+  // NULL value run spans two elements of different value runs (last value of first run, first of second run). Hence,
+  // second value run starts at position 11 instead of 10 due to NULL value.
+  EXPECT_EQ(run_length_segment->end_positions()->at(3), 8);
+  EXPECT_EQ(run_length_segment->end_positions()->at(4), 10);
+}
+
 // Testing the internal data structures of Frame of Reference-encoded segments. In particular, the determination of the
 // reference value (i.e., the block minimum) as well as the difference to the reference value are checked. This test
 // does not test the creation of multiple frames as the required vectors are too large for unit testing.
