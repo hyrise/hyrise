@@ -27,15 +27,14 @@ set(
     expression/pqp_subquery_expression_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
-    import_export/binary/binary_parser_test.cpp
-    import_export/binary/binary_writer_test.cpp
-    import_export/csv/csv_meta_test.cpp
-    import_export/csv/csv_parser_test.cpp
-    import_export/csv/csv_writer_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/hyrise_test.cpp
-    lib/import_export/csv_parser_test.cpp
+    lib/import_export/binary/binary_parser_test.cpp
+    lib/import_export/binary/binary_writer_test.cpp
+    lib/import_export/csv/csv_meta_test.cpp
+    lib/import_export/csv/csv_parser_test.cpp
+    lib/import_export/csv/csv_writer_test.cpp
     lib/fixed_string_test.cpp
     lib/null_value_test.cpp
     lib/utils/load_table_test.cpp

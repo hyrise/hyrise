@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "hyrise.hpp"
-#include "operators/import_binary.hpp"
+// #include "operators/import_binary.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 
@@ -21,7 +21,7 @@ class DISABLED_OperatorsImportBinaryTest : public OperatorsImportBinaryTest {}; 
 
 class OperatorsImportBinaryMultiEncodingTest : public OperatorsImportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};
-
+/*
 auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
@@ -31,6 +31,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 
   return string;
 };
+
 
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsImportBinaryMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength),
@@ -263,7 +264,7 @@ TEST_P(OperatorsImportBinaryMultiEncodingTest, RunNullValues) {
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { /* #1367 */
+TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { // #1367
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -280,7 +281,7 @@ TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionarySingleChunk) { /
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
 }
 
-TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionaryMultipleChunks) { /* #1367 */
+TEST_F(DISABLED_OperatorsImportBinaryTest, FixedStringDictionaryMultipleChunks) { // #1367
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
@@ -345,6 +346,6 @@ TEST_F(OperatorsImportBinaryTest, InvalidAttributeVectorWidth) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin",
       std::string("float_table"));
   EXPECT_THROW(importer->execute(), std::exception);
-}
+}*/
 
 }  // namespace opossum
