@@ -22,8 +22,7 @@ class CreatePreparedPlanNodeTest : public ::testing::Test {
 };
 
 TEST_F(CreatePreparedPlanNodeTest, Description) {
-  // Use short description mode as addresses are non-deterministic
-  EXPECT_EQ(replace_addresses(create_prepared_plan_node->description(AbstractLQPNode::DescriptionMode::Short)),
+  EXPECT_EQ(replace_addresses(create_prepared_plan_node->description(AbstractLQPNode::DescriptionMode::Detailed)),
             R"([CreatePreparedPlan] 'some_prepared_plan' {
 ParameterIDs: []
 [0] [MockNode 'Unnamed'] Columns: a | pruned: 0/1 columns @ 0x00000000

@@ -68,7 +68,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    * @return the expression's column name or, optionally, a more detailed description of the expression
    */
   enum class DescriptionMode {
-    ColumnName,  // returns only the column name (e.g., name)
+    ColumnName,  // returns only the column name
     Detailed     // additionally includes the address of referenced nodes
   };
   virtual std::string description(const DescriptionMode mode = DescriptionMode::Detailed) const = 0;
