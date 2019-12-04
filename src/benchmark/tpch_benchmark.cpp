@@ -10,6 +10,7 @@
 #include "cli_config_parser.hpp"
 #include "cxxopts.hpp"
 #include "hyrise.hpp"
+#include "storage/segment_access_statistics.hpp"
 #include "tpch/tpch_benchmark_item_runner.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_table_generator.hpp"
@@ -132,5 +133,8 @@ int main(int argc, char* argv[]) {
                           benchmark_runner->sqlite_wrapper);
   }
 
+  AtomicTimedAccessStrategy::interval = std::chrono::milliseconds{10000};
+  SegmentAccessStatistics_T::reset_all(Hyrise::get().storage_manager.tables());
   benchmark_runner->run();
+  SegmentAccessStatistics_T::save_to_csv(Hyrise::get().storage_manager.tables(), "access_statistics_tpch_10s.csv");
 }

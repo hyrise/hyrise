@@ -2,6 +2,7 @@
 
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -10,7 +11,6 @@
 
 #include <types.hpp>
 #include <storage/pos_list.hpp>
-//#include <storage/table.hpp>
 
 namespace opossum {
 class Table;
@@ -45,8 +45,40 @@ class AtomicAccessStrategy {
 
   void increase(SegmentAccessType type, uint64_t count);
 
+  static std::string header();
+
+  std::vector<std::string> to_string() const;
+
  private:
   std::array<std::atomic_uint64_t, SegmentAccessType::Count> _count;
+};
+
+// -----------------------------------------------------------------------------------------------------------------
+class AtomicTimedAccessStrategy {
+ public:
+  explicit AtomicTimedAccessStrategy();
+
+  uint64_t count(SegmentAccessType type) const;
+
+  void reset();
+
+  void increase(SegmentAccessType type, uint64_t count);
+
+  static std::string header();
+
+  std::vector<std::string> to_string() const;
+
+  static std::chrono::time_point<std::chrono::steady_clock> start_time;
+  static std::chrono::duration<double, std::milli> interval;
+  static uint32_t time_slots;
+
+ private:
+  std::atomic_uint64_t _max_used_slot;
+  // hold enough elements for 2 h if interval is 1000 ms.
+  static const uint32_t _time_slots = 7200;
+  std::array<std::array<std::atomic_uint64_t, SegmentAccessType::Count>, _time_slots> _count;
+
+  uint64_t _time_slot();
 };
 
 // -----------------------------------------------------------------------------------------------------------------
@@ -57,6 +89,10 @@ class NonLockingStrategy {
   void reset();
 
   void increase(SegmentAccessType type, uint64_t count);
+
+  static std::string header();
+
+  std::vector<std::string> to_string() const;
 
  private:
   std::array<uint64_t, SegmentAccessType::Count> _count;
@@ -194,7 +230,7 @@ class SegmentAccessStatistics {
     _data_access_strategy.reset();
   }
 
-  std::string to_string() const {
+  std::vector<std::string> to_string() const {
     std::string str;
     str.reserve(SegmentAccessType::Count * 4);
     str.append(std::to_string(count(static_cast<SegmentAccessType>(0))));
@@ -204,13 +240,13 @@ class SegmentAccessStatistics {
       str.append(std::to_string(count(static_cast<SegmentAccessType>(type))));
     }
 
-    return str;
+    return std::vector<std::string>{str};
   }
 
   static void save_to_csv(const std::map<std::string, std::shared_ptr<Table>>& tables, const std::string& path) {
     std::ofstream output_file{path};
-    output_file << "table_name,column_name,chunk_id,row_count,Other,IteratorCreate,IteratorAccess,AccessorCreate,"
-                   "AccessorAccess,DictionaryAccess,EstimatedMemoryUsage\n";
+    output_file << "table_name,column_name,chunk_id,row_count,EstimatedMemoryUsage," + AccessStrategyType::header() +
+                   "\n";
     // iterate over all tables, chunks and segments
     for (const auto&[table_name, table_ptr] : tables) {
       for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
@@ -220,8 +256,11 @@ class SegmentAccessStatistics {
           const auto& column_name = table_ptr->column_name(column_id);
           const auto& segment_ptr = chunk_ptr->get_segment(column_id);
           const auto& access_statistics = segment_ptr->access_statistics();
-          output_file << table_name << ',' << column_name << ',' << chunk_id << ',' << segment_ptr->size() << ','
-                      << access_statistics.to_string() << ',' << segment_ptr->estimate_memory_usage() << '\n';
+
+          for (const auto& str : access_statistics._data_access_strategy.to_string()) {
+            output_file << table_name << ',' << column_name << ',' << chunk_id << ',' << segment_ptr->size() << ','
+                        << segment_ptr->estimate_memory_usage() << ',' << str << '\n';
+          }
         }
       }
     }
@@ -231,6 +270,10 @@ class SegmentAccessStatistics {
     output_file.close();
   }
 
+  /**
+   * Resets access statistics of every segment in table
+   * @param tables map of tables
+   */
   static void reset_all(const std::map<std::string, std::shared_ptr<Table>>& tables) {
     for (const auto&[table_name, table_ptr] : tables) {
       for (auto chunk_id = ChunkID{0}; chunk_id < table_ptr->chunk_count(); ++chunk_id) {
@@ -242,6 +285,7 @@ class SegmentAccessStatistics {
         }
       }
     }
+    AtomicTimedAccessStrategy::start_time = std::chrono::steady_clock::now();
   }
 
  private:
@@ -249,5 +293,5 @@ class SegmentAccessStatistics {
   CountingStrategyType _counting_strategy;
 };
 
-  using SegmentAccessStatistics_T = SegmentAccessStatistics<AtomicAccessStrategy, BulkCountingStrategy<AtomicAccessStrategy>>;
+  using SegmentAccessStatistics_T = SegmentAccessStatistics<AtomicTimedAccessStrategy, BulkCountingStrategy<AtomicTimedAccessStrategy>>;
 }  // namespace opossum
