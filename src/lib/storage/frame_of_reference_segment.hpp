@@ -26,6 +26,15 @@ class BaseCompressedVector;
  * compressed using vector compression (null suppression).
  * FOR encoding on its own without vector compression does not
  * add any benefit.
+ *
+ * std::enable_if_t must be used here and cannot be replaced by a
+ * static_assert in order to prevent instantiation of 
+ * FrameOfReferenceSegment<T> with T other than int32_t. Otherwise, 
+ * the compiler might instanciate FrameOfReferenceSegment with other 
+ * types even if they are never actually needed. 
+ * "If the function selected by overload resolution can be determined 
+ * without instantiating a class template definition, it is unspecified 
+ * whether that instantiation actually takes place." Draft Std. N4800 12.8.1.8 
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
