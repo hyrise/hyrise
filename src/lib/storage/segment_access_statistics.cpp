@@ -94,10 +94,9 @@ std::vector<std::string> AtomicTimedAccessStrategy::to_string() const {
   }
 
   if (counters.empty()) {
-    str.append(std::to_string(0) + ',' + std::to_string(_count[0][0]));
+    str.append("0,0");
     for (uint8_t type = 1; type < Count; ++type) {
-      str.append(",");
-      str.append(std::to_string(_count[0][type]));
+      str.append(",0");
     }
     counters.push_back(str);
   }
