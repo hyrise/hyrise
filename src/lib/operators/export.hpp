@@ -39,9 +39,6 @@ class Export : public AbstractReadOnlyOperator {
   // Path of the binary file
   const std::string _filename;
   const FileType _type;
-
-  static void _write_binary(const Table& table, const std::string& filename);
-  static void _write_csv(const Table& table, const std::string& filename);
 };
 
 }  // namespace opossum

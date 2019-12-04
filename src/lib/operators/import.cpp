@@ -10,14 +10,13 @@
 
 namespace opossum {
 
-Import::Import(const std::string& filename, const std::optional<std::string>& tablename,
-               const std::optional<FileType>& type, const ChunkOffset chunk_size,
-               const std::optional<CsvMeta>& csv_meta)
+Import::Import(const std::string& filename, const std::optional<std::string>& tablename, const ChunkOffset chunk_size,
+               const FileType type, const std::optional<CsvMeta>& csv_meta)
     : AbstractReadOnlyOperator(OperatorType::Import),
       _filename(filename),
       _tablename(tablename),
-      _type(type),
       _chunk_size(chunk_size),
+      _type(type),
       _csv_meta(csv_meta) {}
 
 const std::string& Import::name() const {
@@ -47,53 +46,36 @@ std::shared_ptr<const Table> Import::_on_execute() {
 std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
-  return std::make_shared<Import>(_filename, _tablename, _type);
+  return std::make_shared<Import>(_filename, _tablename, _chunk_size, _type, _csv_meta);
 }
 
 void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<Table> Import::_import() {
-  if (!_type || *_type == FileType::Auto) {
-    return _import_any_file();
-  } else {
-    switch (*_type) {
-      case FileType::Csv:
-        return _import_csv(_filename, _chunk_size, _csv_meta);
-      case FileType::Tbl:
-        return _import_tbl(_filename, _chunk_size);
-      case FileType::Binary:
-        return _import_binary(_filename);
-      default:
-        Fail("Cannot import file type.");
-    }
+  switch (_type) {
+    case FileType::Csv:
+      return CsvParser{}.parse(_filename, _csv_meta, _chunk_size);
+    case FileType::Tbl:
+      return load_table(_filename, _chunk_size);
+    case FileType::Binary:
+      return BinaryParser::parse(_filename);
+    case FileType::Auto:
+      return _import_any_type();
+    default:
+      Fail("Cannot import file type.");
   }
 }
 
-std::shared_ptr<Table> Import::_import_csv(const std::string& filename, const ChunkOffset& chunk_size,
-                                           const std::optional<CsvMeta>& csv_meta) {
-  CsvParser parser;
-  return parser.parse(filename, csv_meta, chunk_size);
-}
-
-std::shared_ptr<Table> Import::_import_tbl(const std::string& filename, const ChunkOffset& chunk_size) {
-  return load_table(filename, chunk_size);
-}
-
-std::shared_ptr<Table> Import::_import_binary(const std::string& filename) {
-  BinaryParser parser;
-  return parser.parse(filename);
-}
-
-std::shared_ptr<Table> Import::_import_any_file() {
+std::shared_ptr<Table> Import::_import_any_type() {
   std::vector<std::string> file_parts;
   boost::algorithm::split(file_parts, _filename, boost::is_any_of("."));
   const std::string& extension = file_parts.back();
   if (extension == "csv") {
-    return _import_csv(_filename, _chunk_size, _csv_meta);
+    return CsvParser{}.parse(_filename, _csv_meta, _chunk_size);
   } else if (extension == "tbl") {
-    return _import_tbl(_filename, _chunk_size);
+    return load_table(_filename, _chunk_size);
   } else if (extension == "bin") {
-    return _import_binary(_filename);
+    return BinaryParser::parse(_filename);
   }
 
   Fail("Cannot import file type.");

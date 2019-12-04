@@ -18,10 +18,10 @@ const std::string& Export::name() const {
 std::shared_ptr<const Table> Export::_on_execute() {
   switch (_type) {
     case FileType::Csv:
-      _write_csv(*input_table_left(), _filename);
+      CsvWriter::write(*input_table_left(), _filename);
       break;
     case FileType::Binary:
-      _write_binary(*input_table_left(), _filename);
+      BinaryWriter::write(*input_table_left(), _filename);
       break;
     default:
       Fail("Exporting file type is not supported.");
@@ -37,14 +37,5 @@ std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
 }
 
 void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
-
-void Export::_write_binary(const Table& table, const std::string& filename) {
-  BinaryWriter writer;
-  writer.write(table, filename);
-}
-void Export::_write_csv(const Table& table, const std::string& filename) {
-  CsvWriter writer;
-  writer.write(table, filename);
-}
 
 }  // namespace opossum

@@ -5,16 +5,64 @@
 #include "gtest/gtest.h"
 
 #include "hyrise.hpp"
+#include "import_export/file_type.hpp"
 #include "operators/import.hpp"
-#include "storage/table.hpp"
-
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
-class OperatorsImportTest : public BaseTest {};
+class OperatorsImportTest : public BaseTest {
+ protected:
+  const std::string _reference_filepath = "resources/test_data/";
+  const std::map<FileType, std::string> _reference_filenames{
+      {FileType::Binary, "bin/float.bin"}, {FileType::Tbl, "tbl/float.tbl"}, {FileType::Csv, "csv/float.csv"}};
+};
+
+class OperatorsImportMultiFileTypeTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
+
+auto formatter = [](const ::testing::TestParamInfo<FileType> info) {
+  auto stream = std::stringstream{};
+  stream << info.param;
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportMultiFileTypeTest,
+                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), formatter);
+
+TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
+  auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+  expected_table->append({1.1f});
+  expected_table->append({2.2f});
+  expected_table->append({3.3f});
+  expected_table->append({4.4f});
+
+  std::string reference_filename = _reference_filepath + _reference_filenames.at(GetParam());
+  auto importer = std::make_shared<opossum::Import>(reference_filename, std::nullopt, Chunk::DEFAULT_SIZE, GetParam());
+  importer->execute();
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
+  auto expected_table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+  expected_table->append({1.1f});
+  expected_table->append({2.2f});
+  expected_table->append({3.3f});
+  expected_table->append({4.4f});
+
+  std::string reference_filename = _reference_filepath + _reference_filenames.at(GetParam());
+  auto importer = std::make_shared<opossum::Import>(reference_filename);
+  importer->execute();
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {
   auto importer = std::make_shared<Import>("not_existing_file");
@@ -64,8 +112,8 @@ TEST_F(OperatorsImportTest, Parallel) {
 }
 
 TEST_F(OperatorsImportTest, ChunkSize) {
-  auto importer = std::make_shared<Import>("resources/test_data/csv/float_int_large.csv", std::nullopt, std::nullopt,
-                                           ChunkOffset{20});
+  auto importer =
+      std::make_shared<Import>("resources/test_data/csv/float_int_large.csv", std::nullopt, ChunkOffset{20});
   importer->execute();
 
   // check if chunk_size property is correct
@@ -78,7 +126,7 @@ TEST_F(OperatorsImportTest, ChunkSize) {
 
 TEST_F(OperatorsImportTest, MaxChunkSize) {
   auto importer = std::make_shared<Import>("resources/test_data/csv/float_int_large_chunksize_max.csv", std::nullopt,
-                                           std::nullopt, Chunk::DEFAULT_SIZE);
+                                           Chunk::DEFAULT_SIZE);
   importer->execute();
 
   // check if chunk_size property is correct (maximum chunk size)

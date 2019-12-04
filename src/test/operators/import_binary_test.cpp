@@ -21,7 +21,7 @@ class DISABLED_OperatorsImportBinaryTest : public OperatorsImportBinaryTest {}; 
 
 class OperatorsImportBinaryMultiEncodingTest : public OperatorsImportBinaryTest,
                                                public ::testing::WithParamInterface<EncodingType> {};
-/*
+
 auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   auto stream = std::stringstream{};
   stream << info.param;
@@ -32,11 +32,10 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return string;
 };
 
-
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, OperatorsImportBinaryMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength),
                          formatter);
-
+/*
 TEST_P(OperatorsImportBinaryMultiEncodingTest, SingleChunkSingleFloatColumn) {
   auto expected_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);

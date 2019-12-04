@@ -490,7 +490,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_table_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_import_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto import_node = std::dynamic_pointer_cast<ImportNode>(node);
-  return std::make_shared<Import>(import_node->filename, import_node->tablename,
+  return std::make_shared<Import>(import_node->filename, import_node->tablename, Chunk::DEFAULT_SIZE,
                                   import_type_to_file_type(import_node->filetype));
 }
 

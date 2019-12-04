@@ -100,6 +100,7 @@ set(
     import_export/csv/csv_parser.hpp
     import_export/csv/csv_writer.cpp
     import_export/csv/csv_writer.hpp
+    import_export/file_type.cpp
     import_export/file_type.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
