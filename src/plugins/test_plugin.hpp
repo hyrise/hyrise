@@ -6,9 +6,9 @@
 
 namespace opossum {
 
-class TestPlugin : public AbstractPlugin, public Singleton<TestPlugin> {
+class TestPlugin : public AbstractPlugin {
  public:
-  TestPlugin() : sm(Hyrise::get().storage_manager) {}
+  TestPlugin() : storage_manager(Hyrise::get().storage_manager) {}
 
   const std::string description() const final;
 
@@ -16,7 +16,7 @@ class TestPlugin : public AbstractPlugin, public Singleton<TestPlugin> {
 
   void stop() final;
 
-  StorageManager& sm;
+  StorageManager& storage_manager;
 };
 
 }  // namespace opossum

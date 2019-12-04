@@ -61,7 +61,7 @@ TEST_F(MockNodeTest, HashingAndEqualityCheck) {
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "other_name");
   EXPECT_EQ(*_mock_node_b, *_mock_node_b);
   EXPECT_NE(*_mock_node_b, *different_mock_node_1);
-  EXPECT_EQ(*_mock_node_b, *different_mock_node_2);
+  EXPECT_NE(*_mock_node_b, *different_mock_node_2);
   EXPECT_EQ(*_mock_node_b, *same_mock_node_b);
 
   EXPECT_NE(_mock_node_b->hash(), different_mock_node_1->hash());

@@ -79,6 +79,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
 
   const auto enable_visualization = json_config.value("visualize", default_config.enable_visualization);
   if (enable_visualization) {
+    Assert(clients == 1, "Cannot visualize plans with multiple clients as files may be overwritten");
     std::cout << "- Visualizing the plans into SVG files. This will make the performance numbers invalid." << std::endl;
   }
 
@@ -108,7 +109,9 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   std::cout << "- Chunk size is " << chunk_size << std::endl;
 
   const auto max_runs = json_config.value("runs", default_config.max_runs);
-  std::cout << "- Max runs per item is " << max_runs << std::endl;
+  if (max_runs >= 0) {
+    std::cout << "- Max runs per item is " << max_runs << std::endl;
+  }
 
   const auto default_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(default_config.max_duration);
   const auto max_duration = json_config.value("time", default_duration_seconds.count());
@@ -157,7 +160,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseRes
 nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseResult& parse_result) {
   nlohmann::json json_config;
 
-  json_config.emplace("runs", parse_result["runs"].as<size_t>());
+  json_config.emplace("runs", parse_result["runs"].as<int64_t>());
   json_config.emplace("chunk_size", parse_result["chunk_size"].as<ChunkOffset>());
   json_config.emplace("time", parse_result["time"].as<size_t>());
   json_config.emplace("warmup", parse_result["warmup"].as<size_t>());

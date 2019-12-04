@@ -24,7 +24,10 @@ namespace opossum {
 TPCCTableGenerator::TPCCTableGenerator(int num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _num_warehouses(num_warehouses) {}
 
-std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
+TPCCTableGenerator::TPCCTableGenerator(int num_warehouses, uint32_t chunk_size)
+    : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _num_warehouses(num_warehouses) {}
+
+std::shared_ptr<Table> TPCCTableGenerator::generate_item_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
 
   /**
@@ -35,10 +38,10 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_items_table() {
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
-  _add_column<int>(segments_by_chunk, column_definitions, "I_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "I_IM_ID", cardinalities,
-                   [&](std::vector<size_t>) { return _random_gen.random_number(1, 10000); });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "I_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "I_IM_ID", cardinalities,
+                       [&](std::vector<size_t>) { return _random_gen.random_number(1, 10000); });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "I_NAME", cardinalities,
                           [&](std::vector<size_t>) { return pmr_string{_random_gen.astring(14, 24)}; });
   _add_column<float>(segments_by_chunk, column_definitions, "I_PRICE", cardinalities,
@@ -74,8 +77,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_warehouse_table() {
   std::vector<Segments> segments_by_chunk;
   TableColumnDefinitions column_definitions;
 
-  _add_column<int>(segments_by_chunk, column_definitions, "W_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "W_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "W_NAME", cardinalities,
                           [&](std::vector<size_t>) { return pmr_string{_random_gen.astring(6, 10)}; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "W_STREET_1", cardinalities,
@@ -118,24 +121,24 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_stock_table() {
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
-  _add_column<int>(segments_by_chunk, column_definitions, "S_I_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[1] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "S_W_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "S_QUANTITY", cardinalities,
-                   [&](std::vector<size_t>) { return _random_gen.random_number(10, 100); });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "S_I_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[1] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "S_W_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "S_QUANTITY", cardinalities,
+                       [&](std::vector<size_t>) { return _random_gen.random_number(10, 100); });
   for (int district_i = 1; district_i <= 10; district_i++) {
     std::stringstream district_i_str;
     district_i_str << std::setw(2) << std::setfill('0') << district_i;
     _add_column<pmr_string>(segments_by_chunk, column_definitions, "S_DIST_" + district_i_str.str(), cardinalities,
                             [&](std::vector<size_t>) { return pmr_string{_random_gen.astring(24, 24)}; });
   }
-  _add_column<int>(segments_by_chunk, column_definitions, "S_YTD", cardinalities,
-                   [&](std::vector<size_t>) { return 0; });
-  _add_column<int>(segments_by_chunk, column_definitions, "S_ORDER_CNT", cardinalities,
-                   [&](std::vector<size_t>) { return 0; });
-  _add_column<int>(segments_by_chunk, column_definitions, "S_REMOTE_CNT", cardinalities,
-                   [&](std::vector<size_t>) { return 0; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "S_YTD", cardinalities,
+                       [&](std::vector<size_t>) { return 0; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "S_ORDER_CNT", cardinalities,
+                       [&](std::vector<size_t>) { return 0; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "S_REMOTE_CNT", cardinalities,
+                       [&](std::vector<size_t>) { return 0; });
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "S_DATA", cardinalities, [&](std::vector<size_t> indices) {
         std::string data = _random_gen.astring(26, 50);
@@ -169,10 +172,10 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_district_table() {
   std::vector<Segments> segments_by_chunk;
   TableColumnDefinitions column_definitions;
 
-  _add_column<int>(segments_by_chunk, column_definitions, "D_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[1] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "D_W_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "D_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[1] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "D_W_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "D_NAME", cardinalities,
                           [&](std::vector<size_t>) { return pmr_string{_random_gen.astring(6, 10)}; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "D_STREET_1", cardinalities,
@@ -190,8 +193,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_district_table() {
                      [&](std::vector<size_t>) { return _random_gen.random_number(0, 2000) / 10000.f; });
   _add_column<float>(segments_by_chunk, column_definitions, "D_YTD", cardinalities,
                      [&](std::vector<size_t>) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT; });
-  _add_column<int>(segments_by_chunk, column_definitions, "D_NEXT_O_ID", cardinalities,
-                   [&](std::vector<size_t>) { return NUM_ORDERS_PER_DISTRICT + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "D_NEXT_O_ID", cardinalities,
+                       [&](std::vector<size_t>) { return NUM_ORDERS_PER_DISTRICT + 1; });
 
   auto table =
       std::make_shared<Table>(column_definitions, TableType::Data, _benchmark_config->chunk_size, UseMvcc::Yes);
@@ -217,12 +220,12 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
-  _add_column<int>(segments_by_chunk, column_definitions, "C_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[2] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "C_D_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[1] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "C_W_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "C_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[2] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "C_D_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[1] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "C_W_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_FIRST", cardinalities,
                           [&](std::vector<size_t>) { return pmr_string{_random_gen.astring(8, 16)}; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_MIDDLE", cardinalities,
@@ -241,25 +244,25 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
                           [&](std::vector<size_t>) { return pmr_string{_random_gen.zip_code()}; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_PHONE", cardinalities,
                           [&](std::vector<size_t>) { return pmr_string{_random_gen.nstring(16, 16)}; });
-  _add_column<int>(segments_by_chunk, column_definitions, "C_SINCE", cardinalities,
-                   [&](std::vector<size_t>) { return _current_date; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "C_SINCE", cardinalities,
+                       [&](std::vector<size_t>) { return _current_date; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_CREDIT", cardinalities,
                           [&](std::vector<size_t> indices) {
                             bool is_original = original_ids.find(indices[2]) != original_ids.end();
                             return pmr_string{is_original ? "BC" : "GC"};
                           });
-  _add_column<int>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
-                   [&](std::vector<size_t>) { return 50000; });
+  _add_column<float>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
+                     [&](std::vector<size_t>) { return 50000; });
   _add_column<float>(segments_by_chunk, column_definitions, "C_DISCOUNT", cardinalities,
                      [&](std::vector<size_t>) { return _random_gen.random_number(0, 5000) / 10000.f; });
   _add_column<float>(segments_by_chunk, column_definitions, "C_BALANCE", cardinalities,
                      [&](std::vector<size_t>) { return -CUSTOMER_YTD; });
   _add_column<float>(segments_by_chunk, column_definitions, "C_YTD_PAYMENT", cardinalities,
                      [&](std::vector<size_t>) { return CUSTOMER_YTD; });
-  _add_column<int>(segments_by_chunk, column_definitions, "C_PAYMENT_CNT", cardinalities,
-                   [&](std::vector<size_t>) { return 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "C_DELIVERY_CNT", cardinalities,
-                   [&](std::vector<size_t>) { return 0; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "C_PAYMENT_CNT", cardinalities,
+                       [&](std::vector<size_t>) { return 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "C_DELIVERY_CNT", cardinalities,
+                       [&](std::vector<size_t>) { return 0; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_DATA", cardinalities,
                           [&](std::vector<size_t>) { return pmr_string{_random_gen.astring(300, 500)}; });
 
@@ -269,6 +272,8 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
     const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
     table->append_chunk(segments, mvcc_data);
   }
+
+  _random_gen.reset_c_for_c_last();
 
   return table;
 }
@@ -286,18 +291,18 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_history_table() {
   std::vector<Segments> segments_by_chunk;
   TableColumnDefinitions column_definitions;
 
-  _add_column<int>(segments_by_chunk, column_definitions, "H_C_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[2] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "H_C_D_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[1] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "H_C_W_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "H_D_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[1] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "H_W_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "H_DATE", cardinalities,
-                   [&](std::vector<size_t>) { return _current_date; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "H_C_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[2] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "H_C_D_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[1] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "H_C_W_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "H_D_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[1] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "H_W_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "H_DATE", cardinalities,
+                       [&](std::vector<size_t>) { return _current_date; });
   _add_column<float>(segments_by_chunk, column_definitions, "H_AMOUNT", cardinalities,
                      [&](std::vector<size_t>) { return 10.f; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "H_DATA", cardinalities,
@@ -330,27 +335,29 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
   // same permutation
   auto customer_permutation = _random_gen.permutation(0, NUM_CUSTOMERS_PER_DISTRICT);
 
-  _add_column<int>(segments_by_chunk, column_definitions, "O_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[2] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "O_D_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[1] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "O_W_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "O_C_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return customer_permutation[indices[2]] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "O_ENTRY_D", cardinalities,
-                   [&](std::vector<size_t>) { return _current_date; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "O_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[2] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "O_D_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[1] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "O_W_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "O_C_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return customer_permutation[indices[2]] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "O_ENTRY_D", cardinalities,
+                       [&](std::vector<size_t>) { return _current_date; });
   // TODO(anybody) -1 should be null
 
-  _add_column<int>(
-      segments_by_chunk, column_definitions, "O_CARRIER_ID", cardinalities, [&](std::vector<size_t> indices) {
-        return indices[2] <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT ? _random_gen.random_number(1, 10)
-                                                                                   : -1;
-      });
-  _add_column<int>(segments_by_chunk, column_definitions, "O_OL_CNT", cardinalities,
-                   [&](std::vector<size_t> indices) { return order_line_counts[indices[0]][indices[1]][indices[2]]; });
-  _add_column<int>(segments_by_chunk, column_definitions, "O_ALL_LOCAL", cardinalities,
-                   [&](std::vector<size_t>) { return 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "O_CARRIER_ID", cardinalities,
+                       [&](std::vector<size_t> indices) {
+                         return indices[2] + 1 <= NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT
+                                    ? _random_gen.random_number(1, 10)
+                                    : -1;
+                       });
+  _add_column<int32_t>(
+      segments_by_chunk, column_definitions, "O_OL_CNT", cardinalities,
+      [&](std::vector<size_t> indices) { return order_line_counts[indices[0]][indices[1]][indices[2]]; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "O_ALL_LOCAL", cardinalities,
+                       [&](std::vector<size_t>) { return 1; });
 
   auto table =
       std::make_shared<Table>(column_definitions, TableType::Data, _benchmark_config->chunk_size, UseMvcc::Yes);
@@ -483,13 +490,14 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_new_order_table() {
   std::vector<Segments> segments_by_chunk;
   TableColumnDefinitions column_definitions;
 
-  _add_column<int>(segments_by_chunk, column_definitions, "NO_O_ID", cardinalities, [&](std::vector<size_t> indices) {
-    return indices[2] + 1 + NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT;
-  });
-  _add_column<int>(segments_by_chunk, column_definitions, "NO_D_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[1] + 1; });
-  _add_column<int>(segments_by_chunk, column_definitions, "NO_W_ID", cardinalities,
-                   [&](std::vector<size_t> indices) { return indices[0] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "NO_O_ID", cardinalities,
+                       [&](std::vector<size_t> indices) {
+                         return indices[2] + 1 + NUM_ORDERS_PER_DISTRICT - NUM_NEW_ORDERS_PER_DISTRICT;
+                       });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "NO_D_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[1] + 1; });
+  _add_column<int32_t>(segments_by_chunk, column_definitions, "NO_W_ID", cardinalities,
+                       [&](std::vector<size_t> indices) { return indices[0] + 1; });
 
   auto table =
       std::make_shared<Table>(column_definitions, TableType::Data, _benchmark_config->chunk_size, UseMvcc::Yes);
@@ -505,7 +513,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   Assert(!_benchmark_config->cache_binary_tables, "Caching binary tables is not yet supported for TPC-C");
 
   std::vector<std::thread> threads;
-  auto item_table = std::async(std::launch::async, &TPCCTableGenerator::generate_items_table, this);
+  auto item_table = std::async(std::launch::async, &TPCCTableGenerator::generate_item_table, this);
   auto warehouse_table = std::async(std::launch::async, &TPCCTableGenerator::generate_warehouse_table, this);
   auto stock_table = std::async(std::launch::async, &TPCCTableGenerator::generate_stock_table, this);
   auto district_table = std::async(std::launch::async, &TPCCTableGenerator::generate_district_table, this);
@@ -528,5 +536,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
        {"ORDER_LINE", BenchmarkTableInfo{order_line_table.get()}},
        {"NEW_ORDER", BenchmarkTableInfo{new_order_table.get()}}});
 }
+
+thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT
 
 }  // namespace opossum

@@ -18,6 +18,8 @@ class AggregateExpression : public AbstractExpression {
 
   const AggregateFunction aggregate_function;
 
+  static bool is_count_star(const AbstractExpression& expression);
+
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _shallow_hash() const override;
