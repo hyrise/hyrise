@@ -224,7 +224,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     const auto chunk_count = _table_in->chunk_count();
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = _table_in->get_chunk(chunk_id);
-      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk.");
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       auto base_segment = chunk->get_segment(_column_id);
 
