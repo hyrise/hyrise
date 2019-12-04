@@ -429,9 +429,9 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
   // a single run, only keeping the first value of both runs in values() as a placeholder for the merged NULL run.
   // That means the runs of values 3/4 and the single-value runs of 95/96 are stored as two value runs 3 and 95 in the
   // values() vector (thus, we substract two from the number of expected runs).
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->end_positions()->size());
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->null_values()->size());
   EXPECT_EQ(run_length_segment->values()->size(), long_runs + short_runs - 2);
-  EXPECT_EQ(run_length_segment->null_values()->size(), long_runs + short_runs - 2);
-  EXPECT_EQ(run_length_segment->end_positions()->size(), long_runs + short_runs - 2);
   EXPECT_EQ(run_length_segment->end_positions()->front(), 9ul);
   EXPECT_EQ(run_length_segment->end_positions()->back(), 99ul);
 
@@ -487,9 +487,9 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValuesInRun) {
 
   // NULL value runs are runs as well. We have four NULL runs and two value runs, where one run is split in two due to
   // a NULL value in between.
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->end_positions()->size());
+  EXPECT_EQ(run_length_segment->values()->size(), run_length_segment->null_values()->size());
   EXPECT_EQ(run_length_segment->values()->size(), 4 + run_count + 1);
-  EXPECT_EQ(run_length_segment->null_values()->size(), 4 + run_count + 1);
-  EXPECT_EQ(run_length_segment->end_positions()->size(), 4 + run_count + 1);
 
   EXPECT_EQ(run_length_segment->end_positions()->front(), 0);  // value run longer, but first position is NULL
   EXPECT_EQ(run_length_segment->end_positions()->at(1), 6);
