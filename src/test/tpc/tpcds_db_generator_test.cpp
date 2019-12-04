@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "hyrise.hpp"
-#include "import_export/csv_parser.hpp"
+#include "import_export/csv/csv_parser.hpp"
 #include "testing_assert.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
