@@ -22,7 +22,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
     auto decompressed_segment = _segment.decompress();
     if (_segment.null_values()) {
-      auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values()->cbegin(), ChunkOffset{0u}};
+      auto begin =
+          Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values()->cbegin(), ChunkOffset{0u}};
       auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values()->cend(),
                                          static_cast<ChunkOffset>(decompressed_segment.size())};
       functor(begin, end);
