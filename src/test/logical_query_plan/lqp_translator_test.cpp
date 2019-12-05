@@ -627,7 +627,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
    */
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a)), count_star_(int_float_node)),  // NOLINT
     ProjectionNode::make(expression_vector(int_float_b, int_float_a, add_(int_float_b, int_float_a)),
       int_float_node));
   // clang-format on
@@ -638,14 +638,14 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
    */
   const auto aggregate_op = std::dynamic_pointer_cast<AggregateHash>(op);
   ASSERT_TRUE(aggregate_op);
-  ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
+  ASSERT_EQ(aggregate_op->aggregates().size(), 2u);
   ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
   EXPECT_EQ(aggregate_op->groupby_column_ids().at(0), ColumnID{1});
 
   const auto sum = aggregate_op->aggregates()[0];
   EXPECT_EQ(*sum, *sum_(pqp_column_(ColumnID{2}, DataType::Float, false, "b + a")));
 
-  const auto count = aggregate_op->aggregates()[0];
+  const auto count = aggregate_op->aggregates()[1];
   EXPECT_EQ(*count, *count_(pqp_column_(INVALID_COLUMN_ID, DataType::Long, false, "*")));
 }
 
