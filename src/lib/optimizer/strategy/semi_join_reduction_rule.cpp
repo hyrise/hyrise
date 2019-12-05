@@ -56,7 +56,10 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         semi_join_reduction_node->set_right_input(nullptr);
         lqp_remove_node(semi_join_reduction_node);
 
-        if (original_cardinality == 0 || reduced_cardinality / original_cardinality > MINIMUM_SELECTIVITY) {
+        // While semi join reductions might not be immediately beneficial if the original cardinality is low, remember
+        // that they might be pushed down in the LQP to a point where they are more beneficial (e.g., below an
+        // Aggregate).
+        if (original_cardinality == 0 || (reduced_cardinality / original_cardinality) > MINIMUM_SELECTIVITY) {
           return;
         }
 
@@ -74,12 +77,13 @@ void SemiJoinReductionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& roo
         // join_node. By walking down that LQP, we might find a suitable reducer node where predicate_expression
         // continues to be evaluable but where the cardinality is lower (mostly, because we moved below a join). Also,
         // by moving further down in the LQP, we (1) allow the semi join reduction to start earlier in multi-threaded
-        // environments and (2) normalize the reducer nodes, improving the reusability of sub-LQPs.
+        // environments and (2) have a better chance at finding a common reducer node for multiple semi joins,
+        // improving the reusability of sub-LQPs.
         while (true) {
-          // Independent of the join type, we can use either side of the join's input as a candidate for the reducer,
-          // as long as the predicate continues to be evaluable. This is because the join might only remove values from
-          // the reducer's list of values, but does not add any new values. As such, each value in the output of the
-          // join will also be found in the input.
+          // Independent of the join type of the reducer_node, we can use either side of the join's input as a candidate
+          // for the reducer, as long as the predicate continues to be evaluable. This is because the join in
+          // reducer_node might only remove values from the reducer's list of values, but does not add any new values.
+          // As such, each value in the output of the join will also be found in the input.
           if (reducer_node->type != LQPNodeType::Join) {
             break;
           }

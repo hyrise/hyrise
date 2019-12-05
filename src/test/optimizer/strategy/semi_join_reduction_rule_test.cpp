@@ -79,7 +79,7 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReductionRightSide) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForOuter) {
-  // Same as CreateSimpleReduction, but as tupels without a join partner survive the left outer join, do not reduce
+  // Same as CreateSimpleReduction, but as tuples without a join partner survive the left outer join, do not reduce
   // the left side.
 
   // clang-format off
@@ -135,7 +135,8 @@ TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
 }
 
 TEST_F(SemiJoinReductionRuleTest, NoReductionForNonBeneficial) {
-  // Same as CreateSimpleReduction, but the selectivities make the reduction unprofitable
+  // Same as CreateSimpleReduction, but with different predicates. We estimate that a semi join would not be
+  // beneficial.
 
   // clang-format off
   const auto input_lqp = JoinNode::make(JoinMode::Inner, equals_(_a_b, _b_a),
