@@ -21,6 +21,7 @@ std::shared_ptr<const Table> Export::_on_execute() {
   if (_filename.empty() || std::all_of(_filename.begin(), _filename.end(), isspace)) {
     Fail("Export: File name must not be empty.");
   }
+
   switch (_type) {
     case FileType::Auto:
       _write_any_type();

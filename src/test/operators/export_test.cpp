@@ -7,6 +7,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "constant_mappings.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "operators/export.hpp"
 #include "operators/table_scan.hpp"
@@ -14,6 +15,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -38,43 +40,102 @@ class OperatorsExportTest : public BaseTest {
     return file.good();
   }
 
-  bool compare_file(const std::string& filename, const std::string& expected_content) {
-    std::ifstream file(filename);
-    Assert(file.is_open(), "compare_file: Could not find file " + filename);
+  bool compare_files(const std::string& original_file, const std::string& created_file) {
+    std::ifstream original(original_file);
+    Assert(original.is_open(), "compare_file: Could not find file " + original_file);
 
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    std::ifstream created(created_file);
+    Assert(created.is_open(), "compare_file: Could not find file " + created_file);
 
-    int equality = content.compare(expected_content);
-    if (equality != 0) {
-      std::cout << equality << std::endl;
-      std::cout << "Comparison of file to expected content failed. " << std::endl;
-      std::cout << "Expected:" << std::endl;
-      std::cout << expected_content << std::endl;
-      std::cout << "Actual:" << std::endl;
-      std::cout << content << std::endl;
+    std::istreambuf_iterator<char> iterator_original(original);
+    std::istreambuf_iterator<char> iterator_created(created);
+    std::istreambuf_iterator<char> end;
+
+    while (iterator_original != end && iterator_created != end) {
+      if (*iterator_original != *iterator_created) return false;
+      ++iterator_original;
+      ++iterator_created;
     }
-    return equality == 0;
+    return ((iterator_original == end) && (iterator_created == end));
   }
 
   std::shared_ptr<Table> table;
-  const std::string test_filename = test_data_path + "export_test.csv";
+  const std::string test_filename = test_data_path + "export_test";
   const std::string test_meta_filename = test_filename + CsvMeta::META_FILE_EXTENSION;
+  const std::string reference_filepath = "resources/test_data/";
+  const std::map<FileType, std::string> reference_filenames{{FileType::Binary, "bin/float.bin"},
+                                                            {FileType::Csv, "csv/float.csv"}};
+  const std::map<FileType, std::string> file_extensions{{FileType::Binary, ".bin"}, {FileType::Csv, ".csv"}};
 };
+
+class OperatorsExportMultiFileTypeTest : public OperatorsExportTest, public ::testing::WithParamInterface<FileType> {};
+
+auto formatter = [](const ::testing::TestParamInfo<FileType> info) {
+  auto stream = std::stringstream{};
+  stream << info.param;
+
+  auto string = stream.str();
+  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
+
+  return string;
+};
+
+INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsExportMultiFileTypeTest,
+                         ::testing::Values(FileType::Csv, FileType::Binary), formatter);
+
+TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
+  auto table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+  table->append({1.1f});
+  table->append({2.2f});
+  table->append({3.3f});
+  table->append({4.4f});
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  std::string reference_filename = reference_filepath + reference_filenames.at(GetParam());
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, test_filename, GetParam());
+  exporter->execute();
+
+  EXPECT_TRUE(file_exists(test_filename));
+  EXPECT_TRUE(compare_files(reference_filename, test_filename));
+}
+
+TEST_P(OperatorsExportMultiFileTypeTest, ExportWithoutFileType) {
+  auto table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+  table->append({1.1f});
+  table->append({2.2f});
+  table->append({3.3f});
+  table->append({4.4f});
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+
+  auto filename = test_filename + file_extensions.at(GetParam());
+  auto reference_filename = reference_filepath + reference_filenames.at(GetParam());
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, filename);
+  exporter->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files(reference_filename, filename));
+}
 
 TEST_F(OperatorsExportTest, NonsensePath) {
   table->append({1, "hello", 3.5f});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::Export>(table_wrapper, "this/path/does/not/exist");
-  EXPECT_THROW(ex->execute(), std::exception);
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "this/path/does/not/exist");
+  EXPECT_THROW(exporter->execute(), std::exception);
 }
 
 TEST_F(OperatorsExportTest, EmptyPath) {
   table->append({1, "hello", 3.5f});
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
-  auto ex = std::make_shared<opossum::Export>(table_wrapper, "");
-  EXPECT_THROW(ex->execute(), std::exception);
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "");
+  EXPECT_THROW(exporter->execute(), std::exception);
 }
 
 }  // namespace opossum

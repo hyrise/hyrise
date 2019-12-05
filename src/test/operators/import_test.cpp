@@ -16,9 +16,11 @@ namespace opossum {
 
 class OperatorsImportTest : public BaseTest {
  protected:
-  const std::string _reference_filepath = "resources/test_data/";
-  const std::map<FileType, std::string> _reference_filenames{
-      {FileType::Binary, "bin/float.bin"}, {FileType::Tbl, "tbl/float.tbl"}, {FileType::Csv, "csv/float.csv"}};
+  const std::string reference_filepath = "resources/test_data/";
+  const std::map<FileType, std::string> reference_filenames{
+      {FileType::Binary, "bin/float"}, {FileType::Tbl, "tbl/float"}, {FileType::Csv, "csv/float"}};
+  const std::map<FileType, std::string> file_extensions{
+      {FileType::Binary, ".bin"}, {FileType::Tbl, ".tbl"}, {FileType::Csv, ".csv"}};
 };
 
 class OperatorsImportMultiFileTypeTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
@@ -44,7 +46,7 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   expected_table->append({3.3f});
   expected_table->append({4.4f});
 
-  std::string reference_filename = _reference_filepath + _reference_filenames.at(GetParam());
+  std::string reference_filename = reference_filepath + reference_filenames.at(GetParam());
   auto importer = std::make_shared<opossum::Import>(reference_filename, std::nullopt, Chunk::DEFAULT_SIZE, GetParam());
   importer->execute();
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -58,7 +60,8 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
   expected_table->append({3.3f});
   expected_table->append({4.4f});
 
-  std::string reference_filename = _reference_filepath + _reference_filenames.at(GetParam());
+  std::string reference_filename =
+      reference_filepath + reference_filenames.at(GetParam()) + file_extensions.at(GetParam());
   auto importer = std::make_shared<opossum::Import>(reference_filename);
   importer->execute();
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
