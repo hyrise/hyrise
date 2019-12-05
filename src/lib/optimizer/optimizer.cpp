@@ -182,11 +182,11 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
     lqps.emplace_back(lqp);
   }
 
-  // Next, collect all nodes found in the entire plan (not only the main LQP)
-  std::unordered_set<std::shared_ptr<const AbstractLQPNode>> all_nodes;
+  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::unordered_set<std::shared_ptr<const AbstractLQPNode>>>
+      nodes_by_lqp;
   for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&all_nodes](const auto& node) {
-      all_nodes.emplace(node);
+    visit_lqp(lqp, [&](const auto& node) {
+      nodes_by_lqp[lqp].emplace(node);
       return LQPVisitation::VisitInputs;
     });
   }
@@ -195,7 +195,7 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
   // (2) Make sure each node has the number of inputs expected for that node type
   // (3) Make sure that for all LQPColumnExpressions, the original_node is part of the LQP
   for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&all_nodes](const auto& node) {
+    visit_lqp(lqp, [&](const auto& node) {
       // Check that all outputs are part of the LQP
       const auto outputs = node->outputs();
       for (const auto& output : outputs) {
@@ -204,18 +204,18 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         // outside of the LQP that is currently optimized. For example, if you create a bunch of LQP nodes in the test's
         // SetUp method but these are not used in the current LQP, this can cause this assertion to fail. This is only
         // enforced when rules are executed through the optimizer, not when tests call the rule directly.
-        Assert(all_nodes.contains(output), std::string{"Output `"} + output->description() + "` of node `" +
-                                               node->description() + "` not found in LQP");
+        Assert(nodes_by_lqp[lqp].contains(output), std::string{"Output `"} + output->description() + "` of node `" +
+                                                       node->description() + "` not found in LQP");
       }
 
       // Check that all LQPColumnExpressions in the node can be resolved. This does, however, not guarantee that it is
       // correctly used as one of the (transitive) inputs of `node`. Checking that would be more expensive.
       for (const auto& node_expression : node->node_expressions) {
-        visit_expression(node_expression, [&all_nodes](const auto& sub_expression) {
+        visit_expression(node_expression, [&](const auto& sub_expression) {
           if (sub_expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
           const auto original_node =
               dynamic_cast<LQPColumnExpression&>(*sub_expression).column_reference.original_node();
-          Assert(all_nodes.contains(original_node),
+          Assert(nodes_by_lqp[lqp].contains(original_node),
                  std::string{"LQPColumnExpression "} + sub_expression->as_column_name() + " can not be resolved");
           return ExpressionVisitation::VisitArguments;
         });
