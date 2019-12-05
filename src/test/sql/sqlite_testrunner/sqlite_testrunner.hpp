@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_context.hpp"
+#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -32,7 +33,7 @@
 
 namespace opossum {
 
-using SQLiteTestRunnerParam = std::tuple<std::string /* sql */, EncodingType>;
+using SQLiteTestRunnerParam = std::tuple<std::pair<size_t /* line */, std::string /* sql */>, EncodingType>;
 
 class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
  public:
@@ -53,11 +54,20 @@ class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
 
   void SetUp() override;
 
-  static std::vector<std::string> queries();
+  // Returns pair of the line in the sql file and the query itself
+  static std::vector<std::pair<size_t, std::string>> queries();
 
   inline static std::unique_ptr<SQLiteWrapper> _sqlite;
   inline static std::map<EncodingType, TableCache> _table_cache_per_encoding;
   inline static std::string _master_table_suffix = "_master_copy";
+};
+
+auto sqlite_testrunner_formatter = [](const ::testing::TestParamInfo<SQLiteTestRunnerParam>& info) {
+  const auto& query_pair = std::get<0>(info.param);
+  const auto& encoding_type = std::get<1>(info.param);
+
+  return std::string{"Line"} + std::to_string(query_pair.first) + "With" +
+         encoding_type_to_string.left.at(encoding_type);
 };
 
 }  // namespace opossum

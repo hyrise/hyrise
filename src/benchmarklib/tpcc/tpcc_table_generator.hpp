@@ -10,7 +10,6 @@
 
 #include "abstract_table_generator.hpp"
 #include "benchmark_config.hpp"
-#include "encoding_config.hpp"
 #include "resolve_type.hpp"
 #include "tpcc_random_generator.hpp"
 
@@ -25,7 +24,10 @@ class TPCCTableGenerator : public AbstractTableGenerator {
  public:
   TPCCTableGenerator(int num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config);
 
-  std::shared_ptr<Table> generate_items_table();
+  // Convenience constructor for creating a TPCCTableGenerator without a benchmarking context
+  explicit TPCCTableGenerator(int num_warehouses, uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+
+  std::shared_ptr<Table> generate_item_table();
 
   std::shared_ptr<Table> generate_warehouse_table();
 
@@ -63,7 +65,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
                               OrderLineCounts order_line_counts,
                               const std::function<T(std::vector<size_t>)>& generator_function);
 
-  TPCCRandomGenerator _random_gen;
+  // Used to generate not only random numbers, but also non-uniform numbers and random last names as defined by the
+  // TPC-C Specification.
+  static thread_local TPCCRandomGenerator _random_gen;
 
   /**
    * In TPCC and TPCH table sizes are usually defined relatively to each other.
