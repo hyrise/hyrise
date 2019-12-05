@@ -250,7 +250,6 @@ std::vector<TableConstraintDefinition> AbstractLQPNode::get_unique_constraints(c
 
   const auto& column_expressions = !of_column_expressions.empty() ? of_column_expressions : this->column_expressions();
 
-
   std::vector<LQPColumnExpression> column_expressions_own;
   std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPColumnExpression>>> column_expressions_foreign;
 
@@ -274,7 +273,7 @@ std::vector<TableConstraintDefinition> AbstractLQPNode::get_unique_constraints(c
   auto unique_constraints = _get_local_unique_constraints(column_expressions_own);
 
   // Get constraint information from child nodes
-  for(auto child_node : column_expressions_foreign) {
+  for(const auto child_node : column_expressions_foreign) {
 
   }
 
