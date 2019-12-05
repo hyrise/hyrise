@@ -57,6 +57,9 @@ std::string AggregateNode::description() const {
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {
+  // We do not return node_expressions directly here, because we do not want to expose the ANY to the following LQP
+  // nodes. This way, we execute the ANY() as intended, but do not have to traverse the LQP upwards and adapt nodes
+  // that reference the ANY'd column.
   _column_expressions.resize(node_expressions.size());
   std::copy(node_expressions.begin(), node_expressions.end(), _column_expressions.begin());
 
