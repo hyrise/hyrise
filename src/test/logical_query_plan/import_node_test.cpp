@@ -16,7 +16,7 @@ class ImportNodeTest : public BaseTest {
   std::shared_ptr<ImportNode> _import_node;
 };
 
-TEST_F(ImportNodeTest, Description) { EXPECT_EQ(_import_node->description(), "[Import] Name 'tablename"); }
+TEST_F(ImportNodeTest, Description) { EXPECT_EQ(_import_node->description(), "[Import] Name: 'tablename'"); }
 
 TEST_F(ImportNodeTest, HashingAndEqualityCheck) {
   const auto another_import_node = ImportNode::make("tablename", "filename", hsql::ImportType::kImportCSV);
