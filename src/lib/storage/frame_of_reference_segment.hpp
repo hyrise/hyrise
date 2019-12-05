@@ -26,6 +26,10 @@ class BaseCompressedVector;
  * compressed using vector compression (null suppression).
  * FOR encoding on its own without vector compression does not
  * add any benefit.
+ *
+ * Null values are stored in a separate vector. Note, for correct
+ * offset handling, the minimum of each frame is stored in the 
+ * offset_values vector at each position that is NULL.
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
