@@ -18,9 +18,9 @@ namespace opossum {
 
 enum class EncodingType : uint8_t;
 enum class VectorCompressionType : uint8_t;
-enum class FileType : uint8_t;
 enum class AggregateFunction;
 enum class ExpressionType;
+enum class FileType;
 
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<FunctionType, std::string> function_type_to_string;

@@ -54,7 +54,7 @@ void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVar
 std::shared_ptr<Table> Import::_import() {
   switch (_type) {
     case FileType::Csv:
-      return CsvParser{}.parse(_filename, _csv_meta, _chunk_size);
+      return CsvParser::parse(_filename, _chunk_size, _csv_meta);
     case FileType::Tbl:
       return load_table(_filename, _chunk_size);
     case FileType::Binary:
@@ -62,23 +62,21 @@ std::shared_ptr<Table> Import::_import() {
     case FileType::Auto:
       return _import_any_type();
     default:
-      Fail("Cannot import file type.");
+      Fail("Import: Cannot import file type.");
   }
 }
 
 std::shared_ptr<Table> Import::_import_any_type() {
-  std::vector<std::string> file_parts;
-  boost::algorithm::split(file_parts, _filename, boost::is_any_of("."));
-  const std::string& extension = file_parts.back();
-  if (extension == "csv") {
-    return CsvParser{}.parse(_filename, _csv_meta, _chunk_size);
-  } else if (extension == "tbl") {
+  const auto extension = std::string{std::filesystem::path{_filename}.extension()};
+  if (extension == ".csv") {
+    return CsvParser::parse(_filename, _chunk_size, _csv_meta);
+  } else if (extension == ".tbl") {
     return load_table(_filename, _chunk_size);
-  } else if (extension == "bin") {
+  } else if (extension == ".bin") {
     return BinaryParser::parse(_filename);
   }
 
-  Fail("Cannot import file type.");
+  Fail("Import: Cannot import file type.");
 }
 
 }  // namespace opossum

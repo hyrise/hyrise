@@ -18,6 +18,9 @@ const std::string& Export::name() const {
 }
 
 std::shared_ptr<const Table> Export::_on_execute() {
+  if (_filename.empty() || std::all_of(_filename.begin(), _filename.end(), isspace)) {
+    Fail("Export: File name must not be empty.");
+  }
   switch (_type) {
     case FileType::Auto:
       _write_any_type();
@@ -29,7 +32,7 @@ std::shared_ptr<const Table> Export::_on_execute() {
       BinaryWriter::write(*input_table_left(), _filename);
       break;
     default:
-      Fail("Exporting file type is not supported.");
+      Fail("Export: Exporting file type is not supported.");
   }
 
   return _input_left->get_output();
@@ -44,15 +47,13 @@ std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
 void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void Export::_write_any_type() {
-  std::vector<std::string> file_parts;
-  boost::algorithm::split(file_parts, _filename, boost::is_any_of("."));
-  const std::string& extension = file_parts.back();
-  if (extension == "csv") {
+  const auto extension = std::string{std::filesystem::path{_filename}.extension()};
+  if (extension == ".csv") {
     CsvWriter::write(*input_table_left(), _filename);
-  } else if (extension == "bin") {
+  } else if (extension == ".bin") {
     BinaryWriter::write(*input_table_left(), _filename);
   } else {
-    Fail("Cannot export file type.");
+    Fail("Export: Exporting file type is not supported.");
   }
 }
 

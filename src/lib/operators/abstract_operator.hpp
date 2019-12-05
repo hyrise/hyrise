@@ -21,8 +21,6 @@ enum class OperatorType {
   Delete,
   Difference,
   Export,
-  ExportBinary,
-  ExportCsv,
   GetTable,
   Import,
   IndexScan,

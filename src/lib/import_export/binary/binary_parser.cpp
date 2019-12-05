@@ -21,7 +21,6 @@ namespace opossum {
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   std::ifstream file;
   file.open(filename, std::ios::binary);
-
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   auto [table, chunk_count] = _read_header(file);

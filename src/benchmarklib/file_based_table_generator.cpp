@@ -92,7 +92,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       if (extension == ".tbl") {
         table_info.table = load_table(*table_info.text_file_path, _benchmark_config->chunk_size);
       } else if (extension == ".csv") {
-        table_info.table = CsvParser{}.parse(*table_info.text_file_path, std::nullopt, _benchmark_config->chunk_size);
+        table_info.table = CsvParser::parse(*table_info.text_file_path, _benchmark_config->chunk_size);
       } else {
         Fail("Unknown textual file format. This should have been caught earlier.");
       }

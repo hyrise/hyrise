@@ -71,12 +71,8 @@ set(
     operators/delete_test.cpp
     operators/difference_test.cpp
     operators/export_test.cpp
-    operators/export_binary_test.cpp
-    operators/export_csv_test.cpp
     operators/get_table_test.cpp
     operators/import_test.cpp
-    operators/import_binary_test.cpp
-    operators/import_csv_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
     operators/join_hash_test.cpp
