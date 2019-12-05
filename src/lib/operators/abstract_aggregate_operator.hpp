@@ -146,9 +146,6 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
   auto get_aggregate_function() {
     return [](const ColumnDataType& new_value, std::optional<AggregateType>& current_primary_aggregate,
               std::vector<AggregateType>& current_secondary_aggregates) {
-      if (current_primary_aggregate) {
-        std::cout << "comparing " << *current_primary_aggregate << " and " << new_value << std::endl;
-      }
       DebugAssert(!current_primary_aggregate || *current_primary_aggregate == new_value,
                   "Expected all values to be equal for ANY().");
 
