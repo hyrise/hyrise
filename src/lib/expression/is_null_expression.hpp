@@ -8,7 +8,7 @@ namespace opossum {
 
 class IsNullExpression : public AbstractPredicateExpression {
  public:
-  IsNullExpression(const PredicateCondition new_predicate_condition,
+  IsNullExpression(const PredicateCondition init_predicate_condition,
                    const std::shared_ptr<AbstractExpression>& operand);
 
   const std::shared_ptr<AbstractExpression>& operand() const;
