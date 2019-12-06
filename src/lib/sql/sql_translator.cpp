@@ -1207,6 +1207,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
   return prepared_plan->instantiate(parameters);
 }
 
+// NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
   return ImportNode::make(import_statement.tableName, import_statement.filePath, import_statement.type);
 }
