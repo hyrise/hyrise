@@ -52,7 +52,6 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
     // Main loop. Iterate over the tables and its group-by columns, gather primary keys/unique columns and check if we can reduce.
     for (const auto& [stored_table_node, group_by_columns] : group_by_columns_per_table) {
-      // Obtain column IDs of the unique columns/primary key columns
       auto unique_columns = std::set<ColumnID>();
 
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
@@ -62,17 +61,16 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       }
 
       for (const auto& table_constraint : table->get_soft_unique_constraints()) {
-        if (table_constraint.is_primary_key == IsPrimaryKey::Yes) {
-          auto columns_not_nullable = std::none_of(table_constraint.columns.begin(), table_constraint.columns.end(),
-                                                   [&, stored_table_node = stored_table_node](const auto& column_id){
-                                                     const auto column_reference = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, column_id});
-                                                     return column_reference->is_nullable_on_lqp(aggregate_node);
-                                                   });
+        auto columns_not_nullable = std::none_of(table_constraint.columns.begin(), table_constraint.columns.end(),
+                                                 [&, stored_table_node = stored_table_node](const auto& column_id) {
+                                                   const auto column_reference = std::make_shared<LQPColumnExpression>(
+                                                       LQPColumnReference{stored_table_node, column_id});
+                                                   return column_reference->is_nullable_on_lqp(aggregate_node);
+                                                 });
 
-          if (columns_not_nullable) {
-            unique_columns.insert(table_constraint.columns.begin(), table_constraint.columns.end());
-            break;
-          }
+        if (columns_not_nullable) {
+          unique_columns.insert(table_constraint.columns.begin(), table_constraint.columns.end());
+          break;
         }
       }
 
