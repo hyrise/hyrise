@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "storage/constraints/table_constraint_definition.hpp"
+#include "storage/constraints/unique_constraint_definition.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "types.hpp"
@@ -129,7 +129,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * TODO(Julian)
    * @return
    */
-  virtual const std::shared_ptr<std::vector<TableConstraintDefinition>> get_constraints() const;
+  virtual const std::shared_ptr<std::vector<UniqueConstraintDefinition>> get_constraints() const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)

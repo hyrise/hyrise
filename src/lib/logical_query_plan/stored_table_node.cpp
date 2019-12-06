@@ -153,13 +153,13 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
          _pruned_column_ids == stored_table_node._pruned_column_ids;
 }
 
-const std::shared_ptr<std::vector<TableConstraintDefinition>> StoredTableNode::get_constraints() const {
-  auto lqp_constraints = std::make_shared<std::vector<TableConstraintDefinition>>();
+const std::shared_ptr<std::vector<UniqueConstraintDefinition>> StoredTableNode::get_constraints() const {
+  auto lqp_constraints = std::make_shared<std::vector<UniqueConstraintDefinition>>();
 
   // Extract relevant constraints from table
   const auto& table_constraints = Hyrise::get().storage_manager.get_table(table_name).get()->get_soft_unique_constraints();
 
-  for (const TableConstraintDefinition& constraint : table_constraints) {
+  for (const UniqueConstraintDefinition& constraint : table_constraints) {
 
     // Discard constraints which involve pruned column(s)
     const auto discard_constraint = [&]() {

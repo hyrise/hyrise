@@ -293,7 +293,7 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
-const std::vector<TableConstraintDefinition>& Table::get_soft_unique_constraints() const {
+const std::vector<UniqueConstraintDefinition>& Table::get_soft_unique_constraints() const {
   return _constraint_definitions;
 }
 
@@ -315,7 +315,7 @@ void Table::add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, 
 
     auto sorted_columns_ids = column_ids;
     std::sort(sorted_columns_ids.begin(), sorted_columns_ids.end());
-    TableConstraintDefinition new_constraint{sorted_columns_ids, is_primary_key};
+    UniqueConstraintDefinition new_constraint{sorted_columns_ids, is_primary_key};
 
     Assert(std::find_if(_constraint_definitions.begin(), _constraint_definitions.end(),
                         [&new_constraint](const auto& existing_constraint) {
