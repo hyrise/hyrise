@@ -50,9 +50,9 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
     bool group_by_list_changed = false;
 
-    // Main loop. Iterate over the tables and its group-by columns, gather primary keys and see if we can reduce.
+    // Main loop. Iterate over the tables and its group-by columns, gather primary keys/unique columns and check if we can reduce.
     for (const auto& [stored_table_node, group_by_columns] : group_by_columns_per_table) {
-      // Obtain column IDs of the primary key
+      // Obtain column IDs of the unique columns/primary key columns
       auto unique_columns = std::set<ColumnID>();
 
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
@@ -63,8 +63,16 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
       for (const auto& table_constraint : table->get_soft_unique_constraints()) {
         if (table_constraint.is_primary_key == IsPrimaryKey::Yes) {
-          unique_columns.insert(table_constraint.columns.begin(), table_constraint.columns.end());
-          break;
+          auto columns_not_nullable = std::none_of(table_constraint.columns.begin(), table_constraint.columns.end(),
+                                                   [&, stored_table_node = stored_table_node](const auto& column_id){
+                                                     const auto column_reference = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, column_id});
+                                                     return column_reference->is_nullable_on_lqp(aggregate_node);
+                                                   });
+
+          if (columns_not_nullable) {
+            unique_columns.insert(table_constraint.columns.begin(), table_constraint.columns.end());
+            break;
+          }
         }
       }
 
