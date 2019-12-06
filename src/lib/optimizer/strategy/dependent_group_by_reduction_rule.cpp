@@ -81,36 +81,38 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
 
       for (const auto& group_by_column : group_by_columns) {
         // Every column that is not part of the primary key is going to be removed.
-        if (unique_columns.find(group_by_column) == unique_columns.end()) {
-          // Remove node if it is a column reference and references the correct stored table node. Further, decrement
-          // the aggregate's index which denotes the end of group-by expressions.
-          aggregate_node.node_expressions.erase(
-              std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
-                             [&, stored_table_node = stored_table_node](const auto expression) {
-                               const auto& column_expression =
-                                   std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-                               if (!column_expression) return false;
-
-                               const auto& expression_stored_table_node =
-                                   std::dynamic_pointer_cast<const StoredTableNode>(
-                                       column_expression->column_reference.original_node());
-                               if (!expression_stored_table_node) return false;
-
-                               const auto column_id = column_expression->column_reference.original_column_id();
-                               if (stored_table_node == expression_stored_table_node && group_by_column == column_id) {
-                                 // Adjust the number of group by expressions.
-                                 --aggregate_node.aggregate_expressions_begin_idx;
-                                 group_by_list_changed = true;
-                                 return true;
-                               }
-                               return false;
-                             }),
-              aggregate_node.node_expressions.end());
-
-          // Add the ANY() aggregate to the list of aggregate columns.
-          const auto aggregate_any_expression = any_(lqp_column_({stored_table_node, group_by_column}));
-          aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
+        // Continue in case of primary key/unique column
+        if (unique_columns.find(group_by_column) != unique_columns.end()) {
+          continue;
         }
+
+        // Remove node if it is a column reference and references the correct stored table node. Further, decrement
+        // the aggregate's index which denotes the end of group-by expressions.
+        aggregate_node.node_expressions.erase(
+            std::remove_if(aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.end(),
+                           [&, stored_table_node = stored_table_node](const auto expression) {
+                             const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+                             if (!column_expression) return false;
+
+                             const auto& expression_stored_table_node =
+                                 std::dynamic_pointer_cast<const StoredTableNode>(
+                                     column_expression->column_reference.original_node());
+                             if (!expression_stored_table_node) return false;
+
+                             const auto column_id = column_expression->column_reference.original_column_id();
+                             if (stored_table_node == expression_stored_table_node && group_by_column == column_id) {
+                               // Adjust the number of group by expressions.
+                               --aggregate_node.aggregate_expressions_begin_idx;
+                               group_by_list_changed = true;
+                               return true;
+                             }
+                             return false;
+                           }),
+            aggregate_node.node_expressions.end());
+
+        // Add the ANY() aggregate to the list of aggregate columns.
+        const auto aggregate_any_expression = any_(lqp_column_({stored_table_node, group_by_column}));
+        aggregate_node.node_expressions.emplace_back(aggregate_any_expression);
       }
     }
 

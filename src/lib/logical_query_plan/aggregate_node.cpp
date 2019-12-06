@@ -63,9 +63,13 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
   _column_expressions.resize(node_expressions.size());
   std::copy(node_expressions.begin(), node_expressions.end(), _column_expressions.begin());
 
-  for (auto& column_expression : _column_expressions) {
+  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < _column_expressions.size();
+       ++expression_idx) {
+    auto& column_expression = _column_expressions[expression_idx];
+    DebugAssert(column_expression->type == ExpressionType::Aggregate,
+                "Unexpected non-aggregate in list of aggregates.");
     if (column_expression->type == ExpressionType::Aggregate) {
-      const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(column_expression);
+      const auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(column_expression);
       if (aggregate_expression->aggregate_function == AggregateFunction::Any) {
         column_expression = column_expression->arguments[0];
       }

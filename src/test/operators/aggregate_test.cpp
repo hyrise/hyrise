@@ -230,15 +230,8 @@ TYPED_TEST(OperatorsAggregateTest, ExpressionOnAny) {
 
 // Use ANY() on a column with NULL values.
 TYPED_TEST(OperatorsAggregateTest, AnyAndNulls) {
-  // auto aggregate = std::make_shared<TypeParam>(
-  //     this->_table_wrapper_1_0_null, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Any}},
-  //     std::vector<ColumnID>{ColumnID{1}});
-  // aggregate->execute();
-
-  // Print::print(aggregate->get_output());
-
   this->test_output(this->_table_wrapper_1_0_null, {{ColumnID{0}, AggregateFunction::Any}}, {ColumnID{1}},
-                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_any_null.tbl", 1);
+                    "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/result_any_null.tbl", 1, false);
 }
 
 TYPED_TEST(OperatorsAggregateTest, CanCountStringColumns) {
@@ -771,8 +764,6 @@ TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateAnyOnRef) {
   this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Any}}, {ColumnID{0}},
                     "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/any_filtered.tbl", 1);
 }
-
-// TODO: any on fully NULLed column.
 
 TYPED_TEST(OperatorsAggregateTest, DictionarySingleAggregateStandardDeviationSampleOnRef) {
   auto filtered = std::make_shared<TableScan>(
