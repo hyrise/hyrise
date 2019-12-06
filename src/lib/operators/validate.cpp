@@ -19,8 +19,8 @@ namespace {
 bool is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
                     const MvccData& mvcc_data) {
   const auto row_tid = mvcc_data.tids[chunk_offset].load();
-  const auto begin_cid = mvcc_data.begin_cids[chunk_offset];
-  const auto end_cid = mvcc_data.end_cids[chunk_offset];
+  const auto begin_cid = mvcc_data.get_begin_cid(chunk_offset);
+  const auto end_cid = mvcc_data.get_end_cid(chunk_offset);
   return Validate::is_row_visible(our_tid, snapshot_commit_id, row_tid, begin_cid, end_cid);
 }
 
@@ -108,7 +108,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
   while (job_end_chunk_id < chunk_count) {
     const auto chunk = in_table->get_chunk(job_end_chunk_id);
-    Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // Small chunks are bundled together to avoid unnecessary scheduling overhead.
     // Therefore, we count the number of rows to ensure a minimum of rows per job (default chunk size).
@@ -146,7 +146,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
                                 std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const {
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    Assert(chunk_in, "Did not expect deleted chunk here.");  // see #1686
+    Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
     auto pos_list_out = std::make_shared<const PosList>();

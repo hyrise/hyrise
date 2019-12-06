@@ -65,7 +65,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   const auto chunk_count = input_table->chunk_count();
   for (size_t i = 0; i < num_rows && chunk_id < chunk_count; chunk_id++) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
-    Assert(input_chunk, "Did not expect deleted chunk here.");  // see #1686
+    Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
 

@@ -25,11 +25,11 @@ std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
   return std::make_shared<InExpression>(predicate_condition, value()->deep_copy(), set()->deep_copy());
 }
 
-std::string InExpression::as_column_name() const {
+std::string InExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
-  stream << _enclose_argument_as_column_name(*value()) << " ";
+  stream << _enclose_argument(*value(), mode) << " ";
   stream << predicate_condition << " ";
-  stream << set()->as_column_name();
+  stream << set()->description(mode);
   return stream.str();
 }
 

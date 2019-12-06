@@ -7,36 +7,41 @@
 
 namespace opossum {
 
-static constexpr char file_name[] = "socket_file";
+static constexpr char filename[] = "socket_file";
 
-typedef boost::asio::posix::stream_descriptor file_stream;
+using AsioStreamDescriptor = boost::asio::posix::stream_descriptor;
 
 // Instead of writing data to the network device this class puts the information into a file. This allows an easier
 // verification of input and output and works independently from the network.
 class MockSocket {
  public:
-  MockSocket() {
-    auto file_descriptor = open(file_name, O_RDWR | O_CREAT | O_APPEND, 0755);
-    _stream = std::make_shared<file_stream>(_io_service, file_descriptor);
+  MockSocket() : _path(test_data_path + filename) {
+    _file_descriptor = open(_path.c_str(), O_RDWR | O_CREAT | O_APPEND, 0755);
+    _stream = std::make_shared<AsioStreamDescriptor>(_io_service, _file_descriptor);
     _io_service.run();
   }
 
-  ~MockSocket() { std::filesystem::remove(std::filesystem::path{file_name}); }
-
-  std::shared_ptr<file_stream> get_socket() { return _stream; }
-
-  void write(const std::string& value) { std::ofstream(std::filesystem::path{file_name}, std::ios_base::app) << value; }
-
-  std::string read() {
-    std::ifstream file_stream(file_name);
-    return {std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>()};
+  ~MockSocket() {
+    close(_file_descriptor);
+    std::filesystem::remove(std::filesystem::path{_path});
   }
 
-  bool empty() { return std::ifstream(std::filesystem::path{file_name}).peek() == std::ifstream::traits_type::eof(); }
+  std::shared_ptr<AsioStreamDescriptor> get_socket() { return _stream; }
+
+  void write(const std::string& value) { std::ofstream(std::filesystem::path{_path}, std::ios_base::app) << value; }
+
+  std::string read() {
+    std::ifstream AsioStreamDescriptor(_path);
+    return {std::istreambuf_iterator<char>(AsioStreamDescriptor), std::istreambuf_iterator<char>()};
+  }
+
+  bool empty() { return std::ifstream(std::filesystem::path{_path}).peek() == std::ifstream::traits_type::eof(); }
 
  private:
+  const std::string _path;
+  int _file_descriptor;
   boost::asio::io_service _io_service;
-  std::shared_ptr<file_stream> _stream;
+  std::shared_ptr<AsioStreamDescriptor> _stream;
 };
 
 // Helper class to convert integers from network byte order to host byte order.
