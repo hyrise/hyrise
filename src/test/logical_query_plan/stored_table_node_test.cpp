@@ -146,4 +146,40 @@ TEST_F(StoredTableNodeTest, GetStatisticsPruneBothColumns) {
   EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 0u);
 }
 
+TEST_F(StoredTableNodeTest, GetConstraints) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+
+  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
+  table->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
+
+  const auto table_constraints = table->get_soft_unique_constraints();
+  const auto lqp_constraints = _stored_table_node->get_constraints();
+
+  EXPECT_EQ(table_constraints.size(), 2);
+  EXPECT_EQ(lqp_constraints->size(), 2);
+
+  // Check for constraint equality
+  for (const auto& table_constraint : table_constraints) {
+    EXPECT_NE(std::find_if(lqp_constraints->cbegin(), lqp_constraints->cend(),
+                           [&](const auto& lqp_constraint) { return lqp_constraint.equals(table_constraint); }), lqp_constraints->cend());
+  }
+}
+
+TEST_F(StoredTableNodeTest, GetConstraintsPrunedColumns) {
+  const auto table = Hyrise::get().storage_manager.get_table("t_a");
+
+  table->add_soft_unique_constraint({ColumnID{0}}, IsPrimaryKey::No);
+  table->add_soft_unique_constraint({ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes);
+  table->add_soft_unique_constraint({ColumnID{2}}, IsPrimaryKey::No);
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+
+  const auto table_constraints = table->get_soft_unique_constraints();
+  const auto lqp_constraints = _stored_table_node->get_constraints();
+
+  EXPECT_EQ(table_constraints.size(), 3);
+  EXPECT_EQ(lqp_constraints->size(), 1);
+
+  EXPECT_TRUE(lqp_constraints->at(0).equals(table_constraints[2]));
+}
+
 }  // namespace opossum

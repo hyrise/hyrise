@@ -153,4 +153,31 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
          _pruned_column_ids == stored_table_node._pruned_column_ids;
 }
 
+const std::shared_ptr<std::vector<TableConstraintDefinition>> StoredTableNode::get_constraints() const {
+  auto lqp_constraints = std::make_shared<std::vector<TableConstraintDefinition>>();
+
+  // Extract relevant constraints from table
+  const auto& table_constraints = Hyrise::get().storage_manager.get_table(table_name).get()->get_soft_unique_constraints();
+
+  for (const TableConstraintDefinition& constraint : table_constraints) {
+
+    // Discard constraints which involve pruned column(s)
+    const auto discard_constraint = [&]() {
+      for(const auto& column_id : constraint.columns) {
+        //  Check whether constraint involves pruned column id(s).
+        if(std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), column_id) != _pruned_column_ids.cend()) {
+          return true;
+        }
+      }
+      return false;
+    }();
+
+    if(!discard_constraint) {
+      lqp_constraints->push_back(constraint);
+    }
+  }
+
+  return lqp_constraints;
+}
+
 }  // namespace opossum

@@ -129,7 +129,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * TODO(Julian)
    * @return
    */
-  virtual std::vector<TableConstraintDefinition> get_constraints() const;
+  virtual const std::shared_ptr<std::vector<TableConstraintDefinition>> get_constraints() const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found. Note that because COUNT(*)
