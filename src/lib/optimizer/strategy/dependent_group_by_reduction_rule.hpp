@@ -28,6 +28,9 @@ class AbstractLQPNode;
  * all queries that are listed in the paper can be optimized.
  * When the group by reduction changes the column order and this order is also the final column order of the plan, a
  * projection is appended as the new root to restore the column order.
+ *
+ * For this rule, we search the list of group-by columns for primary key columns as well as unique columns. Since 
+ * unique columns might include NULLs, we only consider non-nullable unique columns.
  */
 class DependentGroupByReductionRule : public AbstractRule {
  public:

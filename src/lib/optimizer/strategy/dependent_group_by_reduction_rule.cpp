@@ -46,8 +46,6 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       group_by_columns_per_table[stored_table_node].insert(column_id);
     }
 
-    // Store copy of aggregate expression to enable restoring the original order of columns via a projection
-    const auto initial_aggregate_column_expressions = aggregate_node.column_expressions();
     bool group_by_list_changed = false;
 
     // Main loop. Iterate over the tables and its group-by columns, gather primary keys/unique columns and check if we can reduce.
@@ -61,6 +59,8 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       }
 
       for (const auto& table_constraint : table->get_soft_unique_constraints()) {
+        // Check that non of the unique/primary key columns is nullable. Unique columns can generally store NULLs while
+        // previous operators (e.g., outer joins) might have added NULLs to a primary key column.
         auto columns_not_nullable = std::none_of(table_constraint.columns.begin(), table_constraint.columns.end(),
                                                  [&, stored_table_node = stored_table_node](const auto& column_id) {
                                                    const auto column_reference = std::make_shared<LQPColumnExpression>(
@@ -74,20 +74,19 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
         }
       }
 
-      // Intersect primary key and group-by columns. Only if full primary key is part of the group-by columns, the
-      // remaining columns can be removed.
+      // Intersect primary key/unique columns and group-by columns. In case a primary key/unique constraint covers
+      // multiple columns, we need to check that all columns are present in order to later remove dependent columns.
       std::vector<ColumnID> intersection;
       std::set_intersection(unique_columns.begin(), unique_columns.end(), group_by_columns.begin(),
                             group_by_columns.end(), std::back_inserter(intersection));
 
-      // Skip the current table as the primary key is not completely present.
+      // Skip the current table as the primary key/unique constraint is not completely present.
       if (intersection.size() != unique_columns.size()) {
         continue;
       }
 
       for (const auto& group_by_column : group_by_columns) {
-        // Every column that is not part of the primary key is going to be removed.
-        // Continue in case of primary key/unique column
+        // Every column that is not part of the primary key/unique constraint is going to be removed.s
         if (unique_columns.find(group_by_column) != unique_columns.end()) {
           continue;
         }
@@ -127,7 +126,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
     // do not modify the column order (e.g., sort or limit). In this case, we need to restore the initial column order
     // by adding a projection with the initial column_references since we changed the column order by moving columns
     // from the group-by list to the aggregations.
-    if (group_by_list_changed && initial_aggregate_column_expressions == root_column_expressions &&
+    if (group_by_list_changed && aggregate_node.column_expressions() == root_column_expressions &&
         lqp->type != LQPNodeType::Projection) {
       const auto projection_node = std::make_shared<ProjectionNode>(root_column_expressions);
       lqp_insert_node(lqp, LQPInputSide::Left, projection_node);
