@@ -18,14 +18,13 @@ struct TableConstraintDefinition final {
     Assert(std::unique(columns.begin(), columns.end()) == columns.end(), "Expected Column IDs to be unique");
   }
 
-  bool equals(const TableConstraintDefinition& other_constraint) const {
+  [[nodiscard]] bool equals(const TableConstraintDefinition& other_constraint) const {
     if(is_primary_key != other_constraint.is_primary_key) return false;
     if(columns.size() != other_constraint.columns.size()) return false;
 
-    for(const auto& column_id : other_constraint.columns) {
-      if(std::find(columns.cbegin(), columns.cend(), column_id) == columns.cend()) {
-        return false;
-      }
+    // Due to the enforced sorting, we can compare both vectors element-wise
+    for(ColumnID i{0}; i < columns.size(); i++) {
+      if(columns[i] != other_constraint.columns[i]) return false;
     }
 
     return true;
