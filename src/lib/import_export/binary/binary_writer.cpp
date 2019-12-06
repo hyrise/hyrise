@@ -128,7 +128,7 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
 
 void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, const ChunkID& chunk_id) {
   const auto chunk = table.get_chunk(chunk_id);
-  Assert(chunk, "Did not expect deleted chunk here.");  // see #1686
+  Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
   // Iterating over all segments of this chunk and exporting them
@@ -261,4 +261,4 @@ template <>
 size_t BinaryWriter::_size(const pmr_string& object) {
   return object.length();
 }
-}  // namespace opossum
+}
