@@ -85,9 +85,11 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
         continue;
       }
 
+      // Every column that is part of the table but not of the primary key/unique constraint is going to be moved from
+      // the group-by list to the list of aggregates wrapped in an ANY().
       for (const auto& group_by_column : group_by_columns) {
-        // Every column that is not part of the primary key/unique constraint is going to be removed.s
         if (unique_columns.find(group_by_column) != unique_columns.end()) {
+          // Do not touch primary key/unique constraint columns.
           continue;
         }
 
