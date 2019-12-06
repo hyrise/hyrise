@@ -81,6 +81,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
     table->append_chunk(segments, mvcc_data);
   }
+  csvfile.close();
 
   return table;
 }

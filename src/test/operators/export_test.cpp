@@ -138,4 +138,25 @@ TEST_F(OperatorsExportTest, EmptyPath) {
   EXPECT_THROW(exporter->execute(), std::exception);
 }
 
+TEST_F(OperatorsExportTest, UnknownFileExtension) {
+  table->append({1, "hello", 3.5f});
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, "not_existing_file.mp3");
+  EXPECT_THROW(exporter->execute(), std::exception);
+}
+
+TEST_F(OperatorsExportTest, ReturnsInput) {
+  auto table = load_table("resources/test_data/tbl/float.tbl");
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto exporter = std::make_shared<opossum::Export>(table_wrapper, test_filename + ".bin");
+  exporter->execute();
+
+  // need to load table again since it moved
+  table = load_table("resources/test_data/tbl/float.tbl");
+
+  EXPECT_TABLE_EQ_ORDERED(exporter->get_output(), table);
+}
+
 }  // namespace opossum

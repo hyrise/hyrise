@@ -18,14 +18,15 @@ namespace opossum {
  * For .csv files, a CSV config is additionally required, which is commonly located in the <filename>.json file.
  * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
  * already exists, it is returned and no import is performed.
+ * Documentation of the file formats can be found in BinaryWriter and CsvWriter header files.
  */
 class Import : public AbstractReadOnlyOperator {
  public:
   /**
    * @param filename       Path to the input file.
    * @param tablename      Optional. Name of the table to store/look up in the StorageManager.
-   * @param import_type    Optional. Type indicating the file format. If not present, it is guessed by the filename.
    * @param chunk_size     Optional. Chunk size. Does not effect binary import.
+   * @param file_type      Optional. Type indicating the file format. If not present, it is guessed by the filename.
    * @param csv_meta       Optional. A specific meta config, to override the given .json file.
    */
   explicit Import(const std::string& filename, const std::optional<std::string>& tablename = std::nullopt,

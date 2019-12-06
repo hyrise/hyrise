@@ -14,8 +14,19 @@
 
 namespace opossum {
 
+/*
+ * This operator writes a table into a file.
+ * Supportes file types are .csv and Opossum .bin files.
+ * For .csv files, a CSV config is added, which is located in the <filename>.json file.
+ * Documentation of the file formats can be found in BinaryWriter and CsvWriter header files.
+ */
 class Export : public AbstractReadOnlyOperator {
  public:
+  /**
+   * @param in             Operator wrapping the table.
+   * @param filename       Path to the output file.
+   * @param file_type      Optional. Type indicating the file format. If not present, it is guessed by the filename.
+   */
   explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename,
                   const FileType& type = FileType::Auto);
 

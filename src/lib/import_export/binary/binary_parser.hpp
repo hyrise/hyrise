@@ -18,6 +18,7 @@ namespace opossum {
 
 /*
  * This parser reads an Opossum binary file and creates a table from that input.
+ * Documentation of the file formats can be found in BinaryWriter header file.
  */
 class BinaryParser {
  public:
@@ -39,18 +40,6 @@ class BinaryParser {
    * Reads the header from the given file.
    * Creates an empty table from the extracted information and
    * returns that table and the number of chunks.
-   * The header has the following format:
-   *
-   * Description           | Type                                  | Size in bytes
-   * -----------------------------------------------------------------------------------------
-   * Chunk size            | ChunkOffset                           |   4
-   * Chunk count           | ChunkID                               |   4
-   * Column count          | ColumnID                              |   2
-   * Column types          | TypeID array                          |   Column Count * 1
-   * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
-   * Column name lengths   | size_t array                          |   Column Count * 1
-   * Column names          | std::string array                     |   Sum of lengths of all names
-   *
    */
   static std::pair<std::shared_ptr<Table>, ChunkID> _read_header(std::ifstream& file);
 
@@ -76,51 +65,10 @@ class BinaryParser {
   // Reads the column type from the given file and chooses a segment import function from it.
   static std::shared_ptr<BaseSegment> _import_segment(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
 
-  /*
-   * Imports a serialized ValueSegment from the given file.
-   * In case T is pmr_string the file contains:
-   *
-   * Description           | Type                                  | Size in byte
-   * -----------------------------------------------------------------------------------------
-   * Length of Strings     | size_t array                          |   row_count * 2
-   * Values                | string array                          |   Total sum of string lengths
-   *
-   *
-   * In case the column is nullable the file contains:
-   *
-   * Description           | Type                                  | Size in bytes
-   * -----------------------------------------------------------------------------------------
-   * Is Value Null?        | bool (stored as BoolAsByteType)       |  row_count * 1
-   * Values                | T                                     |  row_count * sizeof(T)
-   *
-   *
-   * For all other cases the file contains:
-   *
-   * Description           | Type                                  | Size in bytes
-   * -----------------------------------------------------------------------------------------
-   * Values                | T                                     |  row_count * sizeof(T)
-   *
-   */
   template <typename T>
   static std::shared_ptr<ValueSegment<T>> _import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                                 bool is_nullable);
 
-  /*
-   * Imports a serialized DictionarySegment from the given file.
-   * The file must contain data in the following format:
-   *
-   * Description           | Type                                  | Size in bytes
-   * -----------------------------------------------------------------------------------------
-   * Width of attribute v. | AttributeVectorWidth                  |   1
-   * Size of dictionary v. | ValueID                               |   4
-   * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
-   * Dict. String Length^  | size_t                                |   dict. size * 2
-   * Dictionary Values^    | pmr_string                            |   Sum of all string lengths
-   * Attribute v. values   | uintX                                 |   row_count * width of attribute v.
-   *
-   * ^: These fields are only needed if the type of the column is a string.
-   * °: This field is needed if the type of the column is NOT a string
-   */
   template <typename T>
   static std::shared_ptr<DictionarySegment<T>> _import_dictionary_segment(std::ifstream& file, ChunkOffset row_count);
 
@@ -128,21 +76,6 @@ class BinaryParser {
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
                                                                         AttributeVectorWidth attribute_vector_width);
 
-  /*
-   * Imports a serialized RunLengthSegment from the given file.
-   * The file must contain data in the following format:
-   *
-   * Description            | Type                                  | Size in bytes
-   * -----------------------------------------------------------------------------------------
-   * Run count              | uint32_t                              |   4
-   * Values                 | T (int, float, double, long)          |   Run count * sizeof(T)
-   * NULL values            | vector<bool> (BoolAsByteType)         |   Run count * 1
-   * End Positions          | ChunkOffset                           |   Run count * 4
-   *
-   * Please note that the number of rows are written in the header of the chunk.
-   * The type of the column can be found in the global header of the file.
-   *
-   */
   template <typename T>
   static std::shared_ptr<RunLengthSegment<T>> _import_run_length_segment(std::ifstream& file, ChunkOffset row_count);
 

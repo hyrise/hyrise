@@ -261,4 +261,5 @@ template <>
 size_t BinaryWriter::_size(const pmr_string& object) {
   return object.length();
 }
-}
+
+}  // namespace opossum

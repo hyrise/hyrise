@@ -13,6 +13,7 @@ CsvMeta process_csv_meta_file(const std::string& filename) {
   Assert(metafile.good(), "Meta file does not exist: " + filename);
   nlohmann::json meta_json;
   metafile >> meta_json;
+  metafile.close();
   return static_cast<CsvMeta>(meta_json);
 }
 

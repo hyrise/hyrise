@@ -11,11 +11,62 @@
 
 namespace opossum {
 
+/**
+ * With the CsvWriter, selected tables of a database
+ * can be exported to csv files.
+ *
+ * Additionally to the main csv file, which contains the contents of the table,
+ * a meta file is generated. This meta file contains further information,
+ * such as the types of the columns in the table.
+ */
 class CsvWriter {
  public:
   /*
-   * Creates a new CsvWriter with the given file as output file.
-   * @param file The file to output the csv to.
+   * Executes the export process.
+   * @param table     The table to be written.
+   * @param filename  The file to output the csv to.
+   * @param config    Optional. A config.
+   *
+   * During this process, two files are created: <table_name>.csv and <table_name>.csv.meta
+   * Currently, they are both csv files with a comma (,) as delimiter
+   * and a quotation mark (") as quotation mark. As escape character, also a quotation mark is used (").
+   * This definition is in line with RFC 4180
+   *
+   *
+   * For explanation of the output format, consider the following example:
+   * Given table, with name "example", chunk size 100:
+   *  a (int) | b (string)            | c (float)
+   *  -------------------------------------------
+   *    1     | Hallo Welt            |  3.5
+   *   102    | Du: sagtest: "Hi!"    |  4.0
+   *   NULL   | Kekse                 |  5.0
+   *
+   * The generated files will look the following:
+   *
+   *  example.csv
+   *
+   *  a,b,c
+   *  1,"Hallo Welt",3.5
+   *  102,"Du sagtest:""Hi!""",4.0
+   *  ,"Kekse",5.0
+   *
+   *  example.csv.meta:
+   *
+   *  "PropertyType","Key","Value"
+   *  "ChunkSize",,100
+   *  "ColumnType","a","int_null"
+   *  "ColumnType","b","string"
+   *  "ColumnType","c","float"
+   *
+   *  which resembles the following table of meta data:
+   *
+   *  PropertyType  | Key | Value
+   *  ------------------------------
+   *  ChunkSize     |     | 100
+   *  ColumnType    |  a  | int_null
+   *  ColumnType    |  b  | string
+   *  ColumnType    |  c  | float
+   *
    */
   static void write(const Table& table, const std::string& filename, const ParseConfig& config = {});
 
