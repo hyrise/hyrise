@@ -31,7 +31,11 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
          ++expression_idx) {
       const auto& expression = aggregate_node.node_expressions[expression_idx];
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
-      if (!column_expression) continue;
+      if (!column_expression) {
+        // In case the group-by column is not a column expression (e.g., grouping by `a+1`), we take the safe route and
+        // continue even though constraints often hold for such simple expression.
+        continue;
+      }
 
       const auto& stored_table_node =
           std::dynamic_pointer_cast<const StoredTableNode>(column_expression->column_reference.original_node());
@@ -39,11 +43,7 @@ void DependentGroupByReductionRule::apply_to(const std::shared_ptr<AbstractLQPNo
       if (!stored_table_node) continue;
 
       const auto column_id = column_expression->column_reference.original_column_id();
-
-      auto inserted = group_by_columns_per_table.try_emplace(stored_table_node, std::set<ColumnID>{column_id});
-      if (!inserted.second) {
-        group_by_columns_per_table[stored_table_node].insert(column_id);
-      }
+      group_by_columns_per_table[stored_table_node].insert(column_id);
     }
 
     // Store copy of aggregate expression to enable restoring the original order of columns via a projection
