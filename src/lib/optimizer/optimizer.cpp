@@ -206,6 +206,12 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
         // enforced when rules are executed through the optimizer, not when tests call the rule directly.
         Assert(nodes_by_lqp[lqp].contains(output), std::string{"Output `"} + output->description() + "` of node `" +
                                                        node->description() + "` not found in LQP");
+
+        for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
+          if (other_lqp == lqp) continue;
+          Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
+                                                       node->description() + "` found in different LQP");
+        }
       }
 
       // Check that all LQPColumnExpressions in the node can be resolved. This does, however, not guarantee that it is
