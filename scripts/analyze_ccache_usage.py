@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 # For a build folder that was compiled with ccache and the environment variable CCACHE_DEBUG=1, this prints the number
-# of compiled files and the ccache miss ratio. This helps 
+# of compiled files and the ccache miss ratio. This helps in verifying that ccache is working as expected, especially
+# when using unity builds and/or precompiled headers.
 
 from pathlib import Path
 import os
