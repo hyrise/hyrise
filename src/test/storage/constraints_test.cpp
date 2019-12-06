@@ -82,4 +82,22 @@ TEST_F(ConstraintsTest, InvalidConstraintAdd) {
   EXPECT_THROW(table->add_soft_unique_constraint({ColumnID{0}, ColumnID{2}}, IsPrimaryKey::Yes), std::logic_error);
 }
 
+TEST_F(ConstraintsTest, Equals) {
+  const auto constraint_a = TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::No};
+  const auto constraint_a_pk = TableConstraintDefinition{{ColumnID{0}, ColumnID{2}}, IsPrimaryKey::Yes};
+  const auto constraint_b = TableConstraintDefinition{{ColumnID{2}, ColumnID{3}}, IsPrimaryKey::No};
+  const auto constraint_c = TableConstraintDefinition{{ColumnID{0}}, IsPrimaryKey::No};
+
+  EXPECT_TRUE(constraint_a.equals(constraint_a));
+
+  EXPECT_FALSE(constraint_a.equals(constraint_a_pk));
+  EXPECT_FALSE(constraint_a_pk.equals(constraint_a));
+
+  EXPECT_FALSE(constraint_a.equals(constraint_b));
+  EXPECT_FALSE(constraint_b.equals(constraint_a));
+
+  EXPECT_FALSE(constraint_a.equals(constraint_c));
+  EXPECT_FALSE(constraint_c.equals(constraint_a));
+}
+
 }  // namespace opossum
