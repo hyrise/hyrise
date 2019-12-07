@@ -293,7 +293,7 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
 
 std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
 
-const std::vector<UniqueConstraintDefinition>& Table::get_soft_unique_constraints() const {
+const UniqueConstraintDefinitions& Table::get_soft_unique_constraints() const {
   return _constraint_definitions;
 }
 

@@ -194,7 +194,7 @@ class Table : private Noncopyable {
    * We call them "soft" constraints to draw attention to that.
    */
   void add_soft_unique_constraint(const std::vector<ColumnID>& column_ids, const IsPrimaryKey is_primary_key);
-  const std::vector<UniqueConstraintDefinition>& get_soft_unique_constraints() const;
+  const UniqueConstraintDefinitions& get_soft_unique_constraints() const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
@@ -218,7 +218,7 @@ class Table : private Noncopyable {
    */
   tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
 
-  std::vector<UniqueConstraintDefinition> _constraint_definitions;
+  UniqueConstraintDefinitions _constraint_definitions;
 
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;

@@ -34,4 +34,6 @@ struct UniqueConstraintDefinition final {
   IsPrimaryKey is_primary_key;
 };
 
+using UniqueConstraintDefinitions = std::vector<UniqueConstraintDefinition>;
+
 }  // namespace opossum
