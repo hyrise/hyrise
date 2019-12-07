@@ -24,7 +24,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {});
+  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {},
+                    const UniqueConstraintDefinitions& constraints = {});
 
   LQPColumnReference get_column(const std::string& column_name) const;
 
@@ -32,6 +33,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
+  const std::shared_ptr<UniqueConstraintDefinitions> get_constraints() const override;
 
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
@@ -59,6 +61,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   // Constructor args to keep around for deep_copy()
   ColumnDefinitions _column_definitions;
+  std::shared_ptr<UniqueConstraintDefinitions> _constraints;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
 };

@@ -17,8 +17,14 @@ namespace opossum {
 class MockNodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
+
+    const auto a_b_pk_constraint = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+    const auto c_constraint = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+
     _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{
-        {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}});
+        {DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::Double, "c"}, {DataType::String, "d"}},
+                                  std::optional<std::string>{}, UniqueConstraintDefinitions{a_b_pk_constraint, c_constraint});
+
     _mock_node_b =
         MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   }
@@ -77,5 +83,19 @@ TEST_F(MockNodeTest, Copy) {
 }
 
 TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
+
+TEST_F(MockNodeTest, UniqueConstraints) {
+  const auto mock_a_constraints = _mock_node_a->get_constraints();
+  EXPECT_EQ(mock_a_constraints->size(), 2);
+
+  const auto a_b_pk_constraint = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{0}, ColumnID{1}}, IsPrimaryKey::Yes};
+  const auto c_constraint = UniqueConstraintDefinition{std::vector<ColumnID>{ColumnID{2}}, IsPrimaryKey::No};
+
+  EXPECT_TRUE(mock_a_constraints->at(0).equals(a_b_pk_constraint));
+  EXPECT_TRUE(mock_a_constraints->at(1).equals(c_constraint));
+
+  const auto mock_b_constraints = _mock_node_b->get_constraints();
+  EXPECT_TRUE(mock_b_constraints->empty());
+}
 
 }  // namespace opossum
